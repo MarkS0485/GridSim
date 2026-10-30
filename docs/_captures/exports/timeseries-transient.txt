@@ -1,0 +1,16 @@
+$ head -n 14 results/exports-docs/transient/timeseries.csv
+# GridSim  -  2026-10-04 14:30:20 UTC
+# code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     transient  case=case9  minutes=1  dt=100ms  slices=600  solver=Newton-Raphson (dense)
+tick,t_seconds,freq_hz,rocof_hz_s,gen_mw,demand_mw,iters,max_mismatch,vmin_pu,vmax_pu,solve_ms,converged
+1,0.1000,50.00003,0.00027,319.64,315.00,4,1.646E-014,0.99563,1.04000,37.944,True
+2,0.2000,50.00003,0.00005,319.64,315.00,0,1.600E-014,0.99563,1.04000,2.126,True
+3,0.3000,50.00000,-0.00027,319.64,315.00,0,1.600E-014,0.99563,1.04000,0.073,True
+4,0.4000,50.00000,-0.00006,319.64,315.00,0,1.600E-014,0.99563,1.04000,0.086,True
+5,0.5000,49.99999,-0.00010,319.64,315.00,0,1.600E-014,0.99563,1.04000,0.054,True
+[exit 0]

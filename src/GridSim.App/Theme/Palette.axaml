@@ -1,0 +1,63 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+  <!-- UI programme Phase 1.1: the control-room palette, ported from src/GridSim.Wpf/Theme.xaml. Every key and every
+       colour value is the same as the WPF theme, so a page ported later finds the brush it used under the same name
+       ({StaticResource Accent}, {StaticResource Panel} and so on). ThemeParityTests reads the WPF Theme.xaml at test
+       time and fails if a colour here differs from it or goes missing, so the two cannot drift apart while both ship.
+       GridSim is dark only, as the WPF app is: the app requests the Dark theme variant (App.axaml), so there is no
+       light set of these values. -->
+
+  <!-- ============ Control-room palette ============ -->
+  <Color x:Key="BgColor">#FF0A0E13</Color>
+  <Color x:Key="PanelColor">#FF131A23</Color>
+  <Color x:Key="PanelHiColor">#FF1B2430</Color>
+  <Color x:Key="BorderColor">#FF26323F</Color>
+  <Color x:Key="AccentColor">#FF21C7E6</Color>
+  <Color x:Key="TextColor">#FFE6EDF3</Color>
+  <Color x:Key="MutedColor">#FF8492A0</Color>
+  <Color x:Key="GreenColor">#FF2FD27F</Color>
+  <Color x:Key="AmberColor">#FFF3C13A</Color>
+  <Color x:Key="RedColor">#FFFF5B5B</Color>
+
+  <SolidColorBrush x:Key="Bg"      Color="{StaticResource BgColor}" />
+  <SolidColorBrush x:Key="Panel"   Color="{StaticResource PanelColor}" />
+  <SolidColorBrush x:Key="PanelHi" Color="{StaticResource PanelHiColor}" />
+  <SolidColorBrush x:Key="Border"  Color="{StaticResource BorderColor}" />
+  <SolidColorBrush x:Key="Accent"  Color="{StaticResource AccentColor}" />
+  <SolidColorBrush x:Key="Text"    Color="{StaticResource TextColor}" />
+  <SolidColorBrush x:Key="Muted"   Color="{StaticResource MutedColor}" />
+  <SolidColorBrush x:Key="Green"   Color="{StaticResource GreenColor}" />
+  <SolidColorBrush x:Key="Amber"   Color="{StaticResource AmberColor}" />
+  <SolidColorBrush x:Key="Red"     Color="{StaticResource RedColor}" />
+
+  <!-- The same font lists as WPF. Bahnschrift and Consolas are Windows fonts: on macOS and Linux the first family
+       present is used, and when none is, Avalonia falls back to the app's default font (Inter, bundled by the
+       desktop head), so text never disappears. -->
+  <FontFamily x:Key="UiFont">Bahnschrift, Segoe UI, Arial</FontFamily>
+  <FontFamily x:Key="MonoFont">Consolas, Cascadia Mono, Courier New</FontFamily>
+
+  <!-- ============ Shared bar-track / rail background ============ -->
+  <!-- The dark rail behind every progress, loading and inertia bar (WPF: named once instead of ~20 inline #1E2733). -->
+  <Color x:Key="TrackColor">#FF1E2733</Color>
+  <SolidColorBrush x:Key="Track" Color="{StaticResource TrackColor}" />
+
+  <!-- The list-row link colours, inline in the WPF RowLinkBtn template (rest and hover); named here so the Avalonia
+       style can use them and the parity test can pin them. -->
+  <Color x:Key="RowColor">#FF0F151C</Color>
+  <Color x:Key="RowHoverColor">#FF17222E</Color>
+  <SolidColorBrush x:Key="Row"      Color="{StaticResource RowColor}" />
+  <SolidColorBrush x:Key="RowHover" Color="{StaticResource RowHoverColor}" />
+
+  <!-- ============ Type scale ============ -->
+  <sys:Double x:Key="BaseFontSize">12</sys:Double>
+  <sys:Double x:Key="SmallFontSize">10.5</sys:Double>
+  <sys:Double x:Key="MicroFontSize">9.5</sys:Double>
+
+  <!-- ============ Gauge band thresholds ============ -->
+  <!-- The amber/red loading fractions the gauges (and loading colours) switch at, as in WPF. -->
+  <sys:Double x:Key="GaugeAmberFrac">0.70</sys:Double>
+  <sys:Double x:Key="GaugeRedFrac">0.90</sys:Double>
+  <sys:Double x:Key="GaugeAmberFracLow">0.30</sys:Double>
+  <sys:Double x:Key="GaugeRedFracLow">0.10</sys:Double>
+</ResourceDictionary>

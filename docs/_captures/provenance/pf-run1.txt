@@ -1,0 +1,19 @@
+$ gridsim pf case118 --json results/prov-pf.json
+Power flow - IEEE 118-bus (118 buses)
+  converged in 6 iteration(s), mismatch 2.85E-014 pu   losses 132.481 MW / -644.082 MVAr
+  voltage range 0.9430 - 1.0500 pu
+  lowest voltages:
+      bus 76     0.9430 pu     21.803 deg
+      bus 53     0.9460 pu     14.441 deg
+      bus 118    0.9494 pu     21.945 deg
+      bus 55     0.9520 pu     15.063 deg
+      bus 107    0.9520 pu     17.580 deg
+      bus 56     0.9540 pu     15.250 deg
+      bus 1      0.9550 pu     10.982 deg
+      bus 54     0.9550 pu     15.353 deg
+      bus 52     0.9568 pu     15.416 deg
+      bus 74     0.9580 pu     21.671 deg
+      bus 20     0.9581 pu     12.187 deg
+      bus 21     0.9586 pu     13.775 deg
+[pf] wrote results\prov-pf.json
+[exit 0]

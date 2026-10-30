@@ -1,0 +1,19 @@
+$ python (read one partition of the estimated_state lake; result_json, removed_json and boundary_json omitted)
+partition: $GDA_ROOT/Derived/estimated_state/gb-spine/year=2026/week=36/estimated_state.parquet
+rows: 1  columns: 17
+columns: datetime_utc, case, status, converged, iterations, max_state_update, objective_j, chi_threshold, chi_passed, dof, measurements_n, removed_n, removed_json, vm_min, vm_max, boundary_json, result_json
+datetime_utc      2026-09-01 11:00:00+00:00
+case              gb-spine
+status            Converged
+converged         True
+iterations        8
+max_state_update  1.4822059173716063e-09
+objective_j       225.414916686831
+chi_threshold     359.5207249007415
+chi_passed        True
+dof               317
+measurements_n    948
+removed_n         0
+vm_min            0.999361616293283
+vm_max            1.051805170833602
+[exit 0]

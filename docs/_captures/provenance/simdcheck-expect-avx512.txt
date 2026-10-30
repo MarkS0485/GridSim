@@ -1,0 +1,14 @@
+$ gridsim simdcheck --expect Avx512
+GridSim SIMD preflight
+======================
+CPU cores: 8   OS: Microsoft Windows 10.0.26300
+process arch: X64
+commit: v1.95.294-173-g203c6b9c
+
+SIMD: Avx256 (4 doubles/step)  FMA=yes  [Avx512F=False Avx2=True Fma=True Sse2=True AdvSimd=False]
+
+Active vector tier: Avx256 (4 doubles per vector step)
+Dense-LU / normal-equations / covariance kernels dispatch to this width at run time.
+If this reports Avx256 on a box you expect to be AVX-512, the CPU or the runtime is capping the width.
+simdcheck: FAILED - expected at least Avx512, but the active tier is Avx256.
+[exit 3]

@@ -1,0 +1,3 @@
+$ gridsim case14 --ticks 5O
+error: --ticks expected an integer but got '5O'
+[exit 2]

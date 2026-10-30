@@ -1,0 +1,169 @@
+@using GridSim.Web.Projection
+@using GridSim.Core.Dynamics
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+
+    @* ===== PROVENANCE BANNER - REAL vs SYNTHETIC, never present a proxy as measured ===== *@
+    <div class="provenance">
+        <b>MECHANICAL / PLANT ENGINEER - what the MACHINES are doing.</b>
+        MW | loading | inertia (H x MBase) | ramp | the P-Q capability limits | RoCoF-relay margin are
+        <span class="tag-real">REAL</span> from the streamed model. MVAr | power factor | excitation need
+        reactive-dispatch telemetry the presolved feed doesn't carry; shaft-torsional and stator/rotor temps
+        are <span class="tag-syn">SYNTHETIC</span> plant SCADA - shown as "-" and omitted rather than fabricated.
+    </div>
+
+    <div class="panel-grid">
+        <div class="card @(D.RocofLegacyBreached ? "breach" : "")">
+            <div class="card-h">RoCoF MARGIN vs LEGACY (0.125 Hz/s)</div>
+            <div class="stat-row"><span>RoCoF now</span><b>@D.RocofNowHzPerS.ToString("0.000") Hz/s</b></div>
+            <div class="stat-row"><span>Margin</span><b>@D.RocofLegacyMarginPercent.ToString("0")%</b></div>
+            <div class="marginbar"><span style="width:@Pct(D.RocofLegacyMarginPercent/100);--c:@(D.RocofLegacyBreached ? "var(--bad)" : "var(--ok)")"></span></div>
+        </div>
+        <div class="card @(D.RocofModernBreached ? "breach" : "")">
+            <div class="card-h">RoCoF MARGIN vs MODERN (1.0 Hz/s)</div>
+            <div class="stat-row"><span>Sum inertia</span><b>@D.SumInertiaGvaS.ToString("0.0") GVA.s</b></div>
+            <div class="stat-row"><span>Margin</span><b>@D.RocofModernMarginPercent.ToString("0")%</b></div>
+            <div class="marginbar"><span style="width:@Pct(D.RocofModernMarginPercent/100);--c:@(D.RocofModernBreached ? "var(--bad)" : "var(--ok)")"></span></div>
+        </div>
+    </div>
+
+    @* ===== PROTECTION ENVELOPE - P-Q capability for the most-stressed machine + the "companion crime" ===== *@
+    <div class="card">
+        <div class="card-h">PROTECTION ENVELOPE - capability &amp; RoCoF-relay margin</div>
+        <div class="envelope">
+            <div class="pq-col">
+                @if (Top is not null)
+                {
+                    <div class="pq-cap">P-Q | @Top.Name <span class="muted-inline">(@Top.Fuel | @Top.StressPercent.ToString("0")% stress)</span></div>
+                    <PqDiagram Pg="@Top.Pg" Qg="@Top.Qg" Qmin="@Top.Qmin" Qmax="@Top.Qmax" Pmax="@Top.Pmax"
+                               Width="260" Height="180" />
+                    <div class="muted-note">Operating dot at P = @Top.Pg.ToString("N0") MW, Q = 0 - the feed carries no per-generator reactive dispatch, so the point sits on the Q = 0 axis; the polygon limits are model-real.</div>
+                }
+                else
+                {
+                    <div class="muted-note">No synchronous machine online to profile.</div>
+                }
+            </div>
+            <div class="rocof-col">
+                <div class="rocof-now">@D.RocofNowHzPerS.ToString("0.000") <span class="rocof-unit">Hz/s</span></div>
+                <div class="rocof-line">
+                    <span>@RocofPctOf(LegacyLimit).ToString("0")% of 0.125 Hz/s <em>(original)</em></span>
+                    <b class="@LimitClass(LegacyLimit)">@(D.RocofLegacyBreached ? "BREACH" : "ok")</b>
+                </div>
+                <Bar Value="@D.RocofNowHzPerS" Max="@LegacyLimit" Status="@LimitStatus(LegacyLimit)" />
+                <div class="rocof-line">
+                    <span>@RocofPctOf(ModernLimit).ToString("0")% of 1.0 Hz/s <em>(relaxed)</em></span>
+                    <b class="@LimitClass(ModernLimit)">@(D.RocofModernBreached ? "BREACH" : "ok")</b>
+                </div>
+                <Bar Value="@D.RocofNowHzPerS" Max="@ModernLimit" Status="@LimitStatus(ModernLimit)" />
+                <div class="muted-note">The limit was relaxed 8x - from 0.125 to 1.0 Hz/s - to fit the condition, not the condition to the limit. The gap between the two bars is the "companion crime" made visible.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card grow">
+        <div class="card-h">SYNCHRONOUS MACHINES - @D.MachineCount online (risk-sorted | click a row to inspect)</div>
+        <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Machine</th><th>Fuel</th><th class="r">MW</th><th class="r">Loading</th><th class="r">Inertia GVA.s</th><th class="r">H (s)</th><th class="r">Ramp MW/min</th><th class="r">Stress</th><th></th></tr></thead>
+            <tbody>
+                @foreach (MachineRowDto m in D.Machines)
+                {
+                    <tr class="clickable" @onclick="() => OpenMachine(m)">
+                        <td>@m.Name</td>
+                        <td><span class="swatch" style="--c:@m.Color"></span>@m.Fuel</td>
+                        <td class="r">@m.Pg.ToString("N0")</td>
+                        <td class="r">@m.LoadingPercent.ToString("0")%</td>
+                        <td class="r">@m.InertiaGvaS.ToString("0.00")</td>
+                        <td class="r">@m.HSeconds.ToString("0.0")</td>
+                        <td class="r">@m.RampMwPerMin.ToString("+0.0;-0.0;0")</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(m.StressPercent/100);--c:@StressColor(m.StressPercent)"></span></div>
+                            @m.StressPercent.ToString("0")%
+                        </td>
+                        <td class="r chev">></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+        <p class="muted-note">MW / loading / inertia / ramp / RoCoF-margin are real; reactive/excitation/torsional/thermal detail the presolved feed doesn't carry is shown as "-" in the inspector rather than fabricated.</p>
+    </div>
+    </div>
+
+    <Inspector @ref="_inspector" />
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private MechanicalDto? D => Frame?.Mechanical;
+
+    private Inspector? _inspector;
+
+    // Most-stressed machine (the list is risk-sorted, worst first) - drives the P-Q capability diagram.
+    private MachineRowDto? Top => D is { Machines.Count: > 0 } ? D.Machines[0] : null;
+
+    private const double LegacyLimit = FrequencyLimits.RocofLimitLegacyHzPerS;   // 0.125 Hz/s (original)
+    private const double ModernLimit = FrequencyLimits.RocofLimitModernHzPerS;   // 1.0   Hz/s (relaxed)
+
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+    private static string StressColor(double pct) => pct >= 90 ? "var(--bad)" : pct >= 70 ? "var(--warn)" : "var(--ok)";
+
+    private double RocofPctOf(double limit) => limit <= 0 || D is null ? 0 : D.RocofNowHzPerS / limit * 100.0;
+    private string LimitStatus(double limit)
+    {
+        double p = RocofPctOf(limit);
+        return p >= 100 ? "bad" : p >= 80 ? "warn" : "ok";
+    }
+    private string LimitClass(double limit) => "tag-" + LimitStatus(limit);
+
+    private void OpenMachine(MachineRowDto m) => _inspector?.Show(MachineLevel(m));
+
+    // ---- per-machine inspector level: OUTPUT / STORED-KE / RISK / RAMP tiles + provenance rows ----
+    private static Inspector.InspectLevel MachineLevel(MachineRowDto m)
+    {
+        string riskLabel = m.StressPercent >= PresentationLimits.StressLimitPct ? "LIMIT" : m.StressPercent >= PresentationLimits.StressNearPct ? "NEAR" : "OK";
+        string riskColor = m.StressPercent >= PresentationLimits.StressLimitPct ? "var(--bad)" : m.StressPercent >= PresentationLimits.StressNearPct ? "var(--warn)" : "var(--ok)";
+        string rampColor = m.RampMwPerMin > PresentationLimits.RampDeadbandMwPerMin ? "var(--ok)"
+            : m.RampMwPerMin < -PresentationLimits.RampDeadbandMwPerMin ? "var(--warn)" : "var(--muted)";
+
+        var stats = new[]
+        {
+            new Inspector.InspectStat("OUTPUT", $"{m.Pg:N0} MW"),
+            new Inspector.InspectStat("STORED KE", $"{m.InertiaGvaS:0.00} GVA.s", "var(--ok)"),
+            new Inspector.InspectStat("RISK", riskLabel, riskColor),
+            new Inspector.InspectStat("RAMP", $"{m.RampMwPerMin:+0.0;-0.0;0}/min", rampColor),
+        };
+        var rows = new[]
+        {
+            new Inspector.InspectRow("Real power", Sub: "REAL - streamed dispatch",
+                Value: $"{m.Pg:N0} MW", Swatch: m.Color),
+            new Inspector.InspectRow("Loading (MW vs Pmax)", Sub: "REAL",
+                Value: $"{m.LoadingPercent:0}% of {m.Pmax:N0} MW"),
+            new Inspector.InspectRow("Reactive power", Sub: "no per-generator reactive telemetry in the presolved feed",
+                Value: "-", ValueColor: "var(--muted)"),
+            new Inspector.InspectRow("Power factor", Sub: "SYNTHETIC - needs reactive dispatch",
+                Value: "-", ValueColor: "var(--muted)"),
+            new Inspector.InspectRow("Excitation", Sub: "SYNTHETIC - proxy only, no plant feed",
+                Value: "-", ValueColor: "var(--muted)"),
+            new Inspector.InspectRow("Stored kinetic energy", Sub: $"REAL - H {m.HSeconds:0.0}s x MBase",
+                Value: $"{m.InertiaGvaS:0.00} GVA.s", ValueColor: "var(--ok)"),
+            new Inspector.InspectRow("Inertia constant H", Sub: "REAL",
+                Value: $"{m.HSeconds:0.0} s"),
+            new Inspector.InspectRow("MW ramp (last period)", Sub: "REAL - change in dispatch since last frame",
+                Value: $"{m.RampMwPerMin:+0.0;-0.0;0.0} MW/min", ValueColor: rampColor),
+            new Inspector.InspectRow("Limit proximity (stress)", Sub: "REAL - MW vs Pmax (reactive proximity when telemetry exists)",
+                Value: $"{m.StressPercent:0}%", ValueColor: riskColor),
+            new Inspector.InspectRow("Shaft-torsional / stator-rotor temp", Sub: "SYNTHETIC - omitted rather than fabricated (no plant SCADA)",
+                Value: "-", ValueColor: "var(--muted)"),
+        };
+        return new Inspector.InspectLevel(m.Name.ToUpperInvariant(),
+            $"{m.Fuel} | {riskLabel} | per-machine state this frame", stats, rows);
+    }
+}

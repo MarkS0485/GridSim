@@ -1,0 +1,3 @@
+$ curl http://127.0.0.1:8770/meta
+{"cases":["gb-full","gb-spine","zone-enwl","zone-nged","zone-npg","zone-spen","zone-ssen","zone-ukpn"],"scalar_min_timestamp":"2019-02-01T00:30:00+00:00","scalar_max_timestamp":"2026-08-22T23:00:00+00:00","frequency_min_timestamp":"2014-01-01T00:00:00.500000+00:00","frequency_max_timestamp":"2026-08-31T23:59:58.500000+00:00","horizon_cutoff_utc":"2026-09-26T11:38:34.381192+00:00"}
+[exit 0]

@@ -1,0 +1,124 @@
+@using GridSim.Web.Projection
+
+@if (Frame?.CycleError is string cycleError)
+{
+    @* The analysis loop stopped on an error: say so, instead of showing the last cycle's verdict as current. *@
+    <div class="stub g-red">ANALYSIS CYCLE STOPPED: @cycleError</div>
+}
+else if (D is null)
+{
+    <div class="stub">Waiting for the first analysis cycle...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="rp1-hero @(D.HighTierMet ? "g-green" : "g-red")">
+            <div class="hero-main">
+                <span class="hero-v">@(D.HighTierMet ? "HIGH TIER MET" : "HIGH TIER MISSED")</span>
+                <span class="hero-l">
+                    single-core base solve -> parallel fan-out | budget @D.WorkerBudgetNote workers x
+                    @Fmt(D.BudgetTotalCoreMs / Math.Max(1, D.WorkerBudgetNote), "0") ms window
+                </span>
+            </div>
+            <div class="hero-grade">@Fmt(D.UtilizationPercent, "0")%</div>
+        </div>
+
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">CYCLE @D.CycleIndex - budget @Fmt(D.BudgetTotalCoreMs / 1000.0, "0.0") core-s</div>
+                <div class="stat-row"><span>Base solve (single core)</span><b>@Fmt(D.BaseSolveMs, "0.0") ms</b></div>
+                <div class="stat-row"><span>Fan-out wall time</span><b>@Fmt(D.WallMs, "0") ms</b></div>
+                <div class="stat-row"><span>Compute spent</span><b>@Fmt(D.BudgetSpentCoreMs / 1000.0, "0.00") / @Fmt(D.BudgetTotalCoreMs / 1000.0, "0.00") core-s</b></div>
+                <div class="stat-row"><span>Utilization</span><b class="@UtilClass(D.UtilizationPercent)">@Fmt(D.UtilizationPercent, "0")%</b></div>
+                <div class="stat-row"><span>High tier</span><b class="@(D.HighTierMet ? "g-green" : "g-red")">@D.HighCompleted / @D.HighTotal complete</b></div>
+                <div class="stat-row"><span>Low tier (done / admitted / deferred)</span><b>@D.LowCompleted / @D.LowAdmitted / @D.LowDeferred</b></div>
+                @if (D.LowCancelled > 0)
+                {
+                    <div class="stat-row"><span>Low cancelled at deadline</span><b class="g-amber">@D.LowCancelled</b></div>
+                }
+                <div class="stat-row"><span>Backlog depth</span><b>@D.BacklogDepth</b></div>
+                @if (D.NMinus1ShardsTotal > 0)
+                {
+                    <div class="stat-row">
+                        @* D-DOC-144: cumulative since the case was loaded (it never falls), so not "rolling". *@
+                        <span>N-1 shards covered since load</span>
+                        <b class="@(D.NMinus1ShardsCovered >= D.NMinus1ShardsTotal ? "g-green" : "g-amber")">
+                            @D.NMinus1ShardsCovered / @D.NMinus1ShardsTotal shards
+                        </b>
+                    </div>
+                }
+                <div class="stat-row">
+                    <span>Worst contingency seen</span>
+                    <b class="@WorstClass()">@WorstText()</b>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-h">JOBS THIS CYCLE - High first, heaviest first</div>
+                @foreach (CycleJobDto j in D.Jobs)
+                {
+                    <div class="stat-row">
+                        <span>
+                            <b class="@(j.Priority == "High" ? "g-green" : "")">@j.Priority</b>
+                            | @j.Name @(j.FromStaleFrame ? "| (prev frame)" : "")
+                        </span>
+                        <b class="@OutcomeClass(j.Outcome)">@OutcomeText(j) </b>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <p class="note">
+            The Newton-Raphson base solve is single-core; once it converges its immutable frame is shared to
+            every downstream analysis and run across a worker pool. <b>High</b> jobs (hot N-1, harmonics,
+            watch list) complete every cycle; <b>Low</b> jobs (rotating N-1 shards, RoCoF, conformance) run
+            best-effort within the compute budget (@D.WorkerBudgetNote workers x window) and rotate to full
+            N-1 coverage over several cycles. Compute budget is measured in core-milliseconds, so it scales
+            with core count.
+        </p>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private CycleDto? D => Frame?.Cycle;
+
+    private static string Fmt(double v, string fmt) => double.IsFinite(v) ? v.ToString(fmt) : "-";
+
+    private static string UtilClass(double pct) => pct switch
+    {
+        > 100 => "g-red",     // High overran the budget (allowed - it always completes)
+        > 85 => "g-amber",
+        _ => "g-green",
+    };
+
+    private string WorstText()
+    {
+        if (D?.WorstContingency is null) return "none - all secure";
+        return D.WorstContingencyIslanded
+            ? $"{D.WorstContingency} - islands"
+            : $"{D.WorstContingency} - {D.WorstContingencyViolations} violation{(D.WorstContingencyViolations == 1 ? "" : "s")}";
+    }
+
+    private string WorstClass()
+    {
+        if (D?.WorstContingency is null) return "g-green";
+        return D.WorstContingencyIslanded || D.WorstContingencyViolations > 0 ? "g-red" : "g-green";
+    }
+
+    private static string OutcomeClass(string outcome) => outcome switch
+    {
+        "Completed" => "g-green",
+        "Cancelled" => "g-amber",
+        "Deferred" => "",
+        _ => "g-red",   // Faulted
+    };
+
+    private static string OutcomeText(CycleJobDto j) => j.Outcome switch
+    {
+        "Completed" => $"OK {j.CoreMs:0} ms",
+        "Cancelled" => "! cancelled",
+        "Deferred" => "| deferred",
+        _ => "X faulted",
+    };
+}

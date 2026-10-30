@@ -1,0 +1,18 @@
+$ gridsim screen --top 6
+GridSim  -  N-1 RoCoF screening: GB reduced (10-zone)
+==========================================================================
+System inertia 171.7 GVAs  demand 39.50 GW  limits: RoCoF 0.125 Hz/s, statutory 49.5 Hz
+--------------------------------------------------------------------------
+Lost infeed                       MW   Inertia(rem)   RoCoF   Nadir   Verdict
+--------------------------------------------------------------------------
+Midlands CCGT (marginal)         5625    126.7 GVAs  -1.110   46.49  LFDD RISK
+East Anglia Offshore Wind        4000    171.7 GVAs  -0.582   47.76  LFDD RISK
+Hinkley Point Nuclear            2880    158.9 GVAs  -0.453   48.34  LFDD RISK
+Yorkshire CCGT                   2400    151.7 GVAs  -0.396   48.59  LFDD RISK
+Heysham Nuclear                  2160    162.1 GVAs  -0.333   48.76  LFDD RISK
+South Scotland Onshore Wind      2000    171.7 GVAs  -0.291   48.88  <49.5 Hz
+--------------------------------------------------------------------------
+28 credible single losses screened  19 breach a limit  worst RoCoF -1.110 Hz/s (Midlands CCGT (marginal))
+binding case needs >= 1125.0 GVAs spinning for 0.125 Hz/s (has 126.7, headroom -998.3 GVAs)
+Verdict: NOT SECURE, 19 of 28 single loss(es) breach a limit (exit 3).
+[exit 3]

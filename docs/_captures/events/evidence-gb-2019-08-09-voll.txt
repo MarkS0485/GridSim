@@ -1,0 +1,3 @@
+$ gridsim evidence --event gb-2019-08-09 --voll 17000 --duration 1 --voll-source example-citation
+error: evidence: --voll-source 'example-citation' is not a reference that states a GB value of lost load. Name one of S324, S322, S323 (docs/reference/voll), with --voll set to a figure it states.
+[exit 2]

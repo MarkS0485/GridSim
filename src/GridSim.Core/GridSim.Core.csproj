@@ -1,0 +1,93 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net10.0. Pure, platform-neutral numerics - no UI or OS deps - and ready
+         for an ILGPU/CUDA compute backend behind the linear-solver seam later. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.Core</RootNamespace>
+    <AssemblyName>GridSim.Core</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <!-- UI programme Phase 0.1: Core must run under NativeAOT (the iOS head) and trimming. This turns on the trim,
+         AOT and single-file analysers; with TreatWarningsAsErrors any reflection-only JSON call or unannotated
+         reflection now fails the build. Every System.Text.Json call goes through a source-generated
+         JsonSerializerContext (one per call site, beside it). It also makes the SDK add its ILLink analyser package
+         (Microsoft.NET.ILLink.Tasks, build-time only, versioned with the SDK) to this project's packages.lock.json. -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <!-- The test project reaches internal numeric helpers (e.g. NewtonShell) to unit-test them
+       directly, without widening the public API surface. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GridSim.Tests" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PackageId>GridSim.Core</PackageId>
+    <!-- Version: set once for every project in Directory.Build.props (F02); do not add one here. -->
+    <Authors>MarkS0485</Authors>
+    <Description>A grounded, physics-first power-grid simulator: per-unit network model, complex Y-bus, and a Newton-Raphson load flow behind a swappable linear-solver seam (CPU now, CUDA later).</Description>
+    <PackageTags>power-systems;grid;simulation;load-flow;power-flow;newton-raphson;ybus;electrical;ieee;energy</PackageTags>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Copyright>Copyright (C) 2026 MarkS0485</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="\" Visible="false" />
+    <!-- D1 (October 2026): Core contains a C# port of Sun's FDLIBM 5.3 (Numerics/Fdlibm.*.cs), whose licence asks
+         that its notice be preserved; the notices file carries it into the package. -->
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+  <!-- Standard test systems embedded for the built-in IeeeCases factories. Single source of
+       truth: the committed .m files under data/matpower. LogicalName gives a stable resource id
+       (GridSim.Core.cases.<name>.m) independent of the on-disk folder. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\data\matpower\lib\case9.m"           LogicalName="GridSim.Core.cases.case9.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case14.m"          LogicalName="GridSim.Core.cases.case14.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case30.m"          LogicalName="GridSim.Core.cases.case30.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case57.m"          LogicalName="GridSim.Core.cases.case57.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case118.m"         LogicalName="GridSim.Core.cases.case118.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case300.m"         LogicalName="GridSim.Core.cases.case300.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case145.m"         LogicalName="GridSim.Core.cases.case145.m" />
+    <EmbeddedResource Include="..\..\data\matpower\lib\case24_ieee_rts.m" LogicalName="GridSim.Core.cases.case24_ieee_rts.m" />
+    <EmbeddedResource Include="..\..\data\matpower\benchmarks\cigre_mv.m" LogicalName="GridSim.Core.cases.cigre_mv.m" />
+    <!-- The shipped-content manifest, compiled in: for the install's own data folders the embedded copy decides what is
+         bundled, so appending a line to the data/bundled.sha256 beside the data (which anyone who can drop a network
+         there can also edit) grants nothing. -->
+    <EmbeddedResource Include="..\..\data\bundled.sha256" LogicalName="GridSim.Core.bundled.sha256" />
+  </ItemGroup>
+
+  <!-- Case editor (SCHEMA-EDITOR-PLAN.md, slice E2): the v1 and v2 schema files embedded, because schemas/ is not
+       copied to every output. Single source of truth: the committed files under schemas/ (a test pins the embedded
+       bytes equal to the on-disk bytes). Only the top-level *.schema.json files: schemas/v2/kinds holds kind specs,
+       which are documents validated BY a schema, not schemas. LogicalName: GridSim.Core.schemas.v1.<file>. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\schemas\v1\*.schema.json" LogicalName="GridSim.Core.schemas.v1.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\schemas\v2\*.schema.json" LogicalName="GridSim.Core.schemas.v2.%(Filename)%(Extension)" />
+    <!-- N327: the v2 kind specs too, under their own prefix (so the schema set above is unchanged), because the editor's
+         v2 save stage runs the v2 loader, which reads them from a kinds folder. -->
+    <EmbeddedResource Include="..\..\schemas\v2\kinds\*.kind.json" LogicalName="GridSim.Core.schemas.v2kinds.%(Filename)%(Extension)" />
+    <!-- Phase 5a (2026-10-20): the asset overlay kind specs (schemas/v2/kinds/overlay), under a third prefix, so the
+         schema set and the template kinds above are unchanged and the v2 loader the save gate runs can check an
+         overlay. -->
+    <EmbeddedResource Include="..\..\schemas\v2\kinds\overlay\*.kind.json" LogicalName="GridSim.Core.schemas.v2overlaykinds.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- The case editor app (src/GridSim.SchemaEditor) drives the Core-internal case-editing engine
+       (IO/Json/CaseEditing) without widening the public API. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GridSim.SchemaEditor" />
+  </ItemGroup>
+
+  <!-- The platform-neutral UI layer (src/GridSim.Ui, UI programme Phase 0.2) will wrap the same Core-internal
+       case-editing engine for the desktop and mobile front ends, the same pattern as the case editor above, so Core's
+       public API does not have to widen for it. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GridSim.Ui" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,7 @@
+# results/scenario-gb-2019-08-09/risk-curve.csv
+inertia_gvas,rocof_no_device,nadir_no_device,lfdd_no_device,rocof_with_device,nadir_with_device,lfdd_with_device,lfdd_avoided_by_device
+260,-0.1352,48.472,True,-0.0946,48.996,False,True
+155,-0.2149,48.462,True,-0.1430,49.001,False,True
+120,-0.2670,48.436,True,-0.1735,48.978,False,True
+102,-0.3046,48.414,True,-0.1949,48.960,False,True
+50,-0.5320,48.108,True,-0.3014,48.880,False,True

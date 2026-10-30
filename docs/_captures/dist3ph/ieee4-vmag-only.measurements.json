@@ -1,0 +1,61 @@
+{
+ "schema": "gridsim-dist3ph-measurements/1",
+ "description": "SYNTHETIC: voltage magnitudes only, no currents and no pseudo-measurements (not observable).",
+ "voltageMagnitudes": [
+  {
+   "bus": 2,
+   "phase": "a",
+   "valuePu": 0.995022,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 2,
+   "phase": "b",
+   "valuePu": 0.987628,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 2,
+   "phase": "c",
+   "valuePu": 0.983675,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 3,
+   "phase": "a",
+   "valuePu": 0.95991,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 3,
+   "phase": "b",
+   "valuePu": 0.938745,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 3,
+   "phase": "c",
+   "valuePu": 0.917157,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 4,
+   "phase": "a",
+   "valuePu": 0.905567,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 4,
+   "phase": "b",
+   "valuePu": 0.803496,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 4,
+   "phase": "c",
+   "valuePu": 0.763044,
+   "sigmaPu": 0.001
+  }
+ ],
+ "currents": []
+}

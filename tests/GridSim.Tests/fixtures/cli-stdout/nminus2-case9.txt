@@ -1,0 +1,19 @@
+GridSim  -  N-2 branch screening: IEEE 9-bus (WSCC)  [top-20 candidate pairs]
+==========================================================================
+Base case: secure (no violation before any outage).
+Screening N-1 first, then pairing the 20 most-stressed single outages that solve.
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+9-4 + 8-9                       ISLANDED      islanded
+9-4 + 7-8                       ISLANDED      islanded
+9-4 + 6-7                       ISLANDED      islanded
+9-4 + 5-6                       ISLANDED      islanded
+9-4 + 4-5                       ISLANDED      islanded
+--------------------------------------------------------------------------
+(showing worst 5 of 15)
+15 outages screened  0 secure  0 with violations  15 islanded
+3 single outage(s) left out of the pairing because they already fail at N-1 (islanded or no solution):
+  1-4                             islanded
+  3-6                             islanded
+  8-2                             islanded
+Verdict: NOT SECURE, 18 insecure outage(s) (exit 3).

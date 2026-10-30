@@ -1,0 +1,28 @@
+$ gridsim bench --perf --runs 5 --out results/perf-docs.md
+    GridSim  -  2026-10-20 05:05:20 UTC
+    code:    git v1.95.294-173-g203c6b9c  |  GridSim.Core v1.95.467.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     perf-baseline  runs=5
+
+Focused before/after yardstick for the performance programme. Single-threaded, warmed,
+median of N runs. Allocations are managed bytes on the measuring thread.
+
+| Path | Case | Buses | metric | value |
+|------|------|------:|--------|------:|
+| sparse-nr | case118 | 118 | median_ms | 3.432 |
+| sparse-nr | case118 | 118 | alloc_kb | 482.7 |
+| sparse-nr | case300 | 300 | median_ms | 7.048 |
+| sparse-nr | case300 | 300 | alloc_kb | 1899.7 |
+| fault-study | case300 | 300 | median_ms | 3.966 |
+| fault-study | case300 | 300 | alloc_kb | 1360.2 |
+| oltc-loop | case118 | 118 | median_ms | 1.801 |
+| oltc-loop | case118 | 118 | alloc_kb | 495.8 |
+| harmonic-scan | case118 | 118 | median_ms | 2.669 |
+| harmonic-scan | case118 | 118 | alloc_kb | 779.2 |
+
+-> results\perf-docs.md
+[exit 0]

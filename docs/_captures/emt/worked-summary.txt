@@ -1,0 +1,12 @@
+$ cat emt-fault/summary.md
+# EMT run: case14
+
+- steps: 2,500 @ 20 us (dur 0.05s)
+- source: bus 1, amp 1 pu, 50 Hz
+- refactorizations: 5
+- peak |probe|: 4.3636
+- wall: 15.9 ms (156,918 steps/s)
+- rule: Trapezoidal, CDA: True
+
+A forward model trajectory, not a claim about the real grid.
+[exit 0]

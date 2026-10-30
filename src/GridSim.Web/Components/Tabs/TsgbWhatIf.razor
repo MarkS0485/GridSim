@@ -1,0 +1,213 @@
+@using GridSim.Core.Dynamics
+@using GridSim.Core.Frequency
+@using GridSim.Web.Components.Visuals
+@using TripWhatIf = GridSim.Core.Presentation.TripWhatIf
+@using ExactInputMemo = GridSim.Core.Presentation.ExactInputMemo
+
+@* The signature TSGB device what-if: two sliders (synthetic inertia + fast response), a baseline-vs-device
+   frequency trace against the GB limit lines, a RoCoF/nadir pass-fail verdict, and the device sizing that
+   would secure the design-basis loss. Blazor port of the TSGB DEVICE card in GridSim.Wpf GenerationView. *@
+
+<div class="card device-card">
+    <div class="card-h">TSGB DEVICE - synthetic inertia + fast frequency response</div>
+
+    @if (LargestLossMw < 1)
+    {
+        <p class="muted-note">No unit generating - run the sim to trip the largest infeed.</p>
+    }
+    else
+    {
+        <div class="tsgb-ctx">
+            largest online unit <b>@LargestLossName</b> | trip -@LargestLossMw.ToString("N0") MW |
+            system @( (InertiaGvaS).ToString("0.0") ) GVA.s | demand @DemandMw.ToString("N0") MW
+        </div>
+
+        <div class="tsgb-sliders">
+            <label class="tsgb-slider">
+                <span class="sl-h"><span>Synthetic inertia</span><b>@_inertiaGva.ToString("0") GVA.s</b></span>
+                <input type="range" min="0" max="150" step="1"
+                       value="@_inertiaGva" @oninput="OnInertia" />
+            </label>
+            <label class="tsgb-slider">
+                <span class="sl-h"><span>Fast response</span><b>@_ffrGw.ToString("0.0") GW</b></span>
+                <input type="range" min="0" max="10" step="0.1"
+                       value="@_ffrGw" @oninput="OnFfr" />
+            </label>
+        </div>
+
+        <button class="tsgb-trip" @onclick="Recompute">SIMULATE LARGEST-UNIT TRIP</button>
+
+        @if (_base is not null && _device is not null)
+        {
+            <div class="panel-grid four">
+                <div class="mini @Grade(_base, false)"><span class="mv">@_base.InitialRocofHzPerS.ToString("0.000")</span><span class="ml">Baseline RoCoF Hz/s</span></div>
+                <div class="mini @Grade(_base, true)"><span class="mv">@_base.NadirHz.ToString("0.00")</span><span class="ml">Baseline nadir Hz</span></div>
+                <div class="mini @Grade(_device, false)"><span class="mv">@_device.InitialRocofHzPerS.ToString("0.000")</span><span class="ml">+TSGB RoCoF Hz/s</span></div>
+                <div class="mini @Grade(_device, true)"><span class="mv">@_device.NadirHz.ToString("0.00")</span><span class="ml">+TSGB nadir Hz</span></div>
+            </div>
+
+            @* N297 (B4): the reference lines and scale about the case's nominal (the GB 50.0 / 49.8 / 49.5 / 48.8 lines and
+               48.6 - 50.5 Hz scale at 50 Hz, exactly as before). *@
+            <FrequencyTrace Baseline="_baseSeries" Device="_deviceSeries"
+                            BaselineLabel="baseline" DeviceLabel="+ TSGB"
+                            References="FrequencyTrace.For(Bands)"
+                            FMin="FrequencyBands.GbEdgeAbout(48.6, NominalHz)" FMax="FrequencyBands.GbEdgeAbout(50.5, NominalHz)"
+                            Width="640" Height="220" />
+            <div class="chart-legend">
+                <span class="lg base">* Baseline (no device)</span>
+                <span class="lg dev">* With TSGB device</span>
+                <span>- @FrequencyBands.Label(Bands.StatutoryLowHz) Hz statutory | @FrequencyBands.Label(Bands.LfddFirstStageHz) Hz LFDD</span>
+            </div>
+
+            <p class="tsgb-verdict @VerdictClass">@Verdict()</p>
+        }
+
+        @if (_sizing is not null)
+        {
+            <div class="tsgb-sizing">
+                <div class="card-h">DEVICE SIZING - to secure this loss (&lt;=@TripWhatIf.SizingMaxRocofHzPerS.ToString("0.###") Hz/s | >=@TripWhatIf.SizingMinNadirHz(Bands).ToString("0.0") Hz)</div>
+                <div class="panel-grid four">
+                    <div class="stat-row"><span>Synthetic inertia</span><b>+@((_sizing.SyntheticInertiaMwS / 1000.0).ToString("0")) GVA.s</b></div>
+                    <div class="stat-row"><span>Fast response</span><b>@((_sizing.FastResponseMw / 1000.0).ToString("0.0")) GW</b></div>
+                    <div class="stat-row"><span>Achieved RoCoF</span><b>@_sizing.AchievedRocofHzPerS.ToString("0.000") Hz/s</b></div>
+                    <div class="stat-row"><span>Achieved nadir</span><b>@_sizing.AchievedNadirHz.ToString("0.00") Hz</b></div>
+                </div>
+                @* R254: the sizer's search is bounded; when even its largest size cannot hold the nadir target, say so. *@
+                @if (!_sizing.Feasible)
+                {
+                    <p class="muted-note">Not achieved: the nadir target is not met even at the largest size searched.</p>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>Total live system inertia (GVA.s) - mirrors GenInertiaDto.InertiaGvaS / Headline.InertiaGvaS.</summary>
+    [Parameter] public double InertiaGvaS { get; set; }
+    /// <summary>System demand (MW) - sets load damping in the swing model (Frame.Headline.DemandMw).</summary>
+    [Parameter] public double DemandMw { get; set; }
+    /// <summary>Design-basis loss (MW) - the live largest online single infeed, any technology since N039 (B4, 2026-10)
+    /// (Frame.Operator.LargestLossMw).</summary>
+    [Parameter] public double LargestLossMw { get; set; }
+    [Parameter] public string LargestLossName { get; set; } = "-";
+    /// <summary>N297 (B4, October 2026; Ruling R1: Mark delegated EE calls 2026-10-04): the session case's nominal
+    /// frequency. The what-if runs at it and grades against the GB bands about it. Default 50 Hz (every GB case).</summary>
+    [Parameter] public double NominalHz { get; set; } = FrequencyLimits.NominalHz;
+
+    private FrequencyBands Bands => FrequencyBands.ForNominal(NominalHz);
+
+    // Slider state - defaults match the WPF card (30 GVA.s synthetic inertia, 2 GW fast response).
+    private double _inertiaGva = 30;
+    private double _ffrGw = 2;
+
+    private FrequencyResponse? _base;
+    private FrequencyResponse? _device;
+    private TsgbSizing? _sizing;
+    private IReadOnlyList<(double T, double Hz)>? _baseSeries;
+    private IReadOnlyList<(double T, double Hz)>? _deviceSeries;
+
+    protected override void OnParametersSet() => Recompute();
+
+    private void OnInertia(ChangeEventArgs e) { _inertiaGva = ParseD(e, _inertiaGva); Recompute(); }
+    private void OnFfr(ChangeEventArgs e) { _ffrGw = ParseD(e, _ffrGw); Recompute(); }
+
+    /// <summary>R131 (stream P, October 2026): the exact inputs of the last completed run (see ExactInputMemo).</summary>
+    private readonly ExactInputMemo _memo = new();
+
+    private void Recompute()
+    {
+        // R131 (stream P, October 2026): OnParametersSet runs on every Dashboard render (each live frame and each 4 s
+        // presence heartbeat), and every run does two swings plus TsgbSizer (up to 52 more). Everything below is a pure
+        // function of these six inputs, so when every one is the same to the bit as at the last completed run, the results
+        // already held are exactly what a new run would give, and the run is skipped (the SIMULATE button included: it
+        // would draw the very same traces). Not rounded to display precision, as the finding suggested: that could show
+        // results of other inputs.
+        if (_memo.IsUnchanged(null, LargestLossMw, InertiaGvaS, DemandMw, _inertiaGva, _ffrGw, NominalHz)) return;
+        RecomputeNow();
+        _memo.Remember(null, LargestLossMw, InertiaGvaS, DemandMw, _inertiaGva, _ffrGw, NominalHz);
+    }
+
+    /// <summary>The computation itself, unchanged (it was the body of Recompute before R131).</summary>
+    private void RecomputeNow()
+    {
+        double loss = LargestLossMw;
+        if (loss < 1) { _base = _device = null; _sizing = null; return; }
+
+        // Mirror TripTab's Simulate argument construction: full live system inertia (GVA.s -> MW.s),
+        // demand for load damping, a single -loss step at t=1s. (WPF strips the tripped unit's own
+        // inertia; the web projection doesn't expose per-unit inertia, so we use the system total like TripTab.)
+        double inertiaMwS = Math.Max(1.0, InertiaGvaS * 1000.0);
+        double demand = Math.Max(1.0, DemandMw);
+        var ev = new[] { new FrequencyEvent(1.0, -Math.Abs(loss)) };
+
+        // N297 (B4, October 2026; Ruling R1): the swing runs at the case's nominal (a default config at 50 Hz, exactly
+        // the config it always used), so case9 (60 Hz) agrees with CLI `trip`.
+        DynamicsConfig studyCfg = TripWhatIf.StudyConfig(NominalHz);
+        _base = FrequencyDynamics.Simulate(inertiaMwS, demand, ev, studyCfg);
+        var cfg = studyCfg with
+        {
+            DeviceRotationalInertiaMwS = _inertiaGva * 1000.0, // GVA.s -> MW.s of real (1/2)J omega^2 inertia
+            FastResponseMw = _ffrGw * 1000.0,                  // GW -> MW of fast frequency response
+        };
+        _device = FrequencyDynamics.Simulate(inertiaMwS, demand, ev, cfg);
+
+        _baseSeries = ToSeries(_base);
+        _deviceSeries = ToSeries(_device);
+
+        // Device sizing for the design-basis loss - matches WPF and the TRIP / DEVICE tab: the one pair of targets
+        // (R148, TripWhatIf: legacy 0.125 Hz/s RoCoF, the statutory low edge about the case's nominal).
+        _sizing = TsgbSizer.SizeForTargets(inertiaMwS, demand, loss,
+            TripWhatIf.SizingMaxRocofHzPerS, TripWhatIf.SizingMinNadirHz(Bands), studyCfg);
+    }
+
+    private static IReadOnlyList<(double T, double Hz)> ToSeries(FrequencyResponse r)
+    {
+        IReadOnlyList<FrequencyPoint> pts = r.Points;
+        if (pts is null || pts.Count == 0) return System.Array.Empty<(double, double)>();
+        DateTime t0 = pts[0].Time;
+        var list = new List<(double, double)>(pts.Count);
+        foreach (FrequencyPoint p in pts) list.Add(((p.Time - t0).TotalSeconds, p.Hz));
+        return list;
+    }
+
+    private static double ParseD(ChangeEventArgs e, double fallback) =>
+        double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : fallback;
+
+    // RoCoF: >1.0 Hz/s breaches the modern relay limit (alarm), >0.5 is a warning. Nadir: at or below the LFDD stage,
+    // below the statutory edge. R148 / N297 (B4): the shared cuts (TripWhatIf), against the bands about the case's nominal.
+    private string Grade(FrequencyResponse r, bool nadir) => TripWhatIf.CssClass(
+        nadir ? TripWhatIf.GradeNadir(r.NadirHz, Bands) : TripWhatIf.GradeRocof(r.InitialRocofHzPerS));
+
+    // N297: every assessment against the bands about the case's nominal (FrequencyBands.Gb at 50 Hz: the old verdicts).
+    private FrequencyAssessment AssessHere(FrequencyResponse r) => FrequencyLimits.Assess(r, FrequencyLimits.ActiveRocofLimitHzPerS, Bands);
+
+    private string VerdictClass
+    {
+        get
+        {
+            if (_device is null) return "";
+            FrequencyAssessment da = AssessHere(_device);
+            return da.BelowStatutory || da.RocofExceedsActiveLimit ? "fail" : "pass";
+        }
+    }
+
+    private string Verdict()
+    {
+        if (_base is null || _device is null) return "";
+        FrequencyAssessment ba = AssessHere(_base);
+        FrequencyAssessment da = AssessHere(_device);
+        bool devSecure = !da.BelowStatutory && !da.RocofExceedsActiveLimit;
+        double nadirLift = _device.NadirHz - _base.NadirHz;
+        double rocofCut = (1 - Math.Abs(_device.InitialRocofHzPerS) / Math.Max(1e-6, Math.Abs(_base.InitialRocofHzPerS))) * 100;
+
+        string basePart = ba.BelowStatutory || ba.RocofExceedsActiveLimit
+            ? $"Baseline FAILS ({ba.Summary})"
+            : $"Baseline holds ({ba.Summary})";
+        string devPart = devSecure
+            ? $"with the device the trip stays within limits - nadir +{nadirLift:0.00} Hz, RoCoF cut {rocofCut:0}%."
+            : $"the device helps (nadir +{nadirLift:0.00} Hz, RoCoF cut {rocofCut:0}%) but does not yet secure it ({da.Summary}).";
+        return $"{basePart}; {devPart}";
+    }
+}

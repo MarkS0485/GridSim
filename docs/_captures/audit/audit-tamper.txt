@@ -1,0 +1,3 @@
+$ gridsim audit verify results/audit-docs-tampered.log
+TAMPERED results/audit-docs-tampered.log: entry 0: the stored hash does not match the hash recomputed from the entry's fields: this entry's content was edited (0 entries verified before it)
+[exit 3]

@@ -1,0 +1,3 @@
+$ head -n 1 results/exports-docs/audit.log
+{"format":"gridsim-audit/1","seq":0,"runUtc":"2026-10-04T14:31:32.5952612Z","stateUtc":"2024-03-01T12:00:00.0000000Z","provenance":"Synthetic","summary":"actor=analyst@workstation action=estimate inputs=case-id:D784A646F9FED50DEE41E22A244DBAC3BF6B790D2476876CCB2B3A737613CBEB,synthetic-measurements:E9281C961D5E9D1471BB0178820A6EBED4DC3FA850FF67BB3486DA351A69CBEE outcome=exit=0 method=Wls status=Converged observable=True J=43.07228520174633 chi2=PASS dof=46 removed=0 measurements=63","prevHash":"GENESIS","hash":"E9701F8399B010179142F145A733B2C2BA2BD19931AECCEE808A071299B8068A"}
+[exit 0]

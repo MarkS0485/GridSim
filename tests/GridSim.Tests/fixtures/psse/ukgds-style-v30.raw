@@ -1,0 +1,42 @@
+@!	System Base								
+0	100								
+@! Headings									
+GridSim UKGDS-style test network									
+Revision 30 layout as the UKGDS files write it, written for GridSim									
+@!Bus	Name	Base_kV	Type	Y_re	Y_im	Area	Zone	PU Volt	Angle
+1	'GRID'	132	3	0	0	1	1	1	0
+2	'BSP'	33	1	0	0	1	1	1	0
+3	'PRI-A'	11	1	0	2.5	1	2	1	0
+4	'PRI-B'	11	1	0	0	1	2	1	0
+5	'DG'	11	2	0	0	1	2	1	0
+0									
+@!Bus	Load ID	Status	Area	Zone	LP	LQ			
+3	1	1	1	2	4.2	1.4			
+4	1	1	1	2	3.1	1.0
+0																
+@!Bus	ID	P	Q	Qmax	Qmin	SchedV	RegBs	MVAbase	ZR	ZX	RTr	XTr	GTAP	Stat	Percent	Pmax	Pmin
+1	1	0	0	999	-999	1	0	100	0	0.01	0	0	1	1	100	999	-999
+5	1	2	0	1	-1	1.01	0	3	0	0.2	0	0	1	1	100	3	0
+0																	
+@!From	To	ID	R	X	B	RateA	RateB	RateC	G_busI	B_busI	G_busJ	B_busJ	Stat	Len			
+3	4	1	0.05	0.08	0.0001	10	12	8	0	0	0	0	1	2.5			
+4	5	1	0.04	0.06	0	10	12	8	0	0	0	0	1	1.2
+3	5	1	0.1	0.15	0	10	12	8	0	0	0	0	0	3.0
+0															
+@!From	To	K	ID	CW	CZ	CM	MAG1	MAG2	NMETR	‘NAME’	STAT	O1	F1		
+@!R1-2	X1-2	SBASE1-2													
+@!WINDV1	NOMV1	ANG1	RATA1	RATB1	RATC1	COD	CONT	RMA	RMI	VMA	VMI	NTP	TAB	CR	CX
+@!WINDV2	NOMV2														
+1	2	0	1	1	1	2	0	0	2	'1-2'	1	1	1	/	/
+0.002	0.08	100	/	/	/	/	/	/	/	/	/	/	/	/	/
+1	0	0	90	108	72	1	2	1.05	0.85	1.03	0.97	41	0	0	0
+1	0	/	/	/	/	/	/	/	/	/	/	/	/	/	/
+2	3	0	1	1	1	2	0	0	2	'2-3'	1	1	1	/	/
+0.05	0.9	100	/	/	/	/	/	/	/	/	/	/	/	/	/
+1	0	-30	24	28.8	19.2	1	3	1.05	0.85	1.03	0.97	21	0	0	0
+1	0	/	/	/	/	/	/	/	/	/	/	/	/	/	/
+2	4	0	1	1	1	2	0	0	2	'2-4'	1	1	1	/	/
+0.06	1.0	100	/	/	/	/	/	/	/	/	/	/	/	/	/
+1.025	0	-30	24	28.8	19.2	0	0	1.05	0.85	1.03	0.97	21	0	0	0
+1	0	/	/	/	/	/	/	/	/	/	/	/	/	/	/
+Q															

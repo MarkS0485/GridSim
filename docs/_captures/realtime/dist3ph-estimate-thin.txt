@@ -1,0 +1,7 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-thin.json
+THREE-PHASE DISTRIBUTION (estimate) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+  measurements: 3 voltage magnitude(s), 3 current phasor(s), 0 nominal-voltage pseudo-measurement(s); method wls
+dist3ph: the three-phase estimator did not converge after 0 iteration(s) (final max state update Infinity); the measurement set may be unobservable. No estimate reported.
+[exit 3]

@@ -1,0 +1,4 @@
+$ gridsim licence status
+Personal * unregistered * 1,500 buses * no expiry  (licence key from GRIDSIM_LICENCE rejected: licence signature is invalid (key was altered or not issued by GridSim))
+licence file: $LOCALAPPDATA\GridSim\licence.gridsim
+[exit 0]

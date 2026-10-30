@@ -1,0 +1,4 @@
+$ gridsim trip results/asset-grounding/ramp-key --asset-dynamics on
+error: cannot load case folder 'results/asset-grounding/ramp-key': Unsupported asset class input (R073):
+  asset class 'gfl-wind-2024' sets 'dispatchRampMwPerMin': no controller reads it: the inverter controllers model the frequency response about a fixed dispatch, so there is no dispatch setpoint to ramp (the fast response is already rate-limited by fastSlewUp/DownMwPerSPerMw). The bundled values were an observed fleet ramp band, recorded in docs/technical/0013 Asset-dynamics data grounding.md. Remove the key.
+[exit 1]

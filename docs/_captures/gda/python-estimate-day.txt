@@ -1,0 +1,58 @@
+$ python NetworkModel/build_estimated_state.py --date 2026-09-01
+  SP02 ok  iters=23  J=301.6  chi=PASS  removed=1
+  SP03 ok  iters=23  J=288.8  chi=PASS  removed=1
+  SP04 ok  iters=22  J=278.4  chi=PASS  removed=1
+  SP05 ok  iters=44  J=226.9  chi=PASS  removed=3
+  SP06 ok  iters=36  J=212.2  chi=PASS  removed=2
+  SP07 ok  iters=32  J=203.0  chi=PASS  removed=2
+  SP08 ok  iters=59  J=198.0  chi=PASS  removed=5
+  SP09 ok  iters=59  J=192.1  chi=PASS  removed=5
+  SP10 ok  iters=39  J=359.4  chi=PASS  removed=3
+  SP11 ok  iters=24  J=356.3  chi=PASS  removed=1
+  SP12 ok  iters=53  J=345.0  chi=PASS  removed=4
+  SP13 ok  iters=24  J=295.1  chi=PASS  removed=1
+  SP14 ok  iters=24  J=274.6  chi=PASS  removed=1
+  SP15 ok  iters=22  J=280.5  chi=PASS  removed=1
+  SP16 ok  iters=47  J=271.1  chi=PASS  removed=4
+  SP17 ok  iters=102  J=277.5  chi=PASS  removed=11
+  SP18 ok  iters=102  J=251.5  chi=PASS  removed=11
+  SP19 ok  iters=12  J=338.5  chi=PASS  removed=0
+  SP20 ok  iters=12  J=321.1  chi=PASS  removed=0
+  SP21 ok  iters=11  J=341.4  chi=PASS  removed=0
+  SP22 ok  iters=11  J=355.8  chi=PASS  removed=0
+  SP23 ok  iters=10  J=334.3  chi=PASS  removed=0
+  SP24 ok  iters=10  J=326.0  chi=PASS  removed=0
+  SP25 ok  iters=10  J=330.4  chi=PASS  removed=0
+  SP26 ok  iters=10  J=329.7  chi=PASS  removed=0
+  SP27 ok  iters=10  J=337.1  chi=PASS  removed=0
+  SP28 ok  iters=11  J=341.7  chi=PASS  removed=0
+  SP29 ok  iters=11  J=341.2  chi=PASS  removed=0
+  SP30 ok  iters=24  J=339.5  chi=PASS  removed=2
+  SP31 ok  iters=49  J=358.7  chi=PASS  removed=6
+  SP32 ok  iters=75  J=351.3  chi=PASS  removed=10
+  SP33 ok  iters=58  J=358.5  chi=PASS  removed=7
+  SP34 ok  iters=12  J=331.2  chi=PASS  removed=0
+  SP35 ok  iters=14  J=274.0  chi=PASS  removed=0
+  SP36 ok  iters=15  J=258.9  chi=PASS  removed=0
+  SP37 ok  iters=15  J=250.1  chi=PASS  removed=0
+  SP38 ok  iters=16  J=240.9  chi=PASS  removed=0
+  SP39 ok  iters=16  J=245.3  chi=PASS  removed=0
+  SP40 ok  iters=16  J=239.6  chi=PASS  removed=0
+  SP41 ok  iters=16  J=246.1  chi=PASS  removed=0
+  SP42 ok  iters=17  J=242.0  chi=PASS  removed=0
+  SP43 ok  iters=17  J=255.3  chi=PASS  removed=0
+  SP44 ok  iters=17  J=272.5  chi=PASS  removed=0
+  SP45 ok  iters=18  J=300.8  chi=PASS  removed=0
+  SP46 ok  iters=158  J=357.5  chi=PASS  removed=12
+  SP47 ok  iters=29  J=202.8  chi=PASS  removed=1
+  SP48 ok  iters=29  J=220.9  chi=PASS  removed=1
+{
+  "date": "2026-09-01",
+  "case": "gb-spine",
+  "periods": 47,
+  "converged": 47,
+  "chi_passed": 47,
+  "removed_total": 96,
+  "output": "results\\estimated_state\\gb-spine\\year=2026\\week=36\\estimated_state.parquet"
+}
+[exit 0]

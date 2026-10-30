@@ -1,0 +1,9 @@
+$ python tools/crossval/crossval_impedance.py --export impedance-stability-export.json
+impedance cross-validation: case 'IEEE 9-bus (WSCC)', criterion Siso, mode GridFollowingInverter
+  converterParams present: True   grid impedance: canonical Thevenin
+  per-frequency: max|dZ|=0.00e+00  max|dY|=2.29e-16  max|dL|=1.11e-16  (rtol=9.09495e-13 atol=9.09495e-13)
+  winding: numpy encirclements=0  export unstable-modes=0  export stable=True  -> OK
+  boundary: numpy critical SCR=None  export=NaN  found=False  -> OK
+  independent comparisons made: 515
+RESULT: PASS - all within tolerance
+[exit 0]

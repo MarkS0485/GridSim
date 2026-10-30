@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- F11: hosts the real GridSim.Web app in memory (WebApplicationFactory) for the web host tests. -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+  </ItemGroup>
+
+  <!-- F11: the CLI smoke tests run the real gridsim binary as a separate process. This reference only makes the
+       build compile the CLI before the tests (ReferenceOutputAssembly=false: nothing from it is linked or copied;
+       the tests start src/GridSim.Cli/bin/<Configuration>/net10.0/gridsim.dll themselves). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.Cli\GridSim.Cli.csproj" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.Core\GridSim.Core.csproj" />
+    <ProjectReference Include="..\..\src\GridSim.Gda\GridSim.Gda.csproj" />
+    <ProjectReference Include="..\..\src\GridSim.Gpu\GridSim.Gpu.csproj" />
+    <ProjectReference Include="..\..\src\GridSim.Web\GridSim.Web.csproj" />
+    <!-- The case editor app (an Exe, like GridSim.Web): its key-sequence and screen tests drive the internal editor. -->
+    <ProjectReference Include="..\..\src\GridSim.SchemaEditor\GridSim.SchemaEditor.csproj" />
+    <!-- UI programme Phase 0.2: the platform-neutral UI layer; the host-frame equality and neutrality tests drive it. -->
+    <ProjectReference Include="..\..\src\GridSim.Ui\GridSim.Ui.csproj" />
+  </ItemGroup>
+
+  <!-- The test project does not reference the CLI (an executable). The interposer's TCP transports have no other
+       dependency than Core, so their one source file is compiled into the tests as well, which lets
+       InterposeTransportTests drive the real socket code (client reset, next client accepted). -->
+  <ItemGroup>
+    <Compile Include="..\..\src\GridSim.Cli\InterposeTransport.cs" Link="Linked\InterposeTransport.cs" />
+    <!-- F09 / F10: the per-verb help renderer and the shared result writer are pure (no console state beyond
+         CliOutput's own), so VerbHelpTests and CliResultWriterTests drive the real code directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\VerbHelp.cs" Link="Linked\VerbHelp.cs" />
+    <Compile Include="..\..\src\GridSim.Cli\CliResultWriter.cs" Link="Linked\CliResultWriter.cs" />
+    <!-- N103: the per-verb flag check reads the same chapter; VerbFlagsTests drive it directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\VerbFlags.cs" Link="Linked\VerbFlags.cs" />
+    <!-- DOC-1: the shared exit-code mapping (unknown case vs unloadable case, the user-facing message, the failure tally
+         of gpucheck and bench) has no other dependency; CliExitTests drive it directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\CliExit.cs" Link="Linked\CliExit.cs" />
+    <!-- DOC-7: the conformance allowance list and its exit rule (D-DOC-039), and the sidecar Python locator (N219), are
+         pure; Doc7ValidationSidecarTests drive them directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\ConformanceAllowances.cs" Link="Linked\ConformanceAllowances.cs" />
+    <Compile Include="..\..\src\GridSim.Cli\PythonLocator.cs" Link="Linked\PythonLocator.cs" />
+    <!-- DOC-8 (D-DOC-072): the one output policy is pure (paths and the file system only); CliFilesTests drive it
+         directly, and the shared result writer above writes through it. -->
+    <Compile Include="..\..\src\GridSim.Cli\CliFiles.cs" Link="Linked\CliFiles.cs" />
+    <!-- DOC-11 (D-DOC-065 / 137 / 197): the storage chain's spec parser, price-file reader and output formatting depend
+         only on Core and CliFiles; Doc11OpfContingencyStorageTests drive them directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\StorageCli.cs" Link="Linked\StorageCli.cs" />
+    <!-- GR-692: StorageCli writes its run-metadata sidecar through RunInfo (BCL only). -->
+    <Compile Include="..\..\src\GridSim.Cli\RunInfo.cs" Link="Linked\RunInfo.cs" />
+    <!-- F front doors (R079 / R095): the trace reader, the envelope spec parser and the dynamics-file helpers of the new
+         front doors are pure (Core only); FFrontDoorsTests drive them directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\FrontDoorsCli.cs" Link="Linked\FrontDoorsCli.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\data\**\*.json" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\**\*.csv" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\matpower\**\*.m" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- N229 (LF5, October 2026): the shipped-content manifest; a network is bundled only when its files match it. -->
+    <Content Include="..\..\data\bundled.sha256" Link="data\bundled.sha256" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The bundled data's licence and attribution files, as the CLI ships them (BundledDataLicenceTests). -->
+    <Content Include="..\..\data\**\LICENSE*.txt;..\..\data\**\ATTRIBUTION.txt;..\..\data\**\README.md;..\..\data\**\MODEL_CARD.md"
+             Exclude="..\..\data\reference-inbox\**" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Real GDA serializer output (a gridsim-solve-export/1 zone case), used to lock the bridge wire contract. -->
+    <Content Include="fixtures\**\*.json" Link="fixtures\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

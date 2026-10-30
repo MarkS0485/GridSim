@@ -1,0 +1,114 @@
+[
+  {
+    "name": "B4 SHETL-SPT (SSE-SP)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Peterhead-Denny/Bonnybridge #4",
+        "direction": 1
+      },
+      {
+        "branch": "Peterhead-Denny/Bonnybridge #5",
+        "direction": 1
+      },
+      {
+        "branch": "Errochty-Denny/Bonnybridge #6",
+        "direction": 1
+      },
+      {
+        "branch": "Errochty-Denny/Bonnybridge #7",
+        "direction": 1
+      }
+    ]
+  },
+  {
+    "name": "B6 Scotland-England (SCOTEX)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Neilston-Deeside #16",
+        "direction": 1
+      },
+      {
+        "branch": "Strathaven-Harker #17",
+        "direction": 1
+      },
+      {
+        "branch": "Strathaven-Harker #18",
+        "direction": 1
+      },
+      {
+        "branch": "Eccles-Stella West #23",
+        "direction": 1
+      },
+      {
+        "branch": "Eccles-Stella West #24",
+        "direction": 1
+      }
+    ]
+  },
+  {
+    "name": "B7 Upper North England (HARSPNBLY)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Neilston-Deeside #16",
+        "direction": 1
+      },
+      {
+        "branch": "Harker-Penwortham #25",
+        "direction": 1
+      },
+      {
+        "branch": "Harker-Penwortham #26",
+        "direction": 1
+      },
+      {
+        "branch": "Stella West-Thornton/Drax/Eggborough #29",
+        "direction": 1
+      },
+      {
+        "branch": "Stella West-Thornton/Drax/Eggborough #30",
+        "direction": 1
+      }
+    ]
+  },
+  {
+    "name": "B8 North to Midlands (FLOWSTH)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Deeside-Feckenham #38",
+        "direction": 1
+      },
+      {
+        "branch": "Deeside-Feckenham #39",
+        "direction": 1
+      },
+      {
+        "branch": "Daines-Feckenham #41",
+        "direction": 1
+      },
+      {
+        "branch": "Daines-Feckenham #42",
+        "direction": 1
+      },
+      {
+        "branch": "Th. Marsh/Stocksbridge-Keadby #47",
+        "direction": 1
+      },
+      {
+        "branch": "Th. Marsh/Stocksbridge-Keadby #48",
+        "direction": 1
+      },
+      {
+        "branch": "Thornton/Drax/Eggborough-Keadby #49",
+        "direction": 1
+      },
+      {
+        "branch": "Thornton/Drax/Eggborough-Keadby #50",
+        "direction": 1
+      }
+    ]
+  }
+]

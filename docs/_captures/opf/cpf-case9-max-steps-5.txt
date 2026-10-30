@@ -1,0 +1,6 @@
+$ gridsim cpf case9 --max-steps 5
+CPF - IEEE 9-bus (WSCC) (9 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 2  (base demand 315.0 MW -> 630.0 MW at the last converged point; NOT bracketed: --max-steps 5 ran out with every solve converged, so lambda is only a lower bound)
+  margin 100.00% above base load
+cpf: --max-steps 5 ran out before the nose was bracketed to --min-step 0.001; the lambda above is a lower bound, not the loadability limit. Raise --max-steps (or --min-step). Exit 3.
+[exit 3]

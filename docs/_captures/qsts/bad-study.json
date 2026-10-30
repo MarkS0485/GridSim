@@ -1,0 +1,1 @@
+{ "format": "gridsim-qsts/1", "stepSeconds": 60, "steps": 2, "loads": [ { "buses": [999], "profile": "x" } ] }

@@ -1,0 +1,12 @@
+$ gridsim gda-replay --synth --case case9 --steps 6 --step-min 120 --bess lfp:5:5:10 --policy idle --out results/bess-hourly
+
+=== Historical state estimate: case9 over synthetic-case9 ===
+  reconstructed 6 timestamps  (2024-01-01T00:00:00.0000000Z .. 2024-01-01T10:00:00.0000000Z)
+  non-converged: 0
+  system loss over the series: 1.6 .. 2.9 MW
+  COUNTERFACTUAL (Counterfactual): hypothetical storage on recorded history - not a reconstruction.
+  LFP 5MW/10MWh @5: out 0.0 MWh, in 0.0 MWh, aux 0.12 MWh, stored change +0.0 MWh, round trip -, 0.00 equivalent full cycles
+      ageing over the run: calendar 0.0707 %, cycle 0.0000 % (rainflow, depth-aware: 0.0000 %), deepest cycle 0 % SoC
+
+  -> results\bess-hourly
+[exit 0]

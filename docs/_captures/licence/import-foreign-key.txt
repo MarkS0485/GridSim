@@ -1,0 +1,3 @@
+$ gridsim licence import docs/_captures/licence/inputs/test-key.gridsim
+error: Licence key rejected: licence signature is invalid (key was altered or not issued by GridSim)
+[exit 2]

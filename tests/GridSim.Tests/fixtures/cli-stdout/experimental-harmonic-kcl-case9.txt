@@ -1,0 +1,2 @@
+Harmonic KCL (experimental) - IEEE 9-bus (WSCC) (9 buses), 6-pulse-g5 source at bus 9
+  [Holds] law 12 Harmonic KCL (experimental): residual 4.196E-017 pu (tol 1.000E-008) - harmonic KCL balanced to 4.20E-017 pu

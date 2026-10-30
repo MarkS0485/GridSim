@@ -1,0 +1,50 @@
+{
+  "schema": "gridsim-library/2",
+  "title": "Refused by the library checks",
+  "templates": [
+    {
+      "id": "gridsim.exciter.demo",
+      "rev": 1,
+      "kind": "exciter",
+      "status": "active",
+      "title": "Demo exciter",
+      "params": { "model": "SEXS" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Example" } }
+    },
+    {
+      "id": "gridsim.exciter.demo",
+      "rev": 1,
+      "kind": "exciter",
+      "status": "active",
+      "title": "Demo exciter, again",
+      "params": { "model": "IEEET1" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Example" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Example",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Example",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.machine.demo",
+      "rev": 1,
+      "kind": "synchronousMachine",
+      "status": "active",
+      "title": "Demo machine",
+      "params": { "inertiaH": { "v": 25, "unit": "MW" }, "inertiaZ": 1 },
+      "controllers": {
+        "exciter": "gridsim.placeholder.site.Example@1",
+        "governor": "gridsim.exciter.demo@1",
+        "pss": "gridsim.pss.nothing@1"
+      },
+      "provenance": {
+        "_default": { "tag": "Synthetic", "note": "Example" },
+        "inertiaX": { "tag": "Synthetic", "note": "Names no parameter" }
+      }
+    }
+  ]
+}

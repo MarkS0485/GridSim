@@ -1,0 +1,18 @@
+$ gridsim qsts case33bw.m --study docs/_captures/qsts/study33.json --top 0 --csv results/qsts-case33bw-day.csv
+QSTS - case33bw (33 buses, 32 branches), engine Backward-forward sweep, mode timed
+  48 step(s) of 1800 s (24:00:00), 48 solved in 0.19 s wall (247.7 steps/s)
+  power-flow solves 1276, iterations 7291; unsettled steps 0
+  energy (MWh): load 66.721, losses 2.171, source 58.536, PV 9.900 of 9.900 available (curtailed 0.000), storage charge 0.000 / discharge 0.456
+  voltage range 0.9245 pu (bus 33, t = 61200 s) to 1.0197 pu (bus 18, t = 45000 s); limits 0.940-1.050 pu
+  tap operations 0, capacitor operations 1
+      bank C30                       1
+      storage B33               final SOC 0.1000
+  buses outside their voltage limits: 5; branches above 100 %: 0
+      ... (--top N lists more; the result file has all)
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case33bw.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[qsts] wrote results\qsts-case33bw-day.csv, results\qsts-case33bw-day-devices.csv, results\qsts-case33bw-day-operations.csv, results\qsts-case33bw-day-bus_violations.csv, results\qsts-case33bw-day-branch_violations.csv, results\qsts-case33bw-day-taps.csv, results\qsts-case33bw-day-banks.csv, results\qsts-case33bw-day-pv.csv, results\qsts-case33bw-day-storage.csv, results\qsts-case33bw-day-voltages.csv, results\qsts-case33bw-day-loadings.csv, results\qsts-case33bw-day-summary.csv
+[exit 0]

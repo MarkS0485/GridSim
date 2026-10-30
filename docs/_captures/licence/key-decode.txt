@@ -1,0 +1,32 @@
+$ scratch key decoder over GridSim.Core (throw-away keypair)
+key:
+GSK1 R1NLMQEAO3YyfHVzZXJAZXhhbXBsZS5jb218RXhhbXBsZSBMdGR8Y29kZXwwfDIwNzMwfDIxMDk0fGRvYzAwMXwxKR6JdnL1Ik24gkxihZ6WqNs8JyP3SjhB8912i37GIBP_3-kdz25f3TC0-aiZ1mwhQUm9Cta7f3H8zPNzONIXhQ
+key characters: 179
+blob bytes: 130
+magic        : GSK1 (47534B31)
+version      : 1
+payloadLen   : 59 (003B)
+payload      : v2|user@example.com|Example Ltd|code|0|20730|21094|doc001|1
+signature    : 64 bytes, starts 291E897672F5224D...
+  field 0: schema       = v2
+  field 1: email        = user@example.com
+  field 2: org          = Example Ltd
+  field 3: type         = code
+  field 4: buslimit     = 0
+  field 5: issuedDays   = 20730
+  field 6: expiresDays  = 21094
+  field 7: licenceId    = doc001
+  field 8: majorVersion = 1
+issued  20730 days after 1970-01-01 = 2026-10-04
+expires 21094 days after 1970-01-01 = 2027-10-03
+signed bytes: 66 (header 7 + payload 59); signature 64; total 130
+verify with the signer's public key: True
+status line: Commercial Code * Example Ltd * unlimited buses * expires 2027-10-03 * for GridSim 1.x * id doc001
+verify with the embedded GridSim key: False (licence signature is invalid (key was altered or not issued by GridSim))
+one bit flipped in byte 20: False (licence signature is invalid (key was altered or not issued by GridSim))
+truncated key: False (licence key too short)
+not a key: False (licence key is not valid base64)
+fits a 1.x build: True
+fits a 2.x build: False
+reason: this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: gdatooling@proton.me
+[exit 0]

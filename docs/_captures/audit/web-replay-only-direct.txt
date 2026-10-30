@@ -1,0 +1,8 @@
+$ cd src/GridSim.Web/bin/Release/net10.0 && ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5540 dotnet GridSim.Web.dll
+$ curl -s "http://127.0.0.1:5540/dashboard/case9" | grep -o "AUDIT LOG" | wc -l
+1
+$ curl -s "http://127.0.0.1:5540/dashboard/bridge:gb-full@raw" | grep -o "AUDIT LOG" | wc -l
+0
+$ curl -s "http://127.0.0.1:5540/dashboard/case9" | grep -o "v1\.95\.[^<]*"
+v1.95.149 (5e6796e4)
+[exit 0]

@@ -1,0 +1,6 @@
+$ cd src/GridSim.Web/bin/Release/net10.0 && ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5540 GridSim__ReplayOnly=false dotnet GridSim.Web.dll
+$ curl -s "http://127.0.0.1:5540/api/openapi.json" | python -c "import json,sys; print(json.load(sys.stdin)[\"info\"][\"version\"])"
+1.95.149
+$ curl -s "http://127.0.0.1:5540/dashboard/case9" | grep -o "v1\.95\.[^<]*"
+v1.95.149 (5e6796e4)
+[exit 0]

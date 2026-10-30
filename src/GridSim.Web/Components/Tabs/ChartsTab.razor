@@ -1,0 +1,40 @@
+@using GridSim.Web.Projection
+@using GridSim.Web.Components.Visuals
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="charts-tab">
+        <div class="charts-grid">
+            <Chart Values="D.FrequencyHz"  Label="Frequency"          Unit="Hz"    Color="#4fd1c5" Min="@FreqMinHz" Max="@FreqMaxHz" Fmt="0.000" Baseline="@NominalHz" />
+            <Chart Values="D.Rpm"          Label="Grid speed"         Unit="rpm"   Color="#a78bfa" Fmt="0" Baseline="@SyncRpm" />
+            <Chart Values="D.GenerationMw" Label="Generation"         Unit="MW"    Color="#f59e0b" Fmt="0" />
+            <Chart Values="D.DemandMw"     Label="Demand"             Unit="MW"    Color="#38bdf8" Fmt="0" />
+            <Chart Values="D.InertiaGvaS"  Label="System inertia"     Unit="GVA.s" Color="#22c55e" Fmt="0.0" />
+            <Chart Values="D.TorqueMnm"    Label="Machine torque"     Unit="MN.m"  Color="#ef4444" Fmt="0" />
+        </div>
+        <p class="charts-note">
+            Rolling @D.FrequencyHz.Count-sample history at the replay's current speed. <b>Frequency</b>, <b>generation</b>,
+            <b>demand</b> and <b>inertia</b> are the raw published channels (frequency per second; generation / demand /
+            inertia step every 30 min). <b>Grid speed</b> (rpm) and <b>machine torque</b> (T = P / omega) are derived from the
+            same data under GridSim's grid-as-one-machine view - no power-flow solve. Buffers clear on a seek.
+        </p>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private ChartsDto? D => Frame?.Charts;
+
+    // N273 (October 2026, stream B2; Ruling R1: Mark delegated EE calls 2026-10-04): the frequency chart spans the statutory
+    // band about the case's nominal (49.5 - 50.5 Hz at 50 Hz) with its baseline at the nominal, and the speed chart's
+    // baseline is a two-pole machine's synchronous speed at it (3,000 rpm at 50 Hz).
+    [Parameter] public double NominalHz { get; set; } = GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
+    private GridSim.Core.Dynamics.FrequencyBands Bands => GridSim.Core.Dynamics.FrequencyBands.ForNominal(NominalHz);
+    private double FreqMinHz => Bands.StatutoryLowHz;
+    private double FreqMaxHz => Bands.StatutoryHighHz;
+    private double SyncRpm => GridSim.Core.Presentation.PresentationConstants.TwoPoleSyncRpmAt(NominalHz);
+}

@@ -1,0 +1,85 @@
+{
+  "schema": "gridsim-dynamics/2",
+  "name": "WSCC 9-bus GENROU test machines",
+  "description": "B3 / F23 test fixture: one machine per unit of the bundled case9, each with a different controller set. Synthetic values (typical GENROU magnitudes on the machine base), not a real machine.",
+  "templates": [
+    {
+      "id": "gridsim.test.wscc9.hydro", "rev": 1, "kind": "synchronousMachine", "status": "active", "title": "Bus 1 unit (hydro, saturated)",
+      "params": {
+        "damping": 0.0,
+        "xdPu": 1.0, "xdpPu": 0.30, "xdppPu": 0.22, "xqPu": 0.65, "xqpPu": 0.40, "xqppPu": 0.22,
+        "tdopS": 8.0, "tdoppS": 0.03, "tqopS": 0.40, "tqoppS": 0.05,
+        "xlPu": 0.15, "saturationS10": 0.10, "saturationS12": 0.30
+      },
+      "controllers": { "governor": "gridsim.test.wscc9.hygov@1" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture: typical GENROU magnitudes, not a real machine." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.steam2", "rev": 1, "kind": "synchronousMachine", "status": "active", "title": "Bus 2 unit (steam, SEXS + PSS1A, TGOV1)",
+      "params": {
+        "inertiaH": 6.4, "damping": 0.5,
+        "xdPu": 1.8, "xdpPu": 0.30, "xdppPu": 0.25, "xqPu": 1.7, "xqpPu": 0.55, "xqppPu": 0.25,
+        "tdopS": 6.0, "tdoppS": 0.04, "tqopS": 0.40, "tqoppS": 0.06
+      },
+      "controllers": { "exciter": "gridsim.test.wscc9.sexs@1", "pss": "gridsim.test.wscc9.pss@1", "governor": "gridsim.test.wscc9.tgov1@1" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture: typical GENROU magnitudes, not a real machine." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.steam3", "rev": 1, "kind": "synchronousMachine", "status": "active", "title": "Bus 3 unit (steam, IEEET1, IEEEG1)",
+      "params": {
+        "inertiaH": { "v": 3.01, "unit": "s", "prov": { "tag": "DerivedFromRecorded", "note": "Test fixture: the bundled case9 inertia." } },
+        "xdPu": 1.3, "xdpPu": 0.18, "xdppPu": 0.14, "xqPu": 1.25, "xqpPu": 0.25, "xqppPu": 0.14,
+        "tdopS": 5.9, "tdoppS": 0.03, "tqopS": 0.60, "tqoppS": 0.05
+      },
+      "controllers": { "exciter": "gridsim.test.wscc9.ieeet1@1", "governor": "gridsim.test.wscc9.ieeeg1@1" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture: typical GENROU magnitudes, not a real machine." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.sexs", "rev": 1, "kind": "exciter", "status": "active", "title": "SEXS",
+      "params": { "model": "SEXS", "sexsLeadS": 0.1, "sexsLagS": 1.0, "sexsGain": 100.0, "sexsExciterTimeS": 0.05, "sexsFieldMinPu": 0.0, "sexsFieldMaxPu": 8.0 },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.ieeet1", "rev": 1, "kind": "exciter", "status": "active", "title": "IEEET1",
+      "params": {
+        "model": "IEEET1", "ieeet1RegulatorGain": 50.0, "ieeet1RegulatorTimeS": 0.02, "ieeet1ExciterConstant": 1.0,
+        "ieeet1ExciterTimeS": 0.2, "ieeet1FeedbackGain": 0.05, "ieeet1FeedbackTimeS": 1.0,
+        "ieeet1RegulatorMinPu": -10.0, "ieeet1RegulatorMaxPu": 10.0
+      },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.pss", "rev": 1, "kind": "pss", "status": "active", "title": "PSS1A",
+      "params": { "model": "PSS1A", "gain": 20.0, "washoutS": 10.0, "lead1S": 0.15, "lag1S": 0.05, "lead2S": 0.15, "lag2S": 0.05, "outputMinPu": -0.1, "outputMaxPu": 0.1 },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.tgov1", "rev": 1, "kind": "governor", "status": "active", "title": "TGOV1",
+      "params": { "model": "TGOV1", "droopPu": 0.05, "tgov1ValveTimeS": 0.5, "tgov1ReheatLeadS": 1.0, "tgov1ReheatLagS": 5.0, "valveMinPu": 0.0, "valveMaxPu": 1.5 },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.ieeeg1", "rev": 1, "kind": "governor", "status": "active", "title": "IEEEG1",
+      "params": {
+        "model": "IEEEG1", "droopPu": 0.05, "ieeeg1LagS": 0.2, "ieeeg1LeadS": 0.0, "ieeeg1ValveTimeS": 0.3,
+        "ieeeg1ChestS": 0.2, "ieeeg1ReheatS": 7.0, "ieeeg1CrossoverS": 0.4, "ieeeg1LpS": 0.4,
+        "ieeeg1K1": 0.3, "ieeeg1K3": 0.4, "ieeeg1K5": 0.3, "valveMaxPu": 1.5,
+        "ieeeg1UoPuPerS": 0.1, "ieeeg1UcPuPerS": -1.0
+      },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture." } }
+    },
+    {
+      "id": "gridsim.test.wscc9.hygov", "rev": 1, "kind": "governor", "status": "active", "title": "Hydro",
+      "params": {
+        "model": "HYGOV", "droopPu": 0.04, "hygovTransientDroopPu": 0.4, "hygovResetTimeS": 5.0,
+        "hygovGateTimeS": 0.2, "hygovWaterTimeS": 2.0, "valveMinPu": 0.0, "valveMaxPu": 1.2
+      },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Test fixture." } }
+    }
+  ],
+  "machines": [
+    { "bus": 1, "template": "gridsim.test.wscc9.hydro@1" },
+    { "bus": 2, "template": "gridsim.test.wscc9.steam2@1" },
+    { "bus": 3, "unit": 0, "template": "gridsim.test.wscc9.steam3@1" }
+  ]
+}

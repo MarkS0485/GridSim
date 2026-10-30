@@ -1,0 +1,19 @@
+$ gridsim trip --dir data/intl/ireland-all-island
+GridSim  -  contingency on Ireland all-island (EirGrid + SONI) - open transmission model
+================================================================
+Tripped:        Aghada  (336 MW lost, gas)
+System inertia: 27.7 -> 23.4 GVAs after the trip
+Peak RoCoF:     -0.358 Hz/s  (largest |df/dt| over the run)
+Nadir:          47.641 Hz  (t+12.5 s)
+Settling:       48.534 Hz
+
+50.05 Hz |****++==--::,,,....                       .........,,,,,,,,,,,,,| 47.64 Hz (nadir)
+
+...at HALF the inertia (11.7 GVAs): RoCoF -0.717 Hz/s, nadir 46.998 Hz
+
+Frequency protection on this trajectory (G99 Issue 2 Table 10.1 settings; system-wide, not per site):
+  81U  Underfrequency       holds: run minimum frequency 47.641 Hz (>47.5 Hz)
+  81O  Overfrequency        holds: run maximum frequency 50.000 Hz (<52.0 Hz)
+  81R  RoCoF                holds: peak |df/dt| 0.358 Hz/s (<1.00 Hz/s)
+  78   Vector shift / LoM   not evaluated: vector shift / loss-of-mains needs a voltage-angle transient; this run is a frequency (centre-of-inertia) trajectory with no bus voltage angle
+[exit 0]

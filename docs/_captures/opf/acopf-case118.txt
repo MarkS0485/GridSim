@@ -1,0 +1,5 @@
+$ gridsim acopf case118 --top 3
+ACOPF (DC dispatch + AC loss loop) - IEEE 118-bus (118 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+acopf: the AC power flow at the DC-OPF dispatch of loss pass 0 (passes count from 0) did not converge: MaxIterations after 38 iteration(s), largest mismatch 6.210E-001 pu, lowest voltage 0.7966 pu where it stopped. The DC dispatch is chosen without voltages or reactive power, so it can be a point the network cannot carry within the units' reactive limits: the case's physics at that dispatch, not a solver fault.
+acopf: every unit is priced the same (50 GBP/MWh: the case gives no fuel types), so that dispatch is one arbitrary optimum of a degenerate LP; '--costs case' dispatches on the case's own cost curves (a .m file's mpc.gencost).
+[exit 3]

@@ -1,0 +1,119 @@
+@* Control-room gauge dial: a 240 deg arc (start -210 deg, sweep 240 deg) with 9 tick marks, optional
+   amber/red high- and low-side bands, a cyan needle, and the value printed in the hub.
+   A faithful inline-SVG port of GridSim.Wpf.Visuals.Gauge - one render pass, DOM-diffable. *@
+
+<svg viewBox="0 0 @F(_w) @F(_h)" width="@F(Width)" height="@F(Height)"
+     class="gauge" preserveAspectRatio="xMidYMid meet">
+    <path d="@ArcPath(0, 1)" class="track" fill="none" />
+    @if (AmberFrom < 1)
+    {
+        <path d="@ArcPath(Math.Clamp(AmberFrom, 0, 1), Math.Clamp(RedFrom, AmberFrom, 1))" class="amber" fill="none" />
+    }
+    @if (RedFrom < 1)
+    {
+        <path d="@ArcPath(Math.Clamp(RedFrom, 0, 1), 1)" class="red" fill="none" />
+    }
+    @if (AmberTo > 0)
+    {
+        <path d="@ArcPath(Math.Clamp(RedTo, 0, AmberTo), Math.Clamp(AmberTo, 0, 1))" class="amber" fill="none" />
+    }
+    @if (RedTo > 0)
+    {
+        <path d="@ArcPath(0, Math.Clamp(RedTo, 0, 1))" class="red" fill="none" />
+    }
+
+    @for (int i = 0; i <= 8; i++)
+    {
+        var t = Tick(i);
+        <line x1="@F(t.X0)" y1="@F(t.Y0)" x2="@F(t.X1)" y2="@F(t.Y1)" class="tick" />
+    }
+
+    <line x1="@F(_cx)" y1="@F(_cy)" x2="@F(NeedleX)" y2="@F(NeedleY)" class="needle" />
+    <circle cx="@F(_cx)" cy="@F(_cy)" r="4" class="hub" />
+
+    @if (!string.IsNullOrEmpty(Caption))
+    {
+        @SvgText(_cx, _cy - _r - 4, "caption", Caption)
+    }
+    @SvgText(_cx, _cy + _r * 0.30, "value", ValueLabel, ValueSize)
+    @if (!string.IsNullOrEmpty(Unit))
+    {
+        @SvgText(_cx, _cy + _r * 0.30 + ValueSize + 2, "unit", Unit)
+    }
+</svg>
+
+@code {
+    private const double StartDeg = -210;   // 240 deg sweep, gap at the bottom
+    private const double SweepDeg = 240;
+
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double Minimum { get; set; } = 0;
+    [Parameter] public double Maximum { get; set; } = 100;
+    /// <summary>Fraction of range (0..1) where the amber band starts; 1 = no band.</summary>
+    [Parameter] public double AmberFrom { get; set; } = 1;
+    /// <summary>Fraction of range (0..1) where the red band starts; 1 = no band.</summary>
+    [Parameter] public double RedFrom { get; set; } = 1;
+    /// <summary>Low-side amber band, from 0 up to this fraction; 0 = none.</summary>
+    [Parameter] public double AmberTo { get; set; } = 0;
+    /// <summary>Low-side red band, from 0 up to this fraction; 0 = none.</summary>
+    [Parameter] public double RedTo { get; set; } = 0;
+    /// <summary>Unit line under the value (e.g. "RPM", "degC", "MNm").</summary>
+    [Parameter] public string Unit { get; set; } = "";
+    /// <summary>Small caption above the dial (e.g. "GRID SPEED").</summary>
+    [Parameter] public string Caption { get; set; } = "";
+    /// <summary>Override for the hub text; empty = the numeric value, auto-formatted.</summary>
+    [Parameter] public string ValueText { get; set; } = "";
+    [Parameter] public double Width { get; set; } = 180;
+    [Parameter] public double Height { get; set; } = 150;
+
+    private double _w, _h, _r, _cx, _cy;
+
+    protected override void OnParametersSet()
+    {
+        _w = Width;
+        _h = Height;
+        _r = Math.Min(_w, _h * 1.16) / 2 - 10;
+        _cx = _w / 2;
+        _cy = _h / 2 + _r * 0.12;
+    }
+
+    private static double Deg(double frac) => (StartDeg + frac * SweepDeg) * Math.PI / 180;
+
+    private string ArcPath(double f0, double f1)
+    {
+        if (f1 - f0 < 1e-4) return "";
+        double a0 = Deg(f0), a1 = Deg(f1);
+        double x0 = _cx + Math.Cos(a0) * _r, y0 = _cy + Math.Sin(a0) * _r;
+        double x1 = _cx + Math.Cos(a1) * _r, y1 = _cy + Math.Sin(a1) * _r;
+        int large = (f1 - f0) * SweepDeg > 180 ? 1 : 0;
+        return $"M {F(x0)} {F(y0)} A {F(_r)} {F(_r)} 0 {large} 1 {F(x1)} {F(y1)}";
+    }
+
+    private (double X0, double Y0, double X1, double Y1) Tick(int i)
+    {
+        double a = Deg(i / 8.0);
+        return (_cx + Math.Cos(a) * (_r - 7), _cy + Math.Sin(a) * (_r - 7),
+                _cx + Math.Cos(a) * (_r - 13), _cy + Math.Sin(a) * (_r - 13));
+    }
+
+    private double Frac => Math.Clamp((Value - Minimum) / Math.Max(1e-9, Maximum - Minimum), 0, 1);
+    private double NeedleX => _cx + Math.Cos(Deg(Frac)) * (_r - 16);
+    private double NeedleY => _cy + Math.Sin(Deg(Frac)) * (_r - 16);
+    private double ValueSize => Math.Max(13, _r * 0.34);
+    private string ValueLabel => ValueText.Length > 0 ? ValueText : Value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string F(double d) => d.ToString("0.###", CultureInfo.InvariantCulture);
+
+    // Razor reserves the bare <text> tag, so SVG text is emitted as raw markup (the parent <svg> parses it as SVG).
+    private MarkupString SvgText(double x, double y, string cls, string content, double? fontSize = null)
+    {
+        string fs = fontSize is null ? "" : $" font-size=\"{F(fontSize.Value)}\"";
+        // Scoped CSS can't reach a MarkupString <text>: Blazor stamps its CSS-isolation scope attribute only onto
+        // Razor-rendered elements, not raw markup - so `.value { fill }` never matched this text and it fell back to
+        // the SVG default (black, unreadable). Set the fill INLINE as a presentation attribute (a colour literal -
+        // CSS var() is not valid in a presentation attribute).
+        string fill = cls switch { "unit" => "#AEB9C4", _ => "#E6EDF3" };   // value + caption bright; unit slightly dimmer
+        string esc = System.Net.WebUtility.HtmlEncode(content);
+        return (MarkupString)$"<text x=\"{F(x)}\" y=\"{F(y)}\" class=\"{cls}\" fill=\"{fill}\" text-anchor=\"middle\" dominant-baseline=\"hanging\"{fs}>{esc}</text>";
+    }
+}

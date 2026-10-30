@@ -1,0 +1,18 @@
+$ python NetworkModel/build_estimator_measurements.py --date 2026-09-01 --period 25 --out results/gda-estimate/m-sp25.json
+{
+  "date": "2026-09-01",
+  "period": 25,
+  "takenUtc": "2026-09-01T11:00:00Z",
+  "measurements": 948,
+  "buses_with_metered_gen": 42,
+  "metered_gen_mw": 11057.6,
+  "ic_buses": 0,
+  "ic_net_mw": 0,
+  "national_demand_mw": 19885.0,
+  "demand_scale": 0.3732,
+  "groups_used": 0,
+  "group_demand_total_mw": 0.0,
+  "unallocated_gen_mw": 6038.8,
+  "output": "results\\gda-estimate\\m-sp25.json"
+}
+[exit 0]

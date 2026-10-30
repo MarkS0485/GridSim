@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             xmlns:op="using:GridSim.Ui.Tabs.Operator"
+             x:Class="GridSim.App.Tabs.OperatorView"
+             x:DataType="op:OperatorModel">
+  <!-- UI programme Phase 1.6: the OPERATOR tab, a port of src/GridSim.Wpf/Views/OperatorView.xaml. Same texts, same
+       layout order (title and warning banner; then headline tiles and boundaries | generation stack | balancing
+       mechanism over active constraints), the same theme brushes, and every colour from the shared OperatorModel's
+       tokens through TokenBrush (the bytes WPF shows). The DataContext is the shared OperatorModel. -->
+  <Grid Margin="10" RowDefinitions="Auto,*">
+
+    <!-- ============ title + warning banner ============ -->
+    <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Left">
+          <TextBlock Text="OPERATOR  SYSTEM CONTROL ROOM" Classes="PanelHeader" FontSize="13" />
+          <TextBlock Text="balancing, constraints and security  -  streamed from the GDA lake"
+                     Classes="Label" FontSize="10" Margin="0,2,0,0" />
+        </StackPanel>
+        <Border x:Name="WarningBannerBorder" DockPanel.Dock="Right" CornerRadius="4" Padding="10,4"
+                Background="{Binding WarningColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                IsVisible="{Binding IsWarningVisible}">
+          <TextBlock x:Name="WarningBannerText" Text="{Binding WarningBanner}" Foreground="White" FontWeight="Bold" FontSize="11" />
+        </Border>
+      </DockPanel>
+    </Border>
+
+    <!-- ============ console body ============ -->
+    <Grid Grid.Row="1" ColumnDefinitions="1.4*,10,1.1*,10,1.5*">
+
+      <!-- ===== LEFT: headline + boundary transfers ===== -->
+      <DockPanel Grid.Column="0">
+        <Border DockPanel.Dock="Top" Classes="Card" Padding="12" Margin="0,0,0,10">
+          <UniformGrid Columns="3">
+            <StackPanel Margin="4">
+              <TextBlock Text="FREQUENCY" Classes="Label" />
+              <TextBlock x:Name="FrequencyText" Text="{Binding Frequency}" Classes="Value"
+                         Foreground="{Binding FrequencyColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+              <TextBlock Text="Hz" Classes="Unit" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="RoCoF" Classes="Label" />
+              <TextBlock x:Name="RocofText" Text="{Binding Rocof}" Classes="Value" FontSize="18" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="INERTIA" Classes="Label" />
+              <TextBlock x:Name="InertiaText" Text="{Binding Inertia}" Classes="Value" FontSize="18" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="DEMAND" Classes="Label" />
+              <TextBlock x:Name="DemandText" Text="{Binding Demand}" Classes="Value" FontSize="18" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="GENERATION" Classes="Label" />
+              <TextBlock x:Name="GenerationText" Text="{Binding Generation}" Classes="Value" FontSize="18" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="LOSSES" Classes="Label" />
+              <TextBlock x:Name="LossesText" Text="{Binding Losses}" Classes="Value" FontSize="18" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="LARGEST LOSS  *  live N-1" Classes="Label" />
+              <TextBlock x:Name="LargestLossText" Text="{Binding LargestLoss}" Classes="Value" FontSize="18" />
+              <!-- Parity sign-off (2026-10-24): wraps in its narrow column instead of being cut off mid-word. -->
+              <TextBlock x:Name="DesignBasisLossText" Text="{Binding DesignBasisLoss}" Classes="Label" FontSize="9" Foreground="#F3C13A" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="DERATED MARGIN" Classes="Label" />
+              <TextBlock x:Name="DeratedMarginText" Text="{Binding DeratedMargin}" Classes="Value" FontSize="18" />
+            </StackPanel>
+            <StackPanel Margin="4">
+              <TextBlock Text="RESERVE" Classes="Label" />
+              <TextBlock x:Name="ReserveText" Text="{Binding ReserveMw}" Classes="Value" FontSize="18" />
+            </StackPanel>
+          </UniformGrid>
+        </Border>
+
+        <Border Classes="Card" Padding="0">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                    BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+              <TextBlock Text="TRANSMISSION BOUNDARIES  -  transfer vs limit" Classes="PanelHeader" />
+            </Border>
+            <ItemsControl x:Name="BoundaryList" ItemsSource="{Binding Boundaries}" Margin="0,4">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="op:OpBoundaryRowModel">
+                  <Grid Margin="12,4" ColumnDefinitions="2*,1.1*,1.1*,0.9*">
+                    <StackPanel Grid.Column="0">
+                      <TextBlock Text="{Binding Name}" Foreground="{StaticResource Text}" FontSize="11" />
+                      <ProgressBar Height="4" MinHeight="4" Margin="0,3,8,0" Minimum="0" Maximum="120"
+                                   Value="{Binding LoadingPercent, Mode=OneWay}"
+                                   Foreground="{Binding LoadingColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                   Background="{StaticResource Track}" BorderThickness="0" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" Text="{Binding Flow}" Classes="Label"
+                               FontFamily="{StaticResource MonoFont}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Limit}" Classes="Label"
+                               FontFamily="{StaticResource MonoFont}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="{Binding Loading}"
+                               Foreground="{Binding LoadingColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                               FontFamily="{StaticResource MonoFont}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DockPanel>
+        </Border>
+      </DockPanel>
+
+      <!-- ===== CENTRE: generation stack + synchronous split ===== -->
+      <Border Grid.Column="2" Classes="Card" Padding="0">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                  BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+            <TextBlock Text="GENERATION STACK" Classes="PanelHeader" />
+          </Border>
+          <Border DockPanel.Dock="Top" Padding="12,8" BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1">
+            <UniformGrid Columns="2">
+              <StackPanel>
+                <TextBlock Text="SYNCHRONOUS" Classes="Label" />
+                <TextBlock x:Name="SynchronousText" Text="{Binding SynchronousGw}" Classes="Value" FontSize="18"
+                           Foreground="{StaticResource Green}" />
+              </StackPanel>
+              <StackPanel>
+                <TextBlock Text="CONVERTER" Classes="Label" />
+                <TextBlock x:Name="ConverterText" Text="{Binding ConverterGw}" Classes="Value" FontSize="18"
+                           Foreground="{StaticResource Accent}" />
+              </StackPanel>
+            </UniformGrid>
+          </Border>
+          <ItemsControl x:Name="FuelList" ItemsSource="{Binding Fuel}" Margin="0,4">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="op:OpFuelRowModel">
+                <Grid Margin="12,3" ColumnDefinitions="Auto,*,Auto,Auto">
+                  <Border Grid.Column="0" Width="10" Height="10" CornerRadius="2"
+                          Background="{Binding SwatchColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                          VerticalAlignment="Center" Margin="0,0,8,0" />
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Fuel}" Foreground="{StaticResource Text}" FontSize="11" />
+                    <ProgressBar Height="4" MinHeight="4" Margin="0,3,8,0" Minimum="0" Maximum="100"
+                                 Value="{Binding SharePercent, Mode=OneWay}"
+                                 Foreground="{Binding SwatchColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                 Background="{StaticResource Track}" BorderThickness="0" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="2" Text="{Binding Mw}" Classes="Label"
+                             FontFamily="{StaticResource MonoFont}" VerticalAlignment="Center" Margin="8,0" />
+                  <TextBlock Grid.Column="3" Text="{Binding Share}" Foreground="{StaticResource Text}"
+                             FontFamily="{StaticResource MonoFont}" FontSize="12" VerticalAlignment="Center" Width="42"
+                             TextAlignment="Right" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </DockPanel>
+      </Border>
+
+      <!-- ===== RIGHT: balancing mechanism + constraints ===== -->
+      <Grid Grid.Column="4" RowDefinitions="1.2*,10,1*">
+
+        <Border Grid.Row="0" Classes="Card" Padding="0">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                    BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+              <TextBlock Text="BALANCING MECHANISM  -  live acceptances" Classes="PanelHeader" />
+            </Border>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="ActionList" ItemsSource="{Binding BalancingActions}" Margin="0,4">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="op:OpActionRowModel">
+                    <Grid Margin="12,3" ColumnDefinitions="1.6*,Auto,0.9*,0.9*">
+                      <TextBlock Grid.Column="0" Text="{Binding Unit}" Foreground="{StaticResource Text}"
+                                 FontFamily="{StaticResource MonoFont}" FontSize="11" VerticalAlignment="Center" />
+                      <Border Grid.Column="1" CornerRadius="3" Padding="5,1" Margin="4,0"
+                              Background="{Binding KindColour, Converter={x:Static tabs:TokenBrush.Instance}}">
+                        <TextBlock Text="{Binding Kind}" Foreground="Black" FontSize="9" FontWeight="Bold" />
+                      </Border>
+                      <TextBlock Grid.Column="2" Text="{Binding Mw}" Classes="Label"
+                                 FontFamily="{StaticResource MonoFont}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Price}" Foreground="{StaticResource Text}"
+                                 FontFamily="{StaticResource MonoFont}" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <Border Grid.Row="2" Classes="Card" Padding="0">
+          <DockPanel>
+            <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                    BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+              <TextBlock Text="ACTIVE CONSTRAINTS" Classes="PanelHeader" />
+            </Border>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="ConstraintList" ItemsSource="{Binding Constraints}" Margin="0,4">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="op:OpConstraintRowModel">
+                    <Grid Margin="12,3" ColumnDefinitions="2*,Auto,1*">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{StaticResource Text}"
+                                 FontSize="11" VerticalAlignment="Center" />
+                      <Ellipse Grid.Column="1" Width="8" Height="8" VerticalAlignment="Center" Margin="4,0"
+                               Fill="{Binding BindingColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                      <TextBlock Grid.Column="2" Text="{Binding CostGbp}" Classes="Label"
+                                 FontFamily="{StaticResource MonoFont}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

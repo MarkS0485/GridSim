@@ -1,0 +1,31 @@
+$ sed -n '50,78p' tests/GridSim.Tests/BridgeProtocolTests.cs
+    {
+      "type": "state",
+      "t": "{{isoTimestamp}}",
+      "result": {
+        "totalLossMw": 1.5,
+        "buses": [
+          { "id": 1, "vm": 1.010, "vaDeg": 0.0,   "pInjMw": 40.0,  "qInjMvar": 12.0 },
+          { "id": 2, "vm": 1.020, "vaDeg": -1.5,  "pInjMw": 120.0, "qInjMvar": 8.0 },
+          { "id": 3, "vm": 0.978, "vaDeg": -6.2,  "pInjMw": -80.0, "qInjMvar": -20.0 }
+        ],
+        "lineFlows": [
+          { "from": 1, "to": 2, "pFromMw": 40.0, "pToMw": -39.8, "loadingPercent": 8.0 },
+          { "from": 2, "to": 3, "pFromMw": 80.2, "pToMw": -80.0, "loadingPercent": 32.0, "name": "T2-3", "ratingMva": 250 }
+        ]
+      },
+      "scalars": {
+        "freqHz": 49.98,
+        "rocofHzPerS": -0.03,
+        "genMw": 160.0,
+        "demandMw": 80.0,
+        "inertiaMwS": 800.0,
+        "conditionIndex": 0.72,
+        "rocofHeadroomHzS": 0.09
+      },
+      "overlays": {
+        "stressByBranch": { "T2-3": 0.64 },
+        "conditionByBus": { "3": 0.42 }
+      }
+    }
+[exit 0]

@@ -1,0 +1,16 @@
+$ python -c "import os, pandas as pd; d = pd.read_parquet(os.environ['GDA_ROOT'] + '/Derived/estimated_state/gb-spine/year=2026/week=36/estimated_state.parquet').drop(columns=['removed_json', 'boundary_json', 'result_json']); print(d.T.to_string(header=False))"
+datetime_utc      2026-09-01 11:00:00+00:00
+case                               gb-spine
+status                            Converged
+converged                              True
+iterations                                8
+max_state_update                        0.0
+objective_j                      225.414917
+chi_threshold                    359.520725
+chi_passed                             True
+dof                                     317
+measurements_n                          948
+removed_n                                 0
+vm_min                             0.999362
+vm_max                             1.051805
+[exit 0]

@@ -1,0 +1,18 @@
+$ gridsim iec60909 case9 --bus 5 --branches
+IEC 60909 - IEEE 9-bus (WSCC), bus 5, three-phase, Maximum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 1.4683989584292985 kA  (8.774528526143639 pu)
+  ip    = 4.143787818206106 kA  (kappa 1.995438943368623, R/X 0.10501342238071008, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 1.4683989584292985 kA    Ik = 1.4683989584292985 kA
+  Ith   = 1.4881526648788939 kA  (m 0.027086065637215752)    idc(tb) = 0.03963009392407432 kA
+  Zth   = 0.013092788564404878 + j0.12467728665140516 pu
+  branch currents (9 in-service branch(es) in the fault bus's island, largest first; c_max source):
+    branch 4-5                    4 -> 5       from end 0.901 kA  to end 0.901 kA
+    branch 1-4                    1 -> 4       from end 0.726 kA  to end 0.726 kA
+    branch 5-6                    5 -> 6       from end 0.568 kA  to end 0.568 kA
+    branch 3-6                    3 -> 6       from end 0.401 kA  to end 0.401 kA
+    branch 8-2                    8 -> 2       from end 0.343 kA  to end 0.343 kA
+    branch 8-9                    8 -> 9       from end 0.175 kA  to end 0.175 kA
+    branch 9-4                    9 -> 4       from end 0.175 kA  to end 0.175 kA
+    branch 7-8                    7 -> 8       from end 0.167 kA  to end 0.167 kA
+    branch 6-7                    6 -> 7       from end 0.167 kA  to end 0.167 kA
+[exit 0]

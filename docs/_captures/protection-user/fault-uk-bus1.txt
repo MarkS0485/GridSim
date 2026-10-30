@@ -1,0 +1,34 @@
+$ gridsim fault uk --bus 1
+Balanced three-phase fault  -  uk  bus 1  Zf=j0.000 pu
+  fault current: 4.79 pu (69.10 kA)   Thevenin Z: 0.2562 pu   faulted bus voltage: 0.000 pu
+  (generator subtransient reactance synthesised at 0.20 pu; positive-sequence, so three-phase only)
+  converter-interfaced units: 16 (current-limited, K=2.0 reactive priority)  total infeed 1.96 pu, 5 at current limit
+  relays operating on the faulted state: 23
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 50 | Instantaneous overcurrent | L1-2 N-S Scotland | 9.422 xIn | 2.500 | inst | L1-2 N-S Scotland current 9.42x rated exceeds the 2.50x instantaneous pickup (trips instantly) |
+  | 50 | Instantaneous overcurrent | L2-3 B6 boundary | 6.639 xIn | 2.500 | inst | L2-3 B6 boundary current 6.64x rated exceeds the 2.50x instantaneous pickup (trips instantly) |
+  | 50 | Instantaneous overcurrent | L3-4 N England-Yorks | 3.274 xIn | 2.500 | inst | L3-4 N England-Yorks current 3.27x rated exceeds the 2.50x instantaneous pickup (trips instantly) |
+  | 50 | Instantaneous overcurrent | L3-5 N England-N Wales | 2.650 xIn | 2.500 | inst | L3-5 N England-N Wales current 2.65x rated exceeds the 2.50x instantaneous pickup (trips instantly) |
+  | 87 | Differential | North Scotland 400kV | 4.787 pu | 0.100 | inst | busbar differential 4.79E+000 pu at North Scotland 400kV exceeds the 0.10 pu bias pickup (internal fault) |
+  | 21-Z2 | Distance | L1-2 N-S Scotland | 0.101 pu | 0.126 | 0.30s | L1-2 N-S Scotland apparent Z 0.101 pu is inside Zone 2 (reach 0.126 pu, line Z 0.100); operates in 0.3 s (relay at the to end, bus 2) |
+  | 51 | Time overcurrent | L1-2 N-S Scotland | 9.422 xIn | 1.200 | 0.33s | L1-2 N-S Scotland current 9.42x rated over the 1.20x pickup; IEC standard-inverse trips in 0.3 s |
+  | 51 | Time overcurrent | L2-3 B6 boundary | 6.639 xIn | 1.200 | 0.40s | L2-3 B6 boundary current 6.64x rated over the 1.20x pickup; IEC standard-inverse trips in 0.4 s |
+  | 51 | Time overcurrent | L3-4 N England-Yorks | 3.274 xIn | 1.200 | 0.69s | L3-4 N England-Yorks current 3.27x rated over the 1.20x pickup; IEC standard-inverse trips in 0.7 s |
+  | 21-Z3 | Distance | L2-3 B6 boundary | 0.285 pu | 0.301 | 0.80s | L2-3 B6 boundary apparent Z 0.285 pu is inside Zone 3 (reach 0.301 pu, line Z 0.151); operates in 0.8 s (relay at the to end, bus 3) |
+  | 51 | Time overcurrent | L3-5 N England-N Wales | 2.650 xIn | 1.200 | 0.88s | L3-5 N England-N Wales current 2.65x rated over the 1.20x pickup; IEC standard-inverse trips in 0.9 s |
+  | 49 | Thermal overload | L2-3 B6 boundary | 5.342 xRateA | 1.000 | 32.11s | L2-3 B6 boundary loaded to 534% of RateA (4400 MVA); thermal replica trips in 32 s |
+  | 51 | Time overcurrent | L4-6 Yorks-Midlands | 1.215 xIn | 1.200 | 55.92s | L4-6 Yorks-Midlands current 1.22x rated over the 1.20x pickup; IEC standard-inverse trips in 55.9 s |
+  | 49 | Thermal overload | L1-2 N-S Scotland | 3.579 xRateA | 1.000 | 73.15s | L1-2 N-S Scotland loaded to 358% of RateA (4000 MVA); thermal replica trips in 73 s |
+  | 49 | Thermal overload | L3-4 N England-Yorks | 2.857 xRateA | 1.000 | 117.65s | L3-4 N England-Yorks loaded to 286% of RateA (4000 MVA); thermal replica trips in 118 s |
+  | 49 | Thermal overload | L3-5 N England-N Wales | 2.280 xRateA | 1.000 | 192.25s | L3-5 N England-N Wales loaded to 228% of RateA (4000 MVA); thermal replica trips in 192 s |
+  | 49 | Thermal overload | L4-6 Yorks-Midlands | 1.089 xRateA | 1.000 | 1670.75s | L4-6 Yorks-Midlands loaded to 109% of RateA (4000 MVA); thermal replica trips in 1671 s |
+  | 32 | Reverse power | Moyle | -150.000 MW | -5.000 | - | Moyle is absorbing 150.0 MW (reverse/motoring past the 5 MW pickup) |
+  | 27 | Undervoltage | North Scotland 400kV | 0.000 pu | 0.800 | - | Vm 0.000 pu at North Scotland 400kV is below the 0.80 pu undervoltage pickup |
+  | 37 | Undercurrent | T1 GSP N Scotland | 0.000 pu | 0.001 | - | T1 GSP N Scotland carrying 0.00E+000 pu current (effectively de-energized, below the 1.0E-003 pu undercurrent floor) |
+  | 27 | Undervoltage | North Scotland 132kV | 0.000 pu | 0.800 | - | Vm 0.000 pu at North Scotland 132kV is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | South Scotland 132kV | 0.379 pu | 0.800 | - | Vm 0.379 pu at South Scotland 132kV is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | South Scotland 400kV | 0.380 pu | 0.800 | - | Vm 0.380 pu at South Scotland 400kV is below the 0.80 pu undervoltage pickup |
+
+PROTECTION SIMULATION: a three-phase fault at bus 1 would drive 23 relay operation(s) - primary clearance by 87 (Differential) on North Scotland 400kV, instantaneously.
+[exit 0]

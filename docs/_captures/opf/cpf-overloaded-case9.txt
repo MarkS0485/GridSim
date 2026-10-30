@@ -1,0 +1,8 @@
+$ gridsim cpf docs/_captures/opf/overloaded-case9.m
+CPF - overloaded-case9 (9 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 0.94921875  (base demand 787.5 MW -> 747.5 MW at the last converged point; nose bracketed to 0.001)
+  margin -5.08% above base load
+note: overloaded-case9.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: overloaded-case9.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+cpf: the base case (lambda = 1) did not converge; only a lighter load did (largest converged lambda 0.94921875, margin -5.08%), so the case as given has no loadability margin. Exit 3.
+[exit 3]

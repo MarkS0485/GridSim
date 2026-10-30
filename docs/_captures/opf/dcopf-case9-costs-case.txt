@@ -1,0 +1,14 @@
+$ gridsim dcopf data/matpower/lib/case9.m --costs case --prices --top 3
+DC-OPF - case9 (9 buses)  [cheapest secure dispatch on generator cost curves: case gencost]
+  demand 315 MW  generation 315 MW  total cost 5,216.03 cost units/h  (no line limit binds)
+  dispatch (by output):
+      gen bus 2        134.38 MW  marginal   24.0442 cost units/MWh
+      gen bus 3         94.06 MW  marginal   24.0442 cost units/MWh
+      gen bus 1         86.56 MW  marginal   24.0442 cost units/MWh
+  nodal prices (LMP, cost units/MWh, lossless DC): 9 bus(es), highest 24.0442 at bus 1, lowest 24.0442 at bus 9
+      bus 1      LMP    24.0442  (energy 24.0442, congestion 0.0000)
+      bus 2      LMP    24.0442  (energy 24.0442, congestion 0.0000)
+      bus 3      LMP    24.0442  (energy 24.0442, congestion 0.0000)
+note: case9.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case9.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[exit 0]

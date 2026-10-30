@@ -1,0 +1,8 @@
+$ gridsim case14 --ticks 6
+t=08:00 tick  0  load  0.18GW  gen  0.19GW  loss    6MW  V 1.010-1.090  ok (3 NR)
+t=08:20 tick  1  load  0.19GW  gen  0.19GW  loss    7MW  V 1.010-1.090  ok (3 NR)
+t=08:39 tick  2  load  0.19GW  gen  0.20GW  loss    7MW  V 1.010-1.090  ok (3 NR)
+t=09:00 tick  3  load  0.19GW  gen  0.20GW  loss    7MW  V 1.010-1.090  ok (3 NR)
+t=09:20 tick  4  load  0.20GW  gen  0.21GW  loss    8MW  V 1.010-1.090  ok (3 NR)
+t=09:39 tick  5  load  0.20GW  gen  0.21GW  loss    8MW  V 1.010-1.090  ok (3 NR)
+[exit 0]

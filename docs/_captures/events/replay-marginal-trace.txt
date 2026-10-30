@@ -1,0 +1,19 @@
+$ gridsim replay-event gb-2023-12-22 --trace data/neso/gb-2023-12-22-frequency.csv --out results/replay-gb-2023-12-22-trace
+
+=== Replay: GB 22 Dec 2023 excursion (IFA + Cottam, settlement-measured) ===
+  when (UTC):        2023-12-22T13:09:51.0000000Z   provenance: DerivedFromRecorded (event tagged Recorded; the weakest of its parts)
+  pre-event inertia: 161.0 GVA.s   demand: 22.4 GW   total loss: 1345 MW
+  inferred inertia from recorded RoCoF: 193.6 GVA.s (cross-check vs 161.0)
+    (recorded RoCoF is a 1 s windowed figure; inverted after scaling by the replay's instantaneous / windowed ratio 1.266)
+
+  RoCoF:  sim  -0.123   recorded  -0.102 Hz/s   (20 % error)
+  Nadir:  sim   48.98   recorded   49.27 Hz   (0.30 Hz error)
+  Nadir envelope (declared-uncertainty corners): [48.65, 49.20] Hz - recorded OUTSIDE (a constant the corners don't cover - e.g. the inertia basis - is off)
+  RMSE vs trace: 0.281 Hz over 7926 sample(s)
+  back-test vs trace (gate 0.05 Hz / 0.05 Hz/s / 2.0 s): FAIL  nadir 0.295 Hz, RoCoF sim -0.123 vs rec -0.102 Hz/s, nadir time sim 49.0 s vs rec 20.5 s (28.5 s)
+  assessment: BELOW STATUTORY (49.5 Hz)
+
+  VERDICT: MARGINAL  - NOT reproduced; do not run counterfactuals until the baseline matches (check [VERIFY] figures / tolerances).
+
+  -> results\replay-gb-2023-12-22-trace
+[exit 3]

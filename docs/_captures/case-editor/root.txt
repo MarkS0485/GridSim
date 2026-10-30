@@ -1,0 +1,25 @@
+GRIDSIM CASE EDITOR 1.95.113  data/uk (v1)  20 buses  [BUNDLED]
+Case
+  section               records   file
+  System                1         system.json
+  Buses                 20        buses.json
+  Generation            29        generation.json
+  Demand                10        demand.json
+  Lines                 14        transmission.json
+  Transformers          10        transformer.json
+  Tap changers          10        onloadtapchanger.json
+  Asset classes         -         asset-classes.json (absent)
+  Asset bindings        -         asset-bindings.json (absent)
+  Protections           -         protections.json (absent)
+  Boundaries            4         boundaries.json
+  Not part of the case  0         files the loader does not read (never written)
+
+
+
+
+
+
+
+
+Case opened. F1 lists the keys.
+F1 Help  Enter Open  Esc Up  F2 Edit  U Undo  F9 Check  F10 Save  F12 Quit

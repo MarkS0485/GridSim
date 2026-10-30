@@ -1,0 +1,90 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="panel-grid four">
+            <div class="mini"><span class="mv">@D.PointCount</span><span class="ml">Points</span></div>
+            <div class="mini"><span class="mv">@D.GoodCount</span><span class="ml">Good quality</span></div>
+            <div class="mini"><span class="mv @(D.AlarmCount > 0 ? "alarm" : "")">@D.AlarmCount</span><span class="ml">In alarm</span></div>
+            <div class="mini">
+                <input class="scada-filter" placeholder="filter tag / description..." @bind="_filter" @bind:event="oninput" />
+                <span class="ml">Filter</span>
+            </div>
+        </div>
+
+        @if (D.Events.Count > 0)
+        {
+            <div class="card">
+                <div class="card-h">ALARM LOG - @D.Events.Count events (newest first)</div>
+                <div class="tablescroll" style="max-height:200px">
+                    <table class="grid">
+                        <tbody>
+                            @foreach (ScadaEventDto ev in D.Events)
+                            {
+                                <tr>
+                                    <td class="mono">@ev.Stamp</td>
+                                    <td><span class="prio @ev.Priority.ToLowerInvariant()">@ev.Priority</span></td>
+                                    <td class="mono">@ev.Tag</td>
+                                    <td>@ev.Message</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <div class="card grow">
+            <div class="card-h">EMS POINT REGISTER - @Filtered.Count() / @D.PointCount points</div>
+            @* R099 parity with the WPF register: a STAMP column, and a row with an asset page (substation, circuit,
+               transformer) opens it in the ASSETS explorer on click, like the WPF OpenPointCmd. *@
+            <div class="tablescroll">
+                <table class="grid">
+                    <thead><tr><th>Tag</th><th>Description</th><th class="r">Value</th><th>Units</th><th class="r">Load</th><th>Quality</th><th>Stamp</th></tr></thead>
+                    <tbody>
+                        @foreach (ScadaPointDto p in Filtered)
+                        {
+                            AssetRoute? route = OnOpenAsset.HasDelegate ? AssetRoute.FromScada(p.Target, p.TargetKey) : null;
+                            <tr class="@(p.Alarm ? "over" : "")"
+                                style="@(route is null ? null : "cursor:pointer")"
+                                title="@(route is null ? null : "Open in ASSETS")"
+                                @onclick="() => Open(route)">
+                                <td class="mono">@p.Tag</td>
+                                <td>@p.Description</td>
+                                <td class="r">@p.Value.ToString("0.00")</td>
+                                <td>@p.Units</td>
+                                <td class="r">@(p.LoadPercent > 0 ? p.LoadPercent.ToString("0") + "%" : "-")</td>
+                                <td><span class="quality @(p.Alarm ? "q-alarm" : "q-good")">@p.Quality</span></td>
+                                <td class="mono">@p.Stamp</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private ScadaDto? D => Frame?.Scada;
+    private string _filter = "";
+
+    /// <summary>Opens a point's asset page in the ASSETS explorer (the Dashboard switches tab). When not supplied,
+    /// rows are not clickable.</summary>
+    [Parameter] public EventCallback<AssetRoute> OnOpenAsset { get; set; }
+
+    private Task Open(AssetRoute? route) => route is null ? Task.CompletedTask : OnOpenAsset.InvokeAsync(route);
+
+    private IEnumerable<ScadaPointDto> Filtered =>
+        string.IsNullOrWhiteSpace(_filter) || D is null
+            ? D?.Points ?? Enumerable.Empty<ScadaPointDto>()
+            : D.Points.Where(p =>
+                p.Tag.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+                p.Description.Contains(_filter, StringComparison.OrdinalIgnoreCase));
+}

@@ -1,0 +1,21 @@
+$ gridsim protection-check case30 --cascade --alarms docs/_captures/protection-assess/case30-alarms.csv
+Protection assessment  -  case30  (30 buses, converged=True)  [passive; solve unchanged]
+  operating elements: 2
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 49 | Thermal overload | branch 6-8 | 1.088 xRateA | 1.000 | 1673.68s | branch 6-8 loaded to 109% of RateA (32 MVA); thermal replica trips in 1674 s |
+  | 37 | Undercurrent | branch 9-11 | 0.000 pu | 0.001 | - | branch 9-11 carrying 0.00E+000 pu current (effectively de-energized, below the 1.0E-003 pu undercurrent floor) |
+  not evaluated on a steady snapshot: 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence)
+
+PROTECTION SIMULATION suggests 2 protection event(s) would occur. e.g. on branch 6-8, relay 49 (Thermal overload) would likely operate: branch 6-8 loaded to 109% of RateA (32 MVA); thermal replica trips in 1674 s.
+
+Cascade propagation (2 trip(s)):
+  1. relay 49 (Thermal overload) opens branch 6-8 in 1673.68s  ->  2 branch(es) then overloaded
+  2. relay 51 (Time overcurrent) opens branch 8-28 in 2.84s  ->  re-solve did NOT converge
+  stop: non-convergent after opening 8-28 - the network has split / collapsed (blackout).
+
+Sequence of events vs prediction (3 alarm(s), 1 non-branch not matched): 2 agree, 0 predicted not observed, 0 observed not predicted, 0 out of order
+  Agreement: predicted and observed on branch 6-8 (predicted #1, observed at 12.4 s)
+  Agreement: predicted and observed on branch 8-28 (predicted #2, observed at 15.1 s)
+SOE: FULLY CONSISTENT - the predicted cascade reproduces the alarm log.
+[exit 0]

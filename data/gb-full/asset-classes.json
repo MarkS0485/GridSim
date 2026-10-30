@@ -1,0 +1,269 @@
+[
+  {
+    "name": "gfl-wind-2024",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 2.0,
+      "detectionLatencyS": 0.1,
+      "computeLatencyS": 0.02,
+      "actuateTauS": 0.3,
+      "fastSlewUpMwPerSPerMw": 1.0,
+      "fastSlewDownMwPerSPerMw": 1.0,
+      "headroomUpFraction": 0.1,
+      "headroomDownFraction": 0.1,
+      "rocofTripHzPerS": 1.0,
+      "rocofTripConfirmS": 0.5,
+      "lvrtVoltagePu": 0.8,
+      "localRocofUpliftFactor": 1.16
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "Grid-following wind FFR loop; proprietary, literature-approximated [VERIFY]"
+      },
+      "rocofTripHzPerS": {
+        "tag": "Recorded",
+        "note": "Modern GB LoM setting (ALoMCP, 1.0 Hz/s)"
+      },
+      "rocofTripConfirmS": {
+        "tag": "Recorded",
+        "note": "ALoMCP 500 ms definite-time delay (Documentation/manual/54)"
+      },
+      "deadbandHz": {
+        "tag": "Recorded",
+        "note": "NESO frequency-response deadband"
+      },
+      "localRocofUpliftFactor": {
+        "tag": "DerivedFromRecorded",
+        "note": "Sub-cycle RoCoF uplift ~1.16x the 1s COI value (Derived/subcycle_period_features rocof_uplift_ratio)"
+      }
+    }
+  },
+  {
+    "name": "gfl-solar-2024",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 2.0,
+      "detectionLatencyS": 0.12,
+      "computeLatencyS": 0.02,
+      "actuateTauS": 0.3,
+      "headroomUpFraction": 0.05,
+      "headroomDownFraction": 0.05,
+      "rocofTripHzPerS": 1.0,
+      "rocofTripConfirmS": 0.5,
+      "lvrtVoltagePu": 0.8,
+      "localRocofUpliftFactor": 1.16
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "Grid-following solar FFR loop; proprietary [VERIFY]"
+      },
+      "rocofTripHzPerS": {
+        "tag": "Recorded",
+        "note": "Modern GB LoM setting"
+      },
+      "rocofTripConfirmS": {
+        "tag": "Recorded",
+        "note": "ALoMCP 500 ms definite-time delay (Documentation/manual/54)"
+      },
+      "localRocofUpliftFactor": {
+        "tag": "DerivedFromRecorded",
+        "note": "Sub-cycle RoCoF uplift ~1.16x the 1s COI value (Derived/subcycle_period_features rocof_uplift_ratio)"
+      }
+    }
+  },
+  {
+    "name": "gfm-bess-2024",
+    "kind": "gridFormingInverter",
+    "mode": "grid-forming",
+    "params": {
+      "synInertiaMwsPerHz": 8.0,
+      "dampingMwPerHz": 15.0,
+      "deadbandHz": 0.0,
+      "actuateTauS": 0.05,
+      "headroomUpFraction": 0.2,
+      "headroomDownFraction": 0.2,
+      "capacityMwh": 2.0,
+      "socInit": 0.55,
+      "socMin": 0.05,
+      "socMax": 0.95,
+      "rocofTripHzPerS": 2.5,
+      "rocofTripConfirmS": 1.0,
+      "lvrtVoltagePu": 0.5,
+      "localRocofUpliftFactor": 1.16
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "Grid-forming VSM constants; proprietary, literature-approximated [VERIFY]"
+      },
+      "synInertiaMwsPerHz": {
+        "tag": "CuratedPlaceholder",
+        "note": "Virtual-inertia gain (POWER per df/dt, not stored energy) [VERIFY]"
+      },
+      "capacityMwh": {
+        "tag": "CuratedPlaceholder",
+        "note": "BESS duration absent from REPD/TEC/DUKES/BMU; assumed C-rate x MW [VERIFY]"
+      },
+      "localRocofUpliftFactor": {
+        "tag": "DerivedFromRecorded",
+        "note": "Sub-cycle RoCoF uplift ~1.16x the 1s COI value (Derived/subcycle_period_features rocof_uplift_ratio)"
+      }
+    }
+  },
+  {
+    "name": "hvdc-2024",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 3.0,
+      "detectionLatencyS": 0.05,
+      "computeLatencyS": 0.02,
+      "actuateTauS": 0.15,
+      "headroomUpFraction": 0.1,
+      "headroomDownFraction": 0.1,
+      "rocofTripHzPerS": 1.0,
+      "rocofTripConfirmS": 0.5,
+      "localRocofUpliftFactor": 1.16
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "HVDC interconnector fast-response; proprietary [VERIFY]"
+      },
+      "rocofTripHzPerS": {
+        "tag": "Recorded",
+        "note": "Modern GB LoM setting"
+      },
+      "rocofTripConfirmS": {
+        "tag": "Recorded",
+        "note": "ALoMCP 500 ms definite-time delay (Documentation/manual/54)"
+      },
+      "localRocofUpliftFactor": {
+        "tag": "DerivedFromRecorded",
+        "note": "Sub-cycle RoCoF uplift ~1.16x the 1s COI value (Derived/subcycle_period_features rocof_uplift_ratio)"
+      }
+    }
+  },
+  {
+    "name": "legacy-dg-old-lom",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 0.0,
+      "headroomUpFraction": 0.0,
+      "headroomDownFraction": 0.0,
+      "rocofTripHzPerS": 0.125,
+      "rocofTripConfirmS": 0.0,
+      "vectorShiftTripDeg": 6.0,
+      "localRocofUpliftFactor": 1.16
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "Legacy embedded DG on the pre-ALoMCP LoM relay; the 2019-08-09 tripping population [VERIFY]"
+      },
+      "rocofTripHzPerS": {
+        "tag": "Recorded",
+        "note": "Legacy GB LoM setting (0.125 Hz/s): EREC G59 Issue 3 Amendment 8 (S135) p.62, plant commissioned before 01/02/18, not less than K2 x 0.125 Hz/s with K2 = 1.0 (low-impedance network)"
+      },
+      "rocofTripConfirmS": {
+        "tag": "Recorded",
+        "note": "Legacy relays instantaneous - no intentional delay (Documentation/manual/54)"
+      },
+      "vectorShiftTripDeg": {
+        "tag": "Recorded",
+        "note": "Legacy G59 vector-shift LoM setting K1 x 6 degrees with K1 = 1.0 (low-impedance network): EREC G59 Issue 3 Amendment 8 (docs/reference S135), Historic Vector Shift Settings, p.63; vector shift not allowed on or after 01/09/22 and not acceptable under EREC G99 Issue 2 (S124) clause 10.4.11"
+      },
+      "localRocofUpliftFactor": {
+        "tag": "DerivedFromRecorded",
+        "note": "Sub-cycle RoCoF uplift ~1.16x the 1s COI value (Derived/subcycle_period_features rocof_uplift_ratio)"
+      }
+    }
+  },
+  {
+    "name": "tx-oltc-2024",
+    "kind": "transformer",
+    "mode": "on-load-tap-changer",
+    "params": {
+      "targetVpu": 1.0,
+      "tapStepPu": 0.0125,
+      "tapDeadbandPu": 0.01,
+      "minTap": 0.85,
+      "maxTap": 1.15,
+      "interTapDelayS": 5.0,
+      "initialTapDelayS": 10.0,
+      "thermalTauMin": 30.0,
+      "derateAtFullThermal": 0.1
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "Transformer OLTC + thermal; timings not in the lake [VERIFY]"
+      },
+      "targetVpu": {
+        "tag": "Recorded",
+        "note": "Nominal 1.0 pu voltage target"
+      },
+      "tapStepPu": {
+        "tag": "DerivedFromRecorded",
+        "note": "SCADA-recovered OLTC step ~1.0-1.25% nominal (Derived/tap_changers step_pct)"
+      },
+      "minTap": {
+        "tag": "DerivedFromRecorded",
+        "note": "LTDS tap span ~+-15% (ltds_tap_span_pct median 31%)"
+      },
+      "maxTap": {
+        "tag": "DerivedFromRecorded",
+        "note": "LTDS tap span ~+-15% (ltds_tap_span_pct median 31%)"
+      },
+      "interTapDelayS": {
+        "tag": "CuratedPlaceholder",
+        "note": "Mechanical inter-tap delay; no time channel in the lake [VERIFY]"
+      },
+      "initialTapDelayS": {
+        "tag": "CuratedPlaceholder",
+        "note": "Initial tap delay; not in the lake [VERIFY]"
+      },
+      "thermalTauMin": {
+        "tag": "CuratedPlaceholder",
+        "note": "Top-oil/winding thermal time constant; no temperature series [VERIFY]"
+      },
+      "derateAtFullThermal": {
+        "tag": "CuratedPlaceholder",
+        "note": "Sustained thermal derate; emergency headroom is 1.58-2.0x nominal [VERIFY]"
+      }
+    }
+  },
+  {
+    "name": "cable-thermal-2024",
+    "kind": "line",
+    "mode": "dynamic-thermal-rating",
+    "params": {
+      "thermalTauMin": 15.0,
+      "ambientLoadingFraction": 0.0,
+      "derateAtFullThermal": 0.11
+    },
+    "provenance": {
+      "_default": {
+        "tag": "CuratedPlaceholder",
+        "note": "Line/cable IEEE-738 thermal; time constant not in the lake [VERIFY]"
+      },
+      "derateAtFullThermal": {
+        "tag": "DerivedFromRecorded",
+        "note": "Observed seasonal derate: summer ~= 0.89 x winter (LTDS circuits summer/winter ratio)"
+      },
+      "thermalTauMin": {
+        "tag": "CuratedPlaceholder",
+        "note": "Conductor thermal time constant; no temperature series in the lake [VERIFY]"
+      }
+    }
+  }
+]

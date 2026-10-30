@@ -1,0 +1,3 @@
+$ gridsim pmu-ingest docs/_captures/c37118/two-pmu-truncated.bin
+pmu-ingest: docs/_captures/c37118/two-pmu-truncated.bin: the frame at byte 536 declares 56 bytes but only 46 remain; the capture is truncated or corrupt.
+[exit 1]

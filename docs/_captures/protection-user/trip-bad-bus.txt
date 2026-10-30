@@ -1,0 +1,4 @@
+$ gridsim trip results/protection-user/bad-bus --asset-dynamics
+error: cannot load case folder 'results/protection-user/bad-bus': Protection placement is invalid:
+  device 'system-lfdd-1' monitors bus 99999, which is not a bus of model 'GB synthetic'
+[exit 1]

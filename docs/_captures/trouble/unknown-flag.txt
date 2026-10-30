@@ -1,0 +1,3 @@
+$ gridsim case14 --once --bogus
+error: unknown flag '--bogus' (misspelled?). Run 'gridsim --help' for the verb list, or see docs/manual/0019 CLI reference.md.
+[exit 2]

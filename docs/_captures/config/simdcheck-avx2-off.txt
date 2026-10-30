@@ -1,0 +1,13 @@
+$ DOTNET_EnableAVX2=0 gridsim simdcheck
+GridSim SIMD preflight
+======================
+CPU cores: 8   OS: Microsoft Windows 10.0.26200
+process arch: X64
+commit: 11b298f1
+
+SIMD: Sse128 (2 doubles/step)  FMA=no  [Avx512F=False Avx2=False Fma=False Sse2=True AdvSimd=False]
+
+Active vector tier: Sse128 (2 doubles per vector step)
+Dense-LU / normal-equations / covariance kernels dispatch to this width at run time.
+If this reports Avx256 on a box you expect to be AVX-512, the CPU or the runtime is capping the width.
+[exit 0]

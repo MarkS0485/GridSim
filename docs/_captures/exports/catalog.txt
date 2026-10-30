@@ -1,0 +1,28 @@
+$ head -n 26 results/exports-docs/catalog.json
+{
+  "schema": "gridsim-event-catalog/1",
+  "events": [
+    {
+      "id": "gb-2019-08-09",
+      "title": "GB 9 Aug 2019 disturbance (Hornsea \u002B Little Barford)",
+      "whenUtc": "2019-08-09T15:52:33Z",
+      "preEventInertiaMwS": 215000,
+      "preEventDemandMw": 21100,
+      "losses": [
+        {
+          "atSeconds": 0.1,
+          "deltaPMw": -150,
+          "what": "distributed generation vector-shift trip (Ofgem 2.4.2)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 0.5,
+          "deltaPMw": -737,
+          "what": "Hornsea 1 deload 799-\u003E62 MW (Ofgem 2.4.3)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 1,
+          "deltaPMw": -244,
+          "what": "Little Barford steam turbine trip (Ofgem 2.4.4)",
+[exit 0]

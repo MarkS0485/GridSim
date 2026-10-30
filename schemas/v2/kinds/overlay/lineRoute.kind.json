@@ -1,0 +1,16 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "lineRoute",
+  "title": "Line route (asset overlay)",
+  "description": "Phase 5a asset overlay kind. The physical route of one authored line: its spans and earth wires are child records. Carried beside the model, never used by the solver: the line's lengthKm, r, x and b stay the authored values.",
+  "params": {
+    "name": { "type": "string", "required": false, "description": "The route name.", "codeDefaults": [] },
+    "routeLengthKm": { "type": "number", "unit": "km", "min": 0, "required": false, "description": "Route length, kilometres (the authored lengthKm is not changed by it).", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "line": { "target": "line", "required": true, "description": "The authored line this route carries." }
+    },
+    "parentKinds": []
+  }
+}

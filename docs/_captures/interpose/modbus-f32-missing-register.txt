@@ -1,0 +1,11 @@
+$ gridsim interpose case14 --protocol modbus --listen 127.0.0.1:5020 --crosswalk docs/_captures/interpose/modbus-f32-missing-register.json --window-ms 2000 --measurements-dir results/interpose-docs/f32 --ticks 6
+interpose Modbus TCP: listening 127.0.0.1:5020, case 'case14', 1 binding(s)
+windows -> results/interpose-docs/f32 (guard deferred; estimable only once >169 h old)
+headless: stops after 6 frame(s).
+Unhandled exception. System.IO.InvalidDataException: Binding 'MB:U1:3:@103' is F32 (two registers) but register 'MB:U1:3:@104' is not in the same response. Poll a block that includes both registers.
+   at GridSim.Core.Interpose.RtuMeasurementSetMapper.RawValue(RtuPoint p, RtuPointBinding b, IReadOnlyList`1 window) in src\GridSim.Core\Interpose\RtuMeasurementSetMapper.cs:line 141
+   at GridSim.Core.Interpose.RtuMeasurementSetMapper.Map(IReadOnlyList`1 points, RtuPointMap crosswalk, DateTime windowUtc, QualityFold quality, String caseName, Nullable`1 utcNow) in src\GridSim.Core\Interpose\RtuMeasurementSetMapper.cs:line 39
+   at GridSim.Core.Interpose.InterposePipeline.FlushWindow(DateTime fallbackUtc, Nullable`1 utcNow) in src\GridSim.Core\Interpose\InterposePipeline.cs:line 85
+   at Program.<>c__DisplayClass0_0.<<Main>$>g__RunInterpose|23(List`1 a, String root) in src\GridSim.Cli\Program.cs:line 2204
+   at Program.<Main>$(String[] args) in src\GridSim.Cli\Program.cs:line 1115
+[exit -532462766]

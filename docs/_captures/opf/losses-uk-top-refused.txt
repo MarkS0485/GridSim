@@ -1,0 +1,3 @@
+$ gridsim losses uk --top 3
+error: losses does not take --top (it is not one of losses's flags, so it would be silently ignored). Run 'gridsim losses --help' for the flags losses takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

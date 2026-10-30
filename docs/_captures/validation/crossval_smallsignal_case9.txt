@@ -1,0 +1,30 @@
+$ python tools/crossval/crossval_smallsignal.py results/ss9.json
+{
+  "schema": "gridsim-crossval-smallsignal/1",
+  "tool": "scipy.linalg.eig (LAPACK)",
+  "case": "WSCC-9",
+  "states": 6,
+  "inverterStatesIncluded": false,
+  "pairing": "optimal assignment (scipy.optimize.linear_sum_assignment) on |gs_i - sp_j| / max(|sp_j|, 1), the per-mode relative distance the gate uses",
+  "max_relative_eig_diff": 3.120884673715049e-08,
+  "worst_pair": {
+    "gridsim": [
+      0.0,
+      0.0
+    ],
+    "scipy": [
+      1.2888762506743327e-15,
+      3.120884673715046e-08
+    ]
+  },
+  "rtol": 9.094947017729282e-13,
+  "condV": 19279336511.714058,
+  "accept_threshold_rtol_times_condV": 0.017534454411101304,
+  "eigenvalues_within_tolerance": true,
+  "participation_max_abs_diff": 0.38713555137155176,
+  "participation_compared": true,
+  "participation_unavailable_reason": null,
+  "gridsim_exit_code": 0,
+  "note": "non-symmetric eig agreement is cond(V)-limited, not machine-eps; condV ~ 1 means machine-eps-clean, condV >> 1 means conditioning-limited."
+}
+[exit 0]

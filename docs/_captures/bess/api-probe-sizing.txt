@@ -1,0 +1,9 @@
+$ API probe (GridSim.Core, Release build): sizing
+chemistry   Vnom_V  cell_Wh   Ns   Np  pack_MWh
+LFP         3.2900   824.40  304   40   10.0247
+NMC         3.7800   219.10  265  172    9.9868
+LTO         2.3000    64.87  435  354    9.9891
+Na-ion      3.1000   466.73  323   66    9.9497
+VRFB        1.4000   980.00  714   14    9.7961
+Lead-acid   2.0400  1603.84  490   13   10.2164
+[exit 0]

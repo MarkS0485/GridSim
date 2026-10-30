@@ -1,0 +1,257 @@
+@* One generator's dashboard. Three provenance tiers, clearly labelled:
+     - LIVE (solved)      - output, bus voltage, inertia contribution
+     - ESTIMATED (derived)- reactive/PF apportioned from the bus solve, fuel burn from heat rates
+     - STATIC DEMO        - subsystem + event scaffolding (illustrative, awaits real plant telemetry)
+   Mirrors GridSim.Wpf GeneratorDetailVm. *@
+
+@if (_g is null)
+{
+    <div class="stub">This unit is not in the current model.</div>
+}
+else
+{
+    <div class="card" style="margin-bottom:0">
+        <div class="card-eyebrow">GENERATOR</div>
+        <div class="card-h" style="margin-bottom:2px"><span class="swatch" style="--c:@_g.FuelColor"></span>@_g.Name</div>
+        <div class="muted-note" style="margin-top:0">@_g.Fuel | @(_g.Synchronous ? "synchronous machine" : "converter-connected") | <span class="txt-ok">LIVE-SOLVED</span></div>
+    </div>
+
+    <div class="panel-grid">
+        @* OUTPUT dial + PF phasor - live-solved (Q/PF apportioned = estimated) *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">OUTPUT &amp; OPERATING POINT</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center">
+                <Gauge Value="_g.Pg" Minimum="0" Maximum="@_capMax" AmberFrom="0.85" RedFrom="0.95"
+                       Caption="OUTPUT" Unit="MW" Width="200" Height="160" />
+                <Phasor P="_g.Pg" Q="_busQ" SMax="_sMax" Width="190" Height="190" />
+            </div>
+            <div class="muted-note" style="text-align:center;margin-top:2px">
+                P @_g.Pg.ToString("N0") MW | Q @_busQ.ToString("+#,0;-#,0;0") MVAr (est.) | S @_s.ToString("N0") MVA | PF @_pf.ToString("F3") @_leadLag
+            </div>
+        </div>
+
+        @* Live electrical state *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">ELECTRICAL <span class="card-eyebrow" style="display:inline;margin:0">LIVE-SOLVED</span></div>
+            <StatRow Label="Output / rating"><b>@_g.Pg.ToString("N0") MW@(_g.Capped ? $" of {_g.PmaxMw:N0}" : "")</b></StatRow>
+            <StatRow Label="Utilisation" Value="@(_g.Capped ? $"{_g.Pg / _g.PmaxMw * 100:F0}%" : "-")" />
+            <StatRow Label="Voltage setpoint" Value="@($"{_g.Vg:F3} pu")" />
+            <StatRow Label="Reactive (est.)" Value="@($"{_busQ:+#,0;-#,0;0} MVAr")" Status="warn" />
+            <StatRow Label="Reactive limits" Value="@(_g.QLimited ? $"{_g.QminMw:N0} ... {_g.QmaxMw:N0} MVAr" : "unconstrained")" />
+            <StatRow Label="On bus">
+                <a role="button" tabindex="0" class="txt-accent" style="color:var(--accent);cursor:pointer"
+                   @onclick="OpenBus">@_busName -></a>
+            </StatRow>
+            <StatRow Label="Bus voltage" Value="@_busVm" />
+        </div>
+    </div>
+
+    <div class="panel-grid">
+        @* Inertia contribution - live *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">INERTIA CONTRIBUTION <span class="card-eyebrow" style="display:inline;margin:0">LIVE</span></div>
+            @if (_g.Synchronous && _g.HSeconds > 0)
+            {
+                <StatRow Label="Inertia constant H" Value="@($"{_g.HSeconds:F1} s")" />
+                <StatRow Label="Stored energy" Value="@($"{_storedMws:N0} MWs | {_storedMws / 1000.0:F2} GVA.s")" />
+                <StatRow Label="Share of system spin" Value="@($"{_share * 100:F2}%")" />
+                <div class="uibar" style="margin-top:8px"><span style="width:@Pct(Math.Sqrt(_share));background:var(--accent)"></span></div>
+                <div class="muted-note">synchronous mass resists frequency change (RoCoF) | system total @Graph.SystemInertiaGvaS.ToString("F1") GVA.s</div>
+            }
+            else
+            {
+                <div class="muted-note" style="margin-top:0">converter-connected - grid-following, contributes no rotational inertia</div>
+            }
+        </div>
+
+        @* Estimated fuel burn - clearly labelled derived, not metered *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">@_burn.Title <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">ESTIMATED</span></div>
+            <div style="display:flex;align-items:baseline;gap:6px">
+                <span style="font-size:1.9em;font-weight:700;font-variant-numeric:tabular-nums">@_burn.Primary</span>
+                <span class="ml" style="color:var(--muted)">@_burn.Unit</span>
+            </div>
+            <StatRow Label="Carbon" Value="@_burn.Co2" />
+            <div class="warn-note">@_burn.Note</div>
+        </div>
+    </div>
+
+    @* Output history sparkline - live rolling *@
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">OUTPUT | RECENT SIM HISTORY</div>
+        <Sparkline Values="_history" Stroke="@_g.FuelColor" Width="900" Height="90" />
+    </div>
+
+    @* Static-demo scaffolding - subsystem + event log *@
+    <div class="panel-grid">
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">SUBSYSTEMS <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            @foreach ((string n, string status, string note) in _subs)
+            {
+                <StatRow Label="@n" Status="@(status == "OK" ? "ok" : "warn")"><b>@status | <span style="color:var(--muted);font-weight:400">@note</span></b></StatRow>
+            }
+            <div class="muted-note">illustrative - awaits a real plant-telemetry feed</div>
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">EVENT LOG <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            @foreach ((string time, string text) in _events)
+            {
+                <StatRow Label="@time"><b style="font-weight:400">@text</b></StatRow>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+    [Parameter] public int GenIndex { get; set; }
+    [Parameter] public int Tick { get; set; }
+
+    private const int HistoryLength = 96;
+
+    private GenAssetDto? _g;
+    private double _busQ, _s, _pf, _capMax, _sMax, _storedMws, _share;
+    private string _leadLag = "", _busName = "-", _busVm = "-";
+    private BurnInfo _burn = new("FUEL BURN", "-", "", "-", "");
+
+    private readonly List<double> _history = new();
+    private int _lastTick = int.MinValue;
+
+    private (string, string, string)[] _subs = Array.Empty<(string, string, string)>();
+    private (string, string)[] _events = Array.Empty<(string, string)>();
+    private bool _staticBuilt;
+
+    protected override void OnParametersSet()
+    {
+        _g = GenIndex >= 0 && GenIndex < Graph.Generators.Count ? Graph.Generators[GenIndex] : null;
+        if (_g is null) return;
+
+        BusAssetDto? bus = Graph.Buses.FirstOrDefault(b => b.Id == _g.Bus);
+        // Reactive apportioned from the bus solve: gen Q at the bus = QInj + bus Qd, split by this unit's Pg share.
+        _busQ = _g.Qg;
+        if (bus is not null)
+        {
+            _busName = bus.Name;
+            _busVm = bus.Solved ? $"{bus.Vm:F3} pu" : "-";
+            double busPg = Graph.Generators.Where(x => x.Bus == _g.Bus).Sum(x => x.Pg);
+            double sharePg = busPg > 1e-6 ? _g.Pg / busPg : 1.0;
+            _busQ = (bus.QInjMvar + bus.DemandMvar) * sharePg;
+        }
+
+        _s = Math.Sqrt(_g.Pg * _g.Pg + _busQ * _busQ);
+        _pf = _s > 1e-6 ? Math.Abs(_g.Pg) / _s : 1.0;
+        _leadLag = _busQ < -1e-6 ? "leading" : _busQ > 1e-6 ? "lagging" : "unity";
+        _capMax = _g.Capped ? _g.PmaxMw : Math.Max(_g.Pg, 1);
+        _sMax = _g.Capped ? Math.Max(_g.PmaxMw, _s) : Math.Max(_s, 1);
+
+        _storedMws = _g.HSeconds * _g.MBase;
+        _share = Graph.SystemInertiaGvaS > 1e-9 ? _storedMws / 1000.0 / Graph.SystemInertiaGvaS : 0;
+
+        _burn = FuelBurn(_g.Fuel, _g.FuelClass, _g.Name, _g.Pg);
+
+        // rolling output history - seeded full on first sight so the chart reads immediately, then evolves.
+        if (_history.Count == 0)
+            for (int i = 0; i < HistoryLength - 1; i++) _history.Add(_g.Pg);
+        if (Tick != _lastTick)
+        {
+            _lastTick = Tick;
+            _history.Add(_g.Pg);
+            while (_history.Count > HistoryLength) _history.RemoveAt(0);
+        }
+
+        if (!_staticBuilt) { BuildStatic(_g.FuelClass, _g.Name); _staticBuilt = true; }
+    }
+
+    private void OpenBus() { if (_g is not null) Nav.OpenSubstation(_g.Bus, _busName); }
+
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+
+    private sealed record BurnInfo(string Title, string Primary, string Unit, string Co2, string Note);
+
+    // Estimated fuel burn from electrical output - textbook heat rates, NOT metered fuel flow (labelled est.).
+    private static BurnInfo FuelBurn(string fuel, string cls, string name, double mw)
+    {
+        const double gasLhv = 38.7, ccgtCo2 = 0.35;
+        double GasM3(double hr) => mw * hr * 1000.0 / gasLhv;
+        string lower = name.ToLowerInvariant();
+        bool biomass = fuel.StartsWith("Biomass", StringComparison.OrdinalIgnoreCase);
+
+        if (fuel.Equals("CCGT", StringComparison.OrdinalIgnoreCase) || fuel.Equals("CHP", StringComparison.OrdinalIgnoreCase) || fuel.Equals("Gas", StringComparison.OrdinalIgnoreCase))
+            return new("GAS BURN | CCGT", $"{GasM3(6.5):N0}", "m^3/h gas", $"{mw * ccgtCo2:N0} t CO2/h", "estimated | heat rate ~6.5 GJ/MWh (~55%), gas LHV 38.7 MJ/m^3, ~0.35 t CO2/MWh");
+        if (fuel.StartsWith("OCGT", StringComparison.OrdinalIgnoreCase))
+            return new("GAS BURN | OCGT", $"{GasM3(10.0):N0}", "m^3/h gas", $"{mw * 0.49:N0} t CO2/h", "estimated | open-cycle ~10 GJ/MWh (~36%), ~0.49 t CO2/MWh");
+        if (fuel.StartsWith("Coal", StringComparison.OrdinalIgnoreCase))
+            return new("FUEL BURN | COAL", $"{mw * 0.34:N0}", "t/h coal", $"{mw * 0.95:N0} t CO2/h", "estimated | ~0.34 t coal/MWh, ~0.95 t CO2/MWh");
+        if (biomass)
+            return new("FUEL BURN | BIOMASS", $"{mw * 0.55:F1}", "t/h pellets", "biogenic - carbon-neutral at stack", "estimated | ~0.55 t wood pellet/MWh");
+        if (cls == "Nuclear")
+            return new("FUEL | NUCLEAR", $"{mw * 3.9:N0}", "g/h fissioned", "no combustion CO2", "estimated, order-of-magnitude | ~3.9 g U-235 per MWh");
+        if (cls is "Renewable" or "Storage")
+        {
+            string kind = lower.Contains("hydro") || lower.Contains("pumped") ? "hydro"
+                        : fuel.StartsWith("Wind", StringComparison.OrdinalIgnoreCase) ? "wind"
+                        : fuel.StartsWith("Solar", StringComparison.OrdinalIgnoreCase) ? "solar" : "this plant";
+            return new("NO FUEL | CARBON AVOIDED", $"{mw * ccgtCo2:N0}", "t CO2/h avoided", "vs the same MWh from a CCGT", $"estimated | {kind} burns no fuel; avoided at ~0.35 t CO2/MWh");
+        }
+        return new("FUEL BURN", "-", "", "-", "no fuel-burn estimate for this fuel class");
+    }
+
+    private void BuildStatic(string cls, string name)
+    {
+        string lower = name.ToLowerInvariant();
+        _subs = cls switch
+        {
+            "Fossil" => new[]
+            {
+                ("Rotor Train", "OK", "shaft vibration 2.2 mm/s | 3,000 rpm"),
+                ("Bearing Oil", "OK", "metal temp 78 degC | lube pressure nominal"),
+                ("Exciter / AVR", "OK", "voltage regulator in auto | field stable"),
+                ("Protection", "WATCH", "negative-sequence relay logging, no trip"),
+            },
+            "Nuclear" => new[]
+            {
+                ("Main Generator", "OK", "stator winding temps nominal"),
+                ("Excitation", "OK", "field current steady | PF 0.998"),
+                ("Protection", "OK", "no active trip conditions | all zones healthy"),
+                ("Operational Controls", "WATCH", "restricted intervention - oversight required"),
+            },
+            "Renewable" when lower.Contains("hydro") || lower.Contains("pumped") || lower.Contains("dinorwig") => new[]
+            {
+                ("Governor", "OK", "fast reserve enabled | response < 10 s"),
+                ("Wicket Gates", "OK", "position 74% | servo pressure nominal"),
+                ("Hydraulic", "WATCH", "penstock transient logged | within limits"),
+                ("Digital Control", "OK", "unit in auto | setpoint tracking"),
+            },
+            "Renewable" => new[]
+            {
+                ("Turbine Strings", "OK", "weather-led | 94% available"),
+                ("Converter", "OK", "thermal margin healthy | no derate"),
+                ("Export Control", "WATCH", "PPC clipping at boundary limit"),
+                ("Reactive Plant", "OK", "STATCOM holding POI voltage"),
+            },
+            "Storage" => new[]
+            {
+                ("PV / DC Blocks", "OK", "string currents balanced | 41 degC"),
+                ("Battery", "OK", "SoC 62% | cell spread 12 mV"),
+                ("Inverter Farm", "OK", "thermal margin healthy | no derate"),
+                ("EMS", "WATCH", "dispatch arbitrage active | fast-reserve armed"),
+            },
+            _ => new[]
+            {
+                ("Machine", "OK", "operating within nameplate"),
+                ("Excitation", "OK", "field stable"),
+                ("Protection", "OK", "no active trips"),
+                ("Controls", "WATCH", "mode under review"),
+            },
+        };
+        _events = new[]
+        {
+            ("06:12", "governor response to frequency dip - primary delivered"),
+            ("05:48", "AGC setpoint raised"),
+            ("04:30", "routine bearing/insulation sample - within limits"),
+            ("02:15", "synchronised to grid - breaker closed"),
+            ("01:50", "excitation in auto"),
+        };
+    }
+}

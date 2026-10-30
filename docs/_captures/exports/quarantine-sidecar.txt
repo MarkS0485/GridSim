@@ -1,0 +1,10 @@
+$ cat docs/_captures/interpose/quarantine-sidecar.json
+{
+  "store": "rtu_live",
+  "source_class": "telemetry",
+  "evidential": false,
+  "reason": "live SCADA/RTU telemetry - GDA explicit exclude-by-rule (README \u0027does NOT use SCADA data\u0027; manual Table 1.3)",
+  "never_merge_into": "GDA unified (MERGE-only) tables",
+  "horizon_hours": 169,
+  "written_by": "gridsim interpose"
+}[exit 0]

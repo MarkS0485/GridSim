@@ -1,0 +1,5 @@
+$ gridsim cpf case14
+CPF - IEEE 14-bus (14 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 1.759765625  (base demand 259.0 MW -> 455.8 MW at the last converged point; nose bracketed to 0.001)
+  margin 75.98% above base load
+[exit 0]

@@ -1,0 +1,11 @@
+$ gridsim fault case9 --bus 7 --zf 0.5
+Balanced three-phase fault  -  case9  bus 7  Zf=j0.500 pu
+  fault current: 1.67 pu (0.28 kA)   Thevenin Z: 0.1098 pu   faulted bus voltage: 0.836 pu
+  (generator subtransient reactance synthesised at 0.20 pu; positive-sequence, so three-phase only)
+  relays operating on the faulted state: 1
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 87 | Differential | bus 7 | 1.671 pu | 0.100 | inst | busbar differential 1.67E+000 pu at bus 7 exceeds the 0.10 pu bias pickup (internal fault) |
+
+PROTECTION SIMULATION: a three-phase fault at bus 7 would drive 1 relay operation(s) - primary clearance by 87 (Differential) on bus 7, instantaneously.
+[exit 0]

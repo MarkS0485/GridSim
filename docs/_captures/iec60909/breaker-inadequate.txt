@@ -1,0 +1,10 @@
+$ gridsim iec60909 case9 --bus 1 --breaker 345,6,2,2
+IEC 60909 - IEEE 9-bus (WSCC), bus 1, three-phase, Maximum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 2.934393338019216 kA  (17.534688310401165 pu)
+  ip    = 8.299717711928068 kA  (kappa 2, R/X 0.019434794652556552, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 2.3509284626333975 kA    Ik = 2.934393338019216 kA  (near a generator, fed from several sources: IEC 60909-0 Ik = Ik''M, the initial current without motors; no motors are modelled)
+  Ith   = 3.1412149644062284 kA  (m 0.1459315044848038)    idc(tb) = 1.9945128315290945 kA
+  Zth   = 0.0012189687934890236 + j0.06272095050557554 pu
+  breaker 345 kV / making 6 kA / breaking 2 kA / 2 kA for 1 s: NOT ADEQUATE
+    voltage TOO LOW (system 345 kV, highest 362 kV)   making margin -2.299717711928068 kA   breaking margin -0.3509284626333975 kA   thermal margin -1.1412149644062284 kA
+[exit 3]

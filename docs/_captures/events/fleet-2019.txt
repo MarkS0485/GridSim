@@ -1,0 +1,17 @@
+$ gridsim fleet --event gb-2019-08-09 --out results/fleet-gb-2019-08-09
+
+=== Fleet emergent behaviour: GB 9 Aug 2019 disturbance (Hornsea + Little Barford) ===
+  system inertia: 215 GVA.s   device budget: 40 GVA.s inertia + 1.50 GW FFR   stagger: 10.00 s
+  (same TOTAL budget split N ways - intrinsic inertia N-additive, FFR non-additive)
+
+   units |       RoCoF |    nadir |  FFR @ nadir |   peak FFR | LFDD
+  --------------------------------------------------------------------------
+       1 |   -0.139Hz/s |  49.53Hz |      1411MW |    1411MW | no
+     100 |   -0.145Hz/s |  49.53Hz |      1411MW |    1411MW | no
+
+  RoCoF differs across unit counts (-0.139 vs -0.145 Hz/s): the inertia total is the same in both (it is N-additive), so the difference is the timing of the fast response, not the inertia.
+  At the nadir the 100-unit fleet has the same 1411 MW online as 1 aggregate unit (100 %): on this event the staggered fleet is fully delivered by the nadir, so the split costs nothing here.
+  Consequence: the same nadir, 49.53 Hz for the 100-unit fleet and 49.53 Hz for 1 unit(s).
+
+  -> results\fleet-gb-2019-08-09
+[exit 0]

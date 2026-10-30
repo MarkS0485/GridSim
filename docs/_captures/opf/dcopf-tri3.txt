@@ -1,0 +1,9 @@
+$ gridsim dcopf docs/_captures/opf/tri3
+DC-OPF - Three-bus worked example (3 buses)  [cheapest secure dispatch]
+  demand 100 MW  generation 100 MW  total cost 2,700 GBP/h  (network-constrained redispatch applied)
+  dispatch (by output):
+      gen bus 1          80.0 MW  @    10 GBP/MWh
+      gen bus 2          20.0 MW  @    95 GBP/MWh
+  binding line limits:
+      branch 0    L13              60.0 MW / 60 MVA
+[exit 0]

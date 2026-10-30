@@ -1,0 +1,221 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mech="using:GridSim.Ui.Tabs.MachineEngineer"
+             xmlns:dashv="using:GridSim.App.Dashboard"
+             xmlns:ctl="using:GridSim.App.Controls"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             x:Class="GridSim.App.Tabs.MachineEngineerView"
+             x:DataType="mech:MachineEngineerModel">
+  <!-- UI programme Phase 1.6: the MECHANICAL / PLANT ENGINEER tab, ported from
+       src/GridSim.Wpf/Views/MachineEngineerView.xaml. Texts, order, sizes and colours are the WPF ones; every value is
+       bound to the shared MachineEngineerModel, its colours (the WPF RiskBrush, Swatch, RampBrush, RocofLegacyBrush,
+       RocofModernBrush, ProjBrush) through UiColourBrushConverter. A machine row's click (the WPF
+       InspectMachineCommand) calls the model's InspectMachine, which opens the inspector overlay (InspectorView). The P-Q
+       capability is the ported PqDiagram instrument. -->
+  <Grid Margin="10" RowDefinitions="Auto,1.15*,2*,Auto">
+
+    <!-- title -->
+    <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
+      <StackPanel>
+        <TextBlock Text="MECHANICAL / PLANT ENGINEER  *  what the MACHINES are doing" Classes="PanelHeader" FontSize="13" />
+        <TextBlock Text="MW / loading / inertia / ramp / RoCoF-margin REAL from the model  *  MVAr, power factor, excitation need reactive-dispatch telemetry (not in the presolved feed)  *  AVR, torsional, temps, certified-J flagged synthetic until a plant feed is wired"
+                   Classes="Label" FontSize="9" Margin="0,2,0,0" Foreground="#66808A" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- ===================== SECTION 1 : PER-MACHINE STATE (risk-sorted) ===================== -->
+    <!-- Parity sign-off (2026-10-24): every list on this tab keeps 18 px clear at the right of Avalonia's overlay scroll
+         bar (it covered the GOV column and the right-aligned values); the header keeps the same allowance. -->
+    <Border Grid.Row="1" Classes="Card" Padding="10">
+      <Grid RowDefinitions="Auto,Auto,*">
+        <TextBlock Grid.Row="0" Text="PER-MACHINE STATE  *  most-stressed first" Classes="PanelHeader" />
+        <!-- header -->
+        <Grid Grid.Row="1" Margin="0,6,20,4" ColumnDefinitions="16,*,90,70,70,90,70,90,60">
+          <TextBlock Grid.Column="1" Text="MACHINE" Classes="Label" FontSize="9" />
+          <TextBlock Grid.Column="2" Text="FUEL" Classes="Label" FontSize="9" />
+          <TextBlock Grid.Column="3" Text="MW" Classes="Label" FontSize="9" TextAlignment="Right" />
+          <TextBlock Grid.Column="4" Text="MVAr" Classes="Label" FontSize="9" TextAlignment="Right" />
+          <TextBlock Grid.Column="5" Text="POWER FACTOR" Classes="Label" FontSize="9" TextAlignment="Right" />
+          <TextBlock Grid.Column="6" Text="EXC%*" Classes="Label" FontSize="9" TextAlignment="Right" />
+          <TextBlock Grid.Column="7" Text="AVR*" Classes="Label" FontSize="9" TextAlignment="Right" />
+          <TextBlock Grid.Column="8" Text="GOV*" Classes="Label" FontSize="9" TextAlignment="Right" />
+        </Grid>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+          <ItemsControl x:Name="MachinesList" ItemsSource="{Binding Machines}" Margin="0,0,18,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="mech:MachineRowModel">
+                <!-- Parity (2026-10-24, T6-T15 comparison): the WPF RowLinkBtn template draws its row with a fixed 10,7 padding and
+                     ignores the Padding set on the Button, so the WPF rows are 10,7 whatever the XAML says. Avalonia honours the local
+                     value, which made these rows much tighter than WPF; they now carry the 10,7 the WPF rows show. -->
+                <Button Classes="RowLinkBtn" Padding="10,7" Margin="0,1" Click="Machine_Click" ToolTip.Tip="Click for full machine detail">
+                  <Grid ColumnDefinitions="16,*,90,70,70,90,70,90,60">
+                    <Ellipse Grid.Column="0" Width="8" Height="8" VerticalAlignment="Center"
+                             Fill="{Binding RiskColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{StaticResource Text}" FontSize="11" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                      <Border Width="8" Height="8" CornerRadius="2" Margin="0,0,5,0"
+                              Background="{Binding SwatchColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                      <TextBlock Text="{Binding Fuel}" Classes="Label" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="3" Text="{Binding Mw}" Classes="Value" FontSize="11" TextAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Text="{Binding Mvar}" Classes="Value" FontSize="11" TextAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="5" Text="{Binding Pf}" FontFamily="{DynamicResource MonoFont}" FontSize="11" TextAlignment="Right" VerticalAlignment="Center"
+                               Foreground="{Binding RiskColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    <TextBlock Grid.Column="6" Text="{Binding ExcPct}" Classes="Label" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="7" Text="{Binding Avr}" Classes="Label" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="8" Text="{Binding Gov}" Classes="Label" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+
+    <!-- ===================== SECTIONS 2-5 : 2x2 ===================== -->
+    <Grid Grid.Row="2" Margin="0,10,0,0" ColumnDefinitions="*,*" RowDefinitions="*,*">
+
+      <!-- Section 2 : Shaft & Torsional + Thermal (middle-left) -->
+      <Border Grid.Row="0" Grid.Column="0" Classes="Card" Margin="0,0,5,5" Padding="10">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <TextBlock Grid.Row="0" Text="SHAFT / TORSIONAL &amp; THERMAL" Classes="PanelHeader" />
+          <TextBlock Grid.Row="1" Text="cumulative torque-pulse count from MW steps (proxy) * stator/rotor temp synthetic"
+                     Classes="Label" FontSize="9" Foreground="#66808A" TextWrapping="Wrap" Margin="0,2,0,4" />
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding Machines}" Margin="0,0,18,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mech:MachineRowModel">
+                  <Grid Margin="0,2" ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="Label" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Pulses, StringFormat='{}{0} pulses'}" Classes="Label" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding PeakStress}" Foreground="#F3C13A" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Width="120">
+                      <TextBlock Text="{Binding StatorTemp}" Classes="Value" FontSize="10" />
+                      <TextBlock Text=" / " Classes="Label" FontSize="10" />
+                      <TextBlock Text="{Binding RotorTemp}" Classes="Value" FontSize="10" />
+                      <TextBlock Text="{Binding ThermalTrend}" Foreground="#F3C13A" FontSize="10" Margin="4,0,0,0" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+
+      <!-- Section 3 : Protection Envelope (middle-right) -->
+      <Border x:Name="ProtectionEnvelopeCard" Grid.Row="0" Grid.Column="1" Classes="Card" Margin="5,0,0,5" Padding="10" ClipToBounds="True">
+        <Grid ColumnDefinitions="1.1*,*" RowDefinitions="Auto,*">
+          <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="PROTECTION ENVELOPE" Classes="PanelHeader" />
+
+          <!-- P-Q capability for the most-stressed machine. Parity sign-off (2026-10-24): the diagram takes up to its WPF
+               150 px and shrinks to the card on a short window (at a fixed 150 px its axis labels ran past the card). -->
+          <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,6,8,0">
+            <TextBlock x:Name="SelectedNameText" DockPanel.Dock="Top" Text="{Binding Selected.Name, StringFormat='P-Q * {0}'}" Classes="Label" FontSize="9" />
+            <ctl:PqDiagram x:Name="SelectedPq" MaxHeight="150" Margin="0,4,0,0"
+                           Pg="{Binding Selected.Pg}" Qg="{Binding Selected.Qg}"
+                           Qmin="{Binding Selected.Qmin}" Qmax="{Binding Selected.Qmax}" Pmax="{Binding Selected.Pmax}" />
+          </DockPanel>
+
+          <!-- RoCoF relay margin: current vs BOTH the original 0.125 and relaxed 1.0 thresholds -->
+          <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,6,0,0">
+            <TextBlock Text="RoCoF RELAY MARGIN" Classes="Label" FontSize="9" />
+            <TextBlock x:Name="RocofNowText" Text="{Binding RocofNow}" Classes="Value" FontSize="20" />
+            <TextBlock x:Name="RocofLegacyMarginText" Text="{Binding RocofLegacyMargin}" FontSize="10" Margin="0,6,0,0"
+                       Foreground="{Binding RocofLegacyColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+            <ProgressBar x:Name="RocofLegacyBar" Height="5" MinHeight="5" Minimum="0" Maximum="100" Value="{Binding RocofLegacyPct, Mode=OneWay}"
+                         Foreground="{Binding RocofLegacyColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}"
+                         Background="{StaticResource Track}" BorderThickness="0" Margin="0,2,0,0" />
+            <TextBlock x:Name="RocofModernMarginText" Text="{Binding RocofModernMargin}" FontSize="10" Margin="0,6,0,0"
+                       Foreground="{Binding RocofModernColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+            <ProgressBar x:Name="RocofModernBar" Height="5" MinHeight="5" Minimum="0" Maximum="100" Value="{Binding RocofModernPct, Mode=OneWay}"
+                         Foreground="{Binding RocofModernColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}"
+                         Background="{StaticResource Track}" BorderThickness="0" Margin="0,2,0,0" />
+            <TextBlock Text="the limit was relaxed to fit the condition, not the condition to the limit"
+                       Classes="Label" FontSize="8" Foreground="#66808A" TextWrapping="Wrap" Margin="0,6,0,0" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Section 4 : Inertia Per Unit (bottom-left) -->
+      <Border Grid.Row="1" Grid.Column="0" Classes="Card" Margin="0,5,5,0" Padding="10">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Grid.Row="0" Text="INERTIA PER UNIT  *  GVA.s(i) asset-level" Classes="PanelHeader" />
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+            <ItemsControl ItemsSource="{Binding Machines}" Margin="0,0,18,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mech:MachineRowModel">
+                  <Grid Margin="0,2" ColumnDefinitions="*,Auto,Auto,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="Label" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding HseSec, StringFormat='H {0}'}" Classes="Label" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding TestDate, StringFormat='test {0}'}" Classes="Label" FontSize="9" Foreground="#66808A" Margin="6,0" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="{Binding KeGvaS, StringFormat='{}{0} GVA.s'}" Classes="Value" FontSize="11" Width="90" TextAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <Grid Grid.Row="2" Margin="0,6,0,0" ColumnDefinitions="*,*,*">
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="sum ASSET KE" Classes="Label" FontSize="9" />
+              <TextBlock x:Name="SumKeText" Text="{Binding SumKe}" Foreground="#2FD27F" FontWeight="Bold" FontSize="15" />
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="REPORTED (i)" Classes="Label" FontSize="9" />
+              <TextBlock x:Name="ReportedTotalText" Text="{Binding ReportedTotal}" Classes="Value" FontSize="15" />
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="SYNTHETIC GAP" Classes="Label" FontSize="9" />
+              <TextBlock x:Name="SyntheticGapText" Text="{Binding SyntheticGap}" Foreground="#F3C13A" FontWeight="Bold" FontSize="15" />
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- Section 5 : Fleet Trajectory (bottom-right) -->
+      <Border Grid.Row="1" Grid.Column="1" Classes="Card" Margin="5,5,0,0" Padding="10">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
+          <TextBlock Grid.Row="0" Text="FLEET TRAJECTORY  *  MW/min" Classes="PanelHeader" />
+          <DockPanel Grid.Row="1" Margin="0,6,0,0">
+            <StackPanel DockPanel.Dock="Right">
+              <TextBlock Text="PROJECTED (i) +15 min" Classes="Label" FontSize="9" TextAlignment="Right" />
+              <TextBlock x:Name="ProjInertiaText" Text="{Binding ProjInertia}" FontWeight="Bold" FontSize="16" TextAlignment="Right"
+                         Foreground="{Binding ProjColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+            </StackPanel>
+            <TextBlock x:Name="FleetTrendText" Text="{Binding FleetTrend}" Classes="Label" VerticalAlignment="Center" />
+          </DockPanel>
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+            <ItemsControl ItemsSource="{Binding Machines}" Margin="0,0,18,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mech:MachineRowModel">
+                  <Grid Margin="0,2" ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Grid.Column="0" Text="{Binding RampArrow}" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center"
+                               Foreground="{Binding RampColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="Label" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding RampMwMin, StringFormat='{}{0} MW/min'}" FontFamily="{DynamicResource MonoFont}" FontSize="11" VerticalAlignment="Center"
+                               Foreground="{Binding RampColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <ItemsControl x:Name="CommittedStartsList" Grid.Row="3" ItemsSource="{Binding CommittedStarts}" Margin="0,4,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="mech:StartRowModel">
+                <TextBlock Text="{Binding Note}" Classes="Label" FontSize="9" Foreground="#66808A" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- closing line -->
+    <TextBlock Grid.Row="3" Margin="2,8,0,0" Foreground="#66808A" FontSize="10" TextWrapping="Wrap"
+               Text="The operator view tells you what the SYSTEM is doing. The mechanical view tells you what the MACHINES are doing. The system is made of machines." />
+
+    <!-- drill-down inspector overlay (spans the whole tab) -->
+    <tabs:InspectorView x:Name="Inspector" Grid.Row="0" Grid.RowSpan="4" />
+  </Grid>
+</UserControl>

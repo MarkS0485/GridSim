@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26-rewrite.log
+OK results/ch26-rewrite.log: 2 entries, head 627216100033C2216BE7253C90F0CE95298F3E034112FC5F3253BF2916DE25BC
+[exit 0]

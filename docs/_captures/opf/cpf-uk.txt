@@ -1,0 +1,5 @@
+$ gridsim cpf uk
+CPF - GB reduced (10-zone) (20 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 6.052734375  (base demand 39,500.0 MW -> 239,083.0 MW at the last converged point; nose bracketed to 0.001)
+  margin 505.27% above base load
+[exit 0]

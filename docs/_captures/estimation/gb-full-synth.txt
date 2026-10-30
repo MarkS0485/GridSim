@@ -1,0 +1,11 @@
+$ gridsim estimate data/gb-full --synth --out results/gb-full-estimate
+
+=== WLS state estimate: data/gb-full ===
+  status: Converged   iterations: 7   max |dx|: 5.79E-010
+  measurements: 34289   states: 7076   redundancy (dof): 27213
+  observability: observable (rank -1/7076)
+  consistency: J = 26996.85 vs chi2(95%) = 27597.87 -> PASS
+  vs synthetic truth: max |dVm| = 7.892E-003 pu   max |dVa| = 1.172E+000 deg
+
+  -> results\gb-full-estimate
+[exit 0]

@@ -1,0 +1,29 @@
+$ gridsim gda --root $GDA_ROOT --gsp "Nowhere 132kV" --solve
+GridSim  -  GDA ingestion from $GDA_ROOT  (NGED)
+==========================================================================
+Built in 1338 ms  -  GB/NGED ex-GDA [Nowhere 132kV]
+
+  Raw LTDS nodes          22,590
+  Electrical buses             0   (busbar/disconnector ties merged: 0)
+  Series circuits              0   (cables & lines)
+  Transformers (2w/3w)         0 / 0   (+0 star nodes)
+  Total branches               0
+  Demand points                0   matched 0, total 0.00 GW
+  Generators                   0   (0.00 GW capacity, 0 unmatched)
+  System inertia             0.0 GVAs
+  OLTCs                        0
+  Connected islands            0   (largest 0 buses)
+
+  Buses by voltage:
+
+   No embedded generators matched; GSP infeeds carry all supply.
+   0 GSP infeed(s) modelled as slack buses; primary = bus -1 (n/a, 0 kV).
+   Demand: 2118 row(s), 23231.7 MW are on nodes outside this build's network (other areas of the carve, or nodes on no in-scope element) and were not included.
+   GSP group = Nowhere 132kV.
+   Geolocated 0/0 buses from substations.csv.
+   validation: error: No slack (reference) bus; the power flow would be singular.
+
+Solving with the dense backend...
+Converged in 16 ms (0 NR, 0 OLTC, mismatch 0.00E+000)
+Solve failed: Sequence contains no elements
+[exit 1]

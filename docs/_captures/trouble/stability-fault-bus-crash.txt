@@ -1,0 +1,3 @@
+$ gridsim stability case9 --fault-bus 99
+error: stability: fault bus 99 is not in case 'IEEE 9-bus (WSCC)'.
+[exit 2]

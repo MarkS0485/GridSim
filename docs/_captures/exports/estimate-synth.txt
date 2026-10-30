@@ -1,0 +1,11 @@
+$ gridsim estimate case14 --synth --trace --export-solve --out results/exports-docs/estimate
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 2.72E-009
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  consistency: J = 80.01 vs chi2(95%) = 118.75 -> PASS
+  vs synthetic truth: max |dVm| = 1.330E-003 pu   max |dVa| = 2.248E-001 deg
+
+  -> results\exports-docs\estimate
+[exit 0]

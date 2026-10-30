@@ -1,0 +1,12 @@
+$ head -10 results/gda-stalybridge/onloadtapchanger.json
+[
+  {
+    "transformer": "TX EYAM3/EYAM5 33/11",
+    "controlsBus": 6,
+    "targetVpu": 1,
+    "minTap": 0.88,
+    "maxTap": 1.04,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.01
+  },
+[exit 0]

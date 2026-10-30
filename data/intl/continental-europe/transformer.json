@@ -1,0 +1,6822 @@
+[
+  {
+    "name": "TX15146 704-705",
+    "from": 4270,
+    "to": 4274,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15148 716-717",
+    "from": 4369,
+    "to": 4380,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15149 724-725",
+    "from": 4442,
+    "to": 4453,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15155 761-762",
+    "from": 4736,
+    "to": 4747,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15159 831-832",
+    "from": 5314,
+    "to": 5324,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15160 839-840",
+    "from": 5378,
+    "to": 5387,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15161 844-845",
+    "from": 5419,
+    "to": 5427,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15162 847-848",
+    "from": 5445,
+    "to": 5455,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15163 859-860",
+    "from": 5544,
+    "to": 5554,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15164 868-869",
+    "from": 5623,
+    "to": 5630,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15165 871-872",
+    "from": 5646,
+    "to": 5653,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15166 873-874",
+    "from": 5663,
+    "to": 5673,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15167 884-885",
+    "from": 5753,
+    "to": 5762,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15168 887-888",
+    "from": 5774,
+    "to": 5775,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15169 895-896",
+    "from": 5782,
+    "to": 5783,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15170 899-900",
+    "from": 5786,
+    "to": 5787,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15171 902-903",
+    "from": 5789,
+    "to": 5790,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15175 926-927",
+    "from": 5793,
+    "to": 5794,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15176 928-929",
+    "from": 5795,
+    "to": 5796,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15182 975-976",
+    "from": 5810,
+    "to": 5811,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15183 980-981",
+    "from": 5815,
+    "to": 5816,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15184 985-986",
+    "from": 5820,
+    "to": 5821,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15192 1268-1269",
+    "from": 78,
+    "to": 79,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15193 1271-1272",
+    "from": 81,
+    "to": 82,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15194 1273-1274",
+    "from": 83,
+    "to": 84,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15195 1281-1282",
+    "from": 90,
+    "to": 91,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15196 1304-1305",
+    "from": 110,
+    "to": 111,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15197 1310-1311",
+    "from": 116,
+    "to": 117,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15198 1314-1315",
+    "from": 120,
+    "to": 121,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15199 1319-1320",
+    "from": 125,
+    "to": 126,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15200 1333-1334",
+    "from": 138,
+    "to": 139,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15201 1335-1336",
+    "from": 140,
+    "to": 141,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15202 1354-1355",
+    "from": 158,
+    "to": 159,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15203 1360-1361",
+    "from": 164,
+    "to": 165,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15204 1364-1365",
+    "from": 168,
+    "to": 169,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15205 1371-1372",
+    "from": 175,
+    "to": 176,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15206 1376-1377",
+    "from": 179,
+    "to": 180,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15207 1387-1388",
+    "from": 190,
+    "to": 191,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15210 1406-1407",
+    "from": 205,
+    "to": 206,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15213 1462-1463",
+    "from": 247,
+    "to": 248,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15214 1472-1473",
+    "from": 257,
+    "to": 258,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15215 1512-1513",
+    "from": 297,
+    "to": 298,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15216 1525-1526",
+    "from": 309,
+    "to": 310,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15217 1531-1532",
+    "from": 315,
+    "to": 316,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15218 1534-1535",
+    "from": 318,
+    "to": 319,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15219 1538-1539",
+    "from": 322,
+    "to": 323,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15220 1545-1546",
+    "from": 329,
+    "to": 330,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15221 1547-1548",
+    "from": 331,
+    "to": 332,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15222 1552-1553",
+    "from": 336,
+    "to": 337,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15223 1554-1555",
+    "from": 338,
+    "to": 339,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15224 1565-1566",
+    "from": 349,
+    "to": 350,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15225 1569-1570",
+    "from": 353,
+    "to": 354,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15226 1581-1582",
+    "from": 365,
+    "to": 366,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15227 1586-1587",
+    "from": 370,
+    "to": 371,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15228 1593-1594",
+    "from": 377,
+    "to": 378,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15229 1600-1601",
+    "from": 384,
+    "to": 385,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15230 1608-1609",
+    "from": 392,
+    "to": 393,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15231 1615-1616",
+    "from": 399,
+    "to": 400,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15232 1618-1619",
+    "from": 402,
+    "to": 403,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15233 1620-1621",
+    "from": 404,
+    "to": 405,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15234 1634-1635",
+    "from": 418,
+    "to": 419,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15235 1637-1638",
+    "from": 421,
+    "to": 422,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15236 1643-1644",
+    "from": 426,
+    "to": 427,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15237 1656-1657",
+    "from": 439,
+    "to": 440,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15238 1662-1663",
+    "from": 445,
+    "to": 446,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15239 1670-1671",
+    "from": 453,
+    "to": 454,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15240 1688-1689",
+    "from": 471,
+    "to": 472,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15241 1690-1691",
+    "from": 473,
+    "to": 474,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15242 1693-1694",
+    "from": 476,
+    "to": 477,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15243 1701-1702",
+    "from": 484,
+    "to": 485,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15244 1705-1706",
+    "from": 488,
+    "to": 489,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15245 1708-1709",
+    "from": 491,
+    "to": 492,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15246 1714-1715",
+    "from": 497,
+    "to": 498,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15247 1730-1731",
+    "from": 512,
+    "to": 513,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15248 1747-1748",
+    "from": 528,
+    "to": 529,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15249 1755-1756",
+    "from": 536,
+    "to": 537,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15250 1768-1769",
+    "from": 549,
+    "to": 550,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15251 1772-1773",
+    "from": 553,
+    "to": 554,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15252 1776-1777",
+    "from": 557,
+    "to": 558,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15253 1794-1795",
+    "from": 575,
+    "to": 576,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15254 1796-1797",
+    "from": 577,
+    "to": 578,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15255 1802-1803",
+    "from": 583,
+    "to": 584,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15256 1810-1811",
+    "from": 591,
+    "to": 592,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15276 1943-1944",
+    "from": 600,
+    "to": 601,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15277 1945-1946",
+    "from": 602,
+    "to": 603,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15278 1949-1950",
+    "from": 604,
+    "to": 605,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15279 1970-1971",
+    "from": 624,
+    "to": 625,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15280 1981-1982",
+    "from": 629,
+    "to": 630,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15281 1987-1988",
+    "from": 635,
+    "to": 636,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15282 1991-1992",
+    "from": 638,
+    "to": 639,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15283 1999-2000",
+    "from": 645,
+    "to": 646,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15284 2002-2003",
+    "from": 648,
+    "to": 649,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15285 2005-2006",
+    "from": 651,
+    "to": 652,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15286 2019-2020",
+    "from": 663,
+    "to": 664,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15287 2032-2033",
+    "from": 674,
+    "to": 675,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15288 2039-2040",
+    "from": 681,
+    "to": 682,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15289 2039-2041",
+    "from": 681,
+    "to": 683,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15290 2040-2041",
+    "from": 682,
+    "to": 683,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15291 2044-2045",
+    "from": 685,
+    "to": 686,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15292 2048-2049",
+    "from": 689,
+    "to": 690,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15293 2060-2061",
+    "from": 701,
+    "to": 702,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15294 2062-2063",
+    "from": 703,
+    "to": 704,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15295 2068-2069",
+    "from": 709,
+    "to": 710,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15296 2071-2072",
+    "from": 712,
+    "to": 713,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15297 2101-2102",
+    "from": 738,
+    "to": 739,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15298 2109-2110",
+    "from": 743,
+    "to": 744,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15299 2114-2115",
+    "from": 746,
+    "to": 747,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15300 2117-2118",
+    "from": 748,
+    "to": 749,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15303 2121-2122",
+    "from": 751,
+    "to": 752,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15304 2126-2127",
+    "from": 754,
+    "to": 755,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15307 2139-2140",
+    "from": 760,
+    "to": 761,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15308 2142-2143",
+    "from": 762,
+    "to": 763,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15309 2157-2158",
+    "from": 774,
+    "to": 775,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15310 2162-2163",
+    "from": 779,
+    "to": 780,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15311 2168-2169",
+    "from": 785,
+    "to": 786,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15312 2181-2182",
+    "from": 797,
+    "to": 798,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15313 2184-2185",
+    "from": 800,
+    "to": 801,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15314 2196-2197",
+    "from": 812,
+    "to": 813,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15315 2199-2200",
+    "from": 815,
+    "to": 816,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15316 2217-2218",
+    "from": 831,
+    "to": 832,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15317 2226-2227",
+    "from": 840,
+    "to": 841,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15318 2232-2233",
+    "from": 846,
+    "to": 847,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15319 2238-2239",
+    "from": 852,
+    "to": 853,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15320 2241-2242",
+    "from": 855,
+    "to": 856,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15321 2246-2247",
+    "from": 860,
+    "to": 861,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15322 2248-2249",
+    "from": 862,
+    "to": 863,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15323 2250-2251",
+    "from": 864,
+    "to": 865,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15324 2252-2253",
+    "from": 866,
+    "to": 867,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15325 2257-2258",
+    "from": 871,
+    "to": 872,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15326 2276-2277",
+    "from": 885,
+    "to": 886,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15327 2283-2284",
+    "from": 890,
+    "to": 891,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15328 2308-2309",
+    "from": 914,
+    "to": 915,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15329 2317-2318",
+    "from": 923,
+    "to": 924,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15330 2322-2323",
+    "from": 928,
+    "to": 929,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15331 2328-2329",
+    "from": 934,
+    "to": 935,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15332 2334-2335",
+    "from": 939,
+    "to": 940,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15333 2339-2340",
+    "from": 944,
+    "to": 945,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15334 2341-2342",
+    "from": 946,
+    "to": 947,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15335 2352-2353",
+    "from": 957,
+    "to": 958,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15336 2356-2357",
+    "from": 961,
+    "to": 962,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15337 2361-2362",
+    "from": 966,
+    "to": 967,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15338 2374-2375",
+    "from": 979,
+    "to": 980,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15339 2395-2396",
+    "from": 999,
+    "to": 1000,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15340 2397-2398",
+    "from": 1001,
+    "to": 1002,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15341 2400-2401",
+    "from": 1004,
+    "to": 1005,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15342 2408-2409",
+    "from": 1012,
+    "to": 1013,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15343 2420-2421",
+    "from": 1024,
+    "to": 1025,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15344 2429-2430",
+    "from": 1033,
+    "to": 1034,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15345 2452-2453",
+    "from": 1054,
+    "to": 1055,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15346 2457-2458",
+    "from": 1058,
+    "to": 1059,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15347 2460-2461",
+    "from": 1061,
+    "to": 1062,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15348 2465-2466",
+    "from": 1066,
+    "to": 1067,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15349 2475-2476",
+    "from": 1076,
+    "to": 1077,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15350 2481-2482",
+    "from": 1081,
+    "to": 1082,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15351 2485-2486",
+    "from": 1085,
+    "to": 1086,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15352 2488-2489",
+    "from": 1088,
+    "to": 1089,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15353 2491-2492",
+    "from": 1091,
+    "to": 1092,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15354 2495-2496",
+    "from": 1095,
+    "to": 1096,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15355 2498-2499",
+    "from": 1098,
+    "to": 1099,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15356 2516-2517",
+    "from": 1116,
+    "to": 1117,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15357 2532-2533",
+    "from": 1132,
+    "to": 1133,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15358 2539-2540",
+    "from": 1139,
+    "to": 1140,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15359 2546-2547",
+    "from": 1146,
+    "to": 1147,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15360 2548-2549",
+    "from": 1148,
+    "to": 1149,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15361 2570-2571",
+    "from": 1170,
+    "to": 1171,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15362 2586-2587",
+    "from": 1185,
+    "to": 1186,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15363 2588-2589",
+    "from": 1187,
+    "to": 1188,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15364 2599-2600",
+    "from": 1198,
+    "to": 1199,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15365 2604-2605",
+    "from": 1203,
+    "to": 1204,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15366 2607-2608",
+    "from": 1206,
+    "to": 1207,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15367 2610-2611",
+    "from": 1209,
+    "to": 1210,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15368 2615-2616",
+    "from": 1214,
+    "to": 1215,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15369 2623-2624",
+    "from": 1222,
+    "to": 1223,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15370 2627-2628",
+    "from": 1226,
+    "to": 1227,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15371 2632-2633",
+    "from": 1231,
+    "to": 1232,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15372 2639-2640",
+    "from": 1238,
+    "to": 1239,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15373 2642-2643",
+    "from": 1241,
+    "to": 1242,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15374 2664-2665",
+    "from": 1263,
+    "to": 1264,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15375 2672-2673",
+    "from": 1271,
+    "to": 1272,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15376 2676-2677",
+    "from": 1275,
+    "to": 1276,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15377 2684-2685",
+    "from": 1283,
+    "to": 1284,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15379 2691-2692",
+    "from": 1288,
+    "to": 1289,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15380 2695-2696",
+    "from": 1292,
+    "to": 1293,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15381 2701-2702",
+    "from": 1298,
+    "to": 1299,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15382 2703-2704",
+    "from": 1300,
+    "to": 1301,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15383 2705-2706",
+    "from": 1302,
+    "to": 1303,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15384 2710-2711",
+    "from": 1307,
+    "to": 1308,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15385 2713-2714",
+    "from": 1310,
+    "to": 1311,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15386 2719-2720",
+    "from": 1316,
+    "to": 1317,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15387 2727-2728",
+    "from": 1324,
+    "to": 1325,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15388 2730-2731",
+    "from": 1327,
+    "to": 1328,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15389 2749-2750",
+    "from": 1346,
+    "to": 1347,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15390 2752-2753",
+    "from": 1349,
+    "to": 1350,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15391 2780-2781",
+    "from": 1377,
+    "to": 1378,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15392 2786-2787",
+    "from": 1383,
+    "to": 1384,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15393 2812-2813",
+    "from": 1409,
+    "to": 1410,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15394 2823-2824",
+    "from": 1420,
+    "to": 1421,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15395 2837-2838",
+    "from": 1434,
+    "to": 1435,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15396 2843-2844",
+    "from": 1440,
+    "to": 1441,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15397 2857-2858",
+    "from": 1454,
+    "to": 1455,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15398 2865-2866",
+    "from": 1462,
+    "to": 1463,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15399 2869-2870",
+    "from": 1466,
+    "to": 1467,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15400 2889-2890",
+    "from": 1484,
+    "to": 1485,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15401 2893-2894",
+    "from": 1488,
+    "to": 1489,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15402 2898-2899",
+    "from": 1493,
+    "to": 1494,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15403 2909-2910",
+    "from": 1504,
+    "to": 1505,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15404 2911-2912",
+    "from": 1506,
+    "to": 1507,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15405 2923-2924",
+    "from": 1518,
+    "to": 1519,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15406 2934-2935",
+    "from": 1529,
+    "to": 1530,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15407 2941-2942",
+    "from": 1536,
+    "to": 1537,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15408 2943-2944",
+    "from": 1538,
+    "to": 1539,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15410 2977-2978",
+    "from": 1551,
+    "to": 1552,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15419 3033-3034",
+    "from": 1557,
+    "to": 1558,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15420 3041-3042",
+    "from": 1565,
+    "to": 1566,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15421 3047-3048",
+    "from": 1571,
+    "to": 1572,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15422 3056-3057",
+    "from": 1580,
+    "to": 1581,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15423 3062-3063",
+    "from": 1586,
+    "to": 1587,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15424 3066-3067",
+    "from": 1590,
+    "to": 1591,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15425 3075-3076",
+    "from": 1596,
+    "to": 1597,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15426 3084-3085",
+    "from": 1603,
+    "to": 1604,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15427 3086-3087",
+    "from": 1605,
+    "to": 1606,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15428 3090-3091",
+    "from": 1609,
+    "to": 1610,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15429 3090-3092",
+    "from": 1609,
+    "to": 1611,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15430 3091-3092",
+    "from": 1610,
+    "to": 1611,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15431 3095-3096",
+    "from": 1614,
+    "to": 1615,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15432 3100-3101",
+    "from": 1619,
+    "to": 1620,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15438 3147-3148",
+    "from": 1636,
+    "to": 1637,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15440 3155-3156",
+    "from": 1639,
+    "to": 1640,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15441 3168-3169",
+    "from": 1646,
+    "to": 1647,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15442 3182-3183",
+    "from": 1658,
+    "to": 1659,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15443 3187-3188",
+    "from": 1663,
+    "to": 1664,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15444 3193-3194",
+    "from": 1669,
+    "to": 1670,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15445 3207-3208",
+    "from": 1683,
+    "to": 1684,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15446 3213-3214",
+    "from": 1689,
+    "to": 1690,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15447 3217-3218",
+    "from": 1692,
+    "to": 1693,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15448 3219-3220",
+    "from": 1694,
+    "to": 1695,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15449 3222-3223",
+    "from": 1697,
+    "to": 1698,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15450 3224-3225",
+    "from": 1699,
+    "to": 1700,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15451 3232-3233",
+    "from": 1705,
+    "to": 1706,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15453 3258-3259",
+    "from": 1719,
+    "to": 1720,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15454 3268-3269",
+    "from": 1728,
+    "to": 1729,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15455 3270-3271",
+    "from": 1730,
+    "to": 1731,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15456 3278-3279",
+    "from": 1738,
+    "to": 1739,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15457 3284-3285",
+    "from": 1744,
+    "to": 1745,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15458 3299-3300",
+    "from": 1759,
+    "to": 1760,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15459 3303-3304",
+    "from": 1763,
+    "to": 1764,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15460 3330-3331",
+    "from": 1783,
+    "to": 1784,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15461 3332-3333",
+    "from": 1785,
+    "to": 1786,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15462 3334-3335",
+    "from": 1787,
+    "to": 1788,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15463 3338-3339",
+    "from": 1791,
+    "to": 1792,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15464 3345-3346",
+    "from": 1798,
+    "to": 1799,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15466 3353-3354",
+    "from": 1804,
+    "to": 1805,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15467 3361-3362",
+    "from": 1810,
+    "to": 1811,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15468 3367-3368",
+    "from": 1815,
+    "to": 1816,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15469 3370-3371",
+    "from": 1818,
+    "to": 1819,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15470 3386-3387",
+    "from": 1834,
+    "to": 1835,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15471 3395-3396",
+    "from": 1843,
+    "to": 1844,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15472 3398-3399",
+    "from": 1846,
+    "to": 1847,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15473 3400-3401",
+    "from": 1848,
+    "to": 1849,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15474 3407-3408",
+    "from": 1855,
+    "to": 1856,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15475 3417-3418",
+    "from": 1865,
+    "to": 1866,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15476 3421-3422",
+    "from": 1869,
+    "to": 1870,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15477 3426-3427",
+    "from": 1874,
+    "to": 1875,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15478 3430-3431",
+    "from": 1878,
+    "to": 1879,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15479 3432-3433",
+    "from": 1880,
+    "to": 1881,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15480 3434-3435",
+    "from": 1882,
+    "to": 1883,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15481 3445-3446",
+    "from": 1893,
+    "to": 1894,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15482 3449-3450",
+    "from": 1897,
+    "to": 1898,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15483 3452-3453",
+    "from": 1900,
+    "to": 1901,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15484 3457-3458",
+    "from": 1903,
+    "to": 1904,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15485 3470-3471",
+    "from": 1916,
+    "to": 1917,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15486 3473-3474",
+    "from": 1919,
+    "to": 1920,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15487 3475-3476",
+    "from": 1921,
+    "to": 1922,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15488 3482-3483",
+    "from": 1928,
+    "to": 1929,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15489 3488-3489",
+    "from": 1934,
+    "to": 1935,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15490 3491-3492",
+    "from": 1937,
+    "to": 1938,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15491 3493-3494",
+    "from": 1939,
+    "to": 1940,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15492 3498-3499",
+    "from": 1942,
+    "to": 1943,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15493 3501-3502",
+    "from": 1944,
+    "to": 1945,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15494 3506-3507",
+    "from": 1949,
+    "to": 1950,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15495 3512-3513",
+    "from": 1952,
+    "to": 1953,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15496 3520-3521",
+    "from": 1960,
+    "to": 1961,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15497 3528-3529",
+    "from": 1968,
+    "to": 1969,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15498 3545-3546",
+    "from": 1984,
+    "to": 1985,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15499 3551-3552",
+    "from": 1989,
+    "to": 1990,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15500 3557-3558",
+    "from": 1995,
+    "to": 1996,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15501 3559-3560",
+    "from": 1997,
+    "to": 1998,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15502 3565-3566",
+    "from": 2003,
+    "to": 2004,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15503 3579-3580",
+    "from": 2017,
+    "to": 2018,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15504 3584-3585",
+    "from": 2022,
+    "to": 2023,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15505 3593-3594",
+    "from": 2029,
+    "to": 2030,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15506 3597-3598",
+    "from": 2033,
+    "to": 2034,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15507 3599-3600",
+    "from": 2035,
+    "to": 2036,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15508 3601-3602",
+    "from": 2037,
+    "to": 2038,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15509 3607-3608",
+    "from": 2042,
+    "to": 2043,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15510 3609-3610",
+    "from": 2044,
+    "to": 2045,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15511 3616-3617",
+    "from": 2050,
+    "to": 2051,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15512 3618-3619",
+    "from": 2052,
+    "to": 2053,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15513 3620-3621",
+    "from": 2054,
+    "to": 2055,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15514 3622-3623",
+    "from": 2056,
+    "to": 2057,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15515 3625-3626",
+    "from": 2059,
+    "to": 2060,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15516 3635-3636",
+    "from": 2069,
+    "to": 2070,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15517 3637-3638",
+    "from": 2071,
+    "to": 2072,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15518 3641-3642",
+    "from": 2075,
+    "to": 2076,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15519 3649-3650",
+    "from": 2083,
+    "to": 2084,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15520 3651-3652",
+    "from": 2085,
+    "to": 2086,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15521 3659-3660",
+    "from": 2093,
+    "to": 2094,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15522 3663-3664",
+    "from": 2097,
+    "to": 2098,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15523 3669-3670",
+    "from": 2103,
+    "to": 2104,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15524 3677-3678",
+    "from": 2110,
+    "to": 2111,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15525 3681-3682",
+    "from": 2114,
+    "to": 2115,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15526 3688-3689",
+    "from": 2121,
+    "to": 2122,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15527 3696-3697",
+    "from": 2129,
+    "to": 2130,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15528 3704-3705",
+    "from": 2137,
+    "to": 2138,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15529 3706-3707",
+    "from": 2139,
+    "to": 2140,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15530 3730-3731",
+    "from": 2163,
+    "to": 2164,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15531 3733-3734",
+    "from": 2166,
+    "to": 2167,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15532 3736-3737",
+    "from": 2169,
+    "to": 2170,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15533 3742-3743",
+    "from": 2175,
+    "to": 2176,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15534 3744-3745",
+    "from": 2177,
+    "to": 2178,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15535 3763-3764",
+    "from": 2196,
+    "to": 2197,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15536 3766-3767",
+    "from": 2199,
+    "to": 2200,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15537 3771-3772",
+    "from": 2204,
+    "to": 2205,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15538 3773-3774",
+    "from": 2206,
+    "to": 2207,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15539 3776-3777",
+    "from": 2209,
+    "to": 2210,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15540 3780-3781",
+    "from": 2213,
+    "to": 2214,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15541 3783-3784",
+    "from": 2216,
+    "to": 2217,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15542 3797-3798",
+    "from": 2227,
+    "to": 2228,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15543 3802-3803",
+    "from": 2232,
+    "to": 2233,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15544 3810-3811",
+    "from": 2236,
+    "to": 2237,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15545 3812-3813",
+    "from": 2238,
+    "to": 2239,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15546 3817-3818",
+    "from": 2243,
+    "to": 2244,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15547 3820-3821",
+    "from": 2245,
+    "to": 2246,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15548 3834-3835",
+    "from": 2259,
+    "to": 2260,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15549 3836-3837",
+    "from": 2261,
+    "to": 2262,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15550 3842-3843",
+    "from": 2267,
+    "to": 2268,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15551 3846-3847",
+    "from": 2271,
+    "to": 2272,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15552 3850-3851",
+    "from": 2275,
+    "to": 2276,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15553 3853-3854",
+    "from": 2278,
+    "to": 2279,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15556 3869-3870",
+    "from": 2292,
+    "to": 2293,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15557 3873-3874",
+    "from": 2296,
+    "to": 2297,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15558 3876-3877",
+    "from": 2299,
+    "to": 2300,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15559 3882-3883",
+    "from": 2305,
+    "to": 2306,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15560 3887-3888",
+    "from": 2310,
+    "to": 2311,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15562 3901-3902",
+    "from": 2320,
+    "to": 2321,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15563 3909-3910",
+    "from": 2328,
+    "to": 2329,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15564 3915-3916",
+    "from": 2334,
+    "to": 2335,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15565 3922-3923",
+    "from": 2341,
+    "to": 2342,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15566 3928-3929",
+    "from": 2347,
+    "to": 2348,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15567 3937-3938",
+    "from": 2356,
+    "to": 2357,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15568 3939-3940",
+    "from": 2358,
+    "to": 2359,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15569 3941-3942",
+    "from": 2360,
+    "to": 2361,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15570 3950-3951",
+    "from": 2369,
+    "to": 2370,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15571 3952-3953",
+    "from": 2371,
+    "to": 2372,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15572 3959-3960",
+    "from": 2376,
+    "to": 2377,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15573 3967-3968",
+    "from": 2384,
+    "to": 2385,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15574 3970-3971",
+    "from": 2387,
+    "to": 2388,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15575 3975-3976",
+    "from": 2392,
+    "to": 2393,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15576 3977-3978",
+    "from": 2394,
+    "to": 2395,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15577 3986-3987",
+    "from": 2403,
+    "to": 2404,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15578 3991-3992",
+    "from": 2408,
+    "to": 2409,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15579 3998-3999",
+    "from": 2415,
+    "to": 2416,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15580 4004-4005",
+    "from": 2421,
+    "to": 2422,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15581 4006-4007",
+    "from": 2423,
+    "to": 2424,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15582 4016-4017",
+    "from": 2433,
+    "to": 2434,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15583 4022-4023",
+    "from": 2439,
+    "to": 2440,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15584 4033-4034",
+    "from": 2450,
+    "to": 2451,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15585 4039-4040",
+    "from": 2456,
+    "to": 2457,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15586 4050-4051",
+    "from": 2467,
+    "to": 2468,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15587 4059-4060",
+    "from": 2476,
+    "to": 2477,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15588 4067-4068",
+    "from": 2484,
+    "to": 2485,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15589 4072-4073",
+    "from": 2489,
+    "to": 2490,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15590 4078-4079",
+    "from": 2495,
+    "to": 2496,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15591 4093-4094",
+    "from": 2509,
+    "to": 2510,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15592 4096-4097",
+    "from": 2512,
+    "to": 2513,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15593 4107-4108",
+    "from": 2522,
+    "to": 2523,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15594 4119-4120",
+    "from": 2534,
+    "to": 2535,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15595 4124-4125",
+    "from": 2539,
+    "to": 2540,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15596 4127-4128",
+    "from": 2542,
+    "to": 2543,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15597 4130-4131",
+    "from": 2545,
+    "to": 2546,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15598 4132-4133",
+    "from": 2547,
+    "to": 2548,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15599 4141-4142",
+    "from": 2556,
+    "to": 2557,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15600 4149-4150",
+    "from": 2564,
+    "to": 2565,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15601 4154-4155",
+    "from": 2569,
+    "to": 2570,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15602 4160-4161",
+    "from": 2575,
+    "to": 2576,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15603 4169-4170",
+    "from": 2584,
+    "to": 2585,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15604 4177-4178",
+    "from": 2592,
+    "to": 2593,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15605 4183-4184",
+    "from": 2598,
+    "to": 2599,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15606 4187-4188",
+    "from": 2602,
+    "to": 2603,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15607 4193-4194",
+    "from": 2608,
+    "to": 2609,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15608 4204-4205",
+    "from": 2619,
+    "to": 2620,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15609 4209-4210",
+    "from": 2624,
+    "to": 2625,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15610 4212-4213",
+    "from": 2627,
+    "to": 2628,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15621 4301-4302",
+    "from": 2631,
+    "to": 2632,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15633 4349-4350",
+    "from": 2642,
+    "to": 2643,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15634 4349-4351",
+    "from": 2642,
+    "to": 2644,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15635 4350-4351",
+    "from": 2643,
+    "to": 2644,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15636 4357-4358",
+    "from": 2646,
+    "to": 2647,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15638 4363-4364",
+    "from": 2651,
+    "to": 2652,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15639 4367-4368",
+    "from": 2655,
+    "to": 2656,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15641 4395-4396",
+    "from": 2680,
+    "to": 2681,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15642 4397-4398",
+    "from": 2682,
+    "to": 2683,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15643 4399-4400",
+    "from": 2684,
+    "to": 2685,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15644 4401-4402",
+    "from": 2686,
+    "to": 2687,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15645 4403-4404",
+    "from": 2688,
+    "to": 2689,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15646 4414-4415",
+    "from": 2699,
+    "to": 2700,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15647 4416-4417",
+    "from": 2701,
+    "to": 2702,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15648 4418-4419",
+    "from": 2703,
+    "to": 2704,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15649 4421-4422",
+    "from": 2706,
+    "to": 2707,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15650 4421-4423",
+    "from": 2706,
+    "to": 2708,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15651 4422-4423",
+    "from": 2707,
+    "to": 2708,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15652 4425-4426",
+    "from": 2710,
+    "to": 2711,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15653 4427-4428",
+    "from": 2712,
+    "to": 2713,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15654 4429-4430",
+    "from": 2714,
+    "to": 2715,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15655 4431-4432",
+    "from": 2716,
+    "to": 2717,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15656 4433-4434",
+    "from": 2718,
+    "to": 2719,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15657 4436-4437",
+    "from": 2721,
+    "to": 2722,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15658 4445-4446",
+    "from": 2730,
+    "to": 2731,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15659 4456-4457",
+    "from": 2741,
+    "to": 2742,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15660 4460-4461",
+    "from": 2744,
+    "to": 2745,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15661 4464-4465",
+    "from": 2748,
+    "to": 2749,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15662 4469-4470",
+    "from": 2753,
+    "to": 2754,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15663 4476-4477",
+    "from": 2760,
+    "to": 2761,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15664 4483-4484",
+    "from": 2767,
+    "to": 2768,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15665 4489-4490",
+    "from": 2773,
+    "to": 2774,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15666 4502-4503",
+    "from": 2784,
+    "to": 2785,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15667 4508-4509",
+    "from": 2790,
+    "to": 2791,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15668 4515-4516",
+    "from": 2797,
+    "to": 2798,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15669 4520-4521",
+    "from": 2802,
+    "to": 2803,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15670 4523-4524",
+    "from": 2805,
+    "to": 2806,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15671 4529-4530",
+    "from": 2811,
+    "to": 2812,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15672 4537-4538",
+    "from": 2819,
+    "to": 2820,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15673 4541-4542",
+    "from": 2823,
+    "to": 2824,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15674 4544-4545",
+    "from": 2826,
+    "to": 2827,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15675 4547-4548",
+    "from": 2829,
+    "to": 2830,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15676 4556-4557",
+    "from": 2838,
+    "to": 2839,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15677 4561-4562",
+    "from": 2843,
+    "to": 2844,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15678 4564-4565",
+    "from": 2846,
+    "to": 2847,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15679 4570-4571",
+    "from": 2852,
+    "to": 2853,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15680 4572-4573",
+    "from": 2854,
+    "to": 2855,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15681 4576-4577",
+    "from": 2858,
+    "to": 2859,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15682 4583-4584",
+    "from": 2865,
+    "to": 2866,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15683 4591-4592",
+    "from": 2873,
+    "to": 2874,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15684 4597-4598",
+    "from": 2879,
+    "to": 2880,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15685 4599-4600",
+    "from": 2881,
+    "to": 2882,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15686 4603-4604",
+    "from": 2885,
+    "to": 2886,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15687 4609-4610",
+    "from": 2891,
+    "to": 2892,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15688 4612-4613",
+    "from": 2894,
+    "to": 2895,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15689 4615-4616",
+    "from": 2897,
+    "to": 2898,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15690 4622-4623",
+    "from": 2904,
+    "to": 2905,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15691 4630-4631",
+    "from": 2912,
+    "to": 2913,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15692 4630-4632",
+    "from": 2912,
+    "to": 2914,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15693 4631-4632",
+    "from": 2913,
+    "to": 2914,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15694 4637-4638",
+    "from": 2916,
+    "to": 2917,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15695 4640-4641",
+    "from": 2919,
+    "to": 2920,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15696 4644-4645",
+    "from": 2923,
+    "to": 2924,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15697 4649-4650",
+    "from": 2927,
+    "to": 2928,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15698 4653-4654",
+    "from": 2931,
+    "to": 2932,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15699 4655-4656",
+    "from": 2933,
+    "to": 2934,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15700 4665-4666",
+    "from": 2943,
+    "to": 2944,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15701 4668-4669",
+    "from": 2945,
+    "to": 2946,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15702 4677-4678",
+    "from": 2954,
+    "to": 2955,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15703 4684-4685",
+    "from": 2961,
+    "to": 2962,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15704 4692-4693",
+    "from": 2969,
+    "to": 2970,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15705 4694-4695",
+    "from": 2971,
+    "to": 2972,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15706 4696-4697",
+    "from": 2973,
+    "to": 2974,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15707 4699-4700",
+    "from": 2976,
+    "to": 2977,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15708 4712-4713",
+    "from": 2988,
+    "to": 2989,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15709 4714-4715",
+    "from": 2990,
+    "to": 2991,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15710 4718-4719",
+    "from": 2994,
+    "to": 2995,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15711 4721-4722",
+    "from": 2997,
+    "to": 2998,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15712 4726-4727",
+    "from": 3002,
+    "to": 3003,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15713 4729-4730",
+    "from": 3005,
+    "to": 3006,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15714 4732-4733",
+    "from": 3008,
+    "to": 3009,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15715 4735-4736",
+    "from": 3011,
+    "to": 3012,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15716 4737-4738",
+    "from": 3013,
+    "to": 3014,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15717 4739-4740",
+    "from": 3015,
+    "to": 3016,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15718 4741-4742",
+    "from": 3017,
+    "to": 3018,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15719 4743-4744",
+    "from": 3019,
+    "to": 3020,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15720 4745-4746",
+    "from": 3021,
+    "to": 3022,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15721 4747-4748",
+    "from": 3023,
+    "to": 3024,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15722 4751-4752",
+    "from": 3027,
+    "to": 3028,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15723 4753-4754",
+    "from": 3029,
+    "to": 3030,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15724 4756-4757",
+    "from": 3032,
+    "to": 3033,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15725 4758-4759",
+    "from": 3034,
+    "to": 3035,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15726 4760-4761",
+    "from": 3036,
+    "to": 3037,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15727 4764-4765",
+    "from": 3040,
+    "to": 3041,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15728 4767-4768",
+    "from": 3043,
+    "to": 3044,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15729 4772-4773",
+    "from": 3048,
+    "to": 3049,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15730 4774-4775",
+    "from": 3050,
+    "to": 3051,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15731 4776-4777",
+    "from": 3052,
+    "to": 3053,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15732 4780-4781",
+    "from": 3056,
+    "to": 3057,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15733 4789-4790",
+    "from": 3064,
+    "to": 3065,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15734 4797-4798",
+    "from": 3072,
+    "to": 3073,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15735 4799-4800",
+    "from": 3074,
+    "to": 3075,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15736 4802-4803",
+    "from": 3077,
+    "to": 3078,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15737 4818-4819",
+    "from": 3093,
+    "to": 3094,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15738 4823-4824",
+    "from": 3098,
+    "to": 3099,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15739 4830-4831",
+    "from": 3105,
+    "to": 3106,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15740 4833-4834",
+    "from": 3108,
+    "to": 3109,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15741 4835-4836",
+    "from": 3110,
+    "to": 3111,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15742 4838-4839",
+    "from": 3113,
+    "to": 3114,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15743 4840-4841",
+    "from": 3115,
+    "to": 3116,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15744 4851-4852",
+    "from": 3126,
+    "to": 3127,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15745 4855-4856",
+    "from": 3130,
+    "to": 3131,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15746 4860-4861",
+    "from": 3135,
+    "to": 3136,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15747 4868-4869",
+    "from": 3143,
+    "to": 3144,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15748 4889-4890",
+    "from": 3163,
+    "to": 3164,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15749 4906-4907",
+    "from": 3180,
+    "to": 3181,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15750 4908-4909",
+    "from": 3182,
+    "to": 3183,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15751 4910-4911",
+    "from": 3184,
+    "to": 3185,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15752 4912-4913",
+    "from": 3186,
+    "to": 3187,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15753 4916-4917",
+    "from": 3190,
+    "to": 3191,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15754 4919-4920",
+    "from": 3193,
+    "to": 3194,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15755 4936-4937",
+    "from": 3210,
+    "to": 3211,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15756 4957-4958",
+    "from": 3231,
+    "to": 3232,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15757 4959-4960",
+    "from": 3233,
+    "to": 3234,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15758 4966-4967",
+    "from": 3240,
+    "to": 3241,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15759 4982-4983",
+    "from": 3252,
+    "to": 3253,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15760 4984-4985",
+    "from": 3254,
+    "to": 3255,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15761 4987-4988",
+    "from": 3257,
+    "to": 3258,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15762 4990-4991",
+    "from": 3260,
+    "to": 3261,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15763 5000-5001",
+    "from": 3270,
+    "to": 3271,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15764 5008-5009",
+    "from": 3278,
+    "to": 3279,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15765 5013-5014",
+    "from": 3283,
+    "to": 3284,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15766 5023-5024",
+    "from": 3293,
+    "to": 3294,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15767 5032-5033",
+    "from": 3302,
+    "to": 3303,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15768 5039-5040",
+    "from": 3309,
+    "to": 3310,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15769 5041-5042",
+    "from": 3311,
+    "to": 3312,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15770 5048-5049",
+    "from": 3318,
+    "to": 3319,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15771 5051-5052",
+    "from": 3321,
+    "to": 3322,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15772 5057-5058",
+    "from": 3327,
+    "to": 3328,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15773 5068-5069",
+    "from": 3336,
+    "to": 3337,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15774 5079-5080",
+    "from": 3343,
+    "to": 3344,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15775 5083-5084",
+    "from": 3347,
+    "to": 3348,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15776 5101-5102",
+    "from": 3365,
+    "to": 3366,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15777 5110-5111",
+    "from": 3374,
+    "to": 3375,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15778 5116-5117",
+    "from": 3380,
+    "to": 3381,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15779 5118-5119",
+    "from": 3382,
+    "to": 3383,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15780 5123-5124",
+    "from": 3387,
+    "to": 3388,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15781 5133-5134",
+    "from": 3397,
+    "to": 3398,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15782 5138-5139",
+    "from": 3402,
+    "to": 3403,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15783 5159-5160",
+    "from": 3423,
+    "to": 3424,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15784 5161-5162",
+    "from": 3425,
+    "to": 3426,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15785 5167-5168",
+    "from": 3431,
+    "to": 3432,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15786 5175-5176",
+    "from": 3439,
+    "to": 3440,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15787 5184-5185",
+    "from": 3448,
+    "to": 3449,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15788 5186-5187",
+    "from": 3450,
+    "to": 3451,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15789 5199-5200",
+    "from": 3463,
+    "to": 3464,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15790 5201-5202",
+    "from": 3465,
+    "to": 3466,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15791 5211-5212",
+    "from": 3475,
+    "to": 3476,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15792 5216-5217",
+    "from": 3480,
+    "to": 3481,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15793 5220-5221",
+    "from": 3484,
+    "to": 3485,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15794 5227-5228",
+    "from": 3491,
+    "to": 3492,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15795 5246-5247",
+    "from": 3510,
+    "to": 3511,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15796 5255-5256",
+    "from": 3519,
+    "to": 3520,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15797 5260-5261",
+    "from": 3524,
+    "to": 3525,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15798 5263-5264",
+    "from": 3527,
+    "to": 3528,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15799 5267-5268",
+    "from": 3531,
+    "to": 3532,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15800 5271-5272",
+    "from": 3535,
+    "to": 3536,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15801 5283-5284",
+    "from": 3547,
+    "to": 3548,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15835 5509-5510",
+    "from": 3565,
+    "to": 3566,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15836 5511-5512",
+    "from": 3567,
+    "to": 3568,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15838 5518-5519",
+    "from": 3572,
+    "to": 3573,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15846 5561-5562",
+    "from": 3592,
+    "to": 3593,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15847 5573-5574",
+    "from": 3597,
+    "to": 3598,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15848 5577-5578",
+    "from": 3600,
+    "to": 3601,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15849 5583-5584",
+    "from": 3606,
+    "to": 3607,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15850 5594-5595",
+    "from": 3617,
+    "to": 3618,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15851 5597-5598",
+    "from": 3620,
+    "to": 3621,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15853 5617-5618",
+    "from": 3637,
+    "to": 3638,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15857 5645-5646",
+    "from": 3644,
+    "to": 3645,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15860 5656-5657",
+    "from": 3646,
+    "to": 3647,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15866 5684-5685",
+    "from": 3658,
+    "to": 3659,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15867 5686-5687",
+    "from": 3660,
+    "to": 3661,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15868 5692-5693",
+    "from": 3666,
+    "to": 3667,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15869 5694-5695",
+    "from": 3668,
+    "to": 3669,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15870 5698-5699",
+    "from": 3672,
+    "to": 3673,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15871 5708-5709",
+    "from": 3682,
+    "to": 3683,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15872 5710-5711",
+    "from": 3684,
+    "to": 3685,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15873 5721-5722",
+    "from": 3691,
+    "to": 3692,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15874 5723-5724",
+    "from": 3693,
+    "to": 3694,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15875 5725-5726",
+    "from": 3695,
+    "to": 3696,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15876 5729-5730",
+    "from": 3699,
+    "to": 3700,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15877 5732-5733",
+    "from": 3702,
+    "to": 3703,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15878 5734-5735",
+    "from": 3704,
+    "to": 3705,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15879 5752-5753",
+    "from": 3715,
+    "to": 3716,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15880 5757-5758",
+    "from": 3720,
+    "to": 3721,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15881 5761-5762",
+    "from": 3724,
+    "to": 3725,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15882 5766-5767",
+    "from": 3729,
+    "to": 3730,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15885 5779-5780",
+    "from": 3736,
+    "to": 3737,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15886 5791-5792",
+    "from": 3747,
+    "to": 3748,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15887 5795-5796",
+    "from": 3751,
+    "to": 3752,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15890 5802-5803",
+    "from": 3753,
+    "to": 3754,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15895 5821-5822",
+    "from": 3759,
+    "to": 3760,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15898 5832-5833",
+    "from": 3767,
+    "to": 3768,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15903 5855-5856",
+    "from": 3778,
+    "to": 3779,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15904 5859-5860",
+    "from": 3781,
+    "to": 3782,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15905 5862-5863",
+    "from": 3784,
+    "to": 3785,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15906 5872-5873",
+    "from": 3794,
+    "to": 3795,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15907 5874-5875",
+    "from": 3796,
+    "to": 3797,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15908 5877-5878",
+    "from": 3799,
+    "to": 3800,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15909 5884-5885",
+    "from": 3806,
+    "to": 3807,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15910 5900-5901",
+    "from": 3818,
+    "to": 3819,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15911 5903-5904",
+    "from": 3821,
+    "to": 3822,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15912 5909-5910",
+    "from": 3827,
+    "to": 3828,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15913 5911-5912",
+    "from": 3829,
+    "to": 3830,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15914 5916-5917",
+    "from": 3834,
+    "to": 3835,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15915 5921-5922",
+    "from": 3839,
+    "to": 3840,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15916 5933-5934",
+    "from": 3851,
+    "to": 3852,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15917 5940-5941",
+    "from": 3856,
+    "to": 3857,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15918 5945-5946",
+    "from": 3861,
+    "to": 3862,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15919 5948-5949",
+    "from": 3863,
+    "to": 3864,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15920 5956-5957",
+    "from": 3871,
+    "to": 3872,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15921 5958-5959",
+    "from": 3873,
+    "to": 3874,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15922 5965-5966",
+    "from": 3880,
+    "to": 3881,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15923 5970-5971",
+    "from": 3885,
+    "to": 3886,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15924 5975-5976",
+    "from": 3890,
+    "to": 3891,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15925 5977-5978",
+    "from": 3892,
+    "to": 3893,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15926 5979-5980",
+    "from": 3894,
+    "to": 3895,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15927 5985-5986",
+    "from": 3900,
+    "to": 3901,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15928 5991-5992",
+    "from": 3906,
+    "to": 3907,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15929 5994-5995",
+    "from": 3909,
+    "to": 3910,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15930 6000-6001",
+    "from": 3915,
+    "to": 3916,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15931 6005-6006",
+    "from": 3920,
+    "to": 3921,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15932 6008-6009",
+    "from": 3923,
+    "to": 3924,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15933 6015-6016",
+    "from": 3930,
+    "to": 3931,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15934 6017-6018",
+    "from": 3932,
+    "to": 3933,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15935 6022-6023",
+    "from": 3937,
+    "to": 3938,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15936 6024-6025",
+    "from": 3939,
+    "to": 3940,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15937 6027-6028",
+    "from": 3942,
+    "to": 3943,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15938 6034-6035",
+    "from": 3949,
+    "to": 3950,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15939 6044-6045",
+    "from": 3959,
+    "to": 3960,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15940 6049-6050",
+    "from": 3964,
+    "to": 3965,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15941 6054-6055",
+    "from": 3969,
+    "to": 3970,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15942 6079-6080",
+    "from": 3989,
+    "to": 3990,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15943 6085-6086",
+    "from": 3994,
+    "to": 3995,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15944 6090-6091",
+    "from": 3999,
+    "to": 4000,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15986 6357-6358",
+    "from": 4068,
+    "to": 4069,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15987 6362-6363",
+    "from": 4071,
+    "to": 4072,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15988 6372-6373",
+    "from": 4076,
+    "to": 4077,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15997 6424-6425",
+    "from": 4086,
+    "to": 4087,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16000 6438-6439",
+    "from": 4091,
+    "to": 4092,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16001 6450-6451",
+    "from": 4099,
+    "to": 4100,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16002 6456-6457",
+    "from": 4105,
+    "to": 4106,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16003 6463-6464",
+    "from": 4111,
+    "to": 4112,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16004 6470-6471",
+    "from": 4118,
+    "to": 4119,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16005 6481-6482",
+    "from": 4129,
+    "to": 4130,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16006 6483-6484",
+    "from": 4131,
+    "to": 4132,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16015 6529-6530",
+    "from": 4141,
+    "to": 4142,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16020 6563-6564",
+    "from": 4149,
+    "to": 4150,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16021 6576-6577",
+    "from": 4154,
+    "to": 4155,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16023 6593-6594",
+    "from": 4158,
+    "to": 4159,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16024 6596-6597",
+    "from": 4161,
+    "to": 4162,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16025 6601-6602",
+    "from": 4166,
+    "to": 4167,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16026 6604-6605",
+    "from": 4169,
+    "to": 4170,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16027 6607-6608",
+    "from": 4172,
+    "to": 4173,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16028 6638-6639",
+    "from": 4179,
+    "to": 4180,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16029 6640-6641",
+    "from": 4181,
+    "to": 4182,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16036 6677-6678",
+    "from": 4189,
+    "to": 4190,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16037 6681-6682",
+    "from": 4191,
+    "to": 4192,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16038 6689-6690",
+    "from": 4199,
+    "to": 4200,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16039 6692-6693",
+    "from": 4202,
+    "to": 4203,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16040 6697-6698",
+    "from": 4207,
+    "to": 4208,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16041 6708-6709",
+    "from": 4218,
+    "to": 4219,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16042 6726-6727",
+    "from": 4225,
+    "to": 4226,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16043 6729-6730",
+    "from": 4228,
+    "to": 4229,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16044 6733-6734",
+    "from": 4231,
+    "to": 4232,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16045 6735-6736",
+    "from": 4233,
+    "to": 4234,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16046 6739-6740",
+    "from": 4237,
+    "to": 4238,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16047 6741-6742",
+    "from": 4239,
+    "to": 4240,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16049 6750-6751",
+    "from": 4242,
+    "to": 4243,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16081 7031-7032",
+    "from": 4262,
+    "to": 4263,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16082 7033-7034",
+    "from": 4264,
+    "to": 4265,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16083 7035-7036",
+    "from": 4266,
+    "to": 4267,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16084 7041-7042",
+    "from": 4271,
+    "to": 4272,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16090 7049-7050",
+    "from": 4273,
+    "to": 4275,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16092 7057-7058",
+    "from": 4278,
+    "to": 4279,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16093 7066-7067",
+    "from": 4285,
+    "to": 4286,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16094 7069-7070",
+    "from": 4288,
+    "to": 4290,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16096 7073-7074",
+    "from": 4291,
+    "to": 4292,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16097 7076-7077",
+    "from": 4293,
+    "to": 4294,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  }
+]

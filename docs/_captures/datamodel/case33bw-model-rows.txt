@@ -1,0 +1,5 @@
+$ python -c "import json;m=json.load(open('results/exports/data_matpower_dist_case33bw.m-solve.json'))['model'];print(m['baseMva']);print(json.dumps(m['buses'][1]));print(json.dumps(m['branches'][0]))"
+10
+{"id": 2, "type": "Pq", "baseKv": 12.66, "pd": 0.1, "qd": 0.06, "gs": 0, "bs": 0, "vm": 1}
+{"from": 1, "to": 2, "r": 0.005752591161723931, "x": 0.002932448856844086, "b": 0, "tap": 1, "phaseShiftDeg": 0, "rateAMva": 0, "isTransformer": false, "inService": true, "r0": 0, "x0": 0, "fromNeutralXPu": 0, "toNeutralXPu": 0}
+[exit 0]

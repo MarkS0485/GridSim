@@ -1,0 +1,23 @@
+$ gridsim losses case9
+Loss allocation - IEEE 9-bus (WSCC) (9 buses, 9 branches)
+  Total losses: 4.64 MW  (reactive: -92.16 MVAr)
+  Reconciliation residual: 2.13E-014 MW
+
+  Zone losses:
+  | Zone | P Loss MW | Q Loss MVAr | Branches |
+  |------|----------:|------------:|---------:|
+  | Other | 4.64 | -92.16 | 9 |
+
+  Top 20 branch losses:
+  | Branch | From | To | P Loss MW | Q Loss MVAr | Loading % | Type |
+  |--------|-----:|---:|----------:|------------:|----------:|------|
+  |  | 8 | 9 | 2.300 | -19.694 | 34.8 | line |
+  |  | 5 | 6 | 1.354 | -31.531 | 42.3 | line |
+  |  | 7 | 8 | 0.475 | -11.502 | 30.7 | line |
+  |  | 9 | 4 | 0.258 | -15.794 | 22.5 | line |
+  |  | 4 | 5 | 0.166 | -15.513 | 13.9 | line |
+  |  | 6 | 7 | 0.088 | -21.176 | 22.8 | line |
+  |  | 1 | 4 | 0.000 | 3.123 | 30.6 | line |
+  |  | 3 | 6 | 0.000 | 4.096 | 28.8 | line |
+  |  | 8 | 2 | 0.000 | 15.832 | 65.3 | line |
+[exit 0]

@@ -1,0 +1,13 @@
+$ head -n 12 results/exports-docs/dcopf-summary.csv
+key,value
+verb,dcopf
+exit_code,0
+case,IEEE 14-bus
+buses,14
+line_limits_enforced,true
+feasible,true
+total_load_mw,258.99999999999994
+total_generation_mw,258.99999999999994
+total_cost_gbp_per_h,12949.999999999996
+network_constrained,false
+[exit 0]

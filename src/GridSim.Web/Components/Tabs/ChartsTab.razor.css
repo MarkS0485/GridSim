@@ -1,0 +1,47 @@
+.charts-tab {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 12px;
+    overflow: auto;
+}
+
+.charts-grid {
+    flex: 1 1 auto;
+    display: grid;
+    /* Deterministic 3 x 2 for the six charts (auto-fit was giving 5 + an orphan). */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    /* Bound each chart's HEIGHT to a readable band instead of stretching it to fill the viewport.
+       The SVG uses preserveAspectRatio='none', so an unbounded 1fr row on a large or tall-not-wide
+       display gave each card an extreme aspect ratio and visibly distorted the trace. clamp() keeps
+       the rows proportional (~a third of the viewport) but never absurdly short or tall. */
+    grid-auto-rows: clamp(210px, 32vh, 360px);
+    gap: 12px;
+    /* Don't let the six charts sprawl to full width on an ultra-wide monitor - centre a sane column. */
+    width: 100%;
+    max-width: 1600px;
+    margin-inline: auto;
+}
+
+@media (max-width: 900px) {
+    .charts-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Phone: single column, natural height (the tab scrolls) rather than force-filling the viewport. */
+@media (max-width: 640px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+        grid-auto-rows: minmax(180px, auto);
+        min-height: 0;
+    }
+    .chart-card { min-height: 180px; }
+}
+
+.charts-note {
+    flex: 0 0 auto;
+    margin: 0;
+    color: var(--muted, #7b8694);
+    font: 12px/1.55 system-ui, sans-serif;
+}
+
+.charts-note b { color: color-mix(in srgb, var(--ink, #e6edf3) 82%, transparent); font-weight: 700; }

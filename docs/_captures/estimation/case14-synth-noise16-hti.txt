@@ -1,0 +1,18 @@
+$ gridsim estimate case14 --synth --noise 1.6 --hti
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 4.45E-009
+  measurements: 122   states: 27   redundancy (dof): 89
+  observability: observable (rank 27/27)
+  consistency: J = 137.92 vs chi2(95%) = 112.02 -> FAIL
+  removed bad data (HTI pass 0): PFlowMw @ branch 2->5 (from)  t = 3.6  estimated error = -0.0589804 pu_base_mva (-5.89804 MW)
+  removed bad data (HTI pass 0): QFlowMvar @ branch 2->3 (to)  t = 3.6  estimated error = -0.0596507 pu_base_mva (-5.96507 Mvar)
+  removed bad data (HTI pass 0): VmPu @ bus 14  t = 3.3  estimated error = -0.0148523 pu
+  removed bad data (HTI pass 0): QInjMvar @ bus 12  t = 3.3  estimated error = 0.0490311 pu_base_mva (4.90311 Mvar)
+  removed bad data (HTI pass 1): QInjMvar @ bus 13  t = 3.2  estimated error = -0.0596492 pu_base_mva (-5.96492 Mvar)
+  removed bad data (HTI pass 2): PInjMw @ bus 1  t = 3.0  estimated error = -0.0484199 pu_base_mva (-4.84199 MW)
+  bad-data method: HTI, 4 pass(es), 20 iteration(s) in all, stopped: NothingIdentified
+  vs synthetic truth: max |dVm| = 5.456E-003 pu   max |dVa| = 3.968E-001 deg
+
+  -> results\estimate-case14
+[exit 0]

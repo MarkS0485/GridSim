@@ -1,0 +1,4 @@
+Small-signal consistency (experimental) - IEEE 9-bus (WSCC) (9 buses)
+  [Holds] COI null mode (experimental): residual 2.593E-008 rad/s (tol 1.000E-006) - min |eigenvalue| = 2.593E-008 rad/s
+  [Holds] Synchronising-Laplacian row sum (experimental): residual 2.220E-016 MW/rad (tol 3.637E-006) - max |row sum| = 2.220E-016 MW/rad (scale 3.637E+000)
+  overall: Holds

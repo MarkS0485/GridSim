@@ -1,0 +1,40 @@
+{
+  "buses": 1976,
+  "busbar_ties_merged": 0,
+  "star_nodes": 0,
+  "branches_total": 2618,
+  "series_branches": 2376,
+  "tx_branches": 242,
+  "oltcs": 0,
+  "demand": {
+    "total_mw": 94766.80000000002,
+    "attached_at_node": 1976,
+    "aggregated_to_bsp": 0,
+    "unmatched": 0
+  },
+  "generation": {
+    "total_capacity_mw": 187128.0,
+    "dispatched_mw": 94766.80000000002,
+    "unmatched": 0
+  },
+  "buses_by_kv": {
+    "380": 694,
+    "300": 14,
+    "220": 1264,
+    "132": 4
+  },
+  "buses_by_licence": {
+    "FR": 1976
+  },
+  "notes": [
+    "region=FR; source-derived open transmission model",
+    "line impedances synthetic (per-km by voltage class) where the source lacks R/X - indicative, not planning-grade",
+    "demand synthetic: national dispatch total distributed by bus degree",
+    "geo box S41.00 W-5.50 N51.50 E9.80",
+    "unplaced buses (parked at 0.5,0.5): 0"
+  ],
+  "islands": 2,
+  "slack": "2 island reference(s), 1 synthetic infeed",
+  "synthetic_slacks": 1,
+  "largest_island_buses": 1971
+}

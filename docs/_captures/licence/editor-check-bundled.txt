@@ -1,0 +1,4 @@
+$ GridSim.SchemaEditor data/gb-full --check
+CHECK PASSED: the case loads, validates and is within the licence (3539 buses).
+  not part of the case (never written): README.md
+[exit 0]

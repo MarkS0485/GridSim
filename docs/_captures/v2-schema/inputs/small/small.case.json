@@ -1,0 +1,37 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Small v2 example",
+  "description": "Three buses: a CCGT, a wind farm bound to a local grid-following template, and one load.",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "network": ["small.network.json"],
+  "imports": [
+    {
+      "library": "library/placeholders/unmodelled-sites.json",
+      "templates": ["gridsim.placeholder.site.SMR", "gridsim.placeholder.site.Crypto-Mining-Site@1"]
+    }
+  ],
+  "localTemplates": [
+    {
+      "id": "gridsim.local.wind-gfl",
+      "rev": 1,
+      "kind": "gridFollowingInverter",
+      "status": "active",
+      "title": "Onshore wind, grid-following",
+      "params": {
+        "deadbandHz": 0.015,
+        "droopGainMwPerHzPerMw": { "v": 20, "unit": "MW/Hz/MW", "prov": { "tag": "Synthetic", "note": "Chosen for this example" } },
+        "rocofTripHzPerS": 1.0
+      },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Example values, not a measured plant" } }
+    }
+  ],
+  "bindings": [ { "matchType": "wind-*", "template": "gridsim.local.wind-gfl@1" } ],
+  "overrides": [
+    {
+      "template": "gridsim.local.wind-gfl@1",
+      "params": { "deadbandHz": 0.02 },
+      "reason": "Wider deadband for this example",
+      "shadow": "explicit"
+    }
+  ]
+}

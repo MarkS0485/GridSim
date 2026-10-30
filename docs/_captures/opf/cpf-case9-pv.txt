@@ -1,0 +1,6 @@
+$ gridsim cpf case9 --pv-out docs/_captures/opf/results/cpf-case9-pv.csv
+CPF - IEEE 9-bus (WSCC) (9 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 2.373046875  (base demand 315.0 MW -> 747.5 MW at the last converged point; nose bracketed to 0.001)
+  margin 137.30% above base load
+[cpf] PV curves: 12 converged point(s) x 9 bus(es) -> docs\_captures\opf\results\cpf-case9-pv.csv
+[exit 0]

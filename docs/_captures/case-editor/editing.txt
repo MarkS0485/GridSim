@@ -1,0 +1,25 @@
+GRIDSIM CASE EDITOR 1.95.113  data/uk (v1)  20 buses  [BUNDLED]
+Case > Generation > ccgt > Pembroke CCGT (1 units) > #26 'Pembroke CCGT'
+field                                 value                         state
+Name                                  "Pembroke CCGT"
+Bus                                   10                            required
+Technology                            "ccgt"
+Capacity (MVA)                        2100
+Output (MW)                           (absent: derived, see help)
+Capacity factor (0..1)                0.60
+Voltage setpoint (pu)                 1.04
+Minimum reactive power (Mvar)         (absent: derived, see help)
+Maximum reactive power (Mvar)         (absent: derived, see help)
+Inertia constant H (s)                5.0
+Role                                  (absent: "pv")
+Dynamics class                        (absent: derived, see help)
+Converter interfaced                  (absent: derived, see help)
+Converter fault current (x rated)     (absent: derived, see help)
+Power-flow-only device                (absent: false)
+Unit transformer reactance (pu on uni (absent: 0)
+Grid forming                          (absent: false)
+
+
+
+Capacity (MVA): Enter accepts, Esc cancels.
+Enter Accept  Esc Cancel  Left/Right Move  Home/End  Bksp/Del Erase

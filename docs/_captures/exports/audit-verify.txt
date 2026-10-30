@@ -1,0 +1,3 @@
+$ gridsim audit verify results/exports-docs/audit.log
+OK results/exports-docs/audit.log: 1 entries, head 1408D399580FD9521E26323D5CCA2A9C00DDB3D2E225D20E11665701BA2A0BA9
+[exit 0]

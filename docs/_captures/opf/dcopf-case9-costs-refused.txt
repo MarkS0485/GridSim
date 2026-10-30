@@ -1,0 +1,8 @@
+$ gridsim dcopf case9 --costs case
+DC-OPF - IEEE 9-bus (WSCC) (9 buses)  [cheapest secure dispatch on generator cost curves: case gencost]
+  demand 315 MW  generation 315 MW  total cost 5,216.03 cost units/h  (no line limit binds)
+  dispatch (by output):
+      gen bus 2        134.38 MW  marginal   24.0442 cost units/MWh
+      gen bus 3         94.06 MW  marginal   24.0442 cost units/MWh
+      gen bus 1         86.56 MW  marginal   24.0442 cost units/MWh
+[exit 0]

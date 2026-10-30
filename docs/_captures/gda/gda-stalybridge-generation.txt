@@ -1,0 +1,16 @@
+$ cat results/gda-stalybridge/generation.json
+[
+  {
+    "name": "Grid infeed @ BUXT3_REDUCED_3",
+    "bus": 0,
+    "type": "grid",
+    "capacityMva": 5000,
+    "outputMw": 0,
+    "voltageSetpoint": 1,
+    "qMinMvar": -5000,
+    "qMaxMvar": 5000,
+    "inertiaH": 0,
+    "role": "slack"
+  }
+]
+[exit 0]

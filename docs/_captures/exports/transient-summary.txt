@@ -1,0 +1,20 @@
+$ head -n 24 results/exports-docs/transient/summary.md
+# Transient - case9
+
+    GridSim  -  2026-10-04 14:30:20 UTC
+    code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26200
+    cpu:     X64  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     transient  case=case9  minutes=1  dt=100ms  slices=600  solver=Newton-Raphson (dense)
+
+- slices: 600 @ 100 ms = 1 sim-min
+- wall: 0.2 s (600 slices/s)
+- solver: Newton-Raphson (dense)
+- frequency nadir: 49.9998 Hz at t=38.700 s
+- max |RoCoF|: -0.0009 Hz/s at t=57.400 s
+- non-convergence: 0
+- math exports: 7
+[exit 0]

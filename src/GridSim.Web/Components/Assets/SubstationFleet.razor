@@ -1,0 +1,90 @@
+@* Every electrical bus as a substation - voltage level, demand, connected plant, live solved voltage.
+   A voltage-level chip row filters the register; ordered by level then demand, capped to 200. All
+   live-solved. Mirrors GridSim.Wpf SubstationFleetVm. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET CLASS</div>
+    <div class="card-h" style="margin-bottom:2px">SUBSTATIONS</div>
+    <div class="muted-note" style="margin-top:0">every electrical bus - voltage, demand, connected plant | <span class="txt-ok">LIVE-SOLVED</span></div>
+</div>
+
+<div class="panel-grid four">
+    <div class="mini"><span class="mv">@Graph.Buses.Count</span><span class="ml">Buses</span></div>
+    <div class="mini"><span class="mv">@_levels.Count</span><span class="ml">Voltage levels</span></div>
+    <div class="mini"><span class="mv">@($"{_totalDemand / 1000.0:F2}")</span><span class="ml">Total demand GW</span></div>
+    <div class="mini @(_outOfBand > 0 ? "alarm" : "")"><span class="mv">@_outOfBand</span><span class="ml">Out of band</span></div>
+</div>
+
+<div class="asset-cats">
+    <button class="acat @(double.IsNaN(_filterKv) ? "on" : "")" @onclick="() => Pick(double.NaN)">ALL</button>
+    @foreach (double kv in _levels)
+    {
+        double captured = kv;
+        <button class="acat @(NearKv(_filterKv, captured) ? "on" : "")" @onclick="() => Pick(captured)">@kv.ToString("F0") kV</button>
+    }
+</div>
+
+<div class="card grow" style="margin-bottom:0">
+    <div class="card-h">FLEET REGISTER@(_note is "" ? "" : $" | {_note}")</div>
+    <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Bus</th><th>Name</th><th class="r">kV</th><th class="r">Vm pu</th><th class="r">Demand</th><th class="r">Gen</th><th class="r">Conn</th></tr></thead>
+            <tbody>
+                @foreach (BusAssetDto b in _shown)
+                {
+                    <tr @onclick="() => Nav.OpenSubstation(b.Id, b.Name)">
+                        <td class="mono">@b.Id</td>
+                        <td>@b.Name</td>
+                        <td class="r">@b.BaseKv.ToString("F0")</td>
+                        <td class="r mono" style="color:@(b.Solved ? WebPalette.Voltage(b.Vm) : "var(--muted)")">@(b.Solved ? b.Vm.ToString("F3") : "-")</td>
+                        <td class="r">@b.DemandMw.ToString("N0")</td>
+                        <td class="r">@(_gen.GetValueOrDefault(b.Id) > 0.5 ? _gen[b.Id].ToString("N0") : "-")</td>
+                        <td class="r">@_conn.GetValueOrDefault(b.Id)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private const int MaxRows = 200;
+
+    private List<BusAssetDto> _shown = new();
+    private List<double> _levels = new();
+    private Dictionary<int, double> _gen = new();
+    private Dictionary<int, int> _conn = new();
+    private double _filterKv = double.NaN;   // NaN = ALL
+    private double _totalDemand;
+    private int _outOfBand;
+    private string _note = "";
+
+    protected override void OnParametersSet()
+    {
+        _levels = Graph.Buses.Select(b => b.BaseKv).Where(k => k > 0).Distinct().OrderByDescending(k => k).ToList();
+        _gen = new();
+        foreach (GenAssetDto g in Graph.Generators) _gen[g.Bus] = _gen.GetValueOrDefault(g.Bus) + g.Pg;
+        _conn = new();
+        foreach (BranchAssetDto b in Graph.Branches)
+        {
+            _conn[b.From] = _conn.GetValueOrDefault(b.From) + 1;
+            _conn[b.To] = _conn.GetValueOrDefault(b.To) + 1;
+        }
+        _totalDemand = Graph.Buses.Sum(b => b.DemandMw);
+        _outOfBand = Graph.Buses.Count(b => b.Solved && (b.Vm < GridSim.Core.Presentation.ScadaThresholds.VoltageBandLowPu
+                                                         || b.Vm > GridSim.Core.Presentation.ScadaThresholds.VoltageBandHighPu));
+
+        var filtered = Graph.Buses
+            .Where(b => double.IsNaN(_filterKv) || NearKv(b.BaseKv, _filterKv))
+            .OrderByDescending(b => b.BaseKv).ThenByDescending(b => b.DemandMw)
+            .ToList();
+        _shown = filtered.Take(MaxRows).ToList();
+        _note = filtered.Count > MaxRows ? $"showing {MaxRows} of {filtered.Count}" : $"{filtered.Count} substations";
+    }
+
+    private void Pick(double kv) => _filterKv = kv;
+    private static bool NearKv(double a, double b) => !double.IsNaN(a) && !double.IsNaN(b) && Math.Abs(a - b) < 0.5;
+}

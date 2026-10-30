@@ -1,0 +1,17 @@
+$ gridsim estimate case14 --synth --noise 1.6 --out results/trouble-tmp/noise
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 25   max |dx|: 2.78E-011
+  measurements: 122   states: 27   redundancy (dof): 89
+  observability: observable (rank 27/27)
+  consistency: J = 137.92 vs chi2(95%) = 112.02 -> FAIL
+  removed bad data (pass 0): PFlowMw @ branch 2->5 (from)  rN = 3.6
+  removed bad data (pass 1): QFlowMvar @ branch 2->3 (to)  rN = 3.6
+  removed bad data (pass 2): VmPu @ bus 14  rN = 3.2
+  removed bad data (pass 3): QInjMvar @ bus 12  rN = 3.3
+  removed bad data (pass 4): QInjMvar @ bus 13  rN = 3.2
+  removed bad data (pass 5): PInjMw @ bus 1  rN = 3.0
+  vs synthetic truth: max |dVm| = 5.456E-003 pu   max |dVa| = 3.968E-001 deg
+
+  -> results\trouble-tmp\noise
+[exit 0]

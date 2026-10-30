@@ -1,0 +1,7 @@
+$ gridsim dist3ph data/dist3ph/ieee123.json fault --bus 100
+THREE-PHASE DISTRIBUTION (fault) - IEEE 123 Node Test Feeder   [EXPERIMENTAL]
+  file: data/dist3ph/ieee123.json
+  128 buses, 127 branches, 85 loads, base 5 MVA (three-phase)
+  4 regulator(s), 5 closed switch(es), 2 open switch(es) (not branches), 4 capacitor bank(s), 60 single- or two-phase branch(es)
+dist3ph fault: the sequence fault study cannot model the path to bus 100: branch 160-9004 has a step-voltage regulator, whose off-nominal (per-phase) ratio the series sum of sequence impedances does not hold. Use the three-phase sweep.
+[exit 1]

@@ -1,0 +1,101 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+publish/
+
+# Rider / VS
+.vs/
+.idea/
+*.user
+*.suo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ASP.NET Data Protection keys
+**/App_Data/keys/
+
+# Large raw NESO frequency data (keep the small sample under data/neso)
+fnew-*.csv
+
+# GDA-derived grid models — DATA STAYS OUT OF THE REPO.
+# The GridSim.Gda converter reads the read-only /gda data lake at runtime and
+# materialises these locally; the raw/derived grid data must never be committed.
+data/uk-full/
+gda-out/
+*.gda-model.json
+
+# Unity (generated)
+unity/**/Library/
+unity/**/Temp/
+unity/**/Obj/
+unity/**/Build/
+unity/**/Logs/
+unity/**/UserSettings/
+unity/**/*.csproj
+unity/**/*.sln
+
+# viz scratch output
+viz/gridviz.json
+
+
+# local screenshot output from tools/AssetSmoke
+shots/
+
+# CLI run outputs (transient / gda-replay / crossval / scenario / evidence) — regenerable, local only
+results/
+
+# editor swap/backup files (e.g. vim swaps left by remote-server editing)
+*.swp
+*.swo
+*~
+
+# Archived AI review / session-note meta-docs — kept locally, out of the tracked tree
+docs/_archive/
+
+# Stray CLI export dumps at the repo root
+/test-sample-solve-export.json
+
+# Generated manual bundles (build artifacts)
+docs/manual/*.zip
+
+# secrets
+token.txt
+*.token
+
+# python bytecode cache
+__pycache__/
+*.pyc
+
+*.bak
+
+# Site-specific deployment settings (F05): never committed. See docs/developer/deploy/README.md.
+compose.override.yml
+.env
+
+# NESO and other third-party reference downloads (large binaries, e.g. PowerFactory .pfdx / .pfd): kept on disk, not
+# committed (N126, 2026-10-04).
+data/reference-inbox/
+
+# The third-party reference PDFs under docs/reference (grid codes, ENA recommendations, vendor manuals): kept on disk for
+# grounding, never committed, because their redistribution terms do not all allow it. The catalogue (README.md) and
+# MANIFEST.sha256 stay tracked; GridSim-GB-Documents' tools/fetch.py re-fetches the files from their sources.
+docs/reference/**/*.pdf
+
+# Uncommitted docs-programme worktree WIP saved at the 2026-10-12 branch cleanup (kept locally, not in git).
+review-progress/2026-10/archive/docs-programme-wip-*
+
+# Review and planning records: kept locally for the working sessions, not part of the repository.
+review-progress/
+
+# Private keys and certificates with their keys (code-signing .pfx, audit-anchor .pem keys, strong-name .snk): never
+# committed. The public signing certificate is signing/gridsim-signing.cer, which these patterns do not match.
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk

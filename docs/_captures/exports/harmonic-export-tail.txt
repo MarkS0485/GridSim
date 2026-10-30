@@ -1,0 +1,29 @@
+$ sed -n '410,436p' results/exports-docs/harmonic-export.json
+  "resonance": {
+    "bus": 9,
+    "order": 7,
+    "zMag": 0.6575669200741651,
+    "sharpness": 3.83763679770113
+  },
+  "resonanceSweep": {
+    "bus": 9,
+    "peakOrder": 7.47497016807171,
+    "peakHz": 373.7485084035855,
+    "zMag": 0.687623565377445,
+    "sequence": "Positive",
+    "minOrder": 1.5,
+    "maxOrder": 50,
+    "gridPoints": 486
+  },
+  "compliance": [
+    {
+      "bus": 1,
+      "baseKv": 345,
+      "thdPct": 1.3947496157044652,
+      "thdLimitPct": 1.5,
+      "worstIhdPct": 0.9086523860832977,
+      "worstIhdOrder": 7,
+      "ihdLimitPct": 1,
+      "compliant": true,
+      "voltageLevelKnown": true
+[exit 0]

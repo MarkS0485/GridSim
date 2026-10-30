@@ -1,0 +1,12 @@
+$ python NetworkModel/build_state_divergence.py --case gb-spine --date 2026-09-01
+{
+  "case": "gb-spine",
+  "date": "2026-09-01",
+  "periods_compared": 47,
+  "dvm_max_pu": 0.26789,
+  "dva_max_deg": 33.314,
+  "dflow_max_mw": 3816.9,
+  "worst_vm_bus_mode": 11,
+  "output": "results\\state_divergence\\gb-spine\\year=2026\\week=36\\state_divergence.parquet"
+}
+[exit 0]

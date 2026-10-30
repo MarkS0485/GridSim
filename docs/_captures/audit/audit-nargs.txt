@@ -1,0 +1,5 @@
+$ gridsim audit verify
+usage: gridsim audit verify|show <file> [--anchor-count N --anchor-head HEX] [--pubkey <public.pem> [--anchor <file>] [--sig <file>]]
+       gridsim audit sign <file> --key <private.pem> [--anchor <file>] [--sig <file>]
+       gridsim audit keygen <private.pem> <public.pem>
+[exit 2]

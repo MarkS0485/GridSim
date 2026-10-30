@@ -1,0 +1,70 @@
+$ gridsim gda --root $GDA_ROOT --all-gsps
+GridSim  -  solving every GSP supply area of GB/NGED ex-GDA (61 groups)
+==============================================================================
+GSP group                         Buses  Demand   Loss   Vmin   Vmax   Status
+------------------------------------------------------------------------------
+Abham 132 kV                        141   0.22GW      2MW  0.975  1.010  converged
+Alverdiscott 132                  (empty)
+Alverdiscott 132 kV                 184   0.20GW      4MW  0.942  1.009  converged
+Axminster 132                     (empty)
+Axminster 132 kV                     76   0.09GW      2MW  0.931  1.003  converged
+Berkswell 132kV                     140   0.57GW      5MW  0.982  1.009  converged
+Bicker Fen 132kV                    139   0.30GW      5MW  0.961  1.009  converged
+Bishops Wood 132kV                  168   0.67GW      8MW  0.973  1.010  converged
+Bridgwater 132                    (empty)
+Bridgwater 132 kV                   130   0.18GW      9MW  0.884  1.009  converged
+Bushbury 132kV                       42   0.21GW      1MW  0.990  1.003  converged
+Bustleholm 132kV                     47   0.39GW      1MW  0.973  1.002  converged
+Cardiff East / Aberthaw             150   0.29GW      1MW  0.990  1.003  converged
+Cellarhead 132kV                    134   0.68GW      8MW  0.980  1.010  converged
+Chesterfield 132kV                  300   0.99GW      7MW  0.979  1.009  converged
+Coventry 132kV                      188   0.85GW     10MW  0.974  1.009  converged
+Drakelow 132kV                       95   0.32GW      2MW  0.983  1.006  converged
+East Claydon 132kV                  173   0.80GW      7MW  0.973  1.010  converged
+Enderby 132kV                       168   0.91GW      8MW  0.978  1.007  converged
+Exeter 132                        (empty)
+Exeter 132 kV                       188   0.28GW      3MW  0.965  1.008  converged
+Feckenham 66kV                       82   0.30GW     18MW  0.578  1.000  DIV 5E-003
+Grendon 132kV                       300   1.11GW     26MW  0.918  1.008  converged
+Indian Queens 132                 (empty)
+Indian Queens 132 kV                324   0.47GW      9MW  0.904  1.010  converged
+Iron Acton 132                        8   0.00GW      0MW  1.000  1.000  converged
+Iron Acton 132 kV                   193   0.98GW     18MW  0.891  1.006  converged
+Iron Acton 132kV                    193   0.98GW     18MW  0.891  1.006  converged
+Ironbr. & Shrewsb. 132kV            133   0.52GW      9MW  0.946  1.009  converged
+Kitwell 132kV                        46   0.35GW      1MW  0.991  1.003  converged
+Landulph 132                      (empty)
+Landulph 132 kV                     184   0.33GW      5MW  0.933  1.010  converged
+Lea Marston 132kV                    72   0.50GW      1MW  0.983  1.000  converged
+Margam 66                            14   0.04GW      0MW  0.990  1.001  converged
+Melksham 132                      (empty)
+Melksham 132 kV                      32   0.07GW      0MW  0.988  1.003  converged
+Nechells 132kV                       50   0.33GW      1MW  0.985  1.000  converged
+Ocker Hill 132kV                     21   0.10GW      0MW  0.992  1.000  converged
+Oldbury 132kV                        16   0.09GW      0MW  0.990  1.000  converged
+Pembroke 132                        110   0.09GW      1MW  0.966  1.002  converged
+Penn 132kV                           39   0.34GW      1MW  0.981  1.002  converged
+Port Ham 132kV                      116   0.62GW      5MW  0.981  1.008  converged
+Pyle 132                             70   0.10GW      1MW  0.974  1.002  converged
+Rassau 132                          120   0.19GW      2MW  0.982  1.008  converged
+Ratcliffe 132kV                     193   0.78GW     10MW  0.961  1.009  converged
+Rugeley 132kV                        50   0.24GW      1MW  0.980  1.000  converged
+Sandford 132                      (empty)
+Sandford 132 kV                     115   0.27GW      4MW  0.960  1.009  converged
+Seabank 132                       (empty)
+Seabank 132 kV                      145   0.20GW      4MW  0.969  1.010  converged
+Stalybridge 132kV                     9   0.02GW      0MW  0.991  1.000  converged
+Staythorpe 132kV                    156   0.28GW      3MW  0.969  1.008  converged
+Stoke Bardolph 132kV                 55   0.28GW      3MW  0.989  1.010  converged
+Swansea North 132                   433   0.51GW     14MW  0.877  1.008  converged
+Taunton 132 kV                       73   0.09GW      1MW  0.975  1.006  converged
+Upper Boat 132                      139   0.26GW      8MW  0.938  1.008  converged
+Uskmouth 132                        114   0.22GW      1MW  0.991  1.001  converged
+Walpole 132kV                       142   0.45GW     14MW  0.922  1.010  converged
+West Burton 132kV                    93   0.43GW      3MW  0.979  1.010  converged
+Willenhall 132kV                     23   0.15GW      0MW  0.970  1.001  converged
+Willington 132kV                    197   0.87GW     20MW  0.815  1.009  converged
+------------------------------------------------------------------------------
+51/61 GSP areas converged in 3.0s
+Demand: 20.24 GW solved of 20.54 GW total  losses 265 MW (1.31%)
+[exit 3]

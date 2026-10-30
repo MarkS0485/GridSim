@@ -1,0 +1,10 @@
+$ gridsim iec60909 case9 --bus 5 --breaker 362,6,2,2
+IEC 60909 - IEEE 9-bus (WSCC), bus 5, three-phase, Maximum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 1.4683989584292985 kA  (8.774528526143639 pu)
+  ip    = 4.143787818206106 kA  (kappa 1.995438943368623, R/X 0.10501342238071008, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 1.4683989584292985 kA    Ik = 1.4683989584292985 kA
+  Ith   = 1.4881526648788939 kA  (m 0.027086065637215752)    idc(tb) = 0.03963009392407432 kA
+  Zth   = 0.013092788564404878 + j0.12467728665140516 pu
+  breaker 362 kV / making 6 kA / breaking 2 kA / 2 kA for 1 s: ADEQUATE
+    voltage ok (system 345 kV, highest 362 kV)   making margin 1.856212181793894 kA   breaking margin 0.5316010415707015 kA   thermal margin 0.5118473351211061 kA
+[exit 0]

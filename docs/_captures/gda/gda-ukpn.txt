@@ -1,0 +1,3 @@
+$ gridsim gda --root $GDA_ROOT --dno ukpn --no-geo
+Load failed: UKPN ukpn-ltds-table-3a-load-data-observed.csv: column Maximum_Demand_24_25_MW gave no positive demand on any known substation, so the replica would have no load.
+[exit 1]

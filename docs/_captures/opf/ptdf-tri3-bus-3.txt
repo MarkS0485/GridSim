@@ -1,0 +1,6 @@
+$ gridsim ptdf docs/_captures/opf/tri3 --bus 3
+PTDF - Three-bus worked example (3 buses): +1 MW injected at bus 3 (withdrawn at slack 1) flows on:
+    branch 0    1->3           PTDF -0.6667  (-66.7%)
+    branch 1    2->3           PTDF -0.3333  (-33.3%)
+    branch 2    1->2           PTDF -0.3333  (-33.3%)
+[exit 0]

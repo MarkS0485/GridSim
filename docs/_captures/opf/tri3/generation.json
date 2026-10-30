@@ -1,0 +1,4 @@
+[
+  { "name": "G1 nuclear", "bus": 1, "type": "nuclear", "capacityMva": 200, "role": "slack", "voltageSetpoint": 1.0 },
+  { "name": "G2 ocgt",    "bus": 2, "type": "ocgt",    "capacityMva": 200, "voltageSetpoint": 1.0 }
+]

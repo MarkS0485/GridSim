@@ -1,0 +1,8 @@
+$ python bridge_probe.py '{"action":"start","case":"gb-spine","start":"2026-09-01T10:00:00Z","fps":144,"source":"estimated"}' 3
+info      {"message": "GridSim-Bridge connected", "cases": ["gb-full", "gb-spine", "zone-enwl", "zone-nged", "zone-npg", "zone-spen", "zone-ssen", "zone-ukpn"]}
+topology  case=gb-spine  buses=316  branches=579
+info      {"message": "Replaying gb-spine from estimated lake: 1 stored frames 2026-09-01T11:00:00+00:00 -> 2026-09-01T11:00:00+00:00 at 144 FPS"}
+state     t=2026-09-01T11:00:00+00:00  source=estimated  buses=316
+          estimate={"objectiveJ": 225.414916686831, "chiThreshold": 359.5207249007415, "dof": 317, "measurementsN": 948, "removedN": 0, "iterations": 8, "chiPassed": true}
+done      {"framesSent": 1, "source": "estimated"}
+[exit 0]

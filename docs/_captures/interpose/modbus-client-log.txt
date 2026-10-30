@@ -1,0 +1,10 @@
+-- burst A
+  aa bb cc   # noise before a frame (3 octets)
+  00 01 00 00 00 06 01 03 00 64 00 04   # FC3 request txn 1: unit 1, start 100, quantity 4
+  00 01 00 00 00 0b 01 03 08 04 06 ff 88 42 f6 e9 79   # FC3 response txn 1: 1030, -120 (0xFF88), 123.456 as F32 high word first
+-- burst B
+  00 02 00 00 00 06 01 03 00 64 00 04   # FC3 request txn 2: unit 1, start 100, quantity 4
+  00 02 00 00 00 0b 01 03 08 04 07 ff 9c 43 02 80 00   # FC3 response txn 2: 1031, -100 (0xFF9C), 130.5 as F32
+  00 09 00 00 00 07 02 03 04 00 0b 00 16   # FC3 response txn 9, no request seen: unit 2, 2 registers (positional)
+  00 0a 00 00 00 09 02 03 06 00 01 00 02 00 03   # FC3 response txn 10, no request seen: unit 2, 3 registers (refused)
+-- sent 7 write(s)

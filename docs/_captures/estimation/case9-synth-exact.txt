@@ -1,0 +1,11 @@
+$ gridsim estimate case9 --synth --noise 0 --out results/case9-exact
+
+=== WLS state estimate: case9 ===
+  status: Converged   iterations: 4   max |dx|: 6.07E-010
+  measurements: 63   states: 17   redundancy (dof): 46
+  observability: observable (rank 17/17)
+  consistency: J = 0.00 vs chi2(95%) = 62.83 -> PASS
+  vs synthetic truth: max |dVm| = 2.220E-016 pu   max |dVa| = 3.553E-015 deg
+
+  -> results\case9-exact
+[exit 0]

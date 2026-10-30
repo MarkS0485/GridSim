@@ -1,0 +1,76 @@
+{
+  "case": "case118",
+  "seeds": 10,
+  "configs": [
+    {
+      "config": "full/n0.5",
+      "runs": 10,
+      "dof": 863,
+      "chi_pass_rate": 1.0,
+      "dvm_mean_pu": 0.001342,
+      "dvm_max_pu": 0.002538,
+      "dva_mean_deg": 0.0942,
+      "dva_max_deg": 0.1432
+    },
+    {
+      "config": "full/n1",
+      "runs": 10,
+      "dof": 863,
+      "chi_pass_rate": 1.0,
+      "dvm_mean_pu": 0.002684,
+      "dvm_max_pu": 0.005067,
+      "dva_mean_deg": 0.1885,
+      "dva_max_deg": 0.2862
+    },
+    {
+      "config": "full/n2",
+      "runs": 10,
+      "dof": 843,
+      "chi_pass_rate": 0.0,
+      "dvm_mean_pu": 0.006276,
+      "dvm_max_pu": 0.01122,
+      "dva_mean_deg": 0.4113,
+      "dva_max_deg": 0.5602
+    },
+    {
+      "config": "half-flow",
+      "runs": 10,
+      "dof": 491,
+      "chi_pass_rate": 1.0,
+      "dvm_mean_pu": 0.003055,
+      "dvm_max_pu": 0.003981,
+      "dva_mean_deg": 0.2523,
+      "dva_max_deg": 0.5175
+    },
+    {
+      "config": "no-flow",
+      "runs": 10,
+      "dof": 119,
+      "chi_pass_rate": 1.0,
+      "dvm_mean_pu": 0.00364,
+      "dvm_max_pu": 0.004915,
+      "dva_mean_deg": 0.5237,
+      "dva_max_deg": 1.063
+    },
+    {
+      "config": "sparse",
+      "runs": 10,
+      "dof": 244,
+      "chi_pass_rate": 1.0,
+      "dvm_mean_pu": 0.003788,
+      "dvm_max_pu": 0.005304,
+      "dva_mean_deg": 0.3189,
+      "dva_max_deg": 0.6774
+    },
+    {
+      "config": "inj-only",
+      "runs": 10,
+      "dof": 30,
+      "chi_pass_rate": 1.0,
+      "dvm_mean_pu": 0.005253,
+      "dvm_max_pu": 0.00866,
+      "dva_mean_deg": 0.5775,
+      "dva_max_deg": 1.677
+    }
+  ]
+}

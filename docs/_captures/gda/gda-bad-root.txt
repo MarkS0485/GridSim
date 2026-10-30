@@ -1,0 +1,3 @@
+$ gridsim gda --root no-such-lake
+error: GDA root error: GDA root not found: no-such-lake
+[exit 1]

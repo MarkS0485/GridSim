@@ -1,0 +1,12 @@
+[
+  { "name": "T1 GSP N Scotland",       "from": 1,  "to": 101, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 1000 },
+  { "name": "T2 GSP S Scotland",       "from": 2,  "to": 102, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 3000 },
+  { "name": "T3 GSP N England",        "from": 3,  "to": 103, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 7000 },
+  { "name": "T4 GSP Yorkshire",        "from": 4,  "to": 104, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 6000 },
+  { "name": "T5 GSP N Wales & Mersey", "from": 5,  "to": 105, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 5000 },
+  { "name": "T6 GSP Midlands",         "from": 6,  "to": 106, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 8000 },
+  { "name": "T7 GSP East Anglia",      "from": 7,  "to": 107, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 4000 },
+  { "name": "T8 GSP London & SE",      "from": 8,  "to": 108, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 11000 },
+  { "name": "T9 GSP South",            "from": 9,  "to": 109, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 5000 },
+  { "name": "T10 GSP SW & S Wales",    "from": 10, "to": 110, "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "ratingMva": 2500 }
+]

@@ -1,0 +1,15 @@
+$ gridsim replay-event gb-2019-08-09 --trace results/trouble-tmp/recent-trace.csv --out results/trouble-tmp/rev
+gridsim: internal error - this is a defect in GridSim, not a problem with your input.
+gridsim: ForwardInferenceException: NESO frequency sample timestamp 2026-10-04T14:24:53.0000000Z is newer than the historical horizon 2026-09-27T13:24:58.9413450Z (data must lag real time by >=169 h). GridSim replays history only - it never processes recent or future data, so it cannot forward-infer.
+gridsim: crash log written to results/crash\gridsim-crash-20261004-142458-3340.log - please include it when reporting the problem.
+Unhandled exception. GridSim.Core.Diagnostics.ForwardInferenceException: NESO frequency sample timestamp 2026-10-04T14:24:53.0000000Z is newer than the historical horizon 2026-09-27T13:24:58.9413450Z (data must lag real time by >=169 h). GridSim replays history only - it never processes recent or future data, so it cannot forward-infer.
+   at GridSim.Core.Diagnostics.ForwardInferenceGuard.RejectFuture(DateTime stampUtc, Nullable`1 utcNow, String what) in src\GridSim.Core\Diagnostics\ForwardInferenceGuard.cs:line 43
+   at GridSim.Core.Frequency.NesoFrequencyCsv.Read(String path)+MoveNext() in src\GridSim.Core\Frequency\NesoFrequencyCsv.cs:line 37
+   at GridSim.Core.Frequency.RocofUpsampler.Upsample(IEnumerable`1 samples, Int32 subSamplesPerInterval)+MoveNext() in src\GridSim.Core\Frequency\RocofUpsampler.cs:line 21
+   at System.Collections.Generic.List`1..ctor(IEnumerable`1 collection)
+   at System.Linq.Enumerable.ToList[TSource](IEnumerable`1 source)
+   at GridSim.Core.Replay.ReplayValidator.TryPerSampleRmse(GridEvent ev, FrequencyResponse sim, DynamicsConfig cfg) in src\GridSim.Core\Replay\ReplayValidator.cs:line 198
+   at GridSim.Core.Replay.ReplayValidator.Validate(GridEvent ev, DynamicsConfig config, ReplayTolerance tol) in src\GridSim.Core\Replay\ReplayValidator.cs:line 138
+   at Program.<>c__DisplayClass0_0.<<Main>$>g__RunReplayEvent|14(List`1 a, String root) in src\GridSim.Cli\Program.cs:line 1862
+   at Program.<Main>$(String[] args) in src\GridSim.Cli\Program.cs:line 1459
+[exit -532462766]

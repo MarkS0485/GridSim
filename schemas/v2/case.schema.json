@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "case.schema.json",
+  "title": "GridSim v2 case manifest (gridsim-case/2)",
+  "description": "The manifest of one v2 case: its name and system block, the network files that hold its elements, the library templates it imports, the templates it defines for itself, the rules that bind templates to element types, and its explicit overrides of template values, and (Phase 5a) the asset overlay files it carries beside the model without the solver using them. This schema is enforced by the subset validator; since JSON v2 Phase 2 (N065) the loader (V2CaseLoader) reads a v2 case and checks the rules this schema subset cannot express: every network file and library path existing, every template reference resolving (to an import or a local template), a local template id not shadowing an imported one, an override naming parameters of its template, at least one parameter per override.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "system", "network"],
+  "properties": {
+    "schema": { "const": "gridsim-case/2" },
+    "name": {
+      "type": "string",
+      "pattern": "\\S",
+      "description": "The case name (v1 system.json name). Required in v2; v1 fell back to the folder name."
+    },
+    "description": { "type": "string" },
+    "system": { "$ref": "#/$defs/system" },
+    "gridCodeProfile": {
+      "$ref": "common.schema.json#/$defs/templateRef",
+      "description": "The grid-code profile template (frequency and voltage limits). Absent = the built-in GB limits. Not bound from a case yet: the loader refuses a case that sets it."
+    },
+    "solverProfile": {
+      "$ref": "common.schema.json#/$defs/templateRef",
+      "description": "The solver profile template (tolerances, iteration limits). Absent = the built-in solver defaults. Not bound from a case yet: the loader refuses a case that sets it."
+    },
+    "network": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The network files (gridsim-network/2), as paths relative to this case file. The case's network is their union.",
+      "items": { "$ref": "#/$defs/relativeJsonPath" }
+    },
+    "imports": {
+      "type": "array",
+      "description": "Library files and the templates taken from each.",
+      "items": { "$ref": "#/$defs/import" }
+    },
+    "localTemplates": {
+      "type": "array",
+      "description": "Templates defined by this case alone, in the library template shape. A projected v1 asset class becomes one of these, with id gridsim.local.<class name>.",
+      "items": { "$ref": "library.schema.json#/$defs/template" }
+    },
+    "bindings": {
+      "type": "array",
+      "description": "Binding rules (v1 asset-bindings.json): an element whose type matches matchType is bound to the template, unless the element names its own template. A matchType ending in * is a prefix rule; an exact rule beats a prefix rule.",
+      "items": { "$ref": "#/$defs/binding" }
+    },
+    "overrides": {
+      "type": "array",
+      "description": "Values this case sets in place of a template's own. Each one shadows an imported value, so each must say why (reason) and must acknowledge the shadowing in so many words (\"shadow\": \"explicit\"): a silent shadow is not possible.",
+      "items": { "$ref": "#/$defs/override" }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Phase 5a (2026-10-20): the asset overlay files (gridsim-assets/2, assets.schema.json), as paths relative to this case file, each inside the case folder and listed once. An overlay describes physical assets (substations, busbar sections, switchgear, towers, spans, conductors, earth wires, soil, earth paths, three-winding transformers, HVDC links) and points at the case's buses, lines, transformers, generators and demands. It is checked (V2AssetChecker) and carried beside the model, never used by the solver: a case with an overlay loads to exactly the model and results it gives without one. Absent = no overlay; a build older than Phase 5a refuses this member as unknown.",
+      "items": { "$ref": "#/$defs/relativeJsonPath" }
+    }
+  },
+  "$defs": {
+    "system": {
+      "title": "System block",
+      "description": "The system base and nominal frequency (v1 system.json). Both required in v2; v1 defaulted them to 100 MVA and 50 Hz.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseMva", "frequencyHz"],
+      "properties": {
+        "baseMva": { "type": "number", "exclusiveMinimum": 0 },
+        "frequencyHz": { "type": "number", "exclusiveMinimum": 0 },
+        "dispatch": { "type": "boolean", "description": "v1 system.json dispatch (F24): false = keep the generator outputs as written (no capacity-based balance). Absent = true." }
+      }
+    },
+
+    "relativeJsonPath": {
+      "title": "Relative JSON file path",
+      "description": "A forward-slash relative path to a .json file: no drive, no leading slash, no backslash, no empty segment.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*\\.json$"
+    },
+
+    "templatePattern": {
+      "title": "Template pattern",
+      "description": "Which templates an import takes: an exact pinned reference (gridsim.exciter.sexs@1), an unpinned id (gridsim.exciter.sexs, resolving to its highest revision, which is then reported), or an id prefix ending in .* (gridsim.exciter.*), or gridsim.* for every template in the file.",
+      "type": "string",
+      "pattern": "^gridsim\\.(\\*|[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*(\\.\\*|@[1-9][0-9]*)?)$"
+    },
+
+    "import": {
+      "title": "Import",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["library", "templates"],
+      "properties": {
+        "library": { "$ref": "#/$defs/relativeJsonPath", "description": "A gridsim-library/2 file, relative to the data root." },
+        "templates": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/templatePattern" } }
+      }
+    },
+
+    "binding": {
+      "title": "Binding rule",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matchType", "template"],
+      "properties": {
+        "matchType": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\*?$" },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef" }
+      }
+    },
+
+    "override": {
+      "title": "Override",
+      "description": "New values for some parameters of one template revision, for this case only. reason (non-blank) and \"shadow\": \"explicit\" are both required.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template", "params", "reason", "shadow"],
+      "properties": {
+        "template": { "$ref": "common.schema.json#/$defs/templateRef" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/presentParamValue" }
+        },
+        "reason": { "type": "string", "pattern": "\\S" },
+        "shadow": { "const": "explicit" },
+        "provenance": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    }
+  }
+}

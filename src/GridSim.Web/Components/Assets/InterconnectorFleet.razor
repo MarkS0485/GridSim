@@ -1,0 +1,70 @@
+@* The interconnector fleet - HVDC links into GB, signed flow (positive importing). All live-solved. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET CLASS</div>
+    <div class="card-h" style="margin-bottom:2px">INTERCONNECTORS</div>
+    <div class="muted-note" style="margin-top:0">the GB import links - signed flow, capacity, landing site | <span class="txt-ok">LIVE</span></div>
+</div>
+
+<div class="panel-grid four">
+    <div class="mini"><span class="mv">@($"{_cap / 1000.0:F1}")</span><span class="ml">Total capacity GW</span></div>
+    <div class="mini"><span class="mv">@($"{_net / 1000.0:+0.00;-0.00;0.00}")</span><span class="ml">Net flow GW</span></div>
+    <div class="mini"><span class="mv">@_importing / @_ics.Count</span><span class="ml">Importing</span></div>
+    <div class="mini"><span class="mv" style="font-size:1em">@_largest</span><span class="ml">Largest flow</span></div>
+</div>
+
+<div class="card grow" style="margin-bottom:0">
+    <div class="card-h">LINKS</div>
+    <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Link</th><th>Landing</th><th>Status</th><th class="r">Flow</th><th class="r">Utilisation</th></tr></thead>
+            <tbody>
+                @foreach (GenAssetDto g in _ics)
+                {
+                    var (badge, col, frac) = State(g);
+                    <tr @onclick="() => Nav.OpenGenerator(g.Index, g.Name, true)">
+                        <td>@g.Name</td>
+                        <td>@LandingName(g)</td>
+                        <td><b style="color:@col">@badge</b></td>
+                        <td class="r">@g.Pg.ToString("+#,0;-#,0;0") MW</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(frac);--c:@col"></span></div>
+                            @(g.Capped ? $"{frac * 100:F0}%" : "-")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private List<GenAssetDto> _ics = new();
+    private double _cap, _net;
+    private int _importing;
+    private string _largest = "-";
+
+    protected override void OnParametersSet()
+    {
+        _ics = Graph.Generators.Where(g => g.Interconnector).OrderByDescending(g => Math.Abs(g.Pg)).ToList();
+        _cap = _ics.Where(g => g.Capped).Sum(g => g.PmaxMw);
+        _net = _ics.Sum(g => g.Pg);
+        _importing = _ics.Count(g => g.Pg > 5);
+        GenAssetDto? big = _ics.FirstOrDefault();
+        _largest = big is null ? "-" : $"{big.Name} | {Math.Abs(big.Pg):F0} MW";
+    }
+
+    private (string, string, double) State(GenAssetDto g)
+    {
+        bool imp = g.Pg > 5, exp = g.Pg < -5;
+        double frac = g.Capped && g.PmaxMw > 0 ? Math.Clamp(Math.Abs(g.Pg) / g.PmaxMw, 0, 1) : 0;
+        string col = WebPalette.Voltage(imp ? 1.0 : exp ? 1.05 : 0.98);
+        return (imp ? "IMPORTING" : exp ? "EXPORTING" : "IDLE", col, frac);
+    }
+
+    private string LandingName(GenAssetDto g) => Graph.Buses.FirstOrDefault(b => b.Id == g.Bus)?.Name ?? $"bus {g.Bus}";
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+}

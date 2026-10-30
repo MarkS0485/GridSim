@@ -1,0 +1,16 @@
+$ sed -n '238,251p' results/formats/uk-solve.json
+    "generators": [
+      {
+        "bus": 1,
+        "pg": 650,
+        "qg": 0,
+        "vg": 1.04,
+        "qmin": -1300,
+        "qmax": 1300,
+        "pmin": 0,
+        "pmax": 1300,
+        "mBase": 1300,
+        "h": 3,
+        "type": "hydro",
+        "name": "North Scotland Hydro"
+[exit 0]

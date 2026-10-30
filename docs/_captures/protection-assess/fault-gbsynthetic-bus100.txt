@@ -1,0 +1,52 @@
+$ gridsim fault data/gb-synthetic --bus 100
+Balanced three-phase fault  -  data/gb-synthetic  bus 100  Zf=j0.000 pu
+  fault current: 3.54 pu (18.60 kA)   Thevenin Z: 0.3113 pu   faulted bus voltage: 0.000 pu
+  (generator subtransient reactance synthesised at 0.20 pu; positive-sequence, so three-phase only)
+  converter-interfaced units: 50 (current-limited, K=2.0 reactive priority)  total infeed 133.33 pu, 3 at current limit
+  relays operating on the faulted state: 41
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 50 | Instantaneous overcurrent | NSC G2P1S3 33/11 | 12.180 xIn | 2.500 | inst | NSC G2P1S3 33/11 current 12.18x rated exceeds the 2.50x instantaneous pickup (trips instantly) |
+  | 87 | Differential | NSC G2P1S3 11 | 3.544 pu | 0.100 | inst | busbar differential 3.54E+000 pu at NSC G2P1S3 11 exceeds the 0.10 pu bias pickup (internal fault) |
+  | 51 | Time overcurrent | NSC G2P1S3 33/11 | 12.180 xIn | 1.200 | 0.30s | NSC G2P1S3 33/11 current 12.18x rated over the 1.20x pickup; IEC standard-inverse trips in 0.3 s |
+  | 21-Z2 | Distance | NSC G2P1S3 33/11 | 0.207 pu | 0.275 | 0.30s | NSC G2P1S3 33/11 apparent Z 0.207 pu is inside Zone 2 (reach 0.275 pu, line Z 0.220); operates in 0.3 s |
+  | 51 | Time overcurrent | NSC G2P1 132/33 | 2.158 xIn | 1.200 | 1.19s | NSC G2P1 132/33 current 2.16x rated over the 1.20x pickup; IEC standard-inverse trips in 1.2 s |
+  | 51 | Time overcurrent | MID SGT 400/275 1 | 1.591 xIn | 1.200 | 2.47s | MID SGT 400/275 1 current 1.59x rated over the 1.20x pickup; IEC standard-inverse trips in 2.5 s |
+  | 51 | Time overcurrent | LDN SGT 400/275 1 | 1.502 xIn | 1.200 | 3.11s | LDN SGT 400/275 1 current 1.50x rated over the 1.20x pickup; IEC standard-inverse trips in 3.1 s |
+  | 49 | Thermal overload | NSC G2P1S3 33/11 | 9.222 xRateA | 1.000 | 10.64s | NSC G2P1S3 33/11 loaded to 922% of RateA (30 MVA); thermal replica trips in 11 s |
+  | 49 | Thermal overload | NSC G2P1 132/33 | 2.057 xRateA | 1.000 | 242.72s | NSC G2P1 132/33 loaded to 206% of RateA (180 MVA); thermal replica trips in 243 s |
+  | 49 | Thermal overload | MID SGT 400/275 1 | 1.651 xRateA | 1.000 | 411.24s | MID SGT 400/275 1 loaded to 165% of RateA (1000 MVA); thermal replica trips in 411 s |
+  | 49 | Thermal overload | LDN SGT 400/275 1 | 1.550 xRateA | 1.000 | 484.04s | LDN SGT 400/275 1 loaded to 155% of RateA (1000 MVA); thermal replica trips in 484 s |
+  | 49 | Thermal overload | MID SGT 400/275 2 | 1.114 xRateA | 1.000 | 1478.08s | MID SGT 400/275 2 loaded to 111% of RateA (1000 MVA); thermal replica trips in 1478 s |
+  | 49 | Thermal overload | YRK SGT 400/275 1 | 1.053 xRateA | 1.000 | 2095.32s | YRK SGT 400/275 1 loaded to 105% of RateA (1000 MVA); thermal replica trips in 2095 s |
+  | 49 | Thermal overload | YRK SGT 400/275 2 | 1.030 xRateA | 1.000 | 2557.87s | YRK SGT 400/275 2 loaded to 103% of RateA (1000 MVA); thermal replica trips in 2558 s |
+  | 49 | Thermal overload | LDN SGT 400/275 2 | 1.029 xRateA | 1.000 | 2596.50s | LDN SGT 400/275 2 loaded to 103% of RateA (1000 MVA); thermal replica trips in 2596 s |
+  | 49 | Thermal overload | MID G2P1S3 33/11 | 1.026 xRateA | 1.000 | 2710.25s | MID G2P1S3 33/11 loaded to 103% of RateA (30 MVA); thermal replica trips in 2710 s |
+  | 49 | Thermal overload | MID G1P3S5 33/11 | 1.020 xRateA | 1.000 | 2932.83s | MID G1P3S5 33/11 loaded to 102% of RateA (30 MVA); thermal replica trips in 2933 s |
+  | 49 | Thermal overload | YRK G8P4 132/33 | 1.016 xRateA | 1.000 | 3107.13s | YRK G8P4 132/33 loaded to 102% of RateA (180 MVA); thermal replica trips in 3107 s |
+  | 49 | Thermal overload | MID G12P1 132/33 | 1.014 xRateA | 1.000 | 3225.52s | MID G12P1 132/33 loaded to 101% of RateA (180 MVA); thermal replica trips in 3226 s |
+  | 49 | Thermal overload | YRK G7P2S4 33/11 | 1.012 xRateA | 1.000 | 3366.98s | YRK G7P2S4 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 3367 s |
+  | 49 | Thermal overload | MID G5P3S2 33/11 | 1.009 xRateA | 1.000 | 3595.27s | MID G5P3S2 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 3595 s |
+  | 49 | Thermal overload | SWW G1P2S3 33/11 | 1.008 xRateA | 1.000 | 3711.03s | SWW G1P2S3 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 3711 s |
+  | 49 | Thermal overload | MID SGT 400/275 3 | 1.008 xRateA | 1.000 | 3737.65s | MID SGT 400/275 3 loaded to 101% of RateA (1000 MVA); thermal replica trips in 3738 s |
+  | 49 | Thermal overload | MER G6P4S3 33/11 | 1.007 xRateA | 1.000 | 3839.63s | MER G6P4S3 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 3840 s |
+  | 49 | Thermal overload | STH G7P3S1 33/11 | 1.007 xRateA | 1.000 | 3845.58s | STH G7P3S1 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 3846 s |
+  | 49 | Thermal overload | YRK G8P3S7 33/11 | 1.005 xRateA | 1.000 | 4108.91s | YRK G8P3S7 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 4109 s |
+  | 49 | Thermal overload | YRK G5P1S1 33/11 | 1.005 xRateA | 1.000 | 4130.39s | YRK G5P1S1 33/11 loaded to 101% of RateA (30 MVA); thermal replica trips in 4130 s |
+  | 49 | Thermal overload | STH G2P1S1 11/6.6 | 1.004 xRateA | 1.000 | 4387.82s | STH G2P1S1 11/6.6 loaded to 100% of RateA (12 MVA); thermal replica trips in 4388 s |
+  | 49 | Thermal overload | STH G6P2S3 33/11 | 1.003 xRateA | 1.000 | 4534.84s | STH G6P2S3 33/11 loaded to 100% of RateA (30 MVA); thermal replica trips in 4535 s |
+  | 49 | Thermal overload | SSC G3P3S4 33/11 | 1.003 xRateA | 1.000 | 4627.75s | SSC G3P3S4 33/11 loaded to 100% of RateA (30 MVA); thermal replica trips in 4628 s |
+  | 49 | Thermal overload | LDN G8P4S3 33/11 | 1.003 xRateA | 1.000 | 4721.31s | LDN G8P4S3 33/11 loaded to 100% of RateA (30 MVA); thermal replica trips in 4721 s |
+  | 49 | Thermal overload | SWW G1P2S6 33/11 | 1.002 xRateA | 1.000 | 4825.70s | SWW G1P2S6 33/11 loaded to 100% of RateA (30 MVA); thermal replica trips in 4826 s |
+  | 32 | Reverse power | Moyle | -150.000 MW | -5.000 | - | Moyle is absorbing 150.0 MW (reverse/motoring past the 5 MW pickup) |
+  | 27 | Undervoltage | NSC G2P1S3 11 | 0.000 pu | 0.800 | - | Vm 0.000 pu at NSC G2P1S3 11 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1 33 | 0.757 pu | 0.800 | - | Vm 0.757 pu at NSC G2P1 33 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1S5 11 | 0.773 pu | 0.800 | - | Vm 0.773 pu at NSC G2P1S5 11 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1S1 11 | 0.775 pu | 0.800 | - | Vm 0.775 pu at NSC G2P1S1 11 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1S6 11 | 0.775 pu | 0.800 | - | Vm 0.775 pu at NSC G2P1S6 11 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1S5 6.6 | 0.776 pu | 0.800 | - | Vm 0.776 pu at NSC G2P1S5 6.6 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1S4 11 | 0.776 pu | 0.800 | - | Vm 0.776 pu at NSC G2P1S4 11 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | NSC G2P1S2 11 | 0.777 pu | 0.800 | - | Vm 0.777 pu at NSC G2P1S2 11 is below the 0.80 pu undervoltage pickup |
+
+PROTECTION SIMULATION: a three-phase fault at bus 100 would drive 41 relay operation(s) - primary clearance by 87 (Differential) on NSC G2P1S3 11, instantaneously.
+[exit 0]

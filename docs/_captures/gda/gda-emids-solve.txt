@@ -1,0 +1,40 @@
+$ gridsim gda --root $GDA_ROOT --licence EMIDS --out results/gda-emids --solve
+GridSim  -  GDA ingestion from $GDA_ROOT  (NGED)
+==========================================================================
+Built in 1433 ms  -  GB/NGED ex-GDA
+
+  Raw LTDS nodes          22,590
+  Electrical buses         2,253   (busbar/disconnector ties merged: 4,790)
+  Series circuits          2,027   (cables & lines)
+  Transformers (2w/3w)       940 / 2   (+2 star nodes)
+  Total branches           2,973
+  Demand points              824   matched 824, total 8.90 GW
+  Generators                   2   (0.00 GW capacity, 894 unmatched)
+  System inertia             0.0 GVAs
+  OLTCs                      939
+  Connected islands            1   (largest 2,253 buses)
+
+  Buses by voltage:
+      132 kV       280
+       66 kV         1
+       33 kV     1,511
+       25 kV         5
+       11 kV       438
+        7 kV        18
+
+   15 GSP infeed(s) modelled as slack buses; primary = bus 3 (Warwick 132kV Main 2, 132 kV).
+   WARNING OLTC: 1 transformer(s) publish an invalid tap range and got NO OLTC: 'TX SWIB3/SWIB5 33/11' (-16 %/-1 %: range excludes the nominal 0 % tap).
+   WARNING ties: 37 zero-impedance circuit(s) whose Equipment is not a busbar or switch were merged as busbar ties (check for missing R/X cells): KENI3_#2H5-KENI3_2H4 'Circuit'; KENI3_2L4-KENI3_#2L5 'Circuit'; 93HBG38A-FOSW3T 'Circuit'; FLFM3T-FLFM3_1L9 'Circuit'; GAYD3_1H4-GAYD3_#1H5 'Circuit'; ....
+   Generation join: 1 row(s) joined by primary name alone: their GSP group does not list that primary in the demand table, but the name is unique to one GSP group.
+   Generation: 1 matched row(s), 5.0 MW export capacity, are not connected yet and were left out (statuses: 'Accepted').
+   Demand: 1294 row(s), 14331.8 MW are on nodes outside this build's network (other areas of the carve, or nodes on no in-scope element) and were not included.
+   Licence = EMIDS.
+   Geolocated 606/2253 buses from substations.csv.
+   validation: warning: 15 slack (reference) buses  -  treating as a multi-island system.
+
+Materialised replica -> results\gda-emids (git-ignored). Run it: gridsim --dir "results/gda-emids"
+
+Solving with the sparse (ILU0/BiCGSTAB) backend...
+Converged in 530 ms (4 NR, 11 OLTC, mismatch 7.31E-009)
+Generation 9.01 GW  Demand 8.90 GW  Losses 111.8 MW  V 0.850-1.010 p.u.
+[exit 0]

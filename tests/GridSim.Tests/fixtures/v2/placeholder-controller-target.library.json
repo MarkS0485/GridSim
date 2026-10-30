@@ -1,0 +1,25 @@
+{
+  "schema": "gridsim-library/2",
+  "description": "Test fixture: an active machine whose exciter slot points at a placeholder exciter. Must fail. Uses the fixture kinds in fixtures/v2/kinds.",
+  "templates": [
+    {
+      "id": "gridsim.fixture.machine",
+      "rev": 1,
+      "kind": "synchronousMachine",
+      "status": "active",
+      "title": "Machine",
+      "params": { "h": 4.0 },
+      "controllers": { "exciter": "gridsim.fixture.exciter.empty@1" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "fixture" } }
+    },
+    {
+      "id": "gridsim.fixture.exciter.empty",
+      "rev": 1,
+      "kind": "exciter",
+      "status": "placeholder",
+      "title": "Empty exciter",
+      "params": { "ka": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "fixture [VERIFY]" } }
+    }
+  ]
+}

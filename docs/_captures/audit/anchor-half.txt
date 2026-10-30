@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26.log --anchor-count 2
+error: --anchor-count and --anchor-head go together (the anchor is the pair).
+[exit 2]

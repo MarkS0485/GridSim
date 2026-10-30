@@ -1,0 +1,10 @@
+$ gridsim protection-check case9 --uv 1.00
+Protection assessment  -  case9  (9 buses, converged=True)  [passive; solve unchanged]
+  operating elements: 1
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 27 | Undervoltage | bus 9 | 0.996 pu | 1.000 | - | Vm 0.996 pu at bus 9 is below the 1.00 pu undervoltage pickup |
+  not evaluated on a steady snapshot: 81U (Underfrequency); 81O (Overfrequency); 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence)
+
+PROTECTION SIMULATION suggests 1 protection event(s) would occur. e.g. on bus 9, relay 27 (Undervoltage) would likely operate: Vm 0.996 pu at bus 9 is below the 1.00 pu undervoltage pickup.
+[exit 0]

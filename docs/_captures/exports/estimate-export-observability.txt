@@ -1,0 +1,21 @@
+$ sed -n '3317,3335p' results/exports-docs/estimate/estimate-export.json
+  "observability": {
+    "observable": true,
+    "rank": 27,
+    "stateSize": 27,
+    "unobservableBuses": [],
+    "unobservableStates": [],
+    "unmeasuredIslandBuses": []
+  },
+  "removed": [],
+  "trace": [
+    {
+      "pass": 0,
+      "iteration": 0,
+      "maxStateUpdate": 0.2,
+      "stepScale": 0.6483659052714776
+    },
+    {
+      "pass": 0,
+      "iteration": 1,
+[exit 0]

@@ -1,0 +1,15 @@
+$ gridsim stability case9 --rms
+GridSim  -  RMS TRANSIENT STABILITY (salient/subtransient GENROU)  *  WSCC-9
+==================================================================
+3 machines  *  6-state machines  *  field: held (no AVR)  *  GENROU params synthesised from X'd
+
+fault bus 7  *  critical clearing time = 554 ms
+  (bracket: clearing at 554 ms holds synchronism, at 556 ms it is lost)
+CCT = longest clearing time on the 2 ms integration-step grid that keeps synchronism (clearing one step, 2 ms, later loses it); resolution 2 ms.
+A CCT of 0 ms means even an instantaneous clear loses synchronism; 1000 ms means no clearing time in the 1000 ms search window loses it.
+It is the first loss from below: the 16 steps (32 ms) below it are checked to hold and as many above it are probed; NON-MONOTONE marks a later clearing time that holds again (a stable pocket).
+Each trial is judged over the 5 s after the fault clears (the documented default window: first-swing stability, the same window as the classical search); an undamped system can lose synchronism on a later swing, so a longer window can give a shorter CCT.
+
+Self-clearing 3-phase fault; the subtransient engine is validated (reduces to the classical CCT),
+but these GENROU parameters are synthesised from X'd - the result is INDICATIVE, not validated.
+[exit 0]

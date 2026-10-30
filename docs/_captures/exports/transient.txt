@@ -1,0 +1,4 @@
+$ gridsim transient case9 --minutes 1 --dt-ms 100 --export-every 100 --out results/exports-docs/transient
+[transient] case9: done in 0.3s  nadir 60.000Hz  maxRoCoF -0.001Hz/s  exports 7  -> results\exports-docs\transient
+[transient] case9: 600 slices @ 100ms (1 min) on Newton-Raphson (dense)...
+[exit 0]

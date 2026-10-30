@@ -1,0 +1,5 @@
+{
+  "schema": "gridsim-network/2",
+  "buses": [ { "id": 1, "baseKv": 400, "type": "slack" } ],
+  "generators": [ { "name": "G", "bus": 1, "role": "slack", "capacityMva": 100 } ]
+}

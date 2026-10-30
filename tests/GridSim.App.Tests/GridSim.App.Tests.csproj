@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GridSim.App.Tests (UI programme, Phase 0.4): the Avalonia app's tests, run on Avalonia's headless platform (no
+       display, no GPU), so they run on every CI leg. Its packages are test-only and are not shipped. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="11.3.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.App\GridSim.App.csproj" />
+    <!-- The desktop head is referenced so the reference-boundary test can load and inspect its assembly. -->
+    <ProjectReference Include="..\..\src\GridSim.App.Desktop\GridSim.App.Desktop.csproj" />
+    <!-- UI programme Phase 1 item 7: tools/UiSmoke's capture routine runs in-process in UiSmokeTests. -->
+    <ProjectReference Include="..\..\tools\UiSmoke\UiSmoke.csproj" />
+  </ItemGroup>
+
+</Project>

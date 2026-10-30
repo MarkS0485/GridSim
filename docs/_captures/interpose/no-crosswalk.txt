@@ -1,0 +1,3 @@
+$ gridsim interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --ticks 1
+error: --crosswalk <map.json> is required.
+[exit 2]

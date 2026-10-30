@@ -1,0 +1,12 @@
+Carbon tracing - IEEE 14-bus (14 buses)  [fuel each load actually consumes]
+  (this case carries no fuel data - intensities are the 'other' placeholder)
+  system blended intensity      : 300 gCO2/kWh   (77.7 tCO2/h)
+  most carbon-intensive loads:
+      load bus 2           22 MW     300 gCO2/kWh   (   6.5 tCO2/h)
+      load bus 4           48 MW     300 gCO2/kWh   (  14.3 tCO2/h)
+      load bus 3           94 MW     300 gCO2/kWh   (  28.3 tCO2/h)
+      load bus 5            8 MW     300 gCO2/kWh   (   2.3 tCO2/h)
+      load bus 6           11 MW     300 gCO2/kWh   (   3.4 tCO2/h)
+      load bus 12           6 MW     300 gCO2/kWh   (   1.8 tCO2/h)
+      load bus 9           30 MW     300 gCO2/kWh   (   8.8 tCO2/h)
+      load bus 13          14 MW     300 gCO2/kWh   (   4.0 tCO2/h)

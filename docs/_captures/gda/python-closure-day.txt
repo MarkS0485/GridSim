@@ -1,0 +1,16 @@
+$ python NetworkModel/report_estimation_closure.py --case gb-spine --date 2026-09-01
+{
+  "date": "2026-09-01",
+  "case": "gb-spine",
+  "periods": 47,
+  "converged_n": 47,
+  "chi_passed_n": 47,
+  "removed_total": 96,
+  "est_gen_gwh": 471.94,
+  "est_load_gwh": 459.9,
+  "nd_gwh": 586.47,
+  "load_vs_nd_pct": 78.42,
+  "outlier_league": "PInjMw@bus89 x11; PInjMw@bus20 x10; PInjMw@bus40 x9; PInjMw@bus255 x7; PInjMw@bus176 x7",
+  "output": "results\\estimation_closure\\gb-spine\\year=2026\\week=36\\estimation_closure.parquet"
+}
+[exit 0]

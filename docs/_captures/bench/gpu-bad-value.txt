@@ -1,0 +1,3 @@
+$ gridsim batchsolve --gpu=metal
+error: --gpu expected one of auto, cpu, rocm, opencl, cuda but got 'metal'
+[exit 2]

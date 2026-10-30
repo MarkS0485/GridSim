@@ -1,0 +1,16 @@
+$ gridsim dcpf case9 --out results/exports-docs/dcpf.csv
+DC power flow - IEEE 9-bus (WSCC) (9 buses, 9 branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+  island ref bus 1          9 buses  demand      315.0 MW  scheduled generation      320.3 MW  reference injects       67.0 MW
+  0 of 9 rated branch(es) above 100% of RateA
+  largest flows:
+      branch 6     8-2                   8 -> 2         -163.00 MW     65.2% of 250 MVA
+      branch 7     8-9                   8 -> 9           86.97 MW     34.8% of 250 MVA
+      branch 3     3-6                   3 -> 6           85.00 MW     28.3% of 300 MVA
+      branch 5     7-8                   7 -> 8          -76.03 MW     30.4% of 250 MVA
+      branch 0     1-4                   1 -> 4           67.00 MW     26.8% of 250 MVA
+      branch 2     5-6                   5 -> 6          -61.03 MW     40.7% of 150 MVA
+      branch 8     9-4                   9 -> 4          -38.03 MW     15.2% of 250 MVA
+      branch 1     4-5                   4 -> 5           28.97 MW     11.6% of 250 MVA
+      branch 4     6-7                   6 -> 7           23.97 MW     16.0% of 150 MVA
+[dcpf] wrote results\exports-docs\dcpf.csv, results\exports-docs\dcpf-buses.csv, results\exports-docs\dcpf-islands.csv, results\exports-docs\dcpf-summary.csv
+[exit 0]

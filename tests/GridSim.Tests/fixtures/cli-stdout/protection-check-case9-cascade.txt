@@ -1,0 +1,7 @@
+Protection assessment  -  case9  (9 buses, converged=True)  [passive; solve unchanged]
+  operating elements: 0
+  not evaluated on a steady snapshot: 81U (Underfrequency); 81O (Overfrequency); 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence)
+
+PROTECTION SIMULATION: no relay would operate on this state (within the generic settings).
+
+Cascade: stable - no branch relay would operate.

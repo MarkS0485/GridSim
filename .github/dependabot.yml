@@ -1,0 +1,74 @@
+# Dependabot  -  monthly checks for NuGet, the Docker base images and the GitHub Actions; updates are merged by hand.
+#
+# Version-update pull requests are paused for the release (open-pull-requests-limit: 0 on every ecosystem). Security
+# alerts are unaffected. Raise the limits again to resume update pull requests.
+#
+# Ecosystems covered:
+#   * nuget           -  PackageReferences in every project: Core, Gda, Gpu (ILGPU), Cli, Web, Wpf and the tests
+#                        (F06: Gpu, Web and Wpf were missing, so the ILGPU packages were never updated).
+#                        UI programme 0.4 (2026-10-20): the Avalonia app (App, App.Desktop, App.Tests) too.
+#                        tools/UiSmoke (the headless page capture; Avalonia.Headless) moves with them.
+#                        Avalonia, SkiaSharp and HarfBuzzSharp move together: SkiaSharp and HarfBuzzSharp stay
+#                        at the versions the chosen Avalonia.Skia names, so merge those bumps as one change.
+#   * github-actions  -  the action versions pinned in .github/workflows/*.
+#
+# Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+version: 2
+updates:
+  # ---------------------------------------------------------------- NuGet ---
+  - package-ecosystem: "nuget"
+    directories:
+      - "/src/GridSim.Core"
+      - "/src/GridSim.Gda"
+      - "/src/GridSim.Gpu"
+      - "/src/GridSim.Cli"
+      - "/src/GridSim.Web"
+      - "/src/GridSim.Wpf"
+      - "/src/GridSim.App"
+      - "/src/GridSim.App.Desktop"
+      - "/tests/GridSim.Tests"
+      - "/tests/GridSim.App.Tests"
+      - "/tools/UiSmoke"
+    schedule:
+      interval: "monthly"           # N176: monthly, merged by hand after a local batch run
+    open-pull-requests-limit: 0     # paused for the release (see the header)
+    # No `ignore` rules: major bumps are included. CI does not run on pull
+    # requests, so each update is merged by hand after a local batch run.
+    groups:
+      nuget-minor-and-patch:        # batch the low-risk bumps into one PR
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    # Majors are left ungrouped, so each arrives as its own reviewable PR.
+    labels: ["dependencies", "nuget"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    assignees: ["MarkS0485"]
+
+  # ------------------------------------------------------- Docker images ---
+  # F06: the .NET SDK and ASP.NET runtime base images in the Dockerfile (security patches arrive as new tags).
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"           # N176: monthly, merged by hand after a local batch run
+    open-pull-requests-limit: 0     # paused for the release (see the header)
+    labels: ["dependencies", "docker"]
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    assignees: ["MarkS0485"]
+
+  # ------------------------------------------------------- GitHub Actions ---
+  - package-ecosystem: "github-actions"
+    directory: "/"                  # scans .github/workflows/
+    schedule:
+      interval: "monthly"           # N176: monthly, merged by hand after a local batch run
+    open-pull-requests-limit: 0     # paused for the release (see the header)
+    groups:
+      github-actions-all:           # checkout, setup-dotnet, ... all in one PR
+        patterns: ["*"]
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    assignees: ["MarkS0485"]

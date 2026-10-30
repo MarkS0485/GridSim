@@ -1,0 +1,17 @@
+$ gridsim replay-event example-off --catalog results/off-event.json --out results/replay-example-off
+
+=== Replay: Illustrative 1000 MW infeed loss [VERIFY] ===
+  when (UTC):        2022-03-15T12:00:00.0000000Z   provenance: CuratedPlaceholder
+  pre-event inertia: 180.0 GVA.s   demand: 30.0 GW   total loss: 1000 MW
+  inferred inertia from recorded RoCoF: 125.0 GVA.s (cross-check vs 180.0)
+
+  RoCoF:  sim  -0.139   recorded  -0.200 Hz/s   (31 % error)
+  Nadir:  sim   49.34   recorded   49.00 Hz   (0.34 Hz error)
+  Nadir envelope (declared-uncertainty corners): [48.97, 49.55] Hz - recorded INSIDE (consistent within the model's own error bars)
+  RMSE vs trace: n/a (no 1-sec NESO trace attached - data-gated)
+  assessment: BELOW STATUTORY (49.5 Hz)
+
+  VERDICT: FAILED  - NOT reproduced; do not run counterfactuals until the baseline matches (check [VERIFY] figures / tolerances).
+
+  -> results\replay-example-off
+[exit 3]

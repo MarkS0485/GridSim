@@ -1,0 +1,37 @@
+$ gridsim gda
+GridSim  -  GDA ingestion from W:\GDA\DataSources  (NGED)
+==========================================================================
+Built in 1841 ms  -  GB/NGED ex-GDA
+
+  Raw LTDS nodes          22,590
+  Electrical buses         6,003   (busbar/disconnector ties merged: 14,858)
+  Series circuits          5,520   (cables & lines)
+  Transformers (2w/3w)     2,504 / 69   (+69 star nodes)
+  Total branches           8,231
+  Demand points            1,966   matched 1,966, total 18.77 GW
+  Generators                 282   (1.08 GW capacity, 602 unmatched)
+  System inertia             0.6 GVAs
+  OLTCs                    2,503
+  Connected islands            6   (largest 5,960 buses)
+
+  Buses by voltage:
+      132 kV       979
+       66 kV       186
+       33 kV     3,524
+       25 kV         8
+       11 kV     1,277
+        7 kV        29
+
+   55 GSP infeed(s) modelled as slack buses; primary = bus 3 (Warwick 132kV Main 2, 132 kV).
+   WARNING OLTC: 1 transformer(s) publish an invalid tap range and got NO OLTC: 'TX SWIB3/SWIB5 33/11' (-16 %/-1 %: range excludes the nominal 0 % tap).
+   Demand: left out 27 row(s) with zero maximum demand and 0 with negative (net-exporting) maximum demand totalling 0.0 MW; the generation behind them is still built.
+   WARNING ties: 131 zero-impedance circuit(s) whose Equipment is not a busbar or switch were merged as busbar ties (check for missing R/X cells): KENI3_#2H5-KENI3_2H4 'Circuit'; KENI3_2L4-KENI3_#2L5 'Circuit'; 93HBG38A-FOSW3T 'Circuit'; FLFM3T-FLFM3_1L9 'Circuit'; GAYD3_1H4-GAYD3_#1H5 'Circuit'; ....
+   Generation join key: canonical primary name (voltage tokens such as '33 11 kV' or '6.6' and station words such as 'S Stn' dropped), so the generation and demand tables' spellings of one primary meet (N184).
+   Generation join: 163 row(s) joined by primary name alone: their GSP group does not list that primary in the demand table, but the name is unique to one GSP group.
+   Demand: 3 primary name(s) have demand rows on more than one bus within one GSP group; generation at those sites joins the bus of its own voltage (N205).
+   WARNING generation join: 2 row(s), 14.6 MW export capacity, are at a site whose demand sits on several buses and their voltage picks none or several of them (N205); left unplaced: 'Newport West Primary' (Uskmouth; 11 kV); 'Newport West Primary' (Uskmouth; 11 kV).
+   Generation: 13 matched row(s), 102.5 MW export capacity, are not connected yet and were left out (statuses: 'Accepted').
+   WARNING demand: 152 row(s), 4457.0 MW are on nodes outside this build's network (nodes on no in-service element) and were not included.
+   Geolocated 2001/6003 buses from substations.csv.
+   validation: warning: 55 slack (reference) buses  -  treating as a multi-island system.
+[exit 0]

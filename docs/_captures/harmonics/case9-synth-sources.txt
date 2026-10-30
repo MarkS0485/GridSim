@@ -1,0 +1,8 @@
+$ gridsim harmonics case9 --synth-sources
+harmonics: case IEEE 9-bus (WSCC), 1 source(s), orders 24
+  synthetic source : 6-pulse-g5 at bus 9, 0.5 pu fundamental (G5 Issue 5 Table B.3 six-pulse profile, the default; --synth-spectrum ideal for the idealised 1/h)
+  worst voltage THD : 6.31% at bus 9 (relative to the solved fundamental voltage)
+  resonance (bus 9): order 7, |Z|=0.658 pu, sharpness 3.8
+  fine sweep peak  : h=7.4750 (448.50 Hz), |Z|=0.688 pu, positive sequence
+  IEEE-519         : 0/9 buses compliant
+[exit 0]

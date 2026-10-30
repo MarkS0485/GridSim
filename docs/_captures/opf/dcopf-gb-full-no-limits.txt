@@ -1,0 +1,11 @@
+$ gridsim dcopf gb-full --no-limits --top 3
+DC-OPF - GB full (3539-bus, 5918-branch) (3539 buses)  [cheapest secure dispatch]
+  2 DC islands, each dispatched on its own (its own balance, its own reference bus):
+      island ref bus 194     3536 buses  demand   53,279.4 MW  generation   53,279.4 MW  feasible
+      island ref bus 6774       3 buses  demand        5.6 MW  generation        5.6 MW  feasible
+  demand 53,285 MW  generation 53,285 MW  total cost 53,560 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 171     4,100.0 MW  @     1 GBP/MWh
+      gen bus 175     1,320.0 MW  @     1 GBP/MWh
+      gen bus 75      1,200.0 MW  @     1 GBP/MWh
+[exit 0]

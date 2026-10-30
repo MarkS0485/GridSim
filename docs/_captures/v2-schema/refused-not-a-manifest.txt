@@ -1,0 +1,3 @@
+$ gridsim pf docs/_captures/v2-schema/inputs/small/small.network.json
+error loading case 'docs/_captures/v2-schema/inputs/small/small.network.json': cannot load JSON v2 case 'docs/_captures/v2-schema/inputs/small/small.network.json': small.network.json: not a JSON v2 case manifest: its "schema" is 'gridsim-network/2', not 'gridsim-case/2'.
+[exit 1]

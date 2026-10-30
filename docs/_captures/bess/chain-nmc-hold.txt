@@ -1,0 +1,17 @@
+$ gridsim chain case9 --mode daily --steps 6 --bess nmc:5:5:10:0.75 --policy hold
+GridSim - storage time series  *  case9  *  6 x 4 h  *  mode=daily  *  policy=hold
+prices: none.  Chemistry presets are CuratedPlaceholder [VERIFY] (representative cells).
+
+| Step | Hour | Load x | Demand MW | Price | NMC 5MW/10MWh @5: MW / SoC / T deg C | Slack MW | Vmin | Conv |
+|---:|---:|---:|---:|---:|---|---:|---:|:-:|
+| 0 | 0.0 | 0.700 | 220 | - |     1.0 / 0.384 / 23.7 | 48 | 1.024 | y |
+| 1 | 4.0 | 0.600 | 189 | - |    -1.0 / 0.734 / 27.3 | 43 | 1.025 | y |
+| 2 | 8.0 | 0.700 | 220 | - |     1.0 / 0.367 / 25.3 | 48 | 1.024 | y |
+| 3 | 12.0 | 0.900 | 283 | - |    -1.0 / 0.718 / 28.0 | 65 | 1.005 | y |
+| 4 | 16.0 | 1.000 | 315 | - |     1.0 / 0.349 / 25.7 | 71 | 0.996 | y |
+| 5 | 20.0 | 0.900 | 284 | - |    -1.0 / 0.701 / 28.0 | 65 | 1.005 | y |
+
+NMC 5MW/10MWh @5: out 12.0 MWh, in 12.0 MWh, aux 0.24 MWh, stored change -0.5 MWh, round trip 95.6 %, 1.20 equivalent full cycles
+    ageing over the run: calendar 0.1823 %, cycle 0.0065 % (rainflow, depth-aware: 0.0045 %), deepest cycle 40 % SoC
+[chain] done -> results\chain-storage-case9.md
+[exit 0]

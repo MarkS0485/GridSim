@@ -1,0 +1,12 @@
+$ python tools/crossval/crossval_estimation.py results/est-case30
+{
+  "schema": "gridsim-crossval-estimation/1",
+  "tool": "pandapower.estimation",
+  "case": "case30",
+  "buses_compared": 30,
+  "max_dvm_pu": 4.440892098500626e-16,
+  "max_dva_deg": 2.1760371282653068e-14,
+  "within_tolerance": true,
+  "rows": [
+...
+[exit 0]

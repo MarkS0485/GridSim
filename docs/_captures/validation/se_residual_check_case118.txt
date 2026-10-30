@@ -1,0 +1,7 @@
+$ python tools/crossval/se_residual_check.py results/est-case118
+[se-check] residual honesty: max |(z - h_indep) - reported| = 7.081e-12
+[se-check] objective: recomputed J = 877.801239  reported = 877.801239  |dJ| = 2.046e-11
+[se-check] optimality: independent gauss-newton step |dx|_inf = 3.623e-14
+
+[se-check] PASS: residuals honest, objective consistent, x_hat is the independent WLS optimum
+[exit 0]

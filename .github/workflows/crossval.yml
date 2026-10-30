@@ -1,0 +1,154 @@
+name: Crossval
+
+# N249: the power-flow cross-validation against pandapower as a gate, not only local evidence.
+#
+# GridSim's machine-epsilon claim for the power flow rests on `gridsim crossval`: GridSim solves a case down its
+# tolerance ladder (1e-8 ... 1e-15 pu), exports the state, and tools/crossval/crossval.py re-solves the same problem
+# independently in pandapower and compares every bus voltage magnitude (pu) and angle (rad) against a tolerance of
+# 4096 machine epsilons (2^-40, 9.094947017729282e-13). The evidence behind it was measured in a local virtual environment; this workflow repeats it on a clean
+# GitHub runner with a pinned pandapower, so a regression in GridSim, in the sidecar's like-for-like translation or in
+# pandapower itself shows up as a failed run.
+#
+# The cases are the fifteen of the N243 evidence table. The expected verdict for every one is AGREES at the default
+# tolerance, except gb-network-2224, which AGREES under its own documented allowance (crossval.py ALLOWANCES: a
+# floating-point floor, 2e-12 pu and 4e-12 rad). Anything else fails the run:
+#   * the verb's exit code is not 0 (3 = a mismatch or a sidecar validation failure, 77 = Python or pandapower missing,
+#     which here is a broken environment, never a pass; 1 or 2 = a load or usage error);
+#   * crossval-diff.json is missing, or its `within_tolerance` is not true;
+#   * gb-network-2224 is judged without its allowance, or any other case is judged under one.
+#
+# Platform: windows-latest, the reference platform for GridSim's exact-value pins (on Linux the transcendental maths
+# comes from glibc's libm, N175, so the GridSim side could differ in the last binary digits).
+#
+# Triggers: by hand (Actions tab or `gh workflow run crossval.yml`) and once a week. Not on push or pull request: the
+# repository keeps the free Actions allowance (see ci.yml, N176). No secrets are used.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * 1'      # Mondays 04:17 UTC
+
+concurrency:
+  group: crossval-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Build telemetry off on every leg (Mark, 2026-10-20): Avalonia's opt-out switch. Directory.Build.targets also
+# replaces Avalonia.BuildServices' AvaloniaStats target with an empty one; AvaloniaTelemetryOptOutTests pins both.
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  pandapower:
+    name: Crossval vs pandapower (machine epsilon)
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      # GR-443: the versions every measurement in crossval.py and the docs was made on (pandapower 3.5.5, NumPy 2.4.6,
+      # SciPy 1.18.1). Move any of them only after re-measuring the evidence on the new version.
+      PANDAPOWER_VERSION: '3.5.5'
+      NUMPY_VERSION: '2.4.6'
+      SCIPY_VERSION: '1.18.1'
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build GridSim.slnx -c Release --nologo
+
+      - name: Set up Python
+        id: python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # pandapower, NumPy and SciPy pinned exactly (GR-443: NumPy and SciPy used to float, and pip was upgraded to
+      # latest); the resolved set is recorded below. numba is not installed: crossval.py asks pandapower for its plain
+      # PYPOWER path (numba=False), as the local evidence ran.
+      - name: Install pandapower
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "pandapower==${PANDAPOWER_VERSION}" "numpy==${NUMPY_VERSION}" "scipy==${SCIPY_VERSION}"
+          python -c "import pandapower, numpy, scipy, sys; print('python', sys.version.split()[0]); print('pandapower', pandapower.__version__); print('numpy', numpy.__version__); print('scipy', scipy.__version__)"
+          python -m pip freeze > pip-freeze.txt
+
+      - name: Report the CPU vector tier
+        run: dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll simdcheck
+
+      - name: Crossval every case
+        shell: bash
+        env:
+          # The verb would find this interpreter on PATH anyway; naming it makes the choice explicit and fail loud (a
+          # GRIDSIM_PYTHON that names nothing exits 1 instead of falling back to another interpreter).
+          GRIDSIM_PYTHON: ${{ steps.python.outputs.python-path }}
+        run: |
+          # GR-442: GitHub runs a bash step as 'bash -eo pipefail', so -e is on before this line; without +e the first
+          # case that exits non-zero (crossval exit 3, or the judge's exit 1) would stop the step before its code is
+          # read, and the summary row and the failed list below would never be written. Every case is run and judged.
+          set +e -uo pipefail
+          cases="case9 case14 case30 case57 case118 case300 case145 case24 cigre uk gb-reduced-29 pypsa-gb-reduced gb-synthetic gb-full gb-network-2224"
+          failed=""
+          {
+            echo "## Crossval vs pandapower ${PANDAPOWER_VERSION}"
+            echo
+            echo "| Case | Exit | Verdict | max dVm (pu) | max dVa (rad) | Tolerance (pu / rad) | Allowance |"
+            echo "|---|---|---|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          for c in $cases; do
+            out="results/crossval/$c"
+            echo "::group::crossval $c"
+            dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll crossval "$c" --out "$out"
+            code=$?
+            echo "::endgroup::"
+            # Judge the diff file against the expected verdict. Prints one summary row; exits non-zero on any deviation.
+            python - "$c" "$code" "$out/crossval-diff.json" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import json, os, sys
+          case, code, path = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+          expect_allowance = case == "gb-network-2224"
+          problems = []
+          d = {}
+          if code != 0:
+              problems.append(f"exit {code}")
+          if os.path.isfile(path):
+              with open(path, encoding="utf-8") as f:
+                  d = json.load(f)
+          else:
+              problems.append("no crossval-diff.json")
+          agrees = d.get("within_tolerance") is True
+          if d and not agrees:
+              problems.append("within_tolerance is not true")
+          has_allowance = isinstance(d.get("allowance"), dict)
+          if d and has_allowance != expect_allowance:
+              problems.append("judged under an allowance" if has_allowance else "judged without its documented allowance")
+          def num(key):
+              v = d.get(key)
+              return f"{v:.3e}" if isinstance(v, (int, float)) else "-"
+          verdict = "AGREES" if agrees and not problems else "FAIL: " + "; ".join(problems)
+          print(f"| {case} | {code} | {verdict} | {num('max_dvm_pu')} | {num('max_dva_rad')} | "
+                f"{num('tolerance_pu')} / {num('tolerance_rad')} | {'yes' if has_allowance else 'no'} |")
+          if problems:
+              print(f"::error::crossval {case}: " + "; ".join(problems), file=sys.stderr)
+              sys.exit(1)
+          PY
+            if [ $? -ne 0 ]; then failed="$failed $c"; fi
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::crossval did not AGREE as expected on:$failed"
+            exit 1
+          fi
+          echo "Every case AGREES as expected."
+
+      - name: Upload exports and diffs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: crossval-results
+          path: |
+            results/crossval/
+            pip-freeze.txt
+          if-no-files-found: warn

@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26-space.log
+TAMPERED results/ch26-space.log: entry 1: the line is not in the writer's canonical form (fields reordered, spacing changed or a value re-written in a different notation): it was edited by hand (1 entries verified before it)
+[exit 3]

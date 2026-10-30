@@ -1,0 +1,16 @@
+{
+  "timestampUtc": "2026-07-08T19:53:07.1503880Z",
+  "backend": "cpu",
+  "gitCommit": "aa40db5b-dirty",
+  "buildConfig": "Release",
+  "coreVersion": "0.1.0.0",
+  "runtime": ".NET 10.0.9",
+  "arch": "X64",
+  "serverGc": true,
+  "machineName": "DESKTOP-S5V62MR",
+  "os": "Microsoft Windows 10.0.26200",
+  "cpu": "X64",
+  "logicalCores": 8,
+  "ramGb": 8.3,
+  "run": "bench-matrix  cases=25  engines=3  runs=10  parallel=8"
+}

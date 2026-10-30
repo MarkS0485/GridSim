@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GridSim.SchemaEditor (Mark's decision D1, SCHEMA-EDITOR-PLAN.md): a full-screen, text-mode inventory manager
+       for case files. It holds ONLY the user interface (state machine, renderer, views, key map, console host); the
+       format engine (lossless JSON text layer, schema catalogue, case session, operations, save gate) is in Core
+       under IO/Json/Lossless and IO/Json/CaseEditing. It references Core only (no Gpu or Gda, so no ILGPU or Parquet
+       in its output) and no third-party package: System.Console and System.Text.Json only.
+       Version: set once for every project in Directory.Build.props (F02); do not add one here. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.SchemaEditor</RootNamespace>
+    <AssemblyName>GridSim.SchemaEditor</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <!-- The explicit EntryPoint class (no top-level statements), so the test project can reference this exe
+         without any ambiguity about a Program type. -->
+    <StartupObject>GridSim.SchemaEditor.EntryPoint</StartupObject>
+  </PropertyGroup>
+
+  <!-- The key-sequence and golden-screen tests drive the internal editor directly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GridSim.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Core\GridSim.Core.csproj" />
+  </ItemGroup>
+
+</Project>

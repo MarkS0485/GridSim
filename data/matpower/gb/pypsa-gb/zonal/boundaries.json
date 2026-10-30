@@ -1,0 +1,70 @@
+[
+  {
+    "name": "B4 SHETL-SPT (SSE-SP)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Z7-Z2",
+        "direction": -1
+      },
+      {
+        "branch": "Z9-Z3",
+        "direction": -1
+      },
+      {
+        "branch": "Z5-Z3",
+        "direction": -1
+      }
+    ]
+  },
+  {
+    "name": "B6 Scotland-England (SCOTEX)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Z7-Z2",
+        "direction": -1
+      },
+      {
+        "branch": "Z9-Z3",
+        "direction": -1
+      },
+      {
+        "branch": "Z7-Z6",
+        "direction": -1
+      }
+    ]
+  },
+  {
+    "name": "B7 Upper North England (HARSPNBLY)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Z9-Z3",
+        "direction": -1
+      },
+      {
+        "branch": "Z8-Z7",
+        "direction": -1
+      },
+      {
+        "branch": "Z9-Z7",
+        "direction": -1
+      }
+    ]
+  },
+  {
+    "name": "B8 North to Midlands (FLOWSTH)",
+    "limitMw": 0,
+    "branches": [
+      {
+        "branch": "Z10-Z8",
+        "direction": -1
+      },
+      {
+        "branch": "Z11-Z9",
+        "direction": -1
+      }
+    ]
+  }
+]

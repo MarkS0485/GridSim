@@ -1,0 +1,32 @@
+$ gridsim stability uk
+GridSim  -  TRANSIENT STABILITY (classical multi-machine)  *  GB reduced (10-zone)
+==================================================================
+13 machines (16 converter / power-flow-only / zero-inertia units held)  *  fault bus 101  *  X'd = synthetic 0.30 pu (unvalidated)
+
+  Bus   H sys (s)   |E'| pu  delta0 (deg)
+    1       0.390     1.029          11.2
+    2       0.500     1.062          16.4
+    3       0.960     1.110          13.9
+    3       1.000     1.093           9.5
+    4       1.040     1.083          10.9
+    4       2.000     1.078           9.4
+    5       1.500     1.063           9.7
+    6       4.500     1.079           8.3
+    7       0.500     1.067          14.3
+    8       1.000     1.151           8.4
+    9       1.500     1.065           9.5
+   10       1.280     1.054          15.2
+   10       1.000     1.036          10.5
+
+Critical clearing time for a 3-phase fault at bus 101:  764 ms
+(the longest the fault can persist before the fleet loses synchronism on self-clear)
+  (bracket: clearing at 764 ms holds synchronism, at 766 ms it is lost)
+  NON-MONOTONE: clearing at 788 ms holds synchronism again (a stable pocket above the first loss); the reported CCT is the first loss from below, so do not read a longer clearing time as safe.
+CCT = longest clearing time on the 2 ms integration-step grid that keeps synchronism (clearing one step, 2 ms, later loses it); resolution 2 ms.
+A CCT of 0 ms means even an instantaneous clear loses synchronism; 1000 ms means no clearing time in the 1000 ms search window loses it.
+It is the first loss from below: the 16 steps (32 ms) below it are checked to hold and as many above it are probed; NON-MONOTONE marks a later clearing time that holds again (a stable pocket).
+Each trial is judged over the 5 s after the fault clears (the documented default window: first-swing stability, the range in which the classical constant-E' model holds); an undamped system can lose synchronism on a later swing, so a longer window can give a shorter CCT.
+
+Classical model: constant E' behind X'd over the Kron-reduced network, RK4 swing.
+Provenance: X'd is a synthetic default - clearing times are INDICATIVE, not validated.
+[exit 0]

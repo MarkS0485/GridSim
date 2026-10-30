@@ -1,0 +1,11 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-zi.json --method constrained --out results/case9-zi-constrained
+
+=== Constrained WLS state estimate: case9 ===
+  status: Converged   iterations: 6   max |dx|: 1.72E-011
+  measurements: 30   states: 17   redundancy (dof): 13
+  observability: observable (rank 17/17)
+  consistency: J = 2.92 vs chi2(95%) = 22.35 -> PASS
+  critical measurements (sole observers, unremovable, errors undetectable): 6
+
+  -> results\case9-zi-constrained
+[exit 0]

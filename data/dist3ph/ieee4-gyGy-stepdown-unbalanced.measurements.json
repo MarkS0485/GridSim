@@ -1,0 +1,26 @@
+{
+  "schema": "gridsim-dist3ph-measurements/1",
+  "description": "SYNTHETIC example for 'gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements <this file>'. Not recorded telemetry: every value is the GridSim three-phase sweep solution of that feeder, rounded to 6 decimals (per-unit; voltages on each bus's line-to-neutral base, currents on the per-phase power base of baseMva / 3). Voltage magnitudes at buses 2-4 and current phasors on all three branches; sigma 0.001 pu throughout.",
+  "voltageMagnitudes": [
+    { "bus": 2, "phase": "a", "valuePu": 0.995022, "sigmaPu": 0.001 },
+    { "bus": 2, "phase": "b", "valuePu": 0.987628, "sigmaPu": 0.001 },
+    { "bus": 2, "phase": "c", "valuePu": 0.983675, "sigmaPu": 0.001 },
+    { "bus": 3, "phase": "a", "valuePu": 0.959910, "sigmaPu": 0.001 },
+    { "bus": 3, "phase": "b", "valuePu": 0.938745, "sigmaPu": 0.001 },
+    { "bus": 3, "phase": "c", "valuePu": 0.917157, "sigmaPu": 0.001 },
+    { "bus": 4, "phase": "a", "valuePu": 0.905567, "sigmaPu": 0.001 },
+    { "bus": 4, "phase": "b", "valuePu": 0.803496, "sigmaPu": 0.001 },
+    { "bus": 4, "phase": "c", "valuePu": 0.763044, "sigmaPu": 0.001 }
+  ],
+  "currents": [
+    { "from": 1, "to": 2, "phase": "a", "realPu": 0.670785, "imagPu": -0.485777, "sigmaPu": 0.001 },
+    { "from": 1, "to": 2, "phase": "b", "realPu": -1.105339, "imagPu": -0.571979, "sigmaPu": 0.001 },
+    { "from": 1, "to": 2, "phase": "c", "realPu": 0.152737, "imagPu": 1.631040, "sigmaPu": 0.001 },
+    { "from": 2, "to": 3, "phase": "a", "realPu": 0.670785, "imagPu": -0.485777, "sigmaPu": 0.001 },
+    { "from": 2, "to": 3, "phase": "b", "realPu": -1.105339, "imagPu": -0.571979, "sigmaPu": 0.001 },
+    { "from": 2, "to": 3, "phase": "c", "realPu": 0.152737, "imagPu": 1.631040, "sigmaPu": 0.001 },
+    { "from": 3, "to": 4, "phase": "a", "realPu": 0.670785, "imagPu": -0.485777, "sigmaPu": 0.001 },
+    { "from": 3, "to": 4, "phase": "b", "realPu": -1.105339, "imagPu": -0.571979, "sigmaPu": 0.001 },
+    { "from": 3, "to": 4, "phase": "c", "realPu": 0.152737, "imagPu": 1.631040, "sigmaPu": 0.001 }
+  ]
+}

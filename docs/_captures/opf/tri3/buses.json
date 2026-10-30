@@ -1,0 +1,5 @@
+[
+  { "id": 1, "name": "Bus 1 cheap unit", "baseKv": 132 },
+  { "id": 2, "name": "Bus 2 dear unit",  "baseKv": 132 },
+  { "id": 3, "name": "Bus 3 load",       "baseKv": 132 }
+]

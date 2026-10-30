@@ -1,0 +1,17 @@
+$ gridsim nminus1-sweep case14 --parallel 2
+    GridSim  -  2026-10-19 17:39:18 UTC
+    code:    git v1.95.294-168-g786a2162  |  GridSim.Core v1.95.462.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     nminus1-sweep  cases=1  parallel=2  sample=full  vlimits=per-bus
+
+| Case | Buses | Branches | Screened | Secure | Violations | Islanded | Not solved | Solves/s | Wall s | Base viol |
+|------|------:|---------:|---------:|-------:|-----------:|---------:|-----------:|---------:|-------:|----------:|
+| case14 | 14 | 20 | 20 | 16 | 3 | 0 | 1 | 526 | 0.0 | 1 |
+[n-1] case14: 14 buses, screening 20 outages on 2 threads...
+[n-1] done -> results\nminus1-sweep.md
+[n-1] verdict: 1 of 1 case(s) not N-1 secure (exit 3).
+[exit 3]

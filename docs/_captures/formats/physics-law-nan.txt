@@ -1,0 +1,13 @@
+$ sed -n '5346,5356p' results/formats/uk-solve.json
+      },
+      {
+        "number": 4,
+        "name": "Faraday induction",
+        "statement": "changing B induces EMF",
+        "status": "Constitutive",
+        "residual": "NaN",
+        "unit": "-",
+        "tolerance": 1E-06,
+        "detail": "embodied in transformer tap ratio and generator EMF E\u0027 = V \u002B jX\u0027I; no field model to check"
+      },
+[exit 0]

@@ -1,0 +1,3 @@
+$ gridsim fault case9
+usage: gridsim fault <case|case.m|case-dir> --bus <id> [--zf pu] [--type 3ph|slg|ll|dlg]
+[exit 2]

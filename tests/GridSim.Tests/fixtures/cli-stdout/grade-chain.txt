@@ -1,0 +1,15 @@
+Overcurrent grading  -  2 relays (downstream first), CTI 0.4 s
+  R1: IecStandardInverse, pickup 100, time dial 0.1
+  R2: IecStandardInverse, pickup 150, time dial 0.3
+
+  fault current 1000
+  | pair | primary s | backup s | margin s | verdict |
+  |------|-----------|----------|----------|---------|
+  | R1->R2 | 0.2971 | 1.0861 | 0.7890 | OK |
+
+  fault current 2000
+  | pair | primary s | backup s | margin s | verdict |
+  |------|-----------|----------|----------|---------|
+  | R1->R2 | 0.2267 | 0.7899 | 0.5632 | OK |
+
+GRADED: every pair coordinated at every current; binding margin 0.5632 s (CTI 0.4 s).

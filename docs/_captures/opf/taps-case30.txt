@@ -1,0 +1,3 @@
+$ gridsim taps case30
+taps: case 'IEEE 30-bus' has no on-load tap changers to schedule.
+[exit 1]

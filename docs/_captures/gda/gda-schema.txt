@@ -1,0 +1,21 @@
+$ gridsim gda --root $GDA_ROOT --schema "$GDA_ROOT/NationalGrid/RAWData/LTDS Tabular Model/ltds-table-2a-two-winding-transformer.csv"
+$GDA_ROOT\NationalGrid\RAWData\LTDS Tabular Model\ltds-table-2a-two-winding-transformer.csv
+  17 columns  2,705 rows
+    Licence
+    GSP Group
+    Node 1
+    Operating Voltage 1
+    Node 2
+    Operating Voltage 2
+    Status
+    Vector Group
+    R1
+    X1
+    X0
+    Min Tap
+    Max Tap
+    Nominal Rating
+    Emergency Rating
+    Reverse Power Capability
+    Method of Earthing
+[exit 0]

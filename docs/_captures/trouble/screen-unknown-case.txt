@@ -1,0 +1,3 @@
+$ gridsim screen nosuchcase_xyz
+error: screen: unknown case 'nosuchcase_xyz' (built-in names: case118, case14, case145, case24, case30, case300, case57, case9, cigre, gb, gb-full, gb-network-2224, gb-reduced, gb-reduced-29, gb-synthetic, ieee9, pypsa-gb-reduced, pypsa-gb-zonal, rts, synthetic, uk; or a case folder, or a MATPOWER .m file, or a JSON v2 case manifest .json)
+[exit 2]

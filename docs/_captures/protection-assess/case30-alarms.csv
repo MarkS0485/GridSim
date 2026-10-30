@@ -1,0 +1,5 @@
+# Alarm log for the case30 cascade, seconds from the fault start.
+at_s,device,from,to,description
+12.4,49,6,8,Thermal alarm on 6-8
+15.1,51,8,28,Overcurrent trip on 8-28
+15.3,27,0,0,Bus 28 undervoltage (not a branch alarm, not matched)

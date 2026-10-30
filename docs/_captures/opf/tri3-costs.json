@@ -1,0 +1,7 @@
+{
+  "format": "gridsim-costs/1",
+  "generators": [
+    { "index": 1, "model": "polynomial", "coefficients": [0.05, 10, 0] },
+    { "index": 2, "model": "polynomial", "coefficients": [0, 95, 0] }
+  ]
+}

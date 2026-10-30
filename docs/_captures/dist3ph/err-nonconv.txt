@@ -1,0 +1,6 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json sweep --max-iter 2
+THREE-PHASE DISTRIBUTION (sweep) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+dist3ph: the three-phase sweep did not converge (MaxIterations) after 2 sweep(s); final max voltage change 8.399E-002 pu against tolerance 1.000E-010. No result reported.
+[exit 3]

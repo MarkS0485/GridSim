@@ -1,0 +1,103 @@
+@* Cables & lines - every non-transformer branch as a transmission corridor, grouped by voltage band,
+   ordered heaviest-loaded first, capped to 200. A band-chip row filters the register. All live-solved.
+   Mirrors GridSim.Wpf CircuitFleetVm. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET CLASS</div>
+    <div class="card-h" style="margin-bottom:2px">CABLES &amp; LINES</div>
+    <div class="muted-note" style="margin-top:0">transmission corridors - live loading against rating, ordered by stress | <span class="txt-ok">LIVE-SOLVED</span></div>
+</div>
+
+<div class="panel-grid four">
+    <div class="mini"><span class="mv">@_ckts.Count</span><span class="ml">Circuits</span></div>
+    <div class="mini"><span class="mv">@($"{_transfer / 1000.0:F1}")</span><span class="ml">Total transfer GW</span></div>
+    <div class="mini"><span class="mv" style="font-size:1em">@_hottest</span><span class="ml">Hottest</span></div>
+    <div class="mini"><span class="mv">@_stressed</span><span class="ml">Above 80%</span></div>
+</div>
+
+<div class="asset-cats">
+    <button class="acat @(_band == 0 ? "on" : "")" @onclick="() => Pick(0)">ALL</button>
+    @foreach (int b in _bands)
+    {
+        int captured = b;
+        <button class="acat @(_band == captured ? "on" : "")" @onclick="() => Pick(captured)">@b kV</button>
+    }
+</div>
+
+<div class="card grow" style="margin-bottom:0">
+    <div class="card-h">FLEET REGISTER@(_note is "" ? "" : $" | {_note}")</div>
+    <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Circuit</th><th>Route</th><th>Band</th><th class="r">Rating</th><th class="r">Loading</th><th class="r">Flow</th></tr></thead>
+            <tbody>
+                @foreach (BranchAssetDto c in _shown)
+                {
+                    double frac = c.RatingMva > 0 ? c.LoadingPercent / 100.0 : 0;
+                    <tr @onclick="() => Nav.OpenBranch(c.Index, false, c.Name)">
+                        <td>@c.Name</td>
+                        <td>@Route(c)</td>
+                        <td class="mono">@BandOf(c) kV</td>
+                        <td class="r">@(c.RateAMva > 0 ? $"{c.RateAMva:F0} MVA" : "-")</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(frac);--c:@WebPalette.Loading(frac)"></span></div>
+                            @(c.RatingMva > 0 ? $"{c.LoadingPercent:F0}%" : "-")
+                        </td>
+                        <td class="r">@c.PFromMw.ToString("+#,0;-#,0;0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private const int MaxRows = 200;
+    private static readonly int[] Ladder = { 400, 275, 132, 66, 33, 11 };
+
+    private List<BranchAssetDto> _ckts = new();
+    private List<BranchAssetDto> _shown = new();
+    private Dictionary<int, double> _kv = new();
+    private List<int> _bands = new();
+    private int _band;   // 0 = ALL
+    private double _transfer;
+    private int _stressed;
+    private string _hottest = "-", _note = "";
+
+    protected override void OnParametersSet()
+    {
+        _kv = Graph.Buses.ToDictionary(b => b.Id, b => b.BaseKv);
+        _ckts = Graph.Branches.Where(b => !b.IsTransformer).ToList();
+        _bands = _ckts.Select(BandOf).Distinct().OrderByDescending(x => x).ToList();
+
+        _transfer = _ckts.Sum(c => Math.Abs(c.PFromMw));
+        _stressed = _ckts.Count(c => c.RatingMva > 0 && c.LoadingPercent > 80);
+        BranchAssetDto? hot = _ckts.Where(c => c.RatingMva > 0).OrderByDescending(c => c.LoadingPercent).FirstOrDefault();
+        _hottest = hot is null ? "-" : $"{hot.Name} | {hot.LoadingPercent:F0}%";
+
+        var filtered = _ckts.Where(c => _band == 0 || BandOf(c) == _band).ToList();
+        _shown = filtered.OrderByDescending(c => c.RatingMva > 0 ? c.LoadingPercent : 0).Take(MaxRows).ToList();
+        _note = filtered.Count > MaxRows ? $"showing {MaxRows} of {filtered.Count} | heaviest first" : $"{filtered.Count} circuits";
+    }
+
+    private void Pick(int band) => _band = band;
+
+    private int BandOf(BranchAssetDto c)
+    {
+        double k = Math.Max(_kv.GetValueOrDefault(c.From), _kv.GetValueOrDefault(c.To));
+        int best = Ladder[0]; double err = double.MaxValue;
+        foreach (int l in Ladder) { double e = Math.Abs(k - l); if (e < err) { err = e; best = l; } }
+        return best;
+    }
+
+    private string Route(BranchAssetDto c)
+    {
+        string a = Graph.Buses.FirstOrDefault(b => b.Id == c.From)?.Name ?? $"bus {c.From}";
+        string d = Graph.Buses.FirstOrDefault(b => b.Id == c.To)?.Name ?? $"bus {c.To}";
+        return $"{a} -> {d}";
+    }
+
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+}

@@ -1,0 +1,3 @@
+$ GDA_DATA_ROOT=missing-lake gridsim gda
+GDA root error: the environment variable GDA_DATA_ROOT is set but does not name an existing folder (its value is not printed). Point GDA_DATA_ROOT at the GDA lake folder (the one holding NationalGrid/ and NESO/), unset it, or pass --root <path>. GridSim does not fall back to GDA_ROOT while GDA_DATA_ROOT is set.
+[exit 1]

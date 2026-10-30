@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- UiSmoke (UI programme, Phase 1 item 7 and Phase 2): the cross-platform successor of tools/AssetSmoke. It starts the
+       real Avalonia App on Avalonia's headless platform with the real Skia renderer (no display, no GPU), loads a case
+       through the window's own run pipeline, plays a fixed number of ticks, and writes one PNG per page of the main
+       window (every room tab and every ASSETS page kind), an index.html contact sheet and a manifest.json.
+       It runs on Windows, Linux and macOS alike, so the same pages can be compared across OSes and, for the parity
+       sign-off, side by side with the AssetSmoke PNGs of the WPF app (the file names match where a WPF page exists).
+       It never touches the user's settings file (an isolated one is written in the output folder), never loads a case by
+       itself at start-up, never connects to the GDA bridge and never opens an OS dialog.
+       Run it with dotnet run, project tools/UiSmoke, then the options after a double dash (see Program.cs, or pass help).
+       AssetSmoke stays until WPF is retired (Phase 2); this tool does not replace it yet.
+       Version: set once for every project in Directory.Build.props (F02); do not add one here. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.UiSmoke</RootNamespace>
+    <AssemblyName>UiSmoke</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Avalonia.Headless is the headless platform the app's own tests already run on (it comes into
+       tests/GridSim.App.Tests through Avalonia.Headless.XUnit at the same version), so no new package is admitted here.
+       Pinned exactly, the same version as GridSim.App's Avalonia packages; change it only together with them. This tool
+       is not shipped (like the test projects' packages, see THIRD-PARTY-NOTICES.md). -->
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless" Version="11.3.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.App\GridSim.App.csproj" />
+    <ProjectReference Include="..\..\src\GridSim.Ui\GridSim.Ui.csproj" />
+  </ItemGroup>
+
+</Project>

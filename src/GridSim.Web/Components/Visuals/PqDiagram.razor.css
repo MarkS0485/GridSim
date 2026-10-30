@@ -1,0 +1,38 @@
+.pq {
+    display: block;
+    font-family: 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+}
+
+.plot-bg {
+    fill: rgba(255, 255, 255, 0.07);
+}
+
+.axis {
+    stroke: var(--edge);
+    stroke-width: 1;
+}
+
+.boundary {
+    stroke: var(--muted);
+    stroke-width: 1.6;
+    opacity: 0.85;
+}
+
+/* operating dot - coloured by proximity to any boundary */
+.dot { fill: var(--accent); }
+.dot-warn { fill: var(--warn); }
+.dot-bad { fill: var(--bad); }
+
+.dot-ring { stroke: var(--accent); stroke-width: 1.5; }
+.dot-warn-ring { stroke: var(--warn); stroke-width: 1.5; }
+.dot-bad-ring { stroke: var(--bad); stroke-width: 1.5; }
+
+.lbl {
+    fill: var(--muted);
+    font-size: 9px;
+    font-weight: 600;
+}
+
+.lbl.sm {
+    font-size: 8px;
+}

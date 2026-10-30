@@ -1,0 +1,10 @@
+$ python docs/_captures/interpose/read_parquet.py results/interpose-docs/iec104-store
+Parquet/rtu_live/year=2026/week=30/part-20260720T134513250Z-000000.parquet
+  timestamp_utc=2026-07-20 13:45:13.250000, source=rtu_live, source_class=telemetry, cadence_min=0.03333333333333333, vm_pu=1.0210000276565552, bus=4, sigma=0.01, provenance=iec104:VmPu@bus 4, min_confidence=0.0, year=2026, week=30
+  timestamp_utc=2026-07-20 13:45:13.250000, source=rtu_live, source_class=telemetry, cadence_min=0.03333333333333333, vm_pu=0.9869999885559082, bus=5, sigma=0.04, provenance=iec104:VmPu@bus 5, min_confidence=0.0, year=2026, week=30
+  timestamp_utc=2026-07-20 13:45:13.250000, source=rtu_live, source_class=telemetry, cadence_min=0.03333333333333333, vm_pu=1.0454545454545454, bus=9, sigma=0.01, provenance=iec104:VmPu@bus 9, min_confidence=0.0, year=2026, week=30
+  timestamp_utc=2026-07-20 13:45:13.250000, source=rtu_live, source_class=telemetry, cadence_min=0.03333333333333333, p_mw=156.8, from_bus=1, to_bus=2, sigma=2.0, provenance=iec104:PFlowMw@branch 1->2 (from), min_confidence=0.0, year=2026, week=30
+  timestamp_utc=2026-07-20 13:45:13.250000, source=rtu_live, source_class=telemetry, cadence_min=0.03333333333333333, va_deg=-10.310000002384186, bus=4, sigma=0.5, provenance=iec104:VaDeg@bus 4, min_confidence=0.0, year=2026, week=30
+Parquet/rtu_live/year=2026/week=30/part-20260720T134514000Z-000001.parquet
+  timestamp_utc=2026-07-20 13:45:14, source=rtu_live, source_class=telemetry, cadence_min=0.03333333333333333, vm_pu=1.0190000534057617, bus=4, sigma=0.01, provenance=iec104:VmPu@bus 4, min_confidence=0.0, year=2026, week=30
+[exit 0]

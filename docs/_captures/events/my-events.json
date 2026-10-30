@@ -1,0 +1,33 @@
+{
+  "schema": "gridsim-event-catalog/1",
+  "events": [
+    {
+      "id": "example-1000",
+      "title": "Illustrative 1000 MW infeed loss [VERIFY]",
+      "whenUtc": "2022-03-15T12:00:00Z",
+      "preEventInertiaMwS": 180000,
+      "preEventDemandMw": 30000,
+      "losses": [
+        {
+          "atSeconds": 1,
+          "deltaPMw": -1000,
+          "what": "single infeed trip [VERIFY]",
+          "provenance": "CuratedPlaceholder"
+        }
+      ],
+      "recordedActions": [],
+      "outcome": {
+        "initialRocofHzPerS": -0.139,
+        "nadirHz": 49.4,
+        "settleHz": 49.8,
+        "lfddMwShed": 0,
+        "provenance": "CuratedPlaceholder",
+        "notes": "Illustrative figures, not a real event [VERIFY].",
+        "rocofMeasurementWindowS": 0
+      },
+      "provenance": "CuratedPlaceholder",
+      "notes": "Illustrative example for the manual. Every figure is a placeholder [VERIFY].",
+      "responseServicesComplete": false
+    }
+  ]
+}

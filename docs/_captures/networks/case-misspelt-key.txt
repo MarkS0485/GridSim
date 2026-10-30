@@ -1,0 +1,3 @@
+$ gridsim --dir docs/_captures/networks/inputs/misspelt-key --once
+error: cannot load case folder 'docs/_captures/networks/inputs/misspelt-key': transmission.json: The JSON property 'rating_MVA' could not be mapped to any .NET member contained in type 'GridSim.Core.IO.Json.LineDto'.
+[exit 1]

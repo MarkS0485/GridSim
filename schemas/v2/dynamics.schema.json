@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dynamics.schema.json",
+  "title": "GridSim v2 machine dynamic data (gridsim-dynamics/2)",
+  "description": "F23 (October 2026): per-machine dynamic data for the RMS transient-stability study, in the v2 family. The file carries its own templates, in exactly the library template shape (kinds synchronousMachine, exciter, pss, governor; provenance on every template; controller slots naming the exciter, pss and governor templates), and binds machine templates to the case's generators. Rules the schema subset cannot express are enforced in code: the templates are checked together as one library (V2LibraryChecker: kind specs, units, ranges, unique id@rev, controller references resolving to non-placeholder templates of the slot's kind); each machine entry names exactly one generator (by name, or by bus with a unit index when the bus has more than one unit); a generator is bound at most once; the model-specific required parameters are present (MachineDynamicsLoader).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "templates", "machines"],
+  "properties": {
+    "schema": { "const": "gridsim-dynamics/2" },
+    "name": { "type": "string", "pattern": "[^ ]" },
+    "description": { "type": "string" },
+    "templates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "library.schema.json#/$defs/template" }
+    },
+    "machines": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/machine" }
+    }
+  },
+  "$defs": {
+    "machine": {
+      "title": "Machine binding",
+      "description": "One generator of the case and the synchronousMachine template (id@rev) that describes it. Name the generator by its name, or by its bus (with unit, the 0-based index among that bus's units in case order, when the bus has more than one).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["template"],
+      "properties": {
+        "generator": { "type": "string", "pattern": "[^ ]" },
+        "bus": { "type": "integer" },
+        "unit": { "type": "integer", "minimum": 0 },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef" }
+      },
+      "oneOf": [
+        { "required": ["generator"] },
+        { "required": ["bus"] }
+      ]
+    }
+  }
+}

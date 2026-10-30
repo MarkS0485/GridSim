@@ -1,0 +1,3 @@
+$ gridsim trip case14
+error: trip found no eligible generator to trip in IEEE 14-bus (no non-slack synchronous unit). Name one explicitly, or trip a different model.
+[exit 2]

@@ -1,0 +1,13 @@
+$ gridsim crossval data/matpower/nesta/pglib_opf_case3_lmbd.m
+[crossval] solved 'data/matpower/nesta/pglib_opf_case3_lmbd.m' (DID NOT CONVERGE, 100 iters) -> src\GridSim.Cli\bin\Release\net10.0\results\crossval-pglib_opf_case3_lmbd\solve-export.json
+[crossval] validation FAILED (python, exit 4): numba cannot be imported and numba functions are disabled.
+Probably the execution is slow.
+Please install numba to gain a massive speedup.
+(or if you prefer slow execution, set the flag numba=False to avoid this warning!)
+numba cannot be imported and numba functions are disabled.
+Probably the execution is slow.
+Please install numba to gain a massive speedup.
+(or if you prefer slow execution, set the flag numba=False to avoid this warning!)
+crossval: pandapower solve failed: Power Flow nr did not converge after 100 iterations!
+           export is at src\GridSim.Cli\bin\Release\net10.0\results\crossval-pglib_opf_case3_lmbd\solve-export.json.
+[exit 3]

@@ -1,0 +1,7 @@
+$ gridsim dcpf docs/_captures/networks/inputs/v2-two-bus/two-bus.case.json
+DC power flow - Two-bus v2 example (2 buses, 1 branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+  island ref bus 1          2 buses  demand      300.0 MW  scheduled generation      306.0 MW  reference injects      300.0 MW
+  0 of 1 rated branch(es) above 100% of RateA
+  largest flows:
+      branch 0     L1-2                  1 -> 2          300.00 MW     37.5% of 800 MVA
+[exit 0]

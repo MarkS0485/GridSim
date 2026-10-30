@@ -1,0 +1,307 @@
+@using GridSim.Web.Projection
+
+@if (!AppliesHere)
+{
+    @* N301 (LF3, Ruling R1): RP1 is a NESO GB 50 Hz product page; on a case at another nominal it is hidden with the
+       shared one-line reason (FrequencyRiskPresenter), not re-based. The projection still computes every figure. *@
+    <div class="stub">@GridSim.Core.Presentation.FrequencyRiskPresenter.Rp1NotApplicableReason(NominalHz)</div>
+}
+else if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+
+    @* ===== LFDD GRADE HERO - purchased time against the live credible loss, graded to 49.2 Hz ===== *@
+    <div class="rp1-hero @GradeClass(D.LfddLevel)">
+        <div class="hero-main">
+            <span class="hero-v">@Purchased(D.PurchasedTimeSeconds)</span>
+            <span class="hero-l">PURCHASED TIME to 49.2 Hz | against the @D.CredibleLossMw.ToString("N0") MW largest credible loss</span>
+        </div>
+        <div class="hero-grade">@D.LfddGrade</div>
+    </div>
+
+    @* ===== HERO GAUGE + THREE INERTIA GAUGES ===== *@
+    <div class="panel-grid">
+        <div class="card">
+            <div class="card-h">PURCHASED TIME - seconds of ride-through (low = danger)</div>
+            <div class="gauge-wrap">
+                <Gauge Value="@GaugeSeconds" Minimum="0" Maximum="10"
+                       AmberTo="0.5" RedTo="0.2"
+                       Caption="RIDE-THROUGH" Unit="seconds"
+                       ValueText="@Purchased(D.PurchasedTimeSeconds)" Width="220" Height="180" />
+            </div>
+            <div class="muted-note">
+                Time for frequency to fall from @FreqNow to 49.2 Hz on the initial-RoCoF approximation, against a
+                @D.CredibleLossMw.ToString("N0") MW live credible loss. NORMAL at 5 s or more, WATCH from 3 s, ADVISORY from 2 s, WARNING below 2 s; a falling trend below NORMAL turns it red ("down").
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-h">SYSTEM INERTIA - total = intrinsic (petrol) + market (water) GVA.s</div>
+            <div class="gauge-row">
+                <Gauge Value="@D.InertiaTotalGvaS" Minimum="0" Maximum="@InertiaMax"
+                       Caption="TOTAL" Unit="GVA.s"
+                       ValueText="@D.InertiaTotalGvaS.ToString("0")" Width="152" Height="146" />
+                <Gauge Value="@D.InertiaIntrinsicGvaS" Minimum="0" Maximum="@InertiaMax"
+                       Caption="INTRINSIC | petrol" Unit="GVA.s"
+                       ValueText="@D.InertiaIntrinsicGvaS.ToString("0")" Width="152" Height="146" />
+                <Gauge Value="@D.InertiaMarketGvaS" Minimum="0" Maximum="@InertiaMax"
+                       Caption="MARKET | water" Unit="GVA.s"
+                       ValueText="@D.InertiaMarketGvaS.ToString("0")" Width="152" Height="146" />
+            </div>
+            <div class="muted-note">
+                Intrinsic is real synchronous mass; market is the non-synchronous proxy (a lake side-channel - 0 in
+                pure-projection mode). @((D.SyncFraction*100).ToString("0"))% of MW is synchronous | RoCoF @D.RocofHzPerS.ToString("0.000") Hz/s.
+            </div>
+        </div>
+    </div>
+
+    @* ===== LARGEST CREDIBLE LOSS (today's SQSS rules) + INERTIA BY SOURCE ===== *@
+    <div class="panel-grid">
+        <div class="card">
+            <div class="card-h">LARGEST CREDIBLE LOSS - today's SQSS secured event</div>
+            <div class="stat-row"><span>Largest credible loss | @D.LargestUnitName</span><b>@D.CredibleLossMw.ToString("N0") MW</b></div>
+            @if (D.CorrelatedGroup.Mw > 0)
+            {
+                <button class="loss-line drill" @onclick="() => Open(GroupLevel())">
+                    <span>Largest correlated HVDC group | @D.CorrelatedGroup.Name</span>
+                    <b class="@Bind(GroupBinds)">@D.CorrelatedGroup.Mw.ToString("N0") MW ></b>
+                </button>
+            }
+            else
+            {
+                <div class="stat-row"><span>Largest correlated HVDC group</span><b class="muted-v">- none importing</b></div>
+            }
+            <div class="stat-row"><span>Dynamic MIF @@ 0.125 Hz/s</span><b>@D.DynamicMifGvaS.ToString("0") GVA.s</b></div>
+            <div class="muted-note">
+                The @D.CredibleLossMw.ToString("N0") MW single largest secured unit: NESO secures all single-unit (BMU-only)
+                losses and does not secure simultaneous events (Frequency Risk and Control Report 2025, s.7.1). The
+                correlated HVDC group above is a simultaneous event, shown as live unsecured context.
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-h">INERTIA BY SOURCE - click a fuel to inspect its units</div>
+            <table class="grid">
+                <tbody>
+                    @foreach (Rp1InertiaRowDto r in D.InertiaBySource)
+                    {
+                        <tr class="clickable" @onclick="() => Open(FuelLevel(r.Fuel))">
+                            <td><span class="swatch" style="--c:@r.Color"></span>@r.Fuel</td>
+                            <td class="r">@r.SecondsGvaS.ToString("0.00") GVA.s</td>
+                            <td class="r">
+                                <div class="minibar"><span style="width:@Pct(r.SharePercent/100);--c:@r.Color"></span></div>
+                                @r.SharePercent.ToString("0")%
+                            </td>
+                            <td class="r chev">></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ===== INTERCONNECTOR FLEET - correlated-trip corridors flagged; click to inspect the group ===== *@
+    <div class="card">
+        <div class="card-h">INTERCONNECTOR FLEET - import (+ve) is a credible infeed loss | click a link to inspect its corridor</div>
+        <div class="tablescroll">
+            <table class="grid">
+                <thead><tr><th>Interconnector</th><th class="r">Flow</th><th>Direction</th><th>Correlated corridor</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (Rp1IcRowDto ic in D.Interconnectors)
+                    {
+                        <tr class="clickable @(ic.Correlated ? "corr" : "")" @onclick="() => Open(IcLevel(ic))">
+                            <td>@ic.Name</td>
+                            <td class="r" style="color:@(ic.Importing ? "var(--warn)" : "var(--muted)")">@Flow(ic.FlowMw)</td>
+                            <td>@(ic.Importing ? "IMPORT" : "EXPORT")</td>
+                            <td>@(ic.Correlated ? ic.CorridorName : "-")</td>
+                            <td class="r chev">></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @* ===== N-1 ROCOF SCREEN - credible single losses, worst first ===== *@
+    <div class="card grow">
+        <div class="card-h">N-1 ROCOF SCREEN - credible single losses, worst first</div>
+        <div class="tablescroll">
+            <table class="grid">
+                <thead><tr><th>Loss</th><th>Fuel</th><th class="r">MW</th><th class="r">RoCoF Hz/s</th><th>vs 0.125</th><th>vs 1.0</th></tr></thead>
+                <tbody>
+                    @foreach (Rp1ScreenRowDto s in D.Screening)
+                    {
+                        <tr class="@(s.BreachesModern ? "over" : "")">
+                            <td>@s.Name</td>
+                            <td><span class="swatch" style="--c:@s.Color"></span>@s.Fuel</td>
+                            <td class="r">@s.LossMw.ToString("N0")</td>
+                            <td class="r">@s.RocofHzPerS.ToString("0.000")</td>
+                            <td>@Flag(s.BreachesLegacy)</td>
+                            <td>@Flag(s.BreachesModern)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card narrative">@D.Narrative</div>
+    </div>
+
+    <Inspector @ref="_inspector" OnRowClick="OnDrill" />
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+
+    /// <summary>N301 (LF3, Ruling R1): the case's nominal frequency (SimSession.NominalHz). The page shows only when
+    /// <see cref="GridSim.Core.Presentation.FrequencyRiskPresenter.Rp1AppliesAt"/> says it applies (exactly 50 Hz);
+    /// the default is the GB nominal, so a caller that does not pass it sees the page as before.</summary>
+    [Parameter] public double NominalHz { get; set; } = GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
+
+    private bool AppliesHere => GridSim.Core.Presentation.FrequencyRiskPresenter.Rp1AppliesAt(NominalHz);
+
+    private Rp1Dto? D => Frame?.Rp1;
+
+    private Inspector? _inspector;
+
+    // ---- gauge helpers ----
+    private double GaugeSeconds => D is null ? 0
+        : double.IsPositiveInfinity(D.PurchasedTimeSeconds) ? 10 : Math.Min(D.PurchasedTimeSeconds, 10);
+    private double InertiaMax => D is null ? 100 : Math.Max(50, Math.Ceiling(D.InertiaTotalGvaS / 100.0) * 100);
+    private string FreqNow => Frame?.Rp1 is null ? "the working set-point" : "the live frequency";
+    private bool GroupBinds => D is not null && D.CorrelatedGroup.Mw > D.LargestUnitMw;
+
+    // ---- formatting ----
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+    // Colour from the shared Core ladder level (Q1, 2026-10): "green" / "amber" / "red". Anything else is a programming
+    // error and shows red, the safe side.
+    private static string GradeClass(string level) => level switch { "green" => "g-green", "amber" => "g-amber", _ => "g-red" };
+    private static string Purchased(double s) =>
+        double.IsPositiveInfinity(s) ? "inf" : s >= 100 ? $"{s:0} s" : $"{s:0.0} s";
+    private static string Flag(bool breach) => breach ? "X breach" : "ok";
+    private static string Flow(double mw) => $"{mw:+0;-0;0} MW";
+    private static string Bind(bool binding) => binding ? "bind" : "muted-v";
+
+    private void Open(Inspector.InspectLevel level) => _inspector?.Show(level);
+
+    // ---- inspector: drilling within an open page dispatches on the row payload ----
+    private void OnDrill(Inspector.InspectRow r)
+    {
+        switch (r.Payload)
+        {
+            case string fuel: _inspector?.Show(FuelLevel(fuel)); break;
+            case Rp1UnitDto u: _inspector?.Show(UnitLevel(u)); break;
+            case Rp1IcRowDto ic: _inspector?.Show(IcLevel(ic)); break;
+        }
+    }
+
+    // ---- fuel -> per-unit H / stored kinetic energy ----
+    private Inspector.InspectLevel FuelLevel(string fuel)
+    {
+        var us = (D?.Units ?? Array.Empty<Rp1UnitDto>()).Where(u => u.Fuel == fuel)
+            .OrderByDescending(u => u.Mw).ToList();
+        bool sync = us.Count > 0 && us[0].Synchronous;
+        double totMw = us.Sum(u => u.Mw);
+        double totKe = us.Sum(u => u.StoredKeGvaS);
+        double avgLoad = us.Where(u => u.CapMw > 0).Select(u => u.Mw / u.CapMw).DefaultIfEmpty(0).Average();
+        var stats = new[]
+        {
+            new Inspector.InspectStat("UNITS", $"{us.Count}"),
+            new Inspector.InspectStat("TOTAL OUTPUT", $"{totMw:N0} MW"),
+            new Inspector.InspectStat("AVG LOADING", $"{avgLoad * 100:0}%"),
+            new Inspector.InspectStat("INERTIA", sync ? $"{totKe:0.0} GVA.s" : "0 | converter",
+                sync ? "var(--ok)" : "var(--muted)"),
+        };
+        var rows = us.Select(u => new Inspector.InspectRow(
+            Primary: u.Name,
+            Sub: u.Synchronous
+                ? $"H {u.HSeconds:0.0}s | {u.StoredKeGvaS:0.00} GVA.s | {Load(u):0}% loaded"
+                : $"{Load(u):0}% loaded | converter (0 inertia)",
+            Value: $"{u.Mw:N0} MW",
+            Swatch: u.Color,
+            Drillable: true,
+            Payload: u)).ToList();
+        return new Inspector.InspectLevel(fuel.ToUpperInvariant(),
+            sync ? "synchronous - real intrinsic inertia" : "converter - zero intrinsic inertia", stats, rows);
+    }
+
+    private Inspector.InspectLevel UnitLevel(Rp1UnitDto u)
+    {
+        var stats = new[]
+        {
+            new Inspector.InspectStat("OUTPUT", $"{u.Mw:N0} MW"),
+            new Inspector.InspectStat("HEADROOM", $"{Math.Max(0, u.CapMw - u.Mw):N0} MW"),
+            new Inspector.InspectStat("LOADING", $"{Load(u):0}%"),
+            new Inspector.InspectStat("INERTIA", u.Synchronous ? $"{u.StoredKeGvaS:0.00} GVA.s" : "0",
+                u.Synchronous ? "var(--ok)" : "var(--muted)"),
+        };
+        var rows = new[]
+        {
+            new Inspector.InspectRow("Fuel", Value: u.Fuel, Swatch: u.Color, Drillable: true, Payload: u.Fuel),
+            new Inspector.InspectRow("Real power", Value: $"{u.Mw:N0} MW"),
+            new Inspector.InspectRow("Headroom to capacity", Value: $"{Math.Max(0, u.CapMw - u.Mw):N0} MW"),
+            new Inspector.InspectRow("Inertia constant H", Value: $"{u.HSeconds:0.0} s"),
+            new Inspector.InspectRow("Stored kinetic energy",
+                Value: u.Synchronous ? $"{u.StoredKeGvaS:0.00} GVA.s" : "0 (converter)",
+                ValueColor: u.Synchronous ? "var(--ok)" : "var(--muted)"),
+            new Inspector.InspectRow("Intrinsic?",
+                Value: u.Synchronous ? "yes - real synchronous mass" : "no - converter, zero inertia"),
+        };
+        return new Inspector.InspectLevel(u.Name.ToUpperInvariant(), $"{u.Fuel} unit | this frame", stats, rows);
+    }
+
+    // ---- interconnector -> correlated-trip group members ----
+    private Inspector.InspectLevel IcLevel(Rp1IcRowDto ic)
+    {
+        var stats = new[]
+        {
+            new Inspector.InspectStat("FLOW", Flow(ic.FlowMw), ic.Importing ? "var(--warn)" : "var(--muted)"),
+            new Inspector.InspectStat("DIRECTION", ic.Importing ? "IMPORT" : "EXPORT"),
+            new Inspector.InspectStat("CORRELATED", ic.Correlated ? "yes" : "no",
+                ic.Correlated ? "var(--bad)" : "var(--muted)"),
+        };
+        var rows = new List<Inspector.InspectRow>
+        {
+            new("Interconnector", Value: ic.Name),
+            new("Instantaneous flow", Value: Flow(ic.FlowMw), ValueColor: ic.Importing ? "var(--warn)" : "var(--muted)"),
+            new("Infeed loss risk",
+                Value: ic.Importing ? "importing - a trip is a loss of infeed" : "exporting - not an infeed loss"),
+        };
+        if (ic.Correlated && D is not null)
+        {
+            rows.Add(new Inspector.InspectRow("Correlated group", Value: ic.CorridorName, ValueColor: "var(--bad)"));
+            foreach (Rp1IcRowDto m in D.Interconnectors.Where(x => x.CorridorName == ic.CorridorName && x.Name != ic.Name))
+            {
+                rows.Add(new Inspector.InspectRow(m.Name, Value: Flow(m.FlowMw),
+                    ValueColor: m.Importing ? "var(--warn)" : "var(--muted)", Drillable: true, Payload: m));
+            }
+        }
+        return new Inspector.InspectLevel(ic.Name.ToUpperInvariant(),
+            ic.Correlated ? "shares a correlated-trip corridor" : "no shared corridor", stats, rows);
+    }
+
+    // ---- the whole correlated group (from the credible-loss panel) ----
+    private Inspector.InspectLevel GroupLevel()
+    {
+        Rp1CorrGroupDto g = D!.CorrelatedGroup;
+        var stats = new[]
+        {
+            new Inspector.InspectStat("GROUP LOSS", $"{g.Mw:N0} MW", "var(--bad)"),
+            new Inspector.InspectStat("MEMBERS", $"{g.Members.Count}"),
+        };
+        var rows = g.Members.Select(m => new Inspector.InspectRow(
+            Primary: m.Name,
+            Sub: m.Importing ? "importing - counts toward the group loss" : "exporting - excluded from the loss",
+            Value: Flow(m.FlowMw),
+            ValueColor: m.Importing ? "var(--warn)" : "var(--muted)",
+            Drillable: true,
+            Payload: m)).ToList();
+        return new Inspector.InspectLevel(g.Name.ToUpperInvariant(),
+            "correlated HVDC group - lost as one infeed (Policy 0021 s.4)", stats, rows);
+    }
+
+    private static double Load(Rp1UnitDto u) => u.CapMw > 0 ? u.Mw / u.CapMw * 100 : 0;
+}

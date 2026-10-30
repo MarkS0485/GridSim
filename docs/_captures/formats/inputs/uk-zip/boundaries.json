@@ -1,0 +1,29 @@
+[
+  {
+    "name": "B4 Upper North (Scotland)",
+    "limitMw": 3200,
+    "branches": [ { "branch": "L1-2 N-S Scotland", "direction": 1 } ]
+  },
+  {
+    "name": "B6 Scotland-England (SCOTEX)",
+    "limitMw": 6600,
+    "branches": [ { "branch": "L2-3 B6 boundary", "direction": 1 } ]
+  },
+  {
+    "name": "B7/B8 North-Midlands",
+    "limitMw": 12000,
+    "branches": [
+      { "branch": "L4-6 Yorks-Midlands", "direction": 1 },
+      { "branch": "L5-6 N Wales-Midlands", "direction": 1 },
+      { "branch": "L4-7 Yorks-E Anglia", "direction": 1 }
+    ]
+  },
+  {
+    "name": "SW Peninsula & S Wales (export)",
+    "limitMw": 4500,
+    "branches": [
+      { "branch": "L9-10 South-SW", "direction": -1 },
+      { "branch": "L5-10 N Wales-SW", "direction": -1 }
+    ]
+  }
+]

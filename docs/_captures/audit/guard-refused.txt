@@ -1,0 +1,4 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-future.json --out results/ch31-future --audit-log results/ch31-future.log
+REJECTED (forward inference): measurement set timestamp 2099-01-01T12:00:00.0000000Z is newer than the historical horizon 2026-10-13T04:23:45.3695438Z (data must lag real time by >=169 h). GridSim replays history only - it never processes recent or future data, so it cannot forward-infer.
+audit: results\ch31-future.log entries=2 head=C796C9B48CCF2321C435514F86A0C301C925F3466C844CA0D1B31235BB9A5581 security-events=1
+[exit 2]

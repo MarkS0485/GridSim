@@ -1,0 +1,15 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "towerType",
+  "title": "Tower type (asset overlay)",
+  "description": "Phase 5a asset overlay kind. A tower (pylon) design as a catalogue item; its conductor attachment points are conductorPosition child records. Pointed at by spans. Carried beside the model, never used by the solver.",
+  "params": {
+    "code": { "type": "string", "required": false, "description": "The design code (for example L6).", "codeDefaults": [] },
+    "heightM": { "type": "number", "unit": "m", "min": 0, "required": false, "description": "Height to the tower peak, metres.", "codeDefaults": [] },
+    "circuits": { "type": "integer", "unit": "1", "min": 1, "required": false, "description": "Number of circuits the design carries.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {},
+    "parentKinds": []
+  }
+}

@@ -1,0 +1,33 @@
+$ gridsim fault case14 --bus 4
+Balanced three-phase fault  -  case14  bus 4  Zf=j0.000 pu
+  fault current: 12.41 pu   Thevenin Z: 0.0820 pu   faulted bus voltage: 0.000 pu
+  (generator subtransient reactance synthesised at 0.20 pu; positive-sequence, so three-phase only)
+  relays operating on the faulted state: 23
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 87 | Differential | bus 4 | 12.415 pu | 0.100 | inst | busbar differential 1.24E+001 pu at bus 4 exceeds the 0.10 pu bias pickup (internal fault) |
+  | 21-Z2 | Distance | branch 2-4 | 0.186 pu | 0.232 | 0.30s | branch 2-4 apparent Z 0.186 pu is inside Zone 2 (reach 0.232 pu, line Z 0.186); operates in 0.3 s |
+  | 21-Z2 | Distance | branch 3-4 | 0.184 pu | 0.230 | 0.30s | branch 3-4 apparent Z 0.184 pu is inside Zone 2 (reach 0.230 pu, line Z 0.184); operates in 0.3 s |
+  | 21-Z2 | Distance | branch 4-5 | 0.044 pu | 0.055 | 0.30s | branch 4-5 apparent Z 0.044 pu is inside Zone 2 (reach 0.055 pu, line Z 0.044); operates in 0.3 s (relay at the to end, bus 5) |
+  | 21-Z2 | Distance | branch 4-7 | 0.209 pu | 0.261 | 0.30s | branch 4-7 apparent Z 0.209 pu is inside Zone 2 (reach 0.261 pu, line Z 0.209); operates in 0.3 s (relay at the to end, bus 7) |
+  | 21-Z2 | Distance | branch 4-9 | 0.556 pu | 0.695 | 0.30s | branch 4-9 apparent Z 0.556 pu is inside Zone 2 (reach 0.695 pu, line Z 0.556); operates in 0.3 s (relay at the to end, bus 9) |
+  | 21-Z3 | Distance | branch 1-5 | 0.353 pu | 0.459 | 0.80s | branch 1-5 apparent Z 0.353 pu is inside Zone 3 (reach 0.459 pu, line Z 0.229); operates in 0.8 s |
+  | 21-Z3 | Distance | branch 2-5 | 0.314 pu | 0.366 | 0.80s | branch 2-5 apparent Z 0.314 pu is inside Zone 3 (reach 0.366 pu, line Z 0.183); operates in 0.8 s |
+  | 21-Z3 | Distance | branch 5-6 | 0.388 pu | 0.504 | 0.80s | branch 5-6 apparent Z 0.388 pu is inside Zone 3 (reach 0.504 pu, line Z 0.252); operates in 0.8 s (relay at the to end, bus 6) |
+  | 27 | Undervoltage | bus 4 | 0.000 pu | 0.800 | - | Vm 0.000 pu at bus 4 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 5 | 0.204 pu | 0.800 | - | Vm 0.204 pu at bus 5 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 9 | 0.393 pu | 0.800 | - | Vm 0.393 pu at bus 9 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 7 | 0.396 pu | 0.800 | - | Vm 0.396 pu at bus 7 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 10 | 0.429 pu | 0.800 | - | Vm 0.429 pu at bus 10 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 14 | 0.464 pu | 0.800 | - | Vm 0.464 pu at bus 14 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 2 | 0.487 pu | 0.800 | - | Vm 0.487 pu at bus 2 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 3 | 0.489 pu | 0.800 | - | Vm 0.489 pu at bus 3 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 11 | 0.520 pu | 0.800 | - | Vm 0.520 pu at bus 11 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 1 | 0.564 pu | 0.800 | - | Vm 0.564 pu at bus 1 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 13 | 0.577 pu | 0.800 | - | Vm 0.577 pu at bus 13 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 12 | 0.594 pu | 0.800 | - | Vm 0.594 pu at bus 12 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 6 | 0.618 pu | 0.800 | - | Vm 0.618 pu at bus 6 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 8 | 0.736 pu | 0.800 | - | Vm 0.736 pu at bus 8 is below the 0.80 pu undervoltage pickup |
+
+PROTECTION SIMULATION: a three-phase fault at bus 4 would drive 23 relay operation(s) - primary clearance by 87 (Differential) on bus 4, instantaneously.
+[exit 0]

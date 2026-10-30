@@ -1,0 +1,71 @@
+$ gridsim modal uk
+GridSim  -  SMALL-SIGNAL / MODAL STABILITY  *  GB reduced (10-zone)
+==================================================================
+13 machine(s), 26 state(s)  *  X'd = synthetic 0.30 pu (unvalidated)  *  inverters off  *  damping D = 0 (undamped)
+
+   sigma (1/s)  omega (rad/s)    f (Hz)      zeta   mode
+        0.0000       -12.9721    2.0646   -0.0000   oscillatory
+        0.0000        12.9721    2.0646   -0.0000   oscillatory
+        0.0000        11.9859    1.9076   -0.0000   oscillatory
+        0.0000        11.8619    1.8879   -0.0000   oscillatory
+        0.0000        11.7378    1.8681   -0.0000   oscillatory
+        0.0000        11.4635    1.8245   -0.0000   oscillatory
+        0.0000        11.2445    1.7896   -0.0000   oscillatory
+        0.0000        11.0099    1.7523   -0.0000   oscillatory
+        0.0000        10.6969    1.7025   -0.0000   oscillatory
+        0.0000        10.6070    1.6882   -0.0000   oscillatory
+        0.0000        10.5542    1.6798   -0.0000   oscillatory
+        0.0000        10.4764    1.6674   -0.0000   oscillatory
+        0.0000        10.3197    1.6424   -0.0000   oscillatory
+        0.0000       -10.3197    1.6424   -0.0000   oscillatory
+        0.0000       -10.4764    1.6674   -0.0000   oscillatory
+        0.0000       -10.5542    1.6798   -0.0000   oscillatory
+        0.0000       -10.6070    1.6882   -0.0000   oscillatory
+        0.0000       -10.6969    1.7025   -0.0000   oscillatory
+        0.0000       -11.0099    1.7523   -0.0000   oscillatory
+        0.0000       -11.2445    1.7896   -0.0000   oscillatory
+        0.0000       -11.4635    1.8245   -0.0000   oscillatory
+        0.0000       -11.7378    1.8681   -0.0000   oscillatory
+        0.0000       -11.8619    1.8879   -0.0000   oscillatory
+        0.0000       -11.9859    1.9076   -0.0000   oscillatory
+        0.0000         0.0000    0.0000    0.0000   real
+        0.0000         0.0000    0.0000    0.0000   real
+
+Least-damped oscillatory mode: 2.065 Hz, zeta = -0.0000  (poorly damped)
+Right-half-plane eigenvalues (small-signal unstable): 0
+Minimum oscillatory damping ratio: -0.0000
+
+Dominant participation (which state drives each oscillatory mode):
+    2.065 Hz (zeta -0.0000) : d.omega_gen1 46%, d.delta_gen1 46%, d.omega_gen2 4%
+    2.065 Hz (zeta -0.0000) : d.delta_gen1 46%, d.omega_gen1 46%, d.omega_gen2 4%
+    1.908 Hz (zeta -0.0000) : d.delta_gen3 31%, d.omega_gen3 31%, d.delta_gen4 18%
+    1.888 Hz (zeta -0.0000) : d.delta_gen4 20%, d.omega_gen4 20%, d.delta_gen7 16%
+    1.868 Hz (zeta -0.0000) : d.omega_gen7 32%, d.delta_gen7 32%, d.delta_gen4 10%
+    1.824 Hz (zeta -0.0000) : d.delta_gen10 43%, d.omega_gen10 43%, d.omega_gen2 3%
+
+s-plane (imag up, real right; '*' stable pole, 'X' RHP/unstable, left of axis = damped):
+                         |                         
+                         *                         
+                         *                         
+                         *                         
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+-------------------------*-------------------------
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+                         *                         
+                         *                         
+                         *                         
+                         |
+
+Eigenvalues of A = [[0, ws I],[-M^-1 K_L, -M^-1 D]] (true asymmetric K_L; Francis-QR, biorthonormal participation).
+Provenance: X'd is a synthetic default - damping/participation are INDICATIVE, not validated.
+[exit 0]

@@ -1,0 +1,104 @@
+{
+  "B4": {
+    "gbFullName": "B4 SHETL-SPT (SSE-SP)",
+    "reducedNorth": [
+      "Beauly",
+      "Peterhead",
+      "Errochty"
+    ],
+    "zonalNorth": [
+      "Z1_1",
+      "Z1_2",
+      "Z1_3",
+      "Z1_4",
+      "Z2",
+      "Z3",
+      "Z4"
+    ]
+  },
+  "B6": {
+    "gbFullName": "B6 Scotland-England (SCOTEX)",
+    "reducedNorth": [
+      "Beauly",
+      "Peterhead",
+      "Errochty",
+      "Denny/Bonnybridge",
+      "Neilston",
+      "Strathaven",
+      "Torness",
+      "Eccles"
+    ],
+    "zonalNorth": [
+      "Z1_1",
+      "Z1_2",
+      "Z1_3",
+      "Z1_4",
+      "Z2",
+      "Z3",
+      "Z4",
+      "Z5",
+      "Z6"
+    ]
+  },
+  "B7": {
+    "gbFullName": "B7 Upper North England (HARSPNBLY)",
+    "reducedNorth": [
+      "Beauly",
+      "Peterhead",
+      "Errochty",
+      "Denny/Bonnybridge",
+      "Neilston",
+      "Strathaven",
+      "Torness",
+      "Eccles",
+      "Harker",
+      "Stella West"
+    ],
+    "zonalNorth": [
+      "Z1_1",
+      "Z1_2",
+      "Z1_3",
+      "Z1_4",
+      "Z2",
+      "Z3",
+      "Z4",
+      "Z5",
+      "Z6",
+      "Z7"
+    ]
+  },
+  "B8": {
+    "gbFullName": "B8 North to Midlands (FLOWSTH)",
+    "reducedNorth": [
+      "Beauly",
+      "Peterhead",
+      "Errochty",
+      "Denny/Bonnybridge",
+      "Neilston",
+      "Strathaven",
+      "Torness",
+      "Eccles",
+      "Harker",
+      "Stella West",
+      "Penwortham",
+      "Deeside",
+      "Daines",
+      "Th. Marsh/Stocksbridge",
+      "Thornton/Drax/Eggborough"
+    ],
+    "zonalNorth": [
+      "Z1_1",
+      "Z1_2",
+      "Z1_3",
+      "Z1_4",
+      "Z2",
+      "Z3",
+      "Z4",
+      "Z5",
+      "Z6",
+      "Z7",
+      "Z8",
+      "Z9"
+    ]
+  }
+}

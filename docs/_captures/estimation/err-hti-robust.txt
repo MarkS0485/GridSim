@@ -1,0 +1,3 @@
+$ gridsim estimate case14 --synth --hti --method huber --out results/err
+error: --hti: HTI does not apply to the robust method Huber: robust methods down-weight outliers instead of removing them and run no removal loop. Use --method wls, qr, constrained or feasible with HTI.
+[exit 2]

@@ -1,0 +1,3 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/nope.json --out results/err
+error loading measurements: Could not find file 'docs\_captures\estimation\nope.json'.
+[exit 1]

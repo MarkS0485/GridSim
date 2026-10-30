@@ -1,0 +1,6 @@
+$ gridsim validate tests/GridSim.Tests/fixtures/v2/networks/good.network.json tests/GridSim.Tests/fixtures/v2/networks/bad-bus-type.network.json
+OK    tests/GridSim.Tests/fixtures/v2/networks/good.network.json (gridsim-network/2)
+FAIL  tests/GridSim.Tests/fixtures/v2/networks/bad-bus-type.network.json (gridsim-network/2): 1 error(s)
+        /buses/0/type: value "swing" is not one of the allowed values ["pq", "pv", "slack"].
+validate: 1 of 2 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 3]

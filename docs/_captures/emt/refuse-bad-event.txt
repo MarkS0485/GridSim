@@ -1,0 +1,3 @@
+$ gridsim emt case14 --event bogus:1
+error: emt: bad --event 'bogus:1' (use fault:<bus>@<t>:<Rpu>, clear:<bus>@<t>, or switch:<id>@<t>:close|open).
+[exit 2]

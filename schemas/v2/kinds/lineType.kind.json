@@ -1,0 +1,248 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "lineType",
+  "title": "Line or cable type",
+  "description": "Electrical type of an overhead line or cable (per-unit, physical and length side by side) plus the v1 'line' asset class (LineThermalDynamics). thermalTauMin was a unit gap until Q24 (2026-10) added min to the vocabulary; it is declared below.",
+  "params": {
+    "rPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Series resistance, pu on the system base.",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400 kV zone ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring400RPu",
+          "value": 0.0003
+        },
+        {
+          "consumer": "SyntheticGb 275 kV urban ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring275RPu",
+          "value": 0.001
+        },
+        {
+          "consumer": "SyntheticGb 400 kV inter-zone corridor",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Corridor400RPu",
+          "value": 0.0007
+        },
+        {
+          "consumer": "SyntheticGb 132 kV industrial spur",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.IndustrialSpurRPu",
+          "value": 0.002
+        }
+      ]
+    },
+    "xPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Series reactance, pu on the system base.",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400 kV zone ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring400XPu",
+          "value": 0.003
+        },
+        {
+          "consumer": "SyntheticGb 275 kV urban ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring275XPu",
+          "value": 0.0085
+        },
+        {
+          "consumer": "SyntheticGb 400 kV inter-zone corridor",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Corridor400XPu",
+          "value": 0.007
+        },
+        {
+          "consumer": "SyntheticGb 132 kV industrial spur",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.IndustrialSpurXPu",
+          "value": 0.01
+        }
+      ]
+    },
+    "bPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Total line-charging susceptance, pu on the system base.",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400 kV zone ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring400BPu",
+          "value": 0.35
+        },
+        {
+          "consumer": "SyntheticGb 275 kV urban ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring275BPu",
+          "value": 0.2
+        },
+        {
+          "consumer": "SyntheticGb 400 kV inter-zone corridor",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Corridor400BPu",
+          "value": 0.8
+        },
+        {
+          "consumer": "SyntheticGb 132 kV industrial spur",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.IndustrialSpurBPu",
+          "value": 0.01
+        }
+      ]
+    },
+    "rateAMva": {
+      "type": "number",
+      "unit": "MVA",
+      "min": 0,
+      "required": false,
+      "description": "Continuous thermal rating (MVA).",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400 kV zone ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring400RateMva",
+          "value": 5500.0
+        },
+        {
+          "consumer": "SyntheticGb 275 kV urban ring",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Ring275RateMva",
+          "value": 2400.0
+        },
+        {
+          "consumer": "SyntheticGb 400 kV inter-zone corridor",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Corridor400RateMva",
+          "value": 5500.0
+        },
+        {
+          "consumer": "SyntheticGb 132 kV industrial spur",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.IndustrialSpurRateMva",
+          "value": 240.0
+        }
+      ]
+    },
+    "ratedKv": {
+      "type": "number",
+      "unit": "kV",
+      "min": 0,
+      "required": false,
+      "description": "Nominal line-to-line voltage (kV).",
+      "codeDefaults": []
+    },
+    "lengthKm": {
+      "type": "number",
+      "unit": "km",
+      "min": 0,
+      "required": false,
+      "description": "Route length (km).",
+      "codeDefaults": []
+    },
+    "rOhmPerKm": {
+      "type": "number",
+      "unit": "ohm/km",
+      "min": 0,
+      "required": false,
+      "description": "Series resistance per km (physical; the per-unit values are authoritative).",
+      "codeDefaults": []
+    },
+    "xOhmPerKm": {
+      "type": "number",
+      "unit": "ohm/km",
+      "min": 0,
+      "required": false,
+      "description": "Series reactance per km (physical).",
+      "codeDefaults": []
+    },
+    "bUsPerKm": {
+      "type": "number",
+      "unit": "uS/km",
+      "min": 0,
+      "required": false,
+      "description": "Shunt susceptance per km (physical).",
+      "codeDefaults": []
+    },
+    "r0Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Zero-sequence resistance, pu on the system base.",
+      "codeDefaults": []
+    },
+    "x0Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Zero-sequence reactance, pu on the system base.",
+      "codeDefaults": []
+    },
+    "x0OverX1": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Multiple of the positive-sequence impedance used as a line's zero-sequence impedance when it carries none.",
+      "codeDefaults": [
+        {
+          "consumer": "Iec60909.SingleLineToGround lineZeroSeqRatio default",
+          "ref": "param:GridSim.Core:GridSim.Core.Protection.ShortCircuit.Iec60909:SingleLineToGround:lineZeroSeqRatio",
+          "value": 3.0
+        },
+        {
+          "consumer": "Iec60909.DoubleLineToGround lineZeroSeqRatio default",
+          "ref": "param:GridSim.Core:GridSim.Core.Protection.ShortCircuit.Iec60909:DoubleLineToGround:lineZeroSeqRatio",
+          "value": 3.0
+        },
+        {
+          "consumer": "Iec60909.ZeroSequenceThevenin lineZeroSeqRatio default",
+          "ref": "param:GridSim.Core:GridSim.Core.Protection.ShortCircuit.Iec60909:ZeroSequenceThevenin:lineZeroSeqRatio",
+          "value": 3.0
+        }
+      ]
+    },
+    "ambientLoadingFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Ambient (pre-existing) thermal loading as a fraction of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "LineThermalDynamics (asset class): absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.LineThermalDynamics.DefaultAmbientLoadingFraction",
+          "value": 0.0
+        }
+      ]
+    },
+    "thermalTauMin": {
+      "type": "number",
+      "unit": "min",
+      "min": 0,
+      "max": 1440,
+      "required": false,
+      "description": "Thermal time constant of the line or cable (minutes) for the first-order thermal state that derates the rating. The integrator never uses less than one step (tau = max(dt, 60 * thermalTauMin) s). The 1440 min (one day) ceiling is far above any published conductor or transformer winding/oil time constant.",
+      "codeDefaults": [
+        {
+          "consumer": "LineThermalDynamics (asset class): absent => 15 min (the transformer fallback is 20)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.LineThermalDynamics.DefaultThermalTauMin",
+          "value": 15.0
+        }
+      ]
+    },
+    "derateAtFullThermal": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Rating derate at full thermal state, as a fraction of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "LineThermalDynamics (asset class): absent => 0.1 (the transformer fallback is 0)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.LineThermalDynamics.DefaultDerateAtFullThermal",
+          "value": 0.1
+        }
+      ]
+    }
+  }
+}

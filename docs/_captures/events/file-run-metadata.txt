@@ -1,0 +1,20 @@
+# results/replay-gb-2019-08-09/run-metadata.json
+{
+  "timestampUtc": "2026-10-03T08:16:42.7746557Z",
+  "backend": "cpu",
+  "gitCommit": "71c4e64f-dirty",
+  "buildConfig": "Release",
+  "coreVersion": "1.95.91.0",
+  "runtime": ".NET 10.0.12",
+  "arch": "X64",
+  "serverGc": true,
+  "simdTier": "Avx256",
+  "simdLanes": 4,
+  "simdFma": true,
+  "machineName": "LAPTOP",
+  "os": "Microsoft Windows 10.0.26200",
+  "cpu": "X64",
+  "logicalCores": 8,
+  "ramGb": 8.3,
+  "run": "replay-event  id=gb-2019-08-09  provenance=Recorded  verdict=Reproduced"
+}

@@ -1,0 +1,156 @@
+@* One corridor's dashboard. LIVE-SOLVED: loading, signed flow, endpoint voltages (oriented by power
+   direction), reactive balance, series impedance. STATIC DEMO (labelled): conductor temperature, route
+   integrity / thermal envelope / access, event log. Mirrors GridSim.Wpf CircuitDetailVm. *@
+
+@if (_c is null)
+{
+    <div class="stub">This circuit is not in the current model.</div>
+}
+else
+{
+    <div class="card" style="margin-bottom:0">
+        <div class="card-eyebrow">TRANSMISSION CORRIDOR</div>
+        <div class="card-h" style="margin-bottom:2px">@_c.Name</div>
+        <div class="muted-note" style="margin-top:0">@_sub | <span class="txt-ok">LIVE-SOLVED</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">LOADING &amp; CONDUCTOR</div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center">
+            <div style="text-align:center">
+                <Gauge Value="@_c.LoadingPercent" Minimum="0" Maximum="120" AmberFrom="0.83" RedFrom="0.92" Caption="LOADING" Unit="%" Width="180" Height="150" />
+                <div class="card-eyebrow txt-ok">LIVE</div>
+            </div>
+            <div style="text-align:center">
+                <Gauge Value="62" Minimum="0" Maximum="100" AmberFrom="0.75" RedFrom="0.90" Caption="CONDUCTOR" Unit="degC" Width="180" Height="150" />
+                <div class="card-eyebrow" style="color:var(--warn)">STATIC DEMO</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">LOADING | RECENT SIM HISTORY</div>
+        <Sparkline Values="_history" Stroke="@WebPalette.Loading(_c.LoadingPercent / 100.0)" Width="900" Height="90" />
+    </div>
+
+    <div class="panel-grid">
+        @* Voltage in / out - oriented by real power, cross-linked *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">VOLTAGE IN / OUT <span class="card-eyebrow" style="display:inline;margin:0">LIVE-SOLVED</span></div>
+            <StatRow Label="Inlet substation">
+                <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="() => Nav.OpenSubstation(_inId, _inName)">@_inName -></a>
+            </StatRow>
+            <StatRow Label="Inlet voltage" Value="@_vIn" />
+            <StatRow Label="Outlet substation">
+                <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="() => Nav.OpenSubstation(_outId, _outName)">@_outName -></a>
+            </StatRow>
+            <StatRow Label="Outlet voltage" Value="@_vOut" />
+            <StatRow Label="Voltage drop" Value="@_deltaV" />
+            <StatRow Label="Angle spread" Value="@_angle" />
+            <StatRow Label="Flow / rating" Value="@($"{_c.PFromMw:+#,0;-#,0;0} MW | {(_c.RateAMva > 0 ? _c.RateAMva.ToString("F0") : "-")} MVA")" />
+        </div>
+
+        @* Reactive balance + series impedance *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">REACTIVE &amp; IMPEDANCE <span class="card-eyebrow" style="display:inline;margin:0">LIVE / NAMEPLATE</span></div>
+            <StatRow Label="Q inlet / outlet" Value="@_q" />
+            <StatRow Label="Reactive balance" Status="@_qStatus"><b>@_qVerdict</b></StatRow>
+            <StatRow Label="Real loss" Value="@_loss" />
+            <StatRow Label="Series R / X" Value="@($"{_c.RPu:F4} / {_c.XPu:F4} pu")" />
+            <StatRow Label="Charging B" Value="@($"{_c.BPu:F4} pu")" />
+            <StatRow Label="X / R ratio" Value="@(_c.RPu > 1e-9 ? $"{_c.XPu / _c.RPu:F1}" : "-")" />
+        </div>
+    </div>
+
+    @* Static-demo asset registers *@
+    <div class="panel-grid four">
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">ROUTE INTEGRITY <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="Sheath / serving" Value="intact" Status="ok" />
+            <StatRow Label="Joint bays" Value="4 | surveyed 2025-11" />
+            <StatRow Label="Cross-bonding" Value="< 5 A circulating" Status="ok" />
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">THERMAL <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="Conductor (est.)" Value="62 degC" />
+            <StatRow Label="Soil / ambient" Value="15 degC | 1.0 K.m/W" />
+            <StatRow Label="Rating" Value="static in use" />
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">ACCESS <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="Route access" Value="2 of 4 bays trafficable" />
+            <StatRow Label="Third-party works" Value="none within 10 m" Status="ok" />
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">EVENT LOG <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="2025-11-18"><b style="font-weight:400">joint-bay survey - clear</b></StatRow>
+            <StatRow Label="2025-09-02"><b style="font-weight:400">PD scan - no activity</b></StatRow>
+            <StatRow Label="2025-06-14"><b style="font-weight:400">thermographic patrol - OK</b></StatRow>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+    [Parameter] public int BranchIndex { get; set; }
+    [Parameter] public int Tick { get; set; }
+
+    private const int HistoryLength = 96;
+
+    private BranchAssetDto? _c;
+    private int _inId, _outId;
+    private string _sub = "", _inName = "-", _outName = "-", _vIn = "-", _vOut = "-", _deltaV = "-", _angle = "-";
+    private string _q = "-", _qVerdict = "-", _qStatus = "", _loss = "-";
+
+    private readonly List<double> _history = new();
+    private int _lastTick = int.MinValue;
+
+    protected override void OnParametersSet()
+    {
+        _c = BranchIndex >= 0 && BranchIndex < Graph.Branches.Count && !Graph.Branches[BranchIndex].IsTransformer
+            ? Graph.Branches[BranchIndex] : null;
+        if (_c is null) return;
+
+        var byId = Graph.Buses.ToDictionary(b => b.Id);
+        BusAssetDto? from = byId.GetValueOrDefault(_c.From), to = byId.GetValueOrDefault(_c.To);
+        _sub = $"{from?.Name ?? $"bus {_c.From}"} -> {to?.Name ?? $"bus {_c.To}"}";
+
+        // orient by real power: power leaves the inlet end (PFromMw >= 0 -> From is inlet)
+        bool fromIsIn = _c.PFromMw >= 0;
+        BusAssetDto? inB = fromIsIn ? from : to, outB = fromIsIn ? to : from;
+        _inId = fromIsIn ? _c.From : _c.To;
+        _outId = fromIsIn ? _c.To : _c.From;
+        _inName = inB?.Name ?? $"bus {_inId}";
+        _outName = outB?.Name ?? $"bus {_outId}";
+        _vIn = inB is { Solved: true } ? $"{inB.Vm:F3} pu | {inB.Vm * inB.BaseKv:F1} kV" : "-";
+        _vOut = outB is { Solved: true } ? $"{outB.Vm:F3} pu | {outB.Vm * outB.BaseKv:F1} kV" : "-";
+        if (inB is { Solved: true } && outB is { Solved: true })
+        {
+            double dPu = inB.Vm - outB.Vm;
+            _deltaV = $"{dPu:+0.000;-0.000;0.000} pu | {dPu * inB.BaseKv:+0.0;-0.0;0.0} kV";
+            _angle = $"{inB.VaDeg - outB.VaDeg:+0.0;-0.0;0.0} deg";
+        }
+
+        if (_c.Solved)
+        {
+            double qIn = fromIsIn ? _c.QFromMvar : _c.QToMvar;
+            double qOut = fromIsIn ? _c.QToMvar : _c.QFromMvar;
+            _q = $"{qIn:+#,0.0;-#,0.0;0} / {qOut:+#,0.0;-#,0.0;0} MVAr";
+            bool sink = _c.QLossMvar >= 0;
+            _qVerdict = sink ? "net MVAr SINK - XI^2 dominates" : "net MVAr SOURCE - BV^2 charging dominates";
+            _qStatus = sink ? "warn" : "ok";
+            double transfer = Math.Max(Math.Abs(_c.PFromMw), Math.Abs(_c.PToMw));
+            _loss = $"{_c.PLossMw:F2} MW" + (transfer > 1e-6 ? $" | {_c.PLossMw / transfer * 100:F2}% of transfer" : "");
+        }
+
+        if (_history.Count == 0)
+            for (int i = 0; i < HistoryLength - 1; i++) _history.Add(_c.LoadingPercent);
+        if (Tick != _lastTick)
+        {
+            _lastTick = Tick;
+            _history.Add(_c.LoadingPercent);
+            while (_history.Count > HistoryLength) _history.RemoveAt(0);
+        }
+    }
+}

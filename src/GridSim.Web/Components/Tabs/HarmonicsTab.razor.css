@@ -1,0 +1,82 @@
+/* HARMONICS tab - scoped chrome for the on-demand study. Value-driven colours come from WebPalette /
+   inline CSS-variable styles; static chrome uses the shared design tokens (no hard-coded hex). */
+
+.harmonics .runbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.harmonics .runbtn {
+    background: var(--accent);
+    color: var(--panel);
+    border: none;
+    border-radius: var(--r-btn);
+    padding: 8px 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-family: var(--font-ui);
+    cursor: pointer;
+}
+
+.harmonics .runbtn:hover { filter: brightness(1.08); }
+.harmonics .runbtn:disabled { opacity: 0.5; cursor: default; filter: none; }
+
+.harmonics .prov {
+    color: var(--muted);
+    font-size: 0.8em;
+}
+
+.harmonics .busselect {
+    background: var(--panel-hi);
+    color: var(--ink);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-btn);
+    padding: 4px 8px;
+    font-family: var(--font-ui);
+    margin-left: 6px;
+}
+
+.harmonics .prompt {
+    text-align: center;
+    padding: 32px 24px;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+/* charts */
+.harmonics .hsvg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    border-radius: var(--r-card);
+    margin-top: 8px;
+    font-family: 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+}
+
+.harmonics .axis { stroke: var(--track); stroke-width: 1; }
+.harmonics .hbar { fill: var(--accent); }
+.harmonics .zcurve { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.harmonics .zdot { fill: var(--bad); }
+.harmonics .resline { stroke: var(--bad); stroke-width: 1.2; stroke-dasharray: 4 4; }
+
+/* table verdict cells */
+.harmonics .pass { color: var(--ok); font-weight: 700; }
+.harmonics .fail { color: var(--bad); font-weight: 700; }
+
+/* running spinner */
+.harmonics .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    vertical-align: -2px;
+    border: 2px solid var(--edge);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: hspin 0.8s linear infinite;
+}
+
+@keyframes hspin { to { transform: rotate(360deg); } }

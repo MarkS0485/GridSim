@@ -1,0 +1,12 @@
+$ gridsim freq results/trouble-tmp/recent.csv
+gridsim: internal error - this is a defect in GridSim, not a problem with your input.
+gridsim: ForwardInferenceException: NESO frequency sample timestamp 2026-10-04T14:20:06.0000000Z is newer than the historical horizon 2026-09-27T13:20:31.1035793Z (data must lag real time by >=169 h). GridSim replays history only - it never processes recent or future data, so it cannot forward-infer.
+gridsim: crash log written to results/trouble-tmp/crash\gridsim-crash-20261004-142031-12684.log - please include it when reporting the problem.
+Unhandled exception. GridSim.Core.Diagnostics.ForwardInferenceException: NESO frequency sample timestamp 2026-10-04T14:20:06.0000000Z is newer than the historical horizon 2026-09-27T13:20:31.1035793Z (data must lag real time by >=169 h). GridSim replays history only - it never processes recent or future data, so it cannot forward-infer.
+   at GridSim.Core.Diagnostics.ForwardInferenceGuard.RejectFuture(DateTime stampUtc, Nullable`1 utcNow, String what) in src\GridSim.Core\Diagnostics\ForwardInferenceGuard.cs:line 43
+   at GridSim.Core.Frequency.NesoFrequencyCsv.Read(String path)+MoveNext() in src\GridSim.Core\Frequency\NesoFrequencyCsv.cs:line 37
+   at System.Collections.Generic.List`1..ctor(IEnumerable`1 collection)
+   at System.Linq.Enumerable.ToList[TSource](IEnumerable`1 source)
+   at Program.<<Main>$>g__PrintFrequency|0_48(String path) in src\GridSim.Cli\Program.cs:line 4522
+   at Program.<Main>$(String[] args) in src\GridSim.Cli\Program.cs:line 895
+[exit -532462766]

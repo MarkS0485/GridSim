@@ -1,0 +1,8 @@
+PTDF - IEEE 9-bus (WSCC) (9 buses): +1 MW injected at bus 5 (withdrawn at slack 1) flows on:
+    branch 0    1->4           PTDF -1.0000  (-100.0%)
+    branch 1    4->5           PTDF -0.8649  (-86.5%)
+    branch 7    8->9           PTDF  0.1351  ( 13.5%)
+    branch 4    6->7           PTDF  0.1351  ( 13.5%)
+    branch 8    9->4           PTDF  0.1351  ( 13.5%)
+    branch 2    5->6           PTDF  0.1351  ( 13.5%)
+    branch 5    7->8           PTDF  0.1351  ( 13.5%)

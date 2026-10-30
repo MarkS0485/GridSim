@@ -1,0 +1,9 @@
+$ gridsim estimate case14 --synth --max-iter 2 --out results/err
+
+=== WLS state estimate: case14 ===
+  status: MaxIterations   iterations: 2   max |dx|: 8.42E-002
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+
+  -> results\err
+[exit 3]

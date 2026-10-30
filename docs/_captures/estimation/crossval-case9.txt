@@ -1,0 +1,5 @@
+$ gridsim crossval case9
+[crossval] solved 'case9' (converged, 4 iters) -> src\GridSim.Cli\bin\Release\net10.0\results\crossval-case9\solve-export.json
+[crossval] sidecar unavailable (python): crossval: pandapower not installed (pip install pandapower)
+           install pandapower to run the diff (pip install pandapower). The export is at src\GridSim.Cli\bin\Release\net10.0\results\crossval-case9\solve-export.json.
+[exit 77]

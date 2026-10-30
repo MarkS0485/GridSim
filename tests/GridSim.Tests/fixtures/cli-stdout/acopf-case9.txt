@@ -1,0 +1,5 @@
+ACOPF (DC dispatch + AC loss loop) - IEEE 9-bus (WSCC) (9 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+  converged in 5 iteration(s)  losses 11.615 MW  cost 16,331 GBP/h
+      gen bus 3         270.0 MW  @    50 GBP/MWh
+      gen bus 2          46.6 MW  @    50 GBP/MWh
+      gen bus 1          10.0 MW  @    50 GBP/MWh

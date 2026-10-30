@@ -1,0 +1,212 @@
+name: Publish packages
+
+# Packs GridSim.Core and pushes it to THIS repository's GitHub Packages NuGet feed.
+#
+# F25 (Ruling R1, 2026-10-04): GridSim.Core is the only NuGet package that ships. GridSim.Gda is not a
+# release artefact (GDA is a model the author uses, not a product; its project is marked IsPackable=false),
+# so it is neither packed nor pushed. The pack step refuses any other package.
+#
+# F13 signing: the package is signed with the code-signing certificate held in the repository secrets
+# SIGNING_CERT_PFX_BASE64 (the .pfx, base64-encoded) and SIGNING_CERT_PASSWORD, timestamped by the
+# repository variable SIGNING_TIMESTAMP_URL (default http://timestamp.digicert.com), then verified.
+# GR-359: without SIGNING_CERT_PFX_BASE64 the package is pushed UNSIGNED with a warning in the log and the run summary,
+# unless the repository variable GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false', which makes signing required (the run
+# fails). A certificate without its password fails the run. See the header of release.yml.
+#
+# No NuGet.org account and no manually-created secret are needed: every run is
+# handed a built-in GITHUB_TOKEN, and the `packages: write` permission below lets
+# it push to the feed. The feed URL is derived from the repo owner, so nothing is
+# hard-coded to a particular fork.
+#
+# Triggers:
+#   * Called by the Release workflow (release.yml) after a v* tag -> the verified version.
+#   * Publishing a GitHub Release by hand -> the release tag (tag `v1.95.112` publishes 1.95.112).
+#   * The "Run workflow" button -> the version typed in, or the source version if left empty.
+#
+# F02: the version lives in Directory.Build.props. Whatever the trigger, the version
+# asked for must EQUAL that source version, or the run fails: a package labelled
+# 1.95.112 must contain the assemblies of 1.95.112, never a relabelled other build.
+#
+# GR-378 / GR-446: gates. Called by release.yml, the package job runs only after the release's own gates (the full CI
+# matrix, its test run and the vulnerable-package gate) have passed, because release.yml makes this call need them.
+# Started any other way (a GitHub Release published by hand, or the "Run workflow" button) nothing upstream has run,
+# so the job "gate" below runs the same CI workflow (ci.yml: every test leg, the vulnerable-package gate and the
+# container build) on this commit first, and the package job needs it. No path packs a package untested.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Package version (must equal Directory.Build.props)'
+        required: true
+        type: string
+      sbom-sha256:
+        description: 'SHA-256 of the SBOM the package is built against (release.yml passes the CLI SBOM, which holds Core)'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      # F13: not required by the call itself; absent -> the package is pushed unsigned with a warning, or the signing step
+      # fails when GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false' (GR-359).
+      SIGNING_CERT_PFX_BASE64:
+        required: false
+      SIGNING_CERT_PASSWORD:
+        required: false
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Package version to publish (empty = the version in Directory.Build.props)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+  packages: write   # lets the built-in GITHUB_TOKEN push to GitHub Packages
+
+# Build telemetry off on every leg (Mark, 2026-10-20): Avalonia's opt-out switch. Directory.Build.targets also
+# replaces Avalonia.BuildServices' AvaloniaStats target with an empty one; AvaloniaTelemetryOptOutTests pins both.
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  # GR-378 / GR-446: the release-gate CI for the by-hand triggers. Inside a call from release.yml the event is the
+  # caller's (the tag push), so this job is skipped there: release.yml has already run ci.yml and its own gates.
+  gate:
+    name: CI matrix (package gate)
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Pack & push (GitHub Packages)
+    needs: gate
+    # Run after a passed gate, or when the gate was skipped because release.yml called this workflow (its gates passed
+    # first). A failed or cancelled gate stops the package. always() is needed so a skipped gate does not skip this job.
+    if: always() && (needs.gate.result == 'success' || (needs.gate.result == 'skipped' && github.event_name != 'release' && github.event_name != 'workflow_dispatch'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Release tag, called-workflow input or typed-in input -> steps.version, checked
+      # against the source version.
+      - name: Determine version
+        id: version
+        shell: pwsh
+        # Pass the untrusted tag/input through the environment (GitHub does NOT interpolate these into
+        # the script body), then validate - otherwise a tag like `v1.0.0'; <code>; '` would inject and
+        # run arbitrary commands with the packages:write token.
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $props = [xml](Get-Content Directory.Build.props -Raw)
+          $source = @($props.Project.PropertyGroup | ForEach-Object { $_.Version } | Where-Object { $_ })
+          if ($source.Count -ne 1) { Write-Error "Directory.Build.props must hold exactly one <Version>"; exit 1 }
+          $source = $source[0]
+          if ($env:GITHUB_EVENT_NAME -eq 'release') {
+            $v = $env:RELEASE_TAG -replace '^v', ''
+          } elseif ($env:INPUT_VERSION) {
+            $v = $env:INPUT_VERSION
+          } else {
+            $v = $source
+          }
+          if ($v -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { Write-Error "Invalid version '$v'"; exit 1 }
+          if ($v -ne $source) { Write-Error "Requested version $v does not match Directory.Build.props $source"; exit 1 }
+          "value=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Publishing GridSim version $v"
+
+      # No -p:Version override: the packages take the version from Directory.Build.props, which the
+      # step above has just proved equal to the requested one.
+      # The tag-driven release passes the SBOM hash (validated as 64 hex characters), so the packaged GridSim.Core
+      # attests the SBOM it was built against; a hand-started run without one packs a build that says "unset".
+      - name: Pack
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          SBOM_SHA256: ${{ inputs.sbom-sha256 }}
+        run: |
+          set -euo pipefail
+          sbom_arg=()
+          if [[ -n "${SBOM_SHA256:-}" ]]; then
+            [[ "$SBOM_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad SBOM hash '$SBOM_SHA256'"; exit 1; }
+            sbom_arg=(-p:GridSimSbomSha256="$SBOM_SHA256")
+          fi
+          dotnet pack src/GridSim.Core/GridSim.Core.csproj -c Release -o artifacts "${sbom_arg[@]}"
+          # F25: exactly one package, GridSim.Core at the verified version; anything else stops the run.
+          actual="$(cd artifacts && ls *.nupkg)"
+          if [[ "$actual" != "GridSim.Core.$VERSION.nupkg" ]]; then
+            echo "::error::expected only GridSim.Core.$VERSION.nupkg, found: $actual"; exit 1
+          fi
+
+      # F13: sign (author signature, SHA-256, RFC 3161 timestamp) and verify before anything is pushed.
+      - name: Sign the package
+        shell: bash
+        env:
+          SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+          TIMESTAMP_URL: ${{ vars.SIGNING_TIMESTAMP_URL || 'http://timestamp.digicert.com' }}
+          ALLOW_UNSIGNED: ${{ vars.GRIDSIM_ALLOW_UNSIGNED_RELEASE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_CERT_PFX_BASE64:-}" ]]; then
+            # GR-359: an unsigned package is announced (warning and run summary); it is refused when the variable says so.
+            if [[ "${ALLOW_UNSIGNED:-}" == "false" ]]; then
+              echo "::error::NuGet package signing is required: the repository secret SIGNING_CERT_PFX_BASE64 is not set and the repository variable GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false'."
+              exit 1
+            fi
+            echo "::warning::NuGet package signing SKIPPED: the repository secret SIGNING_CERT_PFX_BASE64 is not set, so the package is pushed UNSIGNED."
+            echo "NuGet package signing skipped: no SIGNING_CERT_PFX_BASE64 secret; the package is unsigned." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ -z "${SIGNING_CERT_PASSWORD:-}" ]]; then
+            echo "::error::SIGNING_CERT_PFX_BASE64 is set but SIGNING_CERT_PASSWORD is not: set both secrets, or neither for an unsigned package."
+            exit 1
+          fi
+          pfx="$RUNNER_TEMP/gridsim-signing.pfx"
+          trap 'rm -f "$pfx"' EXIT          # the decoded certificate never outlives this step
+          printf '%s' "$SIGNING_CERT_PFX_BASE64" | base64 -d > "$pfx"
+          # The certificate is self-signed (signing/README.md). Trust exactly the committed public certificate for the
+          # check: append it to this throwaway runner's NuGet code-signing root bundle (the SDK's trustedroots file on
+          # Linux), then verify with the signer pinned by its SHA-256 fingerprint, so no other certificate can pass.
+          cer_pem="$RUNNER_TEMP/gridsim-signing.pem"
+          openssl x509 -inform DER -in signing/gridsim-signing.cer -out "$cer_pem"
+          fp="$(openssl x509 -in "$cer_pem" -noout -fingerprint -sha256 | sed 's/.*=//; s/://g')"
+          thumb="$(openssl x509 -in "$cer_pem" -noout -fingerprint -sha1 | sed 's/.*=//; s/://g')"
+          [[ "$thumb" == "86DD43B731D2B8A5133972F7B7C91C0FDA8EB721" ]] \
+            || { echo "::error::signing/gridsim-signing.cer has thumbprint $thumb, not the pinned GridSim certificate"; exit 1; }
+          # `dotnet --list-sdks` prints "<version> [<sdk folder>]"; take the folder of the SDK this run uses.
+          sdk_ver="$(dotnet --version)"
+          sdk_root="$(dotnet --list-sdks | awk -v v="$sdk_ver" '$1 == v { sub(/^[^[]*\[/, ""); sub(/\]$/, ""); print; exit }')"
+          [[ -n "$sdk_root" ]] || { echo "::error::cannot locate the folder of SDK $sdk_ver"; exit 1; }
+          sdk_dir="$sdk_root/$sdk_ver"
+          bundle="$sdk_dir/trustedroots/codesignctl.pem"
+          [[ -f "$bundle" ]] || { echo "::error::NuGet code-signing root bundle not found at $bundle"; exit 1; }
+          cat "$cer_pem" >> "$bundle"
+          for p in artifacts/*.nupkg; do
+            dotnet nuget sign "$p" --certificate-path "$pfx" --certificate-password "$SIGNING_CERT_PASSWORD" \
+              --timestamper "$TIMESTAMP_URL" --overwrite
+            dotnet nuget verify --all "$p" --certificate-fingerprint "$fp"
+            echo "signed and verified (signer SHA-256 $fp): $p"
+          done
+
+      # dotnet nuget push doesn't expand wildcards, so enumerate and push each.
+      # --skip-duplicate makes re-running for an already-published version a no-op.
+      - name: Push to GitHub Packages
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $src = "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          $pkgs = Get-ChildItem -Path artifacts -Filter *.nupkg
+          if (-not $pkgs) { Write-Error "No .nupkg files found in artifacts/"; exit 1 }
+          foreach ($p in $pkgs) {
+            Write-Host "Pushing $($p.Name)"
+            dotnet nuget push $p.FullName --source $src --api-key $env:GH_TOKEN --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

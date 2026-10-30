@@ -1,0 +1,5 @@
+$ gridsim cpf case30
+CPF - IEEE 30-bus (30 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 2.359375  (base demand 189.2 MW -> 446.4 MW at the last converged point; nose bracketed to 0.001)
+  margin 135.94% above base load
+[exit 0]

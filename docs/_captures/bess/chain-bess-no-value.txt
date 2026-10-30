@@ -1,0 +1,3 @@
+$ gridsim chain case9 --steps 2 --bess
+error: --bess expects chemistry:bus:MW:MWh[:soc]
+[exit 2]

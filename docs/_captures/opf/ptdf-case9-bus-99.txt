@@ -1,0 +1,3 @@
+$ gridsim ptdf case9 --bus 99
+error: ptdf --bus 99: case 'IEEE 9-bus (WSCC)' has no bus 99.
+[exit 2]

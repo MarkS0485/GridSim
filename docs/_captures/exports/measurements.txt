@@ -1,0 +1,22 @@
+$ head -n 20 results/exports-docs/estimate/measurements.json
+{
+  "schema": "gridsim-measurements/1",
+  "case": "IEEE 14-bus",
+  "baseMva": 100,
+  "takenUtc": "2024-03-01T12:00:00Z",
+  "note": "synthetic seed=20260713 noise=1 coverage=vm:1/inj:1/flow:1",
+  "measurements": [
+    {
+      "kind": "VmPu",
+      "value": 1.0603366153490539,
+      "sigma": 0.004,
+      "bus": 1,
+      "from": 0,
+      "to": 0,
+      "end": "From",
+      "source": "synthetic",
+      "isBranch": false
+    },
+    {
+      "kind": "PInjMw",
+[exit 0]

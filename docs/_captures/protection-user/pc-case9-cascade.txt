@@ -1,0 +1,14 @@
+$ gridsim protection-check case9 --cascade --thermal 0.5
+Protection assessment  -  case9  (9 buses, converged=True)  [passive; solve unchanged]
+  operating elements: 1
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 49 | Thermal overload | branch 8-2 | 0.653 xRateA | 0.500 | 794.21s | branch 8-2 loaded to 65% of RateA (250 MVA); thermal replica trips in 794 s |
+  not evaluated on a steady snapshot: 81U (Underfrequency); 81O (Overfrequency); 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence)
+
+PROTECTION SIMULATION suggests 1 protection event(s) would occur. e.g. on branch 8-2, relay 49 (Thermal overload) would likely operate: branch 8-2 loaded to 65% of RateA (250 MVA); thermal replica trips in 794 s.
+
+Cascade propagation (1 trip(s)):
+  1. relay 49 (Thermal overload) opens branch 8-2 in 794.21s  ->  re-solve did NOT converge
+  stop: non-convergent after opening 8-2 - the network has split / collapsed (blackout).
+[exit 0]

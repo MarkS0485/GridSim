@@ -1,0 +1,5 @@
+{
+  "name": "Three-bus worked example",
+  "baseMva": 100,
+  "frequencyHz": 50
+}

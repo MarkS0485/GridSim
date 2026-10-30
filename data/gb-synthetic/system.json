@@ -1,0 +1,5 @@
+{
+  "name": "GB synthetic",
+  "baseMva": 100,
+  "frequencyHz": 50
+}

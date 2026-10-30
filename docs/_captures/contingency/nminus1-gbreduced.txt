@@ -1,0 +1,34 @@
+$ gridsim nminus1
+GridSim  -  N-1 branch screening: GB reduced (10-zone)
+==========================================================================
+Base case: secure (no violation before any outage).
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+L1-2 N-S Scotland               ISLANDED      islanded
+L2-3 B6 boundary                ISLANDED      islanded
+T1 GSP N Scotland (tx)          ISLANDED      islanded
+T2 GSP S Scotland (tx)          ISLANDED      islanded
+T3 GSP N England (tx)           ISLANDED      islanded
+T4 GSP Yorkshire (tx)           ISLANDED      islanded
+T5 GSP N Wales & Mersey (tx)    ISLANDED      islanded
+T6 GSP Midlands (tx)            ISLANDED      islanded
+T7 GSP East Anglia (tx)         ISLANDED      islanded
+T8 GSP London & SE (tx)         ISLANDED      islanded
+T9 GSP South (tx)               ISLANDED      islanded
+T10 GSP SW & S Wales (tx)       ISLANDED      islanded
+L3-4 N England-Yorks            secure           85%      68%  0.998  1.040
+L3-5 N England-N Wales          secure           85%      68%  0.998  1.040
+L4-6 Yorks-Midlands             secure           85%      68%  0.998  1.040
+L5-6 N Wales-Midlands           secure           85%      68%  0.998  1.040
+L4-7 Yorks-E Anglia             secure           85%      68%  0.998  1.040
+L6-7 Midlands-E Anglia          secure           85%      68%  0.998  1.040
+L6-8 Midlands-London            secure           85%      68%  0.998  1.040
+L7-8 E Anglia-London            secure           85%      68%  0.998  1.040
+L6-9 Midlands-South             secure           85%      68%  0.998  1.040
+L8-9 London-South               secure           85%      68%  0.998  1.040
+L9-10 South-SW                  secure           85%      68%  0.998  1.040
+L5-10 N Wales-SW                secure           85%      68%  0.998  1.040
+--------------------------------------------------------------------------
+24 outages screened  12 secure  0 with violations  12 islanded
+Verdict: NOT SECURE, 12 insecure outage(s) (exit 3).
+[exit 3]

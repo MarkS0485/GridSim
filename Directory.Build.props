@@ -1,0 +1,73 @@
+<Project>
+  <!-- v1 "pedantic" build: strict compiler + a sane analyzer set enforced as errors.
+       Nullable is already enable in every csproj. Rule severities (which CA rules
+       are noise for a numerical physics library vs genuine correctness) are tuned
+       in the repo-root .editorconfig. -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <!-- generated code (XAML .g.cs, obj) is excluded from analysis by default -->
+
+    <!-- Supply-chain assurance (CAF A3/A4): pin the NuGet restore graph with a lock file per project, so the
+         restored dependency set (and therefore the SBOM built from it) cannot drift silently. Generating the
+         lock files is automatic; CI can add the locked restore mode to refuse a restore that would change them. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+  <!-- CAF A4.b (secure software development and support): the release build injects the SHA-256 of the SBOM it
+       produced, so a running binary can attest which exact software bill of materials it was built against
+       (GridSim.Core.Diagnostics.SupplyChain.BuildProvenance reads it). A local/dev build sets nothing, so the
+       attribute is absent and BuildProvenance reports the SBOM hash as unset - which the compliance gate treats
+       as "not a release build". Injected by the release workflow with -p:GridSimSbomSha256=<hex>. -->
+  <ItemGroup Condition="'$(GridSimSbomSha256)' != ''">
+    <AssemblyMetadata Include="GridSimSbomSha256" Value="$(GridSimSbomSha256)" />
+  </ItemGroup>
+
+  <!-- The .NET SDK that BUILT the assemblies, stamped at build time. BuildProvenance folds it into the build identity
+       instead of the runtime the binary happens to run on, so a framework-dependent build (the web image, the NuGet
+       package) reports the same identity on every machine whatever its .NET patch runtime. -->
+  <ItemGroup Condition="'$(NETCoreSdkVersion)' != ''">
+    <AssemblyMetadata Include="GridSimBuildSdk" Value="$(NETCoreSdkVersion)" />
+  </ItemGroup>
+
+  <!-- ===================================================================================================
+       THE ONE VERSION NUMBER (F02).
+
+       Every project in the repository (Core, Gda, Gpu, Cli, Web, Wpf, the tests and the tools) takes its
+       version from the single <Version> below. No csproj may set its own <Version>: VersionContractTests
+       fails the build's test run if one does, so the CLI, the web app, the desktop app and the NuGet
+       packages can never disagree about which release they are.
+
+       Bump procedure (one file): change the <Version> below to 1.95.NNN and add the matching
+       "## [1.95.NNN]" heading to CHANGELOG.md in the same commit (VersionContractTests checks that the
+       heading exists).
+
+       What the SDK derives from it:
+         AssemblyVersion      1.95.NNN.0
+         FileVersion          1.95.NNN.0
+         InformationalVersion 1.95.NNN+<full git commit sha>   (the "+sha" part is added by the .NET SDK's
+                              built-in Source Link support when the build runs inside a git checkout; a
+                              build from a source tarball without .git simply has no "+sha" part, and a
+                              container build can pass it in with -p:SourceRevisionId=<sha>)
+       GridSim.Core.BuildInfo reads InformationalVersion at runtime; `gridsim` with its version flag, the web footer,
+       the web OpenAPI document and the desktop app's About box all show it.
+       =================================================================================================== -->
+  <PropertyGroup Label="Version">
+    <Version>2.0.195</Version>
+    <!-- Keep the "+<commit>" suffix on InformationalVersion (this is the SDK default; stated here so
+         nobody turns it off by accident, because the CLI version flag relies on it to name the exact commit). -->
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+    <Product>GridSim</Product>
+  </PropertyGroup>
+
+  <!-- On GitHub Actions, build in "continuous integration" mode: source paths in the PDBs are mapped to
+       the repository root instead of the runner's disk layout, so release binaries do not leak build
+       machine paths and two CI builds of the same commit produce the same output. It changes no code. -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>

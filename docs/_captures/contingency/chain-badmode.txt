@@ -1,0 +1,3 @@
+$ gridsim chain case14 --mode bogus
+error: --mode expected 'fixed', 'ramp' or 'daily' but got 'bogus'
+[exit 2]

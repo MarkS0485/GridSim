@@ -1,0 +1,24 @@
+$ gridsim dcopf gb-full --top 5
+DC-OPF - GB full (3539-bus, 5918-branch) (3539 buses)  [cheapest secure dispatch]
+  2 DC islands, each dispatched on its own (its own balance, its own reference bus):
+      island ref bus 194     3536 buses  demand   53,279.4 MW  generation   53,279.4 MW  feasible  (security LP Optimal)
+      island ref bus 6774       3 buses  demand        5.6 MW  generation        5.6 MW  feasible  (security LP Optimal)
+  3 rated line(s) cannot be brought within rating by any dispatch; left out of the security LP and still overloaded:
+      branch 2157  COPP C1-_COPP T1 132kV       rating 109.0 MW, any dispatch gives -164.4 .. -125.7 MW
+      branch 2527  ENW-ENW 132kV#23             rating 150.0 MW, any dispatch gives 168.8 .. 168.8 MW
+      branch 2528  ENW-ENW 132kV#24             rating 150.0 MW, any dispatch gives 168.8 .. 168.8 MW
+  secure for every rated line except the 3 listed above (no dispatch can relieve them)
+  demand 53,285 MW  generation 53,285 MW  total cost 312,021 GBP/h  (network-constrained redispatch applied)
+  dispatch (by output):
+      gen bus 222     2,199.0 MW  @     5 GBP/MWh
+      gen bus 225     1,644.0 MW  @    30 GBP/MWh
+      gen bus 144     1,376.6 MW  @    10 GBP/MWh
+      gen bus 175     1,320.0 MW  @     1 GBP/MWh
+      gen bus 35      1,230.0 MW  @    10 GBP/MWh
+  binding line limits:
+      branch 1056 ARAG11-LBGS10 132kV    108.8 MW / 109 MVA
+      branch 1130 WARG11-GCTB11 132kV   -105.4 MW / 105 MVA
+      branch 1262 BELS1A-BRAM1B 132kV    155.2 MW / 155 MVA
+      branch 1481 WHAG12-BOWM12 132kV    -48.0 MW / 48 MVA
+      branch 1489 BENW12-LAND11 132kV    140.6 MW / 141 MVA
+[exit 0]

@@ -1,0 +1,3 @@
+$ gridsim trip results/protection-user/bad-class --asset-dynamics
+error: cannot load case folder 'results/protection-user/bad-class': Unknown asset class 'prot-lfdd-stage9' referenced by a binding but not defined in asset-classes.json.
+[exit 1]

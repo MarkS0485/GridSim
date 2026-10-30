@@ -1,0 +1,7 @@
+{
+  "schema": "gridsim-rtu-pointmap/1",
+  "case": "case14",
+  "bindings": [
+    { "address": "IOA:1001", "kind": "VmPu", "bus": 4, "dataType": "S16" }
+  ]
+}

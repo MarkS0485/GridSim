@@ -1,0 +1,32 @@
+$ head -n 30 results/exports-docs/impedance-stability.json
+{
+  "schema": "gridsim-impedance-stability/1",
+  "meta": {
+    "Case": "IEEE 9-bus (WSCC)",
+    "Backend": "impedance-stability",
+    "GitCommit": "v1.95.294-104-g5fd850f6",
+    "TimestampUtc": "2026-10-29T18:21:03.7392753Z",
+    "ElapsedMs": 31.4133,
+    "Machine": "LAPTOP"
+  },
+  "provenance": "CuratedPlaceholder",
+  "model": {
+    "name": "IEEE 9-bus (WSCC)",
+    "baseMva": 100,
+    "busCount": 9
+  },
+  "inverterBus": 2,
+  "mode": "GridFollowingInverter",
+  "modelDetail": "PllOuter",
+  "criterion": "Siso",
+  "operatingPoint": {
+    "vd0Pu": 1.025,
+    "vq0Pu": 0,
+    "id0Pu": 0.8282520325203251,
+    "iq0Pu": -0.033809249585507274,
+    "pPu": 0.8489583333333331,
+    "qPu": 0.034654480825144954,
+    "vd0Clamped": false
+  },
+  "converterParams": {
+[exit 0]

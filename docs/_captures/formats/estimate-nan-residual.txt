@@ -1,0 +1,14 @@
+$ sed -n '417,428p' results/formats/estimate-thin/estimate-export.json
+      "measurement": {
+        "kind": "VmPu",
+        "value": 1.04,
+        "sigma": 0.004,
+        "bus": 1,
+        "source": "scada"
+      },
+      "predicted": 1,
+      "residual": 0.040000000000000036,
+      "normalizedResidual": "NaN",
+      "critical": false
+    },
+[exit 0]

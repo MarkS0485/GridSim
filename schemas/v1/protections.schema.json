@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "protections.schema.json",
+  "title": "GridSim v1 protections.json",
+  "description": "The placed protective devices of the case, one record each. Optional file; requires asset-classes.json. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/protection"
+  },
+  "$defs": {
+    "protection": {
+      "title": "Protection",
+      "description": "A placed protective device (v1 ProtectionInstanceDto). Absent: name empty, capacityMw 0, no target branch.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "class",
+        "monitorBus"
+      ],
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Device name. Absent: empty.",
+          "type": "string"
+        },
+        "class": {
+          "title": "Class",
+          "description": "Name of a class of kind protection in asset-classes.json.",
+          "type": "string"
+        },
+        "monitorBus": {
+          "title": "Monitored bus",
+          "description": "The bus the device watches (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "capacityMw": {
+          "title": "Capacity (MW)",
+          "description": "MW the device trips (infeed) or sheds (demand). Absent: 0.",
+          "type": "number",
+          "minimum": 0
+        },
+        "targetBranch": {
+          "title": "Target branch",
+          "description": "Branch a topology recloser acts on. Absent: none.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

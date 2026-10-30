@@ -1,0 +1,3 @@
+$ gridsim gda-replay --synth --case case9 --steps 4 --bess vrfb:20:10:5 --policy idle
+error: gda-replay storage: storage site 'VRFB 10MW/5MWh @20' is at unknown bus 20.
+[exit 2]

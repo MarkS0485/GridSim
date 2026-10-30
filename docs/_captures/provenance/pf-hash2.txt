@@ -1,0 +1,3 @@
+$ sha256sum results/prov-pf.json
+486001715c607a8fccc4e426e1765a8f40fbf8cf2906ee57dc75803f3470d1d3  results/prov-pf.json
+[exit 0]

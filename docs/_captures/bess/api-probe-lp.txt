@@ -1,0 +1,12 @@
+$ API probe (GridSim.Core, Release build): lp
+LFP 5 MW/10 MWh, SoC 0.9, price -10 x4, w=0: status=Optimal
+  net_MW  = 0.0000 0.0000 0.0000 -2.3438
+  e_MWh   = 9.9198 9.7579 9.5960 10.6417   (Emax 10.6417, now 10.0816)
+LFP 5 MW/10 MWh, SoC 0.9, price -10 x4, w=5: status=Optimal
+  net_MW  = -1.1600 0.0000 0.0000 0.0000
+  e_MWh   = 10.6417 10.6417 10.6417 10.6417   (Emax 10.6417, now 10.0816)
+NMC 5 MW/10 MWh, SoC 0.5, synthetic GB day, 48 x 0.5 h, w=0: status=Optimal objective=GBP 1193.44
+  price min 25.46 max 129.12; charge steps 11, discharge steps 8, end energy 5.5134 MWh (start 5.5134)
+  GbDay(0)=45.00 GbDay(8)=79.12 GbDay(13)=25.46 GbDay(18)=129.12
+  net_MW  = -5.00 -5.00 -0.22 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 0.00 4.31 5.00 5.00 5.00 0.00 0.00 0.00 0.00 0.00 0.00 -5.00 -5.00 -5.00 -5.00 -0.45 -0.00 0.00 0.00 0.00 0.00 0.00 5.00 5.00 5.00 4.31 0.00 0.00 0.00 0.00 0.00 0.00 -0.22 -5.00 -5.00
+[exit 0]

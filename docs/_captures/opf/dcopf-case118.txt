@@ -1,0 +1,17 @@
+$ gridsim dcopf case118
+DC-OPF - IEEE 118-bus (118 buses)  [cheapest secure dispatch]
+  demand 4,242 MW  generation 4,242 MW  total cost 212,100 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 10        550.0 MW  @    50 GBP/MWh
+      gen bus 26        414.0 MW  @    50 GBP/MWh
+      gen bus 25        320.0 MW  @    50 GBP/MWh
+      gen bus 49        304.0 MW  @    50 GBP/MWh
+      gen bus 59        255.0 MW  @    50 GBP/MWh
+      gen bus 61        240.0 MW  @    50 GBP/MWh
+      gen bus 12        185.0 MW  @    50 GBP/MWh
+      gen bus 54        148.0 MW  @    50 GBP/MWh
+      gen bus 46        119.0 MW  @    50 GBP/MWh
+      gen bus 31        107.0 MW  @    50 GBP/MWh
+      gen bus 1         100.0 MW  @    50 GBP/MWh
+      gen bus 4         100.0 MW  @    50 GBP/MWh
+[exit 0]

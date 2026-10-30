@@ -1,0 +1,9 @@
+$ gridsim gda-replay --synth --case gb-full --start 2024-01-01 --steps 6 --export-every 3 --out results/gda-replay-gbfull
+
+=== Historical state estimate: gb-full over synthetic-gb-full ===
+  reconstructed 6 timestamps  (2024-01-01T00:00:00.0000000Z .. 2024-01-01T02:30:00.0000000Z)
+  non-converged: 0
+  system loss over the series: 199.9 .. 257.9 MW
+
+  -> results\gda-replay-gbfull
+[exit 0]

@@ -1,0 +1,14 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "soilZone",
+  "title": "Soil zone (asset overlay)",
+  "description": "Phase 5a asset overlay kind. A zone of uniform soil resistivity, pointed at by earth paths. Carried beside the model, never used by the solver.",
+  "params": {
+    "resistivityOhmM": { "type": "number", "unit": "ohm.m", "min": 0, "required": true, "description": "Soil resistivity, ohm metres.", "codeDefaults": [] },
+    "depthM": { "type": "number", "unit": "m", "min": 0, "required": false, "description": "Depth of the upper soil layer, metres (absent = uniform soil).", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {},
+    "parentKinds": []
+  }
+}

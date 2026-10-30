@@ -1,0 +1,11 @@
+$ gridsim estimate case118 --synth
+
+=== WLS state estimate: case118 ===
+  status: Converged   iterations: 6   max |dx|: 2.40E-011
+  measurements: 1098   states: 235   redundancy (dof): 863
+  observability: observable (rank 235/235)
+  consistency: J = 877.80 vs chi2(95%) = 932.45 -> PASS
+  vs synthetic truth: max |dVm| = 1.619E-003 pu   max |dVa| = 1.134E-001 deg
+
+  -> results\estimate-case118
+[exit 0]

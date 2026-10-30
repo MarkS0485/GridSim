@@ -1,0 +1,4 @@
+$ python bridge_probe.py '{"action":"query","op":"inertia","at":"2026-09-01T11:00:00Z","id":"q1"}' 1
+info      {"message": "GridSim-Bridge connected", "cases": ["gb-full", "gb-spine", "zone-enwl", "zone-nged", "zone-npg", "zone-spen", "zone-ssen", "zone-ukpn"]}
+result    {"op": "inertia", "id": "q1", "at": "2026-09-01T11:00:00Z", "payload": {"verdict": "NO_DATA", "scalars": {}, "violations": []}}
+[exit 0]

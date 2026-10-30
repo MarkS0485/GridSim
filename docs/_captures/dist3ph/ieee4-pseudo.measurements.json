@@ -1,0 +1,102 @@
+{
+ "schema": "gridsim-dist3ph-measurements/1",
+ "description": "SYNTHETIC: the nine current phasors and the bus 4 voltage magnitudes of the bundled set, plus nominal-voltage pseudo-measurements (1.0 pu, sigma 0.05) for the unmetered buses 2 and 3.",
+ "voltageMagnitudes": [
+  {
+   "bus": 4,
+   "phase": "a",
+   "valuePu": 0.905567,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 4,
+   "phase": "b",
+   "valuePu": 0.803496,
+   "sigmaPu": 0.001
+  },
+  {
+   "bus": 4,
+   "phase": "c",
+   "valuePu": 0.763044,
+   "sigmaPu": 0.001
+  }
+ ],
+ "currents": [
+  {
+   "from": 1,
+   "to": 2,
+   "phase": "a",
+   "realPu": 0.670785,
+   "imagPu": -0.485777,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 1,
+   "to": 2,
+   "phase": "b",
+   "realPu": -1.105339,
+   "imagPu": -0.571979,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 1,
+   "to": 2,
+   "phase": "c",
+   "realPu": 0.152737,
+   "imagPu": 1.63104,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 2,
+   "to": 3,
+   "phase": "a",
+   "realPu": 0.670785,
+   "imagPu": -0.485777,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 2,
+   "to": 3,
+   "phase": "b",
+   "realPu": -1.105339,
+   "imagPu": -0.571979,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 2,
+   "to": 3,
+   "phase": "c",
+   "realPu": 0.152737,
+   "imagPu": 1.63104,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 3,
+   "to": 4,
+   "phase": "a",
+   "realPu": 0.670785,
+   "imagPu": -0.485777,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 3,
+   "to": 4,
+   "phase": "b",
+   "realPu": -1.105339,
+   "imagPu": -0.571979,
+   "sigmaPu": 0.001
+  },
+  {
+   "from": 3,
+   "to": 4,
+   "phase": "c",
+   "realPu": 0.152737,
+   "imagPu": 1.63104,
+   "sigmaPu": 0.001
+  }
+ ],
+ "pseudoVoltage": {
+  "valuePu": 1.0,
+  "sigmaPu": 0.05
+ }
+}

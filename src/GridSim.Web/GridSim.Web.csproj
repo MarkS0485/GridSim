@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- GridSim.Web: a browser clone of the WPF dashboard + a programmatic API.
+       Blazor Server (interactive) front-end plus a minimal-API REST surface and a
+       raw-WebSocket streaming endpoint, all reusing GridSim.Core in-process.
+       Cross-platform (net10.0, no Windows deps) so it builds and runs on CI/Linux. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.Web</RootNamespace>
+    <AssemblyName>GridSim.Web</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Core\GridSim.Core.csproj" />
+  </ItemGroup>
+
+  <!-- F11: the test project hosts this app in memory with WebApplicationFactory<Program>; the top-level
+       Program class is internal, so the tests are allowed to see it. Nothing else changes. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GridSim.Tests" />
+  </ItemGroup>
+
+  <!-- Ship the same bundled models the WPF app carries, so the web host can load them
+       without a separate data step (mirrors GridSim.Wpf.csproj). -->
+  <ItemGroup>
+    <Content Include="..\..\data\uk\**\*.json" Link="data\uk\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\gb-synthetic\**\*.json" Link="data\gb-synthetic\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\gb-full\**\*.json" Link="data\gb-full\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\matpower\**\*.m" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- N229 (LF5, October 2026): the shipped-content manifest; a network is bundled only when its files match it. -->
+    <Content Include="..\..\data\bundled.sha256" Link="data\bundled.sha256" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The licences and provenance READMEs of the bundled data this app ships (MATPOWER, PyPSA-GB, the GB cases) travel
+       with it; THIRD-PARTY-NOTICES.md lists every source. One item per folder root, so each file keeps its own path. -->
+  <ItemGroup>
+    <Content Include="..\..\data\matpower\**\LICENSE*.txt;..\..\data\matpower\**\README.md" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\data\gb-full\README.md" Link="data\gb-full\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\data\gb-synthetic\README.md" Link="data\gb-synthetic\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- F07: the licence and the third-party notices ship with every build, publish and container image. -->
+  <ItemGroup>
+    <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The grid control suite: a WPF (Windows-only) dashboard that renders the GB
+       network as a London-Underground-style schematic with live power flow.
+       It is part of GridSim.slnx: EnableWindowsTargeting (below) lets it compile on
+       the Linux CI runners, and the windows-latest CI leg builds and tests it natively.
+       It runs on Windows only. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <!-- Allow `dotnet build/restore` of this Windows-only WPF app on non-Windows
+         hosts (CI, Linux devs) - it compiles there, it just can't run. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RootNamespace>GridSim.Wpf</RootNamespace>
+    <AssemblyName>GridSim.Wpf</AssemblyName>
+    <ApplicationIcon />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Core\GridSim.Core.csproj" />
+    <!-- UI programme Phase 0.2: the platform-neutral host, model catalogue, settings and geography this window drives. -->
+    <ProjectReference Include="..\GridSim.Ui\GridSim.Ui.csproj" />
+  </ItemGroup>
+
+  <!-- Ship the editable GB model + the synthetic at-scale case next to the app. -->
+  <ItemGroup>
+    <Content Include="..\..\data\uk\**\*.json" Link="data\uk\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\gb-synthetic\**\*.json" Link="data\gb-synthetic\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\gb-full\**\*.json" Link="data\gb-full\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\matpower\**\*.m" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- N229 (LF5, October 2026): the shipped-content manifest; a network is bundled only when its files match it. -->
+    <Content Include="..\..\data\bundled.sha256" Link="data\bundled.sha256" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The licences and provenance READMEs of the bundled data this app ships (MATPOWER, PyPSA-GB, the GB cases) travel
+       with it; THIRD-PARTY-NOTICES.md lists every source. One item per folder root, so each file keeps its own path. -->
+  <ItemGroup>
+    <Content Include="..\..\data\matpower\**\LICENSE*.txt;..\..\data\matpower\**\README.md" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\data\gb-full\README.md" Link="data\gb-full\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\data\gb-synthetic\README.md" Link="data\gb-synthetic\README.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- F07: the licence and the third-party notices ship with every build and publish. -->
+  <ItemGroup>
+    <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+</Project>

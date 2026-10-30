@@ -1,0 +1,12 @@
+<Project>
+
+  <!-- Build telemetry is switched off for every project (Mark, 2026-10-20: "opt out everywhere").
+       Avalonia.BuildServices, which the Avalonia packages bring in, defines a target named AvaloniaStats that runs
+       before CoreCompile and sends anonymous build statistics. This file is imported after the NuGet package targets,
+       and in MSBuild the last definition of a target wins, so the empty target below replaces it: no build of this
+       repository, on any machine or CI leg, runs the statistics task, whatever the environment says. The CI
+       workflows and the contributor notes also set AVALONIA_TELEMETRY_OPTOUT=1, Avalonia's own opt-out switch, so the
+       intent is visible where builds are configured. AvaloniaTelemetryOptOutTests pins both. -->
+  <Target Name="AvaloniaStats" />
+
+</Project>

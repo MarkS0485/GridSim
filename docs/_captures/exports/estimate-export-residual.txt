@@ -1,0 +1,16 @@
+$ sed -n '1569,1582p' results/exports-docs/estimate/estimate-export.json
+  "residuals": [
+    {
+      "measurement": {
+        "kind": "VmPu",
+        "value": 1.0603366153490539,
+        "sigma": 0.004,
+        "bus": 1,
+        "source": "synthetic"
+      },
+      "predicted": 1.0600177496207248,
+      "residual": 0.00031886572832906523,
+      "normalizedResidual": 0.08517669708450257,
+      "critical": false
+    },
+[exit 0]

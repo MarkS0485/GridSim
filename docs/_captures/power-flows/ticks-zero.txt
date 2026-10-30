@@ -1,0 +1,3 @@
+$ gridsim case14 --ticks 0
+error: --ticks expected a positive integer (leave --ticks out to run interactively) but got '0'
+[exit 2]

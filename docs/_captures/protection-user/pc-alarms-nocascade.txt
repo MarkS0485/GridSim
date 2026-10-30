@@ -1,0 +1,3 @@
+$ gridsim protection-check case30 --alarms docs/_captures/protection-user/inputs/soe-agree.csv
+error: --alarms cross-references the predicted cascade; add --cascade.
+[exit 2]

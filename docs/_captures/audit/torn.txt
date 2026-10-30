@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26-torn.log
+TAMPERED results/ch26-torn.log: entry 1: the last line has no terminating newline: the file was cut off part-way through this entry, or a write was interrupted (1 entries verified before it)
+[exit 3]

@@ -1,0 +1,3 @@
+$ head -c 420 results/exports-docs/classical.json
+{"schema":"gridsim-classical-export/1","label":"WSCC-9","f0":50,"stepSeconds":0.001,"durationSeconds":5,"bumpMachine":2,"bumpRad":0.1,"machines":[{"bus":1,"h":58.50900000000001,"pm":0.7164102147448185,"eq":1.0465252938930831,"delta0":0.016170595145975637},{"bus":2,"h":12.288000000000002,"pm":1.6300000000000003,"eq":1.0338230694271975,"delta0":0.2580929329264051},{"bus":3,"h":3.8528,"pm":0.85,"eq":1.0168004124084893,"
+[exit 0]

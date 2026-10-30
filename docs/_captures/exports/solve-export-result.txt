@@ -1,0 +1,25 @@
+$ sed -n '1674,1696p' results/exports-docs/solve-export.json
+  "result": {
+    "totalLossMw": 4.6410214744828835,
+    "totalLossMvar": -92.16012521906433,
+    "buses": [
+      {
+        "id": 1,
+        "vm": 1.04,
+        "vaDeg": 0,
+        "pInjMw": 71.64102147448251,
+        "qInjMvar": 27.045923533493067
+      },
+      {
+        "id": 2,
+        "vm": 1.025,
+        "vaDeg": 9.280005481642787,
+        "pInjMw": 162.99999999999997,
+        "qInjMvar": 6.653660318427831
+      },
+      {
+        "id": 3,
+        "vm": 1.025,
+        "vaDeg": 4.664751333136755,
+        "pInjMw": 84.99999999999999,
+[exit 0]

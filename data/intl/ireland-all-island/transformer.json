@@ -1,0 +1,52 @@
+[
+  {
+    "name": "TX15941 6054-6055",
+    "from": 12,
+    "to": 13,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15942 6079-6080",
+    "from": 32,
+    "to": 33,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15943 6085-6086",
+    "from": 37,
+    "to": 38,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX15944 6090-6091",
+    "from": 42,
+    "to": 43,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  },
+  {
+    "name": "TX16082 7033-7034",
+    "from": 51,
+    "to": 52,
+    "rPu": 0.0004,
+    "xPu": 0.006,
+    "tapRatio": 1.0,
+    "phaseShiftDeg": 0.0,
+    "ratingMva": 1000.0
+  }
+]

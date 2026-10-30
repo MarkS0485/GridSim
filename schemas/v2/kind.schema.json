@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "kind.schema.json",
+  "title": "GridSim v2 kind spec (gridsim-kind/2)",
+  "description": "The per-kind parameter contract, one file per kind under schemas/v2/kinds/<kind>.kind.json. Unknown members are refused everywhere. Rules this subset cannot express (unit required for number and integer, values only for enum, min not above max, the file name matching the kind, codeDefaults values matching the parameter type) are enforced in code by KindSpecRegistry. The optional overlay block (Phase 5a) marks an asset overlay kind; those kinds live in schemas/v2/kinds/overlay and are loaded apart from the template kinds, so a library template can never be of an overlay kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "kind", "title", "description", "params"],
+  "properties": {
+    "schema": { "const": "gridsim-kind/2" },
+    "kind": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+    "title": { "type": "string", "pattern": "[^ ]" },
+    "description": { "type": "string" },
+    "params": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/paramSpec" }
+    },
+    "overlay": { "$ref": "#/$defs/overlay" }
+  },
+  "$defs": {
+    "overlay": {
+      "title": "Asset overlay block",
+      "description": "Phase 5a (2026-10-20): present on an asset overlay kind (schemas/v2/kinds/overlay/<kind>.kind.json), which a gridsim-assets/2 record may name; every kind in that folder must have it, so a new component kind is data only. refs: the roles a record of this kind may point through, each to one target type. parentKinds: the kinds a record of this kind may sit under (empty = top level only). parentRequired: true when the record must have a parent. Rules this subset cannot express (role names lowerCamelCase, recordKinds only and always on a record target, every named kind declared in the overlay folder, parentRequired only with parentKinds) are enforced in code by OverlayKindSet (GridSim.Core.IO.Json.Overlay).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refs", "parentKinds"],
+      "properties": {
+        "refs": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/overlayRef" }
+        },
+        "parentKinds": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" }
+        },
+        "parentRequired": { "type": "boolean" }
+      }
+    },
+    "overlayRef": {
+      "title": "One reference role of an overlay kind",
+      "description": "target: what the role points at: a bus (by id), a line, transformer, generator or demand (by name, as the case's network files spell it), or another overlay record (by id). recordKinds: for a record target, the overlay kinds the record pointed at may have.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "required", "description"],
+      "properties": {
+        "target": { "enum": ["bus", "line", "transformer", "generator", "demand", "record"] },
+        "required": { "type": "boolean" },
+        "recordKinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" }
+        },
+        "description": { "type": "string" }
+      }
+    },
+    "paramSpec": {
+      "title": "One parameter of a kind",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "required", "description"],
+      "properties": {
+        "type": { "enum": ["number", "integer", "enum", "string", "boolean"] },
+        "unit": { "$ref": "common.schema.json#/$defs/unit" },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "values": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "required": { "type": "boolean" },
+        "markGated": { "type": "boolean" },
+        "description": { "type": "string" },
+        "codeDefaults": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/codeDefault" }
+        }
+      }
+    },
+    "codeDefault": {
+      "title": "A value the C# code uses today",
+      "description": "Points at the C# constant a consumer uses today. Where the code disagrees with itself there is one entry per consumer; values are never merged. The ref string is opaque here.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["consumer", "ref", "value"],
+      "properties": {
+        "consumer": { "type": "string" },
+        "ref": { "type": "string" },
+        "value": { "type": ["number", "string", "boolean"] }
+      }
+    }
+  }
+}

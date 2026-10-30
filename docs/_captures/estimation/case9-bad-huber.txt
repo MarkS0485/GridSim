@@ -1,0 +1,10 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --method huber --out results/case9-bad-huber
+
+=== Huber M-estimator state estimate: case9 ===
+  status: Converged   iterations: 181   max |dx|: 3.60E-009
+  measurements: 24   states: 17   redundancy (dof): 7
+  observability: observable (rank 17/17)
+  consistency: J = 487.17 vs chi2(95%) = 14.05 -> FAIL
+
+  -> results\case9-bad-huber
+[exit 0]

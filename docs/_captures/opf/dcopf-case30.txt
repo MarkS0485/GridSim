@@ -1,0 +1,8 @@
+$ gridsim dcopf case30
+DC-OPF - IEEE 30-bus (30 buses)  [cheapest secure dispatch]
+  demand 189 MW  generation 189 MW  total cost 9,460 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 1          80.0 MW  @    50 GBP/MWh
+      gen bus 2          69.2 MW  @    50 GBP/MWh
+      gen bus 13         40.0 MW  @    50 GBP/MWh
+[exit 0]

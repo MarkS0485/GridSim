@@ -1,0 +1,9 @@
+$ gridsim iec60909 case9 --bus 7 --type slg
+IEC 60909 - IEEE 9-bus (WSCC), bus 7, single-line-to-earth, Maximum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 0 kA  (0 pu)
+  ip    = 0 kA  (kappa 2, R/X 0.059150094882557964, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 0 kA    Ik = 0 kA  (unbalanced fault: IEC 60909-0 takes no decay, Ik = Ib = Ik'')
+  Ith   = 0 kA  (m 0.048010143260821356)    idc(tb) = 0 kA
+  Zth   = 0.006597803772079404 + j0.11154341823422752 pu
+iec60909: the model carries no transformer winding connections at all (MATPOWER and JSON v1 cannot hold them), so it has no earthed neutral and the earth-fault duty above reflects missing data. Exit 3.
+[exit 3]

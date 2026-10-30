@@ -1,0 +1,3 @@
+$ gridsim emt case24 --duration 0.02 --dt-us 50 --rule be --probe v:1 --no-cda
+emt case24: 400 steps @ 50us, 1 factorization(s), peak |probe| 1, 7 ms -> results\emt-out
+[exit 0]

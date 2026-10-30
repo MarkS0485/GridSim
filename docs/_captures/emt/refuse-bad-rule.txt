@@ -1,0 +1,3 @@
+$ gridsim emt case14 --rule foo
+error: --rule expected trap or be but got 'foo'
+[exit 2]

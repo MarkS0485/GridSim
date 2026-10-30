@@ -1,0 +1,1572 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "harmonicSpectrum",
+  "title": "Harmonic current spectrum",
+  "description": "Harmonic current source spectrum: magnitude (percent of fundamental) and phase per order 2..50. The library spectra are assumed-typical CuratedPlaceholder [VERIFY]; the 6- and 12-pulse spectra are computed 100/h. The -g5 types are ENA EREC G5 Issue 5 (docs/reference S139) Table B.3 emission assumptions, pp.99-100 (S3 G02).",
+  "params": {
+    "sourceType": {
+      "type": "enum",
+      "values": [
+        "6-pulse",
+        "12-pulse",
+        "pv-inverter",
+        "ev-charger",
+        "heat-pump-inverter",
+        "arc-furnace",
+        "saturated-transformer",
+        "6-pulse-g5",
+        "12-pulse-g5",
+        "afe-g5",
+        "custom"
+      ],
+      "required": false,
+      "description": "Library spectrum the source starts from (HarmonicSourceLibrary.ByType), or custom.",
+      "codeDefaults": []
+    },
+    "fundamentalCurrentPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Fundamental (reference) current of the source, pu on the system base.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI harmonic study synthetic 6-pulse source without --spectra (CliDefaults.DefaultHarmonicSourcePu)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.DefaultHarmonicSourcePu",
+          "value": 0.5
+        }
+      ]
+    },
+    "h2MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-2 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=2].MagnitudePercent",
+          "value": 5.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=2].MagnitudePercent",
+          "value": 15.0
+        }
+      ]
+    },
+    "h2PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-2 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=2].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=2].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h3MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-3 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=3].MagnitudePercent",
+          "value": 2.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=3].MagnitudePercent",
+          "value": 12.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=3].MagnitudePercent",
+          "value": 12.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=3].MagnitudePercent",
+          "value": 8.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=3].MagnitudePercent",
+          "value": 8.0
+        }
+      ]
+    },
+    "h3PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-3 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=3].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=3].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=3].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=3].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=3].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h4MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-4 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=4].MagnitudePercent",
+          "value": 3.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=4].MagnitudePercent",
+          "value": 4.0
+        }
+      ]
+    },
+    "h4PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-4 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=4].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=4].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h5MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-5 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=5].MagnitudePercent",
+          "value": 20.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=5].MagnitudePercent",
+          "value": 4.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=5].MagnitudePercent",
+          "value": 8.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=5].MagnitudePercent",
+          "value": 9.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=5].MagnitudePercent",
+          "value": 6.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=5].MagnitudePercent",
+          "value": 3.0
+        }
+      ]
+    },
+    "h5PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-5 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=5].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=5].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=5].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=5].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=5].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.SaturatedTransformer (saturated-transformer)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SaturatedTransformer[Order=5].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h6MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-6 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h6PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-6 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h7MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-7 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=7].MagnitudePercent",
+          "value": 14.285714285714286
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=7].MagnitudePercent",
+          "value": 3.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=7].MagnitudePercent",
+          "value": 5.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=7].MagnitudePercent",
+          "value": 6.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=7].MagnitudePercent",
+          "value": 4.0
+        }
+      ]
+    },
+    "h7PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-7 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=7].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=7].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=7].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=7].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.ArcFurnace (arc-furnace)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.ArcFurnace[Order=7].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h8MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-8 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h8PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-8 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h9MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-9 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=9].MagnitudePercent",
+          "value": 3.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=9].MagnitudePercent",
+          "value": 4.0
+        }
+      ]
+    },
+    "h9PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-9 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=9].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=9].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h10MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-10 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h10PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-10 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h11MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-11 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=11].MagnitudePercent",
+          "value": 9.090909090909092
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=11].MagnitudePercent",
+          "value": 9.090909090909092
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=11].MagnitudePercent",
+          "value": 2.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=11].MagnitudePercent",
+          "value": 2.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=11].MagnitudePercent",
+          "value": 3.0
+        }
+      ]
+    },
+    "h11PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-11 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=11].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=11].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=11].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.EvCharger (ev-charger)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.EvCharger[Order=11].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=11].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h12MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-12 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h12PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-12 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h13MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-13 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=13].MagnitudePercent",
+          "value": 7.6923076923076925
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=13].MagnitudePercent",
+          "value": 7.6923076923076925
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=13].MagnitudePercent",
+          "value": 1.5
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=13].MagnitudePercent",
+          "value": 2.0
+        }
+      ]
+    },
+    "h13PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-13 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=13].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=13].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.PvInverter (pv-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.PvInverter[Order=13].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.HeatPumpInverter (heat-pump-inverter)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.HeatPumpInverter[Order=13].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h14MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-14 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h14PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-14 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h15MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-15 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h15PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-15 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h16MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-16 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h16PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-16 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h17MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-17 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=17].MagnitudePercent",
+          "value": 5.882352941176471
+        }
+      ]
+    },
+    "h17PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-17 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=17].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h18MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-18 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h18PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-18 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h19MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-19 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=19].MagnitudePercent",
+          "value": 5.2631578947368425
+        }
+      ]
+    },
+    "h19PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-19 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=19].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h20MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-20 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h20PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-20 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h21MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-21 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h21PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-21 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h22MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-22 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h22PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-22 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h23MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-23 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=23].MagnitudePercent",
+          "value": 4.3478260869565215
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=23].MagnitudePercent",
+          "value": 4.3478260869565215
+        }
+      ]
+    },
+    "h23PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-23 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=23].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=23].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h24MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-24 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h24PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-24 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h25MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-25 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=25].MagnitudePercent",
+          "value": 4.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=25].MagnitudePercent",
+          "value": 4.0
+        }
+      ]
+    },
+    "h25PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-25 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.SixPulse (6-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.SixPulse[Order=25].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=25].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h26MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-26 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h26PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-26 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h27MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-27 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h27PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-27 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h28MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-28 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h28PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-28 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h29MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-29 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h29PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-29 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h30MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-30 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h30PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-30 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h31MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-31 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h31PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-31 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h32MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-32 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h32PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-32 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h33MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-33 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h33PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-33 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h34MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-34 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h34PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-34 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h35MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-35 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=35].MagnitudePercent",
+          "value": 2.857142857142857
+        }
+      ]
+    },
+    "h35PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-35 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=35].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h36MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-36 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h36PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-36 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h37MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-37 current magnitude, percent of the fundamental.",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=37].MagnitudePercent",
+          "value": 2.7027027027027026
+        }
+      ]
+    },
+    "h37PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-37 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicSourceLibrary.TwelvePulse (12-pulse)",
+          "ref": "member:GridSim.Core:GridSim.Core.Harmonics.HarmonicSourceLibrary.TwelvePulse[Order=37].PhaseDeg",
+          "value": 0.0
+        },
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h38MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-38 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h38PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-38 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h39MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-39 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h39PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-39 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h40MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-40 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h40PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-40 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h41MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-41 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h41PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-41 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h42MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-42 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h42PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-42 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h43MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-43 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h43PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-43 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h44MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-44 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h44PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-44 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h45MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-45 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h45PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-45 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h46MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-46 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h46PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-46 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h47MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-47 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h47PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-47 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h48MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-48 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h48PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-48 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h49MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-49 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h49PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-49 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    },
+    "h50MagnitudePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Order-50 current magnitude, percent of the fundamental.",
+      "codeDefaults": []
+    },
+    "h50PhaseDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": -360,
+      "max": 360,
+      "required": false,
+      "description": "Order-50 current phase (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "HarmonicComponent record default (phase absent => 0 deg)",
+          "ref": "param:GridSim.Core:GridSim.Core.Harmonics.HarmonicComponent:.ctor:PhaseDeg",
+          "value": 0.0
+        }
+      ]
+    }
+  }
+}

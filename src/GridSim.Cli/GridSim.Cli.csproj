@@ -1,0 +1,101 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.Cli</RootNamespace>
+    <!-- F03: the command is called `gridsim` everywhere in the docs, so the binary is called that too
+         (gridsim.exe on Windows, gridsim on Linux and macOS, gridsim.dll for `dotnet gridsim.dll`).
+         Chosen over a `dotnet tool` package because the release ships self-contained single-file
+         binaries (F04) that need no .NET SDK on the target machine; a dotnet tool would need the SDK
+         and could not carry the bundled data/ folder next to the executable. The project, folder and
+         namespace stay GridSim.Cli; only the output file name changes. -->
+    <AssemblyName>gridsim</AssemblyName>
+    <!-- Throughput-oriented GC for the compute loops: server GC (per-core heaps,
+         collection off the working thread) with background concurrent collection.
+         Hot loops additionally drop to SustainedLowLatency via GcScope. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <TieredPGO>true</TieredPGO>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Core\GridSim.Core.csproj" />
+    <ProjectReference Include="..\GridSim.Gda\GridSim.Gda.csproj" />
+    <ProjectReference Include="..\GridSim.Gpu\GridSim.Gpu.csproj" />
+  </ItemGroup>
+
+  <!-- Stamp the git commit + build config into the assembly so RunInfo can report the exact
+       code version at runtime (the server has no git checkout). Best-effort: "unknown" if git
+       is unavailable. Runs before compile so the AssemblyMetadata attributes are generated. -->
+  <Target Name="StampGitCommit" BeforeTargets="CoreGenerateAssemblyInfo;GetAssemblyAttributes">
+    <Exec Command="git describe --always --dirty --abbrev=8"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitDescribe" />
+      <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />
+    </Exec>
+    <PropertyGroup>
+      <GitCommitValue Condition="'$(GitExitCode)' == '0'">$(GitDescribe)</GitCommitValue>
+      <!-- No git (for example a container build with no .git folder): use the commit handed in with
+           -p:SourceRevisionId=<sha> (the same value the SDK puts in InformationalVersion), shortened to
+           8 characters to match the git describe form; "unknown" only when neither is available. -->
+      <GitCommitValue Condition="'$(GitExitCode)' != '0' And '$(SourceRevisionId)' != ''">$(SourceRevisionId.Substring(0, $([System.Math]::Min(8, $(SourceRevisionId.Length)))))</GitCommitValue>
+      <GitCommitValue Condition="'$(GitExitCode)' != '0' And '$(SourceRevisionId)' == ''">unknown</GitCommitValue>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyMetadata Include="GitCommit" Value="$(GitCommitValue)" />
+      <AssemblyMetadata Include="BuildConfig" Value="$(Configuration)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- F09: the CLI reference (user manual ch. 19) is compiled into the binary, so the per-verb help (the help flag
+       after a verb, or `gridsim help <verb>`) prints that verb's section of the manual itself: one copy of every flag,
+       default and exit code, which the help cannot drift from (VerbHelp.cs). The build fails if the chapter is missing. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\docs\manual\0019 CLI reference.md" LogicalName="GridSim.Cli.19-cli-reference.md" Link="docs\0019 CLI reference.md" />
+  </ItemGroup>
+
+  <!-- Ship the editable case data + sample fixtures next to the app. -->
+  <ItemGroup>
+    <Content Include="..\..\data\**\*.json" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\**\*.csv" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\matpower\**\*.m" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- N229 (LF5, October 2026): the shipped-content manifest; a network is bundled only when its files match it. -->
+    <Content Include="..\..\data\bundled.sha256" Link="data\bundled.sha256" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The licences and attribution files of the bundled third-party data travel with the data, beside the binary
+       (THIRD-PARTY-NOTICES.md lists every source): the MATPOWER and PyPSA-GB licences, each starter map's ATTRIBUTION.txt
+       and MODEL_CARD.md, and each data folder's README (its provenance and terms). ExcludeFromSingleFile keeps them
+       readable files in a single-file publish. The local, uncommitted reference inbox is never shipped. -->
+  <ItemGroup>
+    <Content Include="..\..\data\**\LICENSE*.txt;..\..\data\**\ATTRIBUTION.txt;..\..\data\**\README.md;..\..\data\**\MODEL_CARD.md"
+             Exclude="..\..\data\reference-inbox\**" Link="data\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- F04: ship the JSON schemas (schemas/v2) next to the binary as well, so a user of a release
+       download can validate their own case files against the exact schemas this build understands.
+       Also ship the licence and the third-party notices (F07) with every build and publish. The two
+       .md files are marked ExcludeFromSingleFile: without it a single-file publish swallows them into
+       the executable, where nobody can read them. -->
+
+  <ItemGroup>
+    <Content Include="..\..\schemas\**\*.json" Link="schemas\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- The `crossval` verb's pandapower sidecar (crossval.py and the sidecar_common.py it imports) ships beside the
+       binary in tools/crossval, so a build or a published release finds it at <executable folder>/tools/crossval,
+       the first place the verb looks. Without it a release folder could not run `crossval` at all. Kept as readable
+       files in a single-file publish (Python runs them; they are not .NET content). -->
+  <ItemGroup>
+    <Content Include="..\..\tools\crossval\crossval.py;..\..\tools\crossval\sidecar_common.py" Link="tools\crossval\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+</Project>

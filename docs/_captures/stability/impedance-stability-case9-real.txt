@@ -1,0 +1,9 @@
+$ gridsim impedance-stability case9 --grid real
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
+  operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
+  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM 76.9 deg  minDist 0.341  -> STABLE
+  SCR boundary    : n/a (--grid real: the network's own impedance is used, no SCR sweep runs)
+  cross-check (C) : RHP eigenvalues 0  agreement OK  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
+  provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
+WARNING: impedance-stability: the Nyquist contour turns 177.4 deg between two grid points (trusted up to 90 deg), so the encirclement count may be wrong; rerun with a larger --ppd (or a band that resolves the resonance).
+[exit 0]

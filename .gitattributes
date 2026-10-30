@@ -1,0 +1,11 @@
+# Files read by Linux tools inside containers keep LF line endings on every checkout (F05).
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+
+# The reference set is checked by docs/reference/MANIFEST.sha256, so its files keep their stored bytes on every
+# checkout (no line-ending conversion); one manifest then verifies on Windows, Linux and macOS.
+docs/reference/** -text
+
+# The UKGDS-style PSS/E fixture is laid out byte for byte as the UKGDS files are (CR LF line ends, a cp1252 curly quote in
+# a heading line), so the reader is tested against those bytes on every checkout.
+tests/GridSim.Tests/fixtures/psse/ukgds-style-v30.* -text

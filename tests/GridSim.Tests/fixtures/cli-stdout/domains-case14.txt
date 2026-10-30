@@ -1,0 +1,9 @@
+GridSim  -  SPEED DOMAINS on IEEE 14-bus
+==================================================================
+1 speed domains  *  deltaGVa sole domain  *  dominant = Domain 0
+
+Domain   Speed         Kind               Mach      GVA.s   GVad GVA
+Domain 0 inverter      Pll                   5       0.00       0.14  *
+
+GVad = apparent-power stiffness sum(S*C); GVA.s = real spinning inertia. A domain is dominant
+when deltaGVa >= 10% (LOS sec. 5.5). Distributed model: spatial spread & propagation are unvalidated at scale.

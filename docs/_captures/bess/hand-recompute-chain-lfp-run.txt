@@ -1,0 +1,14 @@
+$ python run1b.py   (independent re-computation of all six steps of: gridsim chain case9 --mode daily --steps 6 --bess lfp:5:5:10 --policy peak-shave)
+step request_MW delivered_MW aux_MW SoC T_C total_fade
+0   0.00   0.00000  0.010000 0.499833  25.000 0.000408227
+1  -5.00  -1.32387  0.010912 0.949994  29.371 0.000796927
+2   0.00   0.00000  0.010000 0.949828  28.598 0.001047403
+3   0.00   0.00000  0.010000 0.949661  27.962 0.001231714
+4   5.00   2.41494  0.017145 0.049911  29.570 0.001340755
+5   0.00   0.00000  0.010000 0.049744  28.762 0.001398409
+out 9.65975 MWh, in 5.29548 MWh, aux 0.27223 MWh
+calendar fade 0.0013721 (0.1372 %), cycle fade 2.6283e-05 (0.0026 %)
+stored change = 0 - 5.0408 = -5.0408 MWh (SoC 0.04974 is below the 0.05 floor)
+round trip = 9.65975 / (5.29548 + 5.0408) = 0.93455
+EFC = (9.65975 + 5.29548) / (2 * 10.02466) = 0.74592
+[exit 0]

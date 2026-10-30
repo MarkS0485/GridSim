@@ -1,0 +1,5 @@
+# results/fleet-gb-largest-loss-1320/fleet.csv
+units,rocof_hz_s,nadir_hz,ffr_at_nadir_mw,peak_fleet_ffr_mw,lfdd_at_risk
+1,-0.3300,49.640,1008.4,1049.8,False
+10,-0.3300,49.302,543.8,878.5,False
+100,-0.3300,49.283,515.7,905.7,False

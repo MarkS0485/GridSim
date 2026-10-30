@@ -1,0 +1,7 @@
+$ gridsim gda-replay
+usage: gridsim gda-replay (--series <ts.json> | --synth [--start yyyy-MM-dd] [--steps N] [--step-min M])
+                          [--case <name>] [--export-every N] [--out <dir>] [--passive-plant]
+                          [--bess chem:bus:MW:MWh[:soc] ... [--policy idle|peak-shave|hold] [--shave-high MW] [--shave-low MW]]  (COUNTERFACTUAL)
+Reconstructs the grid state at each historical timestamp (offline state estimation).
+Real per-timestamp GDA demand is data-gated; --synth uses a daily load shape so the estimator runs today.
+[exit 2]

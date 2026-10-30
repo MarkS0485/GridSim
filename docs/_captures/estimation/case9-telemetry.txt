@@ -1,0 +1,10 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry.json --out results/case9-telemetry
+
+=== WLS state estimate: case9 ===
+  status: Converged   iterations: 8   max |dx|: 1.47E-009
+  measurements: 24   states: 17   redundancy (dof): 7
+  observability: observable (rank 17/17)
+  consistency: J = 1.11 vs chi2(95%) = 14.05 -> PASS
+
+  -> results\case9-telemetry
+[exit 0]

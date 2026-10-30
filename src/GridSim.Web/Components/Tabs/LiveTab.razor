@@ -1,0 +1,107 @@
+@using GridSim.Web.Sessions
+@inject PresenceService Presence
+@implements IDisposable
+
+<div class="tabpage">
+    <div class="panel-grid four">
+        <div class="mini"><span class="mv">@_viewers.Count</span><span class="ml">Viewers online now</span></div>
+        <div class="mini"><span class="mv">@Presence.TotalVisits.ToString("N0")</span><span class="ml">Total visits | all-time</span></div>
+        <div class="mini"><span class="mv">@Cpu</span><span class="ml">Server CPU</span></div>
+        <div class="mini"><span class="mv">@Ram</span><span class="ml">Server RAM used</span></div>
+    </div>
+    <div class="muted-note">Usage is logged over time (<b>@Presence.SessionsThisRun.ToString("N0")</b> visits since this server started) - one anonymised line per visit (session >= 2 s), with its duration and the replay time viewed. No names or IPs. Reviewable with jq for trends.</div>
+
+    <div class="card">
+        <div class="card-h">SERVER LOAD - the box hosting this replay</div>
+        <div class="stat-row"><span>CPU</span><b>@Cpu</b></div>
+        <div style="height:10px;border-radius:5px;background:var(--panel-hi);overflow:hidden;margin:2px 0 12px;">
+            <span style="display:block;height:100%;width:@BarPct(Presence.CpuPercent);background:@CpuColor;transition:width .4s;"></span>
+        </div>
+        <div class="stat-row"><span>RAM</span><b>@Ram @(double.IsNaN(Presence.MemTotalGb) ? "" : "of " + RamTotal)</b></div>
+        <div style="height:10px;border-radius:5px;background:var(--panel-hi);overflow:hidden;margin:2px 0 8px;">
+            <span style="display:block;height:100%;width:@BarPct(RamFrac * 100);background:@RamColor;transition:width .4s;"></span>
+        </div>
+        <div class="muted-note">@ProcThreadsNote Sampled from the server every few seconds.</div>
+    </div>
+
+    <div class="card grow">
+        <div class="card-h">WHO'S ONLINE - anonymised | the replay instant each viewer is looking at</div>
+        @if (_viewers.Count == 0)
+        {
+            <div class="muted-note">No one else connected right now.</div>
+        }
+        else
+        {
+            <div class="tablescroll">
+                <table class="grid">
+                    <thead><tr><th>Viewer</th><th>Viewing | replay time</th><th>State</th><th class="r">Connected for</th></tr></thead>
+                    <tbody>
+                        @foreach (PresenceService.Viewer v in _viewers)
+                        {
+                            <tr>
+                                <td>@v.Handle</td>
+                                <td>@ReplayTime(v.ReplayUtc)</td>
+                                <td class="@(v.Playing ? "imp" : "")">@(v.Playing ? "> playing" : "|| paused")</td>
+                                <td class="r">@Duration(v.ConnectedUtc)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <div class="muted-note">Fully anonymous - no names, no IPs. Each session gets a random handle; only the replay time it is viewing (and play/pause) is shown, so you can see what's being looked at and how busy it is.</div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<PresenceService.Viewer> _viewers = Array.Empty<PresenceService.Viewer>();
+    private CancellationTokenSource? _cts;
+
+    protected override void OnInitialized()
+    {
+        Refresh();
+        _cts = new CancellationTokenSource();
+        CancellationToken ct = _cts.Token;
+        // Poll the shared presence snapshot on our own cadence so the panel updates even when the local sim is
+        // paused (no frames). Only runs while the LIVE tab is open (the component is disposed when you switch away).
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));   // GR-729: disposed when the refresh loop ends
+            try
+            {
+                while (await timer.WaitForNextTickAsync(ct))
+                {
+                    Refresh();
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
+
+    private void Refresh() => _viewers = Presence.Viewers();
+
+    private string Cpu => double.IsNaN(Presence.CpuPercent) ? "-" : $"{Presence.CpuPercent:0}%";
+    private string CpuColor => Presence.CpuPercent > 85 ? "var(--bad)" : Presence.CpuPercent > 60 ? "var(--warn)" : "var(--ok)";
+    private string Ram => double.IsNaN(Presence.MemUsedGb) ? "-" : $"{Presence.MemUsedGb:0.0} GB";
+    private string RamTotal => $"{Presence.MemTotalGb:0.0} GB";
+    private double RamFrac => Presence.MemTotalGb > 0 ? Presence.MemUsedGb / Presence.MemTotalGb : 0;
+    private string RamColor => RamFrac > 0.9 ? "var(--bad)" : RamFrac > 0.7 ? "var(--warn)" : "var(--ok)";
+    private string ProcRam => Presence.ProcRamMb <= 0 ? "-" : $"{Presence.ProcRamMb:0} MB";
+    private string ProcThreadsNote => Presence.ProcThreads > 0 ? $"This app is using {Presence.ProcRamMb:0} MB across {Presence.ProcThreads} threads." : "";
+
+    private static string BarPct(double pct) => double.IsNaN(pct) ? "0%" : $"{Math.Clamp(pct, 0, 100):0}%";
+
+    private static string ReplayTime(DateTime? utc) => utc is DateTime t ? t.ToString("yyyy-MM-dd HH:mm") + " UTC" : "- (loading)";
+
+    private static string Duration(DateTime since)
+    {
+        TimeSpan d = DateTime.UtcNow - since;
+        if (d < TimeSpan.Zero) d = TimeSpan.Zero;
+        return d.TotalHours >= 1 ? $"{(int)d.TotalHours}h {d.Minutes}m"
+             : d.TotalMinutes >= 1 ? $"{(int)d.TotalMinutes}m {d.Seconds}s"
+             : $"{d.Seconds}s";
+    }
+
+    public void Dispose() => _cts?.Cancel();
+}

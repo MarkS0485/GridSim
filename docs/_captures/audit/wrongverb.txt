@@ -1,0 +1,3 @@
+$ gridsim case14 --once --audit-log results/ch26x.log
+error: --audit-log applies to estimate, crossval, interpose and serve only (got 'case14').
+[exit 2]

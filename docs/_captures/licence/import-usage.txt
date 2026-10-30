@@ -1,0 +1,3 @@
+$ gridsim licence import
+usage: gridsim licence import <file.gridsim>
+[exit 2]

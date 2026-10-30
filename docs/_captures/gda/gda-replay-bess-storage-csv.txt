@@ -1,0 +1,8 @@
+$ head -6 results/gda-replay-bess/storage-counterfactual.csv
+# COUNTERFACTUAL: hypothetical storage on recorded history (ProvenanceTag.Counterfactual)
+index,site,request_mw,delivered_mw,aux_mw,soc,temp_c,limited
+0,LFP 20MW/40MWh @10,0.000,0.000,0.0400,0.49998,25.00,0
+1,LFP 20MW/40MWh @10,-20.000,-20.000,0.0400,0.71318,27.58,0
+2,LFP 20MW/40MWh @10,-20.000,-20.000,0.0468,0.92458,30.00,0
+3,LFP 20MW/40MWh @10,-20.000,-2.422,0.0577,0.95000,29.93,1
+[exit 0]

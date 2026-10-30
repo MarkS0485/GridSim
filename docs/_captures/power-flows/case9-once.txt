@@ -1,0 +1,30 @@
+$ gridsim case9
+GridSim  -  IEEE 9-bus (WSCC)
+9 buses  9 branches  3 generators  base 100 MVA  60 Hz
+========================================================================
+Converged (4 NR iters, 0 OLTC passes, max mismatch 1.65E-014 p.u.)
+Generator output 0.32 GW  Demand 0.32 GW  Losses 4.6 MW  Inertia 7.5 GVAs
+
+Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)
+------------------------------------------------------------------------------
+  1                                 345   1.040     0.00      71.6      27.0
+  2                                 345   1.025     9.28     163.0       6.7
+  3                                 345   1.025     4.66      85.0     -10.9
+  4                                 345   1.026    -2.22      -0.0       0.0
+  5                                 345   1.013    -3.69     -90.0     -30.0
+  6                                 345   1.032     1.97       0.0      -0.0
+  7                                 345   1.016     0.73    -100.0     -35.0
+  8                                 345   1.026     3.72       0.0       0.0
+  9                                 345   0.996    -3.99    -125.0     -50.0
+
+Most-loaded branches:
+  8-2                              163 MW    65.3%
+  5-6                               61 MW    42.3%
+  8-9                               87 MW    34.8%
+  7-8                               76 MW    30.7%
+  1-4                               72 MW    30.6%
+
+Voltage range: 0.996 - 1.040 p.u. (in band)
+Total losses: 4.64 MW, -92.16 MVAr
+Protection simulation: no relay would operate on this state (generic settings).
+[exit 0]

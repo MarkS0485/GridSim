@@ -1,0 +1,7 @@
+$ sed -n '11,15p' results/formats/estimate/estimate-export.json
+  "model": {
+    "name": "IEEE 14-bus",
+    "baseMva": 100,
+    "busCount": 14,
+    "buses": [
+[exit 0]

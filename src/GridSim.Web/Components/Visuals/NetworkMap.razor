@@ -1,0 +1,490 @@
+@using System.Text.Json
+@using GridSim.Web.Projection
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<div class="netmap-wrap">
+    <div class="netmap-toolbar">
+        <span class="netmap-title">NETWORK</span>
+        <input class="netmap-search" type="search" placeholder="Find substation... (Enter)"
+               @bind="_search" @bind:event="oninput" @onkeydown="OnSearchKey"
+               title="Type a substation name (or bus id) and press Enter to locate it on the map" />
+        @if (!Backdrop)
+        {
+            <div class="netmap-modes">
+                <button class="@ModeClass("loading")" @onclick='() => SetMode("loading")'>Loading</button>
+                <button class="@ModeClass("voltage")" @onclick='() => SetMode("voltage")'>Voltage</button>
+                <button class="@ModeClass("condition")" @onclick='() => SetMode("condition")' title="asset condition / fragility (GDA bridge overlay)">Condition</button>
+                <button class="@ModeClass("stress")" @onclick='() => SetMode("stress")' title="per-branch stress (GDA bridge overlay)">Stress</button>
+                <button class="@ModeClass("wave")" @onclick='() => SetMode("wave")' title="electromechanical-wave ripple">Wave</button>
+            </div>
+        }
+        <div class="netmap-toggles">
+            <button class="mtoggle" @onclick="Fit" title="Fit to view (F)">Fit</button>
+            <button class="@ToggleClass(_t.Minimap)" @onclick='() => Toggle("minimap")' title="Minimap (M)">Map</button>
+            <button class="@ToggleClass(_t.Boundaries)" @onclick='() => Toggle("boundaries")' title="Boundary cuts (B)">Bnd</button>
+            <button class="@ToggleClass(_t.Gsp)" @onclick='() => Toggle("gsp")' title="GSP supply areas (G)">GSP</button>
+            <button class="@ToggleClass(_t.Fleet)" @onclick='() => Toggle("fleet")' title="Generation fleet">Fleet</button>
+            <button class="@ToggleClass(_t.Coast)" @onclick='() => Toggle("coast")' disabled="@(!Geo)" title="Coastline (C)">Coast</button>
+            <button class="@ToggleClass(_t.Dno)" @onclick='() => Toggle("dno")' disabled="@(!Geo)" title="DNO areas (D)">DNO</button>
+            <button class="@ToggleClass(_t.Regions)" @onclick='() => Toggle("regions")' disabled="@(!Geo)" title="GSP regions (R)">Reg</button>
+            <button class="@ToggleClass(_t.Assets)" @onclick='() => Toggle("assets")' disabled="@(!Geo)" title="Geocoded assets (A)">Ast</button>
+        </div>
+    </div>
+
+    <div class="netmap-stage">
+        <canvas id="@CanvasId" tabindex="0"></canvas>
+
+        @if (Backdrop)
+        {
+            @* National frequency "wash": a translucent tint over the static topology that shifts blue (under) ->
+               green (nominal) -> red (over) with the replayed system frequency. Feel the grid without a solve. *@
+            <div class="netmap-freqwash" style="background:@FreqWash(Frame?.Headline.FrequencyHz, NominalHz)"></div>
+        }
+
+        @if (!Backdrop && Frame?.Headline is { Converged: false })
+        {
+            @* R051: the drawn flows and voltages come from a power flow that stopped without converging. Badge the
+               map so nobody reads the colours as a valid operating point (the header lamp says NOT CONVERGED too). *@
+            <div class="netmap-banner netmap-unconverged" title="The power flow did not converge on this frame">NOT CONVERGED - STATE NOT VALID</div>
+        }
+        else if (Backdrop)
+        {
+            <div class="netmap-banner">GB TRANSMISSION | RAW REPLAY</div>
+        }
+        else if (IsBridge)
+        {
+            <div class="netmap-banner">LIVE SYSTEM | GDA BRIDGE</div>
+        }
+
+        @* The TRIP affordances are advertised only when the feed can actually be tripped (a live in-process sim). *@
+        <div class="netmap-hint">@(Backdrop
+            ? "scroll = zoom | drag = pan | click = detail | double-click = drill | F M C B G D R A"
+            : CanTrip
+                ? "scroll = zoom \u00B7 drag = pan \u00B7 click = detail \u00B7 double-click = drill \u00B7 right-click = TRIP \u00B7 F M C B G D R A T \u00B7 . , = flow step"
+                : "scroll = zoom \u00B7 drag = pan \u00B7 click = detail \u00B7 double-click = drill \u00B7 F M C B G D R A \u00B7 . , = flow step")</div>
+
+        @if (_tripNotice is not null)
+        {
+            <div class="netmap-tripnotice" role="status">
+                <span>@_tripNotice</span>
+                <button class="fo-close" @onclick="() => _tripNotice = null" title="Dismiss">&#10005;</button>
+            </div>
+        }
+
+        @if (_legend is not null)
+        {
+            <div class="netmap-legend">
+                <span class="ll-title">@_legend.Title</span>
+                <div class="ll-swatch" style="background:@GradientCss(_legend.Stops)"></div>
+                <div class="ll-scale"><span>@_legend.Min</span><span>@_legend.Max</span></div>
+            </div>
+        }
+
+        @if (_detail is not null)
+        {
+            <div class="netmap-flyout">
+                <div class="fo-head">
+                    <span class="fo-kind">@_detail.Kind</span>
+                    <button class="fo-close" @onclick="ClearSelection" title="Close">x</button>
+                </div>
+                <div class="fo-name">@_detail.Name</div>
+                <div class="fo-sub">@_detail.Sub</div>
+                <div class="fo-rows">
+                    @foreach (string[] row in _detail.Rows)
+                    {
+                        <div class="fo-row"><span class="fo-k">@row[0]</span><span class="fo-v">@(row.Length > 1 ? row[1] : "")</span></div>
+                    }
+                </div>
+                @if (!string.IsNullOrEmpty(_detail.Connections))
+                {
+                    <div class="fo-conn">@_detail.Connections</div>
+                    <div class="fo-lines">@_detail.Lines</div>
+                }
+                <button class="fo-drill" @onclick="() => DrillSelected()">OPEN IN ASSETS -></button>
+            </div>
+        }
+
+        @if (Backdrop)
+        {
+            <div class="netmap-hud">
+                <span class="hud-title">SYSTEM | RAW</span>
+                <div class="hud-cols">
+                    <div class="hud-cell">
+                        <span class="hud-l">FREQUENCY</span>
+                        <span class="hud-v">@F(Frame?.Headline.FrequencyHz, "0.000")<small>Hz</small></span>
+                    </div>
+                    <div class="hud-cell">
+                        <span class="hud-l">RoCoF</span>
+                        <span class="hud-v">@F(Frame?.Headline.RocofHzPerS, "0.000")<small>Hz/s</small></span>
+                    </div>
+                    <div class="hud-cell">
+                        <span class="hud-l">INERTIA</span>
+                        <span class="hud-v">@F(Frame?.Headline.InertiaGvaS, "0.0")<small>GVA.s</small></span>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (IsBridge)
+        {
+            <div class="netmap-hud">
+                <span class="hud-title">LIVE SYSTEM | GDA BRIDGE</span>
+                <div class="hud-cols">
+                    <div class="hud-cell">
+                        <span class="hud-l">INERTIA</span>
+                        <span class="hud-v">@F(Frame?.Headline.InertiaGvaS, "0.0")<small>GVA.s</small></span>
+                    </div>
+                    <div class="hud-cell">
+                        <span class="hud-l">FRAGILITY</span>
+                        <span class="hud-v">@F(Fragility, "0.00")</span>
+                    </div>
+                    <div class="hud-cell">
+                        <span class="hud-l">RoCoF HEADROOM</span>
+                        <span class="hud-v">@F(RocofHeadroom, "0.000")<small>Hz/s</small></span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private const string CanvasId = "gridsim-netmap";
+
+    [Parameter] public TopologyDto? Topology { get; set; }
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    [Parameter] public bool IsBridge { get; set; }
+
+    /// <summary>N273 (October 2026, stream B2; Ruling R1: Mark delegated EE calls 2026-10-04): the case's nominal frequency, the centre of the frequency wash (50 Hz for every GB case).</summary>
+    [Parameter] public double NominalHz { get; set; } = GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
+    [Parameter] public bool Playing { get; set; } = true;
+
+    /// <summary>Static-topology backdrop mode (pure RAW replay): render the network graph but do NOT push solved
+    /// per-bus state (there is none) - the map is tinted by the national frequency wash instead, the per-bus colour
+    /// modes are hidden, and the right-click/T-key TRIP is disabled.</summary>
+    [Parameter] public bool Backdrop { get; set; }
+
+    /// <summary>True when the session can actually be tripped (a live in-process feed). Replay and bridge feeds
+    /// pass false: the TRIP hint is hidden, and a right-click / T key says TRIP is not available instead of
+    /// silently doing nothing.</summary>
+    [Parameter] public bool CanTrip { get; set; }
+
+    /// <summary>Right-click TRIP (bus id) or T key (null = whole system): asks the session to remove the largest
+    /// unit that is generating right now (<see cref="Sessions.SimSession.TripLargestInfeed"/>). The map only
+    /// shows the outcome; the choice of unit is the shared Core rule, sized from live output.</summary>
+    [Parameter] public Func<int?, Sessions.SimSession.TripOutcome>? TripLargest { get; set; }
+
+    /// <summary>Double-click / "OPEN IN ASSETS": fires the bus id the caller should drill into (switch to ASSETS).</summary>
+    [Parameter] public EventCallback<int> OnDrillBus { get; set; }
+
+    private bool _canvasReady;
+    private string _search = "";
+    private string _mode = "loading";
+    private TogglesState _t = new();
+    private TopologyDto? _pushedTopo;
+    private int _pushedTick = int.MinValue;
+    private bool _pushedPlaying;
+    private MapDetail? _detail;
+    private LegendDto? _legend;
+    private string? _tripNotice;   // the last trip request's outcome, shown until dismissed or replaced
+    private DotNetObjectReference<NetworkMap>? _ref;
+
+    // Bridge HUD scalars (N063): read from the frame's MapHud slot, which SimSession fills from the bridge
+    // ScalarsBlock each tick. "-" when the tick carried no finite value. Fragility is the lake's condition index and
+    // RoCoF headroom is shown to 3 d.p., both as the WPF HUD shows them.
+    private double? Fragility => Frame?.MapHud?.ConditionIndex;
+    private bool _overlayShown;   // the map currently holds bridge overlays pushed from an earlier tick
+    private MapStatePayload? _pushedPayload;   // N022: the state last sent, to skip an identical resend
+    private double? RocofHeadroom => Frame?.MapHud?.RocofHeadroomHzPerS;
+
+    private bool Geo => Topology?.IsGeolocated ?? false;
+
+    private string ModeClass(string m) => _mode == m ? "mode on" : "mode";
+    private string ToggleClass(bool on) => on ? "mtoggle on" : "mtoggle";
+    private static string F(double? v, string fmt) => v.HasValue ? v.Value.ToString(fmt) : "-";
+
+    /// <summary>National frequency "wash" for the backdrop: a radial tint - blue (under 50 Hz) -> faint green
+    /// (nominal) -> red (over) - fading to transparent at the edges. Cosmetic per-frame binding of ONE national
+    /// scalar (no per-bus data, no solve). Server culture is invariant, so the formatted values are locale-safe.</summary>
+    private static string FreqWash(double? hz, double nominalHz)
+    {
+        if (hz is not double f || double.IsNaN(f)) return "transparent";
+        double dev = Math.Clamp((f - nominalHz) / 0.5, -1.0, 1.0);     // -1..1 over +/-0.5 Hz about the case's nominal (N273)
+        double a = Math.Min(0.30, 0.06 + Math.Abs(dev) * 0.38);        // stronger further from nominal
+        (int r, int g, int b) = dev < -0.02 ? (33, 150, 243)          // under -> blue
+            : dev > 0.02 ? (255, 91, 91)                              // over  -> red
+            : (47, 210, 127);                                         // nominal -> green
+        return $"radial-gradient(ellipse at 50% 42%, rgba({r},{g},{b},{a:0.###}) 0%, rgba({r},{g},{b},0) 70%)";
+    }
+
+    protected override void OnParametersSet() => _legend ??= Legends[_mode];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _canvasReady = true;
+            _ref = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("gridsimMap.setDotNetRef", CanvasId, _ref);
+        }
+        await PushAsync();
+    }
+
+    private async Task PushAsync()
+    {
+        if (!_canvasReady || Topology is null) return;
+
+        if (!ReferenceEquals(_pushedTopo, Topology))
+        {
+            await JS.InvokeVoidAsync("gridsimMap.setTopology", CanvasId, Topology);
+            await JS.InvokeVoidAsync("gridsimMap.setColorMode", CanvasId, _mode);
+            if (Backdrop) await JS.InvokeVoidAsync("gridsimMap.setBackdrop", CanvasId, true);
+            _pushedTopo = Topology;
+            _pushedTick = int.MinValue;
+            _pushedWaveTick = int.MinValue;
+            _pushedWave = null;      // R132: a new topology always gets the field again
+            _overlayShown = false;   // setTopology empties the script's overlay maps
+            _pushedPayload = null;   // ... and its state, so the next frame must be sent whatever it holds
+            _detail = null;
+        }
+
+        if (Playing != _pushedPlaying)
+        {
+            await JS.InvokeVoidAsync("gridsimMap.setPlaying", CanvasId, Playing);
+            _pushedPlaying = Playing;
+        }
+
+        // Backdrop (raw) mode: the frame carries no solved per-bus state, so never push setState - the map stays a
+        // static topology backdrop, tinted by the national frequency wash (the overlay div, updated per render).
+        if (!Backdrop && Frame is not null && Frame.Tick != _pushedTick)
+        {
+            // Push ONLY what the map consumes (node vm/angle/inj + edge states): the full envelope carries
+            // per-tab DTOs with legitimate non-finite doubles (inf Q-limits, +inf purchased time) and Blazor's
+            // strict JS-interop serializer throws on NaN/Infinity, killing the map for the session.
+            // N022: sent as topology-aligned columns (MapStatePayload: no per-row ids or property names, no unused
+            // qInjMvar), and not sent at all when the numbers are bit-for-bit those already on the map (a held-steady
+            // case re-solving to the same state, a paused replay re-rendering).
+            MapStatePayload payload = MapStatePayload.Build(Topology, Frame);
+            if (!payload.SameBitsAs(_pushedPayload))
+            {
+                await JS.InvokeVoidAsync("gridsimMap.setStateColumns", CanvasId, payload);
+                _pushedPayload = payload;
+            }
+            _pushedTick = Frame.Tick;
+
+            // GDA-bridge condition/stress overlays (finite-guarded MapOverlaysDto) - drives Condition/Stress modes.
+            if (Frame.MapOverlays is MapOverlaysDto ov)
+            {
+                await JS.InvokeVoidAsync("gridsimMap.setOverlays", CanvasId, ov);
+                _overlayShown = true;
+            }
+            else if (_overlayShown)
+            {
+                // N063: a tick without overlays clears the last ones (an empty DTO empties both maps in the script),
+                // so a stale condition / stress colouring never outlives the data it came from.
+                await JS.InvokeVoidAsync("gridsimMap.setOverlays", CanvasId, new MapOverlaysDto());
+                _overlayShown = false;
+            }
+
+        }
+
+        await PushWaveFieldAsync();
+    }
+
+    // R132: the wave field (one amplitude + phase per bus: 3,539 x 3 numbers on gb-full) used to be pushed over
+    // SignalR with every frame although the animator only reads it in WAVE mode. It is now pushed only while the map
+    // is in WAVE mode, at most once per frame tick, and straight away when the user switches into WAVE mode, so the
+    // ripple still always reflects the current operating point when it is visible.
+    private int _pushedWaveTick = int.MinValue;
+
+    /// <summary>True when the map should be sent the frame's wave field now: WAVE mode on, a field present, and not
+    /// already sent for this tick. Pure, so the rule is unit-testable.</summary>
+    public static bool ShouldPushWaveField(string mode, bool backdrop, bool hasField, int frameTick, int pushedTick) =>
+        mode == "wave" && !backdrop && hasField && frameTick != pushedTick;
+
+    // R132 remainder (S5, October 2026): in WAVE mode the field was still sent on every new tick, although it rarely
+    // changes - it depends only on the dominant-mode frequency, the source bus and the distances. On gb-full it is
+    // 229,908 bytes of JSON and was byte-identical on 5 of 5 consecutive live ticks. A field bit-for-bit equal to the
+    // one already on the map is now not sent again (the script would only replace it with the same numbers).
+    private WaveFieldDto? _pushedWave;
+
+    /// <summary>True when two wave fields carry exactly the same numbers (frequency, source bus, and every node's bus,
+    /// amplitude and phase, compared bit for bit, so -0 and +0 differ as their JSON does). Pure, unit-testable.</summary>
+    public static bool SameWaveField(WaveFieldDto? a, WaveFieldDto? b)
+    {
+        if (a is null || b is null) return false;
+        if (ReferenceEquals(a, b)) return true;
+        if (BitConverter.DoubleToInt64Bits(a.FrequencyHz) != BitConverter.DoubleToInt64Bits(b.FrequencyHz)) return false;
+        if (a.SourceBus != b.SourceBus || a.Nodes.Count != b.Nodes.Count) return false;
+        for (int i = 0; i < a.Nodes.Count; i++)
+        {
+            WaveNodeDto x = a.Nodes[i], y = b.Nodes[i];
+            if (x.Bus != y.Bus
+                || BitConverter.DoubleToInt64Bits(x.Amp) != BitConverter.DoubleToInt64Bits(y.Amp)
+                || BitConverter.DoubleToInt64Bits(x.Phase) != BitConverter.DoubleToInt64Bits(y.Phase)) return false;
+        }
+        return true;
+    }
+
+    private async Task PushWaveFieldAsync()
+    {
+        if (!_canvasReady || Frame is null) return;
+        WaveFieldDto? wf = Frame.Experimental?.WaveField;
+        if (!ShouldPushWaveField(_mode, Backdrop, wf is not null, Frame.Tick, _pushedWaveTick)) return;
+        if (!SameWaveField(wf, _pushedWave))
+        {
+            await JS.InvokeVoidAsync("gridsimMap.setWaveField", CanvasId, wf);
+            _pushedWave = wf;
+        }
+        _pushedWaveTick = Frame.Tick;
+    }
+
+    // ---- toolbar ---------------------------------------------------------------------------------------
+    private async Task SetMode(string m)
+    {
+        _mode = m; _legend = Legends[m];
+        if (_canvasReady) await JS.InvokeVoidAsync("gridsimMap.setColorMode", CanvasId, m);
+        await PushWaveFieldAsync();   // entering WAVE mode: send the current field at once (R132)
+    }
+
+    private async Task Fit() { if (_canvasReady) await JS.InvokeVoidAsync("gridsimMap.fit", CanvasId); }
+
+    // ---- substation search -----------------------------------------------------------------------------
+    // Enter resolves the typed text to a bus id from the topology, then asks the map to centre + select it.
+    private async Task OnSearchKey(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter") return;
+        int? id = ResolveBus(_search);
+        if (id is int busId && _canvasReady)
+            await JS.InvokeVoidAsync("gridsimMap.focusBus", CanvasId, busId);
+    }
+
+    /// <summary>Resolve a search string to a bus id: exact name, then starts-with, then contains
+    /// (case-insensitive), then a numeric bus-id fallback. Null when nothing matches.</summary>
+    private int? ResolveBus(string query)
+    {
+        if (Topology is null || string.IsNullOrWhiteSpace(query)) return null;
+        string q = query.Trim();
+        NodeDto? hit =
+            Topology.Nodes.FirstOrDefault(n => string.Equals(n.Name, q, StringComparison.OrdinalIgnoreCase))
+            ?? Topology.Nodes.FirstOrDefault(n => n.Name.StartsWith(q, StringComparison.OrdinalIgnoreCase))
+            ?? Topology.Nodes.FirstOrDefault(n => n.Name.Contains(q, StringComparison.OrdinalIgnoreCase));
+        if (hit is not null) return hit.Id;
+        if (int.TryParse(q, out int byId) && Topology.Nodes.Any(n => n.Id == byId)) return byId;
+        return null;
+    }
+
+    private async Task Toggle(string name)
+    {
+        bool next = !_t.Get(name);
+        _t.Set(name, next);
+        if (_canvasReady) await JS.InvokeVoidAsync("gridsimMap.setToggle", CanvasId, name, next);
+    }
+
+    private async Task ClearSelection()
+    {
+        _detail = null;
+        if (_canvasReady) await JS.InvokeVoidAsync("gridsimMap.clearSelection", CanvasId);
+    }
+
+    private async Task DrillSelected()
+    {
+        if (_detail is { Type: "node" }) await OnDrillBus.InvokeAsync(_detail.Id);
+    }
+
+    // ---- JS -> .NET callbacks --------------------------------------------------------------------------
+    [JSInvokable]
+    public void OnNodeSelected(MapDetail detail) { _detail = detail; StateHasChanged(); }
+
+    [JSInvokable]
+    public void OnBranchSelected(MapDetail detail) { _detail = detail; StateHasChanged(); }
+
+    [JSInvokable]
+    public async Task OnDrill(int busId) => await OnDrillBus.InvokeAsync(busId);
+
+    /// <summary>Right-click on a bus: trip the largest unit generating AT that bus (live output, not nameplate).
+    /// A bus with no generation trips nothing and says so; it never falls back to some other unit.</summary>
+    [JSInvokable]
+    public void OnTrip(int busId) => RequestTrip(busId);
+
+    /// <summary>T key: trip the largest unit generating on the whole system (live output, not nameplate).</summary>
+    [JSInvokable]
+    public void OnTripLargest(int _) => RequestTrip(null);
+
+    /// <summary>Route a trip request to the session and show what happened. On a feed that cannot be tripped
+    /// (replay / bridge), or with no session callback wired, the notice says so rather than doing nothing.</summary>
+    private void RequestTrip(int? busId)
+    {
+        if (!CanTrip || TripLargest is null)
+        {
+            _tripNotice = "TRIP is not available on this feed (replay or bridge stream).";
+        }
+        else
+        {
+            Sessions.SimSession.TripOutcome outcome = TripLargest(busId);
+            _tripNotice = outcome.Message;
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>Keyboard toggled a mode/overlay in JS - reflect it in the toolbar button states.</summary>
+    [JSInvokable]
+    public void OnMapStateChanged(MapUiState state)
+    {
+        if (!string.IsNullOrEmpty(state.ColorMode) && state.ColorMode != _mode) { _mode = state.ColorMode; _legend = Legends.GetValueOrDefault(_mode) ?? _legend; }
+        if (state.Toggles is not null) _t = state.Toggles;
+        StateHasChanged();
+    }
+
+    private static string GradientCss(string[] stops) => $"linear-gradient(90deg,{string.Join(",", stops)})";
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("gridsimMap.dispose", CanvasId); } catch { /* circuit already gone */ }
+        _ref?.Dispose();
+    }
+
+    // ---- DTOs for JS interop ---------------------------------------------------------------------------
+    public sealed record MapDetail(string Type, int Id, string Kind, string Name, string Sub,
+        string[][] Rows, string Connections, string Lines);
+
+    public sealed record MapUiState(string ColorMode, TogglesState Toggles);
+
+    public sealed class TogglesState
+    {
+        public bool Minimap { get; set; } = true;
+        public bool Coast { get; set; }
+        public bool Dno { get; set; }
+        public bool Gsp { get; set; }
+        public bool Regions { get; set; }
+        public bool Assets { get; set; }
+        public bool Fleet { get; set; }
+        public bool Boundaries { get; set; }
+        public bool Get(string n) => n switch
+        {
+            "minimap" => Minimap, "coast" => Coast, "dno" => Dno, "gsp" => Gsp,
+            "regions" => Regions, "assets" => Assets, "fleet" => Fleet, "boundaries" => Boundaries, _ => false
+        };
+        public void Set(string n, bool v)
+        {
+            switch (n)
+            {
+                case "minimap": Minimap = v; break; case "coast": Coast = v; break; case "dno": Dno = v; break;
+                case "gsp": Gsp = v; break; case "regions": Regions = v; break; case "assets": Assets = v; break;
+                case "fleet": Fleet = v; break; case "boundaries": Boundaries = v; break;
+            }
+        }
+    }
+
+    private sealed record LegendDto(string Title, string Min, string Max, string[] Stops);
+
+    // Mirror of the JS LEGENDS table (Palette.cs ramps) so the swatch renders without a JS round-trip.
+    private static readonly Dictionary<string, LegendDto> Legends = new()
+    {
+        ["loading"] = new("CIRCUIT LOADING", "0%", "120%+", new[] { "#2FD27F", "#F3C13A", "#FF5B5B" }),
+        ["voltage"] = new("VOLTAGE (p.u.)", "0.94", "1.06", new[] { "#3FA9F5", "#2FD27F", "#F3C13A", "#FF5B5B" }),
+        ["condition"] = new("ASSET CONDITION", "healthy", "critical", new[] { "#2FD27F", "#F3C13A", "#FF5B5B" }),
+        ["stress"] = new("BRANCH STRESS", "cool", "hot", new[] { "#3FA9F5", "#F3C13A", "#FF5B5B" }),
+        ["wave"] = new("ELECTROMECHANICAL WAVE", "trough", "crest", new[] { "#3FA9F5", "#E6EDF3", "#FF5B5B" }),
+    };
+}

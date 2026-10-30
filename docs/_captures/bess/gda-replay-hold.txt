@@ -1,0 +1,12 @@
+$ gridsim gda-replay --synth --case case9 --steps 6 --step-min 30 --bess nmc:5:5:10:0.75 --policy hold
+
+=== Historical state estimate: case9 over synthetic-case9 ===
+  reconstructed 6 timestamps  (2024-01-01T00:00:00.0000000Z .. 2024-01-01T02:30:00.0000000Z)
+  non-converged: 0
+  system loss over the series: 1.7 .. 2.2 MW
+  COUNTERFACTUAL (Counterfactual): hypothetical storage on recorded history - not a reconstruction.
+  NMC 5MW/10MWh @5: out 2.5 MWh, in 0.0 MWh, aux 0.03 MWh, stored change -2.5 MWh, round trip -, 0.13 equivalent full cycles
+      ageing over the run: calendar 0.0585 %, cycle 0.0006 % (rainflow, depth-aware: 0.0004 %), deepest cycle 23 % SoC
+
+  -> results\gda-replay-case9
+[exit 0]

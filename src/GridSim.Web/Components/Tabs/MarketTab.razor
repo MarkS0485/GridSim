@@ -1,0 +1,142 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+    <div class="panel-grid four">
+        <div class="mini"><span class="mv">@D.RenewableSharePercent.ToString("0.0")%</span><span class="ml">Renewable share</span></div>
+        <div class="mini"><span class="mv">@D.CarbonKgPerKwh.ToString("0.000")</span><span class="ml">Carbon kg/kWh</span></div>
+        <div class="mini"><span class="mv">@D.DemandMw.ToString("N0")</span><span class="ml">Demand MW</span></div>
+        <div class="mini"><span class="mv">@D.Interconnectors.Count</span><span class="ml">Interconnectors</span></div>
+    </div>
+
+    @if (D.Lake is not null)
+    {
+        <div class="card lake">
+            <div class="card-h">GDA LAKE | MARKET PRICES</div>
+            <div class="panel-grid four">
+                <div class="mini"><span class="mv" style="color:@ImbColor(D.Lake.ImbalancePriceGbpMwh)">@Money(D.Lake.ImbalancePriceGbpMwh)</span><span class="ml">Imbalance GBP/MWh</span></div>
+                <div class="mini"><span class="mv">@Money(D.Lake.SystemSellPriceGbpMwh)</span><span class="ml">System sell GBP/MWh</span></div>
+                <div class="mini"><span class="mv">@Money(D.Lake.DayAheadGbpMwh)</span><span class="ml">Day-ahead GBP/MWh</span></div>
+                <div class="mini"><span class="mv">@Money(D.Lake.BsuosGbpMwh)</span><span class="ml">BSUoS GBP/MWh</span></div>
+                <div class="mini"><span class="mv">@Fmt(D.Lake.NetImbalanceVolumeMwh)</span><span class="ml">NIV MWh</span></div>
+                <div class="mini"><span class="mv">@Money(D.Lake.MarketIndexGbpMwh)</span><span class="ml">Market index GBP/MWh</span></div>
+                <div class="mini"><span class="mv" style="color:@CarbonColor(D.Lake.CarbonIntensityGco2PerKwh)">@Fmt(D.Lake.CarbonIntensityGco2PerKwh)</span><span class="ml">Carbon gCO2/kWh</span></div>
+                <div class="mini"><span class="mv">@Fmt(D.Lake.DemandForecastMw)</span><span class="ml">Demand forecast MW</span></div>
+            </div>
+            <div class="stat-row"><span>Constraint cost | thermal, today</span><b>@GbpBig(D.Lake.ConstraintCostGbp)</b></div>
+            @* R099 parity: the WPF rolling imbalance-price sparkline (PriceTrace). The history is kept by the session
+               (SimSession, TabProjections.AppendImbalancePrice), one sample per streamed price, up to 96. *@
+            @if (D.Lake.ImbalancePriceHistory is { Count: > 1 } ph)
+            {
+                <div class="stat-row"><span>Imbalance price, last @ph.Count updates - STREAMED FROM LAKE</span><b>@Money(ph.Min()) to @Money(ph.Max())</b></div>
+                <Sparkline Values="ph" Width="900" Height="60" />
+            }
+        </div>
+    }
+
+    @if (D.Lake is not null && (D.Lake.BmCostGbp is not null || D.Lake.BalancingCostGbp is not null))
+    {
+        <div class="card lake">
+            <div class="card-h">BALANCING | what NESO spent balancing the system (this settlement period)</div>
+            <div class="panel-grid four">
+                <div class="mini"><span class="mv" style="color:@BalColor(TotalBalCost)">@GbpBig(TotalBalCost)</span><span class="ml">Total spend GBP</span></div>
+                <div class="mini"><span class="mv">@Fmt(TotalBalVol)</span><span class="ml">Total volume MWh</span></div>
+                <div class="mini"><span class="mv">@(D.Lake.BmUnitsN?.ToString("N0") ?? "-")</span><span class="ml">BM units instructed</span></div>
+                <div class="mini"><span class="mv">@Money(BalUnit)</span><span class="ml">Net GBP/MWh</span></div>
+            </div>
+            <div class="stat-row"><span>Balancing Mechanism (BM) | bid/offer acceptances</span><b>@GbpBig(D.Lake.BmCostGbp) | @Fmt(D.Lake.BmVolumeMwh) MWh | @(D.Lake.BmUnitsN?.ToString("N0") ?? "-") BMUs</b></div>
+            <div class="stat-row"><span>BSAD adjustment | disaggregated services</span><b>@GbpBig(D.Lake.BalancingCostGbp) | @Fmt(D.Lake.BalancingVolumeMwh) MWh | @(D.Lake.BalancingActionsN?.ToString("N0") ?? "-") actions</b></div>
+            <p class="muted-note">Steps each settlement period as the replay plays. BM is an <b>estimate</b> - Elexon's accepted volume (QAS) x the marginal bid/offer price (BOD); the settled cash-out (EBOCF) isn't in the public feed. BSAD is Elexon's published disaggregated cost.</p>
+        </div>
+    }
+
+    @if (D.Actions is { Count: > 0 })
+    {
+        <div class="card">
+            <div class="card-h">BALANCING ACTIONS - live NESO bid/offer acceptances (Elexon BOALF)</div>
+            <div class="bm-console">
+                @foreach (BalancingActionRowDto a in D.Actions)
+                {
+                    <div class="bm-line">
+                        <span class="bm-t">@a.Time</span>
+                        <span class="bm-dir @(a.ToMw >= a.FromMw ? "off" : "bid")">@(a.ToMw >= a.FromMw ? "^ OFFER" : "v BID")</span>
+                        <span class="bm-u">@a.Unit</span>
+                        <span class="bm-mw">@a.FromMw.ToString("0") -> @a.ToMw.ToString("0") MW</span>
+                        @if (a.So) { <span class="bm-so">SO</span> }
+                    </div>
+                }
+            </div>
+            <div class="muted-note">Individual balancing-mechanism acceptances at their real acceptance times - the
+                newest scroll in as the replay clock advances (the ~10 largest per half-hour). Offer = instructed up,
+                bid = instructed down; SO = system-operator (non-energy) action.</div>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-h">INTERCONNECTORS</div>
+        @if (D.Interconnectors.Count == 0)
+        {
+            <div class="muted-note">No interconnector-classified units in this model.</div>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Link</th><th class="r">Flow MW</th><th>Direction</th></tr></thead>
+                <tbody>
+                    @foreach (MktInterconnectorRowDto ic in D.Interconnectors)
+                    {
+                        <tr>
+                            <td>@ic.Name</td>
+                            <td class="r">@ic.FlowMw.ToString("N0")</td>
+                            <td class="@(ic.Importing ? "imp" : "exp")">@(ic.Importing ? "^ Import" : "v Export")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <p class="muted-note">Prices (imbalance / day-ahead / BSUoS) stream from the GDA lake in bridge mode - added in the bridge-feed step.</p>
+    </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private MarketDto? D => Frame?.Market;
+    private static string Money(double? v) => v.HasValue ? "GBP " + v.Value.ToString("0.00") : "-";
+    private static string Fmt(double? v) => v.HasValue ? v.Value.ToString("N0") : "-";
+
+    // WPF ImbalanceBrush: green when paid-to-generate (<0), red >150, amber >80, else neutral.
+    private static string ImbColor(double? v) => v is not double p ? "var(--ink)"
+        : p < 0 ? "var(--ok)" : p > PresentationLimits.ImbalancePriceHighGbpPerMwh ? "var(--bad)"
+        : p > PresentationLimits.ImbalancePriceWatchGbpPerMwh ? "var(--warn)" : "var(--ink)";
+
+    // WPF CarbonBrush: green <100, amber <250, red otherwise.
+    private static string CarbonColor(double? v) => v is not double c ? "var(--ink)"
+        : c < PresentationLimits.CarbonLowGPerKwh ? "var(--ok)" : c < PresentationLimits.CarbonWatchGPerKwh ? "var(--warn)" : "var(--bad)";
+
+    // Total balancing = Balancing Mechanism (BM) estimate + BSAD adjustment.
+    private double? TotalBalCost => Sum(D?.Lake?.BmCostGbp, D?.Lake?.BalancingCostGbp);
+    private double? TotalBalVol => Sum(D?.Lake?.BmVolumeMwh, D?.Lake?.BalancingVolumeMwh);
+    private static double? Sum(double? a, double? b) => (a is null && b is null) ? (double?)null : (a ?? 0) + (b ?? 0);
+
+    // Net GBP/MWh of balancing: total cost over total accepted volume (crude - cost is net, volume is absolute).
+    private double? BalUnit => (TotalBalCost is double c && TotalBalVol is double v && v > 0) ? c / v : (double?)null;
+
+    // Balancing spend: green when NESO net-received (<0), amber over GBP 250k, red over GBP 1m, else neutral.
+    private static string BalColor(double? v) => v is not double c ? "var(--ink)"
+        : c < 0 ? "var(--ok)" : c > PresentationLimits.BalancingSpendHighGbp ? "var(--bad)"
+        : c > PresentationLimits.BalancingSpendWatchGbp ? "var(--warn)" : "var(--ink)";
+
+    // WPF ConstraintCost: GBP / GBPk / GBPm compaction.
+    private static string GbpBig(double? v)
+    {
+        if (v is not double c) return "-";
+        double a = Math.Abs(c);
+        return a >= 1e6 ? $"GBP {c / 1e6:0.0}m" : a >= 1e3 ? $"GBP {c / 1e3:0.0}k" : $"GBP {c:0}";
+    }
+}

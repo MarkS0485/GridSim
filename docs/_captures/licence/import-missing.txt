@@ -1,0 +1,3 @@
+$ gridsim licence import docs/_captures/licence/inputs/absent.gridsim
+error: Could not read licence file 'docs/_captures/licence/inputs/absent.gridsim': Could not find file 'docs\_captures\licence\inputs\absent.gridsim'.
+[exit 2]

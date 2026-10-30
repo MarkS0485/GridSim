@@ -1,0 +1,17 @@
+$ cat results/gda-replay-passive/state-estimate.csv
+# GridSim  -  2026-10-03 12:27:24 UTC
+# code:    git afedfedf  |  GridSim.Core v1.95.99.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     gda-replay  case=gb-full  series=synthetic-gb-full  steps=6
+index,time_utc,load_factor,converged,iterations,max_mismatch,total_loss_mw,vmin_pu,vmax_pu
+0,2024-01-01T00:00:00.0000000Z,0.7000,True,6,3.528E-011,257.944,0.97135,1.04571
+1,2024-01-01T00:30:00.0000000Z,0.6782,True,3,2.505E-011,242.349,0.98182,1.04572
+2,2024-01-01T01:00:00.0000000Z,0.6586,True,3,3.478E-011,228.657,0.98323,1.04572
+3,2024-01-01T01:30:00.0000000Z,0.6413,True,3,4.079E-011,217.000,0.98444,1.04572
+4,2024-01-01T02:00:00.0000000Z,0.6268,True,3,2.969E-011,207.417,0.98545,1.04572
+5,2024-01-01T02:30:00.0000000Z,0.6152,True,3,2.969E-011,199.946,0.98625,1.04573
+[exit 0]

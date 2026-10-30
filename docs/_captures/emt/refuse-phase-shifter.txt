@@ -1,0 +1,3 @@
+$ gridsim emt cigre --duration 0.01
+emt: EMT build: branch #12 (0->1) is a phase-shifting transformer (shift 30 deg). A phase shift multiplies the voltage phasor by a complex number, which a real-valued single-phase time-domain network cannot represent; it would be silently dropped. Remove the shift or use a phasor study. (Parameter 'model')
+[exit 2]

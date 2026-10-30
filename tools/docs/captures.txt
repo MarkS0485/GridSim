@@ -1,0 +1,853 @@
+# Commands whose exact output the chapters quote. Format: chapter-key | capture-name | gridsim arguments
+# Run: powershell -ExecutionPolicy Bypass -File tools/docs/capture.ps1 [-Chapter key] [-Build]. Output: docs/_captures/<key>/<name>.txt
+
+power-flows | help              | --help
+power-flows | case14-once       | case14 --once
+power-flows | case118-once      | case118 --once
+power-flows | case118-export    | case118 --once --enableExport
+power-flows | gpucheck          | gpucheck
+power-flows | case14-ticks      | case14 --ticks 6
+power-flows | uk-ticks          | --ticks 4
+power-flows | uk-once           | uk --once
+power-flows | case14-bfs        | case14 --once --bfs
+power-flows | case14-gpu        | case14 --once --gpu
+power-flows | case33bw-once     | data/matpower/dist/case33bw.m --once
+power-flows | transient-case118 | transient case118 --minutes 1 --dt-ms 100 --trip 1000 --trip-at 20
+power-flows | case14-export     | case14 --once --enableExport
+
+emt | basic-case9            | emt case9 --duration 0.01 --dt-us 20 --probe v:5
+emt | fault-event-case14     | emt case14 --duration 0.05 --dt-us 20 --freq 50 --probe v:2,i:1-2 --event fault:5@0.01:0.01 --event clear:5@0.03
+emt | backward-euler-case24  | emt case24 --duration 0.02 --dt-us 50 --rule be --probe v:1 --no-cda
+emt | travelling-wave-case30 | emt case30 --duration 0.01 --dt-us 10 --freq 60 --lines --probe v:2
+
+frequency | freq               | freq
+frequency | replay-headless    | replay --frames 5
+frequency | transient          | transient case9 --minutes 0.1 --dt-ms 10
+frequency | h0-study           | h0-study --event gb-2023-12-22 --sync-inertia-scale 1,0 --gfm-fraction 0,1
+frequency | domains-default                 | domains
+frequency | domains-synthetic               | domains --dir data/gb-synthetic
+frequency | freq-gb-2023-12-22              | freq data/neso/gb-2023-12-22-frequency.csv
+frequency | replay-event-gb-2023-12-22      | replay-event gb-2023-12-22 --trace data/neso/gb-2023-12-22-frequency.csv
+frequency | h0-study-gb-largest-loss-1320   | h0-study --event gb-largest-loss-1320
+frequency | h0-study-no-event               | h0-study
+frequency | h0-study-distributed-warning    | h0-study --event gb-largest-loss-1320 --inertia-model distributed --sync-inertia-scale 1 --gfm-fraction 0 --corners best
+frequency | transient-uk-trip               | transient uk --minutes 1 --dt-ms 100 --trip 1000 --trip-at 10
+frequency | transient-uk-distributed        | transient uk --minutes 0.1 --dt-ms 100 --inertia-model distributed
+frequency | transient-trip-past-end         | transient case9 --minutes 0.1 --dt-ms 100 --trip 100 --trip-at 30
+frequency | trip-lumped                     | trip
+frequency | trip-distributed                | trip --inertia-model distributed
+frequency | trip                            | trip
+frequency | trip-forming                    | trip --forming vsm --forming-inertia 20 --forming-damping 100
+
+events | replay-event-gb-2019-08-09 | replay-event gb-2019-08-09
+events | scenario-gb-2019-08-09     | scenario --event gb-2019-08-09
+events | fleet-gb-2019-08-09        | fleet --event gb-2019-08-09
+events | evidence-gb-2019-08-09     | evidence --event gb-2019-08-09
+events | replay-event-help          | replay-event
+events | scenario-help              | scenario
+events | fleet-help                 | fleet
+events | evidence-help              | evidence
+events | h0-study-help              | h0-study
+events | replay-event-gb-2019-08-09-trace     | replay-event gb-2019-08-09 --trace data/neso/gb-2019-08-09-frequency.csv
+events | replay-event-gb-2023-12-22-trace     | replay-event gb-2023-12-22 --trace data/neso/gb-2023-12-22-frequency.csv
+events | replay-event-gb-2019-08-09-estimated | replay-event gb-2019-08-09 --catalog data/events/gb-2019-08-09-estimated.json
+events | replay-event-missing-trace           | replay-event gb-2019-08-09 --trace data/neso/no-such-file.csv
+events | scenario-gb-2023-12-22               | scenario --event gb-2023-12-22
+events | evidence-gb-2023-12-22               | evidence --event gb-2023-12-22
+events | evidence-gb-2019-08-09-voll          | evidence --event gb-2019-08-09 --voll 17000 --duration 1 --voll-source example-citation
+events | h0-study-gb-2019-08-09               | h0-study --event gb-2019-08-09
+# The next captures need docs/_captures/events/{my-events,off-event,recent-event}.json copied into results/ first;
+# recent-event.json needs a whenUtc inside the last 169 h to show the forward-inference rejection.
+events | replay-reproduced     | replay-event gb-2019-08-09 --out results/replay-gb-2019-08-09
+events | replay-marginal       | replay-event gb-2023-12-22 --out results/replay-gb-2023-12-22
+events | replay-marginal-trace | replay-event gb-2023-12-22 --trace data/neso/gb-2023-12-22-frequency.csv --out results/replay-gb-2023-12-22-trace
+events | replay-demoted        | replay-event gb-2019-08-09 --trace data/neso/gb-2019-08-09-frequency.csv --out results/replay-gb-2019-08-09-trace
+events | replay-screening      | replay-event gb-largest-loss-1320 --out results/replay-gb-largest-loss-1320
+events | replay-failed         | replay-event example-off --catalog results/off-event.json --out results/replay-example-off
+events | replay-dump           | replay-event --dump-catalog results/dump-events.json
+events | replay-authored       | replay-event example-1000 --catalog results/my-events.json --out results/replay-example-1000
+events | replay-rejected       | replay-event example-recent --catalog results/recent-event.json --out results/replay-example-recent
+events | replay-unknown        | replay-event nope --out results/replay-nope
+events | replay-trace-missing  | replay-event gb-2019-08-09 --trace results/no-such.csv --out results/replay-trace-missing
+events | replay-estimated      | replay-event gb-2019-08-09 --catalog data/events/gb-2019-08-09-estimated.json --out results/replay-estimated
+events | replay-usage          | replay-event
+events | scenario-2019         | scenario --event gb-2019-08-09 --out results/scenario-gb-2019-08-09
+events | scenario-device       | scenario --event gb-2019-08-09 --device data/devices/tsgb-fleet.json --inertia 215,120,50 --corners best,nominal,worst --out results/scenario-tsgb-fleet
+events | scenario-gate         | scenario --event gb-2023-12-22 --out results/scenario-gb-2023-12-22
+events | scenario-usage        | scenario
+events | fleet-screening       | fleet --event gb-largest-loss-1320 --units 1,10,100 --inertia 60 --out results/fleet-gb-largest-loss-1320
+events | fleet-2019            | fleet --event gb-2019-08-09 --out results/fleet-gb-2019-08-09
+events | fleet-gate            | fleet --event gb-2023-12-22 --out results/fleet-gb-2023-12-22
+events | fleet-usage           | fleet
+events | evidence-2019         | evidence --event gb-2019-08-09 --out results/evidence-gb-2019-08-09
+events | evidence-cited        | evidence --event gb-2019-08-09 --device data/devices/tsgb-fleet.json --voll 17000 --voll-source london-economics-2013 --out results/evidence-gb-2019-08-09-cited
+events | evidence-withheld     | evidence --event gb-2023-12-22 --out results/evidence-gb-2023-12-22
+events | evidence-no-shed      | evidence --event gb-largest-loss-1320 --out results/evidence-gb-largest-loss-1320
+events | evidence-usage        | evidence
+events | h0-study-2019         | h0-study --event gb-2019-08-09 --out results/h0-study-gb-2019-08-09
+events | h0-study-usage        | h0-study
+
+harmonics | case9               | harmonics case9
+harmonics | case30              | harmonics case30
+harmonics | case30-bus1         | harmonics case30 --bus 1
+harmonics | case9-synth-sources | harmonics case9 --synth-sources
+harmonics | gb-full             | harmonics gb-full
+harmonics | case14              | harmonics case14
+harmonics | case9-export        | harmonics case9 --enableExport=docs/_captures/harmonics/case9-export.json
+harmonics | case9-spectra       | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9.json
+harmonics | case9-future        | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-future.json
+harmonics | case9-bad           | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-bad.json
+harmonics | case9-even          | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-even.json
+
+harmonics | case-singular       | harmonics docs/_captures/harmonics/case-singular
+harmonics | case9-triplen       | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-triplen.json
+harmonics | case9-bus-missing   | harmonics case9 --bus 999
+harmonics | case9-bus-nonint    | harmonics case9 --bus abc
+
+estimation | case14-synth             | estimate case14 --synth
+estimation | case14-synth-huber       | estimate case14 --synth --method huber
+estimation | case14-synth-lav         | estimate case14 --synth --method lav
+estimation | case14-synth-schweppe-gm | estimate case14 --synth --method schweppe-gm
+estimation | case14-synth-qr          | estimate case14 --synth --method qr
+estimation | case14-synth-constrained | estimate case14 --synth --method constrained
+estimation | case14-synth-feasible    | estimate case14 --synth --method feasible
+estimation | case14-synth-no-bad-data | estimate case14 --synth --no-bad-data
+estimation | case118-synth            | estimate case118 --synth
+estimation | crossval-case9           | crossval case9
+estimation | case14-synth-noise16     | estimate case14 --synth --noise 1.6
+estimation | case14-synth-noise16-hti | estimate case14 --synth --noise 1.6 --hti
+estimation | case14-synth-nf          | estimate case14 --synth --out results/nf-case14
+estimation | noise-floor              | estimate-noise-floor results/nf-case14 --out results/nf-floor
+
+contingency | nminus1-gbreduced            | nminus1
+contingency | nminus1-positional-ignored   | nminus1 case14
+contingency | nminus1-ireland              | nminus1 --dir data/intl/ireland-all-island
+contingency | nminus2-gbreduced-c5         | nminus2 --candidates 5
+contingency | nminus2-gbreduced-tail       | nminus2 --exhaustive --top 216
+contingency | nminus2-ireland-c6           | nminus2 --dir data/intl/ireland-all-island --candidates 6
+contingency | nminus1minus1-gbreduced-tail | n-1-1 --exhaustive --top 430
+contingency | trip-default                 | trip
+contingency | trip-nosuch                  | trip nosuchunit
+contingency | trip-ireland                 | trip --dir data/intl/ireland-all-island
+contingency | screen-gbreduced             | screen --top 6
+contingency | sweep-case14                 | nminus1-sweep case14 --parallel 2
+contingency | sweep-case118-sample         | nminus1-sweep case118 --sample 20 --parallel 2
+contingency | sweep-case118-losses         | nminus1-sweep case118 --losses --parallel 4
+contingency | sweep-gbsynthetic-sample     | nminus1-sweep gb-synthetic --sample 24 --parallel 4
+contingency | stress-case14                | stress case14
+contingency | stress-case118               | stress case118
+contingency | stress-case14-fine           | stress case14 --from 1.7 --to 1.8 --step 0.01
+contingency | stress-badstep               | stress case14 --step 0
+contingency | chain-case30-fixed           | chain case30 --steps 5
+contingency | chain-case118-ramp           | chain case118 --mode ramp --steps 6 --ramp-pct 10
+contingency | chain-case14-diverge         | chain case14 --mode ramp --steps 12 --ramp-pct 20
+contingency | chain-badmode                | chain case14 --mode bogus
+contingency | cycle-case118                | cycle case118 --cycles 6 --hold-steady
+contingency | cycle-case118-tight          | cycle case118 --cycles 8 --hold-steady --window-ms 150 --workers 2
+
+# registered by sync_captures.py
+emt | fault-bus5-case14-no-cda | emt case14 --duration 0.05 --dt-us 20 --freq 50 --probe v:5,i:2-5 --event fault:5@0.01:0.01 --event clear:5@0.03 --no-cda
+emt | fault-bus5-case14 | emt case14 --duration 0.05 --dt-us 20 --freq 50 --probe v:5,i:2-5 --event fault:5@0.01:0.01 --event clear:5@0.03
+emt | refuse-bad-event | emt case14 --event bogus:1
+emt | refuse-bad-rule | emt case14 --rule foo
+emt | refuse-non-switch-event | emt case14 --duration 0.01 --event switch:3@0.005:open
+emt | refuse-phase-shifter | emt cigre --duration 0.01
+emt | switch-open | emt case14 --duration 0.03 --freq 50 --probe v:5 --event fault:5@0.01:0.01 --event switch:1000000@0.02:open --out emt-switch
+emt | worked-fault | emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 20 --probe v:5,i:1-5 --out emt-fault
+estimation | audit-verify | audit verify results/audit.log
+estimation | case14-audit-log | estimate case14 --synth --audit-log results/audit.log --out results/case14-audit
+estimation | case14-fdia | estimate case14 --synth --fdia-screen --out results/case14-fdia
+estimation | case14-max-iter | estimate case14 --synth --max-iter 2 --out results/err
+estimation | case14-planted-backfill | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --prior solve --backfill-removals --out results/case14-planted-bf
+estimation | case14-planted-hti | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --hti --out results/case14-planted-hti
+estimation | case14-planted-huber | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --method huber --out results/case14-planted-huber
+estimation | case14-planted-lav | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --method lav --out results/case14-planted-lav
+estimation | case14-planted-no-bad-data | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --no-bad-data --out results/case14-planted-nbd
+estimation | case14-planted-prior-solve | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --prior solve --out results/case14-planted-ps
+estimation | case14-planted-schweppe-gm | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --method schweppe-gm --out results/case14-planted-schweppe-gm
+estimation | case14-planted-wls | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --out results/case14-planted
+estimation | case14-synth-coverage | estimate case14 --synth --coverage-inj 0.5 --coverage-flow 0.3 --out results/case14-coverage
+estimation | case30-fdia | estimate case30 --synth --fdia-screen --out results/case30-fdia
+estimation | case9-bad-huber | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --method huber --out results/case9-bad-huber
+estimation | case9-bad-lav | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --method lav --out results/case9-bad-lav
+estimation | case9-bad-no-bad-data | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --no-bad-data --out results/case9-bad-nbd
+estimation | case9-bad-schweppe-gm | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --method schweppe-gm --out results/case9-bad-schweppe-gm
+estimation | case9-bad-wls | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --method wls --out results/case9-bad-wls
+estimation | case9-bus5-hti | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bus5.json --hti --out results/case9-bus5-hti
+estimation | case9-bus5-wls | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bus5.json --out results/case9-bus5-wls
+estimation | case9-invalid-set | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-invalid.json --out results/err
+estimation | case9-phaseangle | estimate case9 --synth --phaseangle 1:10.0:2024-03-01T12:00:00Z:50.0 7:10.7275:2024-03-01T12:00:00Z:50.0 9:6.0112:2024-03-01T12:00:00Z:50.0 --phaseangle-sigma 0.5 --out results/case9-phaseangle
+estimation | case9-prior-solve | estimate case9 --measurements docs/_captures/estimation/case9-telemetry.json --prior solve --out results/case9-prior
+estimation | case9-synth-exact | estimate case9 --synth --noise 0 --out results/case9-exact
+estimation | case9-telemetry-constrained-zi | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-zi.json --method constrained --out results/case9-zi-constrained
+estimation | case9-telemetry-thin | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-thin.json --out results/case9-thin
+estimation | case9-telemetry-wls-zi | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-zi.json --out results/case9-zi-wls
+estimation | case9-telemetry | estimate case9 --measurements docs/_captures/estimation/case9-telemetry.json --out results/case9-telemetry
+estimation | err-future-stamp | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-future.json --out results/err
+estimation | err-hti-no-bad-data | estimate case14 --synth --hti --no-bad-data --out results/err
+estimation | err-hti-robust | estimate case14 --synth --hti --method huber --out results/err
+estimation | err-missing-file | estimate case9 --measurements docs/_captures/estimation/nope.json --out results/err
+estimation | err-no-measurements | estimate case9
+estimation | err-phaseangle-datum | estimate case9 --synth --phaseangle 7:10.7275:2024-03-01T12:00:00Z:50.0 --out results/err
+estimation | err-unknown-method | estimate case14 --synth --method newton --out results/err
+estimation | gb-full-synth | estimate data/gb-full --synth --out results/gb-full-estimate
+estimation | noise-floor-clean | estimate-noise-floor results/nf --out results/nf-report
+estimation | noise-floor-noisy | estimate-noise-floor results/nf2 --out results/nf2-report
+harmonics | case9-both | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9.json --synth-sources
+
+gda | gda-usage            | gda
+gda | gda-replay-usage     | gda-replay
+gda | synth-default        | synth
+gda | gda-replay-synth     | gda-replay --synth --steps 6 --out results/gda-replay-synth
+gda | export-uk            | export results/gridviz-uk.json
+gda | export-synthetic     | export results/gridviz-syn.json --dir data/gb-synthetic
+
+# registered by sync_captures.py
+gda | gda-all-gsps | gda --root $GDA_ROOT --all-gsps
+gda | gda-bad-asof | gda --root $GDA_ROOT --as-of 2026-13-45
+gda | gda-bad-dno | gda --root $GDA_ROOT --dno foo
+gda | gda-bad-root | gda --root no-such-lake
+gda | gda-emids-132-all-gen | gda --root $GDA_ROOT --licence EMIDS --minkv 132 --no-geo --all-gen
+gda | gda-emids-132 | gda --root $GDA_ROOT --licence EMIDS --minkv 132 --no-geo
+gda | gda-emids-minkv | gda --root $GDA_ROOT --licence EMIDS --minkv 132 --solve
+gda | gda-emids-solve | gda --root $GDA_ROOT --licence EMIDS --out results/gda-emids --solve
+gda | gda-estimate-sp25 | estimate NetworkModel/out/gb-spine --measurements results/gda-estimate/m-sp25.json --prior solve --warm-start --export-solve --max-iter 100 --lean --backfill-removals --out results/gda-estimate/sp25
+# gda-fleet-missing needs GDA_ROOT_NO_TEC: a lake root without the NESO TEC register (neither NESO/RAWData nor the
+# NESO/Parquet conversion), for example an empty folder outside the repository; gda-fleet runs on the real lake.
+gda | gda-fleet-missing | gda --root $GDA_ROOT_NO_TEC --fleet
+gda | gda-fleet | gda --root $GDA_ROOT --fleet
+gda | gda-gsp-coventry | gda --root $GDA_ROOT --gsp "Coventry 132kV" --solve
+gda | gda-gsp-unknown | gda --root $GDA_ROOT --gsp "Nowhere 132kV" --solve
+gda | gda-npg | gda --root $GDA_ROOT --dno npg --no-geo
+gda | gda-removed-gsp | gda --root $GDA_ROOT --gsp "Exeter 132" --no-geo
+gda | gda-replay-bad-bess | gda-replay --synth --bess li-ion:10:20:40 --out results/gda-replay-badbess
+gda | gda-replay-bad-case | gda-replay --series results/nd-2026-09-01.json --case results/gda-emids
+gda | gda-replay-bess | gda-replay --synth --case case118 --steps 48 --bess lfp:10:20:40 --policy peak-shave --out results/gda-replay-bess
+gda | gda-replay-day | gda-replay --series results/nd-2026-09-01.json --case gb-full --export-every 24 --out results/gda-replay-nd
+gda | gda-replay-gbfull | gda-replay --synth --case gb-full --start 2024-01-01 --steps 6 --export-every 3 --out results/gda-replay-gbfull
+gda | gda-replay-passive | gda-replay --synth --case gb-full --start 2024-01-01 --steps 6 --passive-plant --out results/gda-replay-passive
+gda | gda-replay-recent | gda-replay --series results/nd-too-recent.json --case gb-full --out results/gda-replay-recent
+gda | gda-replay-rejected | gda-replay --synth --start 2026-10-01 --steps 4 --out results/gda-replay-rejected
+gda | gda-schema | gda --root $GDA_ROOT --schema "$GDA_ROOT/NationalGrid/RAWData/LTDS Tabular Model/ltds-table-2a-two-winding-transformer.csv"
+gda | gda-stalybridge-geo | gda --root $GDA_ROOT --gsp "Stalybridge 132kV"
+gda | gda-stalybridge | gda --root $GDA_ROOT --gsp "Stalybridge 132kV" --no-geo --out results/gda-stalybridge --solve
+gda | gda-ukpn | gda --root $GDA_ROOT --dno ukpn --no-geo
+
+# registered by sync_captures.py
+interpose | audit-log | interpose --audit-log /tmp/test.log
+interpose | crosswalk-bad-datatype | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/bad-datatype.json --ticks 1
+interpose | crosswalk-missing | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/no-such-map.json --ticks 1
+interpose | iec104-full-windows | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14-full.json --measurements-dir results/interpose-docs/iec104-full --window-ms 5000 --ticks 2
+interpose | iec104-monitor | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14.json --monitor --ticks 12
+interpose | iec104-windows | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14.json --measurements-dir results/interpose-docs/iec104 --out-store results/interpose-docs/iec104-store --window-ms 2000 --ticks 12
+interpose | invalid-flag | interpose --invalid-flag
+interpose | list-protocols | interpose --list-protocols
+interpose | modbus-f32-missing-register | interpose case14 --protocol modbus --listen 127.0.0.1:5020 --crosswalk docs/_captures/interpose/modbus-f32-missing-register.json --window-ms 2000 --measurements-dir results/interpose-docs/f32 --ticks 6
+interpose | modbus-monitor | interpose case14 --protocol modbus --listen 127.0.0.1:5020 --crosswalk docs/_captures/interpose/modbus-case14.json --monitor --ticks 6
+interpose | modbus-windows | interpose case14 --protocol modbus --listen 127.0.0.1:5020 --crosswalk docs/_captures/interpose/modbus-case14.json --measurements-dir results/interpose-docs/modbus --window-ms 2000 --ticks 6
+interpose | no-crosswalk | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --ticks 1
+interpose | serve-iec104-full | serve case14 --measurements-dir results/interpose-docs/iec104-full --method wls
+interpose | serve-iec104-unobservable | serve case14 --measurements-dir results/interpose-docs/iec104 --method wls
+interpose | serve-modbus-fresh | serve case14 --measurements-dir results/interpose-docs/modbus --method wls
+interpose | store-inside-lake | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14.json --out-store results/interpose-docs/fake-lake/telemetry --ticks 1
+interpose | unknown-protocol | interpose --protocol dnp3 --crosswalk docs/_captures/interpose/iec104-case14.json
+interpose | usage | interpose
+validation | batchsolve_small | batchsolve --count 4 --n 32 --runs 2
+validation | conformance_all | conformance
+validation | crossval_case9 | crossval case9
+validation | physics-check_case14 | physics-check case14
+validation | simdcheck | simdcheck
+
+# registered by sync_captures.py
+opf | acopf-case30 | acopf case30
+opf | acopf-case9 | acopf case9
+opf | cpf-case30 | cpf case30
+opf | cpf-case9 | cpf case9
+opf | dcopf-case118 | dcopf case118
+opf | dcopf-case14 | dcopf case14
+opf | dcopf-case30 | dcopf case30
+opf | dcopf-case9 | dcopf case9
+opf | lodf-case30-branch-0 | lodf case30 --branch 0
+opf | lodf-case30 | lodf case30
+opf | lodf-case9-branch-0 | lodf case9 --branch 0
+opf | lodf-case9 | lodf case9
+opf | losses-case30 | losses case30
+opf | losses-case9 | losses case9
+opf | ptdf-case30-bus-1 | ptdf case30 --bus 1
+opf | ptdf-case30 | ptdf case30
+opf | ptdf-case9-bus-1 | ptdf case9 --bus 1
+opf | ptdf-case9 | ptdf case9
+opf | taps-case30 | taps case30
+opf | taps-case9 | taps case9
+validation | crossval_case118 | crossval case118
+validation | crossval_case14 | crossval case14
+validation | crossval_case24 | crossval case24
+validation | crossval_case300 | crossval case300
+validation | crossval_unconverged | crossval data/matpower/nesta/pglib_opf_case3_lmbd.m
+validation | estimate_case14_synth | estimate case14 --synth --out results/est-case14
+validation | experimental_harmonic-kcl_case9 | experimental harmonic-kcl case9
+validation | experimental_modal-consistency_case9 | experimental modal-consistency case9
+validation | experimental_passivity_case9 | experimental passivity case9
+validation | experimental_reciprocity_case9 | experimental reciprocity case9
+validation | gpucheck | gpucheck
+validation | physics-check_case145 | physics-check case145
+validation | physics-check_unconverged | physics-check data/matpower/nesta/pglib_opf_case3_lmbd.m
+validation | simdcheck_expect_fail | simdcheck --expect Avx512
+validation | simdcheck_expect_ok | simdcheck --expect Avx256
+
+# registered by sync_captures.py
+opf | acopf-case9-max-iter-2 | acopf case9 --max-iter 2
+opf | acopf-case9-tight | acopf case9 --loss-tol 1e-9
+opf | acopf-gb-synthetic | acopf gb-synthetic
+opf | acopf-tri3 | acopf docs/_captures/opf/tri3
+opf | acopf-uk | acopf uk --top 4
+opf | cpf-case14 | cpf case14
+opf | cpf-case9-coarse | cpf case9 --step 0.5 --min-step 0.01
+opf | cpf-case9-max-steps-5 | cpf case9 --max-steps 5
+opf | cpf-overloaded-case9 | cpf docs/_captures/opf/overloaded-case9.m
+opf | cpf-uk | cpf uk
+opf | dcopf-case9-file | dcopf data/matpower/lib/case9.m
+opf | dcopf-case9-no-limits | dcopf case9 --no-limits
+opf | dcopf-dir-ignored | dcopf --dir data/uk
+opf | dcopf-gb-full | dcopf gb-full --top 5
+opf | dcopf-gb-synthetic-no-limits | dcopf gb-synthetic --no-limits --top 3
+opf | dcopf-gb-synthetic | dcopf gb-synthetic
+opf | dcopf-nosuchcase | dcopf nosuchcase
+opf | dcopf-tri3-no-limits | dcopf docs/_captures/opf/tri3 --no-limits
+opf | dcopf-tri3 | dcopf docs/_captures/opf/tri3
+opf | dcopf-uk-top3 | dcopf uk --top 3
+opf | dcopf-uk | dcopf uk
+opf | lodf-case9-branch-1 | lodf case9 --branch 1
+opf | lodf-case9-branch-2 | lodf case9 --branch 2
+opf | lodf-case9-branch-99 | lodf case9 --branch 99
+opf | lodf-tri3-branch-0 | lodf docs/_captures/opf/tri3 --branch 0
+opf | lodf-uk-branch-0 | lodf uk --branch 0
+opf | losses-dir-ignored | losses --dir data/uk
+opf | losses-uk | losses uk
+opf | ptdf-case9-bus-5 | ptdf case9 --bus 5
+opf | ptdf-case9-bus-99 | ptdf case9 --bus 99
+opf | ptdf-case9-slack | ptdf case9 --bus 1
+opf | ptdf-tri3-bus-2 | ptdf docs/_captures/opf/tri3 --bus 2
+opf | ptdf-uk-bus-8 | ptdf uk --bus 8 --top 5
+opf | taps-target-0 | taps uk --target 0
+opf | taps-uk-dir | taps data/uk
+opf | taps-uk-target-1-02 | taps uk --target 1.02
+opf | taps-uk | taps uk
+validation | physics-check_gb-full | physics-check data/gb-full
+
+# registered by sync_captures.py
+opf | ptdf-tri3-bus-3 | ptdf docs/_captures/opf/tri3 --bus 3
+
+# registered by sync_captures.py
+opf | acopf-case118 | acopf case118 --top 3
+opf | acopf-case9-costs-case | acopf data/matpower/lib/case9.m --costs case
+opf | cpf-case9-pv | cpf case9 --pv-out docs/_captures/opf/results/cpf-case9-pv.csv
+opf | dcopf-case9-costs-case | dcopf data/matpower/lib/case9.m --costs case --prices --top 3
+opf | dcopf-case9-costs-refused | dcopf case9 --costs case
+opf | dcopf-gb-full-no-limits | dcopf gb-full --no-limits --top 3
+opf | dcopf-tri3-costs | dcopf docs/_captures/opf/tri3 --costs docs/_captures/opf/tri3-costs.json --prices
+opf | dcopf-tri3-csv | dcopf docs/_captures/opf/tri3 --csv docs/_captures/opf/results/dcopf-tri3.csv
+opf | dcopf-uk-prices | dcopf uk --prices --top 3
+opf | dcpf-tri3-csv | dcpf docs/_captures/opf/tri3 --csv docs/_captures/opf/results/dcpf-tri3.csv
+opf | dcpf-tri3 | dcpf docs/_captures/opf/tri3
+opf | dcpf-uk | dcpf uk --top 3
+opf | losses-case300 | losses case300
+opf | losses-nosuch-m | losses nosuch.m
+opf | losses-nosuchcase | losses nosuchcase
+opf | losses-tri3 | losses docs/_captures/opf/tri3
+opf | losses-uk-top-refused | losses uk --top 3
+opf | ptdf-costs-refused | ptdf case9 --bus 1 --costs case
+opf | taps-uk-step-refused | taps uk --step 3
+
+# registered by sync_captures.py
+stability | impedance-stability-case9 | impedance-stability case9
+stability | modal-case9 | modal case9
+stability | stability-case14 | stability case14
+stability | stability-case9-rms | stability case9 --rms
+stability | stability-case9-screen | stability case9 --screen
+stability | stability-case9 | stability case9
+
+# registered by sync_captures.py
+stability | impedance-stability-bus99 | impedance-stability case9 --bus 99
+stability | impedance-stability-case14 | impedance-stability case14
+stability | impedance-stability-case9-gfm | impedance-stability case9 --converter gfm
+stability | impedance-stability-case9-mimo | impedance-stability case9 --criterion mimo
+stability | impedance-stability-case9-outer | impedance-stability case9 --outer-loop-only
+stability | impedance-stability-case9-pll | impedance-stability case9 --pll-bw 40 --current-bw 400
+stability | impedance-stability-case9-real | impedance-stability case9 --grid real
+stability | impedance-stability-case9-unstable | impedance-stability case9 --pll-bw 80 --scr 0.3 --scr-min 0.1
+stability | impedance-stability-case9-weak | impedance-stability case9 --pll-bw 300
+stability | impedance-stability-gfm-damping | impedance-stability case9 --converter gfm --pll-damping 0.5
+stability | impedance-stability-real-scr | impedance-stability case9 --grid real --scr 2
+stability | modal-case14 | modal case14
+stability | modal-case9-damped | modal case9 --damping 5
+stability | modal-gbsyn-inv | modal --dir data/gb-synthetic --enable-inverters
+stability | modal-uk | modal uk
+stability | stability-avr-bad | stability case9 --rms --avr foo
+stability | stability-case9-bus2-clear342 | stability case9 --fault-bus 2 --clear 342
+stability | stability-case9-bus2-clear344 | stability case9 --fault-bus 2 --clear 344
+stability | stability-case9-bus2-clear350 | stability case9 --fault-bus 2 --clear 350
+stability | stability-case9-bus2 | stability case9 --fault-bus 2
+stability | stability-case9-clear | stability case9 --clear 400
+stability | stability-case9-rms-clear | stability case9 --rms --clear 400
+stability | stability-case9-rms-ieeet1-pss | stability case9 --rms --avr ieeet1 --pss
+stability | stability-case9-rms-screen | stability case9 --rms --screen
+stability | stability-case9-rms-sexs-screen | stability case9 --rms --avr sexs --screen
+stability | stability-case9-rms-sexs | stability case9 --rms --avr sexs
+stability | stability-gbfull-rms-clear | stability gb-full --rms --fault-bus 35 --clear 150
+stability | stability-pss-no-avr | stability case9 --rms --pss
+stability | stability-pss-no-rms | stability case9 --pss
+stability | stability-uk-rms-clear | stability uk --rms --clear 150
+stability | stability-uk | stability uk
+
+# registered by sync_captures.py
+audit | audit-estimate | estimate case14 --synth --audit-log results/audit-docs.log
+audit | audit-nargs | audit verify
+audit | audit-tamper | audit verify results/audit-docs-tampered.log
+audit | audit-verify | audit verify results/audit-docs.log
+bench | batchsolve-default | batchsolve
+bench | batchsolve-gpu | batchsolve --count 10 --n 32 --runs 2 --gpu
+bench | bench-estimate | bench --estimate --runs 1 --cases case14,case30
+bench | bench-matrix | bench --runs 1 --parallel 2 --out results/bench-quick.md
+bench | bench-perf | bench --perf --runs 5 --out results/perf-docs.md
+bench | cycle | cycle case118 --workers 8 --window-ms 1500 --cycles 3
+bench | gpu-bad-value | batchsolve --gpu=metal
+bench | simdcheck-expect-ok | simdcheck --expect Avx256
+bench | simdcheck-expect | simdcheck --expect Avx512
+
+# registered by sync_captures.py
+audit | anchor-half | audit verify results/ch26.log --anchor-count 2
+audit | anchor-ok | audit verify results/ch26.log --anchor-count 2 --anchor-head A5875A1F529483C92876C3ED0CC801B6EE0F452C5C033E3B1BAB7317D18D45DA
+audit | delete | audit verify results/ch26-delete.log
+audit | edit | audit verify results/ch26-edit.log
+audit | insert | audit verify results/ch26-insert.log
+audit | missing | audit verify results/nonexistent.log
+audit | refuse-dir | estimate case14 --synth --audit-log results/nodir/x.log
+audit | refuse-tampered | estimate case14 --synth --audit-log results/audit-docs-tampered.log
+audit | reorder | audit verify results/ch26-reorder.log
+audit | rewrite-anchor | audit verify results/ch26-rewrite.log --anchor-count 2 --anchor-head A5875A1F529483C92876C3ED0CC801B6EE0F452C5C033E3B1BAB7317D18D45DA
+audit | rewrite-noanchor | audit verify results/ch26-rewrite.log
+audit | run1 | estimate case14 --synth --audit-log results/ch26.log
+audit | run2 | estimate case30 --synth --audit-log results/ch26.log
+audit | show-tampered | audit show results/audit-docs-tampered.log
+audit | show | audit show results/ch26.log
+audit | space | audit verify results/ch26-space.log
+audit | torn | audit verify results/ch26-torn.log
+audit | trunc-anchor | audit verify results/ch26-trunc.log --anchor-count 2 --anchor-head A5875A1F529483C92876C3ED0CC801B6EE0F452C5C033E3B1BAB7317D18D45DA
+audit | trunc-noanchor | audit verify results/ch26-trunc.log
+audit | wrongverb | case14 --once --audit-log results/ch26x.log
+
+# registered by sync_captures.py
+audit | guard-refused-show | audit show results/ch31-future.log
+audit | guard-refused | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-future.json --out results/ch31-future --audit-log results/ch31-future.log
+
+# registered by sync_captures.py
+audit | anchor-negative | audit verify results/ch26.log --anchor-count -1 --anchor-head A5875A1F529483C92876C3ED0CC801B6EE0F452C5C033E3B1BAB7317D18D45DA
+audit | audit-flag-no-value | --audit-log
+audit | bogus-flag | estimate case14 --synth --bogusflag --audit-log results/ch26-bogus.log
+audit | interpose-run | interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14.json --monitor --ticks 12 --audit-log results/ch26-interpose.log
+audit | interpose-show | audit show results/ch26-interpose.log
+audit | missing-case-show | audit show results/ch26-missing.log
+audit | missing-case | estimate nosuchcase.m --synth --audit-log results/ch26-missing.log
+audit | serve-future-utc-now | serve case9 --measurements-dir results/ch31-future-dir --utc-now 2100-01-01T00:00:00Z
+audit | serve-future | serve case9 --measurements-dir results/ch31-future-dir
+audit | version | --version
+
+# registered by sync_captures.py
+bess | chain-lfp-peak-shave | chain case9 --mode daily --steps 6 --bess lfp:5:5:10 --policy peak-shave
+bess | chain-malformed-spec | chain case9 --steps 2 --bess malformed-spec
+bess | chain-multi-site | chain case9 --steps 3 --bess lead-acid:3:2:4 --bess lfp:5:5:10
+bess | chain-na-ion | chain case9 --steps 4 --bess na-ion:5:8:15
+bess | chain-nmc-hold | chain case9 --mode daily --steps 6 --bess nmc:5:5:10:0.75 --policy hold
+bess | chain-nmc-price | chain case118 --mode daily --steps 12 --bess nmc:10:10:20:0.8 --policy price --prices synthetic
+bess | chain-unknown-chemistry | chain case9 --steps 4 --bess unknown-chem:5:5:10
+bess | gda-replay-lto-peak-shave | gda-replay --synth --case case9 --steps 4 --bess lto:5:10:5 --policy peak-shave
+bess | gda-replay-vrfb-idle | gda-replay --synth --case case9 --steps 4 --bess vrfb:20:10:5 --policy idle
+
+# registered by sync_captures.py
+bess | chain-bad-mode | chain case9 --steps 2 --bess lfp:5:5:10 --mode weird
+bess | chain-bad-number | chain case9 --steps 2 --bess lfp:5:abc:10
+bess | chain-bess-no-value | chain case9 --steps 2 --bess
+bess | chain-idle | chain case9 --steps 3 --bess lfp:5:5:10 --policy idle
+bess | chain-lp-no-prices | chain case9 --steps 3 --bess lfp:5:5:10 --policy lp
+bess | chain-nonconverge | chain case9 --steps 3 --bess lfp:5:20000:40000:0.95 --shave-high -30000 --shave-low -40000
+bess | chain-price-no-series | chain case9 --mode daily --steps 6 --bess nmc:5:5:10 --policy price
+bess | chain-shave-explicit | chain case9 --mode daily --steps 6 --bess lfp:5:5:10 --policy peak-shave --shave-high 250 --shave-low 200
+bess | chain-soc-out-of-range | chain case9 --steps 2 --bess lfp:5:5:10:1.5
+bess | chain-unknown-bus | chain case9 --steps 2 --bess lfp:99:5:10
+bess | chain-unknown-case | chain nosuchcase --bess lfp:1:1:1
+bess | chain-unknown-policy | chain case9 --steps 2 --bess lfp:5:5:10 --policy magic
+bess | chain-zero-mw | chain case9 --steps 2 --bess lfp:5:0:10
+bess | chem-lead-acid | chain case9 --mode daily --steps 12 --bess lead-acid:5:5:10
+bess | chem-lfp | chain case9 --mode daily --steps 12 --bess lfp:5:5:10
+bess | chem-lto | chain case9 --mode daily --steps 12 --bess lto:5:5:10
+bess | chem-na-ion | chain case9 --mode daily --steps 12 --bess na-ion:5:5:10
+bess | chem-nmc | chain case9 --mode daily --steps 12 --bess nmc:5:5:10
+bess | chem-vrfb | chain case9 --mode daily --steps 12 --bess vrfb:5:5:10
+bess | gda-replay-day | gda-replay --synth --case case9 --bess lfp:5:5:10 --out results/bess-day
+bess | gda-replay-hold | gda-replay --synth --case case9 --steps 6 --step-min 30 --bess nmc:5:5:10:0.75 --policy hold
+bess | gda-replay-hourly | gda-replay --synth --case case9 --steps 6 --step-min 120 --bess lfp:5:5:10 --policy idle --out results/bess-hourly
+bess | gda-replay-lp | gda-replay --synth --case case9 --steps 4 --bess lfp:5:5:10 --policy lp
+bess | gda-replay-unknown-bus | gda-replay --synth --case case9 --steps 4 --bess vrfb:20:10:5 --policy idle
+
+# registered by sync_captures.py
+bess | chain-negative-mw | chain case9 --steps 2 --bess lfp:5:-5:10
+bess | chain-zero-mwh | chain case9 --steps 2 --bess lfp:5:5:0
+
+# registered by sync_captures.py
+config | simdcheck | simdcheck
+start | case14-once | case14 --once
+start | case9-once | case9 --once
+start | help | --help
+start | uk-once | uk --once
+start | version | --version
+
+# registered by sync_captures.py
+config | case18-once | case18.m --once
+trouble | bad-number | case14 --ticks 5O
+trouble | bare-m-missing | nosuchbare.m --once
+trouble | crash-dcopf | dcopf results/trouble-tmp/pmin-above-pmax.m
+trouble | dcopf-unknown-case | dcopf nosuchcase_xyz
+trouble | dir-not-a-case | --dir docs --once
+trouble | dir-not-taken | dcopf --dir data/uk
+trouble | emt-fault-zero-r | emt case14 --event fault:5@0.01:0 --duration 0.02
+trouble | emt-negative-duration | emt case14 --duration -0.001
+trouble | estimate-hti-singular | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --hti --out results/trouble-tmp/hti
+trouble | fault-nonconverged | fault docs/_captures/opf/overloaded-case9.m --bus 5
+trouble | freq-recent | freq results/trouble-tmp/recent.csv
+trouble | gda-replay-bess-unknown-bus | gda-replay --synth --steps 2 --case case9 --bess lfp:99:5:10
+trouble | gpu-fallback | case14 --once --gpu
+trouble | harmonics-bus-missing | harmonics case9 --bus 999
+trouble | harmonics-triplen | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-triplen.json
+trouble | licence-limit | results/trouble-tmp/mycase9241.m --once
+trouble | missing-dir | --dir nosuchdir --once
+trouble | missing-m | nosuch.m --once
+trouble | modal-positional-ignored | modal case14 --dir data/uk
+trouble | nminus1-case14 | nminus1 case14
+trouble | nminus1-dir-conflict | nminus1 case14 --dir data/uk
+trouble | nonconverged-once | docs/_captures/opf/overloaded-case9.m --once
+trouble | noverb-dir-ignored | case14 --dir data/uk --once
+trouble | noverb-positional-ignored | --dir data/uk case14 --once
+trouble | replay-event-recent-trace | replay-event gb-2019-08-09 --trace results/trouble-tmp/recent-trace.csv --out results/trouble-tmp/rev
+trouble | screen-unknown-case | screen nosuchcase_xyz
+trouble | stability-fault-bus-crash | stability case9 --fault-bus 99
+trouble | stability-no-inertia | stability case14
+trouble | stability-positional-ignored | stability case14 --dir data/uk --screen
+trouble | stress-dir-conflict | stress case14 --dir data/uk
+trouble | transient-trip-at-past-end | transient case9 --minutes 0.1 --dt-ms 100 --trip 100 --trip-at 30
+trouble | trip-no-inertia | trip case14
+trouble | trip-unmatched-generator | trip nosuchcase_xyz
+trouble | unknown-case | nosuchcase --once
+trouble | unknown-flag | case14 --once --bogus
+
+# registered by sync_captures.py
+exports | audit-estimate | --audit-log results/exports-docs/audit.log estimate case9 --synth --out results/exports-docs/estimate-audit
+exports | audit-show | audit show results/exports-docs/audit.log
+exports | chain-bess | chain case9 --steps 4 --bess lfp:5:5:10 --policy peak-shave --out results/exports-docs/chain-storage.md
+exports | chain | chain case14 --steps 5 --mode ramp --out results/exports-docs/chain-case14.md
+exports | cpf | cpf case9 --pv-out results/exports-docs/pv.csv
+exports | crossval | crossval case9 --out results/exports-docs/crossval
+exports | dcopf-csv | dcopf case14 --csv results/exports-docs/dcopf.csv
+exports | dcopf | dcopf case14 --out results/exports-docs/dcopf.json
+exports | dcpf | dcpf case9 --out results/exports-docs/dcpf.csv
+exports | emt | emt case14 --dt-us 20 --duration 0.05 --source 1 --amp 1 --freq 50 --event fault:5@0.02:0.01 --out results/exports-docs/emt
+exports | estimate-hti | estimate case14 --measurements docs/_captures/estimation/case14-planted.json --hti --fdia-screen --out results/exports-docs/estimate-planted
+exports | estimate-synth | estimate case14 --synth --trace --export-solve --out results/exports-docs/estimate
+exports | evidence | evidence --event gb-2019-08-09 --out results/exports-docs/evidence-2019
+exports | fleet | fleet --event gb-2019-08-09 --out results/exports-docs/fleet-2019
+exports | gda-replay | gda-replay --synth --case case9 --bess lfp:5:5:10 --out results/exports-docs/gda-replay
+exports | h0 | h0-study --event gb-2019-08-09 --out results/exports-docs/h0-2019
+exports | harmonics | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9.json --enableExport=results/exports-docs/harmonic-export.json
+exports | impedance | impedance-stability case9 --enableExport=results/exports-docs/impedance-stability.json
+exports | losses | losses case14 --json results/exports-docs/losses.json --csv results/exports-docs/losses.csv
+exports | modal | modal case9 --damping 0.05 --export results/exports-docs/smallsignal.json
+exports | pf-export | case9 --once --enableExport=results/exports-docs/solve-export.json
+exports | replay-event-dump | replay-event --dump-catalog results/exports-docs/catalog.json
+exports | replay-event | replay-event gb-2019-08-09 --out results/exports-docs/replay-2019
+exports | scenario | scenario --event gb-2019-08-09 --out results/exports-docs/scenario-2019
+exports | screen | screen case14 --csv results/exports-docs/screen.csv
+exports | stability-export | stability case9 --export results/exports-docs/classical.json
+exports | stress | stress case14 --out results/exports-docs/stress.md
+exports | sweep | nminus1-sweep case14 --out results/exports-docs/sweep.md
+exports | transient | transient case9 --minutes 1 --dt-ms 100 --export-every 100 --out results/exports-docs/transient
+exports | viz | export results/exports-docs/gridviz.json --frames 4
+trouble | estimate-chi-square-fail | estimate case14 --synth --noise 1.6 --out results/trouble-tmp/noise
+trouble | estimate-future-stamp | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-future.json --out results/trouble-tmp/fut
+trouble | estimate-unobservable | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-thin.json --out results/trouble-tmp/thin
+trouble | harmonics-even-orders | harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-even.json
+trouble | nonconverged-bfs | case14 --once --bfs
+trouble | simdcheck-expect-fail | simdcheck --expect Avx512
+trouble | stress-from-above-to | stress case14 --from 2 --to 1
+trouble | version | --version
+
+# registered by sync_captures.py
+exports | audit-verify | audit verify results/exports-docs/audit.log
+exports | dcopf-costs | dcopf case9 --costs results/exports-docs/inputs/costs.json
+exports | gda-series | gda-replay --series results/exports-docs/inputs/series.json --case case9 --out results/exports-docs/gda-series
+exports | pf-shunts | pf case9 --switched-shunts results/exports-docs/inputs/shunts.json
+exports | validate | validate tests/GridSim.Tests/fixtures/v2/networks/good.network.json tests/GridSim.Tests/fixtures/v2/networks/bad-bus-type.network.json
+
+# registered by sync_captures.py
+networks | case-misspelt-key | --dir docs/_captures/networks/inputs/misspelt-key --once
+networks | case-no-basekv | --dir docs/_captures/networks/inputs/no-basekv --once
+networks | case-no-slack | --dir docs/_captures/networks/inputs/no-slack --once
+networks | case14-once | case14 --once
+networks | dir-gb-synthetic-once | --dir data/gb-synthetic --once
+networks | dir-missing | --dir nosuchdir --once
+networks | dir-not-case | --dir docs --once
+networks | dir-uk-once | --dir data/uk --once
+networks | gb-full-bare-refused | gb-full --once
+networks | gb-full-free-tier | pf gb-full --top 3
+networks | iberia-pf | pf data/intl/iberia --top 3
+networks | intl-ireland-once | --dir data/intl/ireland-all-island --once
+networks | licence-limit | results/networks-tmp/mycase9241.m --once
+networks | matpower-ambiguous | case33bw.m --once
+networks | matpower-bare-name | case33bw.m --once
+networks | matpower-relative-path | pf pegase/case1354pegase.m --top 3
+networks | missing-m | nosuch.m --once
+networks | pypsa-gb-zonal-refused | pf pypsa-gb-zonal
+networks | unknown-case-bare | nosuchcase --once
+networks | unknown-case-dcopf | dcopf nosuchcase_xyz
+networks | unknown-case-screen | screen nosuchcase_xyz
+networks | v2-bare-refused | docs/_captures/networks/inputs/v2-two-bus/two-bus.case.json --once
+networks | v2-dcpf | dcpf docs/_captures/networks/inputs/v2-two-bus/two-bus.case.json
+networks | v2-dir-refused | --dir docs/_captures/networks/inputs/v2-two-bus --once
+networks | v2-validate-fail | validate tests/GridSim.Tests/fixtures/v2/networks/bad-bus-type.network.json
+networks | v2-validate-library | validate data/library/placeholders/unmodelled-sites.json
+networks | v2-validate-ok | validate docs/_captures/networks/inputs/v2-two-bus/two-bus.case.json
+
+# registered by sync_captures.py
+licence | bundled-matpower-over-limit | pf data/matpower/pegase/case9241pegase.m --top 3
+licence | bundled-over-limit | pf gb-full --top 3
+licence | case-9-builtin | case9 --once
+licence | import-flag-eaten | --importLicence --once
+licence | import-foreign-key | licence import docs/_captures/licence/inputs/test-key.gridsim
+licence | import-missing | licence import docs/_captures/licence/inputs/absent.gridsim
+licence | import-not-a-key | --importLicence docs/_captures/licence/inputs/not-a-key.gridsim
+licence | import-usage | licence import
+licence | path | licence path
+licence | status-foreign-key | licence status
+licence | status-free | licence status
+licence | unknown-sub | licence renew
+licence | user-network-refused | results/licence-tmp/mycase9241.m --once
+
+# registered by sync_captures.py
+datamodel | case14-export | case14 --once --enableExport
+datamodel | case33bw-export | data/matpower/dist/case33bw.m --once --enableExport
+
+# registered by sync_captures.py
+provenance | horizon-refused | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-future.json
+provenance | pf-run1 | pf case118 --json results/prov-pf.json
+provenance | pf-run2 | pf case118 --json results/prov-pf.json
+provenance | replay-placeholder | replay-event gb-largest-loss-1320 --out results/prov-replay-placeholder
+provenance | replay-recorded | replay-event gb-2019-08-09 --out results/prov-replay-recorded
+provenance | serve-refused | serve case9 --measurements-dir results/prov-future-dir
+provenance | serve-utc-now | serve case9 --measurements-dir results/prov-future-dir --utc-now 2100-01-01T00:00:00Z
+provenance | simdcheck-expect-avx512 | simdcheck --expect Avx512
+provenance | simdcheck | simdcheck
+
+# registered by sync_captures.py
+asset-grounding | refused-no-verify | trip results/asset-grounding/no-verify --asset-dynamics on
+asset-grounding | refused-ramp-key | trip results/asset-grounding/ramp-key --asset-dynamics on
+asset-grounding | trip-synthetic-assets-off | trip data/gb-synthetic
+asset-grounding | trip-synthetic-assets-on | trip data/gb-synthetic --asset-dynamics on
+asset-grounding | trip-synthetic-modern-lom | trip results/asset-grounding/modern-lom --asset-dynamics on
+c37118 | pmu-ingest-clean | pmu-ingest docs/_captures/c37118/two-pmu.bin
+c37118 | pmu-ingest-csv | pmu-ingest docs/_captures/c37118/two-pmu.bin --csv docs/_captures/c37118/samples.csv
+c37118 | pmu-ingest-damaged | pmu-ingest docs/_captures/c37118/two-pmu-damaged.bin
+c37118 | pmu-ingest-truncated | pmu-ingest docs/_captures/c37118/two-pmu-truncated.bin
+c37118 | pmu-ingest-usage | pmu-ingest
+cliref | flag-refused | trip --top 5
+cliref | unknown-case | screen nosuchcase
+cliref | unknown-flag | nminus1 case14 --no-such-flag
+dist3ph | err-delta | dist3ph docs/_captures/dist3ph/ieee4-delta-bad.json
+dist3ph | err-mode | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json transient
+dist3ph | err-nofile | dist3ph data/dist3ph/nothere.json
+dist3ph | err-nonconv | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json sweep --max-iter 2
+dist3ph | err-spectrum | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum nope --current 0.2
+dist3ph | err-wrongflag | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json sweep --bus 4
+dist3ph | estimate-bc-refused | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json --method branch-current
+dist3ph | estimate-bc | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements docs/_captures/dist3ph/ieee4-currents-only.measurements.json --method branch-current
+dist3ph | estimate-gross-wlav | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements docs/_captures/dist3ph/ieee4-gross-error.measurements.json --method wlav
+dist3ph | estimate-gross-wls | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements docs/_captures/dist3ph/ieee4-gross-error.measurements.json
+dist3ph | estimate-pseudo | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements docs/_captures/dist3ph/ieee4-pseudo.measurements.json
+dist3ph | estimate-unobservable | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements docs/_captures/dist3ph/ieee4-vmag-only.measurements.json
+dist3ph | estimate-wlav | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json --method wlav
+dist3ph | estimate-wls | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json
+dist3ph | fault-123 | dist3ph data/dist3ph/ieee123.json fault --bus 100
+dist3ph | fault-all | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json fault --bus 4
+dist3ph | fault-slg-zf | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json fault --bus 3 --type slg --zf 0.05
+dist3ph | fault-source | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json fault --bus 1
+dist3ph | harmonics-123 | dist3ph data/dist3ph/ieee123.json harmonics --bus 100 --spectrum 6-pulse --current 0.01
+dist3ph | harmonics-pv | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum pv-inverter --current 0.2
+dist3ph | harmonics | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum 6-pulse-g5 --current 0.2
+dist3ph | sweep-123 | dist3ph data/dist3ph/ieee123.json
+dist3ph | sweep-balanced | dist3ph data/dist3ph/ieee4-gyGy-stepdown-balanced.json sweep
+dist3ph | sweep-case33bw | dist3ph data/matpower/dist/case33bw.m
+dist3ph | sweep-unbalanced | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+dynlib | stability-case9-rms-avr-ieeet1-screen | stability case9 --rms --avr ieeet1 --screen
+dynlib | stability-case9-rms-avr-sexs-pss-screen | stability case9 --rms --avr sexs --pss --screen
+formats | estimate-run | estimate case14 --synth --export-solve --trace --out results/formats/estimate
+formats | estimate-thin-run | estimate case9 --measurements docs/_captures/estimation/case9-telemetry-thin.json --out results/formats/estimate-thin
+formats | pegase-solve-run | data/matpower/pegase/case1354pegase.m --once --enableExport=results/formats/pegase-solve.json
+formats | replay-2023-run | replay-event gb-2023-12-22 --out results/formats/replay-2023
+formats | uk-solve-run | --dir data/uk --once --enableExport=results/formats/uk-solve.json
+formats | uk-zip-solve-run | --dir docs/_captures/formats/inputs/uk-zip --once --enableExport=results/formats/uk-zip-solve.json
+iec60909 | all-buses | iec60909 case9 --all-buses
+iec60909 | branches | iec60909 case9 --bus 5 --branches
+iec60909 | breaker-adequate | iec60909 case9 --bus 5 --breaker 345,6,2,2
+iec60909 | breaker-inadequate | iec60909 case9 --bus 1 --breaker 345,6,2,2
+iec60909 | converters-bus3 | iec60909 uk --bus 3
+iec60909 | corrections | iec60909 case9 --bus 5 --corrections --rated-pf 0.85
+iec60909 | earth-fault-no-data | iec60909 case9 --bus 5 --type slg
+iec60909 | gb-full-bramford | iec60909 gb-full --bus 35
+iec60909 | line-to-line-min-bus5 | iec60909 case9 --bus 5 --type ll --objective min
+iec60909 | three-phase-bus1 | iec60909 case9 --bus 1
+iec60909 | three-phase-bus5 | iec60909 case9 --bus 5
+iec60909 | unknown-bus | iec60909 case9 --bus 99
+iec60909 | usage | iec60909 case9
+overcurrent-coordination | alarms-agree | protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/overcurrent-coordination/soe-agree.csv
+overcurrent-coordination | alarms-diverge | protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/overcurrent-coordination/soe-diverge.csv
+overcurrent-coordination | alarms-nocascade | protection-check case30 --alarms docs/_captures/overcurrent-coordination/soe-agree.csv
+overcurrent-coordination | grade-backup-never | grade --chain iec-si:100:0.1,iec-si:1000:0.5 --current 500
+overcurrent-coordination | grade-badspec | grade --chain iec-xx:400:0.1,iec-si:400:0.3 --current 2000
+overcurrent-coordination | grade-below-pickup | grade --chain iec-si:1000:0.1,iec-si:400:0.5 --current 500
+overcurrent-coordination | grade-chain | grade --chain iec-si:400:0.1,iec-si:400:0.3,iec-si:400:0.6 --current 2000,4000
+overcurrent-coordination | grade-families | grade --chain ieee-vi:200:0.5,iec-ei:200:0.3,dt:200:1.5 --current 1600 --cti 0.2
+overcurrent-coordination | grade-usage | grade --chain iec-si:400:0.1 --current 2000
+overcurrent-coordination | grade-zero | grade --chain iec-si:100:0.1,iec-si:100:0.5 --current 0
+power-flows | case9-once | case9
+power-flows | missing-file | nosuch.m --once
+power-flows | ticks-zero | case14 --ticks 0
+protection-assess | cascade-case30-alarms | protection-check case30 --cascade --alarms docs/_captures/protection-assess/case30-alarms.csv
+protection-assess | cascade-case30 | protection-check case30 --cascade
+protection-assess | check-case9-badbus | protection-check case9 --fault-bus 99
+protection-assess | check-case9-fault7-ll | protection-check case9 --fault-bus 7 --fault-type ll
+protection-assess | check-case9-fault7-zf | protection-check case9 --fault-bus 7 --zf 0.5
+protection-assess | check-case9-fault7 | protection-check case9 --fault-bus 7
+protection-assess | check-case9-slg | protection-check case9 --fault-bus 7 --fault-type slg
+protection-assess | check-case9-uf | protection-check case9 --uf 50.5
+protection-assess | check-case9-uv | protection-check case9 --uv 1.00
+protection-assess | check-case9-zf-alone | protection-check case9 --zf 0.5
+protection-assess | check-case9 | protection-check case9
+protection-assess | fault-case14-bus4 | fault case14 --bus 4
+protection-assess | fault-case9-bus7-ll | fault case9 --bus 7 --type ll
+protection-assess | fault-gbsynthetic-bus100 | fault data/gb-synthetic --bus 100
+protection-assess | solve-case30 | case30 --once
+protection-user | fault-case14-ll | fault case14 --bus 4 --type ll
+protection-user | fault-case14-slg | fault case14 --bus 4 --type slg
+protection-user | fault-case9-bus7-zf | fault case9 --bus 7 --zf 0.5
+protection-user | fault-case9-bus7 | fault case9 --bus 7
+protection-user | fault-case9-bus99 | fault case9 --bus 99
+protection-user | fault-case9-nobus | fault case9
+protection-user | fault-uk-bus1 | fault uk --bus 1
+protection-user | grade-bad | grade --chain iec-si:400:0.1,iec-si:400:0.1 --current 1647
+protection-user | grade-badcurve | grade --chain iec-xx:400:0.1,iec-si:400:0.3 --current 2000
+protection-user | grade-chain | grade --chain iec-si:400:0.1,iec-si:400:0.3,iec-si:400:0.6 --current 1647,4000
+protection-user | grade-cti | grade --chain iec-si:400:0.1,iec-si:400:0.3 --current 1647 --cti 0.2
+protection-user | grade-mixed | grade --chain ieee-vi:200:0.5,iec-ei:200:0.3,dt:200:1.5 --current 1600 --cti 0.2
+protection-user | grade-nocurrent | grade --chain iec-si:400:0.1,iec-si:400:0.3
+protection-user | grade-one | grade --chain iec-si:400:0.1 --current 2000
+protection-user | grade-zero | grade --chain iec-si:100:0.1,iec-si:100:0.5 --current 0
+protection-user | iec-case14-nokv | iec60909 case14 --bus 4
+protection-user | iec-case9-all | iec60909 case9 --all-buses
+protection-user | iec-case9-branches | iec60909 case9 --bus 7 --branches
+protection-user | iec-case9-breaker-ok | iec60909 case9 --bus 7 --breaker 345,5,2,2,1
+protection-user | iec-case9-breaker | iec60909 case9 --bus 7 --breaker 345,3,1.5,1.5,1
+protection-user | iec-case9-bus7-ll | iec60909 case9 --bus 7 --type ll
+protection-user | iec-case9-bus7-min | iec60909 case9 --bus 7 --objective min
+protection-user | iec-case9-bus7-slg | iec60909 case9 --bus 7 --type slg
+protection-user | iec-case9-bus7 | iec60909 case9 --bus 7
+protection-user | iec-case9-corrections | iec60909 case9 --bus 7 --corrections --rated-pf 0.85
+protection-user | iec-case9-nobus | iec60909 case9 --bus 99
+protection-user | iec-uk-bus1 | iec60909 uk --bus 1
+protection-user | pc-alarms-bad | protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/protection-user/inputs/soe-bad.csv
+protection-user | pc-alarms-missing | protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/protection-user/inputs/nosuch.csv
+protection-user | pc-alarms-nocascade | protection-check case30 --alarms docs/_captures/protection-user/inputs/soe-agree.csv
+protection-user | pc-case14 | protection-check case14
+protection-user | pc-case30-alarms-agree | protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/protection-user/inputs/soe-agree.csv
+protection-user | pc-case30-alarms-diverge | protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/protection-user/inputs/soe-diverge.csv
+protection-user | pc-case30-cascade | protection-check case30 --cascade --oc 1.0
+protection-user | pc-case9-cascade | protection-check case9 --cascade --thermal 0.5
+protection-user | pc-case9-fault7-ll | protection-check case9 --fault-bus 7 --fault-type ll
+protection-user | pc-case9-fault7-slg | protection-check case9 --fault-bus 7 --fault-type slg
+protection-user | pc-case9-fault7-zf | protection-check case9 --fault-bus 7 --zf 0.5
+protection-user | pc-case9-fault7 | protection-check case9 --fault-bus 7
+protection-user | pc-case9-fault99 | protection-check case9 --fault-bus 99
+protection-user | pc-case9-faultbus-both | protection-check case9 --fault-bus 7 --cascade
+protection-user | pc-case9-thermal | protection-check case9 --thermal 0.5
+protection-user | pc-case9-zf-alone | protection-check case9 --zf 0.5
+protection-user | pc-case9-zf-neg | protection-check case9 --fault-bus 7 --zf -1
+protection-user | pc-uk | protection-check uk
+protection-user | trip-bad-bus | trip results/protection-user/bad-bus --asset-dynamics
+protection-user | trip-bad-class | trip results/protection-user/bad-class --asset-dynamics
+protection-user | trip-lfdd-49p6 | trip results/protection-user/lfdd-49p6 --asset-dynamics
+protection-user | trip-lfdd-only | trip results/protection-user/lfdd-only --asset-dynamics
+protection-user | trip-lom-only | trip results/protection-user/lom-only --asset-dynamics
+protection-user | trip-synthetic-assets-off | trip data/gb-synthetic --asset-dynamics=off
+protection-user | trip-synthetic-assets | trip data/gb-synthetic --asset-dynamics
+protection-user | trip-synthetic-plain | trip data/gb-synthetic
+protection-user | trip-uk-assets | trip uk --asset-dynamics
+protection-user | trip-uv-above-one | trip results/protection-user/uv-inert --asset-dynamics
+protection-user | trip-uv-below-one | trip results/protection-user/uv-inert --asset-dynamics
+protections | trip-asset-dynamics | trip data/gb-synthetic --asset-dynamics
+protections | trip-lfdd-only | trip results/protections/lfdd-only --asset-dynamics
+protections | trip-lom-only | trip results/protections/lom-only --asset-dynamics
+protections | trip-no-assets | trip data/gb-synthetic
+protections | trip-prot-only | trip results/protections/prot-only --asset-dynamics
+realtime | dist3ph-bad-flag | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json --bus 4
+realtime | dist3ph-bad-spectrum | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum nope --current 0.1
+realtime | dist3ph-estimate-branch-current-refused | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json --method branch-current
+realtime | dist3ph-estimate-branch-current | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-currents.json --method branch-current
+realtime | dist3ph-estimate-pseudo | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-pseudo.json
+realtime | dist3ph-estimate-thin | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-thin.json
+realtime | dist3ph-estimate-wlav-gross | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-gross.json --method wlav
+realtime | dist3ph-estimate-wls-gross | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-gross.json
+realtime | dist3ph-estimate-wls | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json
+realtime | dist3ph-fault-ieee123 | dist3ph data/dist3ph/ieee123.json fault --bus 1
+realtime | dist3ph-fault-source | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json fault --bus 1
+realtime | dist3ph-fault | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json fault --bus 4
+realtime | dist3ph-harmonics | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum 6-pulse --current 0.1
+realtime | dist3ph-lift-case33bw | dist3ph data/matpower/dist/case33bw.m
+realtime | dist3ph-sweep-balanced | dist3ph data/dist3ph/ieee4-gyGy-stepdown-balanced.json
+realtime | dist3ph-sweep-ieee123 | dist3ph data/dist3ph/ieee123.json
+realtime | dist3ph-sweep-unbalanced | dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+realtime | serve-bad-method | serve case9 --measurements-dir results/realtime/windows --method pf
+realtime | serve-boundary | serve case9 --measurements-dir results/realtime/windows --utc-now 2024-03-08T13:01:00Z
+realtime | serve-ekf | serve case9 --measurements-dir results/realtime/windows --method ekf
+realtime | serve-enkf | serve case9 --measurements-dir results/realtime/windows --method enkf
+realtime | serve-fresh | serve case9 --measurements-dir results/realtime/windows --method ekf --utc-now 2024-03-01T12:00:00Z
+realtime | serve-max-windows | serve case9 --measurements-dir results/realtime/windows --max-windows 2
+realtime | serve-size-refusal | serve pegase/case1354pegase.m --measurements-dir results/realtime/windows --method ekf
+realtime | serve-ukf | serve case9 --measurements-dir results/realtime/windows --method ukf
+realtime | serve-wls | serve case9 --measurements-dir results/realtime/windows --method wls
+v2-schema | kinds-validate | validate schemas/v2/kinds
+v2-schema | library-meaning-validate | validate docs/_captures/v2-schema/inputs/library/meaning.library.json
+v2-schema | library-shape-validate | validate docs/_captures/v2-schema/inputs/library/shape.library.json
+v2-schema | refused-elements-dcpf | dcpf docs/_captures/v2-schema/inputs/refused/elements.case.json
+v2-schema | refused-not-a-manifest | pf docs/_captures/v2-schema/inputs/small/small.network.json
+v2-schema | refused-override-dcpf | dcpf docs/_captures/v2-schema/inputs/refused/override.case.json
+v2-schema | refused-schema-dcpf | dcpf docs/_captures/v2-schema/inputs/refused/schema.case.json
+v2-schema | refused-schema-validate | validate docs/_captures/v2-schema/inputs/refused/schema.case.json
+v2-schema | sites-validate | validate data/library/placeholders/unmodelled-sites.json
+v2-schema | small-convert | convert docs/_captures/v2-schema/inputs/small/small.case.json results/v2-schema/small-v1
+v2-schema | small-dcpf | dcpf docs/_captures/v2-schema/inputs/small/small.case.json
+v2-schema | small-losses | losses docs/_captures/v2-schema/inputs/small/small.case.json
+v2-schema | small-pf | pf docs/_captures/v2-schema/inputs/small/small.case.json
+v2-schema | small-validate | validate docs/_captures/v2-schema/inputs/small/small.case.json
+v2-schema | v1-validate | validate data/uk/buses.json
+# breakers rated for the highest system voltage Um (362 kV on the 345 kV case9 buses)
+iec60909 | breaker-adequate-um | iec60909 case9 --bus 5 --breaker 362,6,2,2
+iec60909 | breaker-bus7-adequate-um | iec60909 case9 --bus 7 --breaker 362,5,2,2,1
+iec60909 | breaker-bus7-short-um | iec60909 case9 --bus 7 --breaker 362,3,1.5,1.5,1
+# Time series and hosting capacity (manual ch. 34). The study file is docs/_captures/qsts/study33.json (the same day the
+# qsts process tests run); bad-study.json is the refused example.
+qsts | case33bw-day          | qsts case33bw.m --study docs/_captures/qsts/study33.json --top 5
+qsts | case33bw-day-csv      | qsts case33bw.m --study docs/_captures/qsts/study33.json --top 0 --csv results/qsts-case33bw-day.csv
+qsts | refused-study         | qsts case33bw.m --study docs/_captures/qsts/bad-study.json
+qsts | hosting-snapshot      | hosting case33bw.m --buses 6,18,33 --max-mw 10 --tolerance-mw 0.01
+qsts | hosting-qsts          | hosting case33bw.m --method qsts --study docs/_captures/qsts/study33.json --resource-profile solar --buses 18,33 --max-mw 8 --tolerance-mw 0.05
+qsts | hosting-load          | hosting case33bw.m --resource load --buses 18,33 --max-mw 10 --tolerance-mw 0.01
+# summer33.json: a light summer day (no devices) for the time-series hosting examples.
+qsts | hosting-qsts-summer         | hosting case33bw.m --method qsts --study docs/_captures/qsts/summer33.json --resource-profile solar --buses 6,18,33 --max-mw 8 --tolerance-mw 0.01
+qsts | hosting-qsts-summer-voltvar | hosting case33bw.m --method qsts --study docs/_captures/qsts/summer33.json --resource-profile solar --buses 6,18,33 --max-mw 8 --tolerance-mw 0.01 --pv-function volt-var --mva-per-mw 1.1

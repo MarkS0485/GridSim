@@ -1,0 +1,3 @@
+[
+  { "name": "A-B", "from": 1, "to": 2, "rPu": 0.01, "xPu": 0.1, "bPu": 0.0, "ratingMva": 250.0, "circuits": 1 }
+]

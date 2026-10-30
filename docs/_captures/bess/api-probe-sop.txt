@@ -1,0 +1,7 @@
+$ API probe (GridSim.Core, Release build): sop
+chemistry  10 s pulse  30 min   2 h   10 s at -10 C   (MW, discharge)
+LFP         1.104    1.071    0.465    0.955
+NMC         2.258    1.758    0.458    1.725
+LTO         6.210    1.771    0.452    4.851
+Na-ion      2.352    1.716    0.472    1.998
+[exit 0]

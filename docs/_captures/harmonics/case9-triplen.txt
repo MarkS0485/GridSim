@@ -1,0 +1,3 @@
+$ gridsim harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-triplen.json
+error: harmonics: Harmonic source at bus 9 (6-pulse) injects order 3, a triplen (zero sequence). The balanced positive-sequence study cannot model it (that needs the zero-sequence network); use the three-phase harmonic study. (Parameter 'sources')
+[exit 1]

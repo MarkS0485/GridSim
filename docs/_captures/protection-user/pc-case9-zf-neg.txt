@@ -1,0 +1,3 @@
+$ gridsim protection-check case9 --fault-bus 7 --zf -1
+error: --zf expected a finite fault reactance of 0 pu or more (Zf = j zf) but got '-1'
+[exit 2]

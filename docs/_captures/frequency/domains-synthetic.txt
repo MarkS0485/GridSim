@@ -1,0 +1,14 @@
+$ gridsim domains --dir data/gb-synthetic
+GridSim  -  SPEED DOMAINS on GB synthetic
+==================================================================
+4 speed domains  *  deltaGVa 52 %  *  dominant = Domain 2
+
+Domain   Speed         Kind               Mach      GVA.s   GVad GVA
+Domain 2 2p/3000rpm    Synchronous          23     167.80      23.92  *
+Domain 1 inverter      Pll                  35       0.00      15.76
+Domain 3 8p/750rpm     Synchronous           1       3.90       0.65
+Domain 0 inverter      SyntheticInertia     15       0.00       0.05
+
+GVad = apparent-power stiffness sum(S*C); GVA.s = real spinning inertia. A domain is dominant
+when deltaGVa >= 10% (LOS sec. 5.5). Distributed model: spatial spread & propagation are unvalidated at scale.
+[exit 0]

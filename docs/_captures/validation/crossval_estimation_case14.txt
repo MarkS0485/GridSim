@@ -1,0 +1,140 @@
+$ python tools/crossval/crossval_estimation.py results/est-case14
+There are 3 branches which are considered as trafos - due to ratio unequal 0 or 1 - but connect same voltage levels.
+{
+  "schema": "gridsim-crossval-estimation/1",
+  "tool": "pandapower.estimation",
+  "case": "case14",
+  "buses_compared": 14,
+  "max_dvm_pu": 5.5642157548163595e-12,
+  "max_dva_deg": 7.739942020634771e-11,
+  "within_tolerance": true,
+  "rows": [
+    {
+      "bus": 1,
+      "vm_gridsim": 1.0600177496207248,
+      "vm_pandapower": 1.0600177496207863,
+      "dvm": 6.150635556423367e-14,
+      "va_gridsim": 0,
+      "va_pandapower": 0.0,
+      "dva_deg": 0.0
+    },
+    {
+      "bus": 2,
+      "vm_gridsim": 1.044882391143417,
+      "vm_pandapower": 1.0448823911434961,
+      "dvm": 7.904787935331115e-14,
+      "va_gridsim": -4.96659948467924,
+      "va_pandapower": -4.966599484678903,
+      "dva_deg": 3.375077994860476e-13
+    },
+    {
+      "bus": 3,
+      "vm_gridsim": 1.0087618560376483,
+      "vm_pandapower": 1.0087618560377403,
+      "dvm": 9.192646643896296e-14,
+      "va_gridsim": -12.659163003374761,
+      "va_pandapower": -12.659163003380892,
+      "dva_deg": 6.130207452770264e-12
+    },
+    {
+      "bus": 4,
+      "vm_gridsim": 1.017571919930387,
+      "vm_pandapower": 1.0175719199306346,
+      "dvm": 2.475797344914099e-13,
+      "va_gridsim": -10.256153736078947,
+      "va_pandapower": -10.25615373608075,
+      "dva_deg": 1.8030021919912542e-12
+    },
+    {
+      "bus": 5,
+      "vm_gridsim": 1.0192152574733402,
+      "vm_pandapower": 1.0192152574736002,
+      "dvm": 2.6001423236721166e-13,
+      "va_gridsim": -8.719336830684083,
+      "va_pandapower": -8.719336830683135,
+      "dva_deg": 9.485745522397337e-13
+    },
+    {
+      "bus": 6,
+      "vm_gridsim": 1.0693651816932153,
+      "vm_pandapower": 1.0693651816944754,
+      "dvm": 1.2601031329495527e-12,
+      "va_gridsim": -14.191509977674706,
+      "va_pandapower": -14.191509977631066,
+      "dva_deg": 4.363975847354595e-11
+    },
+    {
+      "bus": 7,
+      "vm_gridsim": 1.0616378170343417,
+      "vm_pandapower": 1.0616378170350194,
+      "dvm": 6.776801342311956e-13,
+      "va_gridsim": -13.226654777619945,
+      "va_pandapower": -13.226654777622237,
+      "dva_deg": 2.291500322826323e-12
+    },
+    {
+      "bus": 8,
+      "vm_gridsim": 1.0897066845403143,
+      "vm_pandapower": 1.08970668454079,
+      "dvm": 4.756195437494171e-13,
+      "va_gridsim": -13.13478194581695,
+      "va_pandapower": -13.134781945832673,
+      "dva_deg": 1.5722534385531617e-11
+    },
+    {
+      "bus": 9,
+      "vm_gridsim": 1.0565494298279445,
+      "vm_pandapower": 1.0565494298292717,
+      "dvm": 1.3271606036369121e-12,
+      "va_gridsim": -14.890444728670289,
+      "va_pandapower": -14.890444728646699,
+      "dva_deg": 2.3590018827235326e-11
+    },
+    {
+      "bus": 10,
+      "vm_gridsim": 1.0514535687560125,
+      "vm_pandapower": 1.0514535687570814,
+      "dvm": 1.0689227281091007e-12,
+      "va_gridsim": -15.0455379419114,
+      "va_pandapower": -15.045537941889961,
+      "dva_deg": 2.1438850694721623e-11
+    },
+    {
+      "bus": 11,
+      "vm_gridsim": 1.05557657025957,
+      "vm_pandapower": 1.0555765702604734,
+      "dvm": 9.032774528350274e-13,
+      "va_gridsim": -14.722584692579991,
+      "va_pandapower": -14.722584692547992,
+      "dva_deg": 3.199929210495611e-11
+    },
+    {
+      "bus": 12,
+      "vm_gridsim": 1.0538920352799281,
+      "vm_pandapower": 1.0538920352815606,
+      "dvm": 1.6324719354088302e-12,
+      "va_gridsim": -14.977134203090218,
+      "va_pandapower": -14.977134203029378,
+      "dva_deg": 6.084022174945858e-11
+    },
+    {
+      "bus": 13,
+      "vm_gridsim": 1.0496829750527015,
+      "vm_pandapower": 1.049682975054776,
+      "dvm": 2.0745627438145675e-12,
+      "va_gridsim": -15.124816092840843,
+      "va_pandapower": -15.124816092790063,
+      "dva_deg": 5.078071296793496e-11
+    },
+    {
+      "bus": 14,
+      "vm_gridsim": 1.034448969897869,
+      "vm_pandapower": 1.0344489699034332,
+      "dvm": 5.5642157548163595e-12,
+      "va_gridsim": -16.153304593706714,
+      "va_pandapower": -16.153304593629315,
+      "dva_deg": 7.739942020634771e-11
+    }
+  ]
+}
+[exit 0]

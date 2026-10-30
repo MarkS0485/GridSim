@@ -1,0 +1,10 @@
+$ gridsim estimate case14 --measurements docs/_captures/estimation/case14-planted.json --method huber --out results/case14-planted-huber
+
+=== Huber M-estimator state estimate: case14 ===
+  status: Converged   iterations: 33   max |dx|: 1.24E-009
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  consistency: J = 1271.55 vs chi2(95%) = 118.75 -> FAIL
+
+  -> results\case14-planted-huber
+[exit 0]

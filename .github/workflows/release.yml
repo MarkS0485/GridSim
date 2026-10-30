@@ -1,0 +1,555 @@
+name: Release
+
+# F04: tag-driven release. Pushing a tag of the form v<MAJOR>.<MINOR>.<PATCH> (for example v1.95.112) builds,
+# tests and publishes every shippable artefact from that exact commit, then creates the GitHub Release with the
+# binaries, their SHA-256 checksums, the CycloneDX SBOMs and notes taken from CHANGELOG.md attached.
+#
+# What ships (F25, Ruling R1, 2026-10-04), and nothing else:
+#   * the command line tool `gridsim` as self-contained single-file binaries for win-x64, linux-x64 and osx-arm64
+#     (attached to the GitHub Release);
+#   * GridSim.Core as a NuGet package (publish.yml, pushed to this repository's GitHub Packages feed);
+#   * the web app as the replay-only container image ghcr.io/<owner>/gridsim-web:<version> (the Dockerfile; its
+#     Production settings are replay-only, so the solve API and the simulation socket are not served).
+# Not shipped: the desktop app (GridSim.Wpf) and Unity come after 1.0; GridSim.Gda and the GDA data are not release
+# artefacts (GDA is a model the author uses, not a product: the `gda` verbs stay in the CLI and need a GDA data lake).
+# WorkflowContractTests pins this scope, so an artefact cannot be added or dropped here without a test failing.
+#
+#   git tag v1.95.112 && git push origin v1.95.112
+#
+# Gates (any failure stops the release; nothing is published half-way):
+#   1. The tag must equal the one <Version> in Directory.Build.props (F02). A tag that disagrees with the code
+#      would ship binaries whose --version contradicts the release name.
+#   2. CHANGELOG.md must have a "## [<version>]" heading; its section becomes the release notes.
+#   3. The full test suite passes on every leg of the CI matrix (ci.yml, called here as job `ci`): Linux, Windows and
+#      macOS (Apple silicon), in every SIMD mode (normal, AVX2 off, hardware intrinsics off, AVX-512 forced, FMA off,
+#      256-bit forced).
+#      No leg is advisory; every publishing job needs it.
+#   4. No NuGet package with a known vulnerability (the same gate as CI, F07).
+#   5. Each published CLI binary is run on a machine of its own OS / CPU and must answer --version with exactly
+#      "gridsim <version>+<commit>" and solve case9 (exit 0).
+#   6. The SBOMs are generated FIRST (job sbom); each published artefact is built with the SHA-256 of its SBOM injected
+#      (-p:GridSimSbomSha256), and each CLI binary must then report `release build  yes` with exactly that hash from
+#      `gridsim compliance verify` (a binary that cannot identify its own SBOM is not released).
+#   7. The archives, the SBOMs and SHA256SUMS.txt get a signed build-provenance attestation (actions/attest-build-provenance,
+#      Sigstore), so a downloaded file can be checked against the workflow run that built it with `gh attestation verify`.
+#
+# Signing (F13, Ruling R1): the Windows CLI binary gets an Authenticode signature (job cli) and the NuGet package is
+# signed (publish.yml), both with one code-signing certificate read from repository secrets by name:
+#   SIGNING_CERT_PFX_BASE64  the certificate and its private key as a .pfx (PKCS#12) file, base64-encoded
+#                            (PowerShell: [Convert]::ToBase64String([IO.File]::ReadAllBytes("$HOME\keys\cert.pfx")))
+#   SIGNING_CERT_PASSWORD    the .pfx password
+# and, optionally, the repository VARIABLE (not a secret) SIGNING_TIMESTAMP_URL, the RFC 3161 timestamp server
+# (default http://timestamp.digicert.com). GR-359: when SIGNING_CERT_PFX_BASE64 is not set, signing is SKIPPED with a warning in the log and on the run summary
+# (the F13 behaviour, kept as the default while the certificate is self-signed). Setting the repository variable
+# GRIDSIM_ALLOW_UNSIGNED_RELEASE to 'false' makes signing required: the release then fails in its first job, before
+# anything is built, when the certificate is missing. A certificate without its password fails the run. The decoded .pfx lives
+# only in the runner's temp folder and is deleted at the end of the step; the password is read from the environment,
+# never passed on a command line (GR-907: signtool signs from the runner's certificate store).
+# Authenticode is a Windows format: the Linux and macOS binaries are not signed (macOS notarisation is after 1.0);
+# every file on the Release is covered by the provenance attestation instead (gate 7).
+# The certificate is self-signed for now (signing/README.md). The verify steps therefore trust exactly that one
+# certificate, pinned by thumbprint: the committed public signing/gridsim-signing.cer is added to the runner's trust
+# store for the check, and the signature must chain to it AND carry its thumbprint. Any other certificate fails.
+#
+# Not done here (after 1.0): macOS notarisation, MSIX / WiX installers (they go with the desktop app).
+#
+# Untrusted input: the tag name is passed to scripts through environment variables only (never interpolated into
+# a script body) and validated against a strict pattern before use.
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Build telemetry off on every leg (Mark, 2026-10-20): Avalonia's opt-out switch. Directory.Build.targets also
+# replaces Avalonia.BuildServices' AvaloniaStats target with an empty one; AvaloniaTelemetryOptOutTests pins both.
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  # -------------------------------------------------------------------------------------------- gate ---
+  verify:
+    name: Verify tag, changelog and tests
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Tag must equal Directory.Build.props version
+        id: version
+        shell: bash
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag '$TAG' is not of the form vMAJOR.MINOR.PATCH"; exit 1
+          fi
+          tag_version="${TAG#v}"
+          props_version="$(sed -n 's:.*<Version>\([^<]*\)</Version>.*:\1:p' Directory.Build.props)"
+          if [[ "$(printf '%s\n' "$props_version" | wc -l)" -ne 1 || -z "$props_version" ]]; then
+            echo "::error::Directory.Build.props must hold exactly one <Version>"; exit 1
+          fi
+          if [[ "$tag_version" != "$props_version" ]]; then
+            echo "::error::tag $TAG does not match Directory.Build.props version $props_version"; exit 1
+          fi
+          grep -q "^## \[$props_version\]" CHANGELOG.md \
+            || { echo "::error::CHANGELOG.md has no '## [$props_version]' heading"; exit 1; }
+          echo "value=$props_version" >> "$GITHUB_OUTPUT"
+
+      # GR-359: signing is required unless an unsigned release is chosen on purpose, and that is decided here, before
+      # anything is built: a missing certificate used to be noticed only as a warning in the CLI and package jobs, the
+      # package job running after the Release already existed.
+      - name: Signing certificate present (or an unsigned release chosen)
+        shell: bash
+        env:
+          SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+          ALLOW_UNSIGNED: ${{ vars.GRIDSIM_ALLOW_UNSIGNED_RELEASE }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SIGNING_CERT_PFX_BASE64:-}" ]]; then
+            if [[ "${ALLOW_UNSIGNED:-}" == "false" ]]; then
+              echo "::error::signing is required (the repository variable GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false'): set the repository secrets SIGNING_CERT_PFX_BASE64 and SIGNING_CERT_PASSWORD."
+              exit 1
+            fi
+            echo "::warning::no signing certificate is set: this release is UNSIGNED (set GRIDSIM_ALLOW_UNSIGNED_RELEASE to 'false' to require signing)."
+            echo "Unsigned release: no signing certificate is set, so the Windows binary and the NuGet package are unsigned." >> "$GITHUB_STEP_SUMMARY"
+          elif [[ -z "${SIGNING_CERT_PASSWORD:-}" ]]; then
+            echo "::error::SIGNING_CERT_PFX_BASE64 is set but SIGNING_CERT_PASSWORD is not: set both secrets."
+            exit 1
+          fi
+
+      - name: Build
+        run: dotnet build GridSim.slnx -c Release --nologo
+
+      - name: Test
+        # The RAM gate (tests/CONDITIONAL-TESTING.md) never leaves a test out of a release: every large case runs.
+        env:
+          GRIDSIM_TEST_MAX_BUSES: all
+        run: dotnet test GridSim.slnx -c Release --no-build --nologo
+
+      - name: Vulnerable package gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet list GridSim.slnx package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q -E '^\s*>' vulnerable.txt; then
+            echo "::error::a NuGet package with a known vulnerability is referenced (see the list above)"; exit 1
+          fi
+
+  # ------------------------------------------------------------------------------------ test matrix ---
+  # The whole CI matrix (ci.yml) on this exact commit. Every publishing job below needs it, so a failure on any OS or
+  # SIMD mode stops the release before anything is built for shipping.
+  ci:
+    name: CI matrix (release gate)
+    needs: verify
+    uses: ./.github/workflows/ci.yml
+
+  # --------------------------------------------------------------------------- command line binaries ---
+  cli:
+    name: CLI ${{ matrix.rid }}
+    needs: [ verify, ci, sbom ]
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { rid: win-x64,   os: windows-latest, exe: gridsim.exe }
+          - { rid: linux-x64, os: ubuntu-latest,  exe: gridsim }
+          - { rid: osx-arm64, os: macos-latest,   exe: gridsim }   # macos-latest runners are Apple silicon
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Gate 6: the binary carries the SHA-256 of the CLI SBOM (job sbom), so it can attest which bill of materials
+      # it was built against. The hash is validated as 64 hex characters before use (it is passed through env only).
+      - name: Publish (self-contained single file)
+        shell: bash
+        env:
+          SBOM_SHA256: ${{ needs.sbom.outputs.cli_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$SBOM_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad CLI SBOM hash '$SBOM_SHA256'"; exit 1; }
+          dotnet publish src/GridSim.Cli -c Release -p:PublishProfile=${{ matrix.rid }} -p:GridSimSbomSha256="$SBOM_SHA256" --nologo
+
+      # F13: Authenticode-sign the Windows binary right after publishing, so the smoke test, the published-output tests
+      # and the archive all use the signed file. The single-file bundle is signed as a whole (signing after bundling
+      # is the supported order). No certificate secret -> a warning and an unsigned binary, or a failure when
+      # GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false'; see the header.
+      - name: Sign the Windows binary (Authenticode)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+          TIMESTAMP_URL: ${{ vars.SIGNING_TIMESTAMP_URL || 'http://timestamp.digicert.com' }}
+          EXE: artifacts/publish/gridsim-${{ matrix.rid }}/${{ matrix.exe }}
+          ALLOW_UNSIGNED: ${{ vars.GRIDSIM_ALLOW_UNSIGNED_RELEASE }}
+        run: |
+          if (-not $env:SIGNING_CERT_PFX_BASE64) {
+            # GR-359: signing is required only when GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false' (the job "verify" has already refused it then).
+            if ($env:ALLOW_UNSIGNED -eq 'false') {
+              Write-Host "::error::Authenticode signing is required: the repository secret SIGNING_CERT_PFX_BASE64 is not set and the repository variable GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false'."
+              exit 1
+            }
+            Write-Host "::warning::Authenticode signing SKIPPED: the repository secret SIGNING_CERT_PFX_BASE64 is not set, so $env:EXE is released UNSIGNED."
+            "Authenticode signing skipped: no SIGNING_CERT_PFX_BASE64 secret; the Windows binary is unsigned." | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+            exit 0
+          }
+          if (-not $env:SIGNING_CERT_PASSWORD) {
+            Write-Host "::error::SIGNING_CERT_PFX_BASE64 is set but SIGNING_CERT_PASSWORD is not: set both secrets, or neither for an unsigned release."
+            exit 1
+          }
+          $pfx = Join-Path $env:RUNNER_TEMP 'gridsim-signing.pfx'
+          $pinned = '86DD43B731D2B8A5133972F7B7C91C0FDA8EB721'
+          $imported = $null
+          try {
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SIGNING_CERT_PFX_BASE64))
+            # GR-907: the password never goes on a command line (where any process on the runner can read it): the
+            # .pfx is imported into this runner user's certificate store with the password from the environment, and
+            # signtool signs with the store certificate chosen by its pinned thumbprint (/sha1). The certificate is
+            # removed from the store again in the finally block.
+            $password = ConvertTo-SecureString -String $env:SIGNING_CERT_PASSWORD -AsPlainText -Force
+            $imported = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+            if ($imported.Thumbprint -ne $pinned) { Write-Host "::error::the signing secret holds certificate $($imported.Thumbprint), not the pinned GridSim certificate $pinned"; exit 1 }
+            # The newest signtool.exe of the Windows SDKs installed on the runner.
+            $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+              Sort-Object { [version]$_.Directory.Parent.Name } -Descending | Select-Object -First 1
+            if (-not $signtool) { Write-Host "::error::signtool.exe was not found on the runner"; exit 1 }
+            & $signtool.FullName sign /fd SHA256 /td SHA256 /tr $env:TIMESTAMP_URL /s My /sha1 $pinned $env:EXE
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::signtool sign failed ($LASTEXITCODE)"; exit 1 }
+            # The certificate is self-signed (signing/README.md): trust exactly the committed public certificate on
+            # this throwaway runner, then verify against the Authenticode policy (the chain must end at it), and pin
+            # the signer by thumbprint so no other certificate, trusted or not, can pass.
+            $cer = Get-PfxCertificate -FilePath signing/gridsim-signing.cer
+            if ($cer.Thumbprint -ne $pinned) { Write-Host "::error::signing/gridsim-signing.cer has thumbprint $($cer.Thumbprint), expected $pinned"; exit 1 }
+            Import-Certificate -FilePath signing/gridsim-signing.cer -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+            & $signtool.FullName verify /pa /v $env:EXE
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::signtool verify failed ($LASTEXITCODE)"; exit 1 }
+            $sig = Get-AuthenticodeSignature -FilePath $env:EXE
+            if ($sig.SignerCertificate.Thumbprint -ne $pinned) {
+              Write-Host "::error::the binary is signed by $($sig.SignerCertificate.Thumbprint), not the pinned GridSim certificate $pinned"; exit 1
+            }
+            Write-Host "Authenticode signature applied and verified (signer $pinned): $env:EXE"
+          }
+          finally {
+            Remove-Item -LiteralPath $pfx -Force -ErrorAction SilentlyContinue
+            if ($imported) { Remove-Item -LiteralPath "Cert:\CurrentUser\My\$($imported.Thumbprint)" -DeleteKey -Force -ErrorAction SilentlyContinue }
+          }
+
+      - name: Smoke test on this OS
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          SHA: ${{ github.sha }}
+          SBOM_SHA256: ${{ needs.sbom.outputs.cli_sha256 }}
+          EXE: artifacts/publish/gridsim-${{ matrix.rid }}/${{ matrix.exe }}
+        run: |
+          set -euo pipefail
+          out="$("$EXE" --version | tr -d '\r')"   # strip the Windows CR from Console.WriteLine
+          echo "$out"
+          [[ "$out" == "gridsim $VERSION+$SHA" ]] || { echo "::error::--version said '$out'"; exit 1; }
+          "$EXE" case9 --once > /dev/null
+          # Gate 6: the binary is a release build and names exactly the SBOM it was built against.
+          report="$("$EXE" compliance verify | tr -d '\r' || true)"
+          echo "$report"
+          grep -q "^  release build  yes" <<< "$report" || { echo "::error::the binary does not attest a release build"; exit 1; }
+          grep -q "^  sbom sha256    $SBOM_SHA256\$" <<< "$report" || { echo "::error::the binary does not name the CLI SBOM hash"; exit 1; }
+          for f in LICENSE.md THIRD-PARTY-NOTICES.md data/matpower/lib/case9.m data/matpower/LICENSE-MATPOWER.txt data/matpower/gb/LICENSE-PyPSA-GB.txt data/intl/france/ATTRIBUTION.txt; do
+            [[ -f "artifacts/publish/gridsim-${{ matrix.rid }}/$f" ]] || { echo "::error::$f missing from the publish"; exit 1; }
+          done
+
+      # F11: the published-output tests (PublishedOutputTests) run against the real publish folder on this OS:
+      # single-file and self-contained, data/ schemas/ LICENSE.md THIRD-PARTY-NOTICES.md beside it, the version stamp
+      # equal to this build, and a case9 report identical to the normal build's. Skipped in ordinary test runs.
+      - name: Published-output tests
+        shell: bash
+        env:
+          GRIDSIM_PUBLISHED_DIR: artifacts/publish/gridsim-${{ matrix.rid }}
+        run: dotnet test tests/GridSim.Tests/GridSim.Tests.csproj -c Release --nologo --filter "FullyQualifiedName~PublishedOutputTests"
+
+      # D-DOC-205 (October 2026): the licence-file location tests on every OS of this matrix, because it is the only
+      # place a macOS runner executes them (the CI test matrix is Linux and Windows): their macOS branch checks that the
+      # file lives under ~/Library/Application Support, which no run had ever confirmed.
+      - name: Licence-file location tests
+        shell: bash
+        run: dotnet test tests/GridSim.Tests/GridSim.Tests.csproj -c Release --nologo --filter "FullyQualifiedName~LicensingReleaseTests.Licence_file_lives_in_the_per_user_data_folder_on_every_os|FullyQualifiedName~Doc13LicenceTests.D205_"
+
+      - name: Archive
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd artifacts/publish
+          name="gridsim-$VERSION-${{ matrix.rid }}"
+          mv "gridsim-${{ matrix.rid }}" "$name"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            7z a -tzip "$name.zip" "$name" > /dev/null
+          else
+            tar czf "$name.tar.gz" "$name"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-cli-${{ matrix.rid }}   # release-*: attached to the GitHub Release
+          path: |
+            artifacts/publish/*.zip
+            artifacts/publish/*.tar.gz
+          if-no-files-found: error
+
+  # ------------------------------------------------------------------------------- web container image ---
+  # F25: the web app ships as the replay-only container image and nothing else (no web zip, no desktop app). The image
+  # is built and probed here, then kept as a workflow artefact; it is pushed to the registry only after the GitHub
+  # Release exists (job web-image-push), so a failure anywhere leaves nothing half-published.
+  web-image:
+    name: Web container image (replay-only)
+    needs: [ verify, ci, sbom ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+          SBOM_SHA256: ${{ needs.sbom.outputs.web_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$SBOM_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad web SBOM hash '$SBOM_SHA256'"; exit 1; }
+          docker build -t gridsim-web:release --build-arg SOURCE_REVISION="$SHA" --build-arg SBOM_SHA256="$SBOM_SHA256" .
+
+      # The image must start, show this exact version in its footer, and be replay-only: a replay-only instance does
+      # not map the solve REST API (/api/*), so its OpenAPI document must answer 404.
+      - name: Start and probe
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          SBOM_SHA256: ${{ needs.sbom.outputs.web_sha256 }}
+        run: |
+          set -euo pipefail
+          docker run -d --name gridsim-web-release -p 127.0.0.1:5540:8080 gridsim-web:release
+          for i in $(seq 1 30); do
+            if curl -fsSL http://127.0.0.1:5540/ -o page.html; then break; fi
+            sleep 2
+          done
+          docker logs gridsim-web-release
+          grep -q "v$VERSION" page.html || { echo "::error::the home page does not show v$VERSION"; exit 1; }
+          code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5540/api/openapi.json)"
+          [[ "$code" == "404" ]] || { echo "::error::/api/openapi.json answered $code: the image is not replay-only"; exit 1; }
+          # Gate 6 for the image: it is a release build and names exactly the web SBOM it was built against.
+          curl -fsS http://127.0.0.1:5540/compliance -o compliance.json
+          cat compliance.json
+          python3 - "$SBOM_SHA256" <<'PY'
+          import json, sys
+          c = json.load(open("compliance.json"))
+          if c.get("releaseBuild") is not True or c.get("sbomSha256") != sys.argv[1]:
+              print("::error::the image does not attest a release build with the web SBOM hash"); sys.exit(1)
+          PY
+          docker rm -f gridsim-web-release
+
+      - name: Save image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/image
+          docker save gridsim-web:release | gzip > artifacts/image/gridsim-web.tar.gz
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: image-web   # not release-*: the image goes to the container registry, not onto the Release page
+          path: artifacts/image/gridsim-web.tar.gz
+          if-no-files-found: error
+
+  # ----------------------------------------------------------------------------------------- SBOM ---
+  # Runs FIRST (only verify before it): the CLI, the web image and the NuGet package are built with the SHA-256 of
+  # their SBOM injected, so the hashes must exist before they are built.
+  sbom:
+    name: SBOM (CycloneDX)
+    needs: verify
+    runs-on: ubuntu-latest
+    outputs:
+      cli_sha256: ${{ steps.hash.outputs.cli }}
+      web_sha256: ${{ steps.hash.outputs.web }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Generate CycloneDX SBOM
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          dotnet tool install --global CycloneDX
+          dotnet restore GridSim.slnx
+          # F25: one SBOM per shipped app, each covering exactly what that app carries (the CLI brings Core, Gda and
+          # Gpu; the web image brings Core and Web), not the whole solution (which also holds the desktop app). The
+          # NuGet package is GridSim.Core alone, which both SBOMs contain.
+          dotnet-CycloneDX src/GridSim.Cli/GridSim.Cli.csproj --output artifacts/sbom --filename "gridsim-$VERSION.sbom.json" --output-format Json --set-version "$VERSION"
+          dotnet-CycloneDX src/GridSim.Web/GridSim.Web.csproj --output artifacts/sbom --filename "gridsim-web-$VERSION.sbom.json" --output-format Json --set-version "$VERSION"
+      - name: SBOM hashes
+        id: hash
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          cli="$(sha256sum "artifacts/sbom/gridsim-$VERSION.sbom.json" | cut -d' ' -f1)"
+          web="$(sha256sum "artifacts/sbom/gridsim-web-$VERSION.sbom.json" | cut -d' ' -f1)"
+          echo "cli=$cli" >> "$GITHUB_OUTPUT"
+          echo "web=$web" >> "$GITHUB_OUTPUT"
+          echo "CLI SBOM sha256 $cli; web SBOM sha256 $web"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-sbom
+          path: artifacts/sbom/*.json
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------------------- release ---
+  release:
+    name: Create GitHub Release
+    # The image job is a dependency too: nothing is released unless every shipped artefact built and passed its probe.
+    needs: [ verify, ci, cli, web-image, sbom ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # create the release and upload its assets
+      id-token: write       # gate 7: the Sigstore identity for the provenance attestation
+      attestations: write   # gate 7: store the attestation with the repository
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: release-*
+          merge-multiple: true
+
+      # F25: the Release page carries the three CLI archives and the two SBOMs (plus SHA256SUMS.txt, made below) and
+      # nothing else: no desktop app, no web zip, no GDA package or data. Any other file stops the release.
+      - name: Release holds exactly the shipped files
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected="$(printf '%s\n' "gridsim-$VERSION-linux-x64.tar.gz" "gridsim-$VERSION-osx-arm64.tar.gz" \
+            "gridsim-$VERSION-win-x64.zip" "gridsim-$VERSION.sbom.json" "gridsim-web-$VERSION.sbom.json" | sort)"
+          actual="$(ls dist | sort)"
+          if [[ "$actual" != "$expected" ]]; then
+            echo "::error::the release files differ from the 1.0 ship scope (F25)"
+            echo "expected:"; echo "$expected"; echo "actual:"; echo "$actual"
+            exit 1
+          fi
+
+      - name: Checksums and release notes
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cd ..
+          # The CHANGELOG section for this version: from its heading up to (not including) the next "## [" heading.
+          awk -v v="## [$VERSION]" 'index($0, v) == 1 { on = 1; next } on && /^## \[/ { exit } on { print }' \
+            CHANGELOG.md > notes.md
+          [[ -s notes.md ]] || { echo "::error::empty CHANGELOG section for $VERSION"; exit 1; }
+
+      # Gate 7: a signed SLSA build-provenance statement over every file on the Release (archives, SBOMs and the
+      # checksum list), naming this workflow run and commit. Check a download with `gh attestation verify <file> -R <repo>`.
+      - name: Build provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/*'
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: gh release create "$TAG" dist/* --title "GridSim $VERSION" --notes-file notes.md --verify-tag
+
+  # ------------------------------------------------------------------------------------ web image push ---
+  # The image built and probed by job web-image, pushed to the repository owner's GitHub Container Registry only once
+  # the Release exists. The built-in token's packages: write permission is enough (no extra secret).
+  web-image-push:
+    name: Push web image (GHCR)
+    needs: [ verify, release ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write       # the Sigstore identity for the image's provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: image-web
+          path: image
+      - name: Load, tag and push
+        id: push
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          OWNER: ${{ github.repository_owner }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${OWNER,,}/gridsim-web:$VERSION"   # registry paths must be lower case
+          gunzip -c image/gridsim-web.tar.gz | docker load
+          docker tag gridsim-web:release "$image"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker push "$image"
+          echo "pushed $image"
+          # The registry digest of what was pushed, for the provenance attestation below.
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$image" | sed 's/.*@//')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::no registry digest for $image ('$digest')"; exit 1; }
+          echo "name=${image%:*}" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      # The image gets the same signed build-provenance attestation as the Release files, stored with the image in the
+      # registry (`gh attestation verify oci://<image> -R <repo>`).
+      - name: Image provenance attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+  # --------------------------------------------------------------------------------- NuGet packages ---
+  # A release created with the built-in token does not trigger other workflows' "release: published" event, so the
+  # package workflow is called directly here with the verified version.
+  nuget:
+    name: NuGet packages
+    needs: [ verify, release, sbom ]
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/publish.yml
+    with:
+      version: ${{ needs.verify.outputs.version }}
+      # GridSim.Core is in the CLI's SBOM; the package carries that SBOM's hash.
+      sbom-sha256: ${{ needs.sbom.outputs.cli_sha256 }}
+    # F13: the package-signing step in publish.yml reads SIGNING_CERT_PFX_BASE64 / SIGNING_CERT_PASSWORD. GR-909: only
+    # those two are passed (not the inherit-all form, which would hand every repository secret to the called workflow);
+    # the built-in GITHUB_TOKEN reaches it without being passed.
+    secrets:
+      SIGNING_CERT_PFX_BASE64: ${{ secrets.SIGNING_CERT_PFX_BASE64 }}
+      SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}

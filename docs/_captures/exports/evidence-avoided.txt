@@ -1,0 +1,21 @@
+$ sed -n '97,115p' results/exports-docs/evidence-2019/evidence.json
+    "fleet": {
+      "inertiaGvaS": 215,
+      "units": 100,
+      "staggerSeconds": 10,
+      "aggregateNadirHz": 48.993684185474464,
+      "fleetNadirHz": 48.99368253893572,
+      "aggregateFfrAtNadirMw": 999.9999999999986,
+      "fleetFfrAtNadirMw": 999.9999999999993
+    },
+    "avoidedCost": {
+      "lfddMwShedAvoided": 892,
+      "vollPerMwh": 6000,
+      "durationHours": 0.5,
+      "avoidedCostGbp": 2676000,
+      "provenance": "CuratedPlaceholder",
+      "basis": "recorded LFDD energy avoided (MW shed x duration h) x VoLL (\u00A3/MWh) - grounded in the record, not a marketing figure"
+    },
+    "summary": "Baseline Reproduced; counterfactual device DOES keep the nadir above LFDD; avoided cost \u00A32,676,000 (CuratedPlaceholder)"
+  }
+[exit 0]

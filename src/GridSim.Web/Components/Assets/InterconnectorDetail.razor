@@ -1,0 +1,86 @@
+@* One interconnector's dashboard - live flow / capacity / utilisation / direction, a flow sparkline,
+   and the landing-zone substation link. Mirrors GridSim.Wpf InterconnectorDetailVm. *@
+
+@if (_g is null)
+{
+    <div class="stub">This link is not in the current model.</div>
+}
+else
+{
+    <div class="card" style="margin-bottom:0">
+        <div class="card-eyebrow">INTERCONNECTOR</div>
+        <div class="card-h" style="margin-bottom:2px">@_g.Name</div>
+        <div class="muted-note" style="margin-top:0">HVDC link into GB | <span class="txt-ok">LIVE</span></div>
+    </div>
+
+    <div class="panel-grid four">
+        <div class="mini"><span class="mv">@_g.Pg.ToString("+#,0;-#,0;0")</span><span class="ml">Flow MW</span></div>
+        <div class="mini"><span class="mv">@(_g.Capped ? _g.PmaxMw.ToString("N0") : "-")</span><span class="ml">Capacity MW</span></div>
+        <div class="mini"><span class="mv">@(_g.Capped ? $"{Math.Abs(_g.Pg) / _g.PmaxMw * 100:F0}%" : "-")</span><span class="ml">Utilisation</span></div>
+        <div class="mini"><span class="mv" style="color:@_col">@_dir</span><span class="ml">Direction</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">FLOW | RECENT SIM HISTORY</div>
+        <Sparkline Values="_history" Stroke="@_col" Width="900" Height="90" />
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">LANDING ZONE</div>
+        <StatRow Label="Substation">
+            <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="OpenLanding">@_landing -></a>
+        </StatRow>
+        <StatRow Label="Voltage level" Value="@_landingKv" />
+        <StatRow Label="Bus voltage" Value="@_landingVm" />
+        <StatRow Label="Co-located" Value="@_colocated" />
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+    [Parameter] public int GenIndex { get; set; }
+    [Parameter] public int Tick { get; set; }
+
+    private const int HistoryLength = 96;
+
+    private GenAssetDto? _g;
+    private string _dir = "-", _col = "var(--muted)";
+    private string _landing = "-", _landingKv = "-", _landingVm = "-", _colocated = "-";
+    private int _landingBus = -1;
+
+    private readonly List<double> _history = new();
+    private int _lastTick = int.MinValue;
+
+    protected override void OnParametersSet()
+    {
+        _g = GenIndex >= 0 && GenIndex < Graph.Generators.Count ? Graph.Generators[GenIndex] : null;
+        if (_g is null) return;
+
+        bool imp = _g.Pg > 5, exp = _g.Pg < -5;
+        _dir = imp ? "IMPORTING" : exp ? "EXPORTING" : "IDLE";
+        _col = WebPalette.Voltage(imp ? 1.0 : exp ? 1.05 : 0.98);
+
+        BusAssetDto? bus = Graph.Buses.FirstOrDefault(b => b.Id == _g.Bus);
+        if (bus is not null)
+        {
+            _landing = bus.Name;
+            _landingBus = bus.Id;
+            _landingKv = $"{bus.BaseKv:F0} kV";
+            _landingVm = bus.Solved ? $"{bus.Vm:F3} pu" : "-";
+            double other = Graph.Generators.Where(x => x.Bus == _g.Bus && x.Index != _g.Index).Sum(x => x.Pg);
+            _colocated = other > 0 ? $"{other:F0} MW co-located generation" : "no co-located generation";
+        }
+
+        if (_history.Count == 0)
+            for (int i = 0; i < HistoryLength - 1; i++) _history.Add(_g.Pg);
+        if (Tick != _lastTick)
+        {
+            _lastTick = Tick;
+            _history.Add(_g.Pg);
+            while (_history.Count > HistoryLength) _history.RemoveAt(0);
+        }
+    }
+
+    private void OpenLanding() { if (_landingBus >= 0) Nav.OpenSubstation(_landingBus, _landing); }
+}

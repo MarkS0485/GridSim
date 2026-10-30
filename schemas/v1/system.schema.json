@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "system.schema.json",
+  "title": "GridSim v1 system.json",
+  "description": "The case's system block: name, system base and nominal frequency. The file is optional; when it is absent every member takes its default. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "$ref": "#/$defs/system",
+  "$defs": {
+    "system": {
+      "title": "System",
+      "description": "The case's system block (v1 SystemDto). Absent: name = the case folder name, baseMva 100, frequencyHz 50.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Case name",
+          "description": "Display name of the case. Absent: the case folder's name.",
+          "type": "string"
+        },
+        "baseMva": {
+          "title": "System base (MVA)",
+          "description": "The MVA base every per-unit impedance in the case is expressed on. Absent: 100 MVA (GridModel.DefaultBaseMva).",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "frequencyHz": {
+          "title": "Nominal frequency (Hz)",
+          "description": "Nominal system frequency. Absent: 50 Hz (FrequencyLimits.NominalHz).",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "dispatch": {
+          "title": "Capacity-based dispatch",
+          "description": "false = keep the generator outputs exactly as written (no capacity-based balance); used by cases converted from MATPOWER (F24). Absent: true.",
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

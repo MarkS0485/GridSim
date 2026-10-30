@@ -1,0 +1,227 @@
+$ gridsim nminus2 --exhaustive --top 216
+GridSim  -  N-2 branch screening: GB reduced (10-zone)  [exhaustive (every pair)]
+==========================================================================
+Base case: secure (no violation before any outage).
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+L1-2 N-S Scotland + L2-3 B6 b...  ISLANDED      islanded
+L1-2 N-S Scotland + L3-4 N En...  ISLANDED      islanded
+L1-2 N-S Scotland + L3-5 N En...  ISLANDED      islanded
+L1-2 N-S Scotland + L4-6 York...  ISLANDED      islanded
+L1-2 N-S Scotland + L5-6 N Wa...  ISLANDED      islanded
+L1-2 N-S Scotland + L4-7 York...  ISLANDED      islanded
+L1-2 N-S Scotland + L6-7 Midl...  ISLANDED      islanded
+L1-2 N-S Scotland + L6-8 Midl...  ISLANDED      islanded
+L1-2 N-S Scotland + L7-8 E An...  ISLANDED      islanded
+L1-2 N-S Scotland + L6-9 Midl...  ISLANDED      islanded
+L1-2 N-S Scotland + L8-9 Lond...  ISLANDED      islanded
+L1-2 N-S Scotland + L9-10 Sou...  ISLANDED      islanded
+L1-2 N-S Scotland + L5-10 N W...  ISLANDED      islanded
+L1-2 N-S Scotland + T1 GSP N ...  ISLANDED      islanded
+L1-2 N-S Scotland + T2 GSP S ...  ISLANDED      islanded
+L1-2 N-S Scotland + T3 GSP N ...  ISLANDED      islanded
+L1-2 N-S Scotland + T4 GSP Yo...  ISLANDED      islanded
+L1-2 N-S Scotland + T5 GSP N ...  ISLANDED      islanded
+L1-2 N-S Scotland + T6 GSP Mi...  ISLANDED      islanded
+L1-2 N-S Scotland + T7 GSP Ea...  ISLANDED      islanded
+L1-2 N-S Scotland + T8 GSP Lo...  ISLANDED      islanded
+L1-2 N-S Scotland + T9 GSP So...  ISLANDED      islanded
+L1-2 N-S Scotland + T10 GSP S...  ISLANDED      islanded
+L2-3 B6 boundary + L3-4 N Eng...  ISLANDED      islanded
+L2-3 B6 boundary + L3-5 N Eng...  ISLANDED      islanded
+L2-3 B6 boundary + L4-6 Yorks...  ISLANDED      islanded
+L2-3 B6 boundary + L5-6 N Wal...  ISLANDED      islanded
+L2-3 B6 boundary + L4-7 Yorks...  ISLANDED      islanded
+L2-3 B6 boundary + L6-7 Midla...  ISLANDED      islanded
+L2-3 B6 boundary + L6-8 Midla...  ISLANDED      islanded
+L2-3 B6 boundary + L7-8 E Ang...  ISLANDED      islanded
+L2-3 B6 boundary + L6-9 Midla...  ISLANDED      islanded
+L2-3 B6 boundary + L8-9 Londo...  ISLANDED      islanded
+L2-3 B6 boundary + L9-10 Sout...  ISLANDED      islanded
+L2-3 B6 boundary + L5-10 N Wa...  ISLANDED      islanded
+L2-3 B6 boundary + T1 GSP N S...  ISLANDED      islanded
+L2-3 B6 boundary + T2 GSP S S...  ISLANDED      islanded
+L2-3 B6 boundary + T3 GSP N E...  ISLANDED      islanded
+L2-3 B6 boundary + T4 GSP Yor...  ISLANDED      islanded
+L2-3 B6 boundary + T5 GSP N W...  ISLANDED      islanded
+L2-3 B6 boundary + T6 GSP Mid...  ISLANDED      islanded
+L2-3 B6 boundary + T7 GSP Eas...  ISLANDED      islanded
+L2-3 B6 boundary + T8 GSP Lon...  ISLANDED      islanded
+L2-3 B6 boundary + T9 GSP Sou...  ISLANDED      islanded
+L2-3 B6 boundary + T10 GSP SW...  ISLANDED      islanded
+L3-4 N England-Yorks + L3-5 N...  ISLANDED      islanded
+L3-4 N England-Yorks + T1 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T2 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T3 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T4 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T5 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T6 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T7 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T8 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T9 GSP...  ISLANDED      islanded
+L3-4 N England-Yorks + T10 GS...  ISLANDED      islanded
+L3-5 N England-N Wales + T1 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T2 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T3 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T4 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T5 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T6 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T7 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T8 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T9 G...  ISLANDED      islanded
+L3-5 N England-N Wales + T10 ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T1 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T2 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T3 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T4 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T5 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T6 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T7 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T8 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T9 GSP ...  ISLANDED      islanded
+L4-6 Yorks-Midlands + T10 GSP...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T1 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T2 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T3 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T4 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T5 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T6 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T7 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T8 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T9 GS...  ISLANDED      islanded
+L5-6 N Wales-Midlands + T10 G...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T1 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T2 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T3 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T4 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T5 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T6 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T7 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T8 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T9 GSP ...  ISLANDED      islanded
+L4-7 Yorks-E Anglia + T10 GSP...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T1 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T2 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T3 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T4 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T5 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T6 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T7 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T8 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T9 G...  ISLANDED      islanded
+L6-7 Midlands-E Anglia + T10 ...  ISLANDED      islanded
+L6-8 Midlands-London + T1 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T2 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T3 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T4 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T5 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T6 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T7 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T8 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T9 GSP...  ISLANDED      islanded
+L6-8 Midlands-London + T10 GS...  ISLANDED      islanded
+L7-8 E Anglia-London + T1 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T2 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T3 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T4 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T5 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T6 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T7 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T8 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T9 GSP...  ISLANDED      islanded
+L7-8 E Anglia-London + T10 GS...  ISLANDED      islanded
+L6-9 Midlands-South + T1 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T2 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T3 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T4 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T5 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T6 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T7 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T8 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T9 GSP ...  ISLANDED      islanded
+L6-9 Midlands-South + T10 GSP...  ISLANDED      islanded
+L8-9 London-South + T1 GSP N ...  ISLANDED      islanded
+L8-9 London-South + T2 GSP S ...  ISLANDED      islanded
+L8-9 London-South + T3 GSP N ...  ISLANDED      islanded
+L8-9 London-South + T4 GSP Yo...  ISLANDED      islanded
+L8-9 London-South + T5 GSP N ...  ISLANDED      islanded
+L8-9 London-South + T6 GSP Mi...  ISLANDED      islanded
+L8-9 London-South + T7 GSP Ea...  ISLANDED      islanded
+L8-9 London-South + T8 GSP Lo...  ISLANDED      islanded
+L8-9 London-South + T9 GSP So...  ISLANDED      islanded
+L8-9 London-South + T10 GSP S...  ISLANDED      islanded
+L9-10 South-SW + L5-10 N Wale...  ISLANDED      islanded
+L9-10 South-SW + T1 GSP N Sco...  ISLANDED      islanded
+L9-10 South-SW + T2 GSP S Sco...  ISLANDED      islanded
+L9-10 South-SW + T3 GSP N Eng...  ISLANDED      islanded
+L9-10 South-SW + T4 GSP Yorks...  ISLANDED      islanded
+L9-10 South-SW + T5 GSP N Wal...  ISLANDED      islanded
+L9-10 South-SW + T6 GSP Midla...  ISLANDED      islanded
+L9-10 South-SW + T7 GSP East ...  ISLANDED      islanded
+L9-10 South-SW + T8 GSP Londo...  ISLANDED      islanded
+L9-10 South-SW + T9 GSP South...  ISLANDED      islanded
+L9-10 South-SW + T10 GSP SW &...  ISLANDED      islanded
+L5-10 N Wales-SW + T1 GSP N S...  ISLANDED      islanded
+L5-10 N Wales-SW + T2 GSP S S...  ISLANDED      islanded
+L5-10 N Wales-SW + T3 GSP N E...  ISLANDED      islanded
+L5-10 N Wales-SW + T4 GSP Yor...  ISLANDED      islanded
+L5-10 N Wales-SW + T5 GSP N W...  ISLANDED      islanded
+L5-10 N Wales-SW + T6 GSP Mid...  ISLANDED      islanded
+L5-10 N Wales-SW + T7 GSP Eas...  ISLANDED      islanded
+L5-10 N Wales-SW + T8 GSP Lon...  ISLANDED      islanded
+L5-10 N Wales-SW + T9 GSP Sou...  ISLANDED      islanded
+L5-10 N Wales-SW + T10 GSP SW...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T2 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T3 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T4 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T5 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T6 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T7 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T8 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T9 G...  ISLANDED      islanded
+T1 GSP N Scotland (tx) + T10 ...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T3 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T4 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T5 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T6 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T7 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T8 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T9 G...  ISLANDED      islanded
+T2 GSP S Scotland (tx) + T10 ...  ISLANDED      islanded
+T3 GSP N England (tx) + T4 GS...  ISLANDED      islanded
+T3 GSP N England (tx) + T5 GS...  ISLANDED      islanded
+T3 GSP N England (tx) + T6 GS...  ISLANDED      islanded
+T3 GSP N England (tx) + T7 GS...  ISLANDED      islanded
+T3 GSP N England (tx) + T8 GS...  ISLANDED      islanded
+T3 GSP N England (tx) + T9 GS...  ISLANDED      islanded
+T3 GSP N England (tx) + T10 G...  ISLANDED      islanded
+T4 GSP Yorkshire (tx) + T5 GS...  ISLANDED      islanded
+T4 GSP Yorkshire (tx) + T6 GS...  ISLANDED      islanded
+T4 GSP Yorkshire (tx) + T7 GS...  ISLANDED      islanded
+T4 GSP Yorkshire (tx) + T8 GS...  ISLANDED      islanded
+T4 GSP Yorkshire (tx) + T9 GS...  ISLANDED      islanded
+T4 GSP Yorkshire (tx) + T10 G...  ISLANDED      islanded
+T5 GSP N Wales & Mersey (tx) ...  ISLANDED      islanded
+T5 GSP N Wales & Mersey (tx) ...  ISLANDED      islanded
+T5 GSP N Wales & Mersey (tx) ...  ISLANDED      islanded
+T5 GSP N Wales & Mersey (tx) ...  ISLANDED      islanded
+T5 GSP N Wales & Mersey (tx) ...  ISLANDED      islanded
+T6 GSP Midlands (tx) + T7 GSP...  ISLANDED      islanded
+T6 GSP Midlands (tx) + T8 GSP...  ISLANDED      islanded
+T6 GSP Midlands (tx) + T9 GSP...  ISLANDED      islanded
+T6 GSP Midlands (tx) + T10 GS...  ISLANDED      islanded
+T7 GSP East Anglia (tx) + T8 ...  ISLANDED      islanded
+T7 GSP East Anglia (tx) + T9 ...  ISLANDED      islanded
+T7 GSP East Anglia (tx) + T10...  ISLANDED      islanded
+T8 GSP London & SE (tx) + T9 ...  ISLANDED      islanded
+T8 GSP London & SE (tx) + T10...  ISLANDED      islanded
+T9 GSP South (tx) + T10 GSP S...  ISLANDED      islanded
+L7-8 E Anglia-London + L8-9 L...  VIOLATIONx1     112%      68%  0.998  1.040
+L6-8 Midlands-London + L8-9 L...  VIOLATIONx1     112%      68%  0.998  1.040
+L6-8 Midlands-London + L7-8 E...  VIOLATIONx1     111%      68%  0.998  1.040
+L3-4 N England-Yorks + L5-6 N...  secure           87%      68%  0.998  1.040
+--------------------------------------------------------------------------
+(showing worst 216 of 276)
+276 outages screened  61 secure  3 with violations  212 islanded
+Verdict: NOT SECURE, 215 insecure outage(s) (exit 3).
+[exit 3]

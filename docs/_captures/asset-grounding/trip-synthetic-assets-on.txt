@@ -1,0 +1,21 @@
+$ gridsim trip data/gb-synthetic --asset-dynamics on
+Asset dynamics: on  (8 class(es), 2 protection(s); 1 unit(s) tripped, 800 MW of infeed lost: 0 inverter(s) 0 MW (Loss-of-Mains or ride-through), 1 protection device(s) 800 MW)
+  note: 40 asset(s) carry voltage or loading trip stages (LVRT, under- / over-voltage, overload); this lumped run solves no network, so those stages are not evaluated (transient and the live views evaluate them against the solved state).
+GridSim  -  contingency on GB synthetic
+================================================================
+Tripped:        Hinkley Point Nuclear  (2880 MW lost, nuclear)
+System inertia: 171.7 -> 158.9 GVAs after the trip
+Peak RoCoF:     -0.576 Hz/s  (largest |df/dt| over the run)
+Nadir:          49.052 Hz  (t+5.5 s)
+Settling:       49.525 Hz
+
+50.05 Hz |***=-:,..           ....,,,:::------===========------------:::::| 49.05 Hz (nadir)
+
+...at HALF the inertia (79.5 GVAs): RoCoF -0.906 Hz/s, nadir 47.872 Hz
+
+Frequency protection on this trajectory (G99 Issue 2 Table 10.1 settings; system-wide, not per site):
+  81U  Underfrequency       holds: run minimum frequency 49.052 Hz (>47.5 Hz)
+  81O  Overfrequency        holds: run maximum frequency 50.000 Hz (<52.0 Hz)
+  81R  RoCoF                holds: peak |df/dt| 0.576 Hz/s (<1.00 Hz/s)
+  78   Vector shift / LoM   not evaluated: vector shift / loss-of-mains needs a voltage-angle transient; this run is a frequency (centre-of-inertia) trajectory with no bus voltage angle
+[exit 0]

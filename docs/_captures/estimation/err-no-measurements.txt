@@ -1,0 +1,12 @@
+$ gridsim estimate case9
+usage: gridsim estimate <case> (--measurements <m.json> | --synth [--seed N] [--noise S]
+                        [--coverage-vm F] [--coverage-inj F] [--coverage-flow F])
+                        [--method wls|huber|lav|lav-lp|schweppe-gm|qr|constrained|feasible]
+                        [--prior flat|solve] [--warm-start] [--no-bad-data] [--backfill-removals]
+                        [--hti [--hti-correct]] [--fdia-screen] [--lean] [--trace] [--export-solve]
+                        [--tol 1e-8] [--max-iter N] [--out <dir>]
+                        [--phaseangle BUS:ANGLE:UTC:FREQ ...] [--phaseangle-ref auto|referenced|raw]
+                        [--phaseangle-sigma DEG] [--phaseangle-at UTC] [--phaseangle-from-gda <gda-root>]
+Estimates the grid state from measurements (gridsim-measurements/1). --synth samples a
+deterministic noisy set from the case's own solved truth and scores the estimate against it.
+[exit 2]

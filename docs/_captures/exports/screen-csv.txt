@@ -1,0 +1,7 @@
+$ head -n 5 results/exports-docs/screen-uk.csv
+name,lost_mw,remaining_inertia_gva_s,peak_rocof_hz_per_s,nadir_hz,rocof_breach,statutory_breach,lfdd_risk
+Midlands CCGT (marginal),5625.0,126.70,-1.1099,46.486,True,True,True
+East Anglia Offshore Wind,4000.0,171.70,-0.5824,47.757,True,True,True
+Hinkley Point Nuclear,2880.0,158.90,-0.4531,48.340,True,True,True
+Yorkshire CCGT,2400.0,151.70,-0.3955,48.594,True,True,True
+[exit 0]

@@ -1,0 +1,5 @@
+$ gridsim fault docs/_captures/opf/overloaded-case9.m --bus 5
+note: overloaded-case9.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: overloaded-case9.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+fault: the pre-fault power flow did not converge (MaxIterations, mismatch 4.72E-001); no fault study is possible.
+[exit 3]

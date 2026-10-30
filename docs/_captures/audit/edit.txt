@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26-edit.log
+TAMPERED results/ch26-edit.log: entry 1: the stored hash does not match the hash recomputed from the entry's fields: this entry's content was edited (1 entries verified before it)
+[exit 3]

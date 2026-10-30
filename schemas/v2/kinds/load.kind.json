@@ -1,0 +1,145 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "load",
+  "title": "Load (demand)",
+  "description": "Demand characteristics: power factor, Q/P ratio and the ZIP voltage dependence. Omitted for want of a unit: load self-damping DynamicsConfig.DampingPctPerHz (percent of demand per Hz; default 1.0): NOT DECLARED (finding for Mark): the closed unit vocabulary has no unit for %/Hz, so the parameter cannot be declared without inventing or misstating a unit.",
+  "params": {
+    "powerFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Demand power factor (lagging) used when no reactive demand is given. TWO DIFFERENT code values (inconsistency register).",
+      "codeDefaults": [
+        {
+          "consumer": "JSON demand.json (JsonDefaults.LoadPowerFactor)",
+          "ref": "member:GridSim.Core:GridSim.Core.IO.Json.JsonDefaults.LoadPowerFactor",
+          "value": 0.97
+        },
+        {
+          "consumer": "JSON DemandDto property default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.Json.DemandDto.PowerFactor",
+          "value": 0.97
+        },
+        {
+          "consumer": "GDA LTDS build (GdaBuildDefaults.DemandPowerFactor)",
+          "ref": "member:GridSim.Gda:GridSim.Gda.GdaBuildDefaults.DemandPowerFactor",
+          "value": 0.98
+        }
+      ]
+    },
+    "minPowerFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Floor the demand power factor is clamped to before Q = P tan(acos(pf)).",
+      "codeDefaults": [
+        {
+          "consumer": "JSON loader (JsonDefaults.MinPowerFactor)",
+          "ref": "member:GridSim.Core:GridSim.Core.IO.Json.JsonDefaults.MinPowerFactor",
+          "value": 0.01
+        }
+      ]
+    },
+    "reactiveToActiveRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Q/P ratio of a demand (0.25 is pf ~0.970).",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 132 kV industrial demand",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.IndustrialReactiveToActive",
+          "value": 0.25
+        },
+        {
+          "consumer": "SyntheticGb 33/11/6.6 kV demand spread",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.LadderReactiveToActive",
+          "value": 0.25
+        }
+      ]
+    },
+    "zipAp": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "description": "ZIP load coefficient Ap: constant-impedance share of P.",
+      "codeDefaults": [
+        {
+          "consumer": "ZipLoad record default (constant power)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.ZipLoad:.ctor:Ap",
+          "value": 0.0
+        }
+      ]
+    },
+    "zipBp": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "description": "ZIP load coefficient Bp: constant-current share of P.",
+      "codeDefaults": [
+        {
+          "consumer": "ZipLoad record default (constant power)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.ZipLoad:.ctor:Bp",
+          "value": 0.0
+        }
+      ]
+    },
+    "zipCp": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "description": "ZIP load coefficient Cp: constant-power share of P.",
+      "codeDefaults": [
+        {
+          "consumer": "ZipLoad record default (constant power)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.ZipLoad:.ctor:Cp",
+          "value": 1.0
+        }
+      ]
+    },
+    "zipAq": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "description": "ZIP load coefficient Aq: constant-impedance share of Q.",
+      "codeDefaults": [
+        {
+          "consumer": "ZipLoad record default (constant power)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.ZipLoad:.ctor:Aq",
+          "value": 0.0
+        }
+      ]
+    },
+    "zipBq": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "description": "ZIP load coefficient Bq: constant-current share of Q.",
+      "codeDefaults": [
+        {
+          "consumer": "ZipLoad record default (constant power)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.ZipLoad:.ctor:Bq",
+          "value": 0.0
+        }
+      ]
+    },
+    "zipCq": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "description": "ZIP load coefficient Cq: constant-power share of Q.",
+      "codeDefaults": [
+        {
+          "consumer": "ZipLoad record default (constant power)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.ZipLoad:.ctor:Cq",
+          "value": 1.0
+        }
+      ]
+    }
+  }
+}

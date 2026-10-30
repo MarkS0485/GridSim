@@ -1,0 +1,11 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --method schweppe-gm --out results/case9-bad-schweppe-gm
+
+=== Schweppe GM state estimate: case9 ===
+  status: Converged   iterations: 437   max |dx|: 8.08E-009
+  measurements: 24   states: 17   redundancy (dof): 7
+  observability: observable (rank 17/17)
+  WARNING: the robust re-weighting (IRLS) reached its cap before the weights settled; the state is not a fixed point of the robust estimator.
+  consistency: J = 1048.45 vs chi2(95%) = 14.05 -> FAIL
+
+  -> results\case9-bad-schweppe-gm
+[exit 0]

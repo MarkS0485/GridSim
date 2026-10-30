@@ -1,0 +1,192 @@
+    GridSim  -  2026-07-02 15:46:03 UTC
+    code:    git 8ec809d2-dirty  |  GridSim.Core v0.1.0.0  |  build Release
+    runtime: .NET 10.0.9  X64  GC=Server
+    machine: curious-fermi  Ubuntu 24.04.3 LTS
+    cpu:     AMD EPYC 9554 64-Core Processor  -  28 logical cores  -  177 GB RAM
+    backend: gpu/cuda (NVIDIA H100 PCIe [CUDA] - FP64 is fast (data-centre GPU) (driver probe: cuInit=0 driverVer=12080 cuDeviceGetCount rc=0 count=1))
+    run:     bench-matrix  cases=25  engines=5  runs=5  parallel=1  note="H100 PCIe R570 + EPYC 28c: parallel=1 (uncontended latency)"
+
+> **Run note:** H100 PCIe R570 + EPYC 28c: parallel=1 (uncontended latency)
+
+Full solver x backend matrix over the whole archive. Every **engine** below is swept across
+every case (Q-limits off, tol 1e-8, max 100 iters). Cells: `conv / iters / mismatch / mean ms`.
+BFS is radial-only (meshed cases show `n/a`). Dense solves are memory-gated (few concurrent)
+and ordered small->large; GPU engines run one case at a time and skip cases >3000 buses
+(consumer-GPU FP64 is slow). Absent accelerators are simply not listed as engines.
+
+**Engines this run:** `cpu-dense` - Dense Newton-Raphson, CPU LU; `cpu-sparse` - Sparse Newton-Raphson, CPU (direct LU / ILU0-BiCGSTAB); `bfs` - Backward-forward sweep (radial feeders only); `cuda-dense` - Dense NR, CUDA (gpu/cuda (NVIDIA H100 PCIe [CUDA] - FP64 is fast (data-centre GPU) (driver probe: cuInit=0 driverVer=12080 cuDeviceGetCount rc=0 count=1))); `cuda-sparse` - Sparse NR, CUDA (gpu/cuda (NVIDIA H100 PCIe [CUDA] - FP64 is fast (data-centre GPU) (driver probe: cuInit=0 driverVer=12080 cuDeviceGetCount rc=0 count=1)))
+_ROCm/AMD: `--gpu` requested but no device answered._
+
+## cpu-dense - Dense Newton-Raphson, CPU LU
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | **NO** / 100 / 8.27E+000 / 1ms |
+| pglib_opf_case5_pjm | 5 | 5 | 6 | yes / 3 / 3.57E-011 / 0ms |
+| case9 (WSCC) | 9 | 3 | 9 | yes / 4 / 1.84E-014 / 0ms |
+| case14 | 14 | 5 | 20 | yes / 2 / 1.32E-010 / 0ms |
+| cigre_mv | 15 | 1 | 14 | yes / 5 / 2.66E-009 / 1ms |
+| case18 | 18 | 1 | 17 | yes / 4 / 5.97E-014 / 1ms |
+| case22 | 22 | 1 | 21 | **NO** / 100 / 2.62E+007 / 15ms |
+| case24_ieee_rts | 24 | 33 | 38 | yes / 4 / 2.31E-012 / 0ms |
+| case30 | 30 | 6 | 41 | yes / 3 / 9.57E-010 / 1ms |
+| pglib_opf_case30_as | 30 | 6 | 41 | yes / 4 / 1.97E-014 / 1ms |
+| case33bw | 33 | 1 | 32 | **NO** / 100 / 1.35E+003 / 24ms |
+| case57 | 57 | 7 | 80 | yes / 3 / 3.45E-012 / 2ms |
+| case69 | 69 | 1 | 68 | **NO** / 100 / 3.16E+003 / 96ms |
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | yes / 5 / 2.40E-014 / 3ms |
+| case85 | 85 | 1 | 84 | **NO** / 100 / 1.13E+006 / 141ms |
+| case118 | 118 | 54 | 186 | yes / 3 / 1.51E-012 / 5ms |
+| case145 | 145 | 50 | 453 | yes / 3 / 7.87E-012 / 10ms |
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | **NO** / 100 / 2.21E+004 / 562ms |
+| pglib_opf_case240_pserc | 240 | 143 | 448 | **NO** / 100 / 1.35E+004 / 997ms |
+| case300 | 300 | 69 | 411 | yes / 5 / 1.38E-012 / 80ms |
+| case533mt_hi | 532 | 1 | 514 | ERR:Singular matrix in LU solve. |
+| pglib_opf_case588_sdet | 588 | 95 | 686 | yes / 4 / 1.47E-011 / 248ms |
+| case1354pegase | 1354 | 260 | 1991 | yes / 4 / 4.10E-012 / 2243ms (x3) |
+| case2869pegase | 2869 | 510 | 4582 | yes / 6 / 2.15E-009 / 33865ms (x3) |
+| case9241pegase | 9241 | 1445 | 16049 | ERR:count ('-1973164928') must be a non-negative value. (Parameter 'count') Actual value was -1973164928. |
+
+## cpu-sparse - Sparse Newton-Raphson, CPU (direct LU / ILU0-BiCGSTAB)
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | **NO** / 100 / 6.67E+000 / 2ms |
+| pglib_opf_case5_pjm | 5 | 5 | 6 | yes / 3 / 3.57E-011 / 0ms |
+| case9 (WSCC) | 9 | 3 | 9 | yes / 4 / 1.68E-014 / 0ms |
+| case14 | 14 | 5 | 20 | yes / 2 / 1.32E-010 / 0ms |
+| cigre_mv | 15 | 1 | 14 | yes / 5 / 9.45E-011 / 1ms |
+| case18 | 18 | 1 | 17 | yes / 4 / 5.97E-014 / 1ms |
+| case22 | 22 | 1 | 21 | **NO** / 100 / 8.21E+001 / 15ms |
+| case24_ieee_rts | 24 | 33 | 38 | yes / 4 / 6.52E-012 / 1ms |
+| case30 | 30 | 6 | 41 | yes / 3 / 9.57E-010 / 1ms |
+| pglib_opf_case30_as | 30 | 6 | 41 | yes / 4 / 8.93E-015 / 1ms |
+| case33bw | 33 | 1 | 32 | **NO** / 100 / 6.00E+001 / 12ms |
+| case57 | 57 | 7 | 80 | yes / 3 / 3.45E-012 / 2ms |
+| case69 | 69 | 1 | 68 | **NO** / 100 / 1.24E+002 / 27ms |
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | yes / 7 / 2.81E-014 / 1ms |
+| case85 | 85 | 1 | 84 | **NO** / 100 / 1.14E+002 / 12ms |
+| case118 | 118 | 54 | 186 | yes / 3 / 1.51E-012 / 1ms |
+| case145 | 145 | 50 | 453 | yes / 3 / 7.88E-012 / 2ms |
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | **NO** / 100 / 3.37E+000 / 76ms |
+| pglib_opf_case240_pserc | 240 | 143 | 448 | **NO** / 100 / 1.02E+002 / 108ms |
+| case300 | 300 | 69 | 411 | yes / 5 / 1.38E-012 / 5ms |
+| case533mt_hi | 532 | 1 | 514 | **NO** / 0 / 2.76E-002 / 200ms |
+| pglib_opf_case588_sdet | 588 | 95 | 686 | yes / 5 / 7.27E-010 / 8ms |
+| case1354pegase | 1354 | 260 | 1991 | yes / 4 / 1.45E-012 / 16ms (x3) |
+| case2869pegase | 2869 | 510 | 4582 | yes / 6 / 2.15E-009 / 65ms (x3) |
+| case9241pegase | 9241 | 1445 | 16049 | yes / 6 / 2.13E-009 / 381ms (x1) |
+
+## bfs - Backward-forward sweep (radial feeders only)
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | n/a (meshed) |
+| pglib_opf_case5_pjm | 5 | 5 | 6 | n/a (meshed) |
+| case9 (WSCC) | 9 | 3 | 9 | n/a (meshed) |
+| case14 | 14 | 5 | 20 | n/a (meshed) |
+| cigre_mv | 15 | 1 | 14 | yes / 11 / 6.15E-010 / 1ms |
+| case18 | 18 | 1 | 17 | yes / 12 / 1.11E-009 / 0ms |
+| case22 | 22 | 1 | 21 | **NO** / 100 / 9.96E+002 / 2ms |
+| case24_ieee_rts | 24 | 33 | 38 | n/a (meshed) |
+| case30 | 30 | 6 | 41 | n/a (meshed) |
+| pglib_opf_case30_as | 30 | 6 | 41 | n/a (meshed) |
+| case33bw | 33 | 1 | 32 | **NO** / 100 / 1.01E+002 / 2ms |
+| case57 | 57 | 7 | 80 | n/a (meshed) |
+| case69 | 69 | 1 | 68 | **NO** / 100 / 8.51E+002 / 1ms |
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | n/a (meshed) |
+| case85 | 85 | 1 | 84 | **NO** / 100 / 2.37E+003 / 1ms |
+| case118 | 118 | 54 | 186 | n/a (meshed) |
+| case145 | 145 | 50 | 453 | n/a (meshed) |
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | n/a (meshed) |
+| pglib_opf_case240_pserc | 240 | 143 | 448 | n/a (meshed) |
+| case300 | 300 | 69 | 411 | n/a (meshed) |
+| case533mt_hi | 532 | 1 | 514 | n/a (meshed) |
+| pglib_opf_case588_sdet | 588 | 95 | 686 | n/a (meshed) |
+| case1354pegase | 1354 | 260 | 1991 | n/a (meshed) |
+| case2869pegase | 2869 | 510 | 4582 | n/a (meshed) |
+| case9241pegase | 9241 | 1445 | 16049 | n/a (meshed) |
+
+## cuda-dense - Dense NR, CUDA (gpu/cuda (NVIDIA H100 PCIe [CUDA] - FP64 is fast (data-centre GPU) (driver probe: cuInit=0 driverVer=12080 cuDeviceGetCount rc=0 count=1)))
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | **NO** / 100 / 6.71E+000 / 111ms (x3) |
+| pglib_opf_case5_pjm | 5 | 5 | 6 | yes / 3 / 3.57E-011 / 1ms (x3) |
+| case9 (WSCC) | 9 | 3 | 9 | yes / 4 / 1.84E-014 / 2ms (x3) |
+| case14 | 14 | 5 | 20 | yes / 2 / 1.32E-010 / 1ms (x3) |
+| cigre_mv | 15 | 1 | 14 | yes / 5 / 2.66E-009 / 4ms (x3) |
+| case18 | 18 | 1 | 17 | yes / 4 / 5.27E-014 / 11ms (x3) |
+| case22 | 22 | 1 | 21 | **NO** / 100 / 1.94E+006 / 124ms (x3) |
+| case24_ieee_rts | 24 | 33 | 38 | yes / 4 / 2.31E-012 / 4ms (x3) |
+| case30 | 30 | 6 | 41 | yes / 3 / 9.57E-010 / 4ms (x3) |
+| pglib_opf_case30_as | 30 | 6 | 41 | yes / 4 / 7.32E-015 / 5ms (x3) |
+| case33bw | 33 | 1 | 32 | **NO** / 100 / 9.12E+002 / 180ms (x3) |
+| case57 | 57 | 7 | 80 | yes / 3 / 3.45E-012 / 9ms (x3) |
+| case69 | 69 | 1 | 68 | **NO** / 100 / 9.38E+002 / 488ms (x3) |
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | yes / 5 / 2.09E-014 / 17ms (x3) |
+| case85 | 85 | 1 | 84 | **NO** / 100 / 2.66E+005 / 645ms (x3) |
+| case118 | 118 | 54 | 186 | yes / 3 / 1.51E-012 / 19ms (x3) |
+| case145 | 145 | 50 | 453 | yes / 3 / 7.87E-012 / 31ms (x3) |
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | **NO** / 100 / 7.66E+003 / 1556ms (x3) |
+| pglib_opf_case240_pserc | 240 | 143 | 448 | **NO** / 100 / 4.26E+005 / 3354ms (x3) |
+| case300 | 300 | 69 | 411 | yes / 5 / 1.38E-012 / 354ms (x3) |
+| case533mt_hi | 532 | 1 | 514 | ERR:Singular matrix in GPU LU solve. |
+| pglib_opf_case588_sdet | 588 | 95 | 686 | yes / 4 / 1.47E-011 / 790ms (x3) |
+| case1354pegase | 1354 | 260 | 1991 | yes / 4 / 1.87E-012 / 6226ms (x3) |
+| case2869pegase | 2869 | 510 | 4582 | yes / 6 / 2.15E-009 / 44496ms (x3) |
+| case9241pegase | 9241 | 1445 | 16049 | n/a (>3000 buses, skipped) |
+
+## cuda-sparse - Sparse NR, CUDA (gpu/cuda (NVIDIA H100 PCIe [CUDA] - FP64 is fast (data-centre GPU) (driver probe: cuInit=0 driverVer=12080 cuDeviceGetCount rc=0 count=1)))
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | **NO** / 100 / 6.67E+000 / 82ms (x3) |
+| pglib_opf_case5_pjm | 5 | 5 | 6 | yes / 3 / 3.57E-011 / 3ms (x3) |
+| case9 (WSCC) | 9 | 3 | 9 | yes / 4 / 1.84E-014 / 8ms (x3) |
+| case14 | 14 | 5 | 20 | yes / 2 / 1.32E-010 / 6ms (x3) |
+| cigre_mv | 15 | 1 | 14 | yes / 5 / 9.45E-011 / 29ms (x3) |
+| case18 | 18 | 1 | 17 | yes / 4 / 1.19E-013 / 52ms (x3) |
+| case22 | 22 | 1 | 21 | **NO** / 100 / 8.21E+001 / 3463ms (x3) |
+| case24_ieee_rts | 24 | 33 | 38 | yes / 4 / 6.52E-012 / 15ms (x3) |
+| case30 | 30 | 6 | 41 | yes / 3 / 9.57E-010 / 18ms (x3) |
+| pglib_opf_case30_as | 30 | 6 | 41 | yes / 4 / 1.61E-014 / 25ms (x3) |
+| case33bw | 33 | 1 | 32 | **NO** / 100 / 6.00E+001 / 3431ms (x3) |
+| case57 | 57 | 7 | 80 | yes / 3 / 3.45E-012 / 68ms (x3) |
+| case69 | 69 | 1 | 68 | **NO** / 100 / 1.24E+002 / 8153ms (x3) |
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | yes / 7 / 2.84E-014 / 59ms (x3) |
+| case85 | 85 | 1 | 84 | **NO** / 100 / 1.14E+002 / 7159ms (x3) |
+| case118 | 118 | 54 | 186 | yes / 3 / 1.50E-012 / 32ms (x3) |
+| case145 | 145 | 50 | 453 | yes / 3 / 7.87E-012 / 43ms (x3) |
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | **NO** / 100 / 3.37E+000 / 1678ms (x3) |
+| pglib_opf_case240_pserc | 240 | 143 | 448 | **NO** / 100 / 9.07E+001 / 12134ms (x3) |
+| case300 | 300 | 69 | 411 | yes / 5 / 1.38E-012 / 165ms (x3) |
+| case533mt_hi | 532 | 1 | 514 | **NO** / 0 / 2.76E-002 / 177ms (x3) |
+| pglib_opf_case588_sdet | 588 | 95 | 686 | yes / 5 / 7.27E-010 / 1394ms (x3) |
+| case1354pegase | 1354 | 260 | 1991 | yes / 4 / 3.73E-012 / 886ms (x3) |
+| case2869pegase | 2869 | 510 | 4582 | yes / 6 / 2.15E-009 / 4320ms (x3) |
+| case9241pegase | 9241 | 1445 | 16049 | n/a (>3000 buses, skipped) |
+
+## Comparison - mean solve time (ms), converged unless noted
+| Case | Buses | cpu-dense | cpu-sparse | bfs | cuda-dense | cuda-sparse |
+|------|------:|------:|------:|------:|------:|------:|
+| pglib_opf_case3_lmbd | 3 | NO | NO | n/a | NO | NO |
+| pglib_opf_case5_pjm | 5 | 0ms | 0ms | n/a | 1ms | 3ms |
+| case9 (WSCC) | 9 | 0ms | 0ms | n/a | 2ms | 8ms |
+| case14 | 14 | 0ms | 0ms | n/a | 1ms | 6ms |
+| cigre_mv | 15 | 1ms | 1ms | 1ms | 4ms | 29ms |
+| case18 | 18 | 1ms | 1ms | 0ms | 11ms | 52ms |
+| case22 | 22 | NO | NO | NO | NO | NO |
+| case24_ieee_rts | 24 | 0ms | 1ms | n/a | 4ms | 15ms |
+| case30 | 30 | 1ms | 1ms | n/a | 4ms | 18ms |
+| pglib_opf_case30_as | 30 | 1ms | 1ms | n/a | 5ms | 25ms |
+| case33bw | 33 | NO | NO | NO | NO | NO |
+| case57 | 57 | 2ms | 2ms | n/a | 9ms | 68ms |
+| case69 | 69 | NO | NO | NO | NO | NO |
+| pglib_opf_case73_ieee_rts | 73 | 3ms | 1ms | n/a | 17ms | 59ms |
+| case85 | 85 | NO | NO | NO | NO | NO |
+| case118 | 118 | 5ms | 1ms | n/a | 19ms | 32ms |
+| case145 | 145 | 10ms | 2ms | n/a | 31ms | 43ms |
+| pglib_opf_case162_ieee_dtc | 162 | NO | NO | n/a | NO | NO |
+| pglib_opf_case240_pserc | 240 | NO | NO | n/a | NO | NO |
+| case300 | 300 | 80ms | 5ms | n/a | 354ms | 165ms |
+| case533mt_hi | 532 | ERR:Singular matrix in LU solve. | NO | n/a | ERR:Singular matrix in GPU LU solve. | NO |
+| pglib_opf_case588_sdet | 588 | 248ms | 8ms | n/a | 790ms | 1394ms |
+| case1354pegase | 1354 | 2243ms | 16ms | n/a | 6226ms | 886ms |
+| case2869pegase | 2869 | 33865ms | 65ms | n/a | 44496ms | 4320ms |
+| case9241pegase | 9241 | ERR:count ('-1973164928') must be a non-negative value. (Parameter 'count') Actual value was -1973164928. | 381ms | n/a | skip | skip |

@@ -1,0 +1,7 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Two-bus v2 example",
+  "description": "A hand-written two-bus network: one generator, one load, one line.",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "network": ["two-bus.network.json"]
+}

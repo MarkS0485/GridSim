@@ -1,0 +1,8 @@
+$ head -n 6 data/devices/tsgb-fleet.json
+{
+  "name": "tsgb-fleet-1.14GW",
+  "rotationalInertiaMwS": 13700,
+  "fastResponseMw": 1140,
+  "fastResponseTimeConstantS": 0.05,
+  "fastResponseDeadbandHz": 0.015,
+[exit 0]

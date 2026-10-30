@@ -1,0 +1,25 @@
+$ gridsim taps uk --target 1.02
+TAP SCHEDULE - GB reduced (10-zone) (10 OLTCs)  [minimise sum of squared deviation from 1.020 pu]
+  objective 6.164149E-003 -> 4.133679E-003  (improved)
+      T1 GSP N Scotland          1.0000 ->   1.0250
+      T2 GSP S Scotland          1.0000 ->   1.0125
+      T3 GSP N England           1.0000 ->   1.0125
+      T4 GSP Yorkshire           1.0000 ->   1.0125
+      T5 GSP N Wales & Mersey    1.0000 ->   1.0125
+      T6 GSP Midlands            1.0000 ->   1.0125
+      T7 GSP East Anglia         1.0000 ->   1.0125
+      T8 GSP London & SE         1.0000 ->   1.0125
+      T9 GSP South               1.0000 ->   1.0125
+      T10 GSP SW & S Wales       1.0000 ->   1.0125
+  10 OLTC(s) would leave this schedule: the bus each controls is outside its own target +/- deadband, so its local regulator would retap:
+      T1 GSP N Scotland        bus 101     1.0138 pu  (own target 1.0000 +/- 0.0100)
+      T2 GSP S Scotland        bus 102     1.0240 pu  (own target 1.0000 +/- 0.0100)
+      T3 GSP N England         bus 103     1.0191 pu  (own target 1.0000 +/- 0.0100)
+      T4 GSP Yorkshire         bus 104     1.0207 pu  (own target 1.0000 +/- 0.0100)
+      T5 GSP N Wales & Mersey  bus 105     1.0221 pu  (own target 1.0000 +/- 0.0100)
+      T6 GSP Midlands          bus 106     1.0176 pu  (own target 1.0000 +/- 0.0100)
+      T7 GSP East Anglia       bus 107     1.0229 pu  (own target 1.0000 +/- 0.0100)
+      T8 GSP London & SE       bus 108     1.0144 pu  (own target 1.0000 +/- 0.0100)
+      T9 GSP South             bus 109     1.0221 pu  (own target 1.0000 +/- 0.0100)
+      T10 GSP SW & S Wales     bus 110     1.0248 pu  (own target 1.0000 +/- 0.0100)
+[exit 0]

@@ -1,0 +1,33 @@
+$ gridsim gda --root $GDA_ROOT --gsp "Coventry 132kV" --solve
+GridSim  -  GDA ingestion from $GDA_ROOT  (NGED)
+==========================================================================
+Built in 1592 ms  -  GB/NGED ex-GDA [Coventry 132kV]
+
+  Raw LTDS nodes          22,590
+  Electrical buses           188   (busbar/disconnector ties merged: 429)
+  Series circuits            153   (cables & lines)
+  Transformers (2w/3w)        93 / 0   (+0 star nodes)
+  Total branches             246
+  Demand points               76   matched 76, total 0.85 GW
+  Generators                   0   (0.00 GW capacity, 31 unmatched)
+  System inertia             0.0 GVAs
+  OLTCs                       93
+  Connected islands            1   (largest 188 buses)
+
+  Buses by voltage:
+      132 kV        21
+       33 kV       125
+       11 kV        40
+        7 kV         2
+
+   No embedded generators matched; GSP infeeds carry all supply.
+   1 GSP infeed(s) modelled as slack buses; primary = bus 0 (Coventry 132kV Reserve 2, 132 kV).
+   WARNING ties: 3 zero-impedance circuit(s) whose Equipment is not a busbar or switch were merged as busbar ties (check for missing R/X cells): LADR3_1L9-LADR3S 'Circuit'; LADR3_3L9-LADR3T 'Circuit'; 93ZUVL28A-CFPV3T 'Circuit'.
+   Demand: 2042 row(s), 22383.2 MW are on nodes outside this build's network (other areas of the carve, or nodes on no in-scope element) and were not included.
+   GSP group = Coventry 132kV.
+   Geolocated 58/188 buses from substations.csv.
+
+Solving with the dense backend...
+Converged in 344 ms (4 NR, 6 OLTC, mismatch 1.60E-011)
+Generation 0.86 GW  Demand 0.85 GW  Losses 9.8 MW  V 0.974-1.009 p.u.
+[exit 0]

@@ -1,0 +1,4 @@
+$ gridsim trip results/asset-grounding/no-verify --asset-dynamics on
+error: cannot load case folder 'results/asset-grounding/no-verify': Invalid asset-classes.json:
+  asset class 'gfl-wind-2024' parameter '_default' is CuratedPlaceholder but its note lacks the literal [VERIFY] token.
+[exit 1]

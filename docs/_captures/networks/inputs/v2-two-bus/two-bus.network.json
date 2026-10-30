@@ -1,0 +1,16 @@
+{
+  "schema": "gridsim-network/2",
+  "buses": [
+    { "id": 1, "name": "North 400", "baseKv": 400, "type": "slack" },
+    { "id": 2, "name": "South 400", "baseKv": 400, "type": "pq" }
+  ],
+  "generators": [
+    { "name": "North CCGT", "bus": 1, "type": "ccgt", "capacityMva": 600, "outputMw": 300, "role": "slack" }
+  ],
+  "demands": [
+    { "name": "South load", "bus": 2, "pMw": 300, "qMvar": 100 }
+  ],
+  "lines": [
+    { "name": "L1-2", "from": 1, "to": 2, "rPu": 0.002, "xPu": 0.02, "bPu": 0.1, "ratingMva": 800 }
+  ]
+}

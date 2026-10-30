@@ -1,0 +1,26 @@
+$ gridsim dcopf gb-synthetic
+DC-OPF - GB synthetic (2227 buses)  [cheapest secure dispatch]
+  2 rated line(s) cannot be brought within rating by any dispatch; left out of the security LP and still overloaded:
+      branch 120   MID SGT 400/275 1            rating 1,000.0 MW, any dispatch gives 1,409.0 .. 1,446.0 MW
+      branch 125   LDN SGT 400/275 1            rating 1,000.0 MW, any dispatch gives 1,258.1 .. 1,757.7 MW
+  secure for every rated line except the 2 listed above (no dispatch can relieve them)
+  demand 39,291 MW  generation 39,291 MW  total cost 602,945 GBP/h  (network-constrained redispatch applied)
+  dispatch (by output):
+      gen bus 45      8,000.0 MW  @     1 GBP/MWh
+      gen bus 4       4,000.0 MW  @     1 GBP/MWh
+      gen bus 60      4,000.0 MW  @     1 GBP/MWh
+      gen bus 62      3,200.0 MW  @    10 GBP/MWh
+      gen bus 2       3,000.0 MW  @     1 GBP/MWh
+      gen bus 19      2,600.0 MW  @    55 GBP/MWh
+      gen bus 10      2,400.0 MW  @    10 GBP/MWh
+      gen bus 27      2,000.0 MW  @     1 GBP/MWh
+      gen bus 20      1,870.3 MW  @    65 GBP/MWh
+      gen bus 45      1,400.0 MW  @    60 GBP/MWh
+      gen bus 46      1,250.0 MW  @    10 GBP/MWh
+      gen bus 1       1,237.3 MW  @     5 GBP/MWh
+  binding line limits:
+      branch 60   SSC-NEN 400   5,500.0 MW / 5,500 MVA
+      branch 110  YRK SGT 400/275 1  1,000.0 MW / 1,000 MVA
+      branch 120  MID SGT 400/275 1  1,409.0 MW / 1,000 MVA
+      branch 125  LDN SGT 400/275 1  1,518.6 MW / 1,000 MVA
+[exit 0]

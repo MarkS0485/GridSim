@@ -1,0 +1,9 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "synchronousMachine",
+  "title": "Test fixture machine",
+  "description": "A minimal stand-in machine kind for V2PlaceholderRuleTests only.",
+  "params": {
+    "h": { "type": "number", "unit": "s", "min": 0, "required": true, "description": "Inertia constant." }
+  }
+}

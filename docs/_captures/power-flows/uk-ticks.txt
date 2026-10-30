@@ -1,0 +1,6 @@
+$ gridsim --ticks 4
+t=08:00 tick  0  load 27.65GW  gen 27.68GW  loss   27MW  V 0.998-1.040  ok (3 NR)
+t=08:20 tick  1  load 28.26GW  gen 28.29GW  loss   28MW  V 0.999-1.040  ok (3 NR)
+t=08:39 tick  2  load 28.90GW  gen 28.93GW  loss   30MW  V 0.999-1.040  ok (3 NR)
+t=09:00 tick  3  load 29.56GW  gen 29.59GW  loss   31MW  V 0.999-1.040  ok (3 NR)
+[exit 0]

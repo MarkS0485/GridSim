@@ -1,0 +1,179 @@
+@* One transformer's dashboard. LIVE-SOLVED: loading, flow, tap, HV/LV electrical, OLTC mechanics.
+   STATIC DEMO (clearly labelled): top-oil/hot-spot thermal, DGA, protection, event log - sensible
+   nameplate values wired so a monitoring feed can drop in behind them. Mirrors GridSim.Wpf TransformerDetailVm. *@
+
+@if (_b is null)
+{
+    <div class="stub">This transformer is not in the current model.</div>
+}
+else
+{
+    <div class="card" style="margin-bottom:0">
+        <div class="card-eyebrow">TRANSFORMER</div>
+        <div class="card-h" style="margin-bottom:2px">@_b.Name</div>
+        <div class="muted-note" style="margin-top:0">@_band | <span class="txt-ok">LIVE-SOLVED</span></div>
+    </div>
+
+    @* Dials: loading is live; the two temperatures are static-demo estimates *@
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">THERMAL &amp; LOADING</div>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;justify-content:center">
+            <div style="text-align:center">
+                <Gauge Value="@_b.LoadingPercent" Minimum="0" Maximum="120" AmberFrom="0.83" RedFrom="0.92" Caption="LOADING" Unit="%" Width="180" Height="150" />
+                <div class="card-eyebrow txt-ok">LIVE</div>
+            </div>
+            <div style="text-align:center">
+                <Gauge Value="58" Minimum="0" Maximum="120" AmberFrom="0.75" RedFrom="0.92" Caption="TOP-OIL" Unit="degC" Width="180" Height="150" />
+                <div class="card-eyebrow" style="color:var(--warn)">STATIC DEMO</div>
+            </div>
+            <div style="text-align:center">
+                <Gauge Value="71" Minimum="0" Maximum="140" AmberFrom="0.70" RedFrom="0.79" Caption="HOT-SPOT" Unit="degC" Width="180" Height="150" />
+                <div class="card-eyebrow" style="color:var(--warn)">STATIC DEMO</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+        <div class="card-h">LOADING | RECENT SIM HISTORY</div>
+        <Sparkline Values="_history" Stroke="@WebPalette.Loading(_b.LoadingPercent / 100.0)" Width="900" Height="90" />
+    </div>
+
+    <div class="panel-grid">
+        @* HV / LV electrical - live, cross-linked *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">HV / LV ELECTRICAL <span class="card-eyebrow" style="display:inline;margin:0">LIVE-SOLVED</span></div>
+            <StatRow Label="HV substation">
+                <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="() => Nav.OpenSubstation(_hv, _hvName)">@_hvName -></a>
+            </StatRow>
+            <StatRow Label="HV voltage" Value="@_hvVm" />
+            <StatRow Label="HV reactive" Value="@_qHv" />
+            <StatRow Label="LV substation">
+                <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="() => Nav.OpenSubstation(_lv, _lvName)">@_lvName -></a>
+            </StatRow>
+            <StatRow Label="LV voltage" Value="@_lvVm" />
+            <StatRow Label="LV reactive" Value="@_qLv" />
+            <StatRow Label="Rating / flow / tap" Value="@($"{(_b.RateAMva > 0 ? _b.RateAMva.ToString("F0") : "-")} MVA | {_b.PFromMw:+#,0;-#,0;0} MW | {_b.TapRatio:F3}")" />
+        </div>
+
+        @* OLTC - live, only when fitted *@
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">ON-LOAD TAP CHANGER <span class="card-eyebrow" style="display:inline;margin:0">@(_oltc is null ? "" : "LIVE")</span></div>
+            @if (_oltc is null)
+            {
+                <div class="muted-note" style="margin-top:0">no OLTC fitted to this transformer</div>
+            }
+            else
+            {
+                <StatRow Label="Regulates bus">
+                    <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="() => Nav.OpenSubstation(_oltc.ControlsBus, _oltcBusName)">@_oltcBusName -></a>
+                </StatRow>
+                <StatRow Label="Target" Value="@($"{_oltc.TargetVpu:F3} pu")" />
+                <StatRow Label="Live voltage" Value="@_oltcLive" />
+                <StatRow Label="Status" Status="@_oltcStatus"><b>@_oltcState</b></StatRow>
+                <StatRow Label="Range" Value="@($"{_oltc.MinTap:F3} - {_oltc.MaxTap:F3}")" />
+                <StatRow Label="Step / deadband" Value="@($"{_oltc.StepPu * 100:F2} %/step | +/-{_oltc.DeadbandPu:F3} pu")" />
+            }
+        </div>
+    </div>
+
+    @* Static-demo asset-management sections *@
+    <div class="panel-grid four">
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">THERMAL <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="Top-oil" Value="58 degC" Status="ok" />
+            <StatRow Label="Hot-spot" Value="71 degC" Status="ok" />
+            <StatRow Label="Alarm / trip" Value="98 / 110 degC" />
+            <StatRow Label="Cooling" Value="ONAN->ONAF 1" />
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">DGA <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="Hydrogen H2" Value="42 ppm" Status="ok" />
+            <StatRow Label="CO" Value="310 ppm" Status="ok" />
+            <StatRow Label="Acetylene C2H2" Value="1 ppm" Status="ok" />
+            <StatRow Label="Moisture" Value="9 ppm" Status="warn" />
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">PROTECTION <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="Buchholz" Value="healthy" Status="ok" />
+            <StatRow Label="Differential 87T" Value="healthy" Status="ok" />
+            <StatRow Label="Overcurrent 51" Value="healthy" Status="ok" />
+            <StatRow Label="REF 64" Value="healthy" Status="ok" />
+        </div>
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">EVENT LOG <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">STATIC DEMO</span></div>
+            <StatRow Label="06:14"><b style="font-weight:400">OLTC tap raise | +1</b></StatRow>
+            <StatRow Label="04:02"><b style="font-weight:400">Cooling ONAF 1 engaged</b></StatRow>
+            <StatRow Label="Yesterday"><b style="font-weight:400">Routine DGA sample</b></StatRow>
+            <StatRow Label="3 days ago"><b style="font-weight:400">Moisture trend flagged</b></StatRow>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+    [Parameter] public int BranchIndex { get; set; }
+    [Parameter] public int Tick { get; set; }
+
+    private const int HistoryLength = 96;
+
+    private BranchAssetDto? _b;
+    private OltcAssetDto? _oltc;
+    private int _hv, _lv;
+    private string _band = "", _hvName = "-", _lvName = "-", _hvVm = "-", _lvVm = "-", _qHv = "-", _qLv = "-";
+    private string _oltcBusName = "-", _oltcLive = "-", _oltcState = "-", _oltcStatus = "";
+
+    private readonly List<double> _history = new();
+    private int _lastTick = int.MinValue;
+
+    protected override void OnParametersSet()
+    {
+        _b = BranchIndex >= 0 && BranchIndex < Graph.Branches.Count && Graph.Branches[BranchIndex].IsTransformer
+            ? Graph.Branches[BranchIndex] : null;
+        if (_b is null) return;
+
+        var kv = Graph.Buses.ToDictionary(x => x.Id, x => x);
+        double fromKv = kv.GetValueOrDefault(_b.From)?.BaseKv ?? 0, toKv = kv.GetValueOrDefault(_b.To)?.BaseKv ?? 0;
+        double hi = Math.Max(fromKv, toKv), lo = Math.Min(fromKv, toKv);
+        _band = hi <= 0 ? "transformer" : $"{hi:F0}->{lo:F0} kV";
+
+        bool fromIsHv = fromKv >= toKv;
+        _hv = fromIsHv ? _b.From : _b.To;
+        _lv = fromIsHv ? _b.To : _b.From;
+        BusAssetDto? hvB = kv.GetValueOrDefault(_hv), lvB = kv.GetValueOrDefault(_lv);
+        _hvName = hvB?.Name ?? $"bus {_hv}";
+        _lvName = lvB?.Name ?? $"bus {_lv}";
+        _hvVm = hvB is { Solved: true } ? $"{hvB.Vm:F3} pu | {hvB.Vm * hvB.BaseKv:F1} kV" : "-";
+        _lvVm = lvB is { Solved: true } ? $"{lvB.Vm:F3} pu | {lvB.Vm * lvB.BaseKv:F1} kV" : "-";
+        if (_b.Solved)
+        {
+            _qHv = $"{(fromIsHv ? _b.QFromMvar : _b.QToMvar):+#,0.0;-#,0.0;0} MVAr";
+            _qLv = $"{(fromIsHv ? _b.QToMvar : _b.QFromMvar):+#,0.0;-#,0.0;0} MVAr";
+        }
+
+        _oltc = Graph.Oltcs.FirstOrDefault(o => o.Transformer == _b.Name);
+        if (_oltc is not null)
+        {
+            BusAssetDto? cb = kv.GetValueOrDefault(_oltc.ControlsBus);
+            _oltcBusName = cb?.Name ?? $"bus {_oltc.ControlsBus}";
+            if (cb is { Solved: true })
+            {
+                double dev = cb.Vm - _oltc.TargetVpu;
+                bool inBand = Math.Abs(dev) <= _oltc.DeadbandPu;
+                _oltcLive = $"{cb.Vm:F3} pu";
+                _oltcState = inBand ? "IN BAND" : dev > 0 ? "HIGH" : "LOW";
+                _oltcStatus = inBand ? "ok" : "warn";
+            }
+            else { _oltcLive = "-"; _oltcState = "-"; _oltcStatus = ""; }
+        }
+
+        if (_history.Count == 0)
+            for (int i = 0; i < HistoryLength - 1; i++) _history.Add(_b.LoadingPercent);
+        if (Tick != _lastTick)
+        {
+            _lastTick = Tick;
+            _history.Add(_b.LoadingPercent);
+            while (_history.Count > HistoryLength) _history.RemoveAt(0);
+        }
+    }
+}

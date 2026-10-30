@@ -1,0 +1,15 @@
+$ sed -n '85762,85774p' results/formats/pegase-solve.json
+      {
+        "Index": 639,
+        "Id": 4231,
+        "Type": "Slack",
+        "VmInit": 1.049182,
+        "VaInitDeg": 0,
+        "Pspec": 26.412399999999998,
+        "Qspec": 7.716,
+        "Qd": 0,
+        "Vg": 1.049182,
+        "Qmin": "-Infinity",
+        "Qmax": "Infinity"
+      },
+[exit 0]

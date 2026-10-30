@@ -1,0 +1,8 @@
+$ gridsim iec60909 case9 --bus 5 --type ll --objective min
+IEC 60909 - IEEE 9-bus (WSCC), bus 5, line-to-line, Minimum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 1.1560643644458017 kA  (6.908149645337835 pu)
+  ip    = 3.262386834962709 kA  (kappa 1.995438943368623, R/X 0.10501342238071008, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 1.1560643644458017 kA    Ik = 1.1560643644458017 kA  (unbalanced fault: IEC 60909-0 takes no decay, Ik = Ib = Ik'')
+  Ith   = 1.17161637499512 kA  (m 0.027086065637215752)    idc(tb) = 0.031200607356919714 kA
+  Zth   = 0.013092788564404878 + j0.12467728665140516 pu
+[exit 0]

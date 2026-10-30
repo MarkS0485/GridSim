@@ -1,0 +1,6 @@
+$ gridsim synth
+GridSim  -  synthetic GB    2227 buses  2268 branches  74 generators  357 OLTCs
+  demand 39.3 GW  inertia 172 GVAs
+  converged (5 NR, mismatch 3.3E-010)  V 0.950-1.040 pu  losses 831 MW
+  written -> results\synth\gb-synthetic
+[exit 0]

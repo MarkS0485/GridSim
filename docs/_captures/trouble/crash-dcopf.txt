@@ -1,0 +1,13 @@
+$ gridsim dcopf results/trouble-tmp/pmin-above-pmax.m
+note: pmin-above-pmax.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pmin-above-pmax.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+gridsim: internal error - this is a defect in GridSim, not a problem with your input.
+gridsim: InvalidDataException: DC-OPF: generator 0 ('' at bus 1) has Pmin 300 MW above Pmax 250 MW.
+gridsim: crash log written to results/crash\gridsim-crash-20261004-142052-20932.log - please include it when reporting the problem.
+Unhandled exception. System.IO.InvalidDataException: DC-OPF: generator 0 ('' at bus 1) has Pmin 300 MW above Pmax 250 MW.
+   at GridSim.Core.Analysis.DcOptimalPowerFlow.CheckGeneratorLimits(GridModel model) in src\GridSim.Core\Analysis\DcOptimalPowerFlow.cs:line 338
+   at GridSim.Core.Analysis.DcOptimalPowerFlow.SolveCore(GridModel model, Double[] costPerGen, Boolean enforceLineLimits, Boolean denseReference, Boolean useCosts, Boolean computePrices) in src\GridSim.Core\Analysis\DcOptimalPowerFlow.cs:line 229
+   at GridSim.Core.Analysis.DcOptimalPowerFlow.Solve(GridModel model, Double[] costPerGen, Boolean enforceLineLimits) in src\GridSim.Core\Analysis\DcOptimalPowerFlow.cs:line 206
+   at Program.<<Main>$>g__RunDcOpf|0_77(List`1 a, String root) in src\GridSim.Cli\Program.cs:line 5383
+   at Program.<Main>$(String[] args) in src\GridSim.Cli\Program.cs:line 1247
+[exit -532462766]

@@ -1,0 +1,3 @@
+$ gridsim gda --root $GDA_ROOT --fleet
+Fleet build failed: GDA dataset folder not found: $GDA_ROOT\NESO\RAWData\Transmission Entry Capacity (TEC) register. This lake holds the NESO Transmission Entry Capacity (TEC) register only as Parquet ($GDA_ROOT\NESO\Parquet\transmission_entry_capacity_tec_register); GridSim reads the published CSVs ('tec-register-*.csv') and does not read the Parquet conversion. Put the CSVs under $GDA_ROOT\NESO\RAWData\Transmission Entry Capacity (TEC) register (or point --root at a lake copy that has NESO/RAWData).
+[exit 1]

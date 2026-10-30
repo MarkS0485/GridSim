@@ -1,0 +1,3 @@
+$ gridsim taps uk --target 0
+error: --target expected a voltage above 0 pu but got '0'
+[exit 2]

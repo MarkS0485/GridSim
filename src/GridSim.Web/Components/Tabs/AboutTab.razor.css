@@ -1,0 +1,24 @@
+.about { max-width: 1080px; }
+
+.about-hero { margin-bottom: 12px; }
+.about-lead { color: var(--ink); line-height: 1.55; margin: 8px 0; font-size: 0.95em; }
+
+.about-grid { gap: 12px; }
+
+.about-list { margin: 8px 0 0; padding-left: 18px; }
+.about-list li { color: var(--ink); line-height: 1.5; margin-bottom: 7px; }
+.about-list b { color: var(--ink); font-weight: 700; }
+.about-list i { color: var(--muted); }
+
+/* colour-code the four cadence cards so the viewer reads live / stepped / fixed / range at a glance */
+.about-live .card-h  { color: var(--accent); }
+.about-step .card-h  { color: var(--warn); }
+.about-fixed .card-h { color: var(--muted); }
+.about-range .card-h { color: var(--ok); }
+
+.about-live  { border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+.about-step  { border-left: 2px solid color-mix(in srgb, var(--warn) 55%, transparent); }
+.about-fixed { border-left: 2px solid color-mix(in srgb, var(--muted) 45%, transparent); }
+.about-range { border-left: 2px solid color-mix(in srgb, var(--ok) 55%, transparent); }
+
+.about-foot { margin-top: 12px; }

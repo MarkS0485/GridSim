@@ -1,0 +1,235 @@
+@* One substation's dashboard, keyed by bus id. All live-solved: voltage (with rolling sparkline), angle,
+   demand, connected generation, bus type. CONNECTED PLANT links to each generator; CONNECTIONS links to
+   every branch touching the bus. In bridge mode a GDA per-asset card is surfaced. Mirrors GridSim.Wpf
+   SubstationDetailVm. *@
+@implements IDisposable
+
+@if (_b is null)
+{
+    <div class="stub">This bus is not in the current model.</div>
+}
+else
+{
+    <div class="card" style="margin-bottom:0">
+        <div class="card-eyebrow">SUBSTATION</div>
+        <div class="card-h" style="margin-bottom:2px">@_b.Name</div>
+        <div class="muted-note" style="margin-top:0">@(_b.BaseKv > 0 ? $"{_b.BaseKv:F0} kV electrical bus" : "electrical bus") | <span class="txt-ok">LIVE-SOLVED</span></div>
+    </div>
+
+    <div class="panel-grid">
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">SOLVED STATE</div>
+            <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:2em;font-weight:700;font-variant-numeric:tabular-nums;color:@(_b.Solved ? WebPalette.Voltage(_b.Vm) : "var(--muted)")">@(_b.Solved ? _b.Vm.ToString("F3") : "-")</span>
+                <span class="ml" style="color:var(--muted)">pu | @(_b.Solved ? $"{_b.Vm * _b.BaseKv:F1} kV" : "-")</span>
+            </div>
+            <Sparkline Values="_history" Stroke="@WebPalette.Voltage(_b.Solved ? _b.Vm : 1.0)" Width="420" Height="60" />
+            <StatRow Label="Angle" Value="@($"{_b.VaDeg:+0.0;-0.0;0.0} deg")" />
+            <StatRow Label="Bus type" Value="@_b.BusType" />
+            <StatRow Label="Demand" Value="@($"{_b.DemandMw:N0} MW | {_b.DemandMvar:N0} MVAr")" />
+            <StatRow Label="Generation" Value="@($"{_gen:N0} MW")" />
+        </div>
+
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">SUPPLY CONTEXT <span class="card-eyebrow" style="display:inline;margin:0">DERIVED</span></div>
+            <StatRow Label="Net injection" Value="@($"{_b.PInjMw:+#,0;-#,0;0} MW")" />
+            <StatRow Label="Role"><b class="@(_b.PInjMw > 5 ? "txt-ok" : _b.PInjMw < -5 ? "txt-warn" : "")">@_role</b></StatRow>
+            <StatRow Label="Transformers" Value="@_txCount.ToString()" />
+            <StatRow Label="Lines" Value="@_lineCount.ToString()" />
+            <StatRow Label="Connected plant" Value="@($"{_plant.Count} unit(s)")" />
+        </div>
+    </div>
+
+    @if (_plant.Count > 0)
+    {
+        <div class="card" style="margin-bottom:0">
+            <div class="card-h">CONNECTED PLANT</div>
+            @foreach (GenAssetDto g in _plant)
+            {
+                <StatRow Label="@g.Fuel">
+                    <b>
+                        <a role="button" tabindex="0" style="color:var(--accent);cursor:pointer" @onclick="() => Nav.OpenGenerator(g.Index, g.Name, g.Interconnector)">
+                            <span class="swatch" style="--c:@g.FuelColor"></span>@g.Name ->
+                        </a>
+                        <span style="color:var(--muted);font-weight:400"> | @g.Pg.ToString("N0") MW</span>
+                    </b>
+                </StatRow>
+            }
+        </div>
+    }
+
+    <div class="card grow" style="margin-bottom:0">
+        <div class="card-h">CONNECTIONS</div>
+        @if (_conns.Count == 0)
+        {
+            <div class="muted-note" style="margin-top:0">islanded - no branches touch this bus</div>
+        }
+        else
+        {
+            <div class="tablescroll">
+                <table class="grid">
+                    <thead><tr><th>Circuit</th><th>Kind</th><th>Other end</th><th class="r">Flow</th><th>Dir</th><th class="r">Loading</th></tr></thead>
+                    <tbody>
+                        @foreach (Conn c in _conns)
+                        {
+                            <tr @onclick="() => Nav.OpenBranch(c.Branch.Index, c.Branch.IsTransformer, c.Branch.Name)">
+                                <td>@c.Branch.Name</td>
+                                <td>@(c.Branch.IsTransformer ? "TRANSFORMER" : "LINE")</td>
+                                <td>@c.OtherEnd</td>
+                                <td class="r">@Math.Abs(c.PHere).ToString("N0") MW</td>
+                                <td>@c.Dir</td>
+                                <td class="r">
+                                    <div class="minibar"><span style="width:@Pct(c.Frac);--c:@WebPalette.Loading(c.Frac)"></span></div>
+                                    @(c.Branch.RatingMva > 0 ? $"{c.Branch.LoadingPercent:F0}%" : "unrated")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @if (IsBridge)
+    {
+        @* N063: the GDA per-asset card, filled by the bridge op="asset" query for this bus (the WPF
+           SubstationDetailVm.ApplyAsset flow), with the same rows from the shared Core formatter. *@
+        <div class="card lake" style="margin-bottom:0">
+            <div class="card-h">GDA PER-ASSET <span class="card-eyebrow" style="display:inline;margin:0;color:var(--warn)">BRIDGE</span></div>
+            <div class="muted-note" style="margin-top:0">@_assetStatus</div>
+            @if (_assetRows.Count > 0)
+            {
+                <table class="grid">
+                    <tbody>
+                        @foreach (var r in _assetRows)
+                        {
+                            @if (r.HasGroup)
+                            {
+                                <tr><th colspan="2" style="text-align:left">@r.Group</th></tr>
+                            }
+                            <tr><td>@r.Head</td><td class="muted-note">@r.Sub</td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+    [Parameter] public int BusId { get; set; }
+    [Parameter] public int Tick { get; set; }
+    [Parameter] public bool IsBridge { get; set; }
+
+    /// <summary>N063: the bridge per-asset query (null outside bridge mode). Run once per bus shown.</summary>
+    [Parameter] public Func<int, CancellationToken, Task<GridSim.Core.IO.QueryResult>>? QueryAsset { get; set; }
+
+    private const int HistoryLength = 96;
+
+    private BusAssetDto? _b;
+    private double _gen;
+    private int _txCount, _lineCount;
+    private string _role = "-";
+    private List<GenAssetDto> _plant = new();
+    private List<Conn> _conns = new();
+
+    private readonly List<double> _history = new();
+    private int _lastTick = int.MinValue;
+
+    // ---- GDA per-asset card (N063) ----
+    private IReadOnlyList<GridSim.Core.Presentation.AssetInsightFormatter.Row> _assetRows =
+        Array.Empty<GridSim.Core.Presentation.AssetInsightFormatter.Row>();
+    private string _assetStatus = "";
+    private int? _assetQueriedBus;
+    private CancellationTokenSource? _assetCts;
+
+    /// <summary>Start the per-asset query when a bridge page opens on a bus (or moves to another bus). A query still
+    /// in flight for the previous bus is cancelled, and a late answer for a bus no longer shown is dropped.</summary>
+    private void StartAssetQuery()
+    {
+        if (!IsBridge || _assetQueriedBus == BusId) return;
+        _assetQueriedBus = BusId;
+        _assetCts?.Cancel();
+        _assetCts?.Dispose();
+        _assetCts = new CancellationTokenSource();
+        _assetRows = Array.Empty<GridSim.Core.Presentation.AssetInsightFormatter.Row>();
+        if (QueryAsset is null)
+        {
+            _assetStatus = "per-asset query not available on this session";
+            return;
+        }
+        _assetStatus = "querying GDA per-asset data ...";
+        _ = RunAssetQueryAsync(BusId, QueryAsset, _assetCts.Token);
+    }
+
+    private async Task RunAssetQueryAsync(int busId, Func<int, CancellationToken, Task<GridSim.Core.IO.QueryResult>> query, CancellationToken ct)
+    {
+        string status;
+        IReadOnlyList<GridSim.Core.Presentation.AssetInsightFormatter.Row> rows = Array.Empty<GridSim.Core.Presentation.AssetInsightFormatter.Row>();
+        try
+        {
+            GridSim.Core.IO.QueryResult qr = await query(busId, ct);
+            bool has = qr.Asset is { IsEmpty: false };
+            rows = GridSim.Core.Presentation.AssetInsightFormatter.Rows(qr.Asset);
+            // The same status lines as the desktop page.
+            status = has
+                ? $"GDA @ {qr.At:yyyy-MM-dd HH:mm}Z  *  bus {busId}"
+                : $"no GDA per-asset data resolved for bus {busId}";
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }   // page moved on
+        catch (Exception ex) { status = $"asset query failed: {ex.Message}"; }
+        if (ct.IsCancellationRequested || busId != BusId) return;
+        _assetRows = rows;
+        _assetStatus = status;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        _assetCts?.Cancel();
+        _assetCts?.Dispose();
+    }
+
+    private sealed record Conn(BranchAssetDto Branch, string OtherEnd, double PHere, string Dir, double Frac);
+
+    protected override void OnParametersSet()
+    {
+        StartAssetQuery();
+        _b = Graph.Buses.FirstOrDefault(x => x.Id == BusId);
+        if (_b is null) return;
+
+        _gen = Graph.Generators.Where(g => g.Bus == BusId).Sum(g => g.Pg);
+        _role = _b.PInjMw > 5 ? "net source" : _b.PInjMw < -5 ? "net sink" : "balanced";
+        _plant = Graph.Generators.Where(g => g.Bus == BusId).ToList();
+
+        var byId = Graph.Buses.ToDictionary(x => x.Id);
+        _conns = new(); _txCount = 0; _lineCount = 0;
+        foreach (BranchAssetDto br in Graph.Branches)
+        {
+            bool fromHere = br.From == BusId, toHere = br.To == BusId;
+            if (!fromHere && !toHere) continue;
+            if (br.IsTransformer) _txCount++; else _lineCount++;
+            int otherId = fromHere ? br.To : br.From;
+            double pHere = fromHere ? br.PFromMw : br.PToMw;
+            string dir = pHere > 1 ? "OUT ->" : pHere < -1 ? "<- IN" : "-";
+            double frac = br.RatingMva > 0 ? br.LoadingPercent / 100.0 : 0;
+            _conns.Add(new Conn(br, byId.GetValueOrDefault(otherId)?.Name ?? $"bus {otherId}", pHere, dir, frac));
+        }
+
+        if (_b.Solved)
+        {
+            if (_history.Count == 0)
+                for (int i = 0; i < HistoryLength - 1; i++) _history.Add(_b.Vm);
+            if (Tick != _lastTick)
+            {
+                _lastTick = Tick;
+                _history.Add(_b.Vm);
+                while (_history.Count > HistoryLength) _history.RemoveAt(0);
+            }
+        }
+    }
+
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+}

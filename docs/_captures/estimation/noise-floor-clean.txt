@@ -1,0 +1,13 @@
+$ gridsim estimate-noise-floor results/nf --out results/nf-report
+
+=== Measurement noise floor: 5 estimate(s), 610 residual(s) (0 NaN skipped) ===
+  source                   kind         count  k_robust    k_std     bias  verdict
+  synthetic                QInjMvar        70     0.814    0.917    0.091  ok
+  synthetic                PInjMw          70     0.848    1.006    0.139  ok
+  synthetic                VmPu            70     1.143    1.207    0.004  ok
+  synthetic                QFlowMvar      200     0.899    0.983    0.066  ok
+  synthetic                PFlowMw        200     1.079    0.988   -0.067  ok
+  0 of 5 class(es) miscalibrated (tolerance 0.25, k = true noise / declared sigma)
+
+  -> results\nf-report
+[exit 0]

@@ -1,0 +1,4 @@
+$ gridsim estimate nosuchcase.m --synth --audit-log results/ch26-missing.log
+error loading case 'nosuchcase.m': MATPOWER case file not found: 'nosuchcase.m' (full path nosuchcase.m).
+audit: results\ch26-missing.log entries=1 head=C2C9569D290798AA444762E7C2AA3765C75D035C4BF19D3BB6E3A4CBE834CA0E
+[exit 1]

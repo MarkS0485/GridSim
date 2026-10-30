@@ -1,0 +1,14 @@
+$ sed -n '1485,1496p' results/exports-docs/estimate/estimate-export.json
+  "estimate": {
+    "status": "Converged",
+    "converged": true,
+    "iterations": 5,
+    "maxStateUpdate": 2.7236424897305518E-09,
+    "objectiveJ": 80.01052231478454,
+    "degreesOfFreedom": 95,
+    "chiSquareThreshold": 118.74899343100537,
+    "chiSquarePassed": true,
+    "chiSquareTest": 1,
+    "irlsCapReached": false,
+    "buses": [
+[exit 0]

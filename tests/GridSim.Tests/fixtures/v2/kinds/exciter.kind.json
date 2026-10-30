@@ -1,0 +1,9 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "exciter",
+  "title": "Test fixture exciter",
+  "description": "A minimal stand-in exciter kind for V2PlaceholderRuleTests only, so the controller-target rule is tested without depending on the real kind specs in schemas/v2/kinds.",
+  "params": {
+    "ka": { "type": "number", "unit": "1", "min": 0, "max": 1000, "required": true, "description": "Regulator gain." }
+  }
+}

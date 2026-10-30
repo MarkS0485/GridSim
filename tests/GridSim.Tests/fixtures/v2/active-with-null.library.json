@@ -1,0 +1,15 @@
+{
+  "schema": "gridsim-library/2",
+  "description": "Test fixture: an active template with a null value. Must fail.",
+  "templates": [
+    {
+      "id": "gridsim.fixture.site.bad-active",
+      "rev": 1,
+      "kind": "site",
+      "status": "active",
+      "title": "Active with a null",
+      "params": { "generation": "gridsim.fixture.machine@1", "demand": null },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "fixture" } }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+$ gridsim serve case9 --measurements-dir results/realtime/windows --method enkf
+serving enkf estimator over 4 window(s) from results/realtime/windows
+horizon guard: now=2026-10-04T18:39:03.6265332Z, newest processable=2026-09-27T17:39:03.6265332Z
+  #0 2024-03-01T12:00:00.0000000Z OK
+  #1 2024-03-01T12:01:00.0000000Z OK
+  #2 2024-03-01T12:02:00.0000000Z OK
+  #3 2024-03-01T12:03:00.0000000Z OK
+done: processed 4, converged 4, rejected-fresh 0, failed 0
+[exit 0]

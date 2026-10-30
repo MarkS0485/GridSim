@@ -1,0 +1,4 @@
+$ python bridge_probe.py '{"action":"start","case":"gb-spine","start":"yesterday","fps":144,"source":"estimated"}' 3
+info      {"message": "GridSim-Bridge connected", "cases": ["gb-full", "gb-spine", "zone-enwl", "zone-nged", "zone-npg", "zone-spen", "zone-ssen", "zone-ukpn"]}
+error     {"message": "Invalid start date"}
+[exit 0]

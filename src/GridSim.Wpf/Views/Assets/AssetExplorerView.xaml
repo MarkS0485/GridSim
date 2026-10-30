@@ -1,0 +1,283 @@
+<UserControl x:Class="GridSim.Wpf.Views.Assets.AssetExplorerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:assets="clr-namespace:GridSim.Wpf.Views.Assets"
+             xmlns:viz="clr-namespace:GridSim.Wpf.Visuals">
+    <DockPanel DataContext="{Binding Assets}" Margin="12">
+
+        <!-- explorer header: navigation + the time strip every page is aligned to -->
+        <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,0,0,12" Padding="12,8">
+            <DockPanel>
+                <Button Content=" ASSETS" Style="{StaticResource FlatBtn}" Command="{Binding HomeCmd}"
+                        DockPanel.Dock="Left" Margin="0,0,8,0" />
+                <Button Content=" BACK" Style="{StaticResource FlatBtn}" Command="{Binding BackCmd}"
+                        Visibility="{Binding BackVis}" DockPanel.Dock="Left" />
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <TextBlock Text="TIME-ALIGNED  " Style="{StaticResource Label}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding TimeLabel}" FontFamily="{StaticResource MonoFont}" FontSize="13"
+                               FontWeight="Bold" Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{Binding Crumb}" Style="{StaticResource Label}" FontSize="12"
+                           VerticalAlignment="Center" Margin="14,0,0,0" />
+            </DockPanel>
+        </Border>
+
+        <!-- the current page, matched to its view by type -->
+        <ContentControl Content="{Binding Current}">
+            <ContentControl.Resources>
+                <ResourceDictionary>
+                <!-- per-asset-class page templates (each class keeps its own dictionary) -->
+                <ResourceDictionary.MergedDictionaries>
+                    <ResourceDictionary Source="GeneratorTemplates.xaml" />
+                    <ResourceDictionary Source="TransformerTemplates.xaml" />
+                    <ResourceDictionary Source="CircuitTemplates.xaml" />
+                    <ResourceDictionary Source="SubstationTemplates.xaml" />
+                </ResourceDictionary.MergedDictionaries>
+
+                <!-- ===== landing page: asset-class tiles ===== -->
+                <!-- (the shared PageHeader template lives in Theme.xaml, app-level,
+                     so the merged per-class dictionaries can resolve it too) -->
+                <DataTemplate DataType="{x:Type assets:AssetHomeVm}">
+                    <DockPanel>
+                        <ContentPresenter DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Classes}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="2" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <!-- live summary card: class identity + count, a headline live metric, and a mini bar -->
+                                        <Button Style="{StaticResource TileBtn}" Command="{Binding Open}"
+                                                Margin="0,0,12,12" Padding="18,16" VerticalContentAlignment="Top">
+                                            <StackPanel>
+                                                <!-- title + tag chip -->
+                                                <DockPanel>
+                                                    <TextBlock Text="{Binding Title}" Style="{StaticResource PanelHeader}" FontSize="13"
+                                                               DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                                    <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1"
+                                                            HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Tag}" FontSize="9" FontWeight="Bold"
+                                                                   Foreground="{StaticResource Muted}" />
+                                                    </Border>
+                                                </DockPanel>
+
+                                                <!-- count + live headline metric, side by side -->
+                                                <Grid Margin="0,12,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- the count of units in this class -->
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Bottom">
+                                                        <TextBlock Text="{Binding Count}" Style="{StaticResource Value}" FontSize="34" />
+                                                        <TextBlock Text="UNITS" Style="{StaticResource Label}" FontSize="9" Margin="2,0,0,0" />
+                                                    </StackPanel>
+
+                                                    <!-- the live headline metric, accent/health coloured -->
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                            <TextBlock Text="{Binding Metric}" FontSize="28" FontWeight="Bold"
+                                                                       Foreground="{Binding MetricBrush}" />
+                                                            <TextBlock Text="{Binding MetricUnit}" Style="{StaticResource Unit}"
+                                                                       VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding MetricLabel}" Style="{StaticResource Label}" FontSize="9"
+                                                                   HorizontalAlignment="Right" Margin="0,1,0,0" />
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- mini bar: live metric as a fraction of its class scale -->
+                                                <Border Width="220" Height="6" Background="{StaticResource Track}" CornerRadius="3"
+                                                        HorizontalAlignment="Left" Margin="0,12,0,0">
+                                                    <Border Width="{Binding BarWidth}" Height="6" Background="{Binding MetricBrush}"
+                                                            CornerRadius="3" HorizontalAlignment="Left" />
+                                                </Border>
+
+                                                <!-- the class description -->
+                                                <TextBlock Text="{Binding Detail}" Style="{StaticResource Label}"
+                                                           TextWrapping="Wrap" Margin="0,12,0,0" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </DataTemplate>
+
+
+                <!-- ===== interconnector fleet ===== -->
+                <DataTemplate DataType="{x:Type assets:InterconnectorFleetVm}">
+                    <DockPanel>
+                        <ContentPresenter DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+                        <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                            <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                                <StackPanel>
+                                    <TextBlock Text="TOTAL CAPACITY" Style="{StaticResource PanelHeader}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding TotalCap}" Style="{StaticResource Value}" />
+                                        <TextBlock Text=" GW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0">
+                                <StackPanel>
+                                    <TextBlock Text="NET FLOW" Style="{StaticResource PanelHeader}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding NetFlow}" Style="{StaticResource Value}" />
+                                        <TextBlock Text=" GW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0">
+                                <StackPanel>
+                                    <TextBlock Text="IMPORTING" Style="{StaticResource PanelHeader}" />
+                                    <TextBlock Text="{Binding Importing}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="LARGEST FLOW" Style="{StaticResource PanelHeader}" />
+                                    <TextBlock Text="{Binding Largest}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Links}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource TileBtn}" Command="{Binding Open}" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="220" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" />
+                                                    <TextBlock Text="{Binding Route}" Style="{StaticResource Label}" FontSize="10" />
+                                                </StackPanel>
+                                                <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                                                        VerticalAlignment="Center" Margin="0,0,16,0">
+                                                    <TextBlock Text="{Binding Badge}" FontSize="9" FontWeight="Bold"
+                                                               Foreground="{Binding Bar}" />
+                                                </Border>
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                    <Border Width="240" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                                            HorizontalAlignment="Left">
+                                                        <Border Width="{Binding BarWidth}" Height="7" Background="{Binding Bar}"
+                                                                CornerRadius="3" HorizontalAlignment="Left" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,4,0">
+                                                    <TextBlock Text="{Binding Flow}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" />
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                        <TextBlock Text="{Binding Util}" Style="{StaticResource Label}" FontSize="10" />
+                                                        <TextBlock Text=" of " Style="{StaticResource Label}" FontSize="10" />
+                                                        <TextBlock Text="{Binding Capacity}" Style="{StaticResource Label}" FontSize="10" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </DataTemplate>
+
+                <!-- ===== interconnector unit dashboard ===== -->
+                <DataTemplate DataType="{x:Type assets:InterconnectorDetailVm}">
+                    <DockPanel>
+                        <ContentPresenter DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+                        <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                            <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                                <StackPanel>
+                                    <TextBlock Text="FLOW" Style="{StaticResource PanelHeader}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding Flow}" Style="{StaticResource Value}" />
+                                        <TextBlock Text=" MW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0">
+                                <StackPanel>
+                                    <TextBlock Text="CAPACITY" Style="{StaticResource PanelHeader}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding Capacity}" Style="{StaticResource Value}" />
+                                        <TextBlock Text=" MW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0">
+                                <StackPanel>
+                                    <TextBlock Text="UTILISATION" Style="{StaticResource PanelHeader}" />
+                                    <TextBlock Text="{Binding Util}" Style="{StaticResource Value}" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource Card}" Margin="6,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="DIRECTION" Style="{StaticResource PanelHeader}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <Ellipse Width="12" Height="12" Fill="{Binding DirectionBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding Direction}" FontSize="20" FontWeight="Bold" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="340" />
+                            </Grid.ColumnDefinitions>
+
+                            <Border Style="{StaticResource Card}" Grid.Column="0" Margin="0,0,12,0">
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Top" Text="FLOW  RECENT SIM HISTORY" Style="{StaticResource PanelHeader}" Margin="0,0,0,8" />
+                                    <viz:Sparkline Values="{Binding Trace}" MinHeight="120" />
+                                </DockPanel>
+                            </Border>
+
+                            <Border Style="{StaticResource Card}" Grid.Column="1" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock Text="LANDING ZONE" Style="{StaticResource PanelHeader}" Margin="0,0,0,8" />
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Substation" Style="{StaticResource Label}" Width="110" />
+                                        <Button Style="{StaticResource LinkBtn}" Command="{Binding OpenLanding}" CommandParameter="{Binding LandingBusId}"
+                                                HorizontalAlignment="Left" ToolTip="Open this substation">
+                                            <TextBlock Text="{Binding Landing}" FontWeight="SemiBold" Foreground="{StaticResource Accent}" />
+                                        </Button>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Voltage level" Style="{StaticResource Label}" Width="110" />
+                                        <TextBlock Text="{Binding LandingKv}" FontWeight="SemiBold" />
+                                    </DockPanel>
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Bus voltage" Style="{StaticResource Label}" Width="110" />
+                                        <TextBlock Text="{Binding LandingVm}" FontWeight="SemiBold" />
+                                    </DockPanel>
+                                    <DockPanel Margin="0,3">
+                                        <TextBlock Text="Co-located" Style="{StaticResource Label}" Width="110" />
+                                        <TextBlock Text="{Binding Colocated}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </DataTemplate>
+
+                </ResourceDictionary>
+            </ContentControl.Resources>
+        </ContentControl>
+    </DockPanel>
+</UserControl>

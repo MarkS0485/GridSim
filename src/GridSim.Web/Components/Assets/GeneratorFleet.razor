@@ -1,0 +1,68 @@
+@* The generating fleet by fuel - synchronous inertia and converter plant, ordered by live output,
+   capped to the top 200. Every column is live-solved. Rows click through to the unit dashboard. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET CLASS</div>
+    <div class="card-h" style="margin-bottom:2px">GENERATORS</div>
+    <div class="muted-note" style="margin-top:0">the generating fleet by fuel - down to the unit</div>
+</div>
+
+<div class="panel-grid four">
+    <div class="mini"><span class="mv">@($"{_totalMw / 1000.0:F2}")</span><span class="ml">Total output GW</span></div>
+    <div class="mini"><span class="mv">@_online / @_gens.Count</span><span class="ml">Online</span></div>
+    <div class="mini"><span class="mv">@(_totalMw > 0 ? $"{_syncMw / _totalMw * 100:F0}%" : "-")</span><span class="ml">Synchronous share</span></div>
+    <div class="mini"><span class="mv" style="font-size:1em">@_largest</span><span class="ml">Largest unit</span></div>
+</div>
+
+<div class="card grow" style="margin-bottom:0">
+    <div class="card-h">FLEET REGISTER@(_note is "" ? "" : $" | {_note}")</div>
+    <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Unit</th><th>Fuel</th><th>Inertia</th><th class="r">Output</th><th class="r">Utilisation</th></tr></thead>
+            <tbody>
+                @foreach (GenAssetDto g in _shown)
+                {
+                    <tr @onclick="() => Nav.OpenGenerator(g.Index, g.Name, g.Interconnector)">
+                        <td><span class="swatch" style="--c:@g.FuelColor"></span>@g.Name</td>
+                        <td>@g.Fuel</td>
+                        <td class="mono">@(g.Synchronous ? $"H {g.HSeconds:F1}" : "CONVERTER")</td>
+                        <td class="r">@g.Pg.ToString("N0") MW</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(Frac(g));--c:@WebPalette.Loading(Frac(g))"></span></div>
+                            @(g.Capped ? $"{Frac(g) * 100:F0}%" : "-")
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private const int MaxRows = 200;
+
+    private List<GenAssetDto> _gens = new();
+    private List<GenAssetDto> _shown = new();
+    private double _totalMw, _syncMw;
+    private int _online;
+    private string _largest = "-";
+    private string _note = "";
+
+    protected override void OnParametersSet()
+    {
+        _gens = Graph.Generators.Where(g => !g.Interconnector).ToList();
+        _totalMw = _gens.Sum(g => g.Pg);
+        _syncMw = _gens.Where(g => g.Synchronous).Sum(g => g.Pg);
+        _online = _gens.Count(g => g.Pg > 0);
+        GenAssetDto? big = _gens.OrderByDescending(g => g.Pg).FirstOrDefault();
+        _largest = big is null ? "-" : $"{big.Name} | {big.Pg:F0} MW";
+        _shown = _gens.OrderByDescending(g => g.Pg).Take(MaxRows).ToList();
+        _note = _gens.Count > MaxRows ? $"showing {MaxRows} of {_gens.Count}" : "";
+    }
+
+    private static double Frac(GenAssetDto g) => g.Capped && g.PmaxMw > 0 ? Math.Clamp(g.Pg / g.PmaxMw, 0, 1) : 0;
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+}

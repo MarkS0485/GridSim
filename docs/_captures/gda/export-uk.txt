@@ -1,0 +1,3 @@
+$ gridsim export results/gridviz-uk.json
+Exported 20 buses, 24 branches, 72 frames -> results\gridviz-uk.json
+[exit 0]

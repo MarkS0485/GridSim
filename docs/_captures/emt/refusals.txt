@@ -1,0 +1,51 @@
+$ gridsim emt case14 --rule euler
+error: --rule expected trap or be but got 'euler'
+[exit 2]
+$ gridsim emt case14 --dt-us 0
+error: --dt-us expected a positive step (microseconds) but got '0'
+[exit 2]
+$ gridsim emt nosuchcase
+emt: error loading case 'nosuchcase': unknown case 'nosuchcase'
+[exit 1]
+$ gridsim emt case14 --source 99
+emt: source bus 99 is not in the model. (Parameter 'options')
+[exit 2]
+$ gridsim emt cigre
+emt: EMT build: branch #12 (0->1) is a phase-shifting transformer (shift 30 deg). A phase shift multiplies the voltage phasor by a complex number, which a real-valued single-phase time-domain network cannot represent; it would be silently dropped. Remove the shift or use a phasor study. (Parameter 'model')
+[exit 2]
+$ gridsim emt case14 --event clear:5@0.03
+emt: bad --event 'clear:5@0.03' (use fault:<bus>@<t>:<Rpu>, clear:<bus>@<t>, or switch:<id>@<t>:close|open).
+[exit 2]
+$ gridsim emt case14 --event switch:7@0.01:open
+emt: EMT case has events that cannot act: switch event at 0.01 s names element 7, which is not a switch. Valid switch ids: none.
+[exit 2]
+$ gridsim emt case14 --probe v:99
+emt: unrecognised probe 'v:99' (use v:<bus> or i:<from>-<to>); skipped.
+emt: no valid probes.
+[exit 2]
+$ gridsim emt case14 --probe i:1-9
+emt: no series branch 1->9; probe skipped.
+emt: no valid probes.
+[exit 2]
+$ gridsim emt case14 --probe v:99,v:2 --out emt-err
+emt: unrecognised probe 'v:99' (use v:<bus> or i:<from>-<to>); skipped.
+emt: 2 floating node(s) pinned at 0 V in the initial-condition solve.
+emt case14: 5,000 steps @ 20us, 1 factorization(s), peak |probe| 1.047, 34 ms -> emt-err
+[exit 0]
+$ gridsim emt case14 --event fault:5@0.01:0 --duration 0.02
+emt: EMT element 1000000 (4->-1) has a non-finite companion conductance (Infinity) at dt = 9.999999999999999E-06 s: its resistance is zero or cancels its companion resistance.
+[exit 3]
+
+$ gridsim emt case14 --duration -1
+emt: Non-negative number required. (Parameter 'capacity')
+[exit 2]
+
+$ gridsim emt case14 --event fault:5@0.01:0.01 --event clear:5@0.015 --event fault:5@0.02:5 --duration 0.03 --probe v:5 --out emt-twice
+emt: 2 floating node(s) pinned at 0 V in the initial-condition solve.
+emt case14: 1,500 steps @ 20us, 7 factorization(s), peak |probe| 10.35, 10 ms -> emt-twice
+[exit 0]
+
+$ gridsim emt case14 --event fault:5@0.01:-1 --duration 0.02 --out emt-neg
+emt: 2 floating node(s) pinned at 0 V in the initial-condition solve.
+emt case14: 1,000 steps @ 20us, 3 factorization(s), peak |probe| 3.906E+05, 8 ms -> emt-neg
+[exit 0]

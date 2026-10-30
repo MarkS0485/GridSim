@@ -1,0 +1,4 @@
+[
+  { "id": 1, "name": "A", "baseKv": 345.0, "type": "slack", "vm": 1.0, "vaDeg": 0.0, "gs": 0.0, "bs": 0.0 },
+  { "id": 2, "name": "B", "baseKv": 345.0, "type": "pq", "vm": 1.0, "vaDeg": 0.0, "gs": 0.0, "bs": 0.0 }
+]

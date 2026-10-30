@@ -1,0 +1,9 @@
+$ gridsim harmonics case14
+harmonics: case IEEE 14-bus, 1 source(s), orders 24
+  synthetic source : 6-pulse-g5 at bus 3, 0.5 pu fundamental (G5 Issue 5 Table B.3 six-pulse profile, the default; --synth-spectrum ideal for the idealised 1/h)
+  worst voltage THD : 7.32% at bus 3 (relative to the solved fundamental voltage)
+  resonance (bus 3): order 25, |Z|=1.028 pu, sharpness 1.2
+  fine sweep peak  : h=24.2371 (1211.85 Hz), |Z|=1.031 pu, positive sequence
+  IEEE-519         : 0/14 buses compliant
+  WARNING          : 14 bus(es) have no base kV - judged at the strictest tier and NOT certified
+[exit 0]

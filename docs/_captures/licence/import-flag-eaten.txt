@@ -1,0 +1,3 @@
+$ gridsim --importLicence --once
+error: --importLicence expected a licence file path (<file.gridsim>) but got '--once'
+[exit 2]

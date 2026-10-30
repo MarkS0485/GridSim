@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "boundaries.schema.json",
+  "title": "GridSim v1 boundaries.json",
+  "description": "The transfer boundaries of the case, one record each. Optional file. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/boundary"
+  },
+  "$defs": {
+    "boundary": {
+      "title": "Boundary",
+      "description": "A transfer boundary (v1 BoundaryDto): the named branches whose signed flows sum to the boundary flow. Branches are matched by name only; the last branch of a shared name wins and an unknown name is skipped (BoundaryAnalysis.Evaluate; a recorded finding). Absent: name empty, limitMw 0, no branches.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Boundary name. Absent: empty.",
+          "type": "string"
+        },
+        "limitMw": {
+          "title": "Limit (MW)",
+          "description": "Transfer limit across the boundary. Absent: 0.",
+          "type": "number"
+        },
+        "branches": {
+          "title": "Branches",
+          "description": "The branches crossing the boundary, each with a direction. Absent: none.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/boundaryBranch"
+          }
+        }
+      }
+    },
+    "boundaryBranch": {
+      "title": "Boundary branch",
+      "description": "One branch crossing a boundary (v1 BoundaryBranchDto). Absent direction: 1.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "branch": {
+          "title": "Branch",
+          "description": "Name of a line or transformer. Absent: empty.",
+          "type": "string"
+        },
+        "direction": {
+          "title": "Direction",
+          "description": "+1 counts the branch's from-to flow as positive boundary flow, -1 counts it negative. Absent: 1.",
+          "enum": [
+            1,
+            -1
+          ]
+        }
+      }
+    }
+  }
+}

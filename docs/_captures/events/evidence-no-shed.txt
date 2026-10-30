@@ -1,0 +1,18 @@
+$ gridsim evidence --event gb-largest-loss-1320 --out results/evidence-gb-largest-loss-1320
+
+=== Evidence dossier: GB normal infeed loss risk screening (SQSS): single 1320 MW infeed trip [VERIFY] ===
+  when: 2020-01-01T12:00:00.0000000Z   event provenance: CuratedPlaceholder   baseline gate: Reproduced
+  input provenance: [CuratedPlaceholder]  (event 'gb-largest-loss-1320' is effectively CuratedPlaceholder, the weakest of its parts): a design-basis study, not a reproduction of history; every figure below inherits it and none is Recorded.
+
+  column                                          RoCoF    nadir  LFDD   dev inertia  dev FFR
+  --------------------------------------------------------------------------------------------
+  recorded                                    -0.165Hz/s  49.20Hz    no        0.0GVAs  0.00GW   [CuratedPlaceholder]
+  simulated (no device)                       -0.165Hz/s  49.24Hz    no        0.0GVAs  0.00GW   [CuratedPlaceholder]
+  counterfactual (device @ 200 GVA.s)         -0.143Hz/s  49.62Hz    no       30.0GVAs  1.00GW   [Counterfactual]
+
+  single-vs-fleet @ 200 GVA.s: aggregate nadir 49.62 Hz vs 100-unit fleet 49.48 Hz (FFR@nadir 751 vs 568 MW).
+
+  Baseline Reproduced; counterfactual device DOES keep the nadir above LFDD; no avoided cost claimed
+
+  -> results\evidence-gb-largest-loss-1320
+[exit 0]

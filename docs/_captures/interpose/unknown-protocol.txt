@@ -1,0 +1,9 @@
+$ gridsim interpose --protocol dnp3 --crosswalk docs/_captures/interpose/iec104-case14.json
+usage: gridsim interpose [case] --protocol <name> (--listen host:port | --port N) --crosswalk <map.json>
+                         [--measurements-dir <dir>] [--out-store <dir>] [--source-id <id>] [--window-ms N]
+                         [--monitor] [--ticks N] [--live-seconds S] [--tolerate-malformed]
+       gridsim interpose --list-protocols
+Receives live RTU/SCADA frames, corrects & decodes them, and writes gridsim-measurements/1 windows.
+Live frames feed the estimator only after ageing past the 169 h horizon (monitor-only until then).
+error: unknown protocol 'dnp3'. Try --list-protocols.
+[exit 2]

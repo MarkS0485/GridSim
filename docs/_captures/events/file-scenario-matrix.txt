@@ -1,0 +1,7 @@
+# results/scenario-gb-2019-08-09/matrix.csv
+inertia_gvas,device,corner,rocof_hz_s,nadir_hz,settle_hz,lfdd_at_risk,assessment
+260,none,Best,-0.1268,49.012,49.030,False,"BELOW STATUTORY (49.5 Hz)"
+260,none,Worst,-0.1404,47.376,47.520,True,"LFDD RISK  -  demand disconnection"
+260,tsgb,Best,-0.0929,49.362,49.382,False,"BELOW STATUTORY (49.5 Hz)"
+260,tsgb,Worst,-0.0980,48.275,48.377,True,"LFDD RISK  -  demand disconnection"
+155,none,Best,-0.1929,48.976,49.027,False,"BELOW STATUTORY (49.5 Hz)"

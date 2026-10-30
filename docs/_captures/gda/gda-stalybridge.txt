@@ -1,0 +1,31 @@
+$ gridsim gda --root $GDA_ROOT --gsp "Stalybridge 132kV" --no-geo --out results/gda-stalybridge --solve
+GridSim  -  GDA ingestion from $GDA_ROOT  (NGED)
+==========================================================================
+Built in 200 ms  -  GB/NGED ex-GDA [Stalybridge 132kV]
+
+  Raw LTDS nodes          22,590
+  Electrical buses             9   (busbar/disconnector ties merged: 18)
+  Series circuits              5   (cables & lines)
+  Transformers (2w/3w)         4 / 0   (+0 star nodes)
+  Total branches               9
+  Demand points                5   matched 5, total 0.02 GW
+  Generators                   0   (0.00 GW capacity, 0 unmatched)
+  System inertia             0.0 GVAs
+  OLTCs                        4
+  Connected islands            1   (largest 9 buses)
+
+  Buses by voltage:
+       33 kV         6
+       11 kV         3
+
+   No embedded generators matched; GSP infeeds carry all supply.
+   1 GSP infeed(s) modelled as slack buses; primary = bus 0 (BUXT3_REDUCED_3, 33 kV).
+   Demand: 2113 row(s), 23210.9 MW are on nodes outside this build's network (other areas of the carve, or nodes on no in-scope element) and were not included.
+   GSP group = Stalybridge 132kV.
+
+Materialised replica -> results\gda-stalybridge (git-ignored). Run it: gridsim --dir "results/gda-stalybridge"
+
+Solving with the dense backend...
+Converged in 28 ms (3 NR, 1 OLTC, mismatch 1.51E-011)
+Generation 0.02 GW  Demand 0.02 GW  Losses 0.1 MW  V 0.991-1.000 p.u.
+[exit 0]

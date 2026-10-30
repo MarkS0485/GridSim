@@ -1,0 +1,12 @@
+$ sed -n '5307,5316p' results/formats/uk-solve.json
+  "physics": {
+    "gatePass": false,
+    "hardGateLaws": [
+      1,
+      2,
+      3,
+      6,
+      8
+    ],
+    "laws": [
+[exit 0]

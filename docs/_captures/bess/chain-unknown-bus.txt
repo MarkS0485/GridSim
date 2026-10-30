@@ -1,0 +1,3 @@
+$ gridsim chain case9 --steps 2 --bess lfp:99:5:10
+error: chain storage: storage site 'LFP 5MW/10MWh @99' is at unknown bus 99.
+[exit 2]

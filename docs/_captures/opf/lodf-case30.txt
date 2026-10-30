@@ -1,0 +1,3 @@
+$ gridsim lodf case30
+usage: gridsim lodf <case> --branch <0..40>
+[exit 2]

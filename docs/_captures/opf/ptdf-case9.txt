@@ -1,0 +1,3 @@
+$ gridsim ptdf case9
+usage: gridsim ptdf <case> --bus <busId>
+[exit 2]

@@ -1,0 +1,3215 @@
+[
+  {
+    "transformer": "NSC GSP 1 SGT",
+    "controlsBus": 64,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NSC G1P1 132/33",
+    "controlsBus": 66,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NSC G1P2 132/33",
+    "controlsBus": 72,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NSC G1P3 132/33",
+    "controlsBus": 77,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NSC G1P4 132/33",
+    "controlsBus": 87,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NSC GSP 2 SGT",
+    "controlsBus": 96,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NSC G2P1 132/33",
+    "controlsBus": 97,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NSC G2P2 132/33",
+    "controlsBus": 105,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NSC G2P3 132/33",
+    "controlsBus": 110,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC GSP 1 SGT",
+    "controlsBus": 120,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SSC G1P1 132/33",
+    "controlsBus": 122,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G1P2 132/33",
+    "controlsBus": 129,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G1P3 132/33",
+    "controlsBus": 139,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G1P4 132/33",
+    "controlsBus": 146,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC GSP 2 SGT",
+    "controlsBus": 152,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SSC G2P1 132/33",
+    "controlsBus": 153,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G2P2 132/33",
+    "controlsBus": 160,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G2P3 132/33",
+    "controlsBus": 166,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G2P4 132/33",
+    "controlsBus": 174,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC GSP 3 SGT",
+    "controlsBus": 181,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SSC G3P1 132/33",
+    "controlsBus": 182,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G3P2 132/33",
+    "controlsBus": 188,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G3P3 132/33",
+    "controlsBus": 194,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC GSP 4 SGT",
+    "controlsBus": 202,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SSC G4P1 132/33",
+    "controlsBus": 203,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G4P2 132/33",
+    "controlsBus": 209,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SSC G4P3 132/33",
+    "controlsBus": 218,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 1 SGT",
+    "controlsBus": 225,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G1P1 132/33",
+    "controlsBus": 227,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G1P2 132/33",
+    "controlsBus": 235,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G1P3 132/33",
+    "controlsBus": 242,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G1P4 132/33",
+    "controlsBus": 250,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 2 SGT",
+    "controlsBus": 255,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G2P1 132/33",
+    "controlsBus": 257,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G2P2 132/33",
+    "controlsBus": 263,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G2P3 132/33",
+    "controlsBus": 270,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G2P4 132/33",
+    "controlsBus": 278,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 3 SGT",
+    "controlsBus": 287,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G3P1 132/33",
+    "controlsBus": 289,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G3P2 132/33",
+    "controlsBus": 299,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G3P3 132/33",
+    "controlsBus": 308,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G3P4 132/33",
+    "controlsBus": 314,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 4 SGT",
+    "controlsBus": 320,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G4P1 132/33",
+    "controlsBus": 322,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G4P2 132/33",
+    "controlsBus": 327,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G4P3 132/33",
+    "controlsBus": 334,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G4P4 132/33",
+    "controlsBus": 342,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 5 SGT",
+    "controlsBus": 348,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G5P1 132/33",
+    "controlsBus": 349,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G5P2 132/33",
+    "controlsBus": 358,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G5P3 132/33",
+    "controlsBus": 366,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G5P4 132/33",
+    "controlsBus": 371,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 6 SGT",
+    "controlsBus": 380,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G6P1 132/33",
+    "controlsBus": 381,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G6P2 132/33",
+    "controlsBus": 388,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G6P3 132/33",
+    "controlsBus": 396,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G6P4 132/33",
+    "controlsBus": 403,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 7 SGT",
+    "controlsBus": 409,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G7P1 132/33",
+    "controlsBus": 410,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G7P2 132/33",
+    "controlsBus": 415,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G7P3 132/33",
+    "controlsBus": 422,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 8 SGT",
+    "controlsBus": 431,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G8P1 132/33",
+    "controlsBus": 432,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G8P2 132/33",
+    "controlsBus": 442,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G8P3 132/33",
+    "controlsBus": 448,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G8P4 132/33",
+    "controlsBus": 453,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 9 SGT",
+    "controlsBus": 462,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G9P1 132/33",
+    "controlsBus": 463,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G9P2 132/33",
+    "controlsBus": 468,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G9P3 132/33",
+    "controlsBus": 475,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G9P4 132/33",
+    "controlsBus": 483,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 10 SGT",
+    "controlsBus": 491,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G10P1 132/33",
+    "controlsBus": 492,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G10P2 132/33",
+    "controlsBus": 502,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G10P3 132/33",
+    "controlsBus": 508,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN GSP 11 SGT",
+    "controlsBus": 515,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "NEN G11P1 132/33",
+    "controlsBus": 516,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G11P2 132/33",
+    "controlsBus": 524,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G11P3 132/33",
+    "controlsBus": 532,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "NEN G11P4 132/33",
+    "controlsBus": 538,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 1 SGT",
+    "controlsBus": 549,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G1P1 132/33",
+    "controlsBus": 551,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G1P2 132/33",
+    "controlsBus": 560,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G1P3 132/33",
+    "controlsBus": 565,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 2 SGT",
+    "controlsBus": 573,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G2P1 132/33",
+    "controlsBus": 575,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G2P2 132/33",
+    "controlsBus": 583,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G2P3 132/33",
+    "controlsBus": 591,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G2P4 132/33",
+    "controlsBus": 599,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 3 SGT",
+    "controlsBus": 607,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G3P1 132/33",
+    "controlsBus": 609,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G3P2 132/33",
+    "controlsBus": 617,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G3P3 132/33",
+    "controlsBus": 625,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G3P4 132/33",
+    "controlsBus": 632,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 4 SGT",
+    "controlsBus": 640,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G4P1 132/33",
+    "controlsBus": 641,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G4P2 132/33",
+    "controlsBus": 648,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G4P3 132/33",
+    "controlsBus": 653,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G4P4 132/33",
+    "controlsBus": 658,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 5 SGT",
+    "controlsBus": 663,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G5P1 132/33",
+    "controlsBus": 664,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G5P2 132/33",
+    "controlsBus": 670,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G5P3 132/33",
+    "controlsBus": 679,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 6 SGT",
+    "controlsBus": 686,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G6P1 132/33",
+    "controlsBus": 687,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G6P2 132/33",
+    "controlsBus": 693,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G6P3 132/33",
+    "controlsBus": 703,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 7 SGT",
+    "controlsBus": 711,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G7P1 132/33",
+    "controlsBus": 712,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G7P2 132/33",
+    "controlsBus": 717,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G7P3 132/33",
+    "controlsBus": 728,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 8 SGT",
+    "controlsBus": 737,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G8P1 132/33",
+    "controlsBus": 738,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G8P2 132/33",
+    "controlsBus": 743,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G8P3 132/33",
+    "controlsBus": 749,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G8P4 132/33",
+    "controlsBus": 759,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK GSP 9 SGT",
+    "controlsBus": 770,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "YRK G9P1 132/33",
+    "controlsBus": 771,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G9P2 132/33",
+    "controlsBus": 779,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G9P3 132/33",
+    "controlsBus": 786,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "YRK G9P4 132/33",
+    "controlsBus": 795,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 1 SGT",
+    "controlsBus": 804,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G1P1 132/33",
+    "controlsBus": 806,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G1P2 132/33",
+    "controlsBus": 813,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G1P3 132/33",
+    "controlsBus": 820,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 2 SGT",
+    "controlsBus": 826,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G2P1 132/33",
+    "controlsBus": 828,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G2P2 132/33",
+    "controlsBus": 837,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G2P3 132/33",
+    "controlsBus": 846,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G2P4 132/33",
+    "controlsBus": 855,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 3 SGT",
+    "controlsBus": 863,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G3P1 132/33",
+    "controlsBus": 864,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G3P2 132/33",
+    "controlsBus": 873,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G3P3 132/33",
+    "controlsBus": 879,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G3P4 132/33",
+    "controlsBus": 884,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 4 SGT",
+    "controlsBus": 893,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G4P1 132/33",
+    "controlsBus": 894,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G4P2 132/33",
+    "controlsBus": 903,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G4P3 132/33",
+    "controlsBus": 909,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 5 SGT",
+    "controlsBus": 918,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G5P1 132/33",
+    "controlsBus": 919,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G5P2 132/33",
+    "controlsBus": 925,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G5P3 132/33",
+    "controlsBus": 932,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G5P4 132/33",
+    "controlsBus": 939,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 6 SGT",
+    "controlsBus": 945,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G6P1 132/33",
+    "controlsBus": 946,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G6P2 132/33",
+    "controlsBus": 955,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G6P3 132/33",
+    "controlsBus": 963,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G6P4 132/33",
+    "controlsBus": 969,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER GSP 7 SGT",
+    "controlsBus": 978,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MER G7P1 132/33",
+    "controlsBus": 979,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G7P2 132/33",
+    "controlsBus": 986,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MER G7P3 132/33",
+    "controlsBus": 991,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 1 SGT",
+    "controlsBus": 996,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G1P1 132/33",
+    "controlsBus": 998,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G1P2 132/33",
+    "controlsBus": 1004,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G1P3 132/33",
+    "controlsBus": 1014,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 2 SGT",
+    "controlsBus": 1023,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G2P1 132/33",
+    "controlsBus": 1025,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G2P2 132/33",
+    "controlsBus": 1034,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G2P3 132/33",
+    "controlsBus": 1039,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 3 SGT",
+    "controlsBus": 1049,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G3P1 132/33",
+    "controlsBus": 1051,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G3P2 132/33",
+    "controlsBus": 1060,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G3P3 132/33",
+    "controlsBus": 1066,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G3P4 132/33",
+    "controlsBus": 1071,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 4 SGT",
+    "controlsBus": 1079,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G4P1 132/33",
+    "controlsBus": 1081,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G4P2 132/33",
+    "controlsBus": 1091,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G4P3 132/33",
+    "controlsBus": 1099,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 5 SGT",
+    "controlsBus": 1108,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G5P1 132/33",
+    "controlsBus": 1110,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G5P2 132/33",
+    "controlsBus": 1116,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G5P3 132/33",
+    "controlsBus": 1122,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 6 SGT",
+    "controlsBus": 1131,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G6P1 132/33",
+    "controlsBus": 1132,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G6P2 132/33",
+    "controlsBus": 1141,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G6P3 132/33",
+    "controlsBus": 1148,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G6P4 132/33",
+    "controlsBus": 1156,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 7 SGT",
+    "controlsBus": 1162,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G7P1 132/33",
+    "controlsBus": 1163,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G7P2 132/33",
+    "controlsBus": 1169,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G7P3 132/33",
+    "controlsBus": 1174,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G7P4 132/33",
+    "controlsBus": 1182,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 8 SGT",
+    "controlsBus": 1190,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G8P1 132/33",
+    "controlsBus": 1191,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G8P2 132/33",
+    "controlsBus": 1199,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G8P3 132/33",
+    "controlsBus": 1206,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G8P4 132/33",
+    "controlsBus": 1213,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 9 SGT",
+    "controlsBus": 1219,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G9P1 132/33",
+    "controlsBus": 1220,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G9P2 132/33",
+    "controlsBus": 1230,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G9P3 132/33",
+    "controlsBus": 1235,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 10 SGT",
+    "controlsBus": 1243,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G10P1 132/33",
+    "controlsBus": 1244,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G10P2 132/33",
+    "controlsBus": 1254,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G10P3 132/33",
+    "controlsBus": 1260,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 11 SGT",
+    "controlsBus": 1267,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G11P1 132/33",
+    "controlsBus": 1268,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G11P2 132/33",
+    "controlsBus": 1276,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G11P3 132/33",
+    "controlsBus": 1283,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 12 SGT",
+    "controlsBus": 1289,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G12P1 132/33",
+    "controlsBus": 1290,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G12P2 132/33",
+    "controlsBus": 1299,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G12P3 132/33",
+    "controlsBus": 1305,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID GSP 13 SGT",
+    "controlsBus": 1312,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "MID G13P1 132/33",
+    "controlsBus": 1313,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G13P2 132/33",
+    "controlsBus": 1320,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G13P3 132/33",
+    "controlsBus": 1328,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "MID G13P4 132/33",
+    "controlsBus": 1335,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN GSP 1 SGT",
+    "controlsBus": 1340,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "EAN G1P1 132/33",
+    "controlsBus": 1342,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G1P2 132/33",
+    "controlsBus": 1350,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G1P3 132/33",
+    "controlsBus": 1359,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G1P4 132/33",
+    "controlsBus": 1365,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN GSP 2 SGT",
+    "controlsBus": 1374,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "EAN G2P1 132/33",
+    "controlsBus": 1376,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G2P2 132/33",
+    "controlsBus": 1382,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G2P3 132/33",
+    "controlsBus": 1388,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN GSP 3 SGT",
+    "controlsBus": 1398,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "EAN G3P1 132/33",
+    "controlsBus": 1399,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G3P2 132/33",
+    "controlsBus": 1409,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G3P3 132/33",
+    "controlsBus": 1418,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G3P4 132/33",
+    "controlsBus": 1425,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN GSP 4 SGT",
+    "controlsBus": 1434,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "EAN G4P1 132/33",
+    "controlsBus": 1435,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G4P2 132/33",
+    "controlsBus": 1444,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G4P3 132/33",
+    "controlsBus": 1451,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN GSP 5 SGT",
+    "controlsBus": 1459,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "EAN G5P1 132/33",
+    "controlsBus": 1460,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G5P2 132/33",
+    "controlsBus": 1469,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G5P3 132/33",
+    "controlsBus": 1479,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN GSP 6 SGT",
+    "controlsBus": 1490,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "EAN G6P1 132/33",
+    "controlsBus": 1491,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G6P2 132/33",
+    "controlsBus": 1499,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G6P3 132/33",
+    "controlsBus": 1508,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "EAN G6P4 132/33",
+    "controlsBus": 1516,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 1 SGT",
+    "controlsBus": 1526,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G1P1 132/33",
+    "controlsBus": 1528,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G1P2 132/33",
+    "controlsBus": 1533,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G1P3 132/33",
+    "controlsBus": 1539,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 2 SGT",
+    "controlsBus": 1546,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G2P1 132/33",
+    "controlsBus": 1548,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G2P2 132/33",
+    "controlsBus": 1556,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G2P3 132/33",
+    "controlsBus": 1562,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 3 SGT",
+    "controlsBus": 1569,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G3P1 132/33",
+    "controlsBus": 1571,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G3P2 132/33",
+    "controlsBus": 1579,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G3P3 132/33",
+    "controlsBus": 1585,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 4 SGT",
+    "controlsBus": 1591,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G4P1 132/33",
+    "controlsBus": 1593,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G4P2 132/33",
+    "controlsBus": 1599,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G4P3 132/33",
+    "controlsBus": 1608,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G4P4 132/33",
+    "controlsBus": 1616,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 5 SGT",
+    "controlsBus": 1622,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G5P1 132/33",
+    "controlsBus": 1624,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G5P2 132/33",
+    "controlsBus": 1631,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G5P3 132/33",
+    "controlsBus": 1640,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 6 SGT",
+    "controlsBus": 1648,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G6P1 132/33",
+    "controlsBus": 1650,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G6P2 132/33",
+    "controlsBus": 1656,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G6P3 132/33",
+    "controlsBus": 1663,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 7 SGT",
+    "controlsBus": 1674,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G7P1 132/33",
+    "controlsBus": 1675,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G7P2 132/33",
+    "controlsBus": 1684,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G7P3 132/33",
+    "controlsBus": 1693,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G7P4 132/33",
+    "controlsBus": 1700,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 8 SGT",
+    "controlsBus": 1710,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G8P1 132/33",
+    "controlsBus": 1711,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G8P2 132/33",
+    "controlsBus": 1716,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G8P3 132/33",
+    "controlsBus": 1721,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G8P4 132/33",
+    "controlsBus": 1730,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 9 SGT",
+    "controlsBus": 1739,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G9P1 132/33",
+    "controlsBus": 1740,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G9P2 132/33",
+    "controlsBus": 1745,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G9P3 132/33",
+    "controlsBus": 1752,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 10 SGT",
+    "controlsBus": 1757,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G10P1 132/33",
+    "controlsBus": 1758,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G10P2 132/33",
+    "controlsBus": 1766,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G10P3 132/33",
+    "controlsBus": 1774,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 11 SGT",
+    "controlsBus": 1782,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G11P1 132/33",
+    "controlsBus": 1783,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G11P2 132/33",
+    "controlsBus": 1790,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G11P3 132/33",
+    "controlsBus": 1798,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 12 SGT",
+    "controlsBus": 1804,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G12P1 132/33",
+    "controlsBus": 1805,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G12P2 132/33",
+    "controlsBus": 1810,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G12P3 132/33",
+    "controlsBus": 1818,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G12P4 132/33",
+    "controlsBus": 1824,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 13 SGT",
+    "controlsBus": 1830,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G13P1 132/33",
+    "controlsBus": 1831,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G13P2 132/33",
+    "controlsBus": 1838,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G13P3 132/33",
+    "controlsBus": 1843,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G13P4 132/33",
+    "controlsBus": 1848,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 14 SGT",
+    "controlsBus": 1854,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G14P1 132/33",
+    "controlsBus": 1855,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G14P2 132/33",
+    "controlsBus": 1860,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G14P3 132/33",
+    "controlsBus": 1867,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 15 SGT",
+    "controlsBus": 1872,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G15P1 132/33",
+    "controlsBus": 1873,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G15P2 132/33",
+    "controlsBus": 1882,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G15P3 132/33",
+    "controlsBus": 1892,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G15P4 132/33",
+    "controlsBus": 1898,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 16 SGT",
+    "controlsBus": 1904,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G16P1 132/33",
+    "controlsBus": 1905,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G16P2 132/33",
+    "controlsBus": 1915,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G16P3 132/33",
+    "controlsBus": 1922,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN GSP 17 SGT",
+    "controlsBus": 1933,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "LDN G17P1 132/33",
+    "controlsBus": 1934,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G17P2 132/33",
+    "controlsBus": 1942,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G17P3 132/33",
+    "controlsBus": 1950,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "LDN G17P4 132/33",
+    "controlsBus": 1958,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 1 SGT",
+    "controlsBus": 1964,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G1P1 132/33",
+    "controlsBus": 1966,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G1P2 132/33",
+    "controlsBus": 1971,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G1P3 132/33",
+    "controlsBus": 1980,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G1P4 132/33",
+    "controlsBus": 1986,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 2 SGT",
+    "controlsBus": 1993,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G2P1 132/33",
+    "controlsBus": 1995,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G2P2 132/33",
+    "controlsBus": 2002,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G2P3 132/33",
+    "controlsBus": 2010,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G2P4 132/33",
+    "controlsBus": 2016,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 3 SGT",
+    "controlsBus": 2024,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G3P1 132/33",
+    "controlsBus": 2025,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G3P2 132/33",
+    "controlsBus": 2031,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G3P3 132/33",
+    "controlsBus": 2040,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 4 SGT",
+    "controlsBus": 2049,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G4P1 132/33",
+    "controlsBus": 2050,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G4P2 132/33",
+    "controlsBus": 2060,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G4P3 132/33",
+    "controlsBus": 2066,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 5 SGT",
+    "controlsBus": 2073,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G5P1 132/33",
+    "controlsBus": 2074,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G5P2 132/33",
+    "controlsBus": 2080,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G5P3 132/33",
+    "controlsBus": 2088,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G5P4 132/33",
+    "controlsBus": 2096,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 6 SGT",
+    "controlsBus": 2104,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G6P1 132/33",
+    "controlsBus": 2105,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G6P2 132/33",
+    "controlsBus": 2112,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G6P3 132/33",
+    "controlsBus": 2120,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH GSP 7 SGT",
+    "controlsBus": 2127,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "STH G7P1 132/33",
+    "controlsBus": 2128,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G7P2 132/33",
+    "controlsBus": 2136,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G7P3 132/33",
+    "controlsBus": 2142,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "STH G7P4 132/33",
+    "controlsBus": 2150,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW GSP 1 SGT",
+    "controlsBus": 2157,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SWW G1P1 132/33",
+    "controlsBus": 2159,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G1P2 132/33",
+    "controlsBus": 2166,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G1P3 132/33",
+    "controlsBus": 2174,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G1P4 132/33",
+    "controlsBus": 2181,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW GSP 2 SGT",
+    "controlsBus": 2187,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SWW G2P1 132/33",
+    "controlsBus": 2188,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G2P2 132/33",
+    "controlsBus": 2196,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G2P3 132/33",
+    "controlsBus": 2203,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW GSP 3 SGT",
+    "controlsBus": 2210,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.00625,
+    "deadbandPu": 0.01
+  },
+  {
+    "transformer": "SWW G3P1 132/33",
+    "controlsBus": 2211,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G3P2 132/33",
+    "controlsBus": 2218,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  },
+  {
+    "transformer": "SWW G3P3 132/33",
+    "controlsBus": 2223,
+    "targetVpu": 1,
+    "minTap": 0.9,
+    "maxTap": 1.1,
+    "stepPu": 0.0125,
+    "deadbandPu": 0.015
+  }
+]

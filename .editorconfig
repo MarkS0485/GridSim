@@ -1,0 +1,45 @@
+root = true
+
+[*.cs]
+# ============================================================================
+# GridSim v1 analyzer policy. TreatWarningsAsErrors is on (Directory.Build.props),
+# so anything left at `warning` is a build error. Rules below are tuned for a
+# NUMERICAL PHYSICS library: the domain-inappropriate and low-value-churn rules
+# are turned off (with the reason), and the genuine correctness rules are kept.
+# ============================================================================
+
+# --- domain-inappropriate for numerical / grid-data code ---
+dotnet_diagnostic.CA1814.severity = none   # multidim arrays: Y-bus / Jacobian ARE rectangular matrices
+dotnet_diagnostic.CA1819.severity = none   # array-returning members: numeric buffers are returned by design
+dotnet_diagnostic.CA1002.severity = none   # List<T> in APIs: fine for an internal solver library
+dotnet_diagnostic.CA2227.severity = none   # writable collection props: used for model assembly
+dotnet_diagnostic.CA1062.severity = none   # public-arg null-checks: internal-consistency lib, not an untrusted-caller SDK
+dotnet_diagnostic.CA5394.severity = none   # System.Random: this is a simulator, not cryptography
+
+# --- naming / style churn not worth doing for v1 ---
+dotnet_diagnostic.CA1707.severity = none   # underscores: idiomatic xUnit test names + domain constants
+dotnet_diagnostic.CA1716.severity = none   # identifiers vs VB keywords
+dotnet_diagnostic.CA1720.severity = none   # identifiers containing a type name
+dotnet_diagnostic.CA1725.severity = none   # param names need not mirror the base signature
+dotnet_diagnostic.CA1034.severity = none   # nested public types (DTO groupings)
+
+# --- micro perf/style: keep visible as suggestions, don't block the build ---
+dotnet_diagnostic.CA1805.severity = suggestion   # init to default
+dotnet_diagnostic.CA1859.severity = suggestion   # concrete types for perf
+dotnet_diagnostic.CA1861.severity = suggestion   # constant array arguments
+dotnet_diagnostic.CA1826.severity = suggestion   # use property over Enumerable method
+dotnet_diagnostic.CA1825.severity = suggestion   # Array.Empty<T>()
+dotnet_diagnostic.CA1512.severity = suggestion   # ArgumentOutOfRangeException.ThrowIfNegative
+
+# --- culture: real but voluminous; surface as suggestions for a post-v1 sweep ---
+dotnet_diagnostic.CA1305.severity = suggestion   # IFormatProvider on ToString/Parse
+dotnet_diagnostic.CA1307.severity = suggestion   # StringComparison on string ops
+dotnet_diagnostic.CA1310.severity = suggestion   # ordinal StartsWith/Compare
+
+# --- genuine correctness / quality: ENFORCED as errors (fix the code, don't suppress) ---
+# CA1806 (ignored method results), CA1816/CA2215 (Dispose), CA2201 (reserved exception types),
+# CA2012 (ValueTask), CA1822 (make static), CA1869 (cache JsonSerializerOptions),
+# xUnit2012/xUnit2031 — left at default (warning -> error).
+
+[*Tests*.cs]
+dotnet_diagnostic.CA1861.severity = none   # inline test data arrays are clearer than static readonly

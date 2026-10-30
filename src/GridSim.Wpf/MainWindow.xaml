@@ -1,0 +1,738 @@
+<Window x:Class="GridSim.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:viz="clr-namespace:GridSim.Wpf.Visuals"
+        xmlns:views="clr-namespace:GridSim.Wpf.Views"
+        xmlns:assets="clr-namespace:GridSim.Wpf.Views.Assets"
+        Title="GridSim  -  GB Transmission Control" Height="940" Width="1580"
+        MinHeight="700" MinWidth="1100"
+        WindowState="Maximized" Background="{StaticResource Bg}"
+        TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="58" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="28" />
+        </Grid.RowDefinitions>
+
+        <!-- ================= HEADER ================= -->
+        <Border Grid.Row="0" Background="{StaticResource Panel}" BorderBrush="{StaticResource Accent}"
+                BorderThickness="0,0,0,2">
+            <DockPanel LastChildFill="False" Margin="16,0">
+                <Ellipse DockPanel.Dock="Left" Width="14" Height="14" VerticalAlignment="Center"
+                         Fill="{StaticResource Accent}" Margin="0,0,12,0" />
+                <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="20" FontWeight="Bold"
+                           Foreground="{StaticResource Text}">
+                    GRID<Run Foreground="{StaticResource Accent}">SIM</Run>
+                    <Run FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Muted}">    GB TRANSMISSION CONTROL</Run>
+                </TextBlock>
+
+                <TextBlock DockPanel.Dock="Left" Text="NETWORK" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="22,0,8,0" />
+                <ComboBox DockPanel.Dock="Left" x:Name="SourcePicker" Width="200" VerticalAlignment="Center"
+                          SelectionChanged="SourcePicker_SelectionChanged" Foreground="{StaticResource Text}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock DockPanel.Dock="Left" Text="SOLVER" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="16,0,8,0" />
+                <ComboBox DockPanel.Dock="Left" x:Name="SolverPicker" Width="150" VerticalAlignment="Center"
+                          SelectionChanged="SolverPicker_SelectionChanged" Foreground="{StaticResource Text}"
+                          ToolTip="Power-flow engine. Auto picks per network: radial&#8594;sweep, large&#8594;sparse, else dense.">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock DockPanel.Dock="Left" x:Name="ActiveSolverText" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="8,0,0,0" Foreground="{StaticResource Accent}" />
+
+                <TextBox DockPanel.Dock="Left" x:Name="SearchBox" Width="150" VerticalAlignment="Center"
+                         Margin="16,0,0,0" Foreground="{StaticResource Text}" KeyDown="Search_KeyDown" ToolTip="Type a substation name, press Enter" />
+                <TextBlock DockPanel.Dock="Left" Text=" find" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="6,0,0,0" />
+
+                <Button DockPanel.Dock="Left" x:Name="LoadRunBtn" Style="{StaticResource FlatBtn}" Content=" LOAD RUN..."
+                        Click="LoadRun_Click" VerticalAlignment="Center" Margin="16,0,0,0"
+                        ToolTip="Load a pre-solved run directory (transient / gda-replay exports) and step through it." />
+                <Button DockPanel.Dock="Left" x:Name="AuditLogBtn" Style="{StaticResource FlatBtn}" Content=" AUDIT LOG..."
+                        Click="AuditLog_Click" VerticalAlignment="Center" Margin="8,0,0,0"
+                        ToolTip="Open a gridsim-audit/1 log: verified first; a tampered log shows only the TAMPERED verdict." />
+
+
+                <Border DockPanel.Dock="Right" Background="{StaticResource PanelHi}" CornerRadius="4"
+                        Padding="12,4" VerticalAlignment="Center" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="12" Height="12" VerticalAlignment="Center" Fill="{Binding StatusBrush}" />
+                        <TextBlock Text="{Binding Status}" Margin="8,0,0,0" VerticalAlignment="Center"
+                                   FontWeight="Bold" FontSize="13" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <TextBlock Text="{Binding Clock}" FontSize="22" FontWeight="Bold" FontFamily="{StaticResource MonoFont}" />
+                    <TextBlock Text="  tick " Style="{StaticResource Label}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Tick}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ================= MAIN (tabbed) ================= -->
+        <TabControl Grid.Row="1" x:Name="Tabs" Style="{StaticResource RoomTabs}" Margin="6,2,6,0"
+                    SelectionChanged="Tabs_SelectionChanged">
+        <TabItem Header="NETWORK" Style="{StaticResource RoomTabItem}">
+        <Grid Margin="6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="330" />
+            </Grid.ColumnDefinitions>
+
+            <!-- LEFT: telemetry -->
+            <StackPanel Grid.Column="0">
+                <!-- Frequency + dial -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="SYSTEM FREQUENCY" Style="{StaticResource PanelHeader}" />
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- dial -->
+                            <!-- The track is drawn from the same constants the needle uses (DashboardViewModel
+                                 FreqDialSweepDeg = 120 at FreqDialFullScaleHz = 0.5): a 240 degree arc of radius 52 about
+                                 the pivot (75,62), so each labelled end is exactly full scale. The green band spans the
+                                 read-out's green zone, FreqNominalColourBandHz = 0.1 Hz, i.e. 0.1 / 0.5 x 120 = 24 degrees
+                                 either side. It used to be a 180 degree track with a +/-17 degree band, so the ends read
+                                 +/-0.375 Hz and the needle went below the track beyond that. -->
+                            <Grid Width="150" Height="92" Grid.Column="0">
+                                <Path Stroke="#2A3742" StrokeThickness="8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M 29.967,88 A 52,52 0 1 1 120.033,88" />
+                                <Path Stroke="{StaticResource Green}" StrokeThickness="8" Opacity="0.55"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M 53.850,14.496 A 52,52 0 0 1 96.150,14.496" />
+                                <Canvas>
+                                    <Line X1="75" Y1="62" X2="75" Y2="16" StrokeThickness="3"
+                                          Stroke="{Binding FreqBrush}" StrokeStartLineCap="Round">
+                                        <Line.RenderTransform>
+                                            <RotateTransform CenterX="75" CenterY="62" Angle="{Binding FreqAngle}" />
+                                        </Line.RenderTransform>
+                                    </Line>
+                                    <Ellipse Canvas.Left="69" Canvas.Top="56" Width="12" Height="12" Fill="{StaticResource Text}" />
+                                </Canvas>
+                                <!-- N273: the dial's ends about the case's own nominal ("49.5" / "50.5" at 50 Hz). -->
+                                <TextBlock Text="{Binding FreqDialLowText}" Style="{StaticResource Label}" FontSize="9"
+                                           HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                                <TextBlock Text="{Binding FreqDialHighText}" Style="{StaticResource Label}" FontSize="9"
+                                           HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                            </Grid>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding Freq}" Style="{StaticResource Value}" Foreground="{Binding FreqBrush}" />
+                                    <TextBlock Text=" Hz" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding FreqDev, StringFormat={}{0} Hz dev}" Style="{StaticResource Label}"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Demand / Generation -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Card}" Grid.Column="0">
+                        <StackPanel>
+                            <TextBlock Text="DEMAND" Style="{StaticResource PanelHeader}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Demand}" Style="{StaticResource Value}" />
+                                <TextBlock Text=" GW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Grid.Column="2">
+                        <StackPanel>
+                            <!-- The figure is the sum of positive NET bus injections (SimFrame.GenerationMw): generation at a
+                                 bus with local demand is counted net of it, so it is labelled as such, not as generator output. -->
+                            <TextBlock Text="GENERATION" Style="{StaticResource PanelHeader}"
+                                       ToolTip="Sum of positive net bus injections: generation at a bus with local demand is counted net of that demand, so this is not total generator output." />
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Generation}" Style="{StaticResource Value}" />
+                                <TextBlock Text=" GW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                            </StackPanel>
+                            <TextBlock Text="net bus injection" Style="{StaticResource Label}" FontSize="9" Opacity="0.8" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Inertia / Losses -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Card}" Grid.Column="0">
+                        <StackPanel>
+                            <TextBlock Text="INERTIA" Style="{StaticResource PanelHeader}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Inertia}" Style="{StaticResource Value}" />
+                                <TextBlock Text=" GVAs" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Grid.Column="2">
+                        <StackPanel>
+                            <TextBlock Text="LOSSES" Style="{StaticResource PanelHeader}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Losses}" Style="{StaticResource Value}" />
+                                <TextBlock Text=" MW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- RPM / Torque -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="10" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource Card}" Grid.Column="0">
+                        <StackPanel>
+                            <TextBlock Text="GRID SPEED" Style="{StaticResource PanelHeader}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Rpm}" Style="{StaticResource Value}" />
+                                <TextBlock Text=" rpm" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Grid.Column="2">
+                        <StackPanel>
+                            <TextBlock Text="TORQUE" Style="{StaticResource PanelHeader}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding Torque}" Style="{StaticResource Value}" />
+                                <TextBlock Text=" MNm" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- Voltage band -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="VOLTAGE BAND (p.u.)" Style="{StaticResource PanelHeader}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding Voltage}" FontSize="24" FontWeight="Bold" />
+                        </StackPanel>
+                        <TextBlock Text="statutory band 0.94 - 1.06" Style="{StaticResource Label}" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Per-band voltage dials: each kV level vs nominal (1.0 pu centred) -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="VOLTAGE BY LEVEL  vs NOMINAL" Style="{StaticResource PanelHeader}" />
+                        <ItemsControl ItemsSource="{Binding VoltageBands}" Margin="0,4,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel HorizontalAlignment="Center" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <viz:Gauge Width="92" Height="84" Margin="3"
+                                               Caption="{Binding Label}" Unit="dev" ValueText="{Binding Dev}"
+                                               Value="{Binding Vpu}" Minimum="0.94" Maximum="1.06"
+                                               AmberFrom="0.70" RedFrom="0.90" AmberTo="0.30" RedTo="0.10" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- CENTRE: schematic -->
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="10,0" Padding="0">
+                <Grid>
+                    <viz:FastSchematic x:Name="Schematic" ClipToBounds="True" />
+                    <!-- A non-converged frame is not an operating point: the map's colours come from the unconverged
+                         iterate, so the whole map is greyed and labelled rather than shown as if valid. -->
+                    <Border Background="#B0101418" IsHitTestVisible="False" Visibility="{Binding InvalidStateVis}">
+                        <TextBlock Text="STATE NOT VALID  -  the power flow did not converge; these colours are not an operating point"
+                                   Foreground="#FF5B5B" FontWeight="Bold" FontSize="14" TextWrapping="Wrap" TextAlignment="Center"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40,0" />
+                    </Border>
+                    <TextBlock Text="GB TRANSMISSION NETWORK  LIVE POWER FLOW" Style="{StaticResource PanelHeader}"
+                               Margin="14,10" VerticalAlignment="Top" HorizontalAlignment="Left" />
+
+                    <!-- bridge status pill: connection state / horizon rejections / query errors (GDA bridge only) -->
+                    <Border CornerRadius="4" Padding="9,3" Background="{StaticResource PanelHi}"
+                            BorderBrush="{Binding BridgeStatusBrush}" BorderThickness="1"
+                            HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,32,0,0"
+                            Visibility="{Binding BridgeStatusVis}">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="9" Height="9" VerticalAlignment="Center" Fill="{Binding BridgeStatusBrush}" />
+                            <TextBlock Text="{Binding BridgeStatus}" Margin="7,0,0,0" VerticalAlignment="Center"
+                                       FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Text}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- WHAT-IF banner: shown while a GDA-bridge query result (scenario/feasibility) is overlaid -->
+                    <Border Background="{StaticResource Accent}" CornerRadius="4" Padding="12,5"
+                            HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0"
+                            Visibility="{Binding QueryVis}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="WHAT-IF  " FontWeight="Bold" Foreground="{StaticResource Bg}" />
+                            <TextBlock Text="{Binding QueryTitle}" Foreground="{StaticResource Bg}" />
+                            <TextBlock Text="   " />
+                            <TextBlock Text="{Binding QueryVerdict}" FontWeight="Bold" Foreground="{StaticResource Bg}" />
+                        </StackPanel>
+                    </Border>
+                    <!-- The hint follows the feed (DashboardViewModel.MapHint): right-click trips on a local model, opens the
+                         what-if menu on a bridge, and is refused on a replay; T and the step keys apply only locally. -->
+                    <TextBlock Text="{Binding MapHint}" TextWrapping="Wrap" MaxWidth="900"
+                               Style="{StaticResource Label}" FontSize="10" Opacity="0.7"
+                               Margin="14,10" VerticalAlignment="Bottom" HorizontalAlignment="Left" />
+
+                    <!-- colour-mode legend: gradient swatch + min/max labels so the map tint is interpretable -->
+                    <Border Background="{StaticResource PanelHi}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                            CornerRadius="4" Padding="10,7" Margin="14,0,0,34"
+                            HorizontalAlignment="Left" VerticalAlignment="Bottom">
+                        <StackPanel>
+                            <TextBlock Text="{Binding LegendTitle}" Style="{StaticResource Label}" FontSize="10" Margin="0,0,0,4" />
+                            <Border Width="150" Height="10" CornerRadius="2" ClipToBounds="True"
+                                    Background="{Binding LegendBrush}" BorderBrush="{StaticResource Border}" BorderThickness="1" />
+                            <DockPanel Width="150" Margin="0,3,0,0">
+                                <TextBlock Text="{Binding LegendMin}" Style="{StaticResource Label}" FontSize="9" DockPanel.Dock="Left" />
+                                <TextBlock Text="{Binding LegendMax}" Style="{StaticResource Label}" FontSize="9" HorizontalAlignment="Right" />
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- transport + overlay controls moved to the global bar below the tabs -->
+
+                    <!-- hover tooltip (non-interactive overlay) -->
+                    <Canvas x:Name="HoverLayer" IsHitTestVisible="False">
+                        <Border x:Name="HoverTip" Visibility="Collapsed" Background="{StaticResource PanelHi}"
+                                BorderBrush="{StaticResource Accent}" BorderThickness="1" CornerRadius="4" Padding="8,5">
+                            <TextBlock x:Name="HoverText" FontSize="11" Foreground="{StaticResource Text}" />
+                        </Border>
+                    </Canvas>
+
+                    <!-- substation detail fly-out -->
+                    <Border Style="{StaticResource Card}" Background="{StaticResource PanelHi}"
+                            Width="250" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
+                            Visibility="{Binding SelectionVis}">
+                        <StackPanel>
+                            <DockPanel>
+                                <TextBlock Text="{Binding SelKind}" Style="{StaticResource PanelHeader}" DockPanel.Dock="Left" />
+                                <Button Content="&#x2715;" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                                        Click="ClearSelection_Click" Background="Transparent" BorderThickness="0"
+                                        Foreground="{StaticResource Muted}" Cursor="Hand" Padding="4,0"
+                                        ToolTip="Close" />
+                            </DockPanel>
+                            <TextBlock Text="{Binding SelName}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding SelSub}" Style="{StaticResource Label}" Margin="0,0,0,8" />
+                            <ItemsControl ItemsSource="{Binding SelRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,2">
+                                            <TextBlock Text="{Binding Key}" Style="{StaticResource Label}" DockPanel.Dock="Left" />
+                                            <TextBlock Text="{Binding Value}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="{Binding SelConnections}" Style="{StaticResource Label}" Margin="0,8,0,2" />
+                            <TextBlock Text="{Binding SelLines}" FontFamily="{StaticResource MonoFont}" FontSize="10"
+                                       Foreground="{StaticResource Muted}" TextWrapping="Wrap" />
+                            <Button Content="OPEN IN EXPLORER " Style="{StaticResource FlatBtn}" Click="OpenInExplorer_Click"
+                                    HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,3" FontSize="11" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- live system HUD (GDA-bridge stream scalars): inertia * fragility * RoCoF headroom -->
+                    <Border Style="{StaticResource Card}" Background="{StaticResource PanelHi}"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12"
+                            Visibility="{Binding HudVis}">
+                        <StackPanel>
+                            <TextBlock Text="LIVE SYSTEM  *  GDA BRIDGE" Style="{StaticResource PanelHeader}" Margin="0,0,0,8" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- INERTIA -->
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="INERTIA" Style="{StaticResource Label}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding InertiaGvaS}" Style="{StaticResource Value}" FontSize="22" />
+                                        <TextBlock Text="GVA.s" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="4,0,0,4" />
+                                    </StackPanel>
+                                    <Border Height="3" CornerRadius="1.5" Background="{StaticResource Accent}" Opacity="0.45" Margin="0,3,0,0" />
+                                </StackPanel>
+
+                                <!-- FRAGILITY: value tinted by condition + a coloured trend cue -->
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="FRAGILITY" Style="{StaticResource Label}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding FragilityIndex}" Style="{StaticResource Value}" FontSize="22"
+                                                   Foreground="{Binding FragilityBrush}" />
+                                        <TextBlock Text="{Binding FragilityTrend}" FontSize="11" FontWeight="SemiBold"
+                                                   Foreground="{Binding FragilityTrendBrush}" VerticalAlignment="Bottom" Margin="6,0,0,5" />
+                                    </StackPanel>
+                                    <Border Height="3" CornerRadius="1.5" Background="{Binding FragilityBrush}" Margin="0,3,0,0" />
+                                </StackPanel>
+
+                                <!-- RoCoF HEADROOM -->
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="RoCoF HEADROOM" Style="{StaticResource Label}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding RocofHeadroomHzS}" Style="{StaticResource Value}" FontSize="22" />
+                                        <TextBlock Text="Hz/s" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="4,0,0,4" />
+                                    </StackPanel>
+                                    <Border Height="3" CornerRadius="1.5" Background="{StaticResource Accent}" Opacity="0.45" Margin="0,3,0,0" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT: what-if result + boundaries + alarms + log -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- GDA-bridge on-demand query result: verdict + binding constraint + violations, with a way back to live -->
+                <Border Style="{StaticResource Card}" Grid.Row="0" Margin="0,0,0,10"
+                        BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                        Visibility="{Binding QueryVis}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="WHAT-IF  *  GDA BRIDGE" Style="{StaticResource PanelHeader}" DockPanel.Dock="Left" />
+                            <Button Content="RETURN TO LIVE" Style="{StaticResource FlatBtn}" DockPanel.Dock="Right"
+                                    HorizontalAlignment="Right" Padding="8,2" FontSize="10" Click="ReturnToLive_Click" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding QueryTitle}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding QuerySub}" Style="{StaticResource Label}" Margin="0,2,0,8" TextWrapping="Wrap" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="VERDICT" Style="{StaticResource Label}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Border Background="{Binding QueryVerdictBrush}" CornerRadius="3" Padding="10,2">
+                                <TextBlock Text="{Binding QueryVerdict}" FontWeight="Bold" FontSize="13"
+                                           Foreground="{StaticResource Bg}" />
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding QueryBinding}" Style="{StaticResource Label}" Margin="0,8,0,4" TextWrapping="Wrap" />
+                        <TextBlock Text="VIOLATIONS" Style="{StaticResource PanelHeader}" Margin="0,4,0,2" />
+                        <TextBlock Text="none reported" Style="{StaticResource Label}" FontStyle="Italic"
+                                   Visibility="{Binding QueryViolationsEmptyVis}" />
+                        <ItemsControl ItemsSource="{Binding QueryViolations}" MaxHeight="200">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,3">
+                                        <Ellipse Width="8" Height="8" Fill="{Binding Brush}" DockPanel.Dock="Left"
+                                                 VerticalAlignment="Top" Margin="0,3,8,0" />
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <TextBlock Text="{Binding Element}" FontWeight="SemiBold" DockPanel.Dock="Left"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Detail}" Style="{StaticResource Label}"
+                                                           HorizontalAlignment="Right" Margin="8,0,0,0" />
+                                            </DockPanel>
+                                            <TextBlock Text="{Binding Message}" Style="{StaticResource Label}" FontSize="10"
+                                                       TextWrapping="Wrap" Foreground="{StaticResource Muted}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Grid.Row="1" Margin="0,0,0,10">
+                    <StackPanel>
+                        <TextBlock Text="TRANSMISSION BOUNDARIES" Style="{StaticResource PanelHeader}" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding Boundaries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <Border Width="150" Height="6" Background="#1E2733" CornerRadius="3"
+                                                    HorizontalAlignment="Left" Margin="0,4,0,0" ClipToBounds="True">
+                                                <Border Width="{Binding BarWidth}" Height="6" Background="{Binding Bar}"
+                                                        CornerRadius="3" HorizontalAlignment="Left" />
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Right" Margin="8,0,0,0">
+                                            <TextBlock Text="{Binding Pct}" FontWeight="Bold" HorizontalAlignment="Right" />
+                                            <TextBlock Text="{Binding Flow}" Style="{StaticResource Label}" FontSize="10"
+                                                       HorizontalAlignment="Right" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Grid.Row="2" Margin="0,0,0,10">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,4">
+                            <TextBlock Text="ALARMS" Style="{StaticResource PanelHeader}" DockPanel.Dock="Left" />
+                            <Button Content="CLEAR" Style="{StaticResource FlatBtn}" DockPanel.Dock="Right"
+                                    HorizontalAlignment="Right" Padding="8,2" FontSize="10" Click="ClearAlarms_Click" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Alarms}" MaxHeight="150">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,3">
+                                        <Ellipse Width="9" Height="9" Fill="{Binding Brush}" DockPanel.Dock="Left"
+                                                 VerticalAlignment="Center" Margin="0,0,8,0" />
+                                        <TextBlock Text="{Binding Time}" Style="{StaticResource Label}" DockPanel.Dock="Left"
+                                                   Margin="0,0,8,0" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Text}" FontSize="11" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="no active alarms" Style="{StaticResource Label}" FontStyle="Italic"
+                                   Visibility="{Binding AlarmsEmptyVis}" Margin="0,2,0,0" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}" Grid.Row="3">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="EVENT LOG" Style="{StaticResource PanelHeader}" Margin="0,0,0,6" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Events}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                                                   Foreground="{StaticResource Muted}" Margin="0,1" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        </TabItem>
+
+        <TabItem Header="GENERATION &amp; INERTIA" Style="{StaticResource RoomTabItem}">
+            <views:GenerationView />
+        </TabItem>
+
+        <TabItem Header="THE MACHINE" Style="{StaticResource RoomTabItem}">
+            <views:MachineView />
+        </TabItem>
+
+        <TabItem Header="SCADA" Style="{StaticResource RoomTabItem}">
+            <views:ScadaView />
+        </TabItem>
+
+        <TabItem Header="OPERATOR" Style="{StaticResource RoomTabItem}">
+            <views:OperatorView />
+        </TabItem>
+
+        <TabItem Header="MARKET" Style="{StaticResource RoomTabItem}">
+            <views:MarketView />
+        </TabItem>
+
+        <TabItem Header="NESO RP1" Style="{StaticResource RoomTabItem}">
+            <views:NesoRp1View />
+        </TabItem>
+
+        <TabItem Header="MECHANICAL" Style="{StaticResource RoomTabItem}">
+            <views:MachineEngineerView />
+        </TabItem>
+
+        <TabItem Header="HUMAN SCALE" Style="{StaticResource RoomTabItem}">
+            <views:HumanScaleView />
+        </TabItem>
+
+        <TabItem Header="SPEED DOMAINS" Style="{StaticResource RoomTabItem}">
+            <views:DomainsView />
+        </TabItem>
+
+        <TabItem Header="INVERTER FLEET" Style="{StaticResource RoomTabItem}">
+            <views:InverterFleetView />
+        </TabItem>
+
+        <TabItem Header="EXPERIMENTAL" Style="{StaticResource RoomTabItem}">
+            <views:ExperimentalView />
+        </TabItem>
+
+        <TabItem Header="HARMONICS" Style="{StaticResource RoomTabItem}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="16" MaxWidth="760">
+                    <TextBlock Text="Harmonic analysis" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                               Text="Frequency-domain harmonics from the command line (gridsim harmonics): harmonic penetration, voltage THD, IEEE 519 compliance, the G5/5 headline THD planning levels (the per-order G5/5 tables are not encoded), and a resonance / impedance scan with a fine frequency sweep. Three-phase harmonics, coupled harmonic power flow and harmonic state estimation exist in GridSim.Core as experimental engines but cannot be run from this app or the CLI yet. The only assumed input is the harmonic source spectra, which are provenance-tagged and upgrade in place when measured data exists."/>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" FontFamily="Consolas"
+                               Text="gridsim harmonics &lt;case&gt; [--spectra &lt;gridsim-harmonics/1.json&gt; | --synth-sources] [--enableExport]"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray"
+                               Text="Source spectra follow the gridsim-harmonics/1 schema (authoritative contract in GDA: NetworkModel/HarmonicDataSchema.json); the study emits gridsim-harmonic-export/1. As synchronous machines retire, resonances sharpen - the under-told half of the low-inertia story."/>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="CYCLE" Style="{StaticResource RoomTabItem}">
+            <views:CycleView />
+        </TabItem>
+
+        <TabItem Header="ASSETS" Style="{StaticResource RoomTabItem}">
+            <assets:AssetExplorerView />
+        </TabItem>
+
+        <!-- F02: About. The release number and build commit come from GridSim.Core.BuildInfo, the same text the
+             CLI version flag and the web footer show; the code-behind fills AboutText at start-up. -->
+        <TabItem Header="ABOUT" Style="{StaticResource RoomTabItem}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="16" MaxWidth="760">
+                    <TextBlock Text="About GridSim" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="AboutText" TextWrapping="Wrap" FontFamily="Consolas" Margin="0,0,0,8"/>
+                    <TextBlock TextWrapping="Wrap" Foreground="Gray"
+                               Text="Report a problem with the version line above. A crash writes a crash log; its path is shown in the crash message."/>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+        </TabControl>
+
+        <!-- Shared banner over every tab: on a non-converged frame every analysis tab is fed the unconverged iterate
+             (voltages, flows, tap and inertia read-outs), so each tab carries this warning while it lasts. -->
+        <Border Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10"
+                Background="#E6231A1A" BorderBrush="#FF5B5B" BorderThickness="1" CornerRadius="4" Padding="14,5"
+                IsHitTestVisible="False" Visibility="{Binding InvalidStateVis}">
+            <TextBlock Text="STATE NOT VALID  -  the power flow did not converge; every value on this tab comes from an unconverged iterate"
+                       Foreground="#FF5B5B" FontWeight="Bold" FontSize="12" />
+        </Border>
+
+        <!-- ============ GLOBAL TRANSPORT BAR (all tabs) ============ -->
+        <Border Grid.Row="2" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}" BorderThickness="0,1,0,1" Padding="14,6">
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Left" x:Name="PauseBtn" Style="{StaticResource FlatBtn}" Content=" PAUSE"
+                        Click="Pause_Click" Margin="0,0,10,0" />
+
+                <!-- replay-only: restart + frame stepping -->
+                <Button DockPanel.Dock="Left" x:Name="RestartBtn" Style="{StaticResource FlatBtn}" Content="&#x21ba;"
+                        Click="Restart_Click" Width="34" Margin="0,0,4,0" ToolTip="Restart from frame 1" Visibility="Collapsed" />
+                <Button DockPanel.Dock="Left" x:Name="StepBackBtn" Style="{StaticResource FlatBtn}" Content="&#x25c0;"
+                        Click="StepBack_Click" Width="34" Margin="0,0,4,0" ToolTip="Previous frame" Visibility="Collapsed" />
+                <Button DockPanel.Dock="Left" x:Name="StepFwdBtn" Style="{StaticResource FlatBtn}" Content="&#x25b6;"
+                        Click="StepForward_Click" Width="34" Margin="0,0,10,0" ToolTip="Next frame" Visibility="Collapsed" />
+
+                <!-- live-only: simulation time-step -->
+                <TextBlock DockPanel.Dock="Left" x:Name="StepLabel" Text="STEP" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="0,0,6,0" />
+                <ComboBox DockPanel.Dock="Left" x:Name="StepPicker" Width="80" VerticalAlignment="Center" Margin="0,0,10,0"
+                          SelectionChanged="StepPicker_SelectionChanged" Foreground="{StaticResource Text}"
+                          ToolTip="Simulation time per step (dt). Fine steps integrate the swing equation - watch RoCoF live.">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <Button DockPanel.Dock="Left" x:Name="SpeedBtn" Style="{StaticResource FlatBtn}" Content="x1"
+                        Click="Speed_Click" Width="52" Margin="0,0,10,0"
+                        ToolTip="Playback speed - how fast it plays in real time (live: solves/s; replay: frames/s)." />
+
+                <!-- map overlays (act on the schematic) -->
+                <Button DockPanel.Dock="Left" x:Name="ColorBtn" Style="{StaticResource FlatBtn}" Content=" LOADING"
+                        Click="Color_Click" Width="116" Margin="0,0,8,0"
+                        ToolTip="Cycle the map colouring: line loading, voltage, asset condition, branch stress (last two from the GDA bridge)." />
+                <Button DockPanel.Dock="Left" x:Name="FleetBtn" Style="{StaticResource FlatBtn}" Content=" FLEET"
+                        Click="Fleet_Click" Width="86" Margin="0,0,10,0" ToolTip="Overlay the generation fleet on the map: one diamond per unit, coloured by fuel and sized by capacity." />
+
+                <!-- real DNO/GSP geography + geocoded assets (from gda-out/geo); disabled if not materialised locally -->
+                <Button DockPanel.Dock="Left" x:Name="DnoBtn" Style="{StaticResource FlatBtn}" Content=" DNO"
+                        Click="Dno_Click" Width="66" Margin="0,0,6,0"
+                        ToolTip="Overlay the real GB DNO licence-area boundaries (key: D)." />
+                <Button DockPanel.Dock="Left" x:Name="GspRegionBtn" Style="{StaticResource FlatBtn}" Content=" GSP"
+                        Click="GspRegion_Click" Width="66" Margin="0,0,6,0"
+                        ToolTip="Overlay the real GB GSP-region boundaries (key: R)." />
+                <Button DockPanel.Dock="Left" x:Name="AssetsBtn" Style="{StaticResource FlatBtn}" Content=" ASSETS"
+                        Click="Assets_Click" Width="86" Margin="0,0,10,0"
+                        ToolTip="Plot the geocoded REPD/DUKES assets, coloured by technology (key: A)." />
+
+                <!-- bridge-only: which GDA zone/case to stream, and the historical start it anchors on (never <= horizon) -->
+                <TextBlock DockPanel.Dock="Left" x:Name="BridgeZoneLabel" Text="ZONE" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="8,0,6,0" Visibility="Collapsed" />
+                <ComboBox DockPanel.Dock="Left" x:Name="BridgeZonePicker" Width="210" VerticalAlignment="Center" Margin="0,0,10,0"
+                          SelectionChanged="BridgeZonePicker_SelectionChanged" Foreground="{StaticResource Text}"
+                          Visibility="Collapsed"
+                          ToolTip="GDA network the bridge streams (each a DNO zone case, plus GB-full). Switching restarts the stream.">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock DockPanel.Dock="Left" x:Name="BridgeStartLabel" Text="FROM" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed" />
+                <ComboBox DockPanel.Dock="Left" x:Name="BridgeStartPicker" Width="120" VerticalAlignment="Center" Margin="0,0,10,0"
+                          SelectionChanged="BridgeStartPicker_SelectionChanged" Foreground="{StaticResource Text}"
+                          Visibility="Collapsed"
+                          ToolTip="Historical start the stream replays from. Always behind the no-forward-inference horizon.">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock DockPanel.Dock="Left" x:Name="BridgeSourceLabel" Text="SRC" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="0,0,6,0" Visibility="Collapsed" />
+                <ComboBox DockPanel.Dock="Left" x:Name="BridgeSourcePicker" Width="120" VerticalAlignment="Center" Margin="0,0,10,0"
+                          SelectionChanged="BridgeSourcePicker_SelectionChanged" Foreground="{StaticResource Text}"
+                          Visibility="Collapsed"
+                          ToolTip="Reconstruction the stream replays: PRESOLVED = demand-scaled re-solve lake; ESTIMATED = measurement-fitted WLS lake (per-frame chi-square quality on the status pill); LIVE = static solve, scalars only. Switching restarts the stream.">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <!-- replay-only: frame readout (right) + scrubber (fills the middle) -->
+                <TextBlock DockPanel.Dock="Right" x:Name="FrameReadout" Style="{StaticResource Label}"
+                           VerticalAlignment="Center" Margin="12,0,0,0" Foreground="{StaticResource Accent}" Visibility="Collapsed" />
+                <Slider x:Name="Scrubber" VerticalAlignment="Center" Minimum="0" Maximum="0" Margin="12,0"
+                        IsSnapToTickEnabled="True" TickFrequency="1" SmallChange="1" LargeChange="5"
+                        ValueChanged="Scrubber_ValueChanged" Visibility="Collapsed"
+                        ToolTip="Scrub through the exported frames." />
+            </DockPanel>
+        </Border>
+
+        <!-- ================= FOOTER ================= -->
+        <Border Grid.Row="3" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}" BorderThickness="0,1,0,0">
+            <DockPanel Margin="16,0" LastChildFill="False">
+                <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Style="{StaticResource Label}"
+                           Text="ROUNDEL = SUBSTATION (ring colour = voltage)      LINE = CORRIDOR (dashes = power flow, colour = loading)" />
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Label}"
+                           Text="GridSim  -  GB Transmission Control" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

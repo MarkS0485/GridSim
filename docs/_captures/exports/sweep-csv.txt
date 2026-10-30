@@ -1,0 +1,4 @@
+$ head -n 4 results/exports-docs/sweep.csv
+case,buses,branches,screened,secure,violations,islanded,solves_per_s,wall_s,sampled,commit,base_violations,not_solved
+case14,14,20,20,16,3,0,139.4,0.14,False,98048023,1,1
+[exit 0]

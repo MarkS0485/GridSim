@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "buses.schema.json",
+  "title": "GridSim v1 buses.json",
+  "description": "The buses of the case, one record each. Required file: the loader refuses a case without buses. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/bus"
+  },
+  "$defs": {
+    "bus": {
+      "title": "Bus",
+      "description": "A bus (v1 BusDto). baseKv is REQUIRED (R179 / Q13: it no longer defaults to 400 kV). Absent: type pq, vm 1, vaDeg/gs/bs/x/y 0, no name, no zip. The bus type is normally derived: any generator raises its bus to pv, a slack generator makes it slack.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "baseKv"
+      ],
+      "properties": {
+        "id": {
+          "title": "Bus id",
+          "description": "The bus number every other file refers to. Must be unique in the case.",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "name": {
+          "title": "Name",
+          "description": "Display name. Absent: none.",
+          "type": "string"
+        },
+        "baseKv": {
+          "title": "Base voltage (kV)",
+          "description": "Nominal line-to-line voltage of the bus. Required: it scales every kA figure of a fault study.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "type": {
+          "title": "Bus type",
+          "description": "pq (load), pv (voltage-controlled) or slack (reference). The loader also accepts its aliases ref and swing (slack) and gen (pv), and these are allowed here; the loader refuses any other word, and a null, since October 2026 (N096 / N098), as this schema does. Absent: pq, raised by the generators at the bus.",
+          "enum": [
+            "pq",
+            "pv",
+            "slack",
+            "ref",
+            "swing",
+            "gen"
+          ]
+        },
+        "vm": {
+          "title": "Voltage magnitude (pu)",
+          "description": "Initial or scheduled voltage magnitude. Absent: 1.0 pu.",
+          "type": "number",
+          "minimum": 0
+        },
+        "vaDeg": {
+          "title": "Voltage angle (deg)",
+          "description": "Initial voltage angle. Absent: 0.",
+          "type": "number"
+        },
+        "gs": {
+          "title": "Shunt conductance (MW at 1 pu)",
+          "description": "Shunt conductance, as MW consumed at 1.0 pu voltage. Absent: 0.",
+          "type": "number"
+        },
+        "bs": {
+          "title": "Shunt susceptance (Mvar at 1 pu)",
+          "description": "Shunt susceptance, as Mvar injected at 1.0 pu voltage. Absent: 0.",
+          "type": "number"
+        },
+        "x": {
+          "title": "Layout x",
+          "description": "Layout coordinate (0..1) for the visualiser. Absent: 0.",
+          "type": "number"
+        },
+        "y": {
+          "title": "Layout y",
+          "description": "Layout coordinate (0..1) for the visualiser. Absent: 0.",
+          "type": "number"
+        },
+        "zip": {
+          "title": "ZIP load model",
+          "description": "Voltage-dependent load model for the demand at this bus. Absent: constant power.",
+          "$ref": "#/$defs/zip"
+        },
+        "vminPu": {
+          "title": "Own lower voltage limit (pu)",
+          "description": "This bus's own lower voltage limit (F17; MATPOWER column 13). Used only when per-bus limits are asked for (--bus-vlimits). Absent: the global band.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "vmaxPu": {
+          "title": "Own upper voltage limit (pu)",
+          "description": "This bus's own upper voltage limit (F17; MATPOWER column 12). Used only when per-bus limits are asked for (--bus-vlimits). Absent: the global band.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "zip": {
+      "title": "ZIP load model",
+      "description": "Voltage-dependent load at the bus (v1 BusZipDto): P(V) = Pd (ap V^2 + bp V + cp), Q(V) = Qd (aq V^2 + bq V + cq), V in pu. All six coefficients are required (the loader refuses a missing one); the rule that each triple sums to 1 within 1e-9 is checked by the loader (JsonGridLoader.ParseZip). Absent block: constant power.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ap",
+        "bp",
+        "cp",
+        "aq",
+        "bq",
+        "cq"
+      ],
+      "properties": {
+        "ap": {
+          "title": "ap: constant-impedance share of P",
+          "description": "Share of the real power that scales with V^2.",
+          "type": "number"
+        },
+        "bp": {
+          "title": "bp: constant-current share of P",
+          "description": "Share of the real power that scales with V.",
+          "type": "number"
+        },
+        "cp": {
+          "title": "cp: constant-power share of P",
+          "description": "Share of the real power independent of V.",
+          "type": "number"
+        },
+        "aq": {
+          "title": "aq: constant-impedance share of Q",
+          "description": "Share of the reactive power that scales with V^2.",
+          "type": "number"
+        },
+        "bq": {
+          "title": "bq: constant-current share of Q",
+          "description": "Share of the reactive power that scales with V.",
+          "type": "number"
+        },
+        "cq": {
+          "title": "cq: constant-power share of Q",
+          "description": "Share of the reactive power independent of V.",
+          "type": "number"
+        }
+      }
+    }
+  }
+}

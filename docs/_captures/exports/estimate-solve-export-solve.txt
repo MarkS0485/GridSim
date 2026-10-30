@@ -1,0 +1,14 @@
+$ sed -n '550,561p' results/exports-docs/estimate/estimated-solve-export.json
+  "solve": {
+    "solver": "",
+    "n": 0,
+    "converged": true,
+    "iterations": 5,
+    "maxMismatch": 2.7236424897305518E-09,
+    "jacobianOmittedForSize": false,
+    "ybus": [],
+    "busSpec": [],
+    "qLimitEvents": [],
+    "passes": []
+  },
+[exit 0]

@@ -1,0 +1,31 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Refused at the overrides",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "network": ["ok.network.json"],
+  "localTemplates": [
+    {
+      "id": "gridsim.local.wind-gfl",
+      "rev": 1,
+      "kind": "gridFollowingInverter",
+      "status": "active",
+      "title": "Onshore wind, grid-following",
+      "params": { "deadbandHz": 0.015 },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Example values" } }
+    }
+  ],
+  "overrides": [
+    {
+      "template": "gridsim.local.wind-gfl@1",
+      "params": { "deadbandHz": 9, "deadbandKhz": 1 },
+      "reason": "Two mistakes in one override",
+      "shadow": "explicit"
+    },
+    {
+      "template": "gridsim.local.missing@1",
+      "params": { "deadbandHz": 0.02 },
+      "reason": "A template the case does not have",
+      "shadow": "explicit"
+    }
+  ]
+}

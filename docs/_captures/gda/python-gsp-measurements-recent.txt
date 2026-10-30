@@ -1,0 +1,14 @@
+$ python NetworkModel/build_gsp_measurements.py --date 2026-10-02
+Traceback (most recent call last):
+  File "NetworkModel\build_gsp_measurements.py", line 362, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "NetworkModel\build_gsp_measurements.py", line 354, in main
+    out, group, metrics, ic_flows = build(day, args.min_confidence, args.source)
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "NetworkModel\build_gsp_measurements.py", line 143, in build
+    horizon.assert_historical(dt.datetime.combine(day + dt.timedelta(days=1), dt.time(), tzinfo=dt.timezone.utc))
+  File "Scripts\horizon.py", line 86, in assert_historical
+    raise ForwardInferenceError(
+horizon.ForwardInferenceError: 2026-10-03T00:00:00+00:00 is newer than the no-forward-inference horizon (2026-09-26T11:38:11.703146+00:00, now - 7.041666666666667d). This is a replay system: it may only reconstruct the settled past.
+[exit 1]

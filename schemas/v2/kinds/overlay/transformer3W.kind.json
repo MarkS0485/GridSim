@@ -1,0 +1,27 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "transformer3W",
+  "title": "Three-winding transformer (asset overlay)",
+  "description": "Phase 5a asset overlay kind. A three-winding transformer described over the authored star equivalent: a star bus and three two-winding legs. The pairwise nameplate impedances are referred to the common base baseMva; the editor's derive-star-legs helper (a later slice) uses Z1 = (Z12 + Z13 - Z23)/2 and its cyclic forms. Carried beside the model, never used by the solver: the authored leg r and x stay what the solver uses.",
+  "params": {
+    "baseMva": { "type": "number", "unit": "MVA", "min": 0, "required": true, "description": "The common MVA base the pairwise impedances are on.", "codeDefaults": [] },
+    "hvKv": { "type": "number", "unit": "kV", "min": 0, "required": false, "description": "HV winding rated voltage, kV.", "codeDefaults": [] },
+    "mvKv": { "type": "number", "unit": "kV", "min": 0, "required": false, "description": "MV winding rated voltage, kV.", "codeDefaults": [] },
+    "lvKv": { "type": "number", "unit": "kV", "min": 0, "required": false, "description": "LV winding rated voltage, kV.", "codeDefaults": [] },
+    "r12Pu": { "type": "number", "unit": "pu@transformer", "min": 0, "required": false, "description": "HV-MV resistance on baseMva, per unit.", "codeDefaults": [] },
+    "x12Pu": { "type": "number", "unit": "pu@transformer", "min": 0, "required": false, "description": "HV-MV reactance on baseMva, per unit.", "codeDefaults": [] },
+    "r13Pu": { "type": "number", "unit": "pu@transformer", "min": 0, "required": false, "description": "HV-LV resistance on baseMva, per unit.", "codeDefaults": [] },
+    "x13Pu": { "type": "number", "unit": "pu@transformer", "min": 0, "required": false, "description": "HV-LV reactance on baseMva, per unit.", "codeDefaults": [] },
+    "r23Pu": { "type": "number", "unit": "pu@transformer", "min": 0, "required": false, "description": "MV-LV resistance on baseMva, per unit.", "codeDefaults": [] },
+    "x23Pu": { "type": "number", "unit": "pu@transformer", "min": 0, "required": false, "description": "MV-LV reactance on baseMva, per unit.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "starBus": { "target": "bus", "required": true, "description": "The authored star (fictitious midpoint) bus." },
+      "hv": { "target": "transformer", "required": true, "description": "The authored HV leg (a two-winding transformer to the star bus)." },
+      "mv": { "target": "transformer", "required": true, "description": "The authored MV leg." },
+      "lv": { "target": "transformer", "required": true, "description": "The authored LV leg." }
+    },
+    "parentKinds": ["substation"]
+  }
+}

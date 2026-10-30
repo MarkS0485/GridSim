@@ -1,0 +1,71 @@
+@* A simplified P-Q capability diagram for one synchronous machine: the operating point as a dot
+   against its protection boundaries - thermal MW limit (top), reactive export/absorption limits
+   (right/left) and the loss-of-excitation chamfer in the under-excited corner. The dot is coloured
+   by proximity to any boundary. Faithful inline-SVG port of GridSim.Wpf.Visuals.PqDiagram. *@
+
+<svg viewBox="0 0 @F(_w) @F(_h)" width="@F(Width)" height="@F(Height)"
+     class="pq" preserveAspectRatio="xMidYMid meet">
+    <rect x="@F(_px0)" y="@F(_py1)" width="@F(_px1 - _px0)" height="@F(_py0 - _py1)" class="plot-bg" />
+
+    @* Q=0 vertical + P=0 baseline *@
+    <line x1="@F(QtoX(0))" y1="@F(_py1)" x2="@F(QtoX(0))" y2="@F(_py0)" class="axis" />
+    <line x1="@F(_px0)" y1="@F(_py0)" x2="@F(_px1)" y2="@F(_py0)" class="axis" />
+
+    <path d="@BoundaryPath()" class="boundary" fill="none" />
+
+    <circle cx="@F(QtoX(Qg))" cy="@F(PtoY(Pg))" r="5" class="@_dotClass" />
+    <circle cx="@F(QtoX(Qg))" cy="@F(PtoY(Pg))" r="9" class="@(_dotClass)-ring" fill="none" />
+
+    <text x="@F(_px0 - 26)" y="@F(_py1 - 2)" class="lbl" dominant-baseline="hanging">MW</text>
+    <text x="@F(_px0)" y="@F(_py0 + 4)" class="lbl sm" dominant-baseline="hanging">under-exc</text>
+    <text x="@F(_px1 - 40)" y="@F(_py0 + 4)" class="lbl sm" dominant-baseline="hanging">over-exc</text>
+</svg>
+
+@code {
+    [Parameter] public double Pg { get; set; }
+    [Parameter] public double Qg { get; set; }
+    [Parameter] public double Qmin { get; set; } = -1;
+    [Parameter] public double Qmax { get; set; } = 1;
+    [Parameter] public double Pmax { get; set; } = 1;
+    [Parameter] public double Width { get; set; } = 240;
+    [Parameter] public double Height { get; set; } = 200;
+
+    private double _w, _h, _px0, _px1, _py0, _py1;
+    private double _qmin, _qmax, _pmax, _span;
+    private string _dotClass = "dot";
+
+    protected override void OnParametersSet()
+    {
+        _w = Width;
+        _h = Height;
+        const double ml = 30, mr = 14, mt = 14, mb = 22;
+        _px0 = ml;
+        _px1 = _w - mr;
+        _py0 = _h - mb;   // P = 0 (bottom)
+        _py1 = mt;
+
+        _qmin = Math.Min(Qmin, -1);
+        _qmax = Math.Max(Qmax, 1);
+        _pmax = Math.Max(Pmax, 1);
+        _span = Math.Max(_qmax - _qmin, 1);
+
+        double qUtil = Qg >= 0 ? (_qmax > 0 ? Qg / _qmax : 0) : (_qmin < 0 ? Qg / _qmin : 0);
+        double stress = Math.Max(_pmax > 0 ? Pg / _pmax : 0, qUtil);
+        _dotClass = stress > 0.95 ? "dot-bad" : stress > 0.85 ? "dot-warn" : "dot";
+    }
+
+    private double QtoX(double q) => _px0 + (q - _qmin) / _span * (_px1 - _px0);
+    private double PtoY(double p) => _py0 - Math.Clamp(p / _pmax, 0, 1) * (_py0 - _py1);
+
+    private string BoundaryPath()
+    {
+        double xMin = QtoX(_qmin), xMax = QtoX(_qmax), yTop = PtoY(_pmax);
+        return $"M {F(xMax)} {F(_py0)} "
+             + $"L {F(xMax)} {F(yTop)} "                       // right (over-excited) limit
+             + $"L {F(xMin)} {F(yTop)} "                       // thermal top
+             + $"L {F(xMin)} {F(PtoY(_pmax * 0.45))} "         // under-excited limit
+             + $"L {F(QtoX(_qmin * 0.5))} {F(_py0)}";          // loss-of-excitation chamfer
+    }
+
+    private static string F(double d) => d.ToString("0.###", CultureInfo.InvariantCulture);
+}

@@ -1,0 +1,11 @@
+path,case,buses,metric,value,runs,commit
+sparse-nr,case118,118,median_ms,1.3881,20,e0709279-dirty
+sparse-nr,case118,118,alloc_kb,479.9219,20,e0709279-dirty
+sparse-nr,case300,300,median_ms,8.1502,20,e0709279-dirty
+sparse-nr,case300,300,alloc_kb,1892.9004,20,e0709279-dirty
+fault-study,case300,300,median_ms,26.5705,20,e0709279-dirty
+fault-study,case300,300,alloc_kb,3081.8516,20,e0709279-dirty
+oltc-loop,case118,118,median_ms,13.9496,20,e0709279-dirty
+oltc-loop,case118,118,alloc_kb,1502.9609,20,e0709279-dirty
+harmonic-scan,case118,118,median_ms,6.2932,20,e0709279-dirty
+harmonic-scan,case118,118,alloc_kb,870.6836,20,e0709279-dirty

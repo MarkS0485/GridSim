@@ -1,0 +1,43 @@
+@!Sequence Data Input			
+@!Change Code			
+@!IC			
+0			
+@!Positive Sequence Generator Impedance Data			
+@!I	ID	ZRPOS	ZXPOS
+1	1	0	0.01
+5	1	0.01	0.18
+0			
+@!Negative Sequence Generator Impedance Data			
+@!I	ID	ZRNEG	ZXNEG
+1	1	0	0.01
+5	1	0	0.2
+0			
+@!Zero Sequence Generator Impedance Data									
+@!I	ID	RZERO	XZERO						
+1	1	0	0.01						
+5	1	0	0						
+0									
+@!Negative Sequence Shunt Load Data									
+@!I	GNEG	BNEG							
+0									
+@!Zero Sequence Shunt Load Data									
+@!I	GZERO	BZERO							
+0									
+@!Zero Sequence Nontransformer Branch Data									
+@!I	J	ICKT	RLINZ	XLINZ	BCHZ	GI	BI	GJ	BJ
+3	4	1	0.15	0.24	0.0002	0	0	0	0
+5	4	1	0.12	0.18	0	0	0	0	0
+3	5	1	0.3	0.45	0	0	0	0	0
+0									
+@!Zero Sequence Mutual Impedance Data												
+@!I	J	ICKT1	K	L	ICKT2	RM	XM	BIJ1	BIJ2	BKL1	BKL2	
+0												
+@!Zero Sequence Transformer Data												
+@!I	J	K	ICKT	CC	RG	XG	R1	X1	R2	X2	R3	X3
+1	2	0	1	2	0	0	0.0018	0.075	0	0	0	0
+3	2	0	1	2	5.25	0	0.045	0.88	0	0	0	0
+2	4	0	1	3	0	1.5	0.055	0.95	0	0	0	0
+0												
+@!Zero Sequence Switched Shunt Data			
+@!I	BZ1	BZ2	... BZ8
+0			

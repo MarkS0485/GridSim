@@ -1,0 +1,549 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "exciter",
+  "title": "Exciter (AVR)",
+  "description": "Excitation system of a synchronous machine: SEXS, IEEE Type 1, the alternator-rectifier EXAC1 / ESAC1A, or the static ESST4B. The CLI RMS study's typical, clearly indicative settings are the code defaults. Dynamics wiring: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired).",
+  "params": {
+    "model": {
+      "type": "enum",
+      "values": [
+        "SEXS",
+        "IEEET1",
+        "EXAC1",
+        "ESAC1A",
+        "ESST4B"
+      ],
+      "required": true,
+      "markGated": false,
+      "description": "Exciter / AVR model. EXAC1 (IEEE 1981 AC1) and ESAC1A (IEEE 421.5-2005 AC1A) are the alternator-rectifier exciters: they read the machine's field current (rectifier regulation FEX and the demagnetising term KD) and take the ac... parameters, all required. ESST4B (IEEE 421.5-2005 ST4B) is the static exciter with outer voltage and inner field PI regulators fed from a potential and/or compound source: it reads the terminal voltage and current and the field current, and takes the st4b... parameters, all required.",
+      "codeDefaults": []
+    },
+    "sexsLeadS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SEXS lead-lag numerator TA (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr sexs (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SexsLeadS",
+          "value": 0.1
+        }
+      ]
+    },
+    "sexsLagS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SEXS lead-lag denominator TB (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr sexs (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SexsLagS",
+          "value": 1.0
+        }
+      ]
+    },
+    "sexsGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SEXS exciter gain K.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr sexs (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SexsGain",
+          "value": 100.0
+        }
+      ]
+    },
+    "sexsExciterTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SEXS exciter time constant TE (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr sexs (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SexsExciterTimeS",
+          "value": 0.05
+        }
+      ]
+    },
+    "sexsFieldMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "SEXS field voltage floor EMIN (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr sexs (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SexsFieldMinPu",
+          "value": 0.0
+        }
+      ]
+    },
+    "sexsFieldMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "SEXS field voltage ceiling EMAX (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr sexs (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SexsFieldMaxPu",
+          "value": 8.0
+        }
+      ]
+    },
+    "ieeet1RegulatorGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 regulator gain KA.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1RegulatorGain",
+          "value": 50.0
+        }
+      ]
+    },
+    "ieeet1RegulatorTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 regulator time constant TA (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1RegulatorTimeS",
+          "value": 0.02
+        }
+      ]
+    },
+    "ieeet1ExciterConstant": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 exciter constant KE.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1ExciterConstant",
+          "value": 1.0
+        }
+      ]
+    },
+    "ieeet1ExciterTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 exciter time constant TE (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1ExciterTimeS",
+          "value": 0.2
+        }
+      ]
+    },
+    "ieeet1FeedbackGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 rate-feedback gain KF.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1FeedbackGain",
+          "value": 0.05
+        }
+      ]
+    },
+    "ieeet1FeedbackTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 rate-feedback time constant TF (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1FeedbackTimeS",
+          "value": 1.0
+        }
+      ]
+    },
+    "ieeet1RegulatorMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 regulator floor VRMIN (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1RegulatorMinPu",
+          "value": -10.0
+        }
+      ]
+    },
+    "ieeet1RegulatorMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 regulator ceiling VRMAX (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --avr ieeet1 (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Ieeet1RegulatorMaxPu",
+          "value": 10.0
+        }
+      ]
+    },
+    "ieeet1SaturationA": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 exciter saturation coefficient A.",
+      "codeDefaults": [
+        {
+          "consumer": "RmsExciter.FromIeeet1 parameter default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsExciter:FromIeeet1:saturationA",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeet1SaturationB": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEET1 exciter saturation coefficient B.",
+      "codeDefaults": [
+        {
+          "consumer": "RmsExciter.FromIeeet1 parameter default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsExciter:FromIeeet1:saturationB",
+          "value": 0.0
+        }
+      ]
+    },
+    "acLeadS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter lead time constant TC (s); TB = TC = 0 bypasses the lead-lag. Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acLagS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter lag time constant TB (s). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acRegulatorGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter regulator gain KA (above 0). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acRegulatorTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter regulator time constant TA (s). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acRegulatorMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "Lower limit of the AC exciter regulator lag: VRMIN for EXAC1, VAMIN for ESAC1A (pu). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acRegulatorMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "Upper limit of the AC exciter regulator lag: VRMAX for EXAC1, VAMAX for ESAC1A (pu). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acExciterTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter time constant TE (s, above 0). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acFeedbackGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter rate feedback gain KF. Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acFeedbackTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter rate feedback time constant TF (s, above 0). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acRectifierKc": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter rectifier loading factor KC (proportional to the commutating reactance). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acDemagnetisingKd": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter demagnetising factor KD (armature reaction). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acExciterConstant": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter constant KE (field resistance line slope). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acSatE1": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter saturation point E1 (pu exciter voltage VE). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acSatSe1": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter saturation factor SE(E1); SE1 = SE2 = 0 for none. Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acSatE2": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter saturation point E2 (pu, above E1). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acSatSe2": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "AC exciter saturation factor SE(E2). Required for models EXAC1 and ESAC1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "acOutputMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESAC1A regulator output lower limit VRMIN (pu). Required for model ESAC1A in a gridsim-dynamics/2 file (EXAC1 has none).",
+      "codeDefaults": []
+    },
+    "acOutputMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESAC1A regulator output upper limit VRMAX (pu). Required for model ESAC1A in a gridsim-dynamics/2 file (EXAC1 has none).",
+      "codeDefaults": []
+    },
+    "st4bKpr": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B outer (voltage) regulator proportional gain KPR. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKir": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B outer regulator integral gain KIR (per second); KIR = 0 needs KIM above 0. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bVrMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B outer regulator upper limit VRMAX (pu). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bVrMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B outer regulator lower limit VRMIN (pu). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bTaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B regulator lag TA (s). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKpm": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B inner (field voltage) regulator proportional gain KPM. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKim": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B inner regulator integral gain KIM (per second). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bVmMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B inner regulator upper limit VMMAX (pu). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bVmMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B inner regulator lower limit VMMIN (pu). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKg": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B field voltage feedback gain KG. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKp": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B potential circuit gain KP. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKi": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B compound circuit (current) gain KI. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bVbMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B power source voltage ceiling VBMAX (pu, above 0). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bKc": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B rectifier loading factor KC. Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bXlPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B potential source reactance XL (pu on the machine base). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st4bThetapDeg": {
+      "type": "number",
+      "unit": "deg",
+      "required": false,
+      "markGated": false,
+      "description": "ESST4B potential circuit phase angle THETAP (degrees). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    }
+  }
+}

@@ -1,0 +1,3 @@
+$ gridsim chain case9 --steps 2 --bess lfp:5:5:10:1.5
+error: chain storage: --bess 'lfp:5:5:10:1.5': starting state of charge '1.5' must be a number from 0 to 1.
+[exit 2]

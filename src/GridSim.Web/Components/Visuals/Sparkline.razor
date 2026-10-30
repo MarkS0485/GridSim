@@ -1,0 +1,38 @@
+@* A tiny inline-SVG sparkline. Auto-scales to the data's min/max (with an optional fixed band). *@
+
+@if (Values is { Count: > 1 })
+{
+    @((MarkupString)Svg())
+}
+
+@code {
+    [Parameter] public IReadOnlyList<double>? Values { get; set; }
+    [Parameter] public string Stroke { get; set; } = "#4fd1c5";
+    [Parameter] public double Width { get; set; } = 120;
+    [Parameter] public double Height { get; set; } = 28;
+    /// <summary>Optional fixed y-range; when null, auto-scales to the data.</summary>
+    [Parameter] public double? Min { get; set; }
+    [Parameter] public double? Max { get; set; }
+
+    private string Svg()
+    {
+        IReadOnlyList<double> v = Values!;
+        double lo = Min ?? v.Min();
+        double hi = Max ?? v.Max();
+        if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+
+        double pad = 2, w = Width, h = Height;
+        double X(int i) => pad + (double)i / (v.Count - 1) * (w - 2 * pad);
+        double Y(double val) => pad + (hi - Math.Clamp(val, lo, hi)) / (hi - lo) * (h - 2 * pad);
+
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < v.Count; i++)
+            sb.Append(i == 0 ? 'M' : 'L').Append(X(i).ToString("0.#")).Append(' ').Append(Y(v[i]).ToString("0.#")).Append(' ');
+
+        double lastX = X(v.Count - 1), lastY = Y(v[^1]);
+        return $@"<svg viewBox='0 0 {w} {h}' class='sparkline' preserveAspectRatio='none'>
+            <path d='{sb}' fill='none' stroke='{Stroke}' stroke-width='1.5' vector-effect='non-scaling-stroke'/>
+            <circle cx='{lastX:0.#}' cy='{lastY:0.#}' r='1.8' fill='{Stroke}'/>
+        </svg>";
+    }
+}

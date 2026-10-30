@@ -1,0 +1,18 @@
+$ sed -n '3284,3299p' results/exports-docs/estimate-lnr/estimate-export.json
+  "removed": [
+    {
+      "measurement": {
+        "kind": "VmPu",
+        "value": 0.9791469785239025,
+        "sigma": 0.004,
+        "bus": 9,
+        "source": "synthetic"
+      },
+      "normalizedResidual": 18.347391438257883,
+      "pass": 0
+    },
+    {
+      "measurement": {
+        "kind": "PInjMw",
+        "value": -17.94245975275534,
+[exit 0]

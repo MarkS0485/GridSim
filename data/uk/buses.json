@@ -1,0 +1,23 @@
+[
+  { "id": 1,  "name": "North Scotland 400kV",        "baseKv": 400, "x": 0.45, "y": 0.97 },
+  { "id": 2,  "name": "South Scotland 400kV",        "baseKv": 400, "x": 0.42, "y": 0.85 },
+  { "id": 3,  "name": "North England 400kV",         "baseKv": 400, "x": 0.45, "y": 0.72 },
+  { "id": 4,  "name": "Yorkshire & Humber 400kV",    "baseKv": 400, "x": 0.57, "y": 0.66 },
+  { "id": 5,  "name": "North Wales & Mersey 400kV",  "baseKv": 400, "x": 0.36, "y": 0.60 },
+  { "id": 6,  "name": "Midlands 400kV",              "baseKv": 400, "x": 0.48, "y": 0.52 },
+  { "id": 7,  "name": "East Anglia 400kV",           "baseKv": 400, "x": 0.64, "y": 0.45 },
+  { "id": 8,  "name": "London & South East 400kV",   "baseKv": 400, "x": 0.58, "y": 0.34 },
+  { "id": 9,  "name": "South 400kV",                 "baseKv": 400, "x": 0.50, "y": 0.27 },
+  { "id": 10, "name": "South West & S Wales 400kV",  "baseKv": 400, "x": 0.30, "y": 0.32 },
+
+  { "id": 101, "name": "North Scotland 132kV",       "baseKv": 132, "x": 0.52, "y": 0.95 },
+  { "id": 102, "name": "South Scotland 132kV",       "baseKv": 132, "x": 0.49, "y": 0.83 },
+  { "id": 103, "name": "North England 132kV",        "baseKv": 132, "x": 0.52, "y": 0.70 },
+  { "id": 104, "name": "Yorkshire & Humber 132kV",   "baseKv": 132, "x": 0.64, "y": 0.64 },
+  { "id": 105, "name": "North Wales & Mersey 132kV", "baseKv": 132, "x": 0.29, "y": 0.58 },
+  { "id": 106, "name": "Midlands 132kV",             "baseKv": 132, "x": 0.55, "y": 0.50 },
+  { "id": 107, "name": "East Anglia 132kV",          "baseKv": 132, "x": 0.71, "y": 0.43 },
+  { "id": 108, "name": "London & South East 132kV",  "baseKv": 132, "x": 0.65, "y": 0.32 },
+  { "id": 109, "name": "South 132kV",                "baseKv": 132, "x": 0.50, "y": 0.19 },
+  { "id": 110, "name": "South West & S Wales 132kV", "baseKv": 132, "x": 0.23, "y": 0.30 }
+]

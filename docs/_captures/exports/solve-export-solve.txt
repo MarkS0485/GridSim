@@ -1,0 +1,17 @@
+$ sed -n '298,312p' results/exports-docs/solve-export.json
+  "solve": {
+    "solver": "dense-newton",
+    "n": 9,
+    "converged": true,
+    "iterations": 4,
+    "maxMismatch": 1.6456133601332757E-14,
+    "jacobianOmittedForSize": false,
+    "ybus": [
+      {
+        "I": 0,
+        "J": 0,
+        "G": 0,
+        "B": -17.36111111111111
+      },
+      {
+[exit 0]

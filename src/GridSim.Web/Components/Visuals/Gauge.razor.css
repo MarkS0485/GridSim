@@ -1,0 +1,59 @@
+.gauge {
+    display: block;
+    font-family: 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+}
+
+.track {
+    stroke: var(--edge);
+    stroke-width: 7;
+    stroke-linecap: round;
+}
+
+.amber {
+    stroke: var(--warn);
+    stroke-width: 7;
+    stroke-linecap: round;
+    opacity: 0.85;
+}
+
+.red {
+    stroke: var(--bad);
+    stroke-width: 7;
+    stroke-linecap: round;
+    opacity: 0.9;
+}
+
+.tick {
+    stroke: var(--muted);
+    stroke-width: 1.6;
+    opacity: 0.65;
+}
+
+.needle {
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.hub {
+    fill: var(--ink);
+}
+
+.caption {
+    fill: var(--ink);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.value {
+    fill: var(--ink);
+    font-weight: 700;
+}
+
+.unit {
+    fill: var(--ink);
+    font-size: 10.5px;
+    font-weight: 600;
+    opacity: 0.85;
+}

@@ -1,0 +1,105 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@using GridSim.Core.Licensing
+@using Microsoft.AspNetCore.Components.Routing
+@inject LicenceGate Licence
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject GridSim.Web.Site.SiteSettings Site
+
+<div class="app-shell">
+    <div class="beta-banner" style="flex:0 0 auto; width:100%; box-sizing:border-box; text-align:center; padding:7px 16px; background:linear-gradient(90deg,#7c2d12,#b45309,#7c2d12); color:#ffedd5; font:600 13.5px/1.45 system-ui,-apple-system,sans-serif; letter-spacing:.03em; border-bottom:1px solid #f59e0b; z-index:60;">
+        ! <strong style="letter-spacing:.12em;">BETA</strong> - This replay engine is in BETA and contains known bugs. Please be patient.
+    </div>
+    <main>
+        @Body
+    </main>
+    <footer class="official-note" style="flex:0 0 auto; display:flex; align-items:center; gap:16px; box-sizing:border-box; width:100%; padding:8px 16px; background:rgba(15,18,25,.92); border-top:1px solid #f59e0b; font:12px/1.5 system-ui,-apple-system,sans-serif;">
+        <span style="flex:1 1 auto; text-align:center; color:#c7d0dc;">
+            <strong style="color:#fbbf24; letter-spacing:.04em;">OFFICIAL DATA ONLY</strong> - this tool replays <em>only</em> officially published grid data (DNO | ESO / NESO | Elexon | regulators). GDA holds further data that enables real-time monitoring; this tool is deliberately limited to the official public record.
+        </span>
+        @* N086: footer links are a deployment setting (Site:FooterLinks), not one person's profiles in every deployment. *@
+        @if (Site.FooterLinks.Count > 0)
+        {
+            <span style="flex:0 0 auto; display:flex; align-items:center; gap:14px; white-space:nowrap; font-size:11px;">
+                @foreach (var link in Site.FooterLinks)
+                {
+                    <a href="@link.Url" target="_blank" rel="noopener" style="color:#9aa4b2; text-decoration:none;">@link.Text</a>
+                }
+            </span>
+        }
+        <AuthorizeView>
+            <Authorized>
+                <span style="flex:0 0 auto; color:#9aa4b2; white-space:nowrap;" title="Signed in via single sign-on">
+                    signed in as <strong style="color:#c7d0dc;">@(context.User.Identity?.Name ?? "estate user")</strong>
+                </span>
+            </Authorized>
+        </AuthorizeView>
+        <span style="flex:0 0 auto; color:#9aa4b2; white-space:nowrap;" title="@Licence.Describe()">
+            @* N215: ASCII separator (LicenceGate.Sep), was the non-ASCII middle dot. *@
+            @Licence.Entitlement.Tier.DisplayName() licence@(GridSim.Core.Licensing.LicenceGate.Sep)@LimitText@ExpiryText
+        </span>
+        @* F02: the release number and build commit, the same text `gridsim --version` and the desktop About box show. *@
+        <span class="build-version" style="flex:0 0 auto; color:#9aa4b2; white-space:nowrap;" title="@GridSim.Core.BuildInfo.InformationalVersion">
+            v@(GridSim.Core.BuildInfo.Version) (@GridSim.Core.BuildInfo.Commit)
+        </span>
+    </footer>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">x</a>
+</div>
+
+@code {
+    // GR-248: the visible footer applies the same rule as the tooltip (LicenceGate.Describe): an expired, not-yet-valid or
+    // other-major key shows the free cap that is actually enforced and says why, instead of the key's own limit.
+    private string LimitText => Licence.FreeRulesApply
+        ? $"up to {GridSim.Core.Licensing.Entitlement.FreeDefault.BusLimit:N0} buses (the free tier applies)"
+        : Licence.Entitlement.IsUnlimited
+            ? "unlimited buses"
+            : $"up to {Licence.Entitlement.BusLimit:N0} buses";
+
+    private string ExpiryText => Licence.Entitlement.IsNotYetValid
+        ? $"{GridSim.Core.Licensing.LicenceGate.Sep}NOT YET VALID (starts {Licence.Entitlement.Issued:yyyy-MM-dd})"
+        : Licence.Entitlement.Expires == DateOnly.MaxValue
+            ? string.Empty
+            : Licence.Entitlement.IsExpired
+                ? $"{GridSim.Core.Licensing.LicenceGate.Sep}EXPIRED {Licence.Entitlement.Expires:yyyy-MM-dd}"
+                : $"{GridSim.Core.Licensing.LicenceGate.Sep}expires {Licence.Entitlement.Expires:yyyy-MM-dd}";
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += OnLocationChanged;
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await SendPageViewAsync();
+    }
+
+    private async Task SendPageViewAsync()
+    {
+        // N086: only when the deployment configured analytics (Site:AnalyticsScriptUrl); a neutral deployment makes
+        // no analytics call at all.
+        if (Site.AnalyticsScriptUrl.Length == 0) return;
+        // Defensive: the first-party analytics beacon may not be loaded yet
+        // (deferred script) or the collector may be unreachable. Never throw.
+        try
+        {
+            // GR-714: a named function, not eval (which would force a Content-Security-Policy to allow unsafe-eval). When
+            // the beacon is not loaded the call throws and is ignored below, as the old guard did.
+            await JS.InvokeVoidAsync("tsgbAnalytics.pageView");
+        }
+        catch
+        {
+            // ignore - analytics must never break navigation
+        }
+    }
+
+    public void Dispose()
+    {
+        Nav.LocationChanged -= OnLocationChanged;
+    }
+}

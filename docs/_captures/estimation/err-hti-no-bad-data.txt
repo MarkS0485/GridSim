@@ -1,0 +1,3 @@
+$ gridsim estimate case14 --synth --hti --no-bad-data --out results/err
+error: --hti selects the bad-data method, so it cannot be combined with --no-bad-data.
+[exit 2]

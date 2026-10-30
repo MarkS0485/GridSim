@@ -1,0 +1,156 @@
+{
+  "schema": "gridsim-event-catalog/1",
+  "events": [
+    {
+      "id": "gb-2019-08-09",
+      "title": "GB 9 Aug 2019 disturbance (Hornsea + Little Barford) - measured operating point",
+      "whenUtc": "2019-08-09T15:52:00Z",
+      "preEventInertiaMwS": 215000.0,
+      "preEventDemandMw": 21147.2,
+      "losses": [
+        {
+          "atSeconds": 0.1,
+          "deltaPMw": -150,
+          "what": "distributed generation vector-shift trip (Ofgem 2.4.2)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 0.5,
+          "deltaPMw": -737,
+          "what": "Hornsea 1 deload 799->62 MW (Ofgem 2.4.3)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 1.0,
+          "deltaPMw": -244,
+          "what": "Little Barford steam turbine trip (Ofgem 2.4.4)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 1.0,
+          "deltaPMw": -390,
+          "what": "distributed generation RoCoF-protection trip, 350-430 MW est. (Ofgem 2.4.6; ESO timeline 16:52:34)",
+          "provenance": "DerivedFromRecorded"
+        },
+        {
+          "atSeconds": 40.0,
+          "deltaPMw": -100,
+          "what": "unattributed net reduction over 30 s (Ofgem 2.4.9)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 58.0,
+          "deltaPMw": -210,
+          "what": "Little Barford GT1a steam-pressure trip (Ofgem 2.4.10)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 65.0,
+          "deltaPMw": -200,
+          "what": "distributed generation tripped at 49 Hz (Ofgem 2.4.11)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 76.0,
+          "deltaPMw": -550,
+          "what": "additional distributed generation lost at LFDD instant (Ofgem 2.4.13)",
+          "provenance": "DerivedFromRecorded"
+        },
+        {
+          "atSeconds": 90.0,
+          "deltaPMw": -187,
+          "what": "Little Barford GT1b manual trip (Ofgem 2.4.15)",
+          "provenance": "Recorded"
+        }
+      ],
+      "recordedActions": [
+        {
+          "atSeconds": 76.0,
+          "deltaPMw": 892,
+          "what": "LFDD stage 1: 892 MW net demand disconnected (Ofgem 2.4.12)",
+          "provenance": "Recorded",
+          "kind": "DemandDisconnection"
+        }
+      ],
+      "outcome": {
+        "initialRocofHzPerS": -0.17,
+        "nadirHz": 48.8,
+        "settleHz": 50.0,
+        "lfddMwShed": 892,
+        "provenance": "Recorded",
+        "notes": "Ofgem report: RoCoF exceeded 0.125 Hz/s (0.17 per E3C trace); arrest 49.1 Hz at 25 s, plateau 49.2 Hz at 45 s; below 48.8 Hz at ~76 s -> LFDD; 50 Hz within 5 min.",
+        "nadirSeconds": 75.9
+      },
+      "provenance": "DerivedFromRecorded",
+      "notes": "Operating point from the record: inertia 215 GVA*s is the NESO recorded outturn for the half-hour containing the 15:52Z onset (Derived/inertia_all_srcs, source=neso_inertia); demand 21147 MW is the WLS-estimated transmission-net national demand for the same period (Derived/estimated_state/gb-spine, chi-square PASS, J=141.0); recorded gross ND for the period was 28112 MW - the difference is embedded generation netted behind the GSPs (high solar afternoon). Estimator evidence at the event sites (estimated bus P injections, MW): Grimsby West (GRIW_1): 1566 (15:00Z) -> 1372 (15:30Z period, onset 15:52Z) -> 755 (16:00Z); Eaton Socon (EASO_1): 609 -> 452 -> -77. Loss sequence and outcome sourced from the Ofgem investigation report '9 August 2019 power outage report' paras 2.4.1-2.4.16 (ofgem.gov.uk, Jan 2020); RoCoF-stage DG loss uses the 350-430 MW estimate's midpoint; LFDD modelled as recorded 892 MW shed plus the ~550 MW concurrent DG loss the report infers from the 350 MW net transmission effect.",
+      "responseServices": [
+        {
+          "mw": 266,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 5,
+          "what": "Dynamic primary/secondary, BM (mandatory response): 266 MW delivered of 284 [325] held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 231,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 5,
+          "what": "Dynamic primary/secondary, NBM (FFR): 231 MW delivered of 280 [270] held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 165,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 0.5,
+          "what": "Enhanced Frequency Response, NBM: 165 MW delivered of 227 held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 198,
+          "deadbandHz": 0.3,
+          "fullDeliveryDeviationHz": 0.3,
+          "timeConstantS": 15,
+          "what": "Static, triggered at 49.7 Hz within 30 s, NBM secondary: 198 MW delivered of [285] held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 200,
+          "deadbandHz": 0.4,
+          "fullDeliveryDeviationHz": 0.4,
+          "timeConstantS": 0.5,
+          "what": "Static, triggered at 49.6 Hz within 1 s, BM: 200 MW delivered of 200 held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 30,
+          "deadbandHz": 0.4,
+          "fullDeliveryDeviationHz": 0.4,
+          "timeConstantS": 0.5,
+          "what": "Static, triggered at 49.6 Hz within 1 s, NBM: 30 MW delivered of 31 held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        }
+      ],
+      "responseServicesComplete": true,
+      "demandEffect": {
+        "mwPerHz": 700,
+        "what": "Demand effect: about 350 MW at 49.5 Hz for the event's 29 GW demand (ESO S192 Tables 3 and 4 footnote)",
+        "provenance": "Recorded"
+      }
+    }
+  ]
+}

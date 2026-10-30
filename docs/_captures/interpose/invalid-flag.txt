@@ -1,0 +1,3 @@
+$ gridsim interpose --invalid-flag
+error: unknown flag '--invalid-flag' (misspelled?). Run 'gridsim interpose --help' for the flags interpose takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

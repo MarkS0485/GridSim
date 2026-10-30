@@ -1,0 +1,15 @@
+$ sed -n '219,231p' results/formats/estimate/estimate-export.json
+    "branches": [
+      {
+        "from": 1,
+        "to": 2,
+        "r": 0.01938,
+        "x": 0.05917,
+        "b": 0.0528,
+        "tap": 1,
+        "phaseShiftDeg": 0,
+        "rateAMva": 0,
+        "isTransformer": false,
+        "inService": true
+      },
+[exit 0]

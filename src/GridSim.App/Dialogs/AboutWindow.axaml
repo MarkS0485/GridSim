@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GridSim.App.Dialogs.AboutWindow"
+        Title="About GridSim"
+        Width="720" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg}">
+  <!-- UI programme Phase 1.1: the About box. The same lines the WPF About tab shows (GridSim.Ui.Shell.AboutInfo):
+       the build line, the full build, the runtime and the licence. The lines are selectable so they can be copied
+       into a problem report. -->
+  <Border Classes="Card" Margin="12">
+    <StackPanel Spacing="8">
+      <TextBlock x:Name="Heading" FontSize="18" FontWeight="Bold" />
+      <SelectableTextBlock x:Name="AboutText" TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}"
+                           Foreground="{StaticResource Text}" />
+      <TextBlock x:Name="ReportNote" TextWrapping="Wrap" Classes="Label" />
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+        <Button x:Name="LicenceButton" Classes="FlatBtn" Content="Licence" Click="Licence_Click" />
+        <Button x:Name="NoticesButton" Classes="FlatBtn" Content="Third-party notices" Click="Notices_Click" />
+        <Button x:Name="CloseButton" Classes="FlatBtn" Content="Close" IsDefault="True" IsCancel="True" Click="Close_Click" />
+      </StackPanel>
+    </StackPanel>
+  </Border>
+</Window>

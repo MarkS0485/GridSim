@@ -1,0 +1,597 @@
+/* ============================================================================
+   GridSim.Web - control-room design system
+   Full-parity re-skin of the WPF desktop (GridSim.Wpf/Theme.xaml) for the web.
+   Cyan control-room palette, tokenised. Every class the tabs use is preserved
+   and re-skinned; the UI primitives in Components/Ui build on the same tokens.
+   ============================================================================ */
+
+:root {
+    /* ---- core control-room palette (matched to Theme.xaml) ---- */
+    --bg: #0A0E13;
+    --panel: #131A23;
+    --panel-hi: #1B2430;
+    --edge: #26323F;
+    --accent: #21C7E6;            /* cyan control-room accent */
+    --ink: #E6EDF3;
+    --muted: #8492A0;
+
+    --ok: #2FD27F;
+    --warn: #F3C13A;
+    --bad: #FF5B5B;
+
+    --track: #1E2733;            /* dark rail behind every bar */
+    --row: #0F151C;             /* list-row link bg */
+    --row-hi: #17222E;          /* list-row hover */
+
+    /* ---- TSGB brand (masthead-only, secondary accents) ---- */
+    --brand-navy: #012169;
+    --brand-navy-2: #0a3aa0;
+    --brand-red: #C8102E;
+    --brand-red-dark: #ff5c72;
+
+    /* ---- additive series / semantic colours (tabs may use these) ---- */
+    --info: #3FA9F5;             /* blue: synchronous / grid-following series */
+    --series-async: #6A5A8C;     /* muted purple: asynchronous domain series */
+    --series-volt: #8A7FE0;      /* voltage sparkline series */
+    --replay: #D19A4F;           /* replay / transport scrub accent */
+
+    /* ---- typography ---- */
+    --font-ui: "Bahnschrift", "Segoe UI", Arial, system-ui, sans-serif;
+    --font-mono: Consolas, "Cascadia Mono", "Courier New", ui-monospace, monospace;
+    /* body base 14px; WPF scale keyed off 12 (base) / 10.5 (small) / 9.5 (micro) / 30 (value) */
+    --fs-base: 14px;
+    --fs-sm: 12px;
+    --fs-xs: 10.5px;
+    --fs-micro: 9.5px;
+    --fs-value: 30px;
+    --fs-h: 12px;               /* panel header */
+
+    /* ---- spacing scale ---- */
+    --sp-1: 4px;
+    --sp-2: 8px;
+    --sp-3: 12px;
+    --sp-4: 16px;
+    --sp-5: 20px;
+    --sp-6: 24px;
+
+    /* ---- radii (WPF: 6px card, 4px button) ---- */
+    --r-card: 6px;
+    --r-btn: 4px;
+    --r-pill: 999px;
+
+    /* ---- motion ---- */
+    --t-fast: 0.12s ease;
+    --t-med: 0.18s ease;
+
+    /* ---- gauge band thresholds (from Theme.xaml) ---- */
+    --gauge-amber: 0.70;
+    --gauge-red: 0.90;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: var(--fs-base);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* ---- accessibility: visible keyboard focus on every interactive element ---- */
+a, button, select, input, [tabindex], .tab, .mode, .acat, .tbtn {
+    outline-offset: 2px;
+}
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 2px;
+}
+
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* scrollbars - dark control-room chrome */
+* { scrollbar-width: thin; scrollbar-color: var(--edge) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--edge); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--panel-hi); background-clip: content-box; }
+
+/* ============================================================================
+   Layout shell - dashboard fills the viewport: fixed header/headline/transport/
+   tabs, scrolling tab body.
+   ============================================================================ */
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+main {
+    padding: var(--sp-5) var(--sp-6);
+    width: 100%; max-width: 2360px; margin: 0 auto;
+    flex: 1; display: flex; flex-direction: column;
+}
+.dash-head, .headline, .transport, .tabstrip { flex: 0 0 auto; }
+/* Flex column so a single-child tab (e.g. the NETWORK map's .netmap-wrap) fills the height via flex:1 rather
+   than a height:100% that won't resolve when the tab content is shorter than the available space. */
+.tabbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.tabbody > * { flex: 1 1 auto; min-height: 0; }
+
+/* ============================================================================
+   Masthead / landing
+   ============================================================================ */
+.masthead { border-left: 3px solid var(--brand-red); padding-left: var(--sp-4); margin-bottom: var(--sp-6); }
+.masthead h1 { margin: 0 0 var(--sp-1); font-weight: 800; letter-spacing: 0.5px; }
+.masthead .sub { color: var(--brand-red-dark); font-weight: 700; font-size: 0.68em; text-transform: uppercase; letter-spacing: 3px; }
+.masthead .tagline { color: var(--muted); margin: var(--sp-2) 0 0; }
+
+.case-picker h2 { font-size: 0.8em; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); }
+.case-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+.case-card {
+    display: flex; flex-direction: column; gap: var(--sp-1);
+    background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card);
+    padding: 14px 16px; text-decoration: none; color: var(--ink);
+    transition: border-color var(--t-med), transform var(--t-med), background var(--t-med);
+}
+.case-card:hover { border-color: var(--accent); background: var(--panel-hi); transform: translateY(-1px); }
+.case-card.replay:hover { border-color: var(--replay); }
+.case-card .case-kind { font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.case-card .case-label { font-weight: 600; }
+.case-card .case-id { font-family: var(--font-mono); font-size: 0.75em; color: var(--muted); }
+
+/* ============================================================================
+   State: loading / empty / error
+   ============================================================================ */
+.empty, .loading, .muted { color: var(--muted); }
+.loading { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.loading::before {
+    content: ""; width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--edge); border-top-color: var(--accent);
+    animation: gs-spin 0.7s linear infinite;
+}
+@keyframes gs-spin { to { transform: rotate(360deg); } }
+
+.session-init {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 60vh; text-align: center; padding: var(--sp-4); gap: var(--sp-2);
+}
+.init-spinner {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid var(--edge); border-top-color: var(--accent);
+    animation: gs-spin 0.8s linear infinite; margin-bottom: var(--sp-2);
+}
+.session-init h2 { font-size: 1.25em; font-weight: 700; color: var(--fg); }
+.init-case { font-family: var(--font-mono); font-size: 0.85em; color: var(--muted); }
+.init-msg { color: var(--fg); font-size: 0.95em; }
+.init-patience {
+    max-width: 26em; color: var(--muted); font-size: 0.82em; line-height: 1.5;
+    margin-top: var(--sp-2);
+}
+
+.stub, .empty-state {
+    color: var(--muted); padding: 40px; text-align: center;
+    border: 1px dashed var(--edge); border-radius: var(--r-card);
+    background: color-mix(in srgb, var(--panel) 55%, transparent);
+    line-height: 1.6;
+}
+
+.load-error { color: var(--ink); }
+.load-error pre {
+    background: var(--panel); border: 1px solid var(--edge); border-left: 3px solid var(--bad);
+    padding: 12px; border-radius: var(--r-card); white-space: pre-wrap; color: var(--ink);
+    font-family: var(--font-mono); font-size: 0.85em;
+}
+/* A non-fatal session notice (a skipped bridge message): shown above the dashboard, which stays in place. */
+.load-warning {
+    background: var(--panel); border: 1px solid var(--edge); border-left: 3px solid var(--bad);
+    padding: 6px 12px; margin: 0 0 8px; color: var(--ink); font-family: var(--font-mono); font-size: 0.85em;
+}
+
+#blazor-error-ui {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--brand-red); color: #fff; padding: 10px 16px; z-index: 1000;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.5);
+}
+#blazor-error-ui .reload, #blazor-error-ui .dismiss { color: #fff; margin-left: 12px; cursor: pointer; text-decoration: underline; }
+
+/* ============================================================================
+   Dashboard header (navy masthead bar - brand accent permitted here)
+   ============================================================================ */
+.dash-head {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 14px;
+    padding: 10px 16px; border-radius: var(--r-card);
+    background: linear-gradient(90deg, var(--brand-navy) 0%, #0a1830 55%, var(--panel) 100%);
+    border: 1px solid var(--edge); border-left: 3px solid var(--brand-red);
+}
+.dash-head .home-link {
+    color: #fff; text-decoration: none; font-weight: 800; letter-spacing: 1px;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: opacity var(--t-fast);
+}
+.dash-head .home-link:hover { opacity: 0.85; }
+.dash-head .home-link::before { content: "*"; color: var(--brand-red-dark); font-size: 0.8em; }
+.dash-head .case-name { font-weight: 700; font-size: 1.1em; }
+.dash-head .case-meta { color: color-mix(in srgb, var(--ink) 70%, transparent); font-size: 0.8em; margin-left: auto; }
+.status-lamp { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--edge); font-size: 0.68em; font-weight: 700; letter-spacing: 1.2px; white-space: nowrap; }
+.status-lamp.lamp-ok { color: var(--ok); border-color: #2f6b4f; }
+.status-lamp.lamp-freq { color: var(--bad); border-color: #7a3a3a; }
+.status-lamp.lamp-volt { color: var(--warn); border-color: #6b5a2f; }
+.status-lamp.lamp-corridor { color: var(--warn); border-color: #6b5a2f; }
+.status-lamp.lamp-fault { color: var(--muted); }
+/* R051: a power flow that stopped without converging - shown as a fault, never as normal. */
+.status-lamp.lamp-unconverged { color: var(--bad); border-color: #7a3a3a; }
+/* Active-solver / source readout; on a live session it holds the solver picker (N063) */
+.dash-head .case-solver {
+    display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 999px;
+    border: 1px solid var(--edge); white-space: nowrap;
+    font-size: 0.68em; font-weight: 700; letter-spacing: 1.2px;
+    color: color-mix(in srgb, var(--accent) 78%, var(--ink));
+}
+.dash-head .case-solver .solver-pick {
+    background: var(--panel); color: inherit; border: 1px solid var(--edge); border-radius: 6px;
+    font: inherit; letter-spacing: inherit; padding: 1px 4px;
+}
+
+/* ============================================================================
+   Headline KPI strip
+   ============================================================================ */
+.headline { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.headline .tile {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card);
+    border-top: 2px solid var(--brand-navy-2);
+    padding: 10px 12px; display: flex; flex-direction: column; gap: 2px;
+    transition: border-color var(--t-fast);
+}
+.headline .tile:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--edge)); }
+.headline .tv { font-size: 1.45em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.headline .tv.clock { color: var(--accent); }
+.headline .tl { font-size: 0.62em; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); }
+.headline .sparkline { width: 100%; height: 24px; margin-top: var(--sp-1); opacity: 0.9; }
+.sparkline { display: block; }
+
+/* ============================================================================
+   Transport bar
+   ============================================================================ */
+.transport {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card);
+    padding: 8px 12px; margin-bottom: var(--sp-3);
+}
+.transport .tbtn {
+    background: var(--panel-hi); color: var(--ink); border: 1px solid var(--edge);
+    border-radius: var(--r-btn); padding: 6px 12px; cursor: pointer; font-size: 0.85em;
+    font-family: var(--font-ui); font-weight: 600;
+    transition: border-color var(--t-fast), background var(--t-fast);
+}
+.transport .tbtn:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel-hi)); }
+.transport .tbtn.trip { border-color: color-mix(in srgb, var(--bad) 45%, var(--edge)); color: var(--bad); }
+.transport .tbtn.trip:hover { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--panel-hi)); }
+.transport .tspeed { color: var(--muted); font-size: 0.8em; display: flex; align-items: center; gap: 6px; }
+.transport select { background: var(--panel-hi); color: var(--ink); border: 1px solid var(--edge); border-radius: var(--r-btn); padding: 4px 8px; font-family: var(--font-ui); }
+.transport .tscrub { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 220px; }
+.transport .tscrub input[type=range] { flex: 1; accent-color: var(--replay); }
+.transport .tframe { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.8em; }
+/* raw replay: date/time selection across the 2014-2026 lake */
+.transport .tdatelbl { color: var(--muted); font-size: 0.8em; display: flex; align-items: center; gap: 6px; }
+.transport .tdate { background: var(--panel-hi); color: var(--ink); border: 1px solid var(--edge);
+    border-radius: var(--r-btn); padding: 4px 8px; font-family: var(--font-ui); color-scheme: dark; }
+.transport .tscrub.traw input[type=range] { accent-color: var(--accent); }
+.transport .tsystime { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--accent);
+    font-weight: 700; font-size: 0.9em; white-space: nowrap; letter-spacing: 0.02em; }
+
+/* ============================================================================
+   Tab strip - accent underline on active tab (WPF RoomTabItem)
+   ============================================================================ */
+.tabstrip { display: flex; gap: 2px; flex-wrap: wrap; border-bottom: 1px solid var(--edge); margin-bottom: var(--sp-3); }
+.tabstrip .tab {
+    background: transparent; color: var(--muted); border: none; border-bottom: 2px solid transparent;
+    padding: 9px 16px; cursor: pointer; font-size: 0.8em; letter-spacing: 0.5px;
+    font-family: var(--font-ui); font-weight: 600;
+    border-radius: var(--r-btn) var(--r-btn) 0 0;
+    transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+}
+.tabstrip .tab:hover { color: var(--ink); background: color-mix(in srgb, var(--panel-hi) 55%, transparent); }
+.tabstrip .tab.on { color: var(--ink); border-bottom-color: var(--accent); background: var(--panel); font-weight: 700; }
+
+.tabbody { min-height: 480px; }
+
+/* Data tabs fill height: scrolling column so long tables use vertical space. */
+.tabpage { display: flex; flex-direction: column; height: 100%; gap: var(--sp-3); overflow: auto; }
+.tabpage .card { margin-bottom: 0; }
+.tabpage .grow { flex: 1 1 auto; min-height: 200px; display: flex; flex-direction: column; }
+.tabpage .grow .tablescroll { flex: 1 1 auto; overflow: auto; min-height: 0; }
+
+/* Static / prose tabs (e.g. Harmonics) */
+.tabpad { padding: var(--sp-2) var(--sp-1); max-width: 900px; line-height: 1.65; overflow: auto; height: 100%; }
+.tabpad h3 { margin: 0 0 var(--sp-3); font-size: 1.15em; font-weight: 700; color: var(--ink); }
+.tabpad p { margin: 0 0 var(--sp-3); color: var(--ink); }
+.tabpad ul { margin: 0 0 var(--sp-3); padding-left: var(--sp-5); }
+.tabpad li { margin-bottom: var(--sp-2); color: var(--ink); }
+.tabpad code {
+    font-family: var(--font-mono); font-size: 0.88em; color: var(--accent);
+    background: var(--row); border: 1px solid var(--edge); border-radius: 3px; padding: 1px 5px;
+}
+.tabpad pre {
+    font-family: var(--font-mono); font-size: 0.85em; color: var(--ink);
+    background: var(--panel); border: 1px solid var(--edge); border-left: 3px solid var(--accent);
+    border-radius: var(--r-card); padding: 12px 14px; margin: 0 0 var(--sp-4); overflow-x: auto;
+}
+.tabpad em { color: var(--warn); font-style: normal; }
+.tabpad strong { color: var(--ink); font-weight: 700; }
+.harmonics .muted { display: block; margin-top: var(--sp-4); font-size: 0.9em; }
+
+/* ============================================================================
+   Network map
+   ============================================================================ */
+.netmap-wrap { display: flex; flex-direction: column; height: 100%; background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card); }
+.netmap-toolbar { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--edge); }
+.netmap-title { font-size: 0.72em; letter-spacing: 2px; color: var(--muted); font-weight: 700; }
+/* Substation search box (Enter to locate + select a bus on the map) */
+.netmap-search {
+    background: var(--panel-hi); color: var(--ink); border: 1px solid var(--edge);
+    border-radius: var(--r-btn); padding: 3px 9px; font-size: 0.75em;
+    font-family: var(--font-ui); min-width: 150px; max-width: 220px;
+    transition: border-color var(--t-fast);
+}
+.netmap-search::placeholder { color: var(--muted); }
+.netmap-search:focus { border-color: var(--accent); outline: none; }
+.netmap-modes { display: flex; gap: var(--sp-1); }
+.netmap-modes .mode {
+    background: var(--panel-hi); color: var(--muted); border: 1px solid var(--edge);
+    border-radius: var(--r-btn); padding: 3px 10px; cursor: pointer; font-size: 0.75em;
+    font-family: var(--font-ui); font-weight: 600;
+    transition: color var(--t-fast), border-color var(--t-fast);
+}
+.netmap-modes .mode:hover { color: var(--ink); }
+.netmap-modes .mode.on { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel-hi)); }
+.netmap-wrap canvas { flex: 1 1 auto; width: 100%; min-height: 400px; display: block; cursor: grab; }
+.netmap-wrap canvas:active { cursor: grabbing; }
+
+/* ============================================================================
+   Cards / panels  (WPF Card: Panel bg, Border, 6px radius)
+   ============================================================================ */
+.panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.panel-grid.four { grid-template-columns: repeat(4, 1fr); }
+.card {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card);
+    padding: 14px 16px; margin-bottom: var(--sp-3);
+}
+.card.breach { border-color: color-mix(in srgb, var(--bad) 50%, var(--edge)); }
+.card-h { font-size: 0.68em; letter-spacing: 1.5px; color: var(--accent); text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+.card-eyebrow { font-size: 0.6em; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: var(--sp-1); }
+
+.stat-row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: 4px 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 5%, transparent); }
+.stat-row:last-child { border-bottom: 0; }
+.stat-row span { color: var(--muted); }
+.stat-row b { font-variant-numeric: tabular-nums; }
+.stat-row b.ok { color: var(--ok); } .stat-row b.warn { color: var(--warn); } .stat-row b.bad { color: var(--bad); }
+
+.muted-note { color: var(--muted); font-size: 0.8em; margin-top: var(--sp-2); }
+.stability-note { margin-top: 10px; padding: 8px 10px; border-left: 2px solid var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); font-size: 0.85em; color: var(--ink); }
+.warn-note { color: var(--warn); font-size: 0.72rem; margin-top: var(--sp-2); }
+.warn-note.strong { color: var(--bad); font-size: 0.78rem; }
+
+/* mini KPI (small value/label chip) */
+.mini { background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+.mini .mv { font-size: 1.3em; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mini .ml { font-size: 0.62em; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.mini .mv.alarm, .mini.alarm .mv { color: var(--bad); }
+.mini.warnv .mv { color: var(--warn); }
+
+/* ============================================================================
+   Tables
+   ============================================================================ */
+table.grid { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+table.grid th { text-align: left; color: var(--muted); font-weight: 600; font-size: 0.85em; padding: 6px 8px; border-bottom: 1px solid var(--edge); }
+table.grid td { padding: 6px 8px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 5%, transparent); font-variant-numeric: tabular-nums; }
+table.grid th.r, table.grid td.r { text-align: right; }
+table.grid tr.over td { color: color-mix(in srgb, var(--bad) 80%, var(--ink)); }
+.imp { color: var(--ok); } .exp { color: var(--warn); }
+
+/* ============================================================================
+   Bars, swatches, mini-bars  (all on the shared --track rail)
+   ============================================================================ */
+.swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; background: var(--c, var(--muted)); }
+.minibar { display: inline-block; width: 70px; height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+.minibar span { display: block; height: 100%; background: var(--c, var(--accent)); }
+.splitbar, .lossbar, .marginbar { display: flex; height: 10px; background: var(--track); border-radius: 5px; overflow: hidden; margin-top: 10px; }
+.splitbar .seg { display: block; height: 100%; }
+.splitbar .seg.sync { background: var(--accent); } .splitbar .seg.conv { background: #90A4AE; }
+.lossbar .loss-live { background: var(--warn); height: 100%; }
+.marginbar span { display: block; height: 100%; background: var(--c, var(--accent)); }
+
+/* Generic labelled progress bar (used by Ui/Bar.razor primitive) */
+.uibar { width: 100%; height: 8px; background: var(--track); border-radius: var(--r-pill); overflow: hidden; }
+.uibar > span { display: block; height: 100%; border-radius: var(--r-pill); background: var(--c, var(--accent)); transition: width var(--t-med); }
+.uibar.ok > span { background: var(--ok); } .uibar.warn > span { background: var(--warn); } .uibar.bad > span { background: var(--bad); }
+
+/* ============================================================================
+   Ui/Tile.razor primitive - big KPI tile matching WPF Value/Unit/Label
+   ============================================================================ */
+.ui-tile {
+    background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card);
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;
+    transition: border-color var(--t-fast);
+}
+.ui-tile:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--edge)); }
+.ui-tile .uv { font-size: var(--fs-value); line-height: 1.05; font-weight: 700; font-variant-numeric: tabular-nums; }
+.ui-tile .uu { font-size: 0.85em; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.ui-tile .ul { font-size: 0.62em; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-top: 2px; }
+.ui-tile .uspark { margin-top: 6px; }
+.ui-tile.ok .uv { color: var(--ok); } .ui-tile.warn .uv { color: var(--warn); } .ui-tile.bad .uv { color: var(--bad); } .ui-tile.accent .uv { color: var(--accent); }
+
+/* ============================================================================
+   NESO RP1 hero
+   ============================================================================ */
+.rp1-hero { display: flex; align-items: center; justify-content: space-between; border-radius: var(--r-card); padding: 20px 24px; margin-bottom: var(--sp-3); border: 1px solid var(--edge); }
+.rp1-hero.g-green { background: linear-gradient(90deg, color-mix(in srgb, var(--ok) 12%, transparent), transparent); border-color: color-mix(in srgb, var(--ok) 45%, var(--edge)); }
+.rp1-hero.g-amber { background: linear-gradient(90deg, color-mix(in srgb, var(--warn) 12%, transparent), transparent); border-color: color-mix(in srgb, var(--warn) 45%, var(--edge)); }
+.rp1-hero.g-red { background: linear-gradient(90deg, color-mix(in srgb, var(--bad) 14%, transparent), transparent); border-color: color-mix(in srgb, var(--bad) 50%, var(--edge)); }
+.rp1-hero .hero-v { font-size: 2.4em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rp1-hero .hero-l { display: block; font-size: 0.7em; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
+.rp1-hero .hero-grade { font-size: 1.1em; font-weight: 700; letter-spacing: 2px; padding: 6px 16px; border-radius: var(--r-card); border: 1px solid currentColor; }
+.g-green .hero-grade { color: var(--ok); } .g-amber .hero-grade { color: var(--warn); } .g-red .hero-grade { color: var(--bad); }
+.card.narrative { color: var(--ink); line-height: 1.6; font-size: 0.95em; }
+
+/* ============================================================================
+   Misc shared
+   ============================================================================ */
+.mono { font-family: var(--font-mono); font-size: 0.9em; }
+
+/* text-status utilities (usable on any inline/block element) */
+.txt-ok, td.ok, span.ok { color: var(--ok); }
+.txt-warn, td.warn, span.warn { color: var(--warn); }
+.txt-bad, td.bad, span.bad { color: var(--bad); }
+
+/* ============================================================================
+   SCADA
+   ============================================================================ */
+.scada-filter { background: var(--row); border: 1px solid var(--edge); color: var(--ink); border-radius: var(--r-btn); padding: 4px 8px; width: 100%; font-family: var(--font-ui); }
+.scada-filter:focus-visible { border-color: var(--accent); }
+.quality { font-size: 0.75em; padding: 1px 7px; border-radius: 3px; }
+.quality.q-good { color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 45%, var(--edge)); }
+.quality.q-alarm { color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--edge)); }
+.prio { font-size: 0.72em; font-weight: 700; padding: 1px 6px; border-radius: 3px; }
+.prio.p1 { color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--edge)); }
+.prio.p2 { color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--edge)); }
+.prio.p3 { color: var(--muted); border: 1px solid var(--edge); }
+
+/* ============================================================================
+   The Machine
+   ============================================================================ */
+.machine-hero { display: flex; gap: 20px; align-items: center; background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card); padding: 18px 22px; flex-wrap: wrap; }
+.machine-hero .rpm-dial { flex: 0 0 auto; text-align: center; padding: 8px 24px; border-right: 1px solid var(--edge); }
+.machine-hero .rpm-v { display: block; font-size: 2.6em; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.machine-hero .rpm-l { font-size: 0.72em; letter-spacing: 1px; color: var(--muted); }
+.machine-hero .machine-story { line-height: 1.6; color: var(--ink); flex: 1 1 320px; }
+.machine-hero .hero-spark { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 0.7em; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ============================================================================
+   Assets explorer
+   ============================================================================ */
+.assets .asset-cats { display: flex; gap: 6px; flex: 0 0 auto; flex-wrap: wrap; }
+.assets .acat {
+    background: var(--panel-hi); color: var(--muted); border: 1px solid var(--edge);
+    border-radius: var(--r-card); padding: 6px 14px; cursor: pointer; font-size: 0.82em;
+    font-family: var(--font-ui); font-weight: 600;
+    transition: color var(--t-fast), border-color var(--t-fast);
+}
+.assets .acat:hover { color: var(--ink); }
+.assets .acat.on { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel-hi)); }
+.assets .acat .acount { color: var(--muted); font-size: 0.8em; margin-left: 4px; }
+.assets .asset-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 1fr; gap: var(--sp-3); }
+.assets .asset-body:has(.asset-detail) { grid-template-columns: 2fr 1fr; }
+.assets .asset-list { min-height: 0; }
+.assets table.grid tbody tr { cursor: pointer; }
+.assets table.grid tbody tr:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.assets table.grid tbody tr.sel { background: color-mix(in srgb, var(--accent) 13%, transparent); }
+.assets .asset-detail { align-self: start; }
+
+/* ============================================================================
+   Lake (bridge-mode) overlays
+   ============================================================================ */
+.card.lake { border-color: color-mix(in srgb, var(--accent) 40%, var(--edge)); background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent); }
+.card.lake .card-h { color: var(--accent); }
+.lake-warn { background: color-mix(in srgb, var(--warn) 12%, transparent); border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--edge)); color: var(--warn); border-radius: var(--r-btn); padding: 6px 10px; margin-bottom: 10px; }
+.case-card.bridge { border-color: color-mix(in srgb, var(--accent) 40%, var(--edge)); }
+.case-card.bridge:hover { border-color: var(--accent); }
+.case-card.bridge .case-kind { color: var(--accent); }
+
+/* ============================================================================
+   Trip / Device tab
+   ============================================================================ */
+.trip-controls {
+    display: flex; gap: var(--sp-4); align-items: flex-end; flex-wrap: wrap; flex: 0 0 auto;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r-card); padding: 12px 16px;
+}
+.trip-controls label { display: flex; flex-direction: column; gap: var(--sp-1); font-size: 0.72em; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.trip-controls select, .trip-controls input {
+    background: var(--row); border: 1px solid var(--edge); color: var(--ink);
+    border-radius: var(--r-btn); padding: 5px 8px; font-size: 1.1em; font-family: var(--font-ui);
+}
+.trip-controls select:focus-visible, .trip-controls input:focus-visible { border-color: var(--accent); }
+.trip-controls input[type=number] { width: 100px; }
+.trip-ctx { margin-left: auto; color: var(--muted); font-size: 0.82em; align-self: center; }
+.device-card { border-color: color-mix(in srgb, var(--ok) 45%, var(--edge)); }
+
+/* ============================================================================
+   Frequency chart (inline SVG, Trip tab)
+   ============================================================================ */
+.freqchart { width: 100%; height: 340px; display: block; }
+.freqchart .ref { stroke-width: 1; stroke-dasharray: 4 4; }
+.freqchart .ref.nom { stroke: #3a4653; }
+.freqchart .ref.stat { stroke: var(--warn); opacity: 0.7; }
+.freqchart .ref.lfdd { stroke: var(--bad); opacity: 0.7; }
+.freqchart .axl { fill: var(--muted); font-size: 11px; }
+.freqchart .series { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.freqchart .series.base { stroke: var(--bad); }
+.freqchart .series.dev { stroke: var(--ok); }
+.chart-legend { display: flex; gap: 18px; font-size: 0.8em; color: var(--muted); margin-top: var(--sp-2); flex-wrap: wrap; }
+.chart-legend .lg.base { color: var(--bad); } .chart-legend .lg.dev { color: var(--ok); }
+
+/* ============================================================================
+   Domains tab - GVad / inertia bars
+   ============================================================================ */
+.domainbar-row { display: flex; align-items: center; margin: 5px 0; }
+.domainbar-row .db-name { width: 210px; flex: none; }
+.domainbar-row .db-sub { color: var(--muted); font-size: 0.72rem; }
+.domainbar-row .db-track { flex: 1; display: flex; align-items: center; }
+.domainbar-row .db-fill { height: 22px; border-radius: 3px; background: var(--c, var(--accent)); }
+.domainbar-row .db-val { margin-left: 10px; color: var(--ink); font-weight: 600; white-space: nowrap; }
+
+/* Inverter-fleet mode colours */
+.mode-forming { color: var(--ok); }
+.mode-following { color: var(--info); }
+.val-strong { color: var(--ink); }
+.val-dim { color: var(--muted); }
+
+/* ============================================================================
+   Responsive / mobile - the dashboard is a desktop control layout by default;
+   below these widths it reflows so it stays usable on a tablet / phone.
+   (Viewport meta is set in App.razor, so device-width breakpoints apply.)
+   ============================================================================ */
+
+/* Tablet + large phone */
+@media (max-width: 900px) {
+    main { padding: var(--sp-3) var(--sp-3); }
+    .headline { grid-template-columns: repeat(4, 1fr); }
+    .headline .tv { font-size: 1.15em; }
+    .panel-grid.four { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+    main { padding: var(--sp-2) var(--sp-2); }
+
+    /* Header wraps instead of overflowing; the meta stops pushing to the right edge. */
+    .dash-head { flex-wrap: wrap; gap: 8px; padding: 8px 12px; margin-bottom: 10px; }
+    .dash-head .case-meta { margin-left: 0; }
+    .status-lamp { margin-left: 0; }
+
+    /* KPI strip: flow into as many ~108px tiles as fit (2-3 across on a phone). */
+    .headline { grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: var(--sp-1); }
+    .headline .tile { padding: 7px 9px; }
+    .headline .tv { font-size: 1.05em; }
+    .headline .tl { font-size: 0.56em; letter-spacing: 0.6px; }
+    .headline .sparkline { height: 16px; }
+
+    /* Transport: wrap; the scrubber takes its own full-width line and the clock stops pushing right. */
+    .transport { gap: 6px; padding: 7px 9px; }
+    .transport .tscrub { order: 10; flex-basis: 100%; min-width: 0; }
+    .transport .tsystime { margin-left: 0; }
+
+    /* Tabs: one horizontally-scrolling row rather than wrapping onto many lines. */
+    .tabstrip { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+    .tabstrip .tab { flex: 0 0 auto; white-space: nowrap; padding: 8px 10px; }
+
+    /* Panels stack; wide tables shrink a touch (their tab body already scrolls). */
+    .panel-grid, .panel-grid.four { grid-template-columns: 1fr; }
+    .grid { font-size: 0.82em; }
+    .tabbody { min-height: 360px; }
+
+    /* Banner / footer carry inline base styles (immune to the CSS-cache gotcha), so mobile overrides need
+       !important to win. The footer wraps onto two centred lines. */
+    .beta-banner { font-size: 11.5px !important; padding: 6px 10px !important; }
+    .official-note { flex-wrap: wrap !important; gap: 4px !important; padding: 6px 10px !important; font-size: 10.5px !important; }
+    .official-note span { flex-basis: 100% !important; text-align: center !important; white-space: normal !important; }
+}

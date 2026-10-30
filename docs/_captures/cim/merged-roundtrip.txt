@@ -1,0 +1,60 @@
+$ dotnet run --project results/cim -c Release -- merged print
+parsed: 2 buses, 1 lines, 0 transformers, 1 loads, 1 generators, 0 notes
+bus n1 name=Node1 baseKv=0
+bus n2 name=Node2 baseKv=0
+line l1 n1->n2 r=0.5 x=2.5 b=0.0001
+load ld1 node=n2 p=12.5 q=3.2
+gen g1 node=n1 p=13 q=0
+model: baseMva=100 name=cim-import
+  bus 1 Slack Pd=0 Qd=0 BaseKv=0 Name=Node1
+  bus 2 Pq Pd=12.5 Qd=3.2 BaseKv=0 Name=Node2
+  gen bus=1 Pg=13 Vg=1
+  branch 1->2 R=0.5 X=2.5 B=0.0001 tap=1 shift=0 tx=False Line1
+validate errors: 0
+solve: status=Converged converged=True iterations=6 maxMismatch=1.076E-014
+  bus 1 Vm=1.000000 Va=0.0000 deg
+  bus 2 Vm=0.705489 Va=-24.8531 deg
+<rdf:RDF xmlns:cim="http://iec.ch/TC57/2013/CIM-schema-cim16#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <cim:TopologicalNode rdf:ID="_n1">
+    <cim:IdentifiedObject.name>Node1</cim:IdentifiedObject.name>
+  </cim:TopologicalNode>
+  <cim:TopologicalNode rdf:ID="_n2">
+    <cim:IdentifiedObject.name>Node2</cim:IdentifiedObject.name>
+  </cim:TopologicalNode>
+  <cim:ACLineSegment rdf:ID="_l1">
+    <cim:IdentifiedObject.name>Line1</cim:IdentifiedObject.name>
+    <cim:ACLineSegment.r>0.5</cim:ACLineSegment.r>
+    <cim:ACLineSegment.x>2.5</cim:ACLineSegment.x>
+    <cim:ACLineSegment.bch>0.0001</cim:ACLineSegment.bch>
+  </cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_t_l1_1">
+    <cim:Terminal.TopologicalNode rdf:resource="#_n1" />
+    <cim:Terminal.ConductingEquipment rdf:resource="#_l1" />
+  </cim:Terminal>
+  <cim:Terminal rdf:ID="_t_l1_2">
+    <cim:Terminal.TopologicalNode rdf:resource="#_n2" />
+    <cim:Terminal.ConductingEquipment rdf:resource="#_l1" />
+  </cim:Terminal>
+  <cim:EnergyConsumer rdf:ID="_ld1">
+    <cim:IdentifiedObject.name>Load1</cim:IdentifiedObject.name>
+    <cim:EnergyConsumer.p>12.5</cim:EnergyConsumer.p>
+    <cim:EnergyConsumer.q>3.2</cim:EnergyConsumer.q>
+  </cim:EnergyConsumer>
+  <cim:Terminal rdf:ID="_t_ld1">
+    <cim:Terminal.TopologicalNode rdf:resource="#_n2" />
+    <cim:Terminal.ConductingEquipment rdf:resource="#_ld1" />
+  </cim:Terminal>
+  <cim:SynchronousMachine rdf:ID="_g1">
+    <cim:IdentifiedObject.name>Gen1</cim:IdentifiedObject.name>
+    <cim:RotatingMachine.p>-13</cim:RotatingMachine.p>
+    <cim:RotatingMachine.q>0</cim:RotatingMachine.q>
+  </cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_t_g1">
+    <cim:Terminal.TopologicalNode rdf:resource="#_n1" />
+    <cim:Terminal.ConductingEquipment rdf:resource="#_g1" />
+  </cim:Terminal>
+</rdf:RDF>
+exported 1857 chars; re-imported: 2 buses, 1 lines, 0 transformers, 1 loads, 1 generators, 0 notes; counts equal: True
+load ld1 p=12.5 q=3.2
+gen g1 p=13 q=0
+[exit 0]

@@ -1,0 +1,27 @@
+{
+  "schema": "gridsim-library/2",
+  "description": "Test fixture: a valid placeholder site and a valid active site. Must pass (the positive control).",
+  "templates": [
+    {
+      "id": "gridsim.fixture.site.empty",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Empty site",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "fixture [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.fixture.site.full",
+      "rev": 1,
+      "kind": "site",
+      "status": "active",
+      "title": "Full site",
+      "params": {
+        "generation": "gridsim.fixture.machine@1",
+        "demand": { "v": "gridsim.fixture.load@1", "prov": { "tag": "Synthetic", "note": "fixture" } }
+      },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "fixture" } }
+    }
+  ]
+}

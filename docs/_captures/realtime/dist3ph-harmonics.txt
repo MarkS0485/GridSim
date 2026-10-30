@@ -1,0 +1,18 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum 6-pulse --current 0.1
+THREE-PHASE DISTRIBUTION (harmonics) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+  balanced harmonic source at bus 4: spectrum 6-pulse (library profile, assumed-typical unless a G5-cited one [VERIFY]), fundamental current 0.1 pu;
+  network only (series impedances, R + j h X; loads not modelled), source bus as the harmonic reference.
+  | order | |Va| pu | |Vb| pu | |Vc| pu | |V0| pu | |V1| pu | |V2| pu | worst bus | worst |V| pu |
+  |-------|--------|--------|--------|--------|--------|--------|-----------|-------------|
+  | 5 | 0.017363 | 0.016665 | 0.017899 | 0.000584 | 0.001296 | 0.017258 | 4 | 0.017899 |
+  | 7 | 0.017555 | 0.016465 | 0.017826 | 0.000561 | 0.017234 | 0.001297 | 4 | 0.017826 |
+  | 11 | 0.017394 | 0.016569 | 0.017846 | 0.000577 | 0.001296 | 0.017219 | 4 | 0.017846 |
+  | 13 | 0.017497 | 0.016480 | 0.017819 | 0.000565 | 0.017217 | 0.001297 | 4 | 0.017819 |
+  | 17 | 0.017409 | 0.016546 | 0.017836 | 0.000575 | 0.001297 | 0.017214 | 4 | 0.017836 |
+  | 19 | 0.017478 | 0.016488 | 0.017819 | 0.000567 | 0.017213 | 0.001297 | 4 | 0.017819 |
+  | 23 | 0.017416 | 0.016536 | 0.017832 | 0.000574 | 0.001297 | 0.017212 | 4 | 0.017832 |
+  | 25 | 0.017468 | 0.016493 | 0.017819 | 0.000568 | 0.017211 | 0.001297 | 4 | 0.017819 |
+  RSS harmonic voltage at bus 4: a 0.049349 pu, b 0.046755 pu, c 0.050450 pu
+[exit 0]

@@ -1,0 +1,10 @@
+$ gridsim qsts case33bw.m --study docs/_captures/qsts/bad-study.json
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case33bw.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[qsts] QSTS study refused (2 problems):
+  - loads entry 1: profile 'x' is not defined.
+  - loads entry 1: bus 999 is not in the case.
+[exit 1]

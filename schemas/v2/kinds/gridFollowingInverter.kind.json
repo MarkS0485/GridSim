@@ -1,0 +1,611 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "gridFollowingInverter",
+  "title": "Grid-following inverter",
+  "description": "PLL-behind current source (wind, solar, HVDC, distributed generation): fast frequency response, loss-of-mains trips, impedance-scan and RMS-model parameters. Parameter names are the v1 AssetParams names where one exists. Omitted for want of a unit: the RMS active-current recovery rate RampUpPuPerSecond (pu/s; record default 10.0): NOT DECLARED (finding for Mark): the closed unit vocabulary has no unit for pu/s, so the parameter cannot be declared without inventing or misstating a unit. rocofGainMwsPerHz, fastSlewUpMwPerSPerMw / fastSlewDownMwPerSPerMw and dcVoltageV were unit gaps until Q24 (2026-10) added MW.s/Hz, MW/s/MW and V to the vocabulary; they are declared below.",
+  "params": {
+    "deadbandHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "max": 5,
+      "required": false,
+      "markGated": true,
+      "description": "Frequency deadband before the fast frequency response acts (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0.015 Hz",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultDeadbandHz",
+          "value": 0.015
+        }
+      ]
+    },
+    "droopGainMwPerHzPerMw": {
+      "type": "number",
+      "unit": "MW/Hz/MW",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Frequency droop gain, MW/Hz per MW of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 2.0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultDroopGainMwPerHzPerMw",
+          "value": 2.0
+        },
+        {
+          "consumer": "LinearInverterModel.ForGfl small-signal block: absent => ConverterDefaults.SmallSignalGflDroopMwPerHzPerMw",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.ConverterDefaults.SmallSignalGflDroopMwPerHzPerMw",
+          "value": 2.0
+        }
+      ]
+    },
+    "rocofGainMwsPerHz": {
+      "type": "number",
+      "unit": "MW.s/Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Synthetic-inertia (RoCoF) gain of the fast frequency response: MW delivered per Hz/s of measured df/dt, so MW.s/Hz. 0 or absent = no RoCoF leg (droop only).",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0 (no RoCoF leg)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultRocofGainMwsPerHz",
+          "value": 0.0
+        }
+      ]
+    },
+    "detectionLatencyS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Frequency detection latency (s) before the response starts. The small-signal block derives a PLL bandwidth 1/(2 pi latency) from it when pllBandwidthHz is absent.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultDetectionLatencyS",
+          "value": 0.0
+        },
+        {
+          "consumer": "LinearInverterModel.ForGfl small-signal block: absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.SmallSignal.LinearInverterModel.DefaultDetectionLatencyS",
+          "value": 0.0
+        }
+      ]
+    },
+    "computeLatencyS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Controller compute latency (s).",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultComputeLatencyS",
+          "value": 0.0
+        }
+      ]
+    },
+    "actuateTauS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "First-order actuation time constant of the power response (s).",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0.25 s",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultActuateTauS",
+          "value": 0.25
+        },
+        {
+          "consumer": "LinearInverterModel.ForGfl small-signal block: absent => ConverterDefaults.SmallSignalGflActuateTauSeconds",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.ConverterDefaults.SmallSignalGflActuateTauSeconds",
+          "value": 0.25
+        }
+      ]
+    },
+    "dispatchRampMwPerMin": {
+      "type": "number",
+      "unit": "MW/min",
+      "min": 0,
+      "required": false,
+      "description": "Dispatch ramp rate (MW/min). Refused at load since R073 (October 2026): no controller has a dispatch setpoint to ramp (the inverters model the response about a fixed dispatch). The observed fleet ramp band the bundled v1 classes carried was removed from the data and is recorded in docs/technical/0013 Asset-dynamics data grounding.md.",
+      "codeDefaults": []
+    },
+    "fastSlewUpMwPerSPerMw": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Upward slew-rate limit of the fast frequency response, MW/s per MW of rating. 0 or absent = no upward ramp limit.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0 (no ramp limit)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultFastSlewUpMwPerSPerMw",
+          "value": 0.0
+        }
+      ]
+    },
+    "fastSlewDownMwPerSPerMw": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Downward slew-rate limit of the fast frequency response, MW/s per MW of rating. 0 or absent = no downward ramp limit.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0 (no ramp limit)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultFastSlewDownMwPerSPerMw",
+          "value": 0.0
+        }
+      ]
+    },
+    "headroomUpFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": true,
+      "description": "Upward response headroom as a fraction of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0.2",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultHeadroomUpFraction",
+          "value": 0.2
+        }
+      ]
+    },
+    "headroomDownFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": true,
+      "description": "Downward response headroom as a fraction of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0.2",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultHeadroomDownFraction",
+          "value": 0.2
+        }
+      ]
+    },
+    "rocofTripHzPerS": {
+      "type": "number",
+      "unit": "Hz/s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Loss-of-mains RoCoF trip threshold (Hz/s); absent = never trips on RoCoF.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => +Infinity (never trips)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultRocofTripHzPerS",
+          "value": "+Infinity"
+        }
+      ]
+    },
+    "rocofTripConfirmS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Definite-time confirmation delay of the RoCoF trip (s).",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => AssetParamDefaults.RocofTripConfirmS, 0.5 s (EREC G99 Issue 2 Table 10.1 LoM (RoCoF) time delay; R137, B4 October 2026: one default for both inverter kinds)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.AssetParamDefaults.RocofTripConfirmS",
+          "value": 0.5
+        }
+      ]
+    },
+    "localRocofUpliftFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Ratio of local (sub-cycle) RoCoF to the centre-of-inertia RoCoF; 1 = no uplift.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 1.0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultLocalRocofUpliftFactor",
+          "value": 1.0
+        }
+      ]
+    },
+    "vectorShiftTripDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Vector-shift loss-of-mains trip threshold (deg); absent = never trips on vector shift.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => +Infinity (never trips)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultVectorShiftTripDeg",
+          "value": "+Infinity"
+        }
+      ]
+    },
+    "lvrtVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "markGated": true,
+      "description": "Low-voltage ride-through trip level (pu of nominal voltage); 0 = never trips on voltage.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingInverter controller: absent => 0 (never trips)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.GridFollowingInverter.DefaultLvrtVoltagePu",
+          "value": 0.0
+        }
+      ]
+    },
+    "minOutputFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Minimum output as a fraction of rating. Refused at load since R073 (October 2026): no controller reads it.",
+      "codeDefaults": []
+    },
+    "pllBandwidthHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "SRF-PLL bandwidth (Hz). Opt-in: read only by the impedance scan and the modal (small-signal) model, never by the time-domain controller. One code default for all three converter models since R138 (October 2026, stream B5): ConverterDefaults.PllBandwidthHz = 20 Hz (the impedance and small-signal placeholders were 5 Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "ConverterDefaults.PllBandwidthHz, read by: the EMT average-value converter (ThreePhaseConverter record default); GridFollowingImpedance (impedance scan) placeholder when the class has none (also repeated by CliDefaults.PlaceholderPllBandwidthHz); LinearInverterModel.ForGfl small-signal fallback when neither pllBandwidthHz nor a usable detectionLatencyS is set",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.ConverterDefaults.PllBandwidthHz",
+          "value": 20.0
+        },
+        {
+          "consumer": "EMT ThreePhaseConverter constructor parameter default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Emt.ThreePhaseConverter:.ctor:PllBandwidthHz",
+          "value": 20.0
+        }
+      ]
+    },
+    "pllDampingRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "SRF-PLL damping ratio. Opt-in: read by the impedance scan and (since R138, October 2026, stream B5) the modal (small-signal) model. Default 0.707 for a PLL in every model; the small-signal stand-in for a detection delay (bandwidth from detectionLatencyS) is critically damped (1.0) unless this key is authored.",
+      "codeDefaults": [
+        {
+          "consumer": "ConverterDefaults.PllDampingRatio, read by: the EMT converter PI loop; the GridFollowingImpedance placeholder; LinearInverterModel.ForGfl when its bandwidth is a PLL's (pllBandwidthHz authored, or the 20 Hz placeholder): the one PLL default",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.ConverterDefaults.PllDampingRatio",
+          "value": 0.707
+        },
+        {
+          "consumer": "LinearInverterModel.ForGfl small-signal estimator, delay stand-in only (bandwidth 1/(2 pi detectionLatencyS), no pllDampingRatio authored): critically damped",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.ConverterDefaults.SmallSignalDelayEstimatorDampingRatio",
+          "value": 1.0
+        },
+        {
+          "consumer": "CLI flag-built impedance model placeholder (CliDefaults.PlaceholderPllDamping)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.PlaceholderPllDamping",
+          "value": 0.707
+        }
+      ]
+    },
+    "currentLoopBandwidthHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Inner current-loop bandwidth (Hz); absent or 0 = current loop not modelled in the impedance scan.",
+      "codeDefaults": [
+        {
+          "consumer": "GridFollowingImpedance: absent => 0 (not modelled)",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.Impedance.GridFollowingImpedance.DefaultCurrentLoopBandwidthHz",
+          "value": 0.0
+        }
+      ]
+    },
+    "faultCurrentPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "Converter fault-current multiple k (x rated current), IEC 60909 I_skPF = k I_rG; 0 = feeds no fault current.",
+      "codeDefaults": [
+        {
+          "consumer": "Generator.DefaultConverterFaultCurrentPu (short-circuit studies)",
+          "ref": "member:GridSim.Core:GridSim.Core.Model.Generator.DefaultConverterFaultCurrentPu",
+          "value": 1.2
+        },
+        {
+          "consumer": "RmsConverterParameters Imax record default (RMS converter current limit)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:Imax",
+          "value": 1.2
+        }
+      ]
+    },
+    "rmsCurrentLagS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "REGC_A current-command lag Tg (s) of the RMS converter model.",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters Tg record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:Tg",
+          "value": 0.02
+        }
+      ]
+    },
+    "rmsVoltageFilterS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "REEC terminal-voltage measurement filter Tr (s).",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters Tr record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:Tr",
+          "value": 0.02
+        }
+      ]
+    },
+    "rmsDipVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "markGated": true,
+      "description": "Voltage below which the RMS dip logic is active (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters Vdip record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:Vdip",
+          "value": 0.9
+        }
+      ]
+    },
+    "rmsReactiveCurrentGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "K-factor reactive-current boost on a voltage dip, pu current per pu voltage.",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters Kqv record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:Kqv",
+          "value": 2.0
+        }
+      ]
+    },
+    "rmsLvacmZeroPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "markGated": true,
+      "description": "REGC_A LVACM: active current is zero at or below this terminal voltage (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters LvPnt0 record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:LvPnt0",
+          "value": 0.4
+        }
+      ]
+    },
+    "rmsLvacmFullPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "markGated": true,
+      "description": "REGC_A LVACM: active current is unrestricted at or above this terminal voltage (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters LvPnt1 record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:LvPnt1",
+          "value": 0.8
+        }
+      ]
+    },
+    "rmsDipHoldS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Time the RMS dip logic stays active after the voltage recovers (s).",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters HoldSeconds record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:HoldSeconds",
+          "value": 0.0
+        }
+      ]
+    },
+    "rmsBlockInDip": {
+      "type": "boolean",
+      "required": false,
+      "markGated": true,
+      "description": "Line-commutated HVDC terminal: feeds no current during a dip (commutation failure / blocking).",
+      "codeDefaults": [
+        {
+          "consumer": "RmsConverterParameters BlockInDip record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:BlockInDip",
+          "value": false
+        }
+      ]
+    },
+    "capacityFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Representative capacity factor used to turn nameplate into a snapshot dispatch, by technology. FuelMap (GDA build), Dispatcher (Core) and SyntheticGb disagree (inconsistency register).",
+      "codeDefaults": [
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: wind-onshore",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorWindOnshore",
+          "value": 0.3
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: wind-offshore",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorWindOffshore",
+          "value": 0.45
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: solar",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorSolar",
+          "value": 0.1
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: tidal",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorTidal",
+          "value": 0.2
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: interconnector",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorInterconnector",
+          "value": 0.5
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: wind_offshore / offshore",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorWindOffshore",
+          "value": 0.45
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: wind_onshore / onshore / wind",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorWindOnshore",
+          "value": 0.3
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: solar / pv",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorSolar",
+          "value": 0.15
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: interconnector / hvdc",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorInterconnector",
+          "value": 0.6
+        },
+        {
+          "consumer": "SyntheticGb embedded generation: solar",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.EmbeddedSolarCf",
+          "value": 0.25
+        },
+        {
+          "consumer": "SyntheticGb embedded generation: onshore wind",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.EmbeddedOnshoreCf",
+          "value": 0.35
+        }
+      ]
+    },
+    "capacityMwh": {
+      "type": "number",
+      "unit": "MWh",
+      "min": 0,
+      "required": false,
+      "description": "Usable energy (MWh) of the DC store behind the converter; 0 or absent = unbounded (no store). Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    },
+    "socInit": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Initial state of charge (fraction of capacityMwh). Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    },
+    "socMin": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Lower state-of-charge bound of the simple SoC bucket (used when no chemistry is set). Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    },
+    "socMax": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Upper state-of-charge bound of the simple SoC bucket (used when no chemistry is set). Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    },
+    "batteryChemistry": {
+      "type": "enum",
+      "values": [
+        "none",
+        "LFP",
+        "NMC",
+        "LTO",
+        "Na-ion",
+        "VRFB",
+        "Lead-acid"
+      ],
+      "required": false,
+      "description": "Chemistry pack behind the converter. v1 stores a numeric code (0 or absent = none, 1 LFP, 2 NMC, 3 LTO, 4 Na-ion, 5 VRFB, 6 lead-acid; DcSources.ChemistryFromCode); v2 names it. No codeDefault: the v1 fallback is the numeric code 0, which is not one of these names. Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    },
+    "dcVoltageV": {
+      "type": "number",
+      "unit": "V",
+      "min": 1,
+      "max": 1500,
+      "required": false,
+      "description": "DC pack voltage (V) of the battery store behind the converter, used to size the series cell count. Read through DcSources.FromClass; its code defaults are recorded on the storage kind. The 1500 V ceiling is the low-voltage DC limit that utility battery packs are built to.",
+      "codeDefaults": []
+    },
+    "converterEfficiency": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "One-way converter efficiency between the chemistry pack and the grid. Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    },
+    "ambientC": {
+      "type": "number",
+      "unit": "degC",
+      "min": -60,
+      "max": 80,
+      "required": false,
+      "description": "Ambient temperature of the chemistry pack (degC). Read through DcSources.FromClass; its code defaults are recorded on the storage kind.",
+      "codeDefaults": []
+    }
+  }
+}

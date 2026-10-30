@@ -1,0 +1,15 @@
+$ sed -n '15184,15196p' results/formats/pegase-solve.json
+      {
+        "bus": 4231,
+        "pg": 2641.24,
+        "qg": 771.6,
+        "vg": 1.049182,
+        "qmin": "-Infinity",
+        "qmax": "Infinity",
+        "pmin": 1333.33,
+        "pmax": 4188.95,
+        "mBase": 100,
+        "h": 0,
+        "type": ""
+      },
+[exit 0]

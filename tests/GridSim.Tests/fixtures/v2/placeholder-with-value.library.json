@@ -1,0 +1,15 @@
+{
+  "schema": "gridsim-library/2",
+  "description": "Test fixture: a placeholder template with a non-null value. Must fail.",
+  "templates": [
+    {
+      "id": "gridsim.fixture.site.bad-placeholder",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Placeholder with a value",
+      "params": { "generation": "gridsim.fixture.machine@1", "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "fixture [VERIFY]" } }
+    }
+  ]
+}

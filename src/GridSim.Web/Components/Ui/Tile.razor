@@ -1,0 +1,31 @@
+@* Tile - a big-value KPI tile (WPF Value + Unit + Label). Optional sparkline /
+   extra content slot underneath. Status tints the value via --ok/--warn/--bad. *@
+
+<div class="@TileClass">
+    <div>
+        <span class="uv">@Value</span>@if (!string.IsNullOrEmpty(Unit)) { <span class="uu">@Unit</span> }
+    </div>
+    @if (!string.IsNullOrEmpty(Label))
+    {
+        <span class="ul">@Label</span>
+    }
+    @if (ChildContent is not null)
+    {
+        <div class="uspark">@ChildContent</div>
+    }
+</div>
+
+@code {
+    /// <summary>The big value (pre-formatted string).</summary>
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public string? Unit { get; set; }
+    [Parameter] public string? Label { get; set; }
+    /// <summary>"ok" | "warn" | "bad" | "accent" | null - tints the value.</summary>
+    [Parameter] public string? Tone { get; set; }
+    [Parameter] public string? Class { get; set; }
+    /// <summary>Optional slot rendered under the label (e.g. a Sparkline).</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string ToneClass => Tone is "ok" or "warn" or "bad" or "accent" ? " " + Tone : "";
+    private string TileClass => $"ui-tile{ToneClass}{(string.IsNullOrEmpty(Class) ? "" : " " + Class)}";
+}

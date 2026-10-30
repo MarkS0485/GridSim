@@ -1,0 +1,22 @@
+$ gridsim freq data/neso/gb-2023-12-22-frequency.csv
+NESO frequency  -  gb-2023-12-22-frequency.csv
+================================================================
+Samples      601  (1 s cadence)
+Frequency    min 49.275 Hz  mean 49.778 Hz  max 49.930 Hz
+Max |RoCoF|  0.1020 Hz/s  at 2023-12-22 13:09:53
+
+vs GB limits:
+  RoCoF 0.125 Hz/s: within  (worst 0.1020 Hz/s)
+  operational 49.8 Hz: 299 s below    statutory 49.5 Hz: 60 s below    LFDD 48.8 Hz: clear
+
+Upsample demo  -  1 s frames expanded to 20 ms by RoCoF interpolation:
+  time            Hz         RoCoF (Hz/s)
+  13:07:00.000   49.93000    -0.0080
+  13:07:00.020   49.92984    -0.0080
+  13:07:00.040   49.92968    -0.0080
+  13:07:00.060   49.92952    -0.0080
+  13:07:00.080   49.92936    -0.0080
+  13:07:00.100   49.92920    -0.0080
+  13:07:00.120   49.92904    -0.0080
+  13:07:00.140   49.92888    -0.0080
+[exit 0]

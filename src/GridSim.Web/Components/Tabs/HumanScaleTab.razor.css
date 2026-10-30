@@ -1,0 +1,85 @@
+/* THE HUMAN SCALE tab - control-room theme (cyan #21C7E6). Static chrome uses the shared CSS variables;
+   only the data-driven bar/number colours come from WebPalette (passed inline as computed values). */
+
+.hs { gap: var(--sp-4); }
+
+/* section eyebrow used as a standalone divider heading */
+.hs-sec-h { margin: var(--sp-2) 0 calc(-1 * var(--sp-2)) 2px; font-size: 0.66em; }
+
+/* ---------- badges ---------- */
+.hs-badge-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); }
+.hs-badge {
+    flex: 0 0 auto; font-size: 0.6em; font-weight: 700; letter-spacing: 1px;
+    color: var(--muted); background: var(--track); border-radius: var(--r-pill);
+    padding: 3px 9px; text-transform: uppercase; white-space: nowrap;
+}
+.hs-badge.ok { color: var(--ok); }
+
+/* ---------- hero ---------- */
+.hs-hero { background: var(--panel-hi); }
+.hs-hero-value { font-size: 3.1rem; font-weight: 800; color: var(--accent); line-height: 1.02; margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+/* Reserve two lines' height and use tabular digits so the sentence can't reflow
+   1<->2 lines (and jump the layout) as the humanized numbers change width during
+   fast playback. */
+.hs-hero-line { color: var(--muted); font-size: 0.9em; line-height: 1.5; margin: 6px 0 0; max-width: 80ch; min-height: 3em; font-variant-numeric: tabular-nums; }
+.hs-facts-h { margin-top: var(--sp-4); }
+.hs-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.hs-facts li { position: relative; padding-left: 16px; color: var(--ink); font-size: 0.9em; line-height: 1.45; max-width: 90ch; }
+.hs-facts li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; background: var(--accent); border-radius: 1px; }
+
+/* ---------- shared value / sub text ---------- */
+.hs-val { font-size: var(--fs-value); font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.hs-val.accent { color: var(--accent); }
+.hs-val.ok { color: var(--ok); }
+.hs-val-u { font-size: 0.5em; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.hs-sub { color: var(--muted); font-size: 0.82em; line-height: 1.45; margin-top: 6px; }
+.hs-sub2 { color: var(--muted); font-size: 0.85em; line-height: 1.5; margin-top: 1px; }
+.hs-note { color: var(--muted); font-size: 0.82em; line-height: 1.5; margin: 4px 0 0; }
+
+/* ---------- THE TWIST ---------- */
+.hs-twist-grid { display: grid; grid-template-columns: minmax(360px, 460px) 1fr; gap: var(--sp-4); margin-top: var(--sp-4); align-items: start; }
+.hs-twist-headline { display: flex; align-items: baseline; gap: 10px; }
+.hs-twist-total { font-size: 2.8rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.hs-unit { color: var(--muted); font-size: 0.85em; }
+.hs-twist-slip { color: var(--muted); font-size: 0.82em; margin-top: 6px; }
+
+.hs-wall { position: relative; height: 10px; background: var(--track); border-radius: var(--r-pill); overflow: hidden; margin-top: 6px; }
+.hs-wall-fill { height: 100%; border-radius: var(--r-pill); transition: width var(--t-med); }
+.hs-wall-redline { position: absolute; top: 0; right: 0; width: 2px; height: 100%; background: var(--bad); }
+.hs-wall-scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 0.7em; margin-top: 3px; }
+
+.hs-region-h { margin-top: var(--sp-4); }
+.hs-region-row { display: grid; grid-template-columns: 150px 56px 1fr; align-items: center; gap: 8px; margin: 6px 0; }
+.hs-region-label { font-size: 0.82em; font-weight: 600; color: var(--ink); }
+.hs-region-deg { font-size: 1em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hs-region-bar { display: flex; flex-direction: column; gap: 2px; }
+.hs-region-detail { color: var(--muted); font-size: 0.68em; }
+.hs-corridor { margin-top: var(--sp-3); }
+
+.hs-twist-right { background: var(--panel-hi); }
+.hs-machines { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; margin-top: 6px; padding-right: 4px; }
+.hs-mach-row { display: grid; grid-template-columns: 54px 1fr 72px; align-items: center; gap: 8px; padding: 3px 0; }
+.hs-mach-deg { font-size: 0.82em; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hs-mach-mid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hs-mach-name { font-size: 0.8em; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hs-mach-bar { max-width: 160px; }
+.hs-mach-mw { text-align: right; color: var(--muted); font-size: 0.72em; font-variant-numeric: tabular-nums; }
+
+/* ---------- regen / hold ---------- */
+.hs-regen-dir { font-size: 0.8em; font-weight: 700; margin-top: 3px; }
+.hs-hold-big { font-size: 1.05rem; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.hs-hold-big.accent { color: var(--accent); }
+
+.hs-panelhi { background: var(--panel-hi); }
+
+/* GRAND ENGINE = three across; REGEN = stored-spin wider than live-braking (WPF 1.4* / *) */
+.hs-three { grid-template-columns: 1fr 1fr 1fr; }
+.hs-regen { grid-template-columns: 1.4fr 1fr; }
+
+.hs-caption { max-width: 100ch; line-height: 1.55; }
+
+/* keep the two-column bands from collapsing awkwardly on narrow viewports */
+@media (max-width: 900px) {
+    .hs-twist-grid { grid-template-columns: 1fr; }
+    .hs-three { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,17 @@
+$ gridsim chain case9 --mode daily --steps 6 --bess lfp:5:5:10 --policy peak-shave --shave-high 250 --shave-low 200
+GridSim - storage time series  *  case9  *  6 x 4 h  *  mode=daily  *  policy=peak-shave
+prices: none.  Chemistry presets are CuratedPlaceholder [VERIFY] (representative cells).
+
+| Step | Hour | Load x | Demand MW | Price | LFP 5MW/10MWh @5: MW / SoC / T deg C | Slack MW | Vmin | Conv |
+|---:|---:|---:|---:|---:|---|---:|---:|:-:|
+| 0 | 0.0 | 0.700 | 220 | - |     0.0 / 0.500 / 25.0 | 49 | 1.024 | y |
+| 1 | 4.0 | 0.600 | 189 | - |    -1.3 / 0.950 / 29.4 (SoC ceiling) | 43 | 1.025 | y |
+| 2 | 8.0 | 0.700 | 220 | - |     0.0 / 0.950 / 28.6 | 49 | 1.024 | y |
+| 3 | 12.0 | 0.900 | 283 | - |     2.4 / 0.050 / 29.6 (SoC floor) | 62 | 1.005 | y |
+| 4 | 16.0 | 1.000 | 315 | - |     0.0 / 0.050 / 28.8 (SoC floor) | 72 | 0.996 | y |
+| 5 | 20.0 | 0.900 | 284 | - |     0.0 / 0.050 / 28.1 (SoC floor) | 64 | 1.005 | y |
+
+LFP 5MW/10MWh @5: out 9.7 MWh, in 5.3 MWh, aux 0.28 MWh, stored change -5.0 MWh, round trip 93.5 %, 0.75 equivalent full cycles
+    ageing over the run: calendar 0.1269 %, cycle 0.0026 % (rainflow, depth-aware: 0.0020 %), deepest cycle 90 % SoC
+[chain] done -> results\chain-storage-case9.md
+[exit 0]

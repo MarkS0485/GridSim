@@ -1,0 +1,60 @@
+@* N086: the page head carries no deployment-specific value. Analytics, the share-card image and the schema.org
+   Organization block are emitted only when the deployment configures them (Site:* settings, read and checked once at
+   start-up by SiteSettings); with nothing configured the page loads no third-party script and names no host. *@
+@inject GridSim.Web.Site.SiteSettings Site
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    @if (Site.GoogleTagBootstrap is { } gtagBootstrap)
+    {
+        @* Google tag (gtag.js), configured by Site:GoogleTagId; the id is pattern-checked at start-up. *@
+        <script async src="@($"https://www.googletagmanager.com/gtag/js?id={Site.GoogleTagId}")"></script>
+        <script>@((MarkupString)gtagBootstrap)</script>
+    }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>GridSim - Grid Control Suite</title>
+    <meta name="description" content="GridSim - a physics-first GB power-grid simulator: validated Newton-Raphson power flow, WLS state estimation, and grounded historical counterfactuals over the real GB network." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="GridSim - Grid Control Suite" />
+    <meta property="og:title" content="GridSim - Grid Control Suite" />
+    <meta property="og:description" content="A physics-first GB power-grid simulator: validated power flow, state estimation, and grounded counterfactuals over the real GB network." />
+    @if (Site.ShareImageUrl.Length > 0)
+    {
+        <meta property="og:image" content="@Site.ShareImageUrl" />
+    }
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="GridSim - Grid Control Suite" />
+    <meta name="twitter:description" content="A physics-first GB power-grid simulator." />
+    @if (Site.ShareImageUrl.Length > 0)
+    {
+        <meta name="twitter:image" content="@Site.ShareImageUrl" />
+    }
+    @if (Site.OrganisationJsonLd is { } orgJson)
+    {
+        @* Serialised by System.Text.Json, which escapes < > and &, so it cannot close this script element. *@
+        <script type="application/ld+json">@((MarkupString)orgJson)</script>
+    }
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="GridSim.Web.styles.css" />
+    <HeadOutlet />
+</head>
+<body>
+    <Routes />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="js/map-geo.js"></script>
+    <script src="js/map-interop.js"></script>
+    @if (Site.AnalyticsScriptUrl.Length > 0)
+    {
+        if (Site.AnalyticsCollectorUrl.Length > 0)
+        {
+            <script src="@Site.AnalyticsScriptUrl" data-site="@Site.AnalyticsSiteName" data-collector="@Site.AnalyticsCollectorUrl" defer></script>
+        }
+        else
+        {
+            <script src="@Site.AnalyticsScriptUrl" data-site="@Site.AnalyticsSiteName" defer></script>
+        }
+    }
+</body>
+</html>

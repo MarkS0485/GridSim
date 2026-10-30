@@ -1,0 +1,6 @@
+$ gridsim dcpf docs/_captures/v2-schema/inputs/refused/schema.case.json
+error loading case 'docs/_captures/v2-schema/inputs/refused/schema.case.json': cannot load JSON v2 case 'docs/_captures/v2-schema/inputs/refused/schema.case.json': schema.case.json: JSON v2 case refused at the schema checks: 3 problem(s):
+  schema.network.json: /buses/0: missing required member 'baseKv'.
+  schema.network.json: /buses/1/type: value "swing" is not one of the allowed values ["pq", "pv", "slack"].
+  schema.network.json: /generators/0/capacityMVA: unknown member 'capacityMVA' is not allowed here. Allowed: name, bus, type, template, capacityMva, outputMw, capacityFactor, voltageSetpoint, qMinMvar, qMaxMvar, inertiaH, role, powerFlowOnly, unitTransformerXPu, converter, subtransientXdPu, negativeSeqXPu, inService, pMinMw, pMaxMw, qOutputMvar.
+[exit 1]

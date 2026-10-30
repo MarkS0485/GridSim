@@ -1,0 +1,18 @@
+$ gridsim scenario --event gb-2019-08-09
+
+=== Counterfactual scenario: GB 9 Aug 2019 disturbance (Hornsea + Little Barford) ===
+  baseline gate: Reproduced   device: tsgb (30.0 GVA.s inertia + 1.00 GW FFR)
+  LFDD first-stage threshold: 48.8 Hz  (nominal corner)
+
+   inertia | RoCoF no-dev    nadir  LFDD |  RoCoF +dev    nadir  LFDD | avoided
+  ------------------------------------------------------------------------------------
+     260GV |     -0.142Hz/s  47.69Hz   YES |    -0.125Hz/s  49.09Hz    no | *** YES ***
+     155GV |     -0.234Hz/s  47.62Hz   YES |    -0.190Hz/s  49.05Hz    no | *** YES ***
+     120GV |     -0.298Hz/s  47.61Hz   YES |    -0.231Hz/s  49.04Hz    no | *** YES ***
+     102GV |     -0.347Hz/s  47.60Hz   YES |    -0.259Hz/s  49.04Hz    no | *** YES ***
+      50GV |     -0.660Hz/s  47.60Hz   YES |    -0.398Hz/s  49.03Hz    no | *** YES ***
+
+  device avoids LFDD at 5/5 inertia levels.
+
+  -> results\scenario-gb-2019-08-09
+[exit 0]

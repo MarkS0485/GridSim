@@ -1,0 +1,16 @@
+# Example compose.override.yml (F05): site-specific wiring that should not live in the shared compose.yml.
+#
+# Copy to compose.override.yml beside compose.yml (that name is ignored by source control) and edit. Docker Compose
+# merges it automatically on `docker compose up`. Plain values (bridge address, SSO, key folder, user) are better set
+# as variables in a .env file; see the list at the top of compose.yml.
+#
+# This example joins the web container to an existing external Docker network shared with other services (for
+# example a GDA bridge or an SSO estate), which compose.yml cannot assume exists everywhere.
+services:
+  web:
+    networks: [ shared-backend ]
+
+networks:
+  shared-backend:
+    external: true
+    name: your-existing-network-name

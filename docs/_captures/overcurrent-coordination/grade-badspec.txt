@@ -1,0 +1,3 @@
+$ gridsim grade --chain iec-xx:400:0.1,iec-si:400:0.3 --current 2000
+error: --chain: Relay 'iec-xx:400:0.1': unknown curve 'iec-xx' (iec-si, iec-vi, iec-ei, iec-lti, ieee-mi, ieee-vi, ieee-ei or dt).
+[exit 2]

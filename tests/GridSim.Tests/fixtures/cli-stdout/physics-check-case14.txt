@@ -1,0 +1,15 @@
+Physics-law audit  -  case14  (14 buses, converged=True, tol 1.0E-006 MVA = BaseMva 100 x 1e-8)
+| # | law | status | residual | unit | detail |
+|---|-----|--------|----------|------|--------|
+| 1 | Conservation of energy | Holds | 2.38E-013 | MW | independent dissipation 13.393272 MW (branch 13.3933 + shunt 0.0000) vs reported loss 13.393272 MW |
+| 2 | Ohm's law | Holds | 9.59E-014 | MVA | independent per-branch flow vs solver-reported line flow |
+| 3 | Joule heating | Holds | 2.34E-013 | MW | total network loss 13.393272 MW vs reported 13.393272 MW |
+| 4 | Faraday induction | Constitutive | - | - | embodied in transformer tap ratio and generator EMF E' = V + jX'I; no field model to check |
+| 5 | Ampere's law (passivity) | Constitutive | 3.33E-014 | MW | series reactance X embodies the lumped inductance; all branches passive (I^2 R >= 0) |
+| 6 | Kirchhoff's current law | Holds | 2.01E-009 | MW | network real injection vs specified, at constrained buses |
+| 7 | Kirchhoff's voltage law | Holds | 0.00E+000 | V | structural: nodal voltages are single-valued potentials, so every loop sum vanishes identically |
+| 8 | Complex power S = V I* | Holds | 1.32E-008 | MVA | same residual as law 6, reactive component included at 9 PQ bus(es), by the bus types the solve ended with |
+| 9 | AC phase & frequency synchronism | NotApplicable | - | Hz | NOT SCORED: steady-state snapshot at 50 Hz with no trajectory; law 9 is scored only when a dynamics caller supplies a SynchronismSample: stability --clear (classical or --rms) scores it from its own run, no steady-state verb or export does |
+| 10 | Gauss's law / Coulomb | NotModeled | - | - | field/geometry law outside a positive-sequence phasor model; not represented |
+
+GATE: PASS  -  state is physically admissible (all hard laws hold).

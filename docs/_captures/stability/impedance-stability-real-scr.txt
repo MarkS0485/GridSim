@@ -1,0 +1,3 @@
+$ gridsim impedance-stability case9 --grid real --scr 2
+error: --scr expected no value: the SCR sweep applies to --grid canonical only but got '2'
+[exit 2]

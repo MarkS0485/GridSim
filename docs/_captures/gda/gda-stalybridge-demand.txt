@@ -1,0 +1,22 @@
+$ cat results/gda-stalybridge/demand.json
+[
+  {
+    "name": "EYAM5_BB_B_REP",
+    "bus": 6,
+    "pMw": 6.74,
+    "qMvar": 0.860416666666667
+  },
+  {
+    "name": "FLAG5_MAIN1_REP",
+    "bus": 7,
+    "pMw": 3.22,
+    "qMvar": 0.9391666666666671
+  },
+  {
+    "name": "HINL5_BB_2_REP",
+    "bus": 8,
+    "pMw": 10.82,
+    "qMvar": 3.1558333333333346
+  }
+]
+[exit 0]

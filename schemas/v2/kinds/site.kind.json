@@ -1,0 +1,20 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "site",
+  "title": "Site (unmodelled-site placeholder slots)",
+  "description": "A named site whose electrical behaviour is not in any public dataset. It has two slots: generation (the machine at the site) and demand (the load at the site). In a placeholder site template every slot is null. When a site becomes active, each slot holds a template reference written id@rev (a machine template for generation, a load template for demand); GridSim checks only that the slot is a string; it does not resolve the reference yet. Either slot may be left out of an active site (a site with demand but no generation, say), so neither is required.",
+  "params": {
+    "generation": {
+      "type": "string",
+      "required": false,
+      "description": "The machine at this site, as a template reference id@rev. Null in a placeholder.",
+      "codeDefaults": []
+    },
+    "demand": {
+      "type": "string",
+      "required": false,
+      "description": "The load at this site, as a template reference id@rev. Null in a placeholder.",
+      "codeDefaults": []
+    }
+  }
+}

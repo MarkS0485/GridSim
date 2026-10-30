@@ -1,0 +1,93 @@
+# GridSim web app under Docker Compose (F05).
+#
+#   docker compose up -d --build        then open http://127.0.0.1:5540/
+#
+# Neutral defaults: nothing here names a real host, user or path. Every machine-specific value is an environment
+# variable with a safe default, read from the shell or from a .env file beside this one (never committed):
+#
+#   GRIDSIM_PORT              host port bound on 127.0.0.1 (default 5540; the nginx example proxies to it)
+#   GRIDSIM_UID / GRIDSIM_GID user the container runs as (default 1654, the .NET image's "app" user); set it to
+#                             the owner of GRIDSIM_KEYS_DIR when that is a host folder
+#   GRIDSIM_KEYS_DIR          data-protection key ring: a host folder, or the named volume "gridsim-keys" (default)
+#   GRIDSIM_KEYS_MODE         rw (default) or ro, for a shared key ring owned by another app
+#   GRIDSIM_REPLAY_ONLY       true (default): only the public-data replay; false exposes /api and /ws/sim, which
+#                             have no authorisation yet (F14), so only on a trusted network
+#   GRIDSIM_BRIDGE_ENDPOINT   wss:// address of a GDA bridge (empty = the live bridge source is unavailable)
+#   GRIDSIM_BRIDGE_ALLOW_UNENCRYPTED  true to allow a ws:// bridge address, for a bridge on a private network only
+#                             (default false: a ws:// address stops start-up, naming this setting)
+#   GRIDSIM_SSO_ENABLED       true to join a single sign-on estate (default false: every visitor is anonymous)
+#   GRIDSIM_SSO_AUTHORITY     the estate login origin, e.g. https://login.example.com
+#   GRIDSIM_AUTH_APP_NAME     shared data-protection application name of the estate (empty = "GridSim", N087)
+#   GRIDSIM_COOKIE_DOMAIN     shared cookie domain of the estate, e.g. .example.com (empty = host-only cookie)
+#   GRIDSIM_SSO_PUBLIC_ORIGIN this app's public origin, e.g. https://gridsim.example.com, when the proxy does not
+#                             forward X-Forwarded-Proto (empty = the request's own origin; D-DOC-171)
+#   GRIDSIM_KEY_PROTECTION    key ring encryption at rest: auto (default), certificate, none (D-DOC-064). On Linux,
+#                             auto encrypts only when GRIDSIM_KEY_CERT is set and otherwise logs a warning
+#   GRIDSIM_KEY_CERT          path INSIDE the container of a PKCS#12 (.pfx) certificate with its private key (mount it
+#                             in compose.override.yml); its password, if any, goes in Auth__KeyCertificatePassword
+#                             through a .env or secret, never in this file
+#   GRIDSIM_TRUSTED_PROXIES   proxies whose X-Forwarded-For / -Proto are believed (N226): loopback,private by default
+#                             here (the host proxy reaches the container from the bridge gateway, a private address);
+#                             or a list of addresses / CIDR networks, or any alone (every caller)
+#   GRIDSIM_MAX_SESSIONS      most dashboards plus /ws/sim connections held at once (default 64; D-DOC-076)
+#   GRIDSIM_SOURCE_REVISION   git commit stamped into the build (docker compose build); e.g. $(git rev-parse HEAD)
+#
+# Site identity (N086; all empty by default, so the page loads no third-party script and names no host):
+#   GRIDSIM_GOOGLE_TAG_ID         Google tag id, e.g. G-XXXXXXXXXX (empty = no Google tag)
+#   GRIDSIM_ANALYTICS_SCRIPT_URL  absolute URL of a first-party analytics script (empty = none)
+#   GRIDSIM_ANALYTICS_COLLECTOR   absolute URL that script reports to (needs the script)
+#   GRIDSIM_SHARE_IMAGE_URL       absolute URL of the og:image / twitter:image share card (empty = no image tags)
+#   GRIDSIM_SECURITY_CONTACT      security.txt Contact (mailto:, https:// or tel:); empty = /.well-known/security.txt
+#                                 answers 404
+#   GRIDSIM_SECURITY_EXPIRES      security.txt Expires, ISO 8601 in the future (required with a contact)
+# The organisation block, footer links and the security.txt comment line (Site__OrganisationName,
+# Site__FooterLinks__0__Text / __Url, Site__SecurityTxt__Comment, ...) go in compose.override.yml.
+#
+# Site-specific wiring that does not fit a variable (an external network shared with other containers, extra
+# mounts) belongs in compose.override.yml, which Compose merges automatically and which is ignored by source
+# control. docs/developer/deploy/compose.override.example.yml shows the shape. See docs/developer/deploy/README.md.
+services:
+  web:
+    build:
+      context: .
+      args:
+        SOURCE_REVISION: "${GRIDSIM_SOURCE_REVISION:-}"
+    image: gridsim-web:latest
+    container_name: gridsim-web
+    restart: unless-stopped
+    user: "${GRIDSIM_UID:-1654}:${GRIDSIM_GID:-1654}"
+    ports:
+      - "127.0.0.1:${GRIDSIM_PORT:-5540}:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: "http://+:8080"
+      GridSim__ReplayOnly: "${GRIDSIM_REPLAY_ONLY:-true}"
+      GridSim__BridgeEndpoint: "${GRIDSIM_BRIDGE_ENDPOINT:-}"
+      GridSim__BridgeAllowUnencrypted: "${GRIDSIM_BRIDGE_ALLOW_UNENCRYPTED:-false}"
+      Sso__Enabled: "${GRIDSIM_SSO_ENABLED:-false}"
+      Sso__Authority: "${GRIDSIM_SSO_AUTHORITY:-}"
+      Auth__ApplicationName: "${GRIDSIM_AUTH_APP_NAME:-}"
+      Auth__KeysDirectory: /keys
+      Auth__CookieDomain: "${GRIDSIM_COOKIE_DOMAIN:-}"
+      Auth__KeyProtection: "${GRIDSIM_KEY_PROTECTION:-}"
+      Auth__KeyCertificatePath: "${GRIDSIM_KEY_CERT:-}"
+      Sso__PublicOrigin: "${GRIDSIM_SSO_PUBLIC_ORIGIN:-}"
+      GridSim__MaxSessions: "${GRIDSIM_MAX_SESSIONS:-}"
+      GridSim__TrustedProxies: "${GRIDSIM_TRUSTED_PROXIES:-loopback,private}"
+      Site__GoogleTagId: "${GRIDSIM_GOOGLE_TAG_ID:-}"
+      Site__AnalyticsScriptUrl: "${GRIDSIM_ANALYTICS_SCRIPT_URL:-}"
+      Site__AnalyticsCollectorUrl: "${GRIDSIM_ANALYTICS_COLLECTOR:-}"
+      Site__ShareImageUrl: "${GRIDSIM_SHARE_IMAGE_URL:-}"
+      Site__SecurityTxt__Contact: "${GRIDSIM_SECURITY_CONTACT:-}"
+      Site__SecurityTxt__Expires: "${GRIDSIM_SECURITY_EXPIRES:-}"
+    volumes:
+      - "${GRIDSIM_KEYS_DIR:-gridsim-keys}:/keys:${GRIDSIM_KEYS_MODE:-rw}"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  gridsim-keys:

@@ -1,0 +1,10 @@
+$ cat results/exports-docs/inputs/series.json
+{
+  "name": "docs-three-steps",
+  "steps": [
+    { "timeUtc": "2024-01-01T00:00:00Z", "systemLoadFactor": 0.70 },
+    { "timeUtc": "2024-01-01T00:30:00Z", "systemLoadFactor": 0.68 },
+    { "timeUtc": "2024-01-01T01:00:00Z", "systemLoadFactor": 0.66 }
+  ]
+}
+[exit 0]

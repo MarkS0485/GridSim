@@ -1,0 +1,40 @@
+[
+  { "name": "North Scotland Hydro",        "bus": 1,  "type": "hydro",        "capacityMva": 1300, "capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 3.0 },
+  { "name": "North Scotland Onshore Wind", "bus": 1,  "type": "onshore",      "capacityMva": 3000, "capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+
+  { "name": "Torness Nuclear",             "bus": 2,  "type": "nuclear",      "capacityMva": 1250, "capacityFactor": 0.90, "voltageSetpoint": 1.04, "inertiaH": 4.0 },
+  { "name": "South Scotland Onshore Wind", "bus": 2,  "type": "onshore",      "capacityMva": 4000, "capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "Moyle",                       "bus": 2,  "type": "interconnector","capacityMva": 500, "outputMw": -150,       "voltageSetpoint": 1.04, "inertiaH": 0.0, "converterFaultCurrentPu": 0.0 },
+
+  { "name": "Heysham Nuclear",             "bus": 3,  "type": "nuclear",      "capacityMva": 2400, "capacityFactor": 0.90, "voltageSetpoint": 1.04, "inertiaH": 4.0 },
+  { "name": "North England CCGT",          "bus": 3,  "type": "ccgt",         "capacityMva": 2000, "capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+  { "name": "North Sea Link",              "bus": 3,  "type": "interconnector","capacityMva": 1400,"capacityFactor": 0.55, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+
+  { "name": "Drax Biomass",                "bus": 4,  "type": "biomass",      "capacityMva": 2600, "capacityFactor": 0.70, "voltageSetpoint": 1.04, "inertiaH": 4.0 },
+  { "name": "Yorkshire CCGT",              "bus": 4,  "type": "ccgt",         "capacityMva": 4000, "capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+
+  { "name": "Mersey Offshore Wind",        "bus": 5,  "type": "offshore",     "capacityMva": 2000, "capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "North Wales CCGT",            "bus": 5,  "type": "ccgt",         "capacityMva": 3000, "capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+  { "name": "EWIC",                        "bus": 5,  "type": "interconnector","capacityMva": 500, "capacityFactor": 0.30, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+
+  { "name": "Midlands CCGT (marginal)",    "bus": 6,  "type": "ccgt",         "capacityMva": 9000, "role": "slack",        "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+
+  { "name": "East Anglia Offshore Wind",   "bus": 7,  "type": "offshore",     "capacityMva": 8000, "capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "Sizewell B Nuclear",          "bus": 7,  "type": "nuclear",      "capacityMva": 1250, "capacityFactor": 0.90, "voltageSetpoint": 1.04, "inertiaH": 4.0 },
+  { "name": "Viking Link",                 "bus": 7,  "type": "interconnector","capacityMva": 1400,"capacityFactor": 0.65, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+
+  { "name": "IFA",                         "bus": 8,  "type": "interconnector","capacityMva": 2000,"capacityFactor": 0.70, "voltageSetpoint": 1.04, "inertiaH": 0.0, "converterFaultCurrentPu": 0.0 },
+  { "name": "ElecLink",                    "bus": 8,  "type": "interconnector","capacityMva": 1000,"capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "NemoLink",                    "bus": 8,  "type": "interconnector","capacityMva": 1000,"capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "BritNed",                     "bus": 8,  "type": "interconnector","capacityMva": 1000,"capacityFactor": 0.40, "voltageSetpoint": 1.04, "inertiaH": 0.0, "converterFaultCurrentPu": 0.0 },
+  { "name": "London CCGT",                 "bus": 8,  "type": "ccgt",         "capacityMva": 2000, "capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+
+  { "name": "South CCGT",                  "bus": 9,  "type": "ccgt",         "capacityMva": 3000, "capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+  { "name": "South Solar",                 "bus": 9,  "type": "solar",        "capacityMva": 4000, "capacityFactor": 0.25, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "IFA2",                        "bus": 9,  "type": "interconnector","capacityMva": 1000,"capacityFactor": 0.55, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+
+  { "name": "Hinkley Point Nuclear",       "bus": 10, "type": "nuclear",      "capacityMva": 3200, "capacityFactor": 0.90, "voltageSetpoint": 1.04, "inertiaH": 4.0 },
+  { "name": "Pembroke CCGT",               "bus": 10, "type": "ccgt",         "capacityMva": 2000, "capacityFactor": 0.60, "voltageSetpoint": 1.04, "inertiaH": 5.0 },
+  { "name": "South Wales Onshore Wind",    "bus": 10, "type": "onshore",      "capacityMva": 1000, "capacityFactor": 0.50, "voltageSetpoint": 1.04, "inertiaH": 0.0 },
+  { "name": "Greenlink",                   "bus": 10, "type": "interconnector","capacityMva": 500, "capacityFactor": 0.35, "voltageSetpoint": 1.04, "inertiaH": 0.0 }
+]

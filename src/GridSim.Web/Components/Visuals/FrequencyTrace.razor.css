@@ -1,0 +1,77 @@
+.ftrace {
+    display: block;
+    font-family: 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+}
+
+.bg {
+    fill: var(--panel);
+}
+
+.grid {
+    stroke: var(--track);
+    stroke-width: 1;
+}
+
+.axl {
+    fill: var(--muted);
+    font-size: 9px;
+    font-weight: 600;
+}
+
+/* reference limit lines */
+.ref {
+    fill: none;
+}
+
+.ref.nom {
+    stroke: var(--muted);
+    stroke-width: 1;
+}
+
+.ref.oper {
+    stroke: var(--warn);
+    stroke-width: 1;
+    stroke-dasharray: 4 4;
+}
+
+.ref.stat {
+    stroke: #E8833A;
+    stroke-width: 1.2;
+    stroke-dasharray: 4 4;
+}
+
+.ref.lfdd {
+    stroke: var(--bad);
+    stroke-width: 1.2;
+    stroke-dasharray: 4 4;
+}
+
+/* data series */
+.series {
+    fill: none;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.series.base {
+    stroke: var(--muted);
+    stroke-width: 2;
+}
+
+.series.dev {
+    stroke: var(--ok);
+    stroke-width: 2.2;
+}
+
+.leg {
+    font-size: 9.5px;
+    font-weight: 600;
+}
+
+.base-t {
+    fill: var(--muted);
+}
+
+.dev-t {
+    fill: var(--ok);
+}

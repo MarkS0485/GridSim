@@ -1,0 +1,3 @@
+$ gridsim replay-event gb-largest-loss-1320 --out results/prov-replay-placeholder
+error: event 'gb-largest-loss-1320' (GB normal infeed loss risk screening (SQSS): single 1320 MW infeed trip [VERIFY]) is effectively CuratedPlaceholder (its weakest part: the event itself (CuratedPlaceholder)): a replay presents its output as a reproduction of a recorded event, so only an event sourced from a record (Recorded or DerivedFromRecorded throughout) is replayed (technical ch. 8, trust order). Study it with scenario, fleet, evidence or h0-study instead (their outputs carry the weaker tag), or source its figures and re-tag it.
+[exit 1]

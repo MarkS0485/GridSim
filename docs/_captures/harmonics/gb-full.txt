@@ -1,0 +1,8 @@
+$ gridsim harmonics gb-full
+harmonics: case GB full (3539-bus, 5918-branch), 1 source(s), orders 24
+  synthetic source : 6-pulse-g5 at bus 297, 0.5 pu fundamental (G5 Issue 5 Table B.3 six-pulse profile, the default; --synth-spectrum ideal for the idealised 1/h)
+  worst voltage THD : 5.95% at bus 4992 (relative to the solved fundamental voltage)
+  resonance (bus 4992): order 5, |Z|=112.064 pu, sharpness 83.5
+  fine sweep peak  : h=4.9818 (249.09 Hz), |Z|=157.445 pu, positive sequence
+  IEEE-519         : 3535/3539 buses compliant
+[exit 0]

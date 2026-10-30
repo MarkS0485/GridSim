@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Off-screen WPF smoke harness: instantiates every asset page (and the map, generation, machine and SCADA views)
+       with a solved frame so a DataTemplate or resource crash shows up without clicking through the app.
+       D-DOC-201: it sat outside GridSim.slnx and rotted (it imported GridSim.Wpf.Sim, which no longer exists, and called
+       page constructors that had changed), so it is now part of the solution and every build compiles it.
+       EnableWindowsTargeting lets it compile on the Linux CI runners like GridSim.Wpf; it runs on Windows only.
+       Run it with dotnet run, project tools/AssetSmoke, arguments [caseDir] [shotsDir]. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.Wpf\GridSim.Wpf.csproj" />
+  </ItemGroup>
+
+</Project>

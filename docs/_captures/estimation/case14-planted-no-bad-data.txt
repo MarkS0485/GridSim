@@ -1,0 +1,10 @@
+$ gridsim estimate case14 --measurements docs/_captures/estimation/case14-planted.json --no-bad-data --out results/case14-planted-nbd
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 8.81E-009
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  consistency: not tested (chi-square not run: --no-bad-data; J = 822.02)
+
+  -> results\case14-planted-nbd
+[exit 0]

@@ -1,0 +1,10 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --no-bad-data --out results/case9-bad-nbd
+
+=== WLS state estimate: case9 ===
+  status: Converged   iterations: 17   max |dx|: 9.23E-009
+  measurements: 24   states: 17   redundancy (dof): 7
+  observability: observable (rank 17/17)
+  consistency: not tested (chi-square not run: --no-bad-data; J = 274.46)
+
+  -> results\case9-bad-nbd
+[exit 0]

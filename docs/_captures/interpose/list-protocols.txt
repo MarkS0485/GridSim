@@ -1,0 +1,7 @@
+$ gridsim interpose --list-protocols
+Registered RTU/SCADA protocols:
+  name       transport port   description
+  iec104     Tcp       2404   IEC 60870-5-104
+  modbus     Tcp       502    Modbus TCP
+  Not selectable: DNP3 and IEC 61850 GOOSE exist only as link-framing scaffolding (no application layer).
+[exit 0]

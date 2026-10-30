@@ -1,0 +1,11 @@
+$ gridsim estimate case14 --synth --coverage-inj 0.5 --coverage-flow 0.3 --out results/case14-coverage
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 8   max |dx|: 1.26E-009
+  measurements: 52   states: 27   redundancy (dof): 25
+  observability: observable (rank 27/27)
+  consistency: J = 17.17 vs chi2(95%) = 37.65 -> PASS
+  vs synthetic truth: max |dVm| = 5.231E-003 pu   max |dVa| = 5.287E+000 deg
+
+  -> results\case14-coverage
+[exit 0]

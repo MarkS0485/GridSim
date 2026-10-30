@@ -1,0 +1,10 @@
+$ gridsim protection-check case9 --fault-bus 7 --fault-type slg
+Protection assessment  -  case9  (9 buses)  slg fault at bus 7, Zf=j0.000 pu  [passive; prefault solve unchanged]
+  phase currents Ia 0.00  Ib 0.00  Ic 0.00 pu   earth current |3I0| 0.00 pu   (no earth path in the zero sequence at the fault bus)
+  (phase elements on the phase currents and voltages; 50N/51N/21N/46 on the sequence currents; generic pickups)
+  operating elements: 0
+  not evaluated without a trajectory or the needed sequence data: 81U (Underfrequency); 81O (Overfrequency); 81R (RoCoF); 78 (Vector shift / LoM)
+
+PROTECTION SIMULATION: no relay would operate on the slg fault at bus 7 (within the generic settings).
+protection-check: the model carries no transformer winding connections at all, so it has no earthed neutral; the earth-fault verdicts below reflect missing data. Exit 3.
+[exit 3]

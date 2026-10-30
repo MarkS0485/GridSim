@@ -1,0 +1,136 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "pss",
+  "title": "Power system stabiliser",
+  "description": "PSS1A stabiliser on the speed signal. Dynamics wiring: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired).",
+  "params": {
+    "model": {
+      "type": "enum",
+      "values": [
+        "PSS1A"
+      ],
+      "required": true,
+      "markGated": false,
+      "description": "Power system stabiliser model.",
+      "codeDefaults": []
+    },
+    "gain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Stabiliser gain KS.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aGain",
+          "value": 20.0
+        }
+      ]
+    },
+    "washoutS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Washout time constant TW (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aWashoutS",
+          "value": 10.0
+        }
+      ]
+    },
+    "lead1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "First lead time constant T1 (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aLead1S",
+          "value": 0.15
+        }
+      ]
+    },
+    "lag1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "First lag time constant T2 (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aLag1S",
+          "value": 0.05
+        }
+      ]
+    },
+    "lead2S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Second lead time constant T3 (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aLead2S",
+          "value": 0.15
+        }
+      ]
+    },
+    "lag2S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Second lag time constant T4 (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aLag2S",
+          "value": 0.05
+        }
+      ]
+    },
+    "outputMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "Output floor VSMIN (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aOutputMinPu",
+          "value": -0.1
+        }
+      ]
+    },
+    "outputMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "Output ceiling VSMAX (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS study --pss (Program.cs)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.Pss1aOutputMaxPu",
+          "value": 0.1
+        }
+      ]
+    }
+  }
+}

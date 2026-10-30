@@ -1,0 +1,16 @@
+$ python -c "import pandas as pd; d = pd.read_parquet('results/estimated_state/gb-spine/year=2026/week=36/estimated_state.parquet').drop(columns=['removed_json', 'boundary_json', 'result_json']); print(d.iloc[[0, 23, 44]].T.to_string(header=False))"
+datetime_utc      2026-08-31 23:30:00+00:00  2026-09-01 11:00:00+00:00  2026-09-01 21:30:00+00:00
+case                               gb-spine                   gb-spine                   gb-spine
+status                            Converged                  Converged                  Converged
+converged                              True                       True                       True
+iterations                               23                         10                        158
+max_state_update                        0.0                        0.0                        0.0
+objective_j                      301.585363                 330.371093                 357.543071
+chi_threshold                    359.520725                 359.520725                 359.520725
+chi_passed                             True                       True                       True
+dof                                     317                        317                        317
+measurements_n                          948                        948                        948
+removed_n                                 1                          0                         12
+vm_min                             1.001806                   0.991415                   0.989655
+vm_max                             1.267891                    1.05144                   1.150676
+[exit 0]

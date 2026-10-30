@@ -1,0 +1,10 @@
+$ gridsim pf data/intl/iberia --top 3
+Power flow - Iberian peninsula (Spain + Portugal) - open transmission model (1497 buses)
+  NOT CONVERGED (MaxIterations) in 100 iteration(s), mismatch 3.43E-001 pu   losses 1121.355 MW / 986.331 MVAr
+  voltage range 0.2830 - 1.0365 pu
+  lowest voltages:
+      bus 780    0.2830 pu     31.309 deg
+      bus 779    0.2834 pu     32.390 deg
+      bus 709    0.2838 pu      0.498 deg
+note: data/intl/iberia: this indicative map has no AC power-flow solution as shipped: 225 of its 227 units are fixed (pq) injections, so only the two island slacks hold voltage against 22,811 MVAr of line charging (data, not the solver; see data/intl/README.md). A verb that solves it reports the non-convergence.
+[exit 3]

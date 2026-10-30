@@ -1,0 +1,34 @@
+$ gridsim case18.m --once
+GridSim  -  case18
+18 buses  17 branches  1 generators  base 10 MVA  50 Hz
+========================================================================
+Converged on the voltage step (11 sweep iters, 0 OLTC passes, last |dV| 3.41E-009 p.u.; max mismatch 1.37E-009 p.u., which the sweep does not test)
+Generator output 0.01 GW  Demand 0.01 GW  Losses 0.3 MW  Inertia not in the data (no generator H)
+
+Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)
+------------------------------------------------------------------------------
+  1                                  12   1.055    -4.38       0.0       0.0
+  2                                  12   1.051    -4.85      -0.2      -0.1
+  3                                  12   1.046    -5.43      -0.4      -0.2
+  4                                  12   1.043    -5.71      -1.5      -0.9
+  5                                  12   1.036    -6.33      -3.0      -2.3
+  6                                  12   1.035    -6.41      -0.8      -0.5
+  7                                  12   1.033    -6.53      -0.2      -0.1
+  8                                  12   1.027    -6.56      -1.0      -0.6
+  9                                  12   1.050    -4.88      -0.5      -0.3
+ 20                                  12   1.050    -5.48      -1.0      -0.6
+ 21                                  12   1.050    -6.17      -0.3      -0.2
+ 22                                  12   1.048    -6.20      -0.2      -0.1
+ 23                                  12   1.045    -7.07      -0.8      -0.5
+ 24                                  12   1.049    -7.37      -0.5      -0.3
+ 25                                  12   1.042    -7.40      -1.0      -0.6
+ 26                                  12   1.041    -7.41      -0.2      -0.1
+ 50                                 138   1.050    -0.22       0.0       0.0
+ 51                                 138   1.050     0.00      11.9      -2.1
+
+Voltage range: 1.027 - 1.055 p.u. (in band)
+Total losses: 0.26 MW, -9.67 MVAr
+Protection simulation: no relay would operate on this state (generic settings).
+note: case18.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case18.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[exit 0]

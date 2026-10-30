@@ -1,0 +1,274 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             xmlns:hs="using:GridSim.Ui.Tabs.HumanScale"
+             x:Class="GridSim.App.Tabs.HumanScaleView"
+             x:DataType="hs:HumanScaleModel">
+  <!-- UI programme Phase 1.6 (third batch): THE HUMAN SCALE tab, a port of src/GridSim.Wpf/Views/HumanScaleView.xaml.
+       Same texts, same layout order (the hero claim and the absurd-but-true facts; THE TWIST; the grand engine;
+       regenerative braking; things you can hold), the same theme brushes, and every colour from the shared
+       HumanScaleModel's tokens through TokenBrush (the bytes WPF shows). The DataContext is the shared HumanScaleModel. -->
+  <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+
+      <!-- ============ hero claim + absurd-but-true facts ============ -->
+      <Border Grid.Row="0" Classes="Card" Margin="0,0,0,10" Padding="18,14" Background="{StaticResource PanelHi}">
+        <StackPanel>
+          <DockPanel>
+            <Border Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                    HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Top">
+              <TextBlock Text="JUST FOR FUN" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Muted}" />
+            </Border>
+            <TextBlock Text="BRITAIN'S SINGLE LARGEST ENGINE" Classes="PanelHeader" FontSize="13" />
+          </DockPanel>
+
+          <!-- the headline number -->
+          <TextBlock x:Name="HeroValueText" Text="{Binding HeroValue}" FontSize="52" FontWeight="Bold"
+                     Foreground="{StaticResource Accent}" Margin="0,4,0,0" />
+          <TextBlock x:Name="HeroLineText" Text="{Binding HeroLine}" Classes="Label" FontSize="12"
+                     TextWrapping="Wrap" Margin="0,2,0,0" />
+
+          <!-- the absurd-but-true run -->
+          <TextBlock Text="ABSURD, BUT TRUE" Classes="PanelHeader" FontSize="11" Margin="0,14,0,4" />
+          <StackPanel>
+            <StackPanel.Styles>
+              <Style Selector="TextBlock.FactLine">
+                <Setter Property="FontSize" Value="12.5" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Margin" Value="0,0,0,5" />
+                <Setter Property="Foreground" Value="{StaticResource Text}" />
+              </Style>
+            </StackPanel.Styles>
+            <StackPanel Orientation="Horizontal">
+              <Rectangle Width="4" Height="4" Fill="{StaticResource Accent}" Margin="0,8,9,0" VerticalAlignment="Top" />
+              <TextBlock x:Name="Fact1Text" Text="{Binding Fact1}" Classes="FactLine" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <Rectangle Width="4" Height="4" Fill="{StaticResource Accent}" Margin="0,8,9,0" VerticalAlignment="Top" />
+              <TextBlock x:Name="Fact2Text" Text="{Binding Fact2}" Classes="FactLine" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <Rectangle Width="4" Height="4" Fill="{StaticResource Accent}" Margin="0,8,9,0" VerticalAlignment="Top" />
+              <TextBlock x:Name="Fact3Text" Text="{Binding Fact3}" Classes="FactLine" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <Rectangle Width="4" Height="4" Fill="{StaticResource Accent}" Margin="0,8,9,0" VerticalAlignment="Top" />
+              <TextBlock x:Name="Fact4Text" Text="{Binding Fact4}" Classes="FactLine" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <Rectangle Width="4" Height="4" Fill="{StaticResource Accent}" Margin="0,8,9,0" VerticalAlignment="Top" />
+              <TextBlock x:Name="Fact5Text" Text="{Binding Fact5}" Classes="FactLine" />
+            </StackPanel>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ============ THE TWIST  -  the only reading here with physics behind it ============ -->
+      <Border Grid.Row="1" Classes="Card" Margin="0,0,0,10" Padding="18,14">
+        <StackPanel>
+          <DockPanel>
+            <Border Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                    HorizontalAlignment="Right" DockPanel.Dock="Right" VerticalAlignment="Top">
+              <TextBlock Text="THIS ONE IS REAL" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Green}" />
+            </Border>
+            <TextBlock Text="THE TWIST  -  the crankshaft is 1,000 km of torsion bar" Classes="PanelHeader" FontSize="13" />
+          </DockPanel>
+          <TextBlock Classes="Label" FontSize="11.5" TextWrapping="Wrap" Margin="0,3,0,0"
+                     Text="The shaft isn't rigid. Scotland's rotors run permanently ahead of London's, by tens of degrees, and that wind-up IS the transmission: power south = (V1.V2 / X).sin(delta). Slacken the angle and the flow stops. For the 3,000-rpm two-pole sets, electrical degrees are mechanical degrees - this is a real rotor twist, measured off your own solve." />
+
+          <Grid Margin="0,12,0,0" ColumnDefinitions="Auto,16,*">
+
+            <!-- headline wind-up + regional gauge -->
+            <StackPanel Grid.Column="0" Width="420">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="TwistTotalText" Text="{Binding TwistTotal}" FontSize="46" FontWeight="Bold"
+                           Foreground="{Binding TwistColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                <TextBlock Text="end to end" Classes="Unit" VerticalAlignment="Bottom" Margin="8,0,0,10" />
+              </StackPanel>
+              <TextBlock x:Name="TwistToSlipText" Text="{Binding TwistToSlip}" Classes="Label" FontSize="11" TextWrapping="Wrap" />
+              <!-- distance-to-wall bar: fills toward the 90-degree redline (230px track) -->
+              <Grid Width="230" Height="10" Margin="0,6,0,0" HorizontalAlignment="Left">
+                <Border Background="{StaticResource Track}" CornerRadius="5" />
+                <Border x:Name="TwistBar" Width="{Binding TwistBarPx}" Height="10"
+                        Background="{Binding TwistColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                        CornerRadius="5" HorizontalAlignment="Left" />
+                <Rectangle Width="2" Fill="{StaticResource Red}" HorizontalAlignment="Right" ToolTip.Tip="90 deg - pole slip" />
+              </Grid>
+              <DockPanel Width="230" HorizontalAlignment="Left" Margin="0,2,0,0">
+                <TextBlock Text="0 deg" Classes="Label" FontSize="9" DockPanel.Dock="Left" />
+                <TextBlock Text="redline 90 deg" Classes="Label" FontSize="9" HorizontalAlignment="Right" />
+              </DockPanel>
+
+              <TextBlock Text="ROTOR LEAD BY REGION  vs THE SOUTH" Classes="PanelHeader" FontSize="11" Margin="0,14,0,4" />
+              <ItemsControl x:Name="RegionList" ItemsSource="{Binding Regions}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="hs:TwistRegionRowModel">
+                    <DockPanel Margin="0,4">
+                      <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" Width="150" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding DegText}" FontWeight="Bold" FontSize="15" Width="84" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                      <StackPanel VerticalAlignment="Center">
+                        <Border Height="8" Width="230" Background="{StaticResource Track}" CornerRadius="4" HorizontalAlignment="Left">
+                          <Border Width="{Binding BarWidth}" Height="8" CornerRadius="4" HorizontalAlignment="Left"
+                                  Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                        </Border>
+                        <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="9" Margin="0,1,0,0" />
+                      </StackPanel>
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock x:Name="TwistCorridorText" Text="{Binding TwistCorridor}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,10,0,0" />
+            </StackPanel>
+
+            <!-- ranked synchronous machines (scrollable - the measurement) -->
+            <Border Grid.Column="2" Classes="Card" Background="{StaticResource PanelHi}" Padding="12,8">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                  <TextBlock Text="EVERY MACHINE, RANKED BY LEAD" Classes="PanelHeader" FontSize="11" />
+                  <TextBlock x:Name="TwistLeadText" Text="{Binding TwistLead}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="230">
+                  <ItemsControl x:Name="MachineList" ItemsSource="{Binding Machines}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="hs:TwistMachineRowModel">
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="{Binding DegText}" FontWeight="Bold" FontSize="12" Width="72"
+                                     DockPanel.Dock="Left" VerticalAlignment="Center"
+                                     Foreground="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="10"
+                                     Width="72" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                          <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <Border Height="5" Width="150" Background="{StaticResource Track}" CornerRadius="2.5" HorizontalAlignment="Left" Margin="0,2,0,0">
+                              <Border Width="{Binding BarWidth}" Height="5" CornerRadius="2.5" HorizontalAlignment="Left"
+                                      Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                            </Border>
+                          </StackPanel>
+                        </DockPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </DockPanel>
+            </Border>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <!-- ============ THE GRAND ENGINE ============ -->
+      <StackPanel Grid.Row="2" Margin="0,0,0,4">
+        <TextBlock Text="THE GRAND ENGINE  -  the whole grid as one giant motor" Classes="PanelHeader" Margin="2,0,0,6" />
+        <Grid ColumnDefinitions="*,10,*,10,*">
+
+          <!-- shaft torque -->
+          <Border Grid.Column="0" Classes="Card" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="SHAFT TORQUE" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="TorqueFtLbText" Text="{Binding TorqueFtLb}" Classes="Value" />
+              </StackPanel>
+              <TextBlock x:Name="TorqueNativeText" Text="{Binding TorqueNative}" Classes="Label" FontSize="11" Margin="0,2,0,0" />
+              <TextBlock x:Name="TorqueCarsText" Text="{Binding TorqueCars}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" />
+            </StackPanel>
+          </Border>
+
+          <!-- shaft horsepower -->
+          <Border Grid.Column="2" Classes="Card" Background="{StaticResource PanelHi}" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="SHAFT HORSEPOWER" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="ShaftHpText" Text="{Binding ShaftHp}" Classes="Value" Foreground="{StaticResource Accent}" />
+              </StackPanel>
+              <TextBlock x:Name="ShaftNativeText" Text="{Binding ShaftNative}" Classes="Label" FontSize="11" Margin="0,2,0,0" />
+              <TextBlock x:Name="ShaftCarsText" Text="{Binding ShaftCars}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" />
+            </StackPanel>
+          </Border>
+
+          <!-- grid speed -->
+          <Border Grid.Column="4" Classes="Card" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="GRID SPEED" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="GridRpmText" Text="{Binding GridRpm}" Classes="Value" />
+              </StackPanel>
+              <TextBlock Text="every synchronous machine, locked in step" Classes="Label" FontSize="11" Margin="0,2,0,0" />
+              <TextBlock x:Name="BladeTipText" Text="{Binding BladeTip}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+
+      <!-- ============ REGENERATIVE BRAKING ============ -->
+      <StackPanel Grid.Row="3" Margin="0,12,0,4">
+        <TextBlock Text="REGENERATIVE BRAKING  -  the spinning mass as an energy bank" Classes="PanelHeader" Margin="2,0,0,6" />
+        <Grid ColumnDefinitions="1.4*,10,*">
+
+          <!-- stored spin energy -->
+          <Border Grid.Column="0" Classes="Card" Background="{StaticResource PanelHi}" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="STORED SPIN  -  if you regened every last joule" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="SpinKwhText" Text="{Binding SpinKwh}" Classes="Value" Foreground="{StaticResource Green}" />
+              </StackPanel>
+              <TextBlock x:Name="SpinNativeText" Text="{Binding SpinNative}" Classes="Label" FontSize="11" Margin="0,2,0,6" />
+              <TextBlock x:Name="SpinCarsText" Text="{Binding SpinCars}" Classes="Label" FontSize="12" TextWrapping="Wrap" Margin="0,1,0,0" />
+              <TextBlock x:Name="SpinHomesText" Text="{Binding SpinHomes}" Classes="Label" FontSize="12" TextWrapping="Wrap" Margin="0,1,0,0" />
+              <TextBlock x:Name="SpinKettlesText" Text="{Binding SpinKettles}" Classes="Label" FontSize="12" TextWrapping="Wrap" Margin="0,1,0,0" />
+            </StackPanel>
+          </Border>
+
+          <!-- live regen power from RoCoF -->
+          <Border Grid.Column="2" Classes="Card" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="LIVE BRAKING POWER" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="RegenHpText" Text="{Binding RegenHp}" Classes="Value"
+                           Foreground="{Binding RegenColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+              </StackPanel>
+              <TextBlock x:Name="RegenDirText" Text="{Binding RegenDir}" FontSize="11" FontWeight="Bold" Margin="0,2,0,0"
+                         Foreground="{Binding RegenColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+              <TextBlock x:Name="RegenNoteText" Text="{Binding RegenNote}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" />
+              <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <TextBlock Text="spinning down at " Classes="Label" FontSize="11" VerticalAlignment="Center" />
+                <TextBlock x:Name="RocofRpmSText" Text="{Binding RocofRpmS}" FontWeight="Bold" FontSize="13" VerticalAlignment="Center" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+
+      <!-- ============ THINGS YOU CAN HOLD ============ -->
+      <StackPanel Grid.Row="4" Margin="0,12,0,4">
+        <TextBlock Text="IN THINGS YOU CAN HOLD  -  the load, counted in household appliances" Classes="PanelHeader" Margin="2,0,0,6" />
+        <Grid ColumnDefinitions="*,10,*">
+
+          <!-- demand -->
+          <Border Grid.Column="0" Classes="Card" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="THE LOAD RIGHT NOW" Classes="PanelHeader" />
+              <TextBlock x:Name="DemandNativeText" Text="{Binding DemandNative}" Classes="Label" FontSize="11" Margin="0,4,0,6" />
+              <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                <TextBlock x:Name="DemandKettlesText" Text="{Binding DemandKettles}" FontSize="16" FontWeight="Bold" />
+              </StackPanel>
+              <TextBlock x:Name="DemandHomesText" Text="{Binding DemandHomes}" Classes="Label" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
+              <TextBlock x:Name="DemandShowersText" Text="{Binding DemandShowers}" Classes="Label" FontSize="12" TextWrapping="Wrap" Margin="0,1,0,0" />
+            </StackPanel>
+          </Border>
+
+          <!-- losses -->
+          <Border Grid.Column="2" Classes="Card" Background="{StaticResource PanelHi}" Padding="14,10">
+            <StackPanel>
+              <TextBlock Text="LOST IN THE WIRES" Classes="PanelHeader" />
+              <TextBlock x:Name="LossNativeText" Text="{Binding LossNative}" Classes="Label" FontSize="11" Margin="0,4,0,6" />
+              <StackPanel Orientation="Horizontal" Margin="0,1,0,0">
+                <TextBlock x:Name="LossKettlesText" Text="{Binding LossKettles}" FontSize="16" FontWeight="Bold" Foreground="{StaticResource Accent}" />
+              </StackPanel>
+              <TextBlock x:Name="LossHomesText" Text="{Binding LossHomes}" Classes="Label" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

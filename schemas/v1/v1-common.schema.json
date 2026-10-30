@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "v1-common.schema.json",
+  "title": "GridSim v1 shared definitions",
+  "description": "Definitions shared by the v1 case-file schemas (schemas/v1). This file holds $defs only. The v1 case format is the folder of JSON files read by src/GridSim.Core/IO/Json/JsonGridLoader.cs; these schemas describe exactly the members of its DTOs (JsonDtos.cs, AssetClassDto.cs, ProtectionDto.cs), pinned by a reflection drift test. Defaults for absent members are NOT stated with the 'default' keyword (the v2 validator's subset refuses it); they are the DTO defaults, read by reflection.",
+  "$defs": {
+    "busId": {
+      "title": "Bus id",
+      "description": "A bus number as in buses.json: a whole number in the 32-bit range (the loader's DTO field is a C# int).",
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    }
+  }
+}

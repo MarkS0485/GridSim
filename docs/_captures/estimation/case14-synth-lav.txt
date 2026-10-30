@@ -1,0 +1,13 @@
+$ gridsim estimate case14 --synth --method lav
+
+=== LAV (linear programming) state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 4.91E-012
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  objective: sum |r| / sigma = 76.06 (the LAV objective, over 122 measurements)
+  consistency: no chi-square verdict (J = 89.18, information only)
+  NOTE: the LAV objective is not chi-square distributed (and J at the LAV state is not the least-squares minimum), so no chi-square test applies to a LAV estimate; use --method wls or huber for a consistency verdict.
+  vs synthetic truth: max |dVm| = 1.202E-003 pu   max |dVa| = 2.066E-001 deg
+
+  -> results\estimate-case14
+[exit 0]

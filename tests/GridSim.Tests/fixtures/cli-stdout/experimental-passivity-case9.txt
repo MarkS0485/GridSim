@@ -1,0 +1,2 @@
+Grid passivity (experimental) - IEEE 9-bus (WSCC) (9 buses), bus 2, 5..2500 Hz
+  [Constitutive] law 14 Grid passivity (experimental): residual 0.000E+000 pu (tol 1.000E-009) - driving-point Re(Z) >= 2.19E-005 pu at bus 2 over the swept band (positive-real)

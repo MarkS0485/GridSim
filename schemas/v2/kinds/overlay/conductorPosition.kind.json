@@ -1,0 +1,17 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "conductorPosition",
+  "title": "Conductor position on a tower type (asset overlay)",
+  "description": "Phase 5a asset overlay kind. One conductor attachment point of a tower type, as a child record (params are scalars only, so a tower's positions are children, never an inner array). Carried beside the model, never used by the solver.",
+  "params": {
+    "phase": { "type": "enum", "values": ["a", "b", "c", "earth"], "required": true, "description": "The phase (or earth wire) at this position.", "codeDefaults": [] },
+    "circuit": { "type": "integer", "unit": "1", "min": 1, "required": false, "description": "The circuit number on a multi-circuit tower.", "codeDefaults": [] },
+    "xM": { "type": "number", "unit": "m", "required": true, "description": "Horizontal offset from the tower centre line, metres (positive to one side, negative to the other).", "codeDefaults": [] },
+    "yM": { "type": "number", "unit": "m", "min": 0, "required": true, "description": "Height of the attachment point above ground, metres.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {},
+    "parentKinds": ["towerType"],
+    "parentRequired": true
+  }
+}

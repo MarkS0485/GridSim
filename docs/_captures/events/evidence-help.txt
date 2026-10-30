@@ -1,0 +1,7 @@
+$ gridsim evidence
+usage: gridsim evidence --event <id> [--catalog f] [--device <f.json> | --device-inertia <GVA> --device-ffr <GW>]
+                        [--inertia 260,155,120,102,50] [--cf-inertia <GVA>] [--units N] [--stagger S]
+                        [--voll <GBP/MWh>] [--voll-source <S322|S323|S324>] [--duration <h>] [--trace <neso.csv>] [--out <dir>]
+Built-in events: gb-2019-08-09, gb-2023-12-22, gb-largest-loss-1320
+Assembles the one-dossier case (reproduce -> counterfactual -> risk curve -> fleet -> avoided cost). Gated.
+[exit 2]

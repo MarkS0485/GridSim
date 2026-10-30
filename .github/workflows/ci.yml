@@ -1,0 +1,202 @@
+name: CI
+
+# Build and run the full xUnit suite as the release gate (F06): release.yml calls this workflow and every release job
+# needs it, so nothing ships unless every leg below passed.
+#
+# Bit-identity is GridSim's constitutional rule: every result must be identical across runs, parallel paths and CPU
+# vector tiers. So the suite runs as a matrix of
+#   operating system  ubuntu-latest (Linux) and windows-latest (Windows: the desktop app builds natively there, and the
+#                     licence file path is the real %LOCALAPPDATA% one)
+#   x SIMD mode       normal (whatever the runner CPU offers, often AVX-512 or AVX2)
+#                     avx2-off         DOTNET_EnableAVX2=0        (the SSE / 128-bit paths, and FMA off: on .NET 10 the
+#                                      switch turns off the whole x86-64-v3 group, so this leg also holds the
+#                                      non-FMA axis of the bit-identity rule; its preflight requires Fma=False)
+#                     hwintrinsic-off  DOTNET_EnableHWIntrinsic=0 (the scalar fallback paths)
+# plus, from the include list:
+#                     avx512           DOTNET_PreferredVectorBitWidth=512 and `simdcheck --expect Avx512`, so the
+#                                      leg FAILS on a runner without AVX-512 rather than silently testing a narrower tier
+#                     avx256           DOTNET_PreferredVectorBitWidth=256 and simdcheck must report the Avx256
+#                                      tier (GR-399: on an AVX-512 runner the normal leg may run the 512-bit tier,
+#                                      so the 256-bit production tier is held to the pins by a leg of its own)
+#   and macos-latest  (Apple silicon: the AdvSimd / Vector128 paths of the osx-arm64 binary) in normal and
+#                     hwintrinsic-off modes, against the same recorded pins.
+#   and ubuntu-24.04-arm and windows-11-arm (UI programme Phase 0.5, 2026-10-24: the Linux and Windows ARM64 builds,
+#                     the AdvSimd / Vector128 paths again, on two more operating systems) in normal and hwintrinsic-off
+#                     modes, against the same recorded pins: desktop ARM64 is held to the full bit-identity rule.
+# The tests pin exact values, so a kernel that gives a different answer on one tier, CPU or OS fails here, before a
+# release, instead of in the periodic hand-run batches. No leg is advisory.
+#
+# The tests build their own synthetic GDA fixtures in a temp dir - no real grid-data lake is needed.
+#
+# NOTE: no paths-ignore. This was written when CI ran on pull requests and the "Build & test" job was the required
+# status check the Dependabot auto-merge relied on (a paths filter would have skipped it on a doc-only PR). CI no
+# longer runs on pull requests (see Triggers below), and a paths filter applies only to push and pull_request
+# triggers, so with workflow_call and workflow_dispatch alone the note is history.
+#
+# NOTE: the matrix legs have generated names ("Test (ubuntu-latest, normal)" and so on). The single job literally
+# named "Build & test" at the end waits for all of them and fails if any failed, so branch protection keeps working
+# with the same required check name as before.
+# Triggers (2026-10-04, N176): the repository is private and keeps the free Actions allowance, so this workflow does
+# not run on every push or pull request. It runs when release.yml calls it on a release tag (workflow_call: the
+# release waits for it) and when started by hand (Actions tab or `gh workflow run`). It has no tag trigger of its
+# own, so a tag does not start a second, competing copy. Day-to-day verification is the local three-mode batch run.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+# A newer push to the same ref cancels the in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Build telemetry off on every leg (Mark, 2026-10-20): Avalonia's opt-out switch. Directory.Build.targets also
+# replaces Avalonia.BuildServices' AvaloniaStats target with an empty one; AvaloniaTelemetryOptOutTests pins both.
+env:
+  AVALONIA_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  matrix:
+    name: Test (${{ matrix.os }}, ${{ matrix.simd }})
+    runs-on: ${{ matrix.os }}
+    # GR-900: a hung leg stops at the limit instead of holding the runner for GitHub's 6-hour default.
+    timeout-minutes: 180
+    # Every leg is a hard gate. The transcendental maths no longer goes through the platform libm (GridSim's own
+    # deterministic routines, DetMath / the FDLIBM port, replaced it), so Linux and macOS are held to the same pins
+    # as Windows; the old advisory status of the Linux legs is gone.
+    strategy:
+      fail-fast: false        # run every leg: a tier-specific failure is the most useful thing CI can report
+      matrix:
+        os: [ ubuntu-latest, windows-latest ]
+        simd: [ normal, avx2-off, hwintrinsic-off ]
+        include:
+          - { os: ubuntu-latest,  simd: avx512 }
+          - { os: windows-latest, simd: avx512 }
+          - { os: ubuntu-latest,  simd: avx256 }            # GR-399: the 256-bit tier, whatever the runner CPU
+          - { os: windows-latest, simd: avx256 }
+          - { os: macos-latest,   simd: normal }            # macos-latest runners are Apple silicon (arm64)
+          - { os: macos-latest,   simd: hwintrinsic-off }
+          - { os: ubuntu-24.04-arm, simd: normal }          # Phase 0.5: Linux ARM64
+          - { os: ubuntu-24.04-arm, simd: hwintrinsic-off }
+          - { os: windows-11-arm,   simd: normal }          # Phase 0.5: Windows ARM64
+          - { os: windows-11-arm,   simd: hwintrinsic-off }
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # The build itself always runs in the normal mode (the compiler is not under test); only the test run is
+      # switched to the reduced vector tier.
+      - name: Build
+        run: dotnet build GridSim.slnx -c Release --nologo
+
+      - name: Report the CPU vector tier
+        shell: bash
+        env:
+          SIMD: ${{ matrix.simd }}
+        run: |
+          set -euo pipefail
+          [[ "$SIMD" == "avx2-off" ]] && export DOTNET_EnableAVX2=0
+          [[ "$SIMD" == "hwintrinsic-off" ]] && export DOTNET_EnableHWIntrinsic=0
+          [[ "$SIMD" == "avx512" ]] && export DOTNET_PreferredVectorBitWidth=512
+          [[ "$SIMD" == "avx256" ]] && export DOTNET_PreferredVectorBitWidth=256
+          if [[ "$SIMD" == "avx512" ]]; then
+            # A runner without AVX-512 fails this leg here (exit 3) instead of quietly testing a narrower tier.
+            dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll simdcheck --expect Avx512
+          else
+            dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll simdcheck | tee simdcheck.txt
+            # GR-399: prove the switch took effect. A runtime that ignored the variable would re-run the normal tier
+            # and the leg would pass while testing nothing new, so each reduced leg checks the flag simdcheck prints.
+            # The avx2-off leg must also report Fma=False: it is the leg that holds the non-FMA axis (a separate
+            # leg with the runtime's FMA switch used to exist, but .NET 10 ignores it, so it re-ran the normal tier).
+            want=""; want2=""
+            [[ "$SIMD" == "avx2-off" ]] && want="Avx2=False" && want2="Fma=False"
+            [[ "$SIMD" == "hwintrinsic-off" ]] && want="Active vector tier: Scalar"
+            [[ "$SIMD" == "avx256" ]] && want="Active vector tier: Avx256 "
+            for w in "$want" "$want2"; do
+              if [[ -n "$w" ]] && ! grep -q -F "$w" simdcheck.txt; then
+                echo "::error::the $SIMD leg did not take effect: simdcheck does not report '$w'"; exit 1
+              fi
+            done
+          fi
+
+      - name: Test
+        shell: bash
+        env:
+          SIMD: ${{ matrix.simd }}
+        run: |
+          set -euo pipefail
+          [[ "$SIMD" == "avx2-off" ]] && export DOTNET_EnableAVX2=0
+          [[ "$SIMD" == "hwintrinsic-off" ]] && export DOTNET_EnableHWIntrinsic=0
+          [[ "$SIMD" == "avx512" ]] && export DOTNET_PreferredVectorBitWidth=512
+          [[ "$SIMD" == "avx256" ]] && export DOTNET_PreferredVectorBitWidth=256
+          # The RAM gate (tests/CONDITIONAL-TESTING.md) never leaves a test out of the release gate: every large case runs.
+          export GRIDSIM_TEST_MAX_BUSES=all
+          dotnet test GridSim.slnx -c Release --no-build --nologo
+
+  vulnerable:
+    name: Vulnerable package gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      # F07: fail when any direct or transitive NuGet package has a published vulnerability advisory. (NuGet's own
+      # restore audit also turns an advisory into a build error here, because warnings are errors; this step lists
+      # them all in one place.)
+      - name: dotnet list package --vulnerable
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore GridSim.slnx
+          dotnet list GridSim.slnx package --vulnerable --include-transitive | tee vulnerable.txt
+          if grep -q -E '^\s*>' vulnerable.txt; then
+            echo "::error::a NuGet package with a known vulnerability is referenced (see the list above)"; exit 1
+          fi
+
+  container:
+    name: Container image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      # F05: prove the Dockerfile builds and the image starts and serves the home page. Nothing is pushed anywhere.
+      - name: Build image
+        env:
+          SHA: ${{ github.sha }}
+        run: docker build -t gridsim-web:ci --build-arg SOURCE_REVISION="$SHA" .
+      - name: Start and probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name gridsim-web-ci -p 127.0.0.1:5540:8080 gridsim-web:ci
+          for i in $(seq 1 30); do
+            if curl -fsSL http://127.0.0.1:5540/ -o page.html; then break; fi
+            sleep 2
+          done
+          docker logs gridsim-web-ci
+          grep -q 'build-version' page.html || { echo "::error::the home page did not render the version footer"; exit 1; }
+          docker rm -f gridsim-web-ci
+
+  test:
+    name: Build & test
+    needs: [ matrix, vulnerable, container ]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: All legs passed
+        env:
+          MATRIX: ${{ needs.matrix.result }}
+          VULNERABLE: ${{ needs.vulnerable.result }}
+          CONTAINER: ${{ needs.container.result }}
+        run: |
+          echo "matrix=$MATRIX vulnerable=$VULNERABLE container=$CONTAINER"
+          [ "$MATRIX" = "success" ] && [ "$VULNERABLE" = "success" ] && [ "$CONTAINER" = "success" ]

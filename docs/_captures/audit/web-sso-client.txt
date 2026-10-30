@@ -1,0 +1,10 @@
+$ cd src/GridSim.Web/bin/Release/net10.0 && ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5540 Sso__Enabled=true Sso__Authority=https://login.example.com dotnet GridSim.Web.dll
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/sso/land?t=garbage&r=/dashboard"
+302 http://127.0.0.1:5540/
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/sso/bridge"
+404 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/sso/logout"
+302 http://127.0.0.1:5540/
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/"
+302 http://127.0.0.1:5540/dashboard/bridge:gb-full@raw
+[exit 0]

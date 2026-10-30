@@ -1,0 +1,3 @@
+$ gridsim harmonics docs/_captures/harmonics/case-singular
+harmonics: FAILED - Harmonic penetration: the harmonic network admittance Y(h) is singular at order 5, so no harmonic voltage can be computed. Part of the network has no path to ground at this frequency (a radial feeder or island with no line charging, shunts or source impedance). Model the machine source impedance (HarmonicModelOptions.IncludeGeneratorSources, or HarmonicModelOptions.Study) or the loads (IncludeLoadShunts) to ground it.
+[exit 1]

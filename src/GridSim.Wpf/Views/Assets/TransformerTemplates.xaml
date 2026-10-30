@@ -1,0 +1,426 @@
+<!--
+    Transformer / tap-changer page templates.
+
+    Merged into the asset explorer's ContentControl.Resources, so {StaticResource
+    PageHeader} resolves from the host. Layout grammar follows the interconnector
+    exemplar: PageHeader ContentPresenter, a UniformGrid metric strip, then a
+    ScrollViewer of TileBtn rows; the unit page is a metric strip over a two-column
+    grid (left: sparkline + thermal + DGA, right: nameplate/OLTC + protection + log).
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:assets="clr-namespace:GridSim.Wpf.Views.Assets"
+                    xmlns:viz="clr-namespace:GridSim.Wpf.Visuals">
+
+    <!-- bool -> Visibility, kept local so this dictionary drops in without host changes -->
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+    <!-- shared row for the static reading sections (thermal / DGA / protection);
+         declared first so the unit template can reference it as a StaticResource -->
+    <DataTemplate x:Key="TxReadingRow" DataType="{x:Type assets:TransformerReading}">
+        <DockPanel Margin="0,3">
+            <Border DockPanel.Dock="Right" Background="{StaticResource Track}" CornerRadius="7" Padding="7,1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Status}" FontSize="9" FontWeight="Bold" Foreground="{Binding Chip}" />
+            </Border>
+            <TextBlock Text="{Binding Value}" DockPanel.Dock="Right" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}"
+                       Margin="12,0,10,0" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Label}" Style="{StaticResource Label}" VerticalAlignment="Center" TextWrapping="Wrap" />
+        </DockPanel>
+    </DataTemplate>
+
+    <!-- ===== transformer fleet ===== -->
+    <DataTemplate DataType="{x:Type assets:TransformerFleetVm}">
+        <DockPanel>
+            <ContentPresenter DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+            <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                    <StackPanel>
+                        <TextBlock Text="TRANSFORMERS" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding Count}" Style="{StaticResource Value}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0">
+                    <StackPanel>
+                        <TextBlock Text="VOLTAGE BANDS" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding Bands}" FontSize="20" FontWeight="Bold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0">
+                    <StackPanel>
+                        <TextBlock Text="MEAN LOADING" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding MeanLoading}" Style="{StaticResource Value}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="OLTC FITTED" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding OltcFitted}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <TextBlock DockPanel.Dock="Top" Text="{Binding CapNote}" Style="{StaticResource Label}"
+                       FontSize="11" Margin="2,0,0,8" />
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource TileBtn}" Command="{Binding Open}" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" />
+                                        <TextBlock Text="{Binding Band}" Style="{StaticResource Label}" FontSize="10" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                                            VerticalAlignment="Center" Margin="0,0,16,0"
+                                            Visibility="{Binding HasOltc, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock Text="{Binding Oltc}" FontSize="9" FontWeight="Bold"
+                                                   Foreground="{StaticResource Accent}" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <Border Width="240" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                                HorizontalAlignment="Left">
+                                            <Border Width="{Binding BarWidth}" Height="7" Background="{Binding Bar}"
+                                                    CornerRadius="3" HorizontalAlignment="Left" />
+                                        </Border>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="{Binding Loading}" Style="{StaticResource Label}" FontSize="10" />
+                                            <TextBlock Text="  tap " Style="{StaticResource Label}" FontSize="10" />
+                                            <TextBlock Text="{Binding Tap}" Style="{StaticResource Label}" FontSize="10"
+                                                       FontFamily="{StaticResource MonoFont}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,4,0">
+                                        <TextBlock Text="{Binding Flow}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding Rating}" Style="{StaticResource Label}" FontSize="10"
+                                                   HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </DataTemplate>
+
+    <!-- ===== transformer unit dashboard ===== -->
+    <DataTemplate DataType="{x:Type assets:TransformerDetailVm}">
+        <DockPanel>
+            <ContentPresenter DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+            <!-- transformer schematic diagram -->
+            <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,0,0,12">
+                <StackPanel>
+                    <!-- D-DOC-145: the schematic draws the live loading, flow, voltages and tap, but its top-oil and
+                         hot-spot temperatures are the fixed demo values, so the header says so. -->
+                    <DockPanel Margin="0,0,0,8">
+                        <TextBlock DockPanel.Dock="Right" Style="{StaticResource StaticDemoTag}" Text="TEMPERATURES: STATIC DEMO" />
+                        <TextBlock Text="TRANSFORMER SCHEMATIC" Style="{StaticResource PanelHeader}" />
+                    </DockPanel>
+                    <viz:TransformerSchematic Height="480"
+                        LoadingPct="{Binding LoadingPct}" FlowMw="{Binding FlowMw}"
+                        RatingMva="{Binding RatingNum}" TapRatio="{Binding TapNum}"
+                        HvKvNom="{Binding HvKvNom}" LvKvNom="{Binding LvKvNom}"
+                        HvKvLive="{Binding HvKvLiveNum}" LvKvLive="{Binding LvKvLiveNum}"
+                        TopOilC="{Binding TopOilC}" HotSpotC="{Binding HotSpotC}"
+                        HasOltc="{Binding HasOltc}" TapMin="{Binding TapMinNum}" TapMax="{Binding TapMaxNum}" />
+                </StackPanel>
+            </Border>
+
+            <!-- dials over the live electrical headlines: loading + the two thermal estimates,
+                 then flow / rating / tap as compact readouts beside them -->
+            <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <viz:Gauge Grid.Column="0" Width="130" Height="120" Margin="0,0,8,0"
+                               Caption="LOADING" Unit="%" Minimum="0" Maximum="120"
+                               AmberFrom="0.583" RedFrom="0.833" Value="{Binding LoadingPct}" />
+                    <viz:Gauge Grid.Column="1" Width="130" Height="120" Margin="8,0"
+                               Caption="TOP-OIL  DEMO" Unit=" degC" Minimum="0" Maximum="110"
+                               AmberFrom="0.773" RedFrom="0.909" Value="{Binding TopOilC}" />
+                    <viz:Gauge Grid.Column="2" Width="130" Height="120" Margin="8,0"
+                               Caption="HOT-SPOT  DEMO" Unit=" degC" Minimum="0" Maximum="140"
+                               AmberFrom="0.786" RedFrom="0.893" Value="{Binding HotSpotC}" />
+                    <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,8,0">
+                        <TextBlock Text="FLOW (HV -> LV)" Style="{StaticResource PanelHeader}" HorizontalAlignment="Right" />
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,10" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding FlowFrom}" Style="{StaticResource Value}" />
+                            <TextBlock Text=" MW" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                        </StackPanel>
+                        <TextBlock Text="RATING" Style="{StaticResource PanelHeader}" HorizontalAlignment="Right" />
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,10" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding Rating}" Style="{StaticResource Value}" />
+                            <TextBlock Text=" MVA" Style="{StaticResource Unit}" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                        </StackPanel>
+                        <TextBlock Text="TAP RATIO" Style="{StaticResource PanelHeader}" HorizontalAlignment="Right" />
+                        <TextBlock Text="{Binding Tap}" Style="{StaticResource Value}" FontFamily="{StaticResource MonoFont}"
+                                   Margin="0,2,0,0" HorizontalAlignment="Right" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="360" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- left column: live trace + thermal + DGA -->
+                    <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="LOADING  RECENT SIM HISTORY" Style="{StaticResource PanelHeader}" Margin="0,0,0,8" />
+                                <viz:Sparkline Values="{Binding Trace}" MinHeight="120" />
+                            </DockPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Style="{StaticResource StaticDemoTag}" DockPanel.Dock="Right" />
+                                    <TextBlock Text="THERMAL" Style="{StaticResource PanelHeader}" />
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Thermal}" ItemTemplate="{StaticResource TxReadingRow}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Style="{StaticResource StaticDemoTag}" DockPanel.Dock="Right" />
+                                    <TextBlock Text="DISSOLVED GAS ANALYSIS" Style="{StaticResource PanelHeader}" />
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Dga}" ItemTemplate="{StaticResource TxReadingRow}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- right column: nameplate / OLTC + protection + event log -->
+                    <StackPanel Grid.Column="1">
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="VOLTAGE &amp; REACTIVE FLOW" Style="{StaticResource PanelHeader}" Margin="0,0,0,8" />
+
+                                <!-- voltage IN (HV) -->
+                                <TextBlock Text="VOLTAGE IN (HV)" Style="{StaticResource Label}" FontSize="10" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock Text="{Binding HvVm}" DockPanel.Dock="Right" FontWeight="SemiBold"
+                                               FontFamily="{StaticResource MonoFont}" />
+                                    <Button Style="{StaticResource LinkBtn}" Command="{Binding OpenHv}" CommandParameter="{Binding HvBusId}"
+                                            HorizontalAlignment="Left" ToolTip="Open this substation">
+                                        <TextBlock Text="{Binding HvBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource Accent}" />
+                                    </Button>
+                                </DockPanel>
+                                <DockPanel Margin="0,1,0,0">
+                                    <TextBlock Text="{Binding HvKvLive}" DockPanel.Dock="Right" Style="{StaticResource Label}"
+                                               FontFamily="{StaticResource MonoFont}" />
+                                    <TextBlock Text="{Binding HvKv}" Style="{StaticResource Label}" />
+                                </DockPanel>
+
+                                <Border Height="1" Background="{StaticResource Border}" Margin="0,8" />
+
+                                <!-- voltage OUT (LV) -->
+                                <TextBlock Text="VOLTAGE OUT (LV)" Style="{StaticResource Label}" FontSize="10" />
+                                <DockPanel Margin="0,2,0,0">
+                                    <TextBlock Text="{Binding LvVm}" DockPanel.Dock="Right" FontWeight="SemiBold"
+                                               FontFamily="{StaticResource MonoFont}" />
+                                    <Button Style="{StaticResource LinkBtn}" Command="{Binding OpenLv}" CommandParameter="{Binding LvBusId}"
+                                            HorizontalAlignment="Left" ToolTip="Open this substation">
+                                        <TextBlock Text="{Binding LvBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource Accent}" />
+                                    </Button>
+                                </DockPanel>
+                                <DockPanel Margin="0,1,0,0">
+                                    <TextBlock Text="{Binding LvKvLive}" DockPanel.Dock="Right" Style="{StaticResource Label}"
+                                               FontFamily="{StaticResource MonoFont}" />
+                                    <TextBlock Text="{Binding LvKv}" Style="{StaticResource Label}" />
+                                </DockPanel>
+
+                                <Border Height="1" Background="{StaticResource Border}" Margin="0,8" />
+
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Tap ratio (HV/LV)" Style="{StaticResource Label}" Width="120" />
+                                    <TextBlock Text="{Binding Tap}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Reactive in (HV)" Style="{StaticResource Label}" Width="120" />
+                                    <TextBlock Text="{Binding Qhv}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Reactive in (LV)" Style="{StaticResource Label}" Width="120" />
+                                    <TextBlock Text="{Binding Qlv}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Flow LV -> HV" Style="{StaticResource Label}" Width="120" />
+                                    <TextBlock Text="{Binding FlowTo}" FontWeight="SemiBold" />
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- OLTC card: only when the transformer is regulated -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                                Visibility="{Binding HasOltc, Converter={StaticResource BoolToVis}}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Text="ON-LOAD TAP CHANGER" Style="{StaticResource PanelHeader}" DockPanel.Dock="Left" />
+                                    <Border Background="{StaticResource Track}" CornerRadius="7" Padding="7,2" HorizontalAlignment="Right">
+                                        <TextBlock Text="{Binding OltcState}" FontSize="9" FontWeight="Bold" Foreground="{Binding OltcBrush}" />
+                                    </Border>
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Regulates" Style="{StaticResource Label}" Width="100" />
+                                    <Button Style="{StaticResource LinkBtn}" Command="{Binding OpenOltcBus}" CommandParameter="{Binding OltcBusId}"
+                                            HorizontalAlignment="Left" ToolTip="Open this substation">
+                                        <TextBlock Text="{Binding OltcBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                   Foreground="{StaticResource Accent}" />
+                                    </Button>
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Target" Style="{StaticResource Label}" Width="100" />
+                                    <TextBlock Text="{Binding OltcTarget}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Live voltage" Style="{StaticResource Label}" Width="100" />
+                                    <TextBlock Text="{Binding OltcLive}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" Foreground="{Binding OltcBrush}" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Tap range" Style="{StaticResource Label}" Width="100" />
+                                    <TextBlock Text="{Binding OltcRange}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Step" Style="{StaticResource Label}" Width="100" />
+                                    <TextBlock Text="{Binding OltcStep}" FontWeight="SemiBold" />
+                                </DockPanel>
+                                <DockPanel Margin="0,3">
+                                    <TextBlock Text="Deadband" Style="{StaticResource Label}" Width="100" />
+                                    <TextBlock Text="{Binding OltcDeadband}" FontWeight="SemiBold" />
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ASSETS fix S7 (2026-10-20): the PROTECTION panel lists the case's own protection settings for this
+                             transformer when the case has any (protections.json), and then it is not a demo: its STATIC DEMO
+                             tag shows only while the panel shows the demo rows (ProtectionIsDemo). -->
+                        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Style="{StaticResource StaticDemoTag}" DockPanel.Dock="Right" Visibility="{Binding ProtectionIsDemo, Converter={StaticResource BoolToVis}}" />
+                                    <TextBlock Text="PROTECTION" Style="{StaticResource PanelHeader}" />
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Protection}" ItemTemplate="{StaticResource TxReadingRow}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Style="{StaticResource StaticDemoTag}" DockPanel.Dock="Right" />
+                                    <TextBlock Text="EVENT LOG" Style="{StaticResource PanelHeader}" />
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Events}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,3">
+                                                <Ellipse Width="8" Height="8" Fill="{Binding Chip}" VerticalAlignment="Center"
+                                                         DockPanel.Dock="Left" Margin="0,0,8,0" />
+                                                <TextBlock Text="{Binding Time}" Style="{StaticResource Label}" Width="78" DockPanel.Dock="Left"
+                                                           FontFamily="{StaticResource MonoFont}" />
+                                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </ScrollViewer>
+        </DockPanel>
+    </DataTemplate>
+
+    <!-- ===== tap-changer fleet ===== -->
+    <DataTemplate DataType="{x:Type assets:TapChangerFleetVm}">
+        <DockPanel>
+            <ContentPresenter DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+            <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                    <StackPanel>
+                        <TextBlock Text="TAP CHANGERS" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding Count}" Style="{StaticResource Value}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0">
+                    <StackPanel>
+                        <TextBlock Text="IN DEADBAND" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding InBand}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="6,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="MEAN TARGET" Style="{StaticResource PanelHeader}" />
+                        <TextBlock Text="{Binding MeanTarget}" Style="{StaticResource Value}" FontFamily="{StaticResource MonoFont}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Style="{StaticResource TileBtn}" Command="{Binding Open}" Margin="0,0,0,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="260" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Transformer}" FontWeight="Bold" FontSize="14" />
+                                        <TextBlock Text="{Binding Range}" Style="{StaticResource Label}" FontSize="10" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Bus}" FontWeight="SemiBold" FontSize="13" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="target " Style="{StaticResource Label}" FontSize="10" />
+                                            <TextBlock Text="{Binding Target}" Style="{StaticResource Label}" FontSize="10"
+                                                       FontFamily="{StaticResource MonoFont}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="16,0,16,0">
+                                        <TextBlock Text="{Binding Live}" FontWeight="Bold" FontSize="15" FontFamily="{StaticResource MonoFont}"
+                                                   HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding Deviation}" Style="{StaticResource Label}" FontSize="10"
+                                                   FontFamily="{StaticResource MonoFont}" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                    <Border Grid.Column="3" Background="{StaticResource Track}" CornerRadius="7" Padding="8,3"
+                                            VerticalAlignment="Center" Margin="0,0,4,0">
+                                        <TextBlock Text="{Binding State}" FontSize="10" FontWeight="Bold" Foreground="{Binding Chip}" />
+                                    </Border>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </DockPanel>
+    </DataTemplate>
+
+</ResourceDictionary>

@@ -1,0 +1,474 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "protection",
+  "title": "Protective device",
+  "description": "Relay settings: the v1 protection asset-class keys (ProtectionController) and the generic network relay settings (ProtectionSettings). Where both name the same function the ProtectionSettings generic is recorded as a consumer of the v1 key.",
+  "params": {
+    "rocofTripHzPerS": {
+      "type": "number",
+      "unit": "Hz/s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "RoCoF (81R / loss-of-mains) trip threshold (Hz/s).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 81R relay (RocofTripHzPerS, modern ALoMCP 1.0 Hz/s)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.RocofTripHzPerS",
+          "value": 1.0
+        }
+      ]
+    },
+    "rocofTripConfirmS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Definite-time delay of the RoCoF stage (s). R137 (B4, October 2026): required whenever rocofTripHzPerS is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "dfDtTripHzPerS": {
+      "type": "number",
+      "unit": "Hz/s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "A second RoCoF (df/dt) stage threshold (Hz/s). Same quantity as rocofTripHzPerS under another name (naming duplication, see register).",
+      "codeDefaults": []
+    },
+    "dfDtTripDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Dwell of the df/dt stage (s). R137 (B4, October 2026): required whenever dfDtTripHzPerS is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "localRocofUpliftFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Ratio of local RoCoF to centre-of-inertia RoCoF seen by the relay; 1 = no uplift.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionController: absent => 1.0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.Protection.ProtectionController.DefaultLocalRocofUpliftFactor",
+          "value": 1.0
+        }
+      ]
+    },
+    "ufTripHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Under-frequency (81U) trip threshold (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 81U relay (UnderFrequencyHz)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.UnderFrequencyHz",
+          "value": 47.5
+        }
+      ]
+    },
+    "ufTripDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Under-frequency trip dwell (s). R137 (B4, October 2026): required whenever ufTripHz is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "ofTripHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Over-frequency (81O) trip threshold (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 81O relay (OverFrequencyHz)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.OverFrequencyHz",
+          "value": 52.0
+        }
+      ]
+    },
+    "ofTripDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Over-frequency trip dwell (s). R137 (B4, October 2026): required whenever ofTripHz is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "uvTripPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "description": "Under-voltage (27) trip threshold (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 27 relay (UnderVoltagePu)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.UnderVoltagePu",
+          "value": 0.8
+        }
+      ]
+    },
+    "uvTripDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Under-voltage trip dwell (s). R137 (B4, October 2026): required whenever uvTripPu is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "ovTripPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 3,
+      "required": false,
+      "description": "Over-voltage (59) trip threshold (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 59 relay (OverVoltagePu)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.OverVoltagePu",
+          "value": 1.1
+        }
+      ]
+    },
+    "ovTripDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Over-voltage trip dwell (s). R137 (B4, October 2026): required whenever ovTripPu is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "lvrtVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "markGated": true,
+      "description": "Instantaneous low-voltage ride-through trip level (pu); 0 = stage off.",
+      "codeDefaults": []
+    },
+    "vectorShiftTripDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Vector-shift (78) trip threshold (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 78 relay (VectorShiftTripDeg)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.VectorShiftTripDeg",
+          "value": 12.0
+        }
+      ]
+    },
+    "detectionLatencyS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Relay detection latency added to every stage (s).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionController: absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.Protection.ProtectionController.DefaultDetectionLatencyS",
+          "value": 0.0
+        }
+      ]
+    },
+    "overloadTripFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Thermal (49) trip pickup as a loading fraction of RateA.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 49 relay (ThermalPickupFraction)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.ThermalPickupFraction",
+          "value": 1.0
+        }
+      ]
+    },
+    "overloadTripDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Thermal trip dwell (s). R137 (B4, October 2026): required whenever overloadTripFraction is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "thermalTimeConstantS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "First-order thermal replica time constant of the generic 49 relay (s).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 49 relay (ThermalTimeConstantS)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.ThermalTimeConstantS",
+          "value": 900.0
+        }
+      ]
+    },
+    "lfddStageHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Low-frequency demand disconnection stage frequency (Hz).",
+      "codeDefaults": []
+    },
+    "lfddBlockMw": {
+      "type": "number",
+      "unit": "MW",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Demand shed by the LFDD stage (MW).",
+      "codeDefaults": []
+    },
+    "lfddDwellS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "LFDD stage dwell (s). R137 (B4, October 2026): required whenever lfddStageHz is set; ProtectionController refuses the class without it (it used to read an absent dwell as 0 s, an instantaneous trip).",
+      "codeDefaults": []
+    },
+    "autoRecloseDelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Auto-reclose delay (s); presence makes the device a recloser that needs a target branch.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionController: a recloser with the key absent never recloses (+Infinity)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.Protection.ProtectionController.DefaultAutoRecloseDelayS",
+          "value": "+Infinity"
+        }
+      ]
+    },
+    "instantaneousOcMultiple": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Instantaneous overcurrent (50) pickup, multiple of rated current.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 50 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.InstantaneousOcMultiple",
+          "value": 2.5
+        }
+      ]
+    },
+    "timeOcMultiple": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Inverse-time overcurrent (51) pickup, multiple of rated current (IEC standard inverse).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 51 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.TimeOcMultiple",
+          "value": 1.2
+        }
+      ]
+    },
+    "timeOcTms": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Time multiplier setting of the 51 relay.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 51 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.TimeOcTms",
+          "value": 0.1
+        }
+      ]
+    },
+    "underCurrentFloorPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Undercurrent (37) absolute current floor (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 37 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.UnderCurrentFloorPu",
+          "value": 0.001
+        }
+      ]
+    },
+    "distanceZone1Reach": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Distance (21) zone 1 reach as a fraction of the line impedance.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceZone1Reach",
+          "value": 0.8
+        }
+      ]
+    },
+    "distanceZone2Reach": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Distance zone 2 reach as a fraction of the line impedance.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceZone2Reach",
+          "value": 1.25
+        }
+      ]
+    },
+    "distanceZone3Reach": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Distance zone 3 reach as a fraction of the line impedance.",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceZone3Reach",
+          "value": 2.0
+        }
+      ]
+    },
+    "distanceZone1TimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Distance zone 1 operating time (s).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceZone1TimeS",
+          "value": 0.0
+        }
+      ]
+    },
+    "distanceZone2TimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Distance zone 2 operating time (s).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceZone2TimeS",
+          "value": 0.3
+        }
+      ]
+    },
+    "distanceZone3TimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Distance zone 3 operating time (s).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceZone3TimeS",
+          "value": 0.8
+        }
+      ]
+    },
+    "distanceAngleWindowDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": 0,
+      "max": 180,
+      "required": false,
+      "description": "Distance forward-fault sector half-width (deg).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 21 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DistanceAngleWindowDeg",
+          "value": 75.0
+        }
+      ]
+    },
+    "reversePowerMw": {
+      "type": "number",
+      "unit": "MW",
+      "min": 0,
+      "required": false,
+      "description": "Reverse-power (32) threshold (MW into the element below minus this = reverse).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 32 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.ReversePowerMw",
+          "value": 5.0
+        }
+      ]
+    },
+    "differentialPickupPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Busbar differential (87) operate current pickup (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionSettings generic 87 relay",
+          "ref": "instance:GridSim.Core:GridSim.Core.Protection.ProtectionSettings.DifferentialPickupPu",
+          "value": 0.1
+        }
+      ]
+    },
+    "settingsNominalHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "The system nominal frequency (Hz) the class's frequency settings (ufTripHz, ofTripHz, lfddStageHz) are written for. On a system at another nominal they move by the difference, as hertz offsets (N297, B4 October 2026; the FrequencyBands convention). Absent: 50 Hz, the GB convention of every bundled class. Each frequency setting must lie on its own side of it and within 10 Hz (N318, LF6 October 2026, replacing N304's symmetric 5 Hz bound): ufTripHz and lfddStageHz strictly below it, ofTripHz strictly above it; anything else is refused at load, naming the key. The side test catches native 60 Hz settings written without this key (a 60 Hz under-frequency stage then lies above 50 Hz); the 10 Hz admits every real setting, the widest being the Quebec Interconnection's +6.0 Hz instantaneous over-frequency trip (NERC PRC-024-3 Table 3).",
+      "codeDefaults": [
+        {
+          "consumer": "ProtectionController: absent => AssetParamDefaults.ProtectionSettingsNominalHz (the GB 50 Hz)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.AssetParamDefaults.ProtectionSettingsNominalHz",
+          "value": 50.0
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,312 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:dash="using:GridSim.Ui.Dashboard"
+             xmlns:dashv="using:GridSim.App.Dashboard"
+             xmlns:ctl="using:GridSim.App.Controls"
+             x:Class="GridSim.App.Tabs.GenerationView"
+             x:DataType="dash:DashboardModel">
+  <!-- UI programme Phase 1.6: the GENERATION tab, ported from src/GridSim.Wpf/Views/GenerationView.xaml. As in WPF, the
+       tab is a view of the dashboard's own model (DashboardModel: the generation mix, import links, the one-machine
+       dial, the stability regime and the TSGB trip compare), so it shares the dashboard's model rather than owning one.
+       Texts, order, sizes and colours are the WPF ones; colours (the WPF Color, Bar, BadgeBrush, StabilityBrush,
+       TripVerdictBrush) are the model's tokens through UiColourBrushConverter; the dial needle turns by RpmAngle about
+       the WPF pivot (75,62) through NeedleRotationConverter; the trace is the ported FrequencyTrace instrument. -->
+  <Grid Margin="12" RowDefinitions="Auto,*">
+
+    <!-- headline metric strip -->
+    <UniformGrid Grid.Row="0" Rows="1" Margin="0,0,0,12">
+      <Border Classes="Card" Margin="0,0,6,0">
+        <StackPanel>
+          <TextBlock Text="TOTAL GENERATION" Classes="PanelHeader" />
+          <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+            <TextBlock x:Name="GenTotalText" Text="{Binding GenTotal}" Classes="Value" />
+            <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <Border Classes="Card" Margin="6,0">
+        <StackPanel>
+          <TextBlock Text="SYSTEM INERTIA" Classes="PanelHeader" />
+          <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+            <TextBlock x:Name="InertiaGvaText" Text="{Binding InertiaGva}" Classes="Value" />
+            <TextBlock Text=" GVAs" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <Border Classes="Card" Margin="6,0">
+        <StackPanel>
+          <TextBlock Text="SYNCHRONOUS SHARE" Classes="PanelHeader" />
+          <TextBlock x:Name="SyncShareText" Text="{Binding SyncShare}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+        </StackPanel>
+      </Border>
+      <Border Classes="Card" Margin="6,0,0,0">
+        <StackPanel>
+          <TextBlock Text="EST. CO2" Classes="PanelHeader" />
+          <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+            <TextBlock x:Name="Co2Text" Text="{Binding Co2}" Classes="Value" />
+            <TextBlock Text=" tCO2/h" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </UniformGrid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,380">
+
+      <!-- fuel mix + import links -->
+      <Grid Grid.Column="0" Margin="0,0,12,0" RowDefinitions="*,Auto">
+
+        <!-- generation mix (left) + inertia by class (right)  -  same fuel ordering -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,*">
+
+          <Border Classes="Card" Grid.Column="0" Margin="0,0,6,0">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="GENERATION MIX BY FUEL" Classes="PanelHeader" Margin="0,0,0,8" />
+              <!-- Parity sign-off (2026-10-24): Avalonia's scroll bar lies over the content (WPF's takes its own column),
+                   so the list keeps 18 px (the bar's full width) clear at the right and the bar never covers the right-aligned values. -->
+              <ScrollViewer x:Name="FuelMixScroll" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="FuelMixList" ItemsSource="{Binding FuelMix}" Margin="0,0,18,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="dash:FuelRowModel">
+                      <Grid Margin="0,6" ColumnDefinitions="Auto,*,Auto">
+                        <Rectangle Width="11" Height="11" RadiusX="2" RadiusY="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"
+                                   Fill="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                        <StackPanel Grid.Column="1">
+                          <DockPanel>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" DockPanel.Dock="Left" />
+                            <TextBlock Text="{Binding Pct}" Classes="Label" HorizontalAlignment="Right" />
+                          </DockPanel>
+                          <Border Width="150" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                  HorizontalAlignment="Left" Margin="0,4,0,0">
+                            <Border Width="{Binding BarWidth}" Height="7" CornerRadius="3" HorizontalAlignment="Left"
+                                    Background="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                          </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Mw}" Grid.Column="2" VerticalAlignment="Center" FontWeight="Bold" Margin="10,0,0,0" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </Border>
+
+          <Border Classes="Card" Grid.Column="1" Margin="6,0,0,0">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Top" Text="INERTIA BY CLASS" Classes="PanelHeader" Margin="0,0,0,8" />
+              <ScrollViewer x:Name="InertiaByClassScroll" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="InertiaByClassList" ItemsSource="{Binding FuelMix}" Margin="0,0,18,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="dash:FuelRowModel">
+                      <Grid Margin="0,6" ColumnDefinitions="Auto,*">
+                        <Rectangle Width="11" Height="11" RadiusX="2" RadiusY="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"
+                                   Fill="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                        <StackPanel Grid.Column="1">
+                          <DockPanel>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" DockPanel.Dock="Left" />
+                            <TextBlock Text="{Binding InertiaGva}" Classes="Label" HorizontalAlignment="Right" />
+                          </DockPanel>
+                          <Border Width="150" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                  HorizontalAlignment="Left" Margin="0,4,0,0">
+                            <Border Width="{Binding InertiaBar}" Height="7" CornerRadius="3" HorizontalAlignment="Left"
+                                    Background="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                          </Border>
+                        </StackPanel>
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </Border>
+        </Grid>
+
+        <!-- import links: every interconnector individually, signed flow against link capacity -->
+        <Border Classes="Card" Grid.Row="1" Margin="0,10,0,0">
+          <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+              <TextBlock Text="IMPORT LINKS  INTERCONNECTORS" Classes="PanelHeader" DockPanel.Dock="Left" />
+              <TextBlock x:Name="NetImportText" Text="{Binding NetImport}" FontWeight="Bold" FontSize="13"
+                         Foreground="{StaticResource Accent}" HorizontalAlignment="Right" />
+            </DockPanel>
+            <ItemsControl x:Name="ImportLinksList" ItemsSource="{Binding ImportLinks}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="2" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dash:ImportLinkRowModel">
+                  <Grid Margin="0,5,14,5" ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0">
+                      <DockPanel>
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13" DockPanel.Dock="Left" />
+                        <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1" Margin="8,0,0,0"
+                                HorizontalAlignment="Left" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Badge}" FontSize="9" FontWeight="Bold"
+                                     Foreground="{Binding BadgeColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                        </Border>
+                      </DockPanel>
+                      <TextBlock Text="{Binding Route}" Classes="Label" FontSize="10" />
+                      <!-- centred diverging bar: export pulls left, import pulls right -->
+                      <Grid Width="210" Height="8" HorizontalAlignment="Left" Margin="0,3,0,0">
+                        <Border Background="{StaticResource Track}" CornerRadius="3" />
+                        <Canvas>
+                          <Line StartPoint="105,0" EndPoint="105,8" Stroke="{StaticResource Muted}" StrokeThickness="1" Opacity="0.6" />
+                          <Border Canvas.Left="{Binding BarOffset}" Width="{Binding BarWidth}" Height="8" CornerRadius="3"
+                                  Background="{Binding BarColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                        </Canvas>
+                      </Grid>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0,0,0">
+                      <TextBlock Text="{Binding Flow}" FontWeight="Bold" HorizontalAlignment="Right" />
+                      <TextBlock Text="{Binding Capacity}" Classes="Label" FontSize="10" HorizontalAlignment="Right" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+      <!-- rotating machine + stability. Parity sign-off (2026-10-24): the column scrolls, so on a short window the TSGB
+           DEVICE card, its trip button and the trip results below it can still be reached (they ran off the bottom). -->
+      <ScrollViewer x:Name="GenerationSideScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="0,0,18,0">
+        <Border Classes="Card" Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="THE GRID AS ONE MACHINE" Classes="PanelHeader" />
+            <Grid Margin="0,6,0,0" ColumnDefinitions="Auto,*">
+              <!-- Same geometry as the frequency dial: a 240 degree track (the needle's +/-120 degrees at
+                   full scale) about the pivot (75,62), green band +/-24 degrees (0.1 Hz of the 0.5 Hz scale). -->
+              <Grid Width="150" Height="92" Grid.Column="0">
+                <Path Stroke="#2A3742" StrokeThickness="8" StrokeLineCap="Round"
+                      Data="M 29.967,88 A 52,52 0 1 1 120.033,88" />
+                <Path Stroke="{StaticResource Green}" StrokeThickness="8" Opacity="0.55" StrokeLineCap="Round"
+                      Data="M 53.850,14.496 A 52,52 0 0 1 96.150,14.496" />
+                <Canvas>
+                  <!-- The needle points straight up and is turned by RpmAngle about the pivot (75,62), as WPF's
+                       RotateTransform CenterX="75" CenterY="62"; the transform origin is the line's top-left corner (the
+                       canvas origin), so the pivot is in the dial's own coordinates. -->
+                  <Line x:Name="RpmNeedle" StartPoint="75,62" EndPoint="75,16" StrokeThickness="3" StrokeLineCap="Round"
+                        Stroke="{StaticResource Accent}" RenderTransformOrigin="0,0"
+                        RenderTransform="{Binding RpmAngle, Converter={x:Static dashv:NeedleRotationConverter.Instance}}" />
+                  <Ellipse Canvas.Left="69" Canvas.Top="56" Width="12" Height="12" Fill="{StaticResource Text}" />
+                </Canvas>
+                <!-- N273: the dial's ends about the case's own nominal ("2970" / "3030" at 50 Hz). -->
+                <TextBlock x:Name="RpmDialLowText" Text="{Binding RpmDialLowText}" Classes="Label" FontSize="9" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                <TextBlock x:Name="RpmDialHighText" Text="{Binding RpmDialHighText}" Classes="Label" FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+              </Grid>
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                  <TextBlock x:Name="RpmText" Text="{Binding Rpm}" Classes="Value" />
+                  <TextBlock Text=" RPM" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                </StackPanel>
+                <TextBlock x:Name="TorqueText" Text="{Binding Torque, StringFormat='{}{0} MNm torque'}" Classes="Label" HorizontalAlignment="Center" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="SYNCHRONOUS vs CONVERTER" Classes="PanelHeader" Margin="0,0,0,6" />
+            <DockPanel Margin="0,2">
+              <TextBlock Text="Synchronous" Classes="Label" DockPanel.Dock="Left" Width="92" />
+              <TextBlock x:Name="SyncMwText" Text="{Binding SyncMw}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+            </DockPanel>
+            <Border Height="7" Background="{StaticResource Track}" CornerRadius="3" HorizontalAlignment="Left" Width="210" Margin="0,2,0,6">
+              <Border Width="{Binding SyncBar}" Height="7" Background="{StaticResource Green}" CornerRadius="3" HorizontalAlignment="Left" />
+            </Border>
+            <DockPanel Margin="0,2">
+              <TextBlock Text="Converter" Classes="Label" DockPanel.Dock="Left" Width="92" />
+              <TextBlock x:Name="ConverterMwText" Text="{Binding ConverterMw}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+            </DockPanel>
+            <Border Height="7" Background="{StaticResource Track}" CornerRadius="3" HorizontalAlignment="Left" Width="210" Margin="0,2,0,0">
+              <Border Width="{Binding ConverterBar}" Height="7" Background="{StaticResource Accent}" CornerRadius="3" HorizontalAlignment="Left" />
+            </Border>
+
+            <!-- the whole, made of both halves  -  see what composes the total at a glance -->
+            <DockPanel Margin="0,10,0,2">
+              <TextBlock Text="Total mix" Classes="Label" DockPanel.Dock="Left" Width="92" />
+              <TextBlock x:Name="TotalMixText" Text="{Binding GenTotal, StringFormat='{}{0} GW'}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+            </DockPanel>
+            <Border Height="11" Background="{StaticResource Track}" CornerRadius="3" HorizontalAlignment="Left" Width="210">
+              <StackPanel Orientation="Horizontal">
+                <Border Width="{Binding SyncBar}" Height="11" Background="{StaticResource Green}" CornerRadius="3,0,0,3" />
+                <Border Width="{Binding ConverterBar}" Height="11" Background="{StaticResource Accent}" CornerRadius="0,3,3,0" />
+              </StackPanel>
+            </Border>
+            <TextBlock Text="one whole  -  green spinning iron + cyan converter" Classes="Label"
+                       FontSize="{StaticResource MicroFontSize}" Margin="0,3,0,0" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Margin="0,0,0,10">
+          <Grid ColumnDefinitions="*,*">
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="FOSSIL" Classes="PanelHeader" Foreground="{StaticResource Amber}" />
+              <TextBlock x:Name="FossilMwText" Text="{Binding FossilMw}" FontSize="20" FontWeight="Bold" Margin="0,4,0,0" />
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="RENEWABLE" Classes="PanelHeader" Foreground="{StaticResource Green}" />
+              <TextBlock x:Name="RenewableMwText" Text="{Binding RenewableMw}" FontSize="20" FontWeight="Bold" Margin="0,4,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Classes="Card" Background="{StaticResource PanelHi}">
+          <StackPanel>
+            <TextBlock Text="STABILITY REGIME" Classes="PanelHeader" />
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+              <Ellipse x:Name="StabilityLamp" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,8,0"
+                       Fill="{Binding StabilityColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+              <TextBlock x:Name="StabilityNoteText" Text="{Binding StabilityNote}" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+            <TextBlock Text="Synchronous plant carries inertia; as it retires, RoCoF after a trip worsens. The TSGB device targets the gas held purely for that margin."
+                       Classes="Label" TextWrapping="Wrap" Margin="0,8,0,0" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Margin="0,10,0,0">
+          <StackPanel>
+            <TextBlock Text="TSGB DEVICE" Classes="PanelHeader" />
+            <TextBlock Text="synthetic inertia + fast frequency response" Classes="Label" Margin="0,1,0,8" />
+
+            <DockPanel>
+              <TextBlock x:Name="TsgbInertiaText" Text="{Binding TsgbInertiaGva, StringFormat='{}{0:F0} GVAs'}" DockPanel.Dock="Right"
+                         HorizontalAlignment="Right" FontWeight="SemiBold" />
+              <TextBlock Text="Synthetic inertia" Classes="Label" VerticalAlignment="Center" />
+            </DockPanel>
+            <Slider x:Name="TsgbInertiaSlider" Minimum="0" Maximum="150" Value="{Binding TsgbInertiaGva, Mode=TwoWay}" Margin="0,2,0,8" />
+
+            <DockPanel>
+              <TextBlock x:Name="TsgbFfrText" Text="{Binding TsgbFfrGw, StringFormat='{}{0:F1} GW'}" DockPanel.Dock="Right"
+                         HorizontalAlignment="Right" FontWeight="SemiBold" />
+              <TextBlock Text="Fast response" Classes="Label" VerticalAlignment="Center" />
+            </DockPanel>
+            <Slider x:Name="TsgbFfrSlider" Minimum="0" Maximum="10" Value="{Binding TsgbFfrGw, Mode=TwoWay}" Margin="0,2,0,10" />
+
+            <Button x:Name="TripButton" Content="SIMULATE LARGEST-UNIT TRIP" Classes="FlatBtn"
+                    HorizontalAlignment="Stretch" Click="Trip_Click" />
+            <TextBlock x:Name="TripBaselineText" Text="{Binding TripBaseline}" FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                       Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource Muted}" />
+            <TextBlock x:Name="TripTsgbText" Text="{Binding TripTsgb}" FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                       Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+            <TextBlock x:Name="TripVerdictText" Text="{Binding TripVerdict}" FontWeight="Bold" Margin="0,6,0,0" TextWrapping="Wrap"
+                       Foreground="{Binding TripVerdictColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+
+            <!-- frequency-response trace: baseline vs +TSGB against the GB limits -->
+            <ctl:FrequencyTrace x:Name="FreqTrace" Height="150" Margin="0,10,0,0" />
+
+            <TextBlock x:Name="TripAssessmentText" Text="{Binding TripAssessment}" FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                       Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource Muted}" />
+            <TextBlock x:Name="TripSizingText" Text="{Binding TripSizing}" FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                       Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{StaticResource Accent}" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

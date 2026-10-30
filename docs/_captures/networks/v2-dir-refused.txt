@@ -1,0 +1,3 @@
+$ gridsim --dir docs/_captures/networks/inputs/v2-two-bus --once
+error: cannot load case folder 'docs/_captures/networks/inputs/v2-two-bus': buses.json is empty or missing.
+[exit 1]

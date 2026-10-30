@@ -1,0 +1,3 @@
+$ gridsim protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/protection-user/inputs/nosuch.csv
+error reading --alarms 'docs/_captures/protection-user/inputs/nosuch.csv': Could not find file 'docs\_captures\protection-user\inputs\nosuch.csv'.
+[exit 1]

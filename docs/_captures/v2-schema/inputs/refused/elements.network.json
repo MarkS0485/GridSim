@@ -1,0 +1,13 @@
+{
+  "schema": "gridsim-network/2",
+  "buses": [
+    { "id": 1, "baseKv": 400, "type": "slack" },
+    { "id": 2, "baseKv": 400 }
+  ],
+  "generators": [
+    { "name": "G", "bus": 1, "role": "slack", "capacityMva": 100, "subtransientXdPu": 0.2 }
+  ],
+  "lines": [
+    { "name": "L1-2", "from": 1, "to": 2, "rPu": 0.002, "xPu": 0.02, "type": "gridsim.local.cable@1", "inService": false }
+  ]
+}

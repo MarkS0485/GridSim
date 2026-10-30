@@ -1,0 +1,3 @@
+$ gridsim --dir docs/_captures/formats/inputs/uk-zip --once --enableExport=results/formats/uk-zip-solve.json
+[export] dense-newton: converged=True iters=3 maxMis=2.48E-010  ->  results\formats\uk-zip-solve.json
+[exit 0]

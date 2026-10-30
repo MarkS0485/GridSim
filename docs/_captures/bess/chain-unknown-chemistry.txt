@@ -1,0 +1,3 @@
+$ gridsim chain case9 --steps 4 --bess unknown-chem:5:5:10
+error: chain storage: --bess 'unknown-chem:5:5:10': unknown chemistry 'unknown-chem' (lfp, nmc, lto, na-ion, vrfb, lead-acid).
+[exit 2]

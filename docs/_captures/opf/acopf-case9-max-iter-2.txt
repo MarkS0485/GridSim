@@ -1,0 +1,4 @@
+$ gridsim acopf case9 --max-iter 2
+ACOPF (DC dispatch + AC loss loop) - IEEE 9-bus (WSCC) (9 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+acopf: the losses did not settle within 2 pass(es) (--max-iter 2, --loss-tol 0.001 MW).
+[exit 3]

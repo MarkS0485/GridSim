@@ -1,0 +1,3 @@
+$ gridsim chain case9 --steps 2 --bess lfp:5:abc:10
+error: chain storage: --bess 'lfp:5:abc:10': rated power (MW) 'abc' must be a number above 0.
+[exit 2]

@@ -1,0 +1,45 @@
+{
+  "schema": "gridsim-measurements/1",
+  "case": "case9",
+  "baseMva": 100.0,
+  "takenUtc": "2024-03-01T12:00:00Z",
+  "note": "case9 telemetry plus virtual zero-injection rows at the switching buses 4, 6 and 8",
+  "measurements": [
+    { "kind": "PInjMw",   "value": 0.0, "sigma": 1.0, "bus": 4, "source": "virtual-zero-injection" },
+    { "kind": "QInjMvar", "value": 0.0, "sigma": 1.0, "bus": 4, "source": "virtual-zero-injection" },
+    { "kind": "PInjMw",   "value": 0.0, "sigma": 1.0, "bus": 6, "source": "virtual-zero-injection" },
+    { "kind": "QInjMvar", "value": 0.0, "sigma": 1.0, "bus": 6, "source": "virtual-zero-injection" },
+    { "kind": "PInjMw",   "value": 0.0, "sigma": 1.0, "bus": 8, "source": "virtual-zero-injection" },
+    { "kind": "QInjMvar", "value": 0.0, "sigma": 1.0, "bus": 8, "source": "virtual-zero-injection" },
+
+    { "kind": "VmPu",     "value": 1.040,  "sigma": 0.004, "bus": 1, "source": "scada" },
+    { "kind": "VmPu",     "value": 1.026,  "sigma": 0.004, "bus": 2, "source": "scada" },
+    { "kind": "VmPu",     "value": 1.012,  "sigma": 0.004, "bus": 5, "source": "scada" },
+    { "kind": "VmPu",     "value": 0.996,  "sigma": 0.004, "bus": 9, "source": "scada" },
+
+    { "kind": "PInjMw",   "value": 71.9,   "sigma": 1.0, "bus": 1, "source": "scada" },
+    { "kind": "PInjMw",   "value": 162.2,  "sigma": 1.0, "bus": 2, "source": "scada" },
+    { "kind": "PInjMw",   "value": 85.6,   "sigma": 1.0, "bus": 3, "source": "scada" },
+    { "kind": "PInjMw",   "value": -89.4,  "sigma": 1.0, "bus": 5, "source": "scada" },
+    { "kind": "PInjMw",   "value": -100.7, "sigma": 1.0, "bus": 7, "source": "scada" },
+    { "kind": "PInjMw",   "value": -124.1, "sigma": 1.0, "bus": 9, "source": "scada" },
+
+    { "kind": "QInjMvar", "value": 26.5,   "sigma": 1.0, "bus": 1, "source": "scada" },
+    { "kind": "QInjMvar", "value": 7.4,    "sigma": 1.0, "bus": 2, "source": "scada" },
+    { "kind": "QInjMvar", "value": -10.2,  "sigma": 1.0, "bus": 3, "source": "scada" },
+    { "kind": "QInjMvar", "value": -30.6,  "sigma": 1.0, "bus": 5, "source": "scada" },
+    { "kind": "QInjMvar", "value": -34.2,  "sigma": 1.0, "bus": 7, "source": "scada" },
+    { "kind": "QInjMvar", "value": -50.8,  "sigma": 1.0, "bus": 9, "source": "scada" },
+
+    { "kind": "PFlowMw",   "value": 31.2,  "sigma": 1.6, "from": 4, "to": 5, "end": "From", "source": "scada" },
+    { "kind": "QFlowMvar", "value": 1.5,   "sigma": 1.6, "from": 4, "to": 5, "end": "From", "source": "scada" },
+    { "kind": "PFlowMw",   "value": 87.3,  "sigma": 1.6, "from": 8, "to": 9, "end": "From", "source": "scada" },
+    { "kind": "QFlowMvar", "value": -8.9,  "sigma": 1.6, "from": 8, "to": 9, "end": "From", "source": "scada" },
+    { "kind": "PFlowMw",   "value": -23.5, "sigma": 1.6, "from": 6, "to": 7, "end": "To",   "source": "scada" },
+
+    { "kind": "IMagPu",    "value": 0.7549, "sigma": 0.005, "from": 7, "to": 8, "end": "From", "source": "scada" },
+
+    { "kind": "VaDeg",     "value": 4.7,   "sigma": 0.5, "bus": 3, "source": "pmu" },
+    { "kind": "VaDeg",     "value": -3.9,  "sigma": 0.5, "bus": 9, "source": "pmu" }
+  ]
+}

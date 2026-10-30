@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dist3ph.schema.json",
+  "title": "GridSim v2 three-phase feeder (gridsim-dist3ph/2)",
+  "description": "N339 (October 2026): the JSON v2 form of the three-phase distribution feeder (the v1 format gridsim-dist3ph/1 is unchanged and stays the authoring format in physical units). A standalone document read by MultiPhaseJsonLoader.ParseV2 and written by MultiPhaseV2Writer. It is the SOLVER-AUTHORITATIVE per-unit form: every member ending in Pu is per unit on the system base (closed unit vocabulary: pu@system), that is power on BaseMva / 3 per phase, voltage on each bus's line-to-neutral base (baseKvLL / sqrt 3), impedance and admittance on that bus's impedance base (baseKvLL^2 / BaseMva ohm); baseMva is in MVA, baseKvLL in kV, ratios are dimensionless (unit 1). Nothing is converted at load, so a feeder written by the writer loads back to the same model bit for bit. Complex quantities are written {re, im} with each part a 3-vector or 3x3 matrix (phases a, b, c). The element kinds are the $defs below (bus, branch, capacitor, load, converter): the dist3ph element set is defined here and not as kind specs under kinds/, because those are parameter contracts for library templates and the dist3ph elements carry matrices, not scalar parameters. Provenance: the document carries provenance._default (tag and note; a CuratedPlaceholder note must contain [VERIFY]) and any element may carry its own prov. Member names are case-sensitive and unknown members are refused everywhere. Rules this subset cannot express (vectors of exactly three and matrices of exactly 3x3 numbers, unique ids, bus references resolving, one source bus, the kind rules for branches, one radial tree, phases consistent from the source outward) are the loader's job and are checked there.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "name", "description", "baseMva", "provenance", "buses", "branches"],
+  "properties": {
+    "schema": { "const": "gridsim-dist3ph/2" },
+    "name": { "type": "string", "pattern": "\\S" },
+    "description": { "type": "string" },
+    "baseMva": { "type": "number", "exclusiveMinimum": 0 },
+    "provenance": { "$ref": "#/$defs/documentProvenance" },
+    "buses": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/bus" } },
+    "branches": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/branch" } },
+    "openSwitches": { "type": "array", "items": { "$ref": "#/$defs/elementId" } },
+    "capacitors": { "type": "array", "items": { "$ref": "#/$defs/capacitor" } },
+    "loads": { "type": "array", "items": { "$ref": "#/$defs/load" } },
+    "converters": { "type": "array", "items": { "$ref": "#/$defs/converter" } }
+  },
+  "$defs": {
+    "documentProvenance": {
+      "title": "Document provenance",
+      "description": "The provenance every value of the document takes unless its element carries its own prov.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["_default"],
+      "properties": {
+        "_default": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    },
+
+    "elementId": {
+      "title": "Element id",
+      "description": "An authored id with at least one non-blank character. Branch ids and open-switch ids share one id space; load ids and capacitor ids each have their own.",
+      "type": "string",
+      "pattern": "\\S"
+    },
+
+    "phases": {
+      "title": "Phases",
+      "description": "The phases a branch carries, in a, b, c order. Absent: abc.",
+      "enum": ["abc", "ab", "ac", "bc", "a", "b", "c"]
+    },
+
+    "vector3": {
+      "title": "Three numbers",
+      "description": "Phases a, b, c. Exactly three (checked by the loader).",
+      "type": "array",
+      "minItems": 3,
+      "items": { "type": "number" }
+    },
+
+    "matrix3": {
+      "title": "3x3 matrix",
+      "description": "Three rows of three numbers (checked by the loader).",
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/vector3" }
+    },
+
+    "complexVector3": {
+      "title": "Complex 3-vector",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["re", "im"],
+      "properties": {
+        "re": { "$ref": "#/$defs/vector3" },
+        "im": { "$ref": "#/$defs/vector3" }
+      }
+    },
+
+    "complexMatrix3": {
+      "title": "Complex 3x3 matrix",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["re", "im"],
+      "properties": {
+        "re": { "$ref": "#/$defs/matrix3" },
+        "im": { "$ref": "#/$defs/matrix3" }
+      }
+    },
+
+    "bus": {
+      "title": "Bus",
+      "description": "A feeder node. Exactly one bus carries sourceVPu (the infinite-bus voltage per phase, pu@system, rectangular); every other bus is solved.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "baseKvLL"],
+      "properties": {
+        "id": { "type": "integer" },
+        "baseKvLL": { "type": "number", "exclusiveMinimum": 0 },
+        "name": { "type": "string", "pattern": "\\S" },
+        "sourceVPu": { "$ref": "#/$defs/complexVector3" },
+        "prov": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    },
+
+    "branch": {
+      "title": "Branch",
+      "description": "One radial branch, in model order (the order the solver sees). kind line: series zPu (rows and columns of absent phases zero, each present phase with a non-zero self impedance), optional shuntYPu (total, half at each end). kind switch: a closed switch, zPu all zero. kind regulator: an ideal step-voltage regulator, zPu all zero, regulatorRatio required (1 on a phase it does not have). kind transformer: three phases, zPu not all zero; either transformerElement (with optional transformerRatio, the per-unit ideal ratio, absent 1) or none (grounded wye / grounded wye, with an optional regulatorRatio equal on all three phases for an off-nominal ratio). Lines, switches and regulators join buses of one kV base.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "from", "to", "zPu"],
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "kind": { "enum": ["line", "transformer", "switch", "regulator"] },
+        "from": { "type": "integer" },
+        "to": { "type": "integer" },
+        "phases": { "$ref": "#/$defs/phases" },
+        "zPu": { "$ref": "#/$defs/complexMatrix3" },
+        "shuntYPu": { "$ref": "#/$defs/complexMatrix3" },
+        "regulatorRatio": { "$ref": "#/$defs/vector3" },
+        "transformerElement": { "enum": ["delta-wye-step-down", "delta-wye-step-up", "wye-delta-step-down", "wye-delta-step-up", "delta-delta", "open-wye-open-delta", "open-delta-open-delta"] },
+        "transformerRatio": { "type": "number", "exclusiveMinimum": 0 },
+        "prov": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    },
+
+    "capacitor": {
+      "title": "Shunt capacitor bank",
+      "description": "A wye bank of constant susceptance: qPu is the reactive power per phase at 1 pu (pu@system on BaseMva / 3), 0 or more, not all zero.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "bus", "qPu"],
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "bus": { "type": "integer" },
+        "qPu": { "$ref": "#/$defs/vector3" },
+        "prov": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    },
+
+    "load": {
+      "title": "Load",
+      "description": "Per-phase complex power at nominal voltage, sPu (pu@system on BaseMva / 3; re = P, im = Q). For a delta load the three entries are a-b, b-c and c-a. A ZIP load is up to three loads on one bus, one of each model.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "bus", "connection", "model", "sPu"],
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "bus": { "type": "integer" },
+        "connection": { "enum": ["wye", "delta"] },
+        "model": { "enum": ["constant-power", "constant-current", "constant-impedance"] },
+        "sPu": { "$ref": "#/$defs/complexVector3" },
+        "prov": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    },
+
+    "converter": {
+      "title": "Active-front-end converter unit",
+      "description": "N360 (CF6): one active-front-end converter unit, the v2 form of the v1 converters section (N354), read by the three-phase harmonic study only (dist3ph harmonics --afe feeder); no other solver reads it. ratingMva is the unit's three-phase rating in MVA; xOnRating (above 0) and the optional rOnRating (0 or more; absent 0) are its internal reactance at the fundamental and its series resistance, per unit on the unit's OWN rating (dimensionless ratios to the unit's base impedance, unit 1, which is why they do not end in Pu: Pu members are on the system base). The v1 file's kva / 1000 and percent / 100 are the values held here, so the round trip is exact. Converter ids are their own id space.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "bus", "ratingMva", "xOnRating"],
+      "properties": {
+        "id": { "$ref": "#/$defs/elementId" },
+        "bus": { "type": "integer" },
+        "ratingMva": { "type": "number", "exclusiveMinimum": 0 },
+        "xOnRating": { "type": "number", "exclusiveMinimum": 0 },
+        "rOnRating": { "type": "number", "minimum": 0 },
+        "prov": { "$ref": "common.schema.json#/$defs/provenance" }
+      }
+    }
+  }
+}

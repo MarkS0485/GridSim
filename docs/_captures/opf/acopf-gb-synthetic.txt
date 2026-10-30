@@ -1,0 +1,22 @@
+$ gridsim acopf gb-synthetic
+ACOPF (DC dispatch + AC loss loop) - GB synthetic (2227 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+  the final DC pass left out 5 rated line(s) no dispatch can bring within rating (still overloaded; 'gridsim dcopf' lists them):
+      branch 120   MID SGT 400/275 1            rating 1,000.0 MW, any dispatch gives 1,454.5 .. 1,491.4 MW
+      branch 121   MID SGT 400/275 2            rating 1,000.0 MW, any dispatch gives 1,020.7 .. 1,037.6 MW
+      branch 125   LDN SGT 400/275 1            rating 1,000.0 MW, any dispatch gives 1,313.4 .. 1,813.0 MW
+      branch 817   YRK G8P4 132/33              rating 180.0 MW, any dispatch gives 180.1 .. 180.1 MW
+      branch 1082  MID G2P1S3 33/11             rating 30.0 MW, any dispatch gives 30.0 .. 30.0 MW
+  converged in 6 iteration(s)  losses 1235.507 MW  cost 675,277 GBP/h
+      gen bus 45      8,000.0 MW  @     1 GBP/MWh
+      gen bus 4       4,000.0 MW  @     1 GBP/MWh
+      gen bus 60      4,000.0 MW  @     1 GBP/MWh
+      gen bus 62      3,200.0 MW  @    10 GBP/MWh
+      gen bus 2       3,000.0 MW  @     1 GBP/MWh
+      gen bus 19      2,600.0 MW  @    55 GBP/MWh
+      gen bus 20      2,434.2 MW  @    65 GBP/MWh
+      gen bus 10      2,400.0 MW  @    10 GBP/MWh
+      gen bus 27      2,000.0 MW  @     1 GBP/MWh
+      gen bus 47      2,000.0 MW  @    60 GBP/MWh
+      gen bus 1       1,300.0 MW  @     5 GBP/MWh
+      gen bus 46      1,250.0 MW  @    10 GBP/MWh
+[exit 0]

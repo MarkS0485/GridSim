@@ -1,0 +1,3 @@
+$ gridsim interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14.json --out-store results/interpose-docs/fake-lake/telemetry --ticks 1
+error opening quarantine store 'results/interpose-docs/fake-lake/telemetry': refusing to write live telemetry into the GDA public lake (found DataSchema.json at 'results\interpose-docs\fake-lake'). The interposer's quarantine store must live OUTSIDE the evidence estate.
+[exit 1]

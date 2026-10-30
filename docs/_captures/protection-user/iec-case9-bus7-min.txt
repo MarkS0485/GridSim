@@ -1,0 +1,8 @@
+$ gridsim iec60909 case9 --bus 7 --objective min
+IEC 60909 - IEEE 9-bus (WSCC), bus 7, three-phase, Minimum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 1.4976761501924665 kA  (8.949476589690406 pu)
+  ip    = 4.236067847289822 kA  (kappa 2, R/X 0.059150094882557964, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 1.4925904832215877 kA    Ik = 1.4976761501924665 kA  (near a generator, fed from several sources: IEC 60909-0 Ik = Ik''M, the initial current without motors; no motors are modelled)
+  Ith   = 1.533206518174823 kA  (m 0.048010143260821356)    idc(tb) = 0.22777026250157467 kA
+  Zth   = 0.006597803772079404 + j0.11154341823422752 pu
+[exit 0]

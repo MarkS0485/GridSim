@@ -1,0 +1,59 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="rp1-hero @(D.GatePass ? "g-green" : "g-red")">
+            <div class="hero-main">
+                <span class="hero-v">@(D.GatePass ? "ADMISSIBLE" : "IMPOSSIBLE")</span>
+                <span class="hero-l">PHYSICS-LAW GATE (energy | Ohm | Joule | KCL | S=VI)</span>
+            </div>
+            <div class="hero-grade">@(D.GatePass ? "PASS" : "FAIL")</div>
+        </div>
+
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">PHYSICAL LAWS - this frame's state</div>
+                @foreach (LawPillDto law in D.Laws)
+                {
+                    <div class="stat-row">
+                        <span>@law.Number. @law.Name @(law.Hard ? "| gate" : "")</span>
+                        <b class="@PillClass(law.Status)">@PillText(law)</b>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <p class="note">
+            Independent per-branch audit (not the solver). A hard-law breach means the state is not a
+            physically-possible network state; constitutive/structural/dynamics laws are reported but do
+            not gate. See technical ch. 16.
+        </p>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private ConformanceDto? D => Frame?.Conformance;
+
+    private static string PillClass(string status) => status switch
+    {
+        "Holds" => "g-green",
+        "Violated" => "g-red",
+        _ => "g-amber",
+    };
+
+    private static string PillText(LawPillDto l) => l.Status switch
+    {
+        "Holds" => $"OK holds ({Res(l)})",
+        "Violated" => $"X violated ({Res(l)})",
+        _ => l.Status.ToLowerInvariant(),
+    };
+
+    private static string Res(LawPillDto l) =>
+        double.IsNaN(l.Residual) ? "-" : $"{l.Residual:0.###E+0} {l.Unit}";
+}

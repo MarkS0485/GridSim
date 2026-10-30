@@ -1,0 +1,7 @@
+$ gridsim batchsolve --count 10 --n 32 --runs 2 --gpu
+GridSim  -  batched dense solve: 10 systems x 32x32   backend batched-dense-lu (cpu)
+==============================================================================
+correctness: 10/10 solved   max|Delta| vs CPU reference = 0.000E+000
+timing (median of 2): backend 0.2 ms   cpu-reference 0.2 ms   backend 46189 solves/s
+[gpu] no usable gpu device found - falling back to the CPU backend.
+[exit 0]

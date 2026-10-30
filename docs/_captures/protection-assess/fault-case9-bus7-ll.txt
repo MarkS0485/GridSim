@@ -1,0 +1,40 @@
+$ gridsim fault case9 --bus 7 --type ll
+Line to line (phases b-c) fault  -  case9  bus 7  Zf=j0.000 pu
+  phase currents: Ia 0.000 pu (0.000 kA)  Ib 8.016 pu (1.341 kA)  Ic 8.016 pu (1.341 kA)
+  earth current |3I0|: 0.000 pu (0.000 kA)   sequence |I1| 4.628  |I2| 4.628  |I0| 0.000 pu
+  faulted bus phase voltages: Va 1.016  Vb 0.508  Vc 0.508 pu
+  driving-point Z1 0.0225+j0.1074  Z2 0.0225+j0.1074  Z0 infinite (no earth path in the zero sequence)
+  (generator X''d synthesised at 0.20 pu where not supplied, X2 = X''d where not supplied; line Z0 = 3 x Z1 where not supplied; loads neglected in the zero sequence; converter units keep their prefault current)
+  relays operating on the faulted state: 27 (phase elements on the phase currents and voltages; 50N/51N/21N/46 on the sequence currents)
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 21-Z1 | Distance | branch 6-7 | 0.000 pu | 0.081 | inst | branch 6-7 apparent Z 0.000 pu is inside Zone 1 (reach 0.081 pu, line Z 0.102); operates in 0.0 s (relay at the to end, bus 7) [b-c loop] |
+  | 21-Z1 | Distance | branch 7-8 | 0.000 pu | 0.058 | inst | branch 7-8 apparent Z 0.000 pu is inside Zone 1 (reach 0.058 pu, line Z 0.072); operates in 0.0 s [b-c loop] |
+  | 87 | Differential | bus 7 | 8.016 pu | 0.100 | inst | busbar differential 8.02E+000 pu at bus 7 exceeds the 0.10 pu bias pickup (internal fault) |
+  | 46 | Negative sequence | branch 1-4 | 0.463 xIn | 0.200 | 1.00s | branch 1-4 negative-sequence current 0.46x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 4-5 | 0.221 xIn | 0.200 | 1.00s | branch 4-5 negative-sequence current 0.22x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 5-6 | 0.416 xIn | 0.200 | 1.00s | branch 5-6 negative-sequence current 0.42x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 3-6 | 0.484 xIn | 0.200 | 1.00s | branch 3-6 negative-sequence current 0.48x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 6-7 | 1.308 xIn | 0.200 | 1.00s | branch 6-7 negative-sequence current 1.31x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 7-8 | 1.026 xIn | 0.200 | 1.00s | branch 7-8 negative-sequence current 1.03x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 8-2 | 0.777 xIn | 0.200 | 1.00s | branch 8-2 negative-sequence current 0.78x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 8-9 | 0.292 xIn | 0.200 | 1.00s | branch 8-9 negative-sequence current 0.29x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 46 | Negative sequence | branch 9-4 | 0.243 xIn | 0.200 | 1.00s | branch 9-4 negative-sequence current 0.24x rated exceeds the 0.20x pickup; definite time 1.00 s |
+  | 51 | Time overcurrent | branch 6-7 | 2.390 xIn | 1.200 | 1.01s | branch 6-7 current 2.39x rated over the 1.20x pickup; IEC standard-inverse trips in 1.0 s |
+  | 51 | Time overcurrent | branch 7-8 | 1.956 xIn | 1.200 | 1.43s | branch 7-8 current 1.96x rated over the 1.20x pickup; IEC standard-inverse trips in 1.4 s |
+  | 51 | Time overcurrent | branch 8-2 | 1.710 xIn | 1.200 | 1.97s | branch 8-2 current 1.71x rated over the 1.20x pickup; IEC standard-inverse trips in 2.0 s |
+  | 49 | Thermal overload | branch 6-7 | 2.390 xRateA | 1.000 | 173.18s | branch 6-7 loaded to 239% of RateA (150 MVA); thermal replica trips in 173 s |
+  | 49 | Thermal overload | branch 7-8 | 1.956 xRateA | 1.000 | 272.76s | branch 7-8 loaded to 196% of RateA (250 MVA); thermal replica trips in 273 s |
+  | 49 | Thermal overload | branch 8-2 | 1.710 xRateA | 1.000 | 376.56s | branch 8-2 loaded to 171% of RateA (250 MVA); thermal replica trips in 377 s |
+  | 49 | Thermal overload | branch 1-4 | 1.045 xRateA | 1.000 | 2218.42s | branch 1-4 loaded to 105% of RateA (250 MVA); thermal replica trips in 2218 s |
+  | 27 | Undervoltage | bus 7 | 0.508 pu | 0.800 | - | Vm 0.508 pu at bus 7 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 8 | 0.590 pu | 0.800 | - | Vm 0.590 pu at bus 8 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 6 | 0.619 pu | 0.800 | - | Vm 0.619 pu at bus 6 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 3 | 0.695 pu | 0.800 | - | Vm 0.695 pu at bus 3 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 9 | 0.697 pu | 0.800 | - | Vm 0.697 pu at bus 9 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 2 | 0.713 pu | 0.800 | - | Vm 0.713 pu at bus 2 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 5 | 0.714 pu | 0.800 | - | Vm 0.714 pu at bus 5 is below the 0.80 pu undervoltage pickup |
+  | 27 | Undervoltage | bus 4 | 0.792 pu | 0.800 | - | Vm 0.792 pu at bus 4 is below the 0.80 pu undervoltage pickup |
+
+PROTECTION SIMULATION: a line to line (phases b-c) fault at bus 7 would drive 27 relay operation(s) - primary clearance by 87 (Differential) on bus 7, instantaneously.
+[exit 0]

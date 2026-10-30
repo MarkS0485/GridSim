@@ -1,0 +1,19 @@
+$ gridsim cycle case118 --cycles 8 --hold-steady --window-ms 150 --workers 2
+GridSim  -  prioritised parallel analysis cycle: IEEE 118-bus
+============================================================================================
+case 118 buses / 186 branches   engine Newton-Raphson (dense)
+window 150 ms   workers 2   budget 0.3 core-s/cycle   jobs 13 (3 High / 10 Low)
+--------------------------------------------------------------------------------------------
+cycle |  base ms | wall ms |  HP   | LP done/adm/def | util% | backlog | note
+--------------------------------------------------------------------------------------------
+    0 |     84.8 |     173 |  3/3  |   0/1  /9     |   54% |      10 | n-1 shards 0/8
+    1 |     17.0 |      81 |  3/3  |   2/2  /8     |   49% |       8 | n-1 shards 2/8
+    2 |     18.1 |      83 |  3/3  |   2/2  /8     |   52% |       8 | n-1 shards 4/8
+    3 |     16.0 |      90 |  3/3  |   2/2  /8     |   53% |       8 | n-1 shards 6/8
+    4 |     26.9 |      77 |  3/3  |   4/4  /6     |   45% |       6 | n-1 shards 8/8
+    5 |      7.5 |     127 |  3/3  |   3/3  /7     |   78% |       7 | n-1 shards 8/8
+    6 |      6.8 |      99 |  3/3  |   3/3  /7     |   50% |       7 | n-1 shards 8/8
+    7 |      6.5 |     154 |  3/3  |   6/6  /4     |   88% |       4 | n-1 shards 8/8
+--------------------------------------------------------------------------------------------
+8 cycles   avg util 59%   HP met every cycle: YES   N-1 coverage 8/8 shards
+[exit 0]

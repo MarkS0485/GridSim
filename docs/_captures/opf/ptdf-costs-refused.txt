@@ -1,0 +1,3 @@
+$ gridsim ptdf case9 --bus 1 --costs case
+error: --costs applies to dcopf and acopf only (got 'ptdf').
+[exit 2]

@@ -1,0 +1,184 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "solverProfile",
+  "title": "Solver profile",
+  "description": "Numerical settings of the power-flow, dispatch and dynamic solvers. Not bound from a case yet (the v2 loader refuses a case that names one).",
+  "params": {
+    "toleranceMismatchPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Newton-Raphson power-mismatch tolerance (pu on the system base).",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.Tolerance default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.Tolerance",
+          "value": 1e-08
+        }
+      ]
+    },
+    "maxIterations": {
+      "type": "integer",
+      "unit": "1",
+      "min": 1,
+      "required": false,
+      "description": "Newton-Raphson iteration cap.",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.MaxIterations default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.MaxIterations",
+          "value": 30
+        }
+      ]
+    },
+    "flatStart": {
+      "type": "boolean",
+      "required": false,
+      "description": "Start from a flat voltage profile.",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.FlatStart default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.FlatStart",
+          "value": false
+        }
+      ]
+    },
+    "enforceQLimits": {
+      "type": "boolean",
+      "required": false,
+      "description": "Enforce generator reactive limits (PV to PQ switching).",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.EnforceQLimits default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.EnforceQLimits",
+          "value": true
+        }
+      ]
+    },
+    "maxQLimitPasses": {
+      "type": "integer",
+      "unit": "1",
+      "min": 1,
+      "required": false,
+      "description": "Cap on reactive-limit outer passes.",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.MaxQLimitPasses default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.MaxQLimitPasses",
+          "value": 12
+        }
+      ]
+    },
+    "dispatchLossAllowance": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Loss allowance the dispatcher adds to demand when it sets the marginal plant.",
+      "codeDefaults": [
+        {
+          "consumer": "Dispatcher.Balance parameter default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dispatch.Dispatcher:Balance:lossAllowance",
+          "value": 0.02
+        },
+        {
+          "consumer": "Dispatcher.BalanceDetailed parameter default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dispatch.Dispatcher:BalanceDetailed:lossAllowance",
+          "value": 0.02
+        }
+      ]
+    },
+    "frequencyStepS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Integration step of the centre-of-inertia frequency model (s).",
+      "codeDefaults": [
+        {
+          "consumer": "Frequency model DynamicsConfig.StepSeconds",
+          "ref": "instance:GridSim.Core:GridSim.Core.Dynamics.DynamicsConfig.StepSeconds",
+          "value": 0.02
+        }
+      ]
+    },
+    "frequencyDurationS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Simulated time of the frequency model (s).",
+      "codeDefaults": [
+        {
+          "consumer": "Frequency model DynamicsConfig.DurationSeconds",
+          "ref": "instance:GridSim.Core:GridSim.Core.Dynamics.DynamicsConfig.DurationSeconds",
+          "value": 30.0
+        }
+      ]
+    },
+    "rmsStepS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "RMS (subtransient) study integration step (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS single-clearing study (CliDefaults.RmsStepS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.RmsStepS",
+          "value": 0.005
+        }
+      ]
+    },
+    "rmsDurationS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "RMS study simulated time (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS single-clearing study (CliDefaults.RmsDurationS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.RmsDurationS",
+          "value": 3.0
+        }
+      ]
+    },
+    "classicalStepS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Classical (RK4) study step (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI classical single-clearing study (CliDefaults.ClassicalStepS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.ClassicalStepS",
+          "value": 0.002
+        }
+      ]
+    },
+    "classicalPostClearS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Classical study time simulated after clearing (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI classical single-clearing study (CliDefaults.ClassicalPostClearS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.ClassicalPostClearS",
+          "value": 5.0
+        }
+      ]
+    }
+  }
+}

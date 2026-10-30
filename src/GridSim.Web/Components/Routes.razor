@@ -1,0 +1,14 @@
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        @* AuthorizeRouteView renders exactly like RouteView when a page has no [Authorize] - so every
+           page stays anonymous - but exposes the (cascaded) auth state so components can read the
+           signed-in estate user via <AuthorizeView> / AuthenticationStateProvider. *@
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

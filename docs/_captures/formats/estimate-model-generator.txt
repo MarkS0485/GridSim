@@ -1,0 +1,14 @@
+$ sed -n '157,168p' results/formats/estimate/estimate-export.json
+    "generators": [
+      {
+        "bus": 1,
+        "pg": 232.4,
+        "qg": -16.9,
+        "vg": 1.06,
+        "qmin": 0,
+        "qmax": 10,
+        "pmax": 332.4,
+        "mBase": 100,
+        "h": 0,
+        "type": ""
+[exit 0]

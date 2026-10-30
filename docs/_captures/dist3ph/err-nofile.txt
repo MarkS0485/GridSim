@@ -1,0 +1,3 @@
+$ gridsim dist3ph data/dist3ph/nothere.json
+error loading three-phase feeder: three-phase feeder file not found: 'data/dist3ph/nothere.json' (full path data\dist3ph\nothere.json).
+[exit 1]

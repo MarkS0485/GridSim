@@ -1,0 +1,15 @@
+$ gridsim dcopf docs/_captures/opf/tri3 --costs docs/_captures/opf/tri3-costs.json --prices
+DC-OPF - Three-bus worked example (3 buses)  [cheapest secure dispatch on generator cost curves: tri3-costs.json]
+  demand 100 MW  generation 100 MW  total cost 3,020.00 cost units/h  (network-constrained)
+  dispatch (by output):
+      gen bus 1         80.00 MW  marginal   18.0000 cost units/MWh
+      gen bus 2         20.00 MW  marginal   95.0000 cost units/MWh
+  binding line limits:
+      branch 0    L13              60.0 MW / 60 MVA
+  nodal prices (LMP, cost units/MWh, lossless DC): 3 bus(es), highest 172.0000 at bus 3, lowest 18.0000 at bus 1
+      bus 3      LMP   172.0000  (energy 18.0000, congestion 154.0000)
+      bus 2      LMP    95.0000  (energy 18.0000, congestion 77.0000)
+      bus 1      LMP    18.0000  (energy 18.0000, congestion 0.0000)
+  line shadow prices (cost units/MWh per MW of extra rating):
+      branch 0    L13              60.0 MW / 60 MVA  shadow price 231.0000
+[exit 0]

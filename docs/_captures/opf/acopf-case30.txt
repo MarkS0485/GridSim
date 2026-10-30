@@ -1,0 +1,7 @@
+$ gridsim acopf case30
+ACOPF (DC dispatch + AC loss loop) - IEEE 30-bus (30 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+  converged in 3 iteration(s)  losses 6.012 MW  cost 9,761 GBP/h
+      gen bus 1          80.0 MW  @    50 GBP/MWh
+      gen bus 2          80.0 MW  @    50 GBP/MWh
+      gen bus 13         35.2 MW  @    50 GBP/MWh
+[exit 0]

@@ -1,0 +1,3 @@
+$ head -c 520 results/exports-docs/gridviz.json
+{"name":"GB reduced (10-zone)","baseMva":10000,"buses":[{"id":1,"name":"North Scotland 400kV","kv":400,"type":"Pv","x":0.45,"y":0.97},{"id":2,"name":"South Scotland 400kV","kv":400,"type":"Pv","x":0.42,"y":0.85},{"id":3,"name":"North England 400kV","kv":400,"type":"Pv","x":0.45,"y":0.72},{"id":4,"name":"Yorkshire \u0026 Humber 400kV","kv":400,"type":"Pv","x":0.57,"y":0.66},{"id":5,"name":"North Wales \u0026 Mersey 400kV","kv":400,"type":"Pv","x":0.36,"y":0.6},{"id":6,"name":"Midlands 400kV","kv":400,"type":"Slack",
+[exit 0]

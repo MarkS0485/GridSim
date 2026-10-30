@@ -1,0 +1,3 @@
+$ gridsim trip nosuchunit
+error: trip 'nosuchunit' matched no generator in GB reduced (10-zone). Available: North Scotland Hydro, North Scotland Onshore Wind, Torness Nuclear, South Scotland Onshore Wind, Moyle, Heysham Nuclear, North England CCGT, North Sea Link, Drax Biomass, Yorkshire CCGT, Mersey Offshore Wind, North Wales CCGT, EWIC, Midlands CCGT (marginal), East Anglia Offshore Wind, Sizewell B Nuclear, Viking Link, IFA, ElecLink, NemoLink
+[exit 2]

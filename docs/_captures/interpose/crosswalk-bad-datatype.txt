@@ -1,0 +1,3 @@
+$ gridsim interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/bad-datatype.json --ticks 1
+error loading crosswalk 'docs/_captures/interpose/bad-datatype.json': Binding 'IOA:1001': dataType S16 applies only to a Modbus register address (MB:U<unit>:<fc>:<index> or MB:U<unit>:<fc>:@<register>).
+[exit 1]

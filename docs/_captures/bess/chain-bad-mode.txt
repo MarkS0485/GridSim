@@ -1,0 +1,3 @@
+$ gridsim chain case9 --steps 2 --bess lfp:5:5:10 --mode weird
+error: --mode expected 'fixed', 'ramp' or 'daily' but got 'weird'
+[exit 2]

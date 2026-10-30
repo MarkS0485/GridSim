@@ -1,0 +1,17 @@
+# results/replay-gb-2019-08-09/summary.md
+# Replay - GB 9 Aug 2019 disturbance (Hornsea + Little Barford)
+
+    GridSim  -  2026-10-03 08:16:43 UTC
+    code:    git 71c4e64f-dirty  |  GridSim.Core v1.95.91.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26200
+    cpu:     X64  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     replay-event  id=gb-2019-08-09  provenance=Recorded  verdict=Reproduced
+
+- provenance: **Recorded**  (Credibility-gate target event, sourced from the Ofgem investigation report. The curated operating point (215 GVA*s / 21.1 GW) mirrors the measured catalog data/events/gb-2019-08-09-estimated.json.)
+- verdict: **Reproduced**
+- Reproduced: RoCoF sim -0.161 vs rec -0.170 Hz/s (5 % err); nadir sim 48.82 vs rec 48.80 Hz (0.02 Hz err); RMSE n/a (no trace)
+- inferred inertia from recorded RoCoF: 223.7 GVA.s
+- baseline swing export: `baseline-frequency.json`

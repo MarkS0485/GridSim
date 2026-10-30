@@ -1,0 +1,241 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "gridCodeProfile",
+  "title": "Grid-code profile",
+  "description": "Frequency and voltage limits of a grid code (GB today). Not bound from a case yet (the v2 loader refuses a case that names one).",
+  "params": {
+    "nominalFrequencyHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Nominal system frequency (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb model frequency (the builder sets FrequencyHz = FrequencyLimits.NominalHz since R196 / D2); the same constant is FrequencyLimits.NominalHz itself, the frequency limits' nominal",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.NominalHz",
+          "value": 50.0
+        },
+        {
+          "consumer": "JSON system.json default (JsonDefaults.FrequencyHz)",
+          "ref": "member:GridSim.Core:GridSim.Core.IO.Json.JsonDefaults.FrequencyHz",
+          "value": 50.0
+        },
+        {
+          "consumer": "Frequency model DynamicsConfig.NominalHz",
+          "ref": "instance:GridSim.Core:GridSim.Core.Dynamics.DynamicsConfig.NominalHz",
+          "value": 50.0
+        },
+        {
+          "consumer": "RmsConverterParameters NominalHz record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.RmsConverterParameters:.ctor:NominalHz",
+          "value": 50.0
+        },
+        {
+          "consumer": "GDA build (GdaBuildDefaults.SystemFrequencyHz)",
+          "ref": "member:GridSim.Gda:GridSim.Gda.GdaBuildDefaults.SystemFrequencyHz",
+          "value": 50.0
+        }
+      ]
+    },
+    "operationalLowHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Operational frequency band, low edge (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "FrequencyLimits.OperationalLowHz",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.OperationalLowHz",
+          "value": 49.8
+        }
+      ]
+    },
+    "operationalHighHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Operational frequency band, high edge (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "FrequencyLimits.OperationalHighHz",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.OperationalHighHz",
+          "value": 50.2
+        }
+      ]
+    },
+    "statutoryLowHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Statutory frequency limit, low (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "FrequencyLimits.StatutoryLowHz",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.StatutoryLowHz",
+          "value": 49.5
+        }
+      ]
+    },
+    "statutoryHighHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Statutory frequency limit, high (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "FrequencyLimits.StatutoryHighHz",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.StatutoryHighHz",
+          "value": 50.5
+        }
+      ]
+    },
+    "lfddFirstStageHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "First low-frequency demand disconnection stage (Hz).",
+      "codeDefaults": [
+        {
+          "consumer": "FrequencyLimits.LfddFirstStageHz",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.LfddFirstStageHz",
+          "value": 48.8
+        }
+      ]
+    },
+    "rocofLimitHzPerS": {
+      "type": "number",
+      "unit": "Hz/s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Loss-of-mains RoCoF limit the system is screened against (Hz/s). Legacy and modern settings coexist; the active one is a mutable static (FrequencyLimits.ActiveRocofLimitHzPerS, initialised to the modern value) and is deliberately not reflected.",
+      "codeDefaults": [
+        {
+          "consumer": "FrequencyLimits.RocofLimitLegacyHzPerS (and its alias RocofLimitHzPerS)",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.RocofLimitLegacyHzPerS",
+          "value": 0.125
+        },
+        {
+          "consumer": "FrequencyLimits.RocofLimitHzPerS back-compatible alias",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.RocofLimitHzPerS",
+          "value": 0.125
+        },
+        {
+          "consumer": "FrequencyLimits.RocofLimitModernHzPerS (ALoMCP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Dynamics.FrequencyLimits.RocofLimitModernHzPerS",
+          "value": 1.0
+        }
+      ]
+    },
+    "nominalVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Nominal voltage (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.NominalPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.NominalPu",
+          "value": 1.0
+        }
+      ]
+    },
+    "operationalLowVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Operational voltage band, low edge (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.OperationalLowPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.OperationalLowPu",
+          "value": 0.94
+        }
+      ]
+    },
+    "operationalHighVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Operational voltage band, high edge (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.OperationalHighPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.OperationalHighPu",
+          "value": 1.06
+        }
+      ]
+    },
+    "statutoryLowVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Statutory voltage limit, low (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.StatutoryLowPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.StatutoryLowPu",
+          "value": 0.9
+        }
+      ]
+    },
+    "statutoryHighVoltagePu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Statutory voltage limit, high (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.StatutoryHighPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.StatutoryHighPu",
+          "value": 1.1
+        }
+      ]
+    },
+    "statutoryVoltageBandPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Statutory voltage half-band (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.StatutoryBandPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.StatutoryBandPu",
+          "value": 0.1
+        }
+      ]
+    },
+    "watchVoltageBandPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Voltage watch half-band (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "VoltageLimits.WatchBandPu",
+          "ref": "member:GridSim.Core:GridSim.Core.Analysis.VoltageLimits.WatchBandPu",
+          "value": 0.04
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,3 @@
+$ gridsim licence renew
+unknown licence subcommand 'renew'. Use: status | import | path
+[exit 2]

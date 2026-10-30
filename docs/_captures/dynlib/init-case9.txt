@@ -1,0 +1,11 @@
+$ dotnet fsi docs/_captures/dynlib/init-case9.fsx
+power flow converged=true iterations=4
+bus 1 solved: Vm=1.04 VaDeg=0 P=71.6410214744825 MW Q=27.0459235334931 MVAr
+machine 1 (bus 1): H=58.509 s on 100 MVA
+  delta0=0.0400417046366223 rad (2.29422068018788 deg)
+  E'q=1.04622713736649  E'd=0.0166528982585501  E''q=1.04481498500788  E''d=0.0283099270395352
+  Efd=1.06034866095259  Pm=0.716410214744825
+undisturbed 2 s: synchronism=true max|speed|=4.250e-017 pu max|delta-delta0|=3.886e-015 rad
+flat reactances, machine 1: delta0=0.9265 deg |E|=1.0465 pu
+bus 7 CCT: stable to 554 ms, lost at 556 ms (39 trials)
+[exit 0]

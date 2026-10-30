@@ -1,0 +1,12 @@
+$ python tools/crossval/crossval_classical.py results/cl9.json
+{
+  "schema": "gridsim-crossval-classical/1",
+  "tool": "scipy.integrate.solve_ivp (RK45)",
+  "case": "WSCC-9",
+  "machines": 3,
+  "samples": 101,
+  "max_abs_angle_diff_rad": 3.74656974333476e-08,
+  "tolerance_rad": 0.001,
+  "within_tolerance": true
+}
+[exit 0]

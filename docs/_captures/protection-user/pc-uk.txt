@@ -1,0 +1,10 @@
+$ gridsim protection-check uk
+Protection assessment  -  uk  (20 buses, converged=True)  [passive; solve unchanged]
+  operating elements: 1
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 32 | Reverse power | Moyle | -150.000 MW | -5.000 | - | Moyle is absorbing 150.0 MW (reverse/motoring past the 5 MW pickup) |
+  not evaluated on a steady snapshot: 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence)
+
+PROTECTION SIMULATION suggests 1 protection event(s) would occur. e.g. on Moyle, relay 32 (Reverse power) would likely operate: Moyle is absorbing 150.0 MW (reverse/motoring past the 5 MW pickup).
+[exit 0]

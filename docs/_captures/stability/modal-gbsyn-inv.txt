@@ -1,0 +1,158 @@
+$ gridsim modal --dir data/gb-synthetic --enable-inverters
+GridSim  -  SMALL-SIGNAL / MODAL STABILITY  *  GB synthetic
+==================================================================
+13 machine(s), 116 state(s)  *  X'd = synthetic 0.30 pu (unvalidated)  *  inverters ON  *  damping D = 0 (undamped)
+
+   sigma (1/s)  omega (rad/s)    f (Hz)      zeta   mode
+        0.0158         3.7573    0.5980   -0.0042   oscillatory
+        0.0158        -3.7573    0.5980   -0.0042   oscillatory
+        0.0000         9.4205    1.4993   -0.0000   oscillatory
+        0.0000        -9.4205    1.4993   -0.0000   oscillatory
+        0.0000         9.7265    1.5480   -0.0000   oscillatory
+        0.0000        -9.7265    1.5480   -0.0000   oscillatory
+        0.0000         8.7791    1.3972   -0.0000   oscillatory
+        0.0000        -8.7791    1.3972   -0.0000   oscillatory
+        0.0000        -9.9134    1.5778   -0.0000   oscillatory
+        0.0000         9.9134    1.5778   -0.0000   oscillatory
+        0.0000         7.5711    1.2050   -0.0000   oscillatory
+        0.0000        -7.5711    1.2050   -0.0000   oscillatory
+        0.0000        11.6760    1.8583   -0.0000   oscillatory
+        0.0000       -11.6760    1.8583   -0.0000   oscillatory
+        0.0000        12.1799    1.9385   -0.0000   oscillatory
+        0.0000       -12.1799    1.9385   -0.0000   oscillatory
+        0.0000        10.8224    1.7224   -0.0000   oscillatory
+        0.0000       -10.8224    1.7224   -0.0000   oscillatory
+        0.0000        -9.0608    1.4421   -0.0000   oscillatory
+        0.0000         9.0608    1.4421   -0.0000   oscillatory
+        0.0000        11.1027    1.7671   -0.0000   oscillatory
+        0.0000       -11.1027    1.7671   -0.0000   oscillatory
+        0.0000         7.9825    1.2705   -0.0000   oscillatory
+        0.0000        -7.9825    1.2705   -0.0000   oscillatory
+       -0.0000        11.3446    1.8055    0.0000   oscillatory
+       -0.0000       -11.3446    1.8055    0.0000   oscillatory
+      -11.4847        -3.9417    0.6273    0.9458   oscillatory
+      -11.4847         3.9417    0.6273    0.9458   oscillatory
+       -8.5466        -0.5701    0.0907    0.9978   oscillatory
+       -8.5466         0.5701    0.0907    0.9978   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333         0.0000    0.0000    1.0000   oscillatory
+       -8.3333        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333         0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+       -8.3333        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333         0.0000    0.0000    1.0000   oscillatory
+       -8.3333        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333        -0.0000    0.0000    1.0000   oscillatory
+       -8.3333         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -10.0000        -0.0000    0.0000    1.0000   oscillatory
+      -10.0000         0.0000    0.0000    1.0000   oscillatory
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000        -0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -20.0000         0.0000    0.0000    1.0000   real
+      -19.9690         0.0000    0.0000    1.0000   real
+      -10.0000         0.0000    0.0000    1.0000   real
+      -10.0000         0.0000    0.0000    1.0000   real
+       -8.3333         0.0000    0.0000    1.0000   real
+       -8.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+       -3.3333        -0.0000    0.0000    1.0000   real
+       -3.3333         0.0000    0.0000    1.0000   real
+        0.0000         0.0000    0.0000    0.0000   real
+
+Least-damped oscillatory mode: 0.598 Hz, zeta = -0.0042  (UNSTABLE)
+Right-half-plane eigenvalues (small-signal unstable): 2
+Minimum oscillatory damping ratio: -0.0042
+
+Dominant participation (which state drives each oscillatory mode):
+  unavailable: the state matrix is defective, so participation factors are undefined (eigenvalues only; the reason is on stderr).
+
+s-plane (imag up, real right; '*' stable pole, 'X' RHP/unstable, left of axis = damped):
+                         |                         
+                         *                         
+                         *                         
+                         *                         
+                         *                         
+                         |                         
+                         |                         
+           *             X                         
+                         |                         
+                         |                         
+-*-----------*-*-----*---*-------------------------
+                         |                         
+                         |                         
+           *             X                         
+                         |                         
+                         |                         
+                         *                         
+                         *                         
+                         *                         
+                         *                         
+                         |
+
+Eigenvalues of A = [[0, ws I],[-M^-1 K_L, -M^-1 D]] (true asymmetric K_L; Francis-QR, biorthonormal participation).
+Provenance: X'd is a synthetic default - damping/participation are INDICATIVE, not validated.
+Inverter states are a documented archetype (COI-coupled; GFL PLL is an SRF-PLL substitution of the transport delay).
+modal: participation factors unavailable - damped / inverter-augmented path: the state matrix is defective, so participation factors are undefined and are reported as all zero (eigenvalues only). Decomposition said: eigenvalue <-10.000000403857998; 3.432645684750273E-08> is repeated but its eigenspace has too few independent directions: the deflated eigenvector leaves a residual |A v - lambda v| = 6.647E+001, above the tolerance 5.333E-002. A is defective, so biorthonormal participation is undefined.
+[exit 1]

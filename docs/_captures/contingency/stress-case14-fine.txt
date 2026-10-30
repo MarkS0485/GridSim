@@ -1,0 +1,16 @@
+$ gridsim stress case14 --from 1.7 --to 1.8 --step 0.01
+    GridSim  -  2026-10-19 17:39:27 UTC
+    code:    git v1.95.294-168-g786a2162  |  GridSim.Core v1.95.462.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     stress  cases=1  load 1.7->1.8 step 0.01  parallel=8
+
+| Case | Buses | Max loadability (x base) | Vmin at collapse | Notes |
+|------|------:|-------------------------:|-----------------:|-------|
+| case14 | 14 | 1.77 | 0.669 |  |
+[stress] case14: 11 load points on 8 threads...
+[stress] done -> results\stress.md
+[exit 0]

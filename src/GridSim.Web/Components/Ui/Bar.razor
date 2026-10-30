@@ -1,0 +1,25 @@
+@* Bar - a horizontal value/max bar on the shared --track rail.
+   Colour comes from Status (ok/warn/bad) or an explicit Color (a CSS colour or
+   var(--...)); defaults to the cyan accent. Reports its value to assistive tech. *@
+
+<div class="uibar@(StatusClass)" role="progressbar"
+     aria-valuenow="@Value.ToString("0.##")" aria-valuemin="0" aria-valuemax="@Max.ToString("0.##")"
+     @attributes="Extra">
+    <span style="@BarStyle"></span>
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public double Max { get; set; } = 1;
+    /// <summary>"ok" | "warn" | "bad" | null - semantic fill colour.</summary>
+    [Parameter] public string? Status { get; set; }
+    /// <summary>Explicit fill colour (CSS colour or var(--...)); overrides Status when set.</summary>
+    [Parameter] public string? Color { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)] public IReadOnlyDictionary<string, object>? Extra { get; set; }
+
+    private double Frac => Max <= 0 ? 0 : Math.Clamp(Value / Max, 0, 1);
+    private string Width => $"{Frac * 100:0.##}%";
+    private string StatusClass => Color is null && Status is "ok" or "warn" or "bad" ? " " + Status : "";
+    private string ColorStyle => Color is null ? "" : $";background:{Color}";
+    private string BarStyle => $"width:{Width}{ColorStyle}";
+}

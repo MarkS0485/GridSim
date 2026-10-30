@@ -1,0 +1,733 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:edit="using:GridSim.Ui.Assets.Editing"
+             xmlns:elem="using:GridSim.Ui.Assets.Editing.Elements"
+             xmlns:olay="using:GridSim.Ui.Assets.Overlay"
+             xmlns:templ="using:GridSim.Ui.Assets.Editing.Templates"
+             xmlns:dg="using:GridSim.App.Controls.Diagram"
+             xmlns:sys="using:System"
+             x:Class="GridSim.App.Assets.AuthorView"
+             x:DataType="edit:AssetAuthorModel">
+  <!-- UI programme Phase 4.1: the ASSETS tab in AUTHOR mode, in the same split layout as RUN (ASSETS plan section 3.2;
+       Mark: "Really really like it": extended, not replaced): an action strip (UNDO, REDO, CHECK, SAVE, SAVE AS..., each
+       the same action as its Edit or Case menu item), the tree of the CASE FILE's records on the left (Home, the case
+       file, one class per role; right-click for the record actions of that kind), and on the right the sub-tabs over the
+       page: OVERVIEW (Home: the case summary; a class: its records; a record: the record summary), PROPERTIES (the
+       editable field grid, from the schema's field specs), CONNECTIONS (who refers to the record) and CHECK (the last
+       Check's problems). A sub-tab with nothing to show is hidden. Nothing on this view is a live value: Author mode reads
+       no frame (plan Q5). The status line at the foot says what the last action did, or why it was refused.
+       The data context is the navigator's Author model (GridSim.Ui AssetAuthorModel). -->
+
+  <UserControl.Styles>
+    <Style Selector="TreeViewItem" x:DataType="edit:AuthorNode">
+      <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+    </Style>
+    <Style Selector="TextBlock.Status">
+      <Setter Property="Foreground" Value="{StaticResource Green}" />
+    </Style>
+    <Style Selector="TextBlock.Status.Error">
+      <Setter Property="Foreground" Value="{StaticResource Amber}" />
+    </Style>
+    <Style Selector="Button.RowLinkBtn">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <!-- Phase 4.3: the per-element editor's rows: a nested block's field is indented; a locked field's state is amber -->
+    <Style Selector="Border.EditorRow.Nested">
+      <Setter Property="Margin" Value="28,0,0,4" />
+    </Style>
+    <Style Selector="TextBlock.LockedState">
+      <Setter Property="Foreground" Value="{StaticResource Amber}" />
+    </Style>
+  </UserControl.Styles>
+
+  <DockPanel>
+    <!-- the action strip: the Edit and Case menu commands, as buttons -->
+    <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12" Padding="12,8">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+          <Button x:Name="UndoButton" Content="UNDO" Classes="FlatBtn" Click="Undo_Click" Margin="0,0,8,0" ToolTip.Tip="Edit > Undo (Ctrl+Z)" />
+          <Button x:Name="RedoButton" Content="REDO" Classes="FlatBtn" Click="Redo_Click" Margin="0,0,16,0" ToolTip.Tip="Edit > Redo (Ctrl+Y)" />
+          <Button x:Name="CheckButton" Content="CHECK" Classes="FlatBtn" Click="Check_Click" Margin="0,0,8,0" ToolTip.Tip="Case > Check: validate and load the case as it is now, writing nothing" />
+          <Button x:Name="SaveButton" Content="SAVE" Classes="FlatBtn" Click="Save_Click" Margin="0,0,8,0" ToolTip.Tip="Case > Save (Ctrl+S); a bundled case goes to Save As" />
+          <Button x:Name="SaveAsButton" Content="SAVE AS..." Classes="FlatBtn" Click="SaveAs_Click" Margin="0,0,16,0" ToolTip.Tip="Case > Save As... (Ctrl+Shift+S): a new case of your own" />
+        </StackPanel>
+        <TextBlock x:Name="AuthorCrumb" Text="{Binding Crumb}" Classes="Label" FontSize="12" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+    </Border>
+
+    <!-- the last action's result (a refusal starts with what did not happen) -->
+    <Border DockPanel.Dock="Bottom" Classes="Card" Margin="0,12,0,0" Padding="12,6">
+      <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
+        <TextBlock x:Name="AuthorStatus" Text="{Binding Status}" Classes="Status" Classes.Error="{Binding StatusIsError}"
+                   TextWrapping="Wrap" FontSize="11" />
+      </ScrollViewer>
+    </Border>
+
+    <Grid ColumnDefinitions="300,6,*">
+      <!-- the case file's records -->
+      <Border Grid.Column="0" Classes="Card" Padding="6">
+        <TreeView x:Name="AuthorTree" ItemsSource="{Binding Roots}" SelectionChanged="Tree_SelectionChanged"
+                  ContextRequested="Tree_ContextRequested">
+          <TreeView.ItemTemplate>
+            <TreeDataTemplate DataType="edit:AuthorNode" ItemsSource="{Binding Children}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
+              </StackPanel>
+            </TreeDataTemplate>
+          </TreeView.ItemTemplate>
+        </TreeView>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Background="Transparent" ResizeDirection="Columns" />
+
+      <DockPanel Grid.Column="2">
+        <TabStrip x:Name="AuthorSubTabStrip" DockPanel.Dock="Top" ItemsSource="{Binding SubTabs}"
+                  SelectedItem="{Binding SelectedSubTab, Mode=TwoWay}" Margin="0,0,0,8" />
+        <Panel>
+
+          <!-- ===== OVERVIEW of Home: the case summary ===== -->
+          <ContentControl x:Name="SummaryHost" Content="{Binding Summary}" IsVisible="{Binding IsOverviewShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="edit:AuthorSummary">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <StackPanel>
+                    <TextBlock Text="CASE SUMMARY  (AUTHOR MODE: NO LIVE VALUES)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="SummaryName" Text="{Binding CaseName}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding FormatText}" Classes="Label" FontSize="12" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding CasePath}" Classes="Label" FontSize="11" FontFamily="{StaticResource MonoFont}" Margin="0,2,0,8" />
+                    <TextBlock x:Name="SummaryBundled" Text="{Binding BundledNote}" IsVisible="{Binding HasBundledNote}" Foreground="{StaticResource Amber}"
+                               TextWrapping="Wrap" Margin="0,0,0,6" />
+                    <TextBlock x:Name="SummaryOverlay" Text="{Binding OverlayNote}" IsVisible="{Binding HasOverlayNote}" Foreground="{StaticResource Amber}"
+                               TextWrapping="Wrap" Margin="0,0,0,6" />
+                    <TextBlock Text="RECORDS PER ROLE" Classes="PanelHeader" Margin="0,8,0,6" />
+                    <ItemsControl x:Name="SummaryCounts" ItemsSource="{Binding Counts}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="edit:AuthorCount">
+                          <Grid ColumnDefinitions="200,*" Margin="0,0,0,2">
+                            <TextBlock Grid.Column="0" Text="{Binding Title}" Classes="Label" />
+                            <TextBlock Grid.Column="1" Text="{Binding Count}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="FILES" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <ItemsControl x:Name="SummaryFiles" ItemsSource="{Binding Files}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="edit:AuthoringFile">
+                          <Grid ColumnDefinitions="260,90,*" Margin="0,0,0,2">
+                            <TextBlock Grid.Column="0" Text="{Binding FileName}" FontFamily="{StaticResource MonoFont}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Exists, StringFormat='exists: {0}'}" Classes="Label" />
+                            <TextBlock Grid.Column="2" Text="{Binding IsDirty, StringFormat='unsaved changes: {0}'}" Classes="Label" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock x:Name="SummaryDirty" Text="{Binding DirtyText}" FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                    <TextBlock Text="LAST CHECK" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <TextBlock x:Name="SummaryCheck" Text="{Binding LastCheckText}" TextWrapping="Wrap" />
+                    <TextBlock Text="HISTORY" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <TextBlock x:Name="SummaryUndo" Text="{Binding UndoText}" Classes="Label" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding PreflightText}" Classes="Label" TextWrapping="Wrap" Margin="0,4,0,0" />
+                  </StackPanel>
+                </ScrollViewer>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== OVERVIEW of a class: its records ===== -->
+          <ContentControl x:Name="ClassPageHost" Content="{Binding ClassPage}" IsVisible="{Binding IsOverviewShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="edit:AuthorClassPage">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                    <TextBlock Text="CASE RECORDS  (AUTHOR MODE: NO LIVE VALUES)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="ClassPageTitle" Text="{Binding Title}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding Note}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                  </StackPanel>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="ClassRows" ItemsSource="{Binding Rows}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="edit:AuthorNode">
+                          <Button Classes="RowLinkBtn" Click="ClassRow_Click" Margin="0,0,0,4" Padding="8,4">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Grid.Column="0" Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding Detail}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" Margin="12,0,0,0" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </DockPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== OVERVIEW of the TEMPLATES node (UI programme Phase 4.4): every template of the v2 case (local ones
+               editable, imported library ones read only; a row selects it), the binding rules, the overrides (each
+               against the template's own value) and which template every generator is bound to. ===== -->
+          <ContentControl x:Name="TemplatesPageHost" Content="{Binding TemplatesPage}" IsVisible="{Binding IsOverviewShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="templ:TemplatesPage">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <StackPanel>
+                    <TextBlock Text="CASE TEMPLATES  (AUTHOR MODE: NO LIVE VALUES)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="TemplatesTitle" Text="TEMPLATES" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock x:Name="TemplatesNote" Text="{Binding Note}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,8" />
+                    <ItemsControl x:Name="TemplatesNotes" ItemsSource="{Binding Notes}" IsVisible="{Binding HasNotes}" Margin="0,0,0,8">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="sys:String">
+                          <TextBlock Text="{Binding}" Foreground="{StaticResource Amber}" TextWrapping="Wrap" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="TEMPLATES" Classes="PanelHeader" Margin="0,4,0,6" />
+                    <ItemsControl x:Name="TemplatesRows" ItemsSource="{Binding Templates}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="edit:AuthorNode">
+                          <Button Classes="RowLinkBtn" Click="ClassRow_Click" Margin="0,0,0,4" Padding="8,4">
+                            <Grid ColumnDefinitions="*,Auto">
+                              <TextBlock Grid.Column="0" Text="{Binding Label}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding Detail}" Classes="Label" FontSize="10" Margin="12,0,0,0" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="BINDING RULES (A GENERATOR OF THE TYPE IS BOUND, UNLESS IT NAMES ITS OWN TEMPLATE)" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <TextBlock Text="No binding rule." Classes="Label" IsVisible="{Binding !HasRules}" />
+                    <ItemsControl x:Name="TemplatesRules" ItemsSource="{Binding Rules}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="templ:TemplateBindingRule">
+                          <TextBlock Text="{Binding Text}" FontFamily="{StaticResource MonoFont}" Margin="0,0,0,2" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="OVERRIDES (THIS CASE'S VALUES IN PLACE OF A TEMPLATE'S OWN)" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <TextBlock Text="No override." Classes="Label" IsVisible="{Binding !HasOverrides}" />
+                    <ItemsControl x:Name="TemplatesOverrides" ItemsSource="{Binding Overrides}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="templ:TemplateOverrideRow">
+                          <Grid ColumnDefinitions="260,180,*" Margin="0,0,0,2">
+                            <TextBlock Grid.Column="0" Text="{Binding Template}" FontFamily="{StaticResource MonoFont}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="{Binding Param}" FontWeight="SemiBold" />
+                            <TextBlock Grid.Column="2" Text="{Binding Text}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="GENERATORS AND THEIR TEMPLATES (A CLICK OPENS THE GENERATOR)" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <ItemsControl x:Name="TemplatesGenerators" ItemsSource="{Binding Generators}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="templ:GeneratorBindingInfo">
+                          <Button Classes="RowLinkBtn" Click="BoundGenerator_Click" Margin="0,0,0,2" Padding="8,2">
+                            <Grid ColumnDefinitions="300,280,*">
+                              <TextBlock Grid.Column="0" Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding Template}" FontFamily="{StaticResource MonoFont}" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="2" Text="{Binding Route}" Classes="Label" FontSize="10" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </ScrollViewer>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== OVERVIEW of an override node (Phase 4.4): the override against the template's value; RESET TO
+               TEMPLATE removes it (one undo step; the registry's Reset override does the same). ===== -->
+          <ContentControl x:Name="OverridePageHost" Content="{Binding OverridePage}" IsVisible="{Binding IsOverviewShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="templ:TemplateOverridePage">
+                <StackPanel>
+                  <TextBlock Text="TEMPLATE OVERRIDE  (AUTHOR MODE: NO LIVE VALUES)" Classes="Label" FontSize="10" />
+                  <TextBlock x:Name="OverrideHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                  <TextBlock Text="{Binding TemplateSource}" Classes="Label" FontSize="11" FontFamily="{StaticResource MonoFont}" Margin="0,2,0,8" />
+                  <TextBlock x:Name="OverrideText" Text="{Binding Row.Text}" FontSize="16" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                  <TextBlock Text="{Binding Row.Unit, StringFormat='unit: {0}'}" Classes="Label" Margin="0,2,0,0" />
+                  <TextBlock Text="{Binding Row.Reason, StringFormat='reason: {0}'}" TextWrapping="Wrap" Margin="0,6,0,8" />
+                  <Button x:Name="OverridePageReset" Content="RESET TO TEMPLATE" Classes="FlatBtn" Click="OverridePageReset_Click" HorizontalAlignment="Left"
+                          ToolTip.Tip="Remove the override, so the template's own value applies again (one undo step)" />
+                </StackPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== OVERVIEW of a record: the record summary (as written, no live value) ===== -->
+          <ContentControl x:Name="RecordPageHost" Content="{Binding RecordPage}" IsVisible="{Binding IsOverviewShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="edit:AuthorRecordPage">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                    <TextBlock Text="CASE RECORD  (AUTHOR MODE: NO LIVE VALUES)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="RecordHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding ShapeTitle}" Classes="Label" FontSize="12" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding Where}" Classes="Label" FontSize="11" FontFamily="{StaticResource MonoFont}" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding KeyText}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding StateText}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,2,0,0" />
+                  </StackPanel>
+                  <!-- Phase 5c: an overlay record of a substation shows that substation's topology from the session as it
+                       is now (switch states as written, nothing energised: no live values here), with its implied split or
+                       coupling warnings; a change (a normalOpen toggled in PROPERTIES) redraws it. A click on a symbol
+                       selects its record (a bay's far end: the model record it switches). -->
+                  <Border DockPanel.Dock="Top" Classes="Card" IsVisible="{Binding HasTopology}" Margin="0,0,0,12">
+                    <ContentControl x:Name="TopologyHost" Content="{Binding Topology}">
+                      <ContentControl.ContentTemplate>
+                        <DataTemplate DataType="olay:SubstationTopologyView">
+                          <StackPanel x:Name="TopologyPanel">
+                            <TextBlock x:Name="TopologyHeading" Text="{Binding Heading}" Classes="PanelHeader" Margin="0,0,0,4" />
+                            <TextBlock x:Name="TopologyNodes" Text="{Binding Nodes}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,6" />
+                            <dg:DiagramControl x:Name="TopologyDiagram" Height="300" AutoFit="True" Model="{Binding Diagram}"
+                                               IsVisible="{Binding HasDiagram}" SymbolClicked="TopologyDiagram_SymbolClicked" />
+                            <ItemsControl x:Name="TopologyWarnings" ItemsSource="{Binding Warnings}" IsVisible="{Binding HasWarnings}" Margin="0,6,0,0">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="sys:String">
+                                  <TextBlock Text="{Binding}" FontWeight="SemiBold" Foreground="{StaticResource Amber}" TextWrapping="Wrap" Margin="0,2" />
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ContentControl.ContentTemplate>
+                    </ContentControl>
+                  </Border>
+                  <!-- Phase 5f: a three-winding transformer record's Derive star legs. DERIVE only proposes (each leg value
+                       old -> new, with the bases and formulas used); APPLY is the confirmation and writes the six values as
+                       one undo step; nothing is ever written automatically and the solver uses the authored leg values. -->
+                  <Border DockPanel.Dock="Top" Classes="Card" IsVisible="{Binding CanDeriveStarLegs}" Margin="0,0,0,12">
+                    <StackPanel x:Name="StarLegsPanel">
+                      <TextBlock Text="DERIVE STAR LEGS  (FROM THE PAIRWISE NAMEPLATE IMPEDANCES; PROPOSED FIRST, WRITTEN ONLY ON APPLY)" Classes="PanelHeader" Margin="0,0,0,6" />
+                      <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                        <Button x:Name="DeriveStarLegsButton" Content="DERIVE STAR LEGS..." Classes="FlatBtn" Click="DeriveStarLegs_Click"
+                                ToolTip.Tip="Propose the HV, MV and LV legs' r and x from the nameplate (nothing is changed yet)" />
+                        <Button x:Name="ApplyStarLegsButton" Content="APPLY THESE EDITS (ONE UNDO STEP)" Classes="FlatBtn" Click="ApplyStarLegs_Click"
+                                IsVisible="{Binding CanApplyStarLegs}" Margin="8,0,0,0" />
+                        <Button x:Name="CancelStarLegsButton" Content="CANCEL" Classes="FlatBtn" Click="CancelStarLegs_Click"
+                                IsVisible="{Binding HasStarLegs}" Margin="8,0,0,0" />
+                      </StackPanel>
+                      <TextBlock x:Name="StarLegsRefusal" Text="{Binding StarLegsRefusal}" IsVisible="{Binding HasStarLegsRefusal}"
+                                 Foreground="{StaticResource Amber}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      <ItemsControl x:Name="StarLegsEdits" ItemsSource="{Binding StarLegs.EditLines}" IsVisible="{Binding CanApplyStarLegs}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="sys:String">
+                            <TextBlock Text="{Binding}" FontFamily="{StaticResource MonoFont}" FontSize="12" Margin="0,1" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <ItemsControl x:Name="StarLegsLines" ItemsSource="{Binding StarLegs.Derivation.Lines}" IsVisible="{Binding CanApplyStarLegs}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="sys:String">
+                            <TextBlock Text="{Binding}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,1" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                  <TextBlock DockPanel.Dock="Top" Text="AS WRITTEN IN THE FILE" Classes="PanelHeader" Margin="0,0,0,6" />
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <SelectableTextBlock x:Name="RecordWritten" Text="{Binding WrittenText}" FontFamily="{StaticResource MonoFont}" FontSize="12" />
+                  </ScrollViewer>
+                </DockPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== PROPERTIES: the editable field grid (schema field specs; edits are engine transactions) ===== -->
+          <ContentControl x:Name="FieldsHost" Content="{Binding Fields}" IsVisible="{Binding IsFieldGridShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="edit:FieldGridModel">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                    <TextBlock Text="CASE RECORD  (EDITABLE IN AUTHOR MODE: TYPE A VALUE, ENTER OR SET; EACH EDIT IS ONE UNDO STEP)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="FieldsHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding ShapeTitle}" Classes="Label" FontSize="12" Margin="0,2,0,0" />
+                  </StackPanel>
+                  <Grid DockPanel.Dock="Top" ColumnDefinitions="230,*,150,260,80" Margin="8,0,8,6">
+                    <TextBlock Grid.Column="0" Text="FIELD" Classes="PanelHeader" />
+                    <TextBlock Grid.Column="1" Text="VALUE (JSON AS WRITTEN)" Classes="PanelHeader" />
+                    <TextBlock Grid.Column="3" Text="STATE" Classes="PanelHeader" />
+                    <TextBlock Grid.Column="4" Text="UNIT" Classes="PanelHeader" />
+                  </Grid>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="FieldRows" ItemsSource="{Binding Rows}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="edit:FieldRow">
+                          <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                            <Grid ColumnDefinitions="230,*,150,260,80" RowDefinitions="Auto,Auto">
+                              <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Field}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                              </StackPanel>
+                              <TextBox Grid.Column="1" x:Name="FieldBox" Text="{Binding EditText, Mode=TwoWay}" IsEnabled="{Binding IsEditable}"
+                                       FontFamily="{StaticResource MonoFont}" Margin="0,0,8,0" KeyDown="FieldBox_KeyDown"
+                                       Watermark="absent" />
+                              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="SET" Classes="FlatBtn" Click="FieldSet_Click" IsEnabled="{Binding IsEditable}" Margin="0,0,6,0" />
+                                <Button Content="RESET" Classes="FlatBtn" Click="FieldReset_Click" IsEnabled="{Binding CanReset}"
+                                        ToolTip.Tip="Remove the member so the field takes its default" />
+                              </StackPanel>
+                              <TextBlock Grid.Column="3" Text="{Binding StateText}" Classes="Label" TextWrapping="Wrap" Margin="0,0,12,0" />
+                              <TextBlock Grid.Column="4" Text="{Binding Unit}" Classes="Label" TextWrapping="Wrap" />
+                              <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Margin="0,3,0,0">
+                                <TextBlock Text="{Binding ChoicesText}" IsVisible="{Binding HasChoices}" FontSize="10" FontFamily="{StaticResource MonoFont}"
+                                           Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Help}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </DockPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== PROPERTIES as a per-element editor (UI programme Phase 4.3): the same field grid's rows in labelled
+               sections, in an engineering order, with pickers for references, enums and booleans, the reason of a
+               refused edit inline on its field, locked fields with the loader's reason, and DERIVED read-outs beside the
+               inputs (display only, never written back). SET, RESET, Enter and a pick are the grid row's own Commit and
+               Reset (one undo step each). Records without an editor keep the generic grid above. ===== -->
+          <ContentControl x:Name="EditorHost" Content="{Binding Editor}" IsVisible="{Binding IsEditorShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="elem:ElementEditorModel">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                    <TextBlock Text="CASE RECORD  (EDITABLE IN AUTHOR MODE: TYPE OR PICK A VALUE, ENTER OR SET; EACH EDIT IS ONE UNDO STEP)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="EditorHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                      <TextBlock x:Name="EditorKind" Text="{Binding KindTitle, StringFormat='{}{0} editor'}" FontSize="12" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding ShapeTitle}" Classes="Label" FontSize="12" Margin="12,0,0,0" />
+                      <TextBlock Text="{Binding FormatText}" Classes="Label" FontSize="11" FontFamily="{StaticResource MonoFont}" Margin="12,0,0,0" />
+                    </StackPanel>
+                  </StackPanel>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                    <ItemsControl x:Name="EditorSections" ItemsSource="{Binding Sections}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="elem:EditorSection">
+                          <StackPanel Margin="0,0,0,14">
+                            <TextBlock x:Name="EditorSectionTitle" Text="{Binding Title}" Classes="PanelHeader" Margin="0,0,0,6" />
+                            <Grid ColumnDefinitions="230,*,150,260,90" Margin="8,0,8,4">
+                              <TextBlock Grid.Column="0" Text="FIELD" Classes="Label" FontSize="10" />
+                              <TextBlock Grid.Column="1" Text="VALUE (JSON AS WRITTEN)" Classes="Label" FontSize="10" />
+                              <TextBlock Grid.Column="3" Text="STATE" Classes="Label" FontSize="10" />
+                              <TextBlock Grid.Column="4" Text="UNIT" Classes="Label" FontSize="10" />
+                            </Grid>
+                            <ItemsControl x:Name="EditorFields" ItemsSource="{Binding Fields}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="elem:EditorField">
+                                  <Border Classes="Card EditorRow" Classes.Nested="{Binding IsNested}" Margin="0,0,0,4" Padding="8,5">
+                                    <Grid ColumnDefinitions="230,*,150,260,90" RowDefinitions="Auto,Auto">
+                                      <StackPanel Grid.Column="0">
+                                        <TextBlock x:Name="EditorLabel" Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Path}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                                      </StackPanel>
+                                      <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                        <TextBox x:Name="EditorBox" Text="{Binding EditText, Mode=TwoWay}" IsEnabled="{Binding IsEditable}"
+                                                 FontFamily="{StaticResource MonoFont}" KeyDown="EditorBox_KeyDown" Watermark="absent" />
+                                        <ComboBox x:Name="EditorPicker" ItemsSource="{Binding Choices}" IsVisible="{Binding HasChoices}" IsEnabled="{Binding IsEditable}"
+                                                  PlaceholderText="pick a value" HorizontalAlignment="Stretch" Margin="0,4,0,0"
+                                                  SelectionChanged="EditorPicker_SelectionChanged">
+                                          <ComboBox.ItemTemplate>
+                                            <DataTemplate DataType="elem:EditorChoice">
+                                              <TextBlock Text="{Binding Display}" FontFamily="{StaticResource MonoFont}" />
+                                            </DataTemplate>
+                                          </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                      </StackPanel>
+                                      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                                        <Button Content="SET" Classes="FlatBtn" Click="EditorSet_Click" IsEnabled="{Binding IsEditable}" Margin="0,0,6,0" />
+                                        <Button Content="RESET" Classes="FlatBtn" Click="EditorReset_Click" IsEnabled="{Binding CanReset}"
+                                                ToolTip.Tip="Remove the member so the field takes its default" />
+                                      </StackPanel>
+                                      <TextBlock Grid.Column="3" x:Name="EditorState" Text="{Binding StateText}" Classes="Label" Classes.LockedState="{Binding IsLocked}"
+                                                 TextWrapping="Wrap" Margin="0,0,12,0" />
+                                      <TextBlock Grid.Column="4" x:Name="EditorUnit" Text="{Binding Unit}" Classes="Label" TextWrapping="Wrap" />
+                                      <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Margin="0,3,0,0">
+                                        <TextBlock x:Name="EditorError" Text="{Binding Error}" IsVisible="{Binding HasError}" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Amber}" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding ChoicesNote}" IsVisible="{Binding HasChoicesNote}" FontSize="10" Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                                        <TextBlock x:Name="EditorHelp" Text="{Binding Help}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding LabelSource, StringFormat='label from: {0}'}" Classes="Label" FontSize="9" FontFamily="{StaticResource MonoFont}" />
+                                      </StackPanel>
+                                    </Grid>
+                                  </Border>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl x:Name="EditorReadouts" ItemsSource="{Binding Readouts}" IsVisible="{Binding HasReadouts}" Margin="8,4,0,0">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="elem:DerivedReadout">
+                                  <Grid ColumnDefinitions="70,300,170,110,*" Margin="0,0,0,2">
+                                    <TextBlock Grid.Column="0" Text="derived" Classes="Label" FontSize="10" Foreground="{StaticResource Accent}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" x:Name="ReadoutLabel" Text="{Binding Label}" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="2" x:Name="ReadoutValue" Text="{Binding Text}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}"
+                                               TextWrapping="Wrap" ToolTip.Tip="{Binding ExactText}" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Unit}" Classes="Label" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Formula}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap" />
+                                  </Grid>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- UI programme Phase 4.4: on a generator of a v2 case, its TEMPLATE: the template it is bound to and
+                         how (OPEN TEMPLATE selects it), BIND to another template by its own template member or UNBIND it,
+                         that template's overrides each against the template's value (RESET TO TEMPLATE removes one), and
+                         the effective parameters as the v2 loader resolves them (SHOW EFFECTIVE PARAMETERS loads the case
+                         as it is now on a staged copy; nothing is written). -->
+                    <Border x:Name="TemplateLinkCard" Classes="Card" IsVisible="{Binding HasTemplateLink}" Margin="0,0,0,14" Padding="10,8">
+                      <ContentControl x:Name="TemplateLinkHost" Content="{Binding TemplateLink}">
+                        <ContentControl.ContentTemplate>
+                          <DataTemplate DataType="templ:GeneratorTemplateModel">
+                            <StackPanel>
+                              <TextBlock Text="TEMPLATE (INVERTER CONTROLLER PARAMETERS)" Classes="PanelHeader" Margin="0,0,0,6" />
+                              <TextBlock x:Name="TemplateLinkText" Text="{Binding BindingText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                              <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <Button x:Name="OpenTemplateButton" Content="OPEN TEMPLATE" Classes="FlatBtn" Click="OpenTemplate_Click" IsEnabled="{Binding HasTemplate}" Margin="0,0,8,0" />
+                                <ComboBox x:Name="BindTemplatePicker" ItemsSource="{Binding Choices}" PlaceholderText="bind to a template" MinWidth="280"
+                                          SelectionChanged="BindTemplatePicker_SelectionChanged" Margin="0,0,8,0" />
+                                <Button x:Name="UnbindTemplateButton" Content="UNBIND" Classes="FlatBtn" Click="UnbindTemplate_Click" IsEnabled="{Binding HasOwnTemplate}"
+                                        ToolTip.Tip="Remove the generator's own template member (the binding rules then apply)" />
+                              </StackPanel>
+                              <TextBlock Text="OVERRIDES OF THIS TEMPLATE IN THE CASE" Classes="Label" FontSize="10" Margin="0,10,0,4" />
+                              <TextBlock Text="{Binding OverridesNote}" Classes="Label" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,4" />
+                              <TextBlock Text="None: every value is the template's own." Classes="Label" IsVisible="{Binding !HasOverrides}" />
+                              <ItemsControl x:Name="TemplateLinkOverrides" ItemsSource="{Binding Overrides}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate DataType="templ:TemplateOverrideRow">
+                                    <Grid ColumnDefinitions="200,*,170" Margin="0,0,0,2">
+                                      <TextBlock Grid.Column="0" Text="{Binding Param}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Text}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                      <Button Grid.Column="2" Content="RESET TO TEMPLATE" Classes="FlatBtn" Click="OverrideReset_Click" />
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <StackPanel Orientation="Horizontal" Margin="0,10,0,4">
+                                <Button x:Name="ShowEffectiveButton" Content="SHOW EFFECTIVE PARAMETERS" Classes="FlatBtn" Click="ShowEffective_Click"
+                                        ToolTip.Tip="Load the case as it is now with the v2 loader (a staged copy; nothing is written) and show this generator's parameters as it resolves them" />
+                              </StackPanel>
+                              <TextBlock x:Name="EffectiveText" Text="{Binding EffectiveText}" Classes="Label" FontSize="11" TextWrapping="Wrap" />
+                              <ItemsControl x:Name="EffectiveRows" ItemsSource="{Binding Effective.Params}">
+                                <ItemsControl.ItemTemplate>
+                                  <DataTemplate DataType="templ:EffectiveParameter">
+                                    <Grid ColumnDefinitions="240,170,110,*" Margin="0,0,0,2">
+                                      <TextBlock Grid.Column="0" Text="{Binding Name}" />
+                                      <TextBlock Grid.Column="1" Text="{Binding Text}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                                      <TextBlock Grid.Column="2" Text="{Binding Unit}" Classes="Label" />
+                                      <TextBlock Grid.Column="3" Text="{Binding Source}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                                    </Grid>
+                                  </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                      </ContentControl>
+                    </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                </DockPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- ===== PROPERTIES of a template (UI programme Phase 4.4): its identity, its parameter grid built from its
+               KIND SPEC (one row per parameter in the kind file's order: unit, range, default, required or optional,
+               enum choices and help, all from the kind spec; SET, RESET and Enter are the field grid row's own, one undo
+               step each, a value the kind spec refuses refused with its message), the binding rules and generators that
+               use it, and its overrides (each against the template's value; SET OVERRIDE and RESET TO TEMPLATE). A
+               library template's rows are locked with the reason; its values can still be overridden. ===== -->
+          <ContentControl x:Name="TemplateEditorHost" Content="{Binding TemplateEditor}" IsVisible="{Binding IsTemplateEditorShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="templ:TemplateEditorModel">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <StackPanel>
+                    <TextBlock Text="CASE TEMPLATE  (EDITABLE IN AUTHOR MODE WHEN LOCAL: TYPE A VALUE, ENTER OR SET; EACH EDIT IS ONE UNDO STEP)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="TemplateHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" TextWrapping="Wrap" />
+                    <TextBlock x:Name="TemplateKind" Text="{Binding KindText}" FontSize="12" FontWeight="SemiBold" Margin="0,2,0,0" />
+                    <TextBlock x:Name="TemplateSource" Text="{Binding SourceText}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding StatusText}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,12" />
+
+                    <TextBlock Text="{Binding Params.ShapeTitle}" Classes="PanelHeader" Margin="0,0,0,6" />
+                    <Grid ColumnDefinitions="230,*,150,260,80" Margin="8,0,8,6">
+                      <TextBlock Grid.Column="0" Text="PARAMETER" Classes="Label" FontSize="10" />
+                      <TextBlock Grid.Column="1" Text="VALUE (JSON AS WRITTEN)" Classes="Label" FontSize="10" />
+                      <TextBlock Grid.Column="3" Text="STATE (ABSENT: THE CODE DEFAULT)" Classes="Label" FontSize="10" />
+                      <TextBlock Grid.Column="4" Text="UNIT" Classes="Label" FontSize="10" />
+                    </Grid>
+                    <ItemsControl x:Name="TemplateParamRows" ItemsSource="{Binding Params.Rows}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="edit:FieldRow">
+                          <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                            <Grid ColumnDefinitions="230,*,150,260,80" RowDefinitions="Auto,Auto">
+                              <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Kind}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                              </StackPanel>
+                              <TextBox Grid.Column="1" x:Name="TemplateParamBox" Text="{Binding EditText, Mode=TwoWay}" IsEnabled="{Binding IsEditable}"
+                                       FontFamily="{StaticResource MonoFont}" Margin="0,0,8,0" KeyDown="FieldBox_KeyDown" Watermark="absent" />
+                              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Content="SET" Classes="FlatBtn" Click="FieldSet_Click" IsEnabled="{Binding IsEditable}" Margin="0,0,6,0" />
+                                <Button Content="RESET" Classes="FlatBtn" Click="FieldReset_Click" IsEnabled="{Binding CanReset}"
+                                        ToolTip.Tip="Remove the parameter so its consumers use their code default" />
+                              </StackPanel>
+                              <TextBlock Grid.Column="3" Text="{Binding StateText}" Classes="Label" Classes.LockedState="{Binding IsLocked}" TextWrapping="Wrap" Margin="0,0,12,0" />
+                              <TextBlock Grid.Column="4" Text="{Binding Unit}" Classes="Label" TextWrapping="Wrap" />
+                              <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Margin="0,3,0,0">
+                                <TextBlock Text="{Binding ChoicesText}" IsVisible="{Binding HasChoices}" FontSize="10" FontFamily="{StaticResource MonoFont}"
+                                           Foreground="{StaticResource Accent}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Help}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                              </StackPanel>
+                            </Grid>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="BINDINGS (WHICH GENERATORS USE THIS TEMPLATE)" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <ItemsControl x:Name="TemplateRules" ItemsSource="{Binding Rules}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="templ:TemplateBindingRule">
+                          <Grid ColumnDefinitions="*,120" Margin="0,0,0,2">
+                            <TextBlock Grid.Column="0" Text="{Binding Text}" FontFamily="{StaticResource MonoFont}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="REMOVE RULE" Classes="FlatBtn" Click="RuleRemove_Click" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                      <TextBox x:Name="NewRuleBox" Text="{Binding NewRuleMatchType, Mode=TwoWay}" Watermark="generator type (wind* for a prefix)" MinWidth="260" Margin="0,0,8,0" />
+                      <Button x:Name="AddRuleButton" Content="ADD RULE" Classes="FlatBtn" Click="RuleAdd_Click"
+                              ToolTip.Tip="Bind every generator of this type to this template (unless it names its own)" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding BoundText}" Classes="Label" Margin="0,0,0,4" />
+                    <ItemsControl x:Name="TemplateBoundGenerators" ItemsSource="{Binding BoundGenerators}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="templ:GeneratorBindingInfo">
+                          <Button Classes="RowLinkBtn" Click="BoundGenerator_Click" Margin="0,0,0,2" Padding="8,2">
+                            <Grid ColumnDefinitions="300,*">
+                              <TextBlock Grid.Column="0" Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                              <TextBlock Grid.Column="1" Text="{Binding Route}" Classes="Label" FontSize="10" TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="OVERRIDES (THIS CASE'S VALUES IN PLACE OF THE TEMPLATE'S OWN)" Classes="PanelHeader" Margin="0,12,0,6" />
+                    <TextBlock Text="None: every value is the template's own." Classes="Label" IsVisible="{Binding !HasOverrides}" />
+                    <ItemsControl x:Name="TemplateOverrides" ItemsSource="{Binding Overrides}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="templ:TemplateOverrideRow">
+                          <Grid ColumnDefinitions="200,*,170" Margin="0,0,0,2">
+                            <TextBlock Grid.Column="0" Text="{Binding Param}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1">
+                              <TextBlock Text="{Binding Text}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Reason, StringFormat='reason: {0}'}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="RESET TO TEMPLATE" Classes="FlatBtn" Click="OverrideReset_Click" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                      <ComboBox x:Name="OverrideParamPicker" ItemsSource="{Binding OverrideChoices}" SelectedItem="{Binding OverrideParam, Mode=TwoWay}"
+                                PlaceholderText="parameter" MinWidth="220" Margin="0,0,8,0" />
+                      <TextBox x:Name="OverrideValueBox" Text="{Binding OverrideText, Mode=TwoWay}" Watermark="value" MinWidth="120" Margin="0,0,8,0" FontFamily="{StaticResource MonoFont}" />
+                      <TextBox x:Name="OverrideReasonBox" Text="{Binding OverrideReason, Mode=TwoWay}" Watermark="reason (a new override must say why)" MinWidth="280" Margin="0,0,8,0" />
+                      <Button x:Name="SetOverrideButton" Content="SET OVERRIDE" Classes="FlatBtn" Click="OverrideSet_Click"
+                              ToolTip.Tip="Set this case's value for the parameter in place of the template's (one undo step)" />
+                    </StackPanel>
+                  </StackPanel>
+                </ScrollViewer>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+
+          <!-- Phase 4.3: the switch between a record's editor and the generic field grid (top right of PROPERTIES) -->
+          <Button x:Name="EditorViewToggle" Content="{Binding ViewToggleText}" Classes="FlatBtn" Click="EditorViewToggle_Click"
+                  IsVisible="{Binding IsViewToggleShown}" HorizontalAlignment="Right" VerticalAlignment="Top" />
+
+          <!-- ===== CONNECTIONS: who refers to the record (a click selects that record) ===== -->
+          <ScrollViewer x:Name="WhereUsedHost" IsVisible="{Binding IsConnectionsShown}" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+              <TextBlock Text="WHERE USED IN THE CASE FILE" Classes="PanelHeader" Margin="0,0,0,8" />
+              <ItemsControl x:Name="WhereUsedRows" ItemsSource="{Binding WhereUsed}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="edit:WhereUsedRow">
+                    <Button Classes="RowLinkBtn" Click="WhereUsed_Click" Margin="0,0,0,4" Padding="8,4">
+                      <Grid ColumnDefinitions="200,*">
+                        <TextBlock Grid.Column="0" Text="{Binding Field}" Classes="Label" FontSize="11" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding What}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- ===== CHECK: the last Check's problems (Home: every one; a record: its own) ===== -->
+          <ContentControl x:Name="AuthorCheckHost" Content="{Binding CheckPage}" IsVisible="{Binding IsCheckShown}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate DataType="edit:AuthorCheckPage">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                    <TextBlock Text="CHECK  (THE SAVE GATE, WRITING NOTHING; NO SOLVE)" Classes="Label" FontSize="10" />
+                    <TextBlock x:Name="AuthorCheckHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock x:Name="AuthorCheckNote" Text="{Binding Note}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <TextBlock Text="No problem here in the last Check." IsVisible="{Binding !HasProblems}" Foreground="{StaticResource Green}" Margin="0,8,0,0" />
+                  </StackPanel>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                      <ItemsControl x:Name="AuthorCheckRows" ItemsSource="{Binding Problems}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="edit:AuthoringProblem">
+                            <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                              <StackPanel>
+                                <TextBlock Text="{Binding Message}" FontWeight="SemiBold" Foreground="{StaticResource Amber}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding File}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                                <TextBlock Text="{Binding Pointer}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                              </StackPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <!-- Phase 5c follow-up: the substation topology warnings of the case as it is now (display only). -->
+                      <StackPanel x:Name="AuthorCheckTopology" IsVisible="{Binding HasTopologyWarnings}" Margin="0,10,0,0">
+                        <TextBlock Text="TOPOLOGY WARNINGS  (THE CASE AS IT IS NOW; DISPLAY ONLY, THEY NEVER STOP A CHECK OR A SAVE)" Classes="PanelHeader" Margin="0,0,0,6" />
+                        <ItemsControl x:Name="AuthorCheckWarnings" ItemsSource="{Binding TopologyWarnings}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="edit:AuthoringProblem">
+                              <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                                <StackPanel>
+                                  <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                                  <TextBlock Text="{Binding File}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                                  <TextBlock Text="{Binding Pointer}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </StackPanel>
+                  </ScrollViewer>
+                </DockPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+        </Panel>
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</UserControl>

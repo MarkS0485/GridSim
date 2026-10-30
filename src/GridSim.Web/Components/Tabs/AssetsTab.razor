@@ -1,0 +1,162 @@
+@using GridSim.Web.Projection
+@using GridSim.Web.Components.Assets
+
+@if (Graph is null)
+{
+    <div class="stub">Waiting for first solved frame...</div>
+}
+else
+{
+    <div class="assets tabpage">
+        @* ---- explorer header: home / back nav, breadcrumb, and the sim-time strip every page aligns to ---- *@
+        <div class="card" style="margin-bottom:0;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <button class="acat" @onclick="Home">ASSETS</button>
+                @if (_stack.Count > 0)
+                {
+                    <button class="acat" @onclick="Back">&lt; BACK</button>
+                }
+                <span class="mono" style="color:var(--muted);font-size:0.8em;margin-left:6px">@Breadcrumb</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
+                    <span class="card-eyebrow" style="margin:0">TIME-ALIGNED</span>
+                    <span class="mono" style="color:var(--accent);font-weight:700">SIM @(Frame?.Clock ?? "--:--") | TICK @(Frame?.Tick ?? 0)</span>
+                </span>
+            </div>
+        </div>
+
+        @* ---- the current page, matched to its route ---- *@
+        <div @key="_current" style="flex:1 1 auto;min-height:0;display:flex;flex-direction:column;gap:var(--sp-3);overflow:auto">
+            @switch (_current.Page)
+            {
+                case AssetPage.Landing:
+                    <AssetLanding Graph="Graph" Nav="_nav" />
+                    break;
+                case AssetPage.GenFleet:
+                    <GeneratorFleet Graph="Graph" Nav="_nav" />
+                    break;
+                case AssetPage.IcFleet:
+                    <InterconnectorFleet Graph="Graph" Nav="_nav" />
+                    break;
+                case AssetPage.GenDetail:
+                    <GeneratorDetail Graph="Graph" Nav="_nav" GenIndex="_current.Key" Tick="Frame?.Tick ?? 0" />
+                    break;
+                case AssetPage.IcDetail:
+                    <InterconnectorDetail Graph="Graph" Nav="_nav" GenIndex="_current.Key" Tick="Frame?.Tick ?? 0" />
+                    break;
+                case AssetPage.TxFleet:
+                    <TransformerFleet Graph="Graph" Nav="_nav" />
+                    break;
+                case AssetPage.TxDetail:
+                    <TransformerDetail Graph="Graph" Nav="_nav" BranchIndex="_current.Key" Tick="Frame?.Tick ?? 0" />
+                    break;
+                case AssetPage.CktFleet:
+                    <CircuitFleet Graph="Graph" Nav="_nav" />
+                    break;
+                case AssetPage.CktDetail:
+                    <CircuitDetail Graph="Graph" Nav="_nav" BranchIndex="_current.Key" Tick="Frame?.Tick ?? 0" />
+                    break;
+                case AssetPage.SubFleet:
+                    <SubstationFleet Graph="Graph" Nav="_nav" />
+                    break;
+                case AssetPage.SubDetail:
+                    <SubstationDetail Graph="Graph" Nav="_nav" BusId="_current.Key" Tick="Frame?.Tick ?? 0" IsBridge="IsBridge" QueryAsset="QueryAsset" />
+                    break;
+                case AssetPage.TapFleet:
+                    <TapChangerFleet Graph="Graph" Nav="_nav" />
+                    break;
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public TopologyDto? Topology { get; set; }
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+
+    /// <summary>Optional deep-link: when set, the explorer opens that bus's substation page. Honours the
+    /// map's double-click / OPEN IN ASSETS drill (Dashboard.HandleMapDrill passes the drilled bus id).</summary>
+    [Parameter] public int? FocusBus { get; set; }
+
+    /// <summary>Optional deep-link to any explorer page (R099: the SCADA register's click-through passes the
+    /// substation, circuit or transformer of the clicked point). An empty title is resolved from the asset graph.
+    /// Applied the same way as <see cref="FocusBus"/>: the page opens with a single Back to Home.</summary>
+    [Parameter] public AssetRoute? FocusRoute { get; set; }
+
+    /// <summary>True in GDA bridge mode - unlocks the per-asset GDA card on the substation page. The Dashboard
+    /// passes <c>_session.IsBridge</c> (defaults false so the card is simply omitted elsewhere).</summary>
+    [Parameter] public bool IsBridge { get; set; }
+
+    /// <summary>N063: runs the bridge per-asset query for a bus (the Dashboard passes the session's
+    /// <c>QueryAssetAsync</c> on a bridge session); handed straight to the substation page.</summary>
+    [Parameter] public Func<int, CancellationToken, Task<GridSim.Core.IO.QueryResult>>? QueryAsset { get; set; }
+
+    private AssetGraphDto? Graph => Frame?.AssetGraph;
+
+    private readonly List<AssetRoute> _stack = new();
+    private AssetRoute _current = new(AssetPage.Landing, Title: "ASSETS");
+    private AssetNavContext _nav = default!;
+    private int? _lastFocusBus;
+    private AssetRoute? _lastFocusRoute;
+
+    protected override void OnInitialized() => _nav = new AssetNavContext(Push);
+
+    protected override void OnParametersSet()
+    {
+        // Deep-link: a newly-supplied FocusBus opens that substation with a single Back to Home.
+        if (FocusBus is int bus && FocusBus != _lastFocusBus)
+        {
+            _lastFocusBus = FocusBus;
+            _stack.Clear();
+            _stack.Add(new AssetRoute(AssetPage.Landing, Title: "ASSETS"));
+            string name = Graph?.Buses.FirstOrDefault(b => b.Id == bus)?.Name ?? $"bus {bus}";
+            _current = new AssetRoute(AssetPage.SubDetail, bus, name);
+        }
+
+        // Deep-link to any page (SCADA click-through). Records compare by value, so a re-render with the same
+        // route does not reset the user's navigation.
+        if (FocusRoute is AssetRoute route && route != _lastFocusRoute)
+        {
+            _lastFocusRoute = route;
+            _stack.Clear();
+            _stack.Add(new AssetRoute(AssetPage.Landing, Title: "ASSETS"));
+            _current = string.IsNullOrEmpty(route.Title) ? route with { Title = TitleFor(route) } : route;
+        }
+    }
+
+    /// <summary>A breadcrumb title for a deep-linked route: the substation or branch name from the asset graph,
+    /// or a plain "bus N" / "branch N" when the graph has not arrived yet or the key is out of range.</summary>
+    private string TitleFor(AssetRoute r) => r.Page switch
+    {
+        AssetPage.SubDetail => Graph?.Buses.FirstOrDefault(b => b.Id == r.Key)?.Name ?? $"bus {r.Key}",
+        AssetPage.CktDetail or AssetPage.TxDetail =>
+            Graph is not null && r.Key >= 0 && r.Key < Graph.Branches.Count ? Graph.Branches[r.Key].Name : $"branch {r.Key}",
+        _ => r.Page.ToString(),
+    };
+
+    private void Push(AssetRoute route)
+    {
+        // Called via the _nav delegate from CHILD pages (landing tiles, cross-links). A child's event handler
+        // re-renders the child, not this parent whose _current changed - so trigger the parent render explicitly.
+        _stack.Add(_current);
+        _current = route;
+        StateHasChanged();
+    }
+
+    private void Back()
+    {
+        if (_stack.Count == 0) return;
+        _current = _stack[^1];
+        _stack.RemoveAt(_stack.Count - 1);
+    }
+
+    private void Home()
+    {
+        _stack.Clear();
+        _current = new AssetRoute(AssetPage.Landing, Title: "ASSETS");
+    }
+
+    private string Breadcrumb =>
+        string.Join("    >    ", _stack.Select(r => Crumb(r)).Append(Crumb(_current)));
+
+    private static string Crumb(AssetRoute r) => string.IsNullOrEmpty(r.Title) ? r.Page.ToString() : r.Title;
+}

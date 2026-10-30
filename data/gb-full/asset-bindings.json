@@ -1,0 +1,30 @@
+[
+  {
+    "matchType": "wind*",
+    "class": "gfl-wind-2024"
+  },
+  {
+    "matchType": "solar",
+    "class": "gfl-solar-2024"
+  },
+  {
+    "matchType": "storage",
+    "class": "gfm-bess-2024"
+  },
+  {
+    "matchType": "interconnector",
+    "class": "hvdc-2024"
+  },
+  {
+    "matchType": "tidal",
+    "class": "gfl-wind-2024"
+  },
+  {
+    "matchType": "transformer",
+    "class": "tx-oltc-2024"
+  },
+  {
+    "matchType": "line",
+    "class": "cable-thermal-2024"
+  }
+]

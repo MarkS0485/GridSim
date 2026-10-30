@@ -1,0 +1,8 @@
+$ gridsim ptdf uk --bus 8 --top 5
+PTDF - GB reduced (10-zone) (20 buses): +1 MW injected at bus 8 (withdrawn at slack 6) flows on:
+    branch 8    6->8           PTDF -0.4539  (-45.4%)
+    branch 9    7->8           PTDF -0.2867  (-28.7%)
+    branch 11   8->9           PTDF  0.2594  ( 25.9%)
+    branch 10   6->9           PTDF -0.2038  (-20.4%)
+    branch 7    6->7           PTDF -0.1985  (-19.9%)
+[exit 0]

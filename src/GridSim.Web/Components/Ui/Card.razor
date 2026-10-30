@@ -1,0 +1,24 @@
+@* Card - a control-room panel (WPF Card style): Panel bg, Border, 6px radius.
+   Optional eyebrow + accent panel-header, then arbitrary content. *@
+
+<div class="card@(string.IsNullOrEmpty(Class) ? "" : " " + Class)">
+    @if (!string.IsNullOrEmpty(Eyebrow))
+    {
+        <div class="card-eyebrow">@Eyebrow</div>
+    }
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <div class="card-h">@Title</div>
+    }
+    @ChildContent
+</div>
+
+@code {
+    /// <summary>Accent panel-header text (rendered uppercase by the theme).</summary>
+    [Parameter] public string? Title { get; set; }
+    /// <summary>Optional muted eyebrow above the header.</summary>
+    [Parameter] public string? Eyebrow { get; set; }
+    /// <summary>Extra class(es), e.g. "breach", "grow", "lake", "narrative".</summary>
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

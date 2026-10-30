@@ -1,0 +1,3 @@
+$ gridsim lodf case9 --branch 0
+LODF - IEEE 9-bus (WSCC): outage of branch 0 (1->4) ISLANDS the system (bridge line); LODF undefined.
+[exit 0]

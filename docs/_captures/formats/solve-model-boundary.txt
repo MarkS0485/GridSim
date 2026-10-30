@@ -1,0 +1,13 @@
+$ sed -n '1148,1158p' results/formats/uk-solve.json
+    "boundaries": [
+      {
+        "name": "B4 Upper North (Scotland)",
+        "limitMw": 3200,
+        "branches": [
+          {
+            "branch": "L1-2 N-S Scotland",
+            "direction": 1
+          }
+        ]
+      },
+[exit 0]

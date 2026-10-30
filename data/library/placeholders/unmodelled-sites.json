@@ -1,0 +1,142 @@
+{
+  "schema": "gridsim-library/2",
+  "title": "Unmodelled sites (placeholders)",
+  "description": "Named sites that are not in any public dataset. Every value is deliberately null. Strippable by design: nothing references these templates by name, so deleting this one file removes them.",
+  "templates": [
+    {
+      "id": "gridsim.placeholder.site.Nuclear-Sub",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Nuclear-Sub",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Carrier",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Carrier",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.PCI-Datacentres",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "PCI-Datacentres",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Hyperscale-Datacentre",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Hyperscale-Datacentre",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.AI-Training-Campus",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "AI-Training-Campus",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Naval-Base-Shore-Supply",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Naval-Base-Shore-Supply",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Military-Airfield",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Military-Airfield",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.SMR",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "SMR (small modular reactor)",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Private-Wire-Network",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Private-Wire-Network",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Behind-The-Meter-BESS-Aggregate",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Behind-The-Meter-BESS-Aggregate",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Electrolyser-Cluster",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Electrolyser-Cluster",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Arc-Furnace-Steelworks",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Arc-Furnace-Steelworks",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Rail-Traction-Supply",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Rail-Traction-Supply",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Megawatt-EV-Charging-Hub",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Megawatt-EV-Charging-Hub",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.placeholder.site.Crypto-Mining-Site",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Crypto-Mining-Site",
+      "params": { "generation": null, "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "Deliberately empty: not in any public dataset [VERIFY]" } }
+    }
+  ]
+}

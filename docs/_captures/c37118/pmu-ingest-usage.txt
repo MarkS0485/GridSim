@@ -1,0 +1,4 @@
+$ gridsim pmu-ingest
+usage: gridsim pmu-ingest (<capture.bin> | --live tcp://host:port|udp://[bind]:port --live-frames N [--live-seconds S] [--live-idcode ID] [--live-quarantine <dir>])
+                          [--channels <map.json> --measurements-dir <dir>]   (an IEEE C37.118.2 stream: CONFIG then DATA frames)
+[exit 2]

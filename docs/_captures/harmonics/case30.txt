@@ -1,0 +1,8 @@
+$ gridsim harmonics case30
+harmonics: case IEEE 30-bus, 1 source(s), orders 24
+  synthetic source : 6-pulse-g5 at bus 8, 0.5 pu fundamental (G5 Issue 5 Table B.3 six-pulse profile, the default; --synth-spectrum ideal for the idealised 1/h)
+  worst voltage THD : 12.17% at bus 8 (relative to the solved fundamental voltage)
+  resonance (bus 8): order 49, |Z|=2.951 pu, sharpness 3.1
+  fine sweep peak  : h=50.0000 (2500.00 Hz), |Z|=2.998 pu, positive sequence
+  IEEE-519         : 1/30 buses compliant
+[exit 0]

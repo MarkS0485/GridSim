@@ -1,0 +1,1002 @@
+[
+  {
+    "name": "NSC 400 tie",
+    "from": 1,
+    "to": 2,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "SSC 400 tie",
+    "from": 3,
+    "to": 4,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "SSC 275 ring 1",
+    "from": 5,
+    "to": 6,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "SSC 275 ring 2",
+    "from": 6,
+    "to": 7,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "SSC 275 ring 3",
+    "from": 7,
+    "to": 8,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "SSC 275 ring 4",
+    "from": 8,
+    "to": 9,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "SSC 275 ring 5",
+    "from": 9,
+    "to": 5,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 400 ring 1",
+    "from": 10,
+    "to": 11,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 400 ring 2",
+    "from": 11,
+    "to": 12,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 400 ring 3",
+    "from": 12,
+    "to": 13,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 400 ring 4",
+    "from": 13,
+    "to": 10,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 275 ring 1",
+    "from": 14,
+    "to": 15,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 275 ring 2",
+    "from": 15,
+    "to": 16,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 275 ring 3",
+    "from": 16,
+    "to": 17,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 275 ring 4",
+    "from": 17,
+    "to": 18,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "NEN 275 ring 5",
+    "from": 18,
+    "to": 14,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 400 ring 1",
+    "from": 19,
+    "to": 20,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 400 ring 2",
+    "from": 20,
+    "to": 21,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 400 ring 3",
+    "from": 21,
+    "to": 19,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 275 ring 1",
+    "from": 22,
+    "to": 23,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 275 ring 2",
+    "from": 23,
+    "to": 24,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 275 ring 3",
+    "from": 24,
+    "to": 25,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 275 ring 4",
+    "from": 25,
+    "to": 26,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "YRK 275 ring 5",
+    "from": 26,
+    "to": 22,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MER 400 ring 1",
+    "from": 27,
+    "to": 28,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MER 400 ring 2",
+    "from": 28,
+    "to": 29,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MER 400 ring 3",
+    "from": 29,
+    "to": 27,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MER 275 ring 1",
+    "from": 30,
+    "to": 31,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MER 275 ring 2",
+    "from": 31,
+    "to": 32,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MER 275 ring 3",
+    "from": 32,
+    "to": 33,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MER 275 ring 4",
+    "from": 33,
+    "to": 34,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MER 275 ring 5",
+    "from": 34,
+    "to": 30,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MID 400 ring 1",
+    "from": 35,
+    "to": 36,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID 400 ring 2",
+    "from": 36,
+    "to": 37,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID 400 ring 3",
+    "from": 37,
+    "to": 38,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID 400 ring 4",
+    "from": 38,
+    "to": 39,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID 400 ring 5",
+    "from": 39,
+    "to": 35,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID 275 ring 1",
+    "from": 40,
+    "to": 41,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MID 275 ring 2",
+    "from": 41,
+    "to": 42,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MID 275 ring 3",
+    "from": 42,
+    "to": 43,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MID 275 ring 4",
+    "from": 43,
+    "to": 44,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "MID 275 ring 5",
+    "from": 44,
+    "to": 40,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "EAN 400 tie",
+    "from": 45,
+    "to": 46,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 400 ring 1",
+    "from": 47,
+    "to": 48,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 400 ring 2",
+    "from": 48,
+    "to": 49,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 400 ring 3",
+    "from": 49,
+    "to": 50,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 400 ring 4",
+    "from": 50,
+    "to": 51,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 400 ring 5",
+    "from": 51,
+    "to": 52,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 400 ring 6",
+    "from": 52,
+    "to": 47,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 275 ring 1",
+    "from": 53,
+    "to": 54,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 275 ring 2",
+    "from": 54,
+    "to": 55,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 275 ring 3",
+    "from": 55,
+    "to": 56,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 275 ring 4",
+    "from": 56,
+    "to": 57,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 275 ring 5",
+    "from": 57,
+    "to": 58,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "LDN 275 ring 6",
+    "from": 58,
+    "to": 53,
+    "rPu": 0.001,
+    "xPu": 0.0085,
+    "bPu": 0.2,
+    "ratingMva": 2400,
+    "circuits": 1
+  },
+  {
+    "name": "STH 400 ring 1",
+    "from": 59,
+    "to": 60,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "STH 400 ring 2",
+    "from": 60,
+    "to": 61,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "STH 400 ring 3",
+    "from": 61,
+    "to": 59,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "SWW 400 tie",
+    "from": 62,
+    "to": 63,
+    "rPu": 0.0003,
+    "xPu": 0.003,
+    "bPu": 0.35,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NSC-SSC 400",
+    "from": 1,
+    "to": 3,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "SSC-NEN 400",
+    "from": 3,
+    "to": 10,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NEN-YRK 400",
+    "from": 10,
+    "to": 19,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NEN-MER 400",
+    "from": 10,
+    "to": 27,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "YRK-MID 400",
+    "from": 19,
+    "to": 35,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MER-MID 400",
+    "from": 27,
+    "to": 35,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "YRK-EAN 400",
+    "from": 19,
+    "to": 45,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID-EAN 400",
+    "from": 35,
+    "to": 45,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID-LDN 400",
+    "from": 35,
+    "to": 47,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "EAN-LDN 400",
+    "from": 45,
+    "to": 47,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "LDN-STH 400",
+    "from": 47,
+    "to": 59,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MID-STH 400",
+    "from": 35,
+    "to": 59,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "STH-SWW 400",
+    "from": 59,
+    "to": 62,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "MER-SWW 400",
+    "from": 27,
+    "to": 62,
+    "rPu": 0.0007,
+    "xPu": 0.007,
+    "bPu": 0.8,
+    "ratingMva": 5500,
+    "circuits": 1
+  },
+  {
+    "name": "NSC GSP 1 industrial spur",
+    "from": 64,
+    "to": 65,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "SSC GSP 1 industrial spur",
+    "from": 120,
+    "to": 121,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "NEN GSP 1 industrial spur",
+    "from": 225,
+    "to": 226,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "NEN GSP 2 industrial spur",
+    "from": 255,
+    "to": 256,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "NEN GSP 3 industrial spur",
+    "from": 287,
+    "to": 288,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "NEN GSP 4 industrial spur",
+    "from": 320,
+    "to": 321,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "YRK GSP 1 industrial spur",
+    "from": 549,
+    "to": 550,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "YRK GSP 2 industrial spur",
+    "from": 573,
+    "to": 574,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "YRK GSP 3 industrial spur",
+    "from": 607,
+    "to": 608,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "MER GSP 1 industrial spur",
+    "from": 804,
+    "to": 805,
+    "rPu": 0.001,
+    "xPu": 0.005,
+    "bPu": 0.02,
+    "ratingMva": 480,
+    "circuits": 1
+  },
+  {
+    "name": "MER GSP 2 industrial spur",
+    "from": 826,
+    "to": 827,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "MID GSP 1 industrial spur",
+    "from": 996,
+    "to": 997,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "MID GSP 2 industrial spur",
+    "from": 1023,
+    "to": 1024,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "MID GSP 3 industrial spur",
+    "from": 1049,
+    "to": 1050,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "MID GSP 4 industrial spur",
+    "from": 1079,
+    "to": 1080,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "MID GSP 5 industrial spur",
+    "from": 1108,
+    "to": 1109,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "EAN GSP 1 industrial spur",
+    "from": 1340,
+    "to": 1341,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "EAN GSP 2 industrial spur",
+    "from": 1374,
+    "to": 1375,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "LDN GSP 1 industrial spur",
+    "from": 1526,
+    "to": 1527,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "LDN GSP 2 industrial spur",
+    "from": 1546,
+    "to": 1547,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "LDN GSP 3 industrial spur",
+    "from": 1569,
+    "to": 1570,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "LDN GSP 4 industrial spur",
+    "from": 1591,
+    "to": 1592,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "LDN GSP 5 industrial spur",
+    "from": 1622,
+    "to": 1623,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "LDN GSP 6 industrial spur",
+    "from": 1648,
+    "to": 1649,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "STH GSP 1 industrial spur",
+    "from": 1964,
+    "to": 1965,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "STH GSP 2 industrial spur",
+    "from": 1993,
+    "to": 1994,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  },
+  {
+    "name": "SWW GSP 1 industrial spur",
+    "from": 2157,
+    "to": 2158,
+    "rPu": 0.002,
+    "xPu": 0.01,
+    "bPu": 0.01,
+    "ratingMva": 240,
+    "circuits": 1
+  }
+]

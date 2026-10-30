@@ -1,0 +1,16 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "substation",
+  "title": "Substation (asset overlay)",
+  "description": "Phase 5a asset overlay kind. A substation site: the top-level record its busbar sections, switching devices, earth paths and three-winding transformers sit under. Carried beside the model, never used by the solver: the authored buses stay the electrical truth. A substation points at no element itself; its busbar sections point at the buses they collapse to.",
+  "params": {
+    "name": { "type": "string", "required": false, "description": "The site name as the operator publishes it.", "codeDefaults": [] },
+    "operator": { "type": "string", "required": false, "description": "The owner or operator of the site.", "codeDefaults": [] },
+    "latitudeDeg": { "type": "number", "unit": "deg", "min": -90, "max": 90, "required": false, "description": "Site latitude, degrees north (WGS84).", "codeDefaults": [] },
+    "longitudeDeg": { "type": "number", "unit": "deg", "min": -180, "max": 180, "required": false, "description": "Site longitude, degrees east (WGS84).", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {},
+    "parentKinds": []
+  }
+}

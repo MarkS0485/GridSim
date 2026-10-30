@@ -1,0 +1,3 @@
+$ gridsim iec60909 case9
+usage: gridsim iec60909 <case> (--bus <id> | --all-buses) [--type 3ph|ll|slg|dlg] [--objective max|min] [--tb 0.10] [--tk 1.0] [--breaker kV,making_kA,breaking_kA,withstand_kA[,seconds[,asym_kA]]] [--branches [--top N]] [--corrections --rated-pf <cos phi> [--no-unit-oltc]]
+[exit 2]

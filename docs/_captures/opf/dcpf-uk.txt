@@ -1,0 +1,9 @@
+$ gridsim dcpf uk --top 3
+DC power flow - GB reduced (10-zone) (20 buses, 24 branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+  island ref bus 6         20 buses  demand   39,500.0 MW  scheduled generation   40,290.0 MW  reference injects    4,835.0 MW
+  0 of 24 rated branch(es) above 100% of RateA
+  largest flows:
+      branch 21    T8 GSP London & SE      8 -> 108       8500.00 MW     77.3% of 11,000 MVA
+      branch 19    T6 GSP Midlands       6 -> 106       6500.00 MW     81.2% of 8,000 MVA
+      branch 16    T3 GSP N England      3 -> 103       5500.00 MW     78.6% of 7,000 MVA
+[exit 0]

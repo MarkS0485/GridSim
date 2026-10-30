@@ -1,0 +1,6 @@
+$ head -n 4 results/exports-docs/losses.csv
+name,from,to,p_loss_mw,q_loss_mvar,loading_pct,type
+,1,2,4.297600336020395,7.271958043463716,0,line
+,1,5,2.762872592516459,6.084349851734967,0,line
+,2,3,2.3232693341752366,5.162435824094027,0,line
+[exit 0]

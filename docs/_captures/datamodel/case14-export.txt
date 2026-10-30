@@ -1,0 +1,3 @@
+$ gridsim case14 --once --enableExport
+[export] dense-newton: converged=True iters=2 maxMis=1.32E-010  ->  results\exports\case14-solve.json
+[exit 0]

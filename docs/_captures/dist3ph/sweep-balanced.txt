@@ -1,0 +1,20 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-balanced.json sweep
+THREE-PHASE DISTRIBUTION (sweep) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, balanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-balanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+  sweep CONVERGED in 25 iteration(s), max voltage change 5.279E-011 pu (tolerance 1.000E-010)
+  | bus | kV LL | phase | |V| pu | |V| V (LN) | angle deg | VUF % |
+  |-----|-------|-------|--------|------------|-----------|-------|
+  | 1 | 12.47 | a | 1.000000 | 7199.56 | 0.000 | 0.0000 |
+  | 1 | 12.47 | b | 1.000000 | 7199.56 | -120.000 |  |
+  | 1 | 12.47 | c | 1.000000 | 7199.56 | 120.000 |  |
+  | 2 | 12.47 | a | 0.987081 | 7106.55 | -0.339 | 0.1523 |
+  | 2 | 12.47 | b | 0.991687 | 7139.71 | -120.344 |  |
+  | 2 | 12.47 | c | 0.989056 | 7120.77 | 119.629 |  |
+  | 3 | 4.16 | a | 0.935730 | 2247.41 | -3.694 | 0.2928 |
+  | 3 | 4.16 | b | 0.944511 | 2268.51 | -123.476 |  |
+  | 3 | 4.16 | c | 0.939245 | 2255.86 | 116.395 |  |
+  | 4 | 4.16 | a | 0.798479 | 1917.77 | -9.073 | 2.3654 |
+  | 4 | 4.16 | b | 0.858224 | 2061.26 | -128.315 |  |
+  | 4 | 4.16 | c | 0.824709 | 1980.77 | 110.856 |  |
+[exit 0]

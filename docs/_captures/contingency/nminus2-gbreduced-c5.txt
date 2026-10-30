@@ -1,0 +1,34 @@
+$ gridsim nminus2 --candidates 5
+GridSim  -  N-2 branch screening: GB reduced (10-zone)  [top-5 candidate pairs]
+==========================================================================
+Base case: secure (no violation before any outage).
+Screening N-1 first, then pairing the 5 most-stressed single outages that solve.
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+L6-9 Midlands-South + L6-7 Mi...  secure           85%      68%  0.998  1.040
+L6-9 Midlands-South + L3-5 N ...  secure           85%      68%  0.998  1.040
+L3-5 N England-N Wales + L6-7...  secure           85%      68%  0.998  1.040
+L6-9 Midlands-South + L4-7 Yo...  secure           85%      68%  0.998  1.040
+L6-7 Midlands-E Anglia + L4-7...  secure           85%      68%  0.998  1.040
+L8-9 London-South + L6-7 Midl...  secure           85%      68%  0.998  1.040
+L8-9 London-South + L4-7 York...  secure           85%      68%  0.998  1.040
+L3-5 N England-N Wales + L4-7...  secure           85%      68%  0.998  1.040
+L8-9 London-South + L3-5 N En...  secure           85%      68%  0.998  1.040
+L6-9 Midlands-South + L8-9 Lo...  secure           85%      68%  0.998  1.040
+--------------------------------------------------------------------------
+10 outages screened  10 secure  0 with violations  0 islanded
+12 single outage(s) left out of the pairing because they already fail at N-1 (islanded or no solution):
+  L1-2 N-S Scotland               islanded
+  L2-3 B6 boundary                islanded
+  T1 GSP N Scotland (tx)          islanded
+  T2 GSP S Scotland (tx)          islanded
+  T3 GSP N England (tx)           islanded
+  T4 GSP Yorkshire (tx)           islanded
+  T5 GSP N Wales & Mersey (tx)    islanded
+  T6 GSP Midlands (tx)            islanded
+  T7 GSP East Anglia (tx)         islanded
+  T8 GSP London & SE (tx)         islanded
+  T9 GSP South (tx)               islanded
+  T10 GSP SW & S Wales (tx)       islanded
+Verdict: NOT SECURE, 12 insecure outage(s) (exit 3).
+[exit 3]

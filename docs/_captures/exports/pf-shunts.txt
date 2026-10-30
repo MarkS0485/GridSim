@@ -1,0 +1,17 @@
+$ gridsim pf case9 --switched-shunts results/exports-docs/inputs/shunts.json
+Power flow - IEEE 9-bus (WSCC) (9 buses)  [1 switched shunt(s)]
+  converged in 4 iteration(s), mismatch 2.16E-014 pu   losses 4.619 MW / -103.799 MVAr
+  voltage range 0.9984 - 1.0400 pu
+  switched shunts: 2 pass(es), settled
+      C5               bus 5      steps   1 of 0..4      10.00 MVAr at 1 pu   V 1.0221 pu (band 1.02-1.04)
+  lowest voltages:
+      bus 9      0.9984 pu     -3.967 deg
+      bus 7      1.0175 pu      0.738 deg
+      bus 5      1.0221 pu     -3.720 deg
+      bus 2      1.0250 pu      9.281 deg
+      bus 3      1.0250 pu      4.658 deg
+      bus 8      1.0269 pu      3.727 deg
+      bus 4      1.0292 pu     -2.209 deg
+      bus 6      1.0345 pu      1.966 deg
+      bus 1      1.0400 pu      0.000 deg
+[exit 0]

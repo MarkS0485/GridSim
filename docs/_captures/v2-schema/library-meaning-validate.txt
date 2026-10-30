@@ -1,0 +1,12 @@
+$ gridsim validate docs/_captures/v2-schema/inputs/library/meaning.library.json
+FAIL  docs/_captures/v2-schema/inputs/library/meaning.library.json (gridsim-library/2): 8 error(s)
+        /templates/1/id: template gridsim.exciter.demo@1 is declared twice (first in docs/_captures/v2-schema/inputs/library/meaning.library.json at /templates/0).
+        /templates/3/params/inertiaH/unit: unit 'MW' does not match the kind's unit 's' for 'inertiaH' (no conversion is done; write the spec's unit).
+        /templates/3/params/inertiaH/v: 25 s is above the maximum 20 for 'inertiaH'.
+        /templates/3/params/inertiaZ: unknown parameter 'inertiaZ' for kind 'synchronousMachine' (declared: inertiaH, damping, xdPu, xdpPu, xdppPu, xqPu, xqpPu, xqppPu, negativeSeqXPu, unitTransformerXPu, tdopS, tdoppS, tqopS, tqoppS, xdOverXdpRatio, xdppOverXdpRatio, xqOverXdpRatio, xqpOverXdpRatio, xqppOverXdpRatio, capacityFactor, fuelType, xlPu, saturationS10, saturationS12).
+        /templates/3/provenance/inertiaX: provenance is given for 'inertiaX', which is not a parameter of this template.
+        /templates/3/controllers/exciter: controller reference gridsim.placeholder.site.Example@1 is a placeholder template (docs/_captures/v2-schema/inputs/library/meaning.library.json at /templates/2); a placeholder can never be a controller target.
+        /templates/3/controllers/governor: the 'governor' slot must reference a 'governor' template, but gridsim.exciter.demo@1 is kind 'exciter'.
+        /templates/3/controllers/pss: controller reference gridsim.pss.nothing@1 does not resolve to any template in the loaded libraries.
+validate: 0 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 3]

@@ -1,0 +1,9 @@
+$ gridsim gda-replay --series results/exports-docs/inputs/series.json --case case9 --out results/exports-docs/gda-series
+
+=== Historical state estimate: case9 over docs-three-steps ===
+  reconstructed 3 timestamps  (2024-01-01T00:00:00.0000000Z .. 2024-01-01T01:00:00.0000000Z)
+  non-converged: 0
+  system loss over the series: 1.9 .. 2.2 MW
+
+  -> results\exports-docs\gda-series
+[exit 0]

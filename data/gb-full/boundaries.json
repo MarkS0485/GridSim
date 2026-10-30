@@ -1,0 +1,228 @@
+[
+  {
+    "name": "B4 SHETL-SPT (SSE-SP)",
+    "limitMw": 1850,
+    "branches": [
+      {
+        "branch": "spine:ABNE_P-CUPA",
+        "direction": 1
+      },
+      {
+        "branch": "spine:ABNE_P-GLRO",
+        "direction": 1
+      },
+      {
+        "branch": "spine:BRAC_P-DEVO",
+        "direction": 1
+      },
+      {
+        "branch": "spine:BRAC_P-STIR",
+        "direction": 1
+      },
+      {
+        "branch": "spine:CAAD_P-HUER",
+        "direction": 1
+      },
+      {
+        "branch": "spine:CUPA-DUDH_P",
+        "direction": -1
+      },
+      {
+        "branch": "spine:DUNO_P-SPAV",
+        "direction": 1
+      },
+      {
+        "branch": "spine:HELE-SLOY_P",
+        "direction": -1
+      },
+      {
+        "branch": "spine:BEAU_P-BONN",
+        "direction": 1
+      },
+      {
+        "branch": "spine:KINT_P-WFIE",
+        "direction": 1
+      }
+    ]
+  },
+  {
+    "name": "B6 Scotland-England (SCOTEX)",
+    "limitMw": 4900,
+    "branches": [
+      {
+        "branch": "spine:BERW-BLYTB1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:BLYTB1-ECCL",
+        "direction": -1
+      },
+      {
+        "branch": "spine:CHAP-HARK_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:ECCL-FOUR_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:FOUR_1-HAWI",
+        "direction": -1
+      },
+      {
+        "branch": "spine:HARK_1-HAWI",
+        "direction": -1
+      },
+      {
+        "branch": "spine:HARK_1-STHA",
+        "direction": -1
+      },
+      {
+        "branch": "spine:DUNB-STEN_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:ECCL-STES_1",
+        "direction": 1
+      }
+    ]
+  },
+  {
+    "name": "B7 Upper North England (HARSPNBLY)",
+    "limitMw": 5650,
+    "branches": [
+      {
+        "branch": "spine:FOUR_1-HUTT_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:HARK_1-HUTT_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:HARM_6-HAWP_6",
+        "direction": -1
+      },
+      {
+        "branch": "spine:HAWP_6-SPEN_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:SPEN_1-STES_1",
+        "direction": -1
+      }
+    ]
+  },
+  {
+    "name": "B8 North to Midlands (FLOWSTH)",
+    "limitMw": 10450,
+    "branches": [
+      {
+        "branch": "spine:BICF_1-GRIW_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:BRED_1-WHGA_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:CARR_1-KEAR_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:ELLA_1-STAL_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:KEAD_1-WBUR_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:KEAR_1-SMAN_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:KIBY_1-WASF_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:SMAN_1-WHGA_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:STAL_1-WHGA_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:TEMP_3-WMEL_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:THOM_6-THUR_6",
+        "direction": 1
+      },
+      {
+        "branch": "spine:THOM_6-WBUR_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:WIBA_3-WMEL_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:CARR_1-PENE_1",
+        "direction": -1
+      }
+    ]
+  },
+  {
+    "name": "SEIMP South East import (SEIMPPR2)",
+    "limitMw": 5363,
+    "branches": [
+      {
+        "branch": "spine:BEDDT1-BEDD_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:BEDD_1-WIMBN1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:BOLN_1-FLEE_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:BOLN_1-LOVE_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:CHSI_1-WIMBN1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:FLEE_1-WWEY_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:KINO_1-RAYL_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:KINO_1-TILBB_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:LALE1SG003-WWEY_1",
+        "direction": 1
+      },
+      {
+        "branch": "spine:NFLE-TILBB_1",
+        "direction": -1
+      },
+      {
+        "branch": "spine:NFLE-WTHU31",
+        "direction": -1
+      }
+    ]
+  }
+]

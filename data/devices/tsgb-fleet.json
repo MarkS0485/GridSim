@@ -1,0 +1,16 @@
+{
+  "name": "tsgb-fleet-1.14GW",
+  "rotationalInertiaMwS": 13700,
+  "fastResponseMw": 1140,
+  "fastResponseTimeConstantS": 0.05,
+  "fastResponseDeadbandHz": 0.015,
+
+  "_provenance": {
+    "status": "DESIGNED/ASPIRATIONAL - never label these figures measured. The formal status document (TSGB 0002) records TRL 6 (bench-tested subsystems); the fleet is a proposed deployment concept, not a build plan.",
+    "rotationalInertiaMwS": "13.7 GJ (= 13,700 MW*s) fleet stored inertial energy for the proposed 123-unit / 1.14 GW fleet - TSGB white paper (full) section 6 counterfactual tables / section 6.0.1 fleet bill of materials. The white paper's own caveat: 'more of a conceptual what-if sketch than a precise engineering simulation'. Per-unit basis: ~121 MW*s per 10 MW reference unit (section 4.2.1, 'a simplified estimate').",
+    "fastResponseMw": "1.14 GW fleet continuous output - white paper section 6.0.1 (123 units: 1x100 MW, 12x30, 15x20, 20x10, 20x5, 25x2, 30x1 MW).",
+    "fastResponseTimeConstantS": "Design claim: <20 ms per-unit inertial response (concise white paper section 3 ratings table); fleet-level '<50 ms' in the section 6 tables. 0.05 s carries the fleet-level design figure - a DESIGN specification, not a demonstrated one.",
+    "fastResponseDeadbandHz": "Not specified in the corpus; GridSim's DeviceConfig default (0.015 Hz) retained.",
+    "corpus": "D:\\Work\\TSGB-2026\\TSGB\\0004 - White Paper - Full.md; 0003 - White Paper - Concise.md; 0002 - Project Completion (TRL 6). Queried via tsgb-expert 2026-07-14."
+  }
+}

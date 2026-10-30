@@ -1,0 +1,73 @@
+@* A labelled inline-SVG area/line chart for the CHARTS tab. Self-contained: the SVG is emitted as a
+   MarkupString, so (like Gauge) it uses INLINE presentation attributes for colour, not scoped CSS classes -
+   scoped CSS attributes are not stamped onto raw markup. The card / head / axis are normal Razor elements and
+   pick up Chart.razor.css normally. *@
+
+<div class="chart-card">
+    <div class="chart-head">
+        <span class="chart-title">@Label</span>
+        <span class="chart-now" style="color:@Color">@Current<small>@Unit</small></span>
+    </div>
+    @if (Values is { Count: > 1 })
+    {
+        <div class="chart-plot">
+            @((MarkupString)Svg())
+            <span class="chart-hi">@Bounds().hi.ToString(Fmt)</span>
+            <span class="chart-lo">@Bounds().lo.ToString(Fmt)</span>
+        </div>
+    }
+    else
+    {
+        <div class="chart-plot empty">gathering samples...</div>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<double>? Values { get; set; }
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Unit { get; set; } = "";
+    [Parameter] public string Color { get; set; } = "#4fd1c5";
+    [Parameter] public double? Min { get; set; }
+    [Parameter] public double? Max { get; set; }
+    [Parameter] public string Fmt { get; set; } = "0.###";
+    [Parameter] public double? Baseline { get; set; }   // optional dashed reference line (e.g. 50 Hz, 3000 rpm)
+
+    private string Current => Values is { Count: > 0 } v ? v[^1].ToString(Fmt) : "-";
+
+    // y-range: fixed band when given, else auto-fit the data with a little headroom.
+    private (double lo, double hi) Bounds()
+    {
+        IReadOnlyList<double> v = Values!;
+        double lo = Min ?? v.Min();
+        double hi = Max ?? v.Max();
+        if (Min is null && Max is null) { double m = (hi - lo) * 0.08 + 1e-6; lo -= m; hi += m; }
+        if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+        return (lo, hi);
+    }
+
+    private string Svg()
+    {
+        IReadOnlyList<double> v = Values!;
+        (double lo, double hi) = Bounds();
+        double W = 400, H = 150, padL = 3, padR = 3, padT = 6, padB = 6;
+        double X(int i) => padL + (double)i / (v.Count - 1) * (W - padL - padR);
+        double Y(double val) => padT + (hi - Math.Clamp(val, lo, hi)) / (hi - lo) * (H - padT - padB);
+
+        var line = new System.Text.StringBuilder();
+        for (int i = 0; i < v.Count; i++)
+            line.Append(i == 0 ? 'M' : 'L').Append(X(i).ToString("0.#")).Append(' ').Append(Y(v[i]).ToString("0.#")).Append(' ');
+        string area = $"{line}L{X(v.Count - 1):0.#} {H - padB:0.#} L{X(0):0.#} {H - padB:0.#} Z";
+
+        string baseLine = Baseline is double b && b >= lo && b <= hi
+            ? $"<line x1='{padL}' y1='{Y(b):0.#}' x2='{W - padR}' y2='{Y(b):0.#}' stroke='#5b6674' stroke-width='0.75' stroke-dasharray='3 4' vector-effect='non-scaling-stroke'/>"
+            : "";
+
+        double lastX = X(v.Count - 1), lastY = Y(v[^1]);
+        return $@"<svg viewBox='0 0 {W} {H}' class='chart-svg' preserveAspectRatio='none'>
+            <path d='{area}' fill='{Color}' fill-opacity='0.13' stroke='none'/>
+            {baseLine}
+            <path d='{line}' fill='none' stroke='{Color}' stroke-width='1.9' vector-effect='non-scaling-stroke' stroke-linejoin='round' stroke-linecap='round'/>
+            <circle cx='{lastX:0.#}' cy='{lastY:0.#}' r='2.6' fill='{Color}'/>
+        </svg>";
+    }
+}

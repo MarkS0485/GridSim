@@ -1,0 +1,25 @@
+$ sed -n '462,484p' results/formats/estimate/estimate-export.json
+  "measurements": {
+    "measurementSchema": "gridsim-measurements/1",
+    "case": "IEEE 14-bus",
+    "takenUtc": "2024-03-01T12:00:00Z",
+    "note": "synthetic seed=20260713 noise=1 coverage=vm:1/inj:1/flow:1",
+    "count": 122,
+    "items": [
+      {
+        "kind": "VmPu",
+        "value": 1.0603366153490539,
+        "sigma": 0.004,
+        "bus": 1,
+        "source": "synthetic"
+      },
+      {
+        "kind": "PInjMw",
+        "value": 230.50994250325303,
+        "sigma": 1,
+        "bus": 1,
+        "source": "synthetic"
+      },
+      {
+        "kind": "QInjMvar",
+[exit 0]

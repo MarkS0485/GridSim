@@ -1,0 +1,11 @@
+$ gridsim bench --estimate --runs 1 --cases case14,case30
+GridSim - WLS estimation benchmark
+| case         | buses |   meas | backend | iters |   mean ms |
+|--------------|-------|--------|---------|-------|-----------|
+| case14       |    14 |    122 | dense   |     5 |       8.0 |
+| case14       |    14 |    122 | sparse  |     5 |       6.7 |
+| case30       |    30 |    254 | dense   |     4 |      14.7 |
+| case30       |    30 |    254 | sparse  |     4 |       7.9 |
+
+  -> results\bench-estimate
+[exit 0]

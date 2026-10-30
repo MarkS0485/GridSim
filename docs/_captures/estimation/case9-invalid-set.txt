@@ -1,0 +1,6 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-invalid.json --out results/err
+invalid measurement set: Measurement set 'case9' failed validation:
+  measurement #0 (VmPu @ bus 1): sigma 0 must be finite and > 0
+  measurement #1 (VmPu @ bus 99): bus 99 does not exist in the model
+  measurement #2 (PFlowMw @ branch 4->1 (to)): no branch 4->1 in the model
+[exit 1]

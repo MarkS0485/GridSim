@@ -1,0 +1,14 @@
+$ cd src/GridSim.Web/bin/Release/net10.0 && ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5540 dotnet GridSim.Web.dll
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/"
+302 http://127.0.0.1:5540/dashboard/bridge:gb-full@raw
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/api/cases"
+404 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/api/openapi.json"
+404 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/.well-known/security.txt"
+404 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/sso/bridge"
+404 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/sso/land?t=x"
+404 
+[exit 0]

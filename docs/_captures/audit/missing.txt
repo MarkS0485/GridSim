@@ -1,0 +1,3 @@
+$ gridsim audit verify results/nonexistent.log
+audit: cannot read 'results/nonexistent.log': Could not find file 'results\nonexistent.log'.
+[exit 1]

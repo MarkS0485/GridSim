@@ -1,0 +1,27 @@
+GridSim  -  N-1-1 sequential screening: IEEE 9-bus (WSCC)  [top-4 candidates]
+==========================================================================
+Base case: secure (no violation before any outage).
+Lose one element; if a line or boundary is then over its limit, redispatch the fewest MW that relieve it
+(DC model, island by island); then lose a second.
+First and second outages are the 4 most-stressed single outages that solve.
+Outage (first => second)        Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+9-4 => 8-9                      ISLANDED      islanded
+9-4 => 7-8                      ISLANDED      islanded
+9-4 => 6-7                      ISLANDED      islanded
+8-9 => 9-4                      ISLANDED      islanded
+8-9 => 7-8                      ISLANDED      islanded
+8-9 => 6-7                      ISLANDED      islanded
+7-8 => 9-4                      ISLANDED      islanded
+7-8 => 8-9                      ISLANDED      islanded
+7-8 => 6-7                      ISLANDED      islanded
+6-7 => 9-4                      ISLANDED      islanded
+6-7 => 8-9                      ISLANDED      islanded
+6-7 => 7-8                      ISLANDED      islanded
+--------------------------------------------------------------------------
+12 outages screened  0 secure  0 with violations  12 islanded
+3 single outage(s) left out of the pairing because they already fail at N-1 (islanded or no solution):
+  1-4                             islanded
+  3-6                             islanded
+  8-2                             islanded
+Verdict: NOT SECURE, 15 insecure outage(s) (exit 3).

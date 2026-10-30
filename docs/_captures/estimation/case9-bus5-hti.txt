@@ -1,0 +1,11 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bus5.json --hti --out results/case9-bus5-hti
+
+=== WLS state estimate: case9 ===
+  status: Converged   iterations: 12   max |dx|: 5.13E-009
+  measurements: 24   states: 17   redundancy (dof): 7
+  observability: observable (rank 17/17)
+  consistency: J = 45.45 vs chi2(95%) = 14.05 -> FAIL
+  bad-data method: HTI, 1 pass(es), 12 iteration(s) in all, stopped: NothingIdentified
+
+  -> results\case9-bus5-hti
+[exit 0]

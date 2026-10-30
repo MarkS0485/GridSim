@@ -1,0 +1,147 @@
+[
+  {
+    "name": "gfl-wind-2024",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 2.0,
+      "rocofGainMwsPerHz": 0.0,
+      "detectionLatencyS": 0.10,
+      "computeLatencyS": 0.02,
+      "actuateTauS": 0.30,
+      "fastSlewUpMwPerSPerMw": 1.0,
+      "fastSlewDownMwPerSPerMw": 1.0,
+      "headroomUpFraction": 0.10,
+      "headroomDownFraction": 0.10,
+      "rocofTripHzPerS": 1.0,
+      "rocofTripConfirmS": 0.5,
+      "lvrtVoltagePu": 0.80
+    },
+    "provenance": {
+      "_default":            { "tag": "CuratedPlaceholder", "note": "Grid-following wind FFR loop; vendor-proprietary, approximated from literature [VERIFY]" },
+      "rocofTripHzPerS":     { "tag": "Recorded",           "note": "Modern GB LoM setting (FrequencyLimits.RocofLimitModernHzPerS)" },
+      "deadbandHz":          { "tag": "Recorded",           "note": "NESO frequency-response service deadband" }
+    }
+  },
+  {
+    "name": "gfl-solar-2024",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 2.0,
+      "detectionLatencyS": 0.12,
+      "computeLatencyS": 0.02,
+      "actuateTauS": 0.30,
+      "headroomUpFraction": 0.05,
+      "headroomDownFraction": 0.05,
+      "rocofTripHzPerS": 1.0,
+      "rocofTripConfirmS": 0.5,
+      "lvrtVoltagePu": 0.80
+    },
+    "provenance": {
+      "_default":        { "tag": "CuratedPlaceholder", "note": "Grid-following solar FFR loop; proprietary, literature-approximated [VERIFY]" },
+      "rocofTripHzPerS": { "tag": "Recorded",           "note": "Modern GB LoM setting" }
+    }
+  },
+  {
+    "name": "gfm-bess-2024",
+    "kind": "gridFormingInverter",
+    "mode": "grid-forming",
+    "params": {
+      "synInertiaMwsPerHz": 8.0,
+      "dampingMwPerHz": 15.0,
+      "deadbandHz": 0.0,
+      "actuateTauS": 0.05,
+      "headroomUpFraction": 0.20,
+      "headroomDownFraction": 0.20,
+      "capacityMwh": 2.0,
+      "socInit": 0.55, "socMin": 0.05, "socMax": 0.95,
+      "rocofTripHzPerS": 2.5,
+      "rocofTripConfirmS": 1.0,
+      "lvrtVoltagePu": 0.50
+    },
+    "provenance": {
+      "_default":           { "tag": "CuratedPlaceholder", "note": "Grid-forming VSM emulation constants; proprietary, literature-approximated [VERIFY]" },
+      "synInertiaMwsPerHz": { "tag": "CuratedPlaceholder", "note": "Virtual-inertia gain (POWER per df/dt, NOT stored energy) [VERIFY]" }
+    }
+  },
+  {
+    "name": "gfm-vsm-study-2024",
+    "kind": "gridFormingInverter",
+    "mode": "grid-forming (VSM, H=0 counterfactual study)",
+    "params": {
+      "synInertiaMwsPerHz": 120.0,
+      "dampingMwPerHz": 40.0,
+      "deadbandHz": 0.0,
+      "actuateTauS": 0.05,
+      "headroomUpFraction": 1.0,
+      "headroomDownFraction": 1.0,
+      "capacityMwh": 0.0,
+      "rocofTripHzPerS": 1000000000.0,
+      "lvrtVoltagePu": 0.0
+    },
+    "provenance": {
+      "_default":           { "tag": "CuratedPlaceholder", "note": "VSM virtual inertia/damping for the H=0 forming counterfactual; an idealised ride-through former (no SoC cap), literature-approximated [VERIFY]" },
+      "synInertiaMwsPerHz": { "tag": "CuratedPlaceholder", "note": "Virtual-inertia gain (POWER per df/dt), re-interpreted as Ev = synInertia*f0/2 in the forming denominator, NOT stored energy [VERIFY]" }
+    }
+  },
+  {
+    "name": "legacy-dg-old-lom",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 0.0,
+      "headroomUpFraction": 0.0,
+      "headroomDownFraction": 0.0,
+      "rocofTripHzPerS": 0.125,
+      "rocofTripConfirmS": 0.0,
+      "vectorShiftTripDeg": 6.0
+    },
+    "provenance": {
+      "_default":           { "tag": "CuratedPlaceholder", "note": "Legacy embedded DG on the pre-ALoMCP LoM relay; the 2019-08-09 tripping population [VERIFY]" },
+      "rocofTripHzPerS":    { "tag": "Recorded",           "note": "Legacy GB LoM setting (FrequencyLimits.RocofLimitLegacyHzPerS): EREC G59 Issue 3 Amendment 8 (S135) p.62, not less than K2 x 0.125 Hz/s with K2 = 1.0" },
+      "vectorShiftTripDeg": { "tag": "Recorded",           "note": "Legacy G59 vector-shift LoM setting K1 x 6 degrees with K1 = 1.0 (low-impedance network): EREC G59 Issue 3 Amendment 8 (docs/reference S135), Historic Vector Shift Settings, p.63; vector shift not allowed on or after 01/09/22 and not acceptable under EREC G99 Issue 2 (S124) clause 10.4.11" }
+    }
+  },
+  {
+    "name": "dg-alomcp",
+    "kind": "gridFollowingInverter",
+    "mode": "grid-following",
+    "params": {
+      "deadbandHz": 0.015,
+      "droopGainMwPerHzPerMw": 0.0,
+      "headroomUpFraction": 0.0,
+      "headroomDownFraction": 0.0,
+      "rocofTripHzPerS": 1.0,
+      "rocofTripConfirmS": 0.5
+    },
+    "provenance": {
+      "_default":        { "tag": "CuratedPlaceholder", "note": "Embedded DG upgraded under the Accelerated Loss-of-Mains Change Programme [VERIFY]" },
+      "rocofTripHzPerS": { "tag": "Recorded",           "note": "Modern GB LoM setting, 1.0 Hz/s: EREC G99 Issue 2 (docs/reference S124) Table 10.1, p.125" },
+      "rocofTripConfirmS": { "tag": "Recorded",         "note": "LoM (RoCoF) time delay 0.5 s, reset if RoCoF falls below the threshold: EREC G99 Issue 2 (S124) Table 10.1 and its note, pp.125-126" }
+    }
+  },
+  {
+    "name": "prot-lom-legacy",
+    "kind": "protection",
+    "mode": "rocof / loss-of-mains (legacy)",
+    "params": { "rocofTripHzPerS": 0.125, "rocofTripConfirmS": 0.0, "localRocofUpliftFactor": 1.16 },
+    "provenance": {
+      "rocofTripHzPerS":        { "tag": "Recorded",           "note": "Legacy GB LoM setting (0.125 Hz/s), GDA rocof_events relay_legacy grade" },
+      "localRocofUpliftFactor": { "tag": "DerivedFromRecorded", "note": "Sub-cycle local>COI ~1.16 (Derived/subcycle_period_features)" }
+    }
+  },
+  {
+    "name": "prot-lfdd-stage1",
+    "kind": "protection",
+    "mode": "low-frequency demand disconnection",
+    "params": { "lfddStageHz": 48.8, "lfddDwellS": 0.0, "lfddBlockMw": 632.0 },
+    "provenance": {
+      "lfddStageHz": { "tag": "Recorded",           "note": "GB LFDD first stage 48.8 Hz: Grid Code Issue 6 Revision 16 (docs/reference S076) CC.A.5.5.1, Table CC.A.5.5.1a (PDF p.264)" },
+      "lfddBlockMw": { "tag": "DerivedFromRecorded", "note": "GDA lfdd_risk 632 MW coincident block 2019-08-09" }
+    }
+  }
+]

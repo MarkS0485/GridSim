@@ -1,0 +1,29 @@
+$ gridsim case14 --once --bfs
+GridSim  -  IEEE 14-bus
+14 buses  20 branches  5 generators  base 100 MVA  50 Hz
+========================================================================
+DID NOT CONVERGE (0 iters, max mismatch Infinity p.u.)
+Generator output n/a (not converged)  Demand 0.26 GW  Losses 0.0 MW  Inertia not in the data (no generator H)
+
+Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)
+------------------------------------------------------------------------------
+  1                                   -   1.000     0.00       0.0       0.0
+  2                                   -   1.000     0.00       0.0       0.0
+  3                                   -   1.000     0.00       0.0       0.0
+  4                                   -   1.000     0.00       0.0       0.0
+  5                                   -   1.000     0.00       0.0       0.0
+  6                                   -   1.000     0.00       0.0       0.0
+  7                                   -   1.000     0.00       0.0       0.0
+  8                                   -   1.000     0.00       0.0       0.0
+  9                                   -   1.000     0.00       0.0       0.0
+ 10                                   -   1.000     0.00       0.0       0.0
+ 11                                   -   1.000     0.00       0.0       0.0
+ 12                                   -   1.000     0.00       0.0       0.0
+ 13                                   -   1.000     0.00       0.0       0.0
+ 14                                   -   1.000     0.00       0.0       0.0
+kV '-': base voltage not in the data for 14 of 14 bus(es) (the case gives 0).
+
+Voltage range: 1.000 - 1.000 p.u. (in band)
+Total losses: 0.00 MW, 0.00 MVAr
+Protection simulation: skipped - the power flow did not converge, so there is no state to assess.
+[exit 3]

@@ -1,0 +1,489 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="using:System"
+             xmlns:dash="using:GridSim.Ui.Dashboard"
+             xmlns:local="using:GridSim.App.Dashboard"
+             xmlns:ctl="using:GridSim.App.Controls"
+             x:Class="GridSim.App.Dashboard.DashboardView"
+             x:DataType="dash:DashboardModel">
+  <!-- UI programme Phase 1.4: the dashboard tiles, ported from the WPF window (src/GridSim.Wpf/MainWindow.xaml): the
+       header's status lamp and clock, then the NETWORK tab's three columns (telemetry on the left, the map area in the
+       centre, what-if result, boundaries, alarms and event log on the right) and the shared STATE NOT VALID banner.
+       Texts, order, sizes and margins are the WPF ones. Every value is bound to the shared DashboardModel, which already
+       produces each display string with the WPF format; colours are its neutral tokens through UiColourBrushConverter;
+       each WPF "...Vis" Visibility is the model's bool, bound to IsVisible.
+       Not here: the map itself (FastSchematic; it goes in the MapSlot below), its hover tooltip (the map's own code),
+       and the window's header controls (title, pickers, search, LOAD RUN, AUDIT LOG), transport bar and footer.
+       DashboardViewParityTests reads this file and the WPF one and fails if a dashboard binding is missing here. -->
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ================= STATUS LAMP + CLOCK (the right end of the WPF header) ================= -->
+    <!-- HeaderStrip and BannerHost are hidden when the view is the main window's NETWORK tab (ShowsWindowParts=false):
+         there, as in WPF, the lamp and clock sit in the window's header and the banner lies over every tab. -->
+    <DockPanel x:Name="HeaderStrip" Grid.Row="0" LastChildFill="False" Margin="16,6">
+      <Border DockPanel.Dock="Right" Background="{StaticResource PanelHi}" CornerRadius="4"
+              Padding="12,4" VerticalAlignment="Center" BorderBrush="{StaticResource Border}" BorderThickness="1">
+        <StackPanel Orientation="Horizontal">
+          <Ellipse x:Name="StatusLamp" Width="12" Height="12" VerticalAlignment="Center"
+                   Fill="{Binding StatusColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+          <TextBlock x:Name="StatusText" Text="{Binding Status}" Margin="8,0,0,0" VerticalAlignment="Center"
+                     FontWeight="Bold" FontSize="13" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+        <TextBlock x:Name="ClockText" Text="{Binding Clock}" FontSize="22" FontWeight="Bold" FontFamily="{DynamicResource MonoFont}" />
+        <TextBlock Text="  tick " Classes="Label" VerticalAlignment="Center" />
+        <TextBlock x:Name="TickText" Text="{Binding Tick}" Classes="Label" VerticalAlignment="Center" />
+      </StackPanel>
+    </DockPanel>
+
+    <!-- ================= NETWORK (the WPF NETWORK tab's content) ================= -->
+    <Grid Grid.Row="1" Margin="6" ColumnDefinitions="300,*,330">
+
+      <!-- LEFT: telemetry -->
+      <StackPanel Grid.Column="0">
+        <!-- Frequency + dial -->
+        <Border Classes="Card" Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="SYSTEM FREQUENCY" Classes="PanelHeader" />
+            <Grid Margin="0,6,0,0" ColumnDefinitions="Auto,*">
+
+              <!-- dial. The track is drawn from the same constants the needle uses (DashboardModel FreqDialSweepDeg = 120
+                   at FreqDialFullScaleHz = 0.5): a 240 degree arc of radius 52 about the pivot (75,62), so each labelled
+                   end is exactly full scale. The green band spans the read-out's green zone, FreqNominalColourBandHz =
+                   0.1 Hz, i.e. 0.1 / 0.5 x 120 = 24 degrees either side. The same paths as WPF. -->
+              <Grid Grid.Column="0" Width="150" Height="92">
+                <Path Stroke="#2A3742" StrokeThickness="8" StrokeLineCap="Round"
+                      Data="M 29.967,88 A 52,52 0 1 1 120.033,88" />
+                <Path Stroke="{StaticResource Green}" StrokeThickness="8" Opacity="0.55" StrokeLineCap="Round"
+                      Data="M 53.850,14.496 A 52,52 0 0 1 96.150,14.496" />
+                <Canvas>
+                  <!-- The needle points straight up and is turned by FreqAngle about the pivot (75,62), as WPF's
+                       RotateTransform CenterX="75" CenterY="62"; the transform origin is the line's top-left corner
+                       (the canvas origin), so the pivot is in the dial's own coordinates. -->
+                  <Line x:Name="FreqNeedle" StartPoint="75,62" EndPoint="75,16" StrokeThickness="3" StrokeLineCap="Round"
+                        Stroke="{Binding FreqColour, Converter={x:Static local:UiColourBrushConverter.Instance}}"
+                        RenderTransformOrigin="0,0"
+                        RenderTransform="{Binding FreqAngle, Converter={x:Static local:NeedleRotationConverter.Instance}}" />
+                  <Ellipse Canvas.Left="69" Canvas.Top="56" Width="12" Height="12" Fill="{StaticResource Text}" />
+                </Canvas>
+                <!-- N273: the dial's ends about the case's own nominal ("49.5" / "50.5" at 50 Hz). -->
+                <TextBlock x:Name="FreqDialLowText" Text="{Binding FreqDialLowText}" Classes="Label" FontSize="9"
+                           HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                <TextBlock x:Name="FreqDialHighText" Text="{Binding FreqDialHighText}" Classes="Label" FontSize="9"
+                           HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+              </Grid>
+
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                  <TextBlock x:Name="FreqText" Text="{Binding Freq}" Classes="Value"
+                             Foreground="{Binding FreqColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+                  <TextBlock Text=" Hz" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                </StackPanel>
+                <TextBlock x:Name="FreqDevText" Text="{Binding FreqDev, StringFormat='{}{0} Hz dev'}" Classes="Label"
+                           HorizontalAlignment="Center" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Demand / Generation -->
+        <Grid Margin="0,0,0,10" ColumnDefinitions="*,10,*">
+          <Border Classes="Card" Grid.Column="0">
+            <StackPanel>
+              <TextBlock Text="DEMAND" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="DemandText" Text="{Binding Demand}" Classes="Value" />
+                <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="Card" Grid.Column="2">
+            <StackPanel>
+              <!-- The figure is the sum of positive NET bus injections (SimFrame.GenerationMw): generation at a bus with
+                   local demand is counted net of it, so it is labelled as such, not as generator output. -->
+              <TextBlock Text="GENERATION" Classes="PanelHeader"
+                         ToolTip.Tip="Sum of positive net bus injections: generation at a bus with local demand is counted net of that demand, so this is not total generator output." />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="GenerationText" Text="{Binding Generation}" Classes="Value" />
+                <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+              </StackPanel>
+              <TextBlock Text="net bus injection" Classes="Label" FontSize="9" Opacity="0.8" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Inertia / Losses -->
+        <Grid Margin="0,0,0,10" ColumnDefinitions="*,10,*">
+          <Border Classes="Card" Grid.Column="0">
+            <StackPanel>
+              <TextBlock Text="INERTIA" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="InertiaText" Text="{Binding Inertia}" Classes="Value" />
+                <TextBlock Text=" GVAs" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="Card" Grid.Column="2">
+            <StackPanel>
+              <TextBlock Text="LOSSES" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="LossesText" Text="{Binding Losses}" Classes="Value" />
+                <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- RPM / Torque -->
+        <Grid Margin="0,0,0,10" ColumnDefinitions="*,10,*">
+          <Border Classes="Card" Grid.Column="0">
+            <StackPanel>
+              <TextBlock Text="GRID SPEED" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="RpmText" Text="{Binding Rpm}" Classes="Value" />
+                <TextBlock Text=" rpm" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="Card" Grid.Column="2">
+            <StackPanel>
+              <TextBlock Text="TORQUE" Classes="PanelHeader" />
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <TextBlock x:Name="TorqueText" Text="{Binding Torque}" Classes="Value" />
+                <TextBlock Text=" MNm" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Voltage band -->
+        <Border Classes="Card" Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="VOLTAGE BAND (p.u.)" Classes="PanelHeader" />
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+              <TextBlock x:Name="VoltageText" Text="{Binding Voltage}" FontSize="24" FontWeight="Bold" />
+            </StackPanel>
+            <TextBlock Text="statutory band 0.94 - 1.06" Classes="Label" Margin="0,2,0,0" />
+          </StackPanel>
+        </Border>
+
+        <!-- Per-band voltage dials: each kV level vs nominal (1.0 pu centred) -->
+        <Border Classes="Card">
+          <StackPanel>
+            <TextBlock Text="VOLTAGE BY LEVEL  vs NOMINAL" Classes="PanelHeader" />
+            <ItemsControl x:Name="VoltageBandList" ItemsSource="{Binding VoltageBands}" Margin="0,4,0,0">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel HorizontalAlignment="Center" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dash:VoltageBandDialModel">
+                  <ctl:Gauge Width="92" Height="84" Margin="3"
+                             Caption="{Binding Label}" Unit="dev" ValueText="{Binding Dev}"
+                             Value="{Binding Vpu}" Minimum="0.94" Maximum="1.06"
+                             AmberFrom="0.70" RedFrom="0.90" AmberTo="0.30" RedTo="0.10" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <!-- CENTRE: the map area. The map control goes in MapSlot (DashboardView.Map); everything else here is the WPF
+           overlay set drawn over the schematic, in the WPF order. -->
+      <Border Grid.Column="1" Classes="Card" Margin="10,0" Padding="0">
+        <Grid>
+          <ContentControl x:Name="MapSlot" ClipToBounds="True" />
+          <!-- A non-converged frame is not an operating point: the map's colours come from the unconverged iterate, so
+               the whole map is greyed and labelled rather than shown as if valid. -->
+          <Border x:Name="InvalidVeil" Background="#B0101418" IsHitTestVisible="False" IsVisible="{Binding InvalidState}">
+            <TextBlock x:Name="InvalidVeilText"
+                       Text="STATE NOT VALID  -  the power flow did not converge; these colours are not an operating point"
+                       Foreground="#FF5B5B" FontWeight="Bold" FontSize="14" TextWrapping="Wrap" TextAlignment="Center"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40,0" />
+          </Border>
+          <TextBlock Text="GB TRANSMISSION NETWORK  LIVE POWER FLOW" Classes="PanelHeader"
+                     Margin="14,10" VerticalAlignment="Top" HorizontalAlignment="Left" />
+
+          <!-- bridge status pill: connection state / horizon rejections / query errors (GDA bridge only) -->
+          <Border x:Name="BridgePill" CornerRadius="4" Padding="9,3" Background="{StaticResource PanelHi}"
+                  BorderBrush="{Binding BridgeStatusColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" BorderThickness="1"
+                  HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14,32,0,0"
+                  IsVisible="{Binding BridgeStatusVisible}">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse x:Name="BridgePillLamp" Width="9" Height="9" VerticalAlignment="Center"
+                       Fill="{Binding BridgeStatusColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+              <TextBlock x:Name="BridgeStatusText" Text="{Binding BridgeStatus}" Margin="7,0,0,0" VerticalAlignment="Center"
+                         FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Text}" />
+            </StackPanel>
+          </Border>
+
+          <!-- WHAT-IF banner: shown while a GDA-bridge query result (scenario/feasibility) is overlaid -->
+          <Border x:Name="WhatIfBanner" Background="{StaticResource Accent}" CornerRadius="4" Padding="12,5"
+                  HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,8,0,0"
+                  IsVisible="{Binding QueryVisible}">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="WHAT-IF  " FontWeight="Bold" Foreground="{StaticResource Bg}" />
+              <TextBlock x:Name="WhatIfTitleText" Text="{Binding QueryTitle}" Foreground="{StaticResource Bg}" />
+              <TextBlock Text="   " />
+              <TextBlock x:Name="WhatIfVerdictText" Text="{Binding QueryVerdict}" FontWeight="Bold" Foreground="{StaticResource Bg}" />
+            </StackPanel>
+          </Border>
+          <!-- The hint follows the feed (DashboardModel.MapHint): right-click trips on a local model, opens the what-if
+               menu on a bridge, and is refused on a replay; T and the step keys apply only locally. -->
+          <!-- Parity sign-off (2026-10-24): the hint and the legend below start right of the minimap (which the map draws
+               12 px in from the bottom-left corner, at most 156 px wide), so neither is drawn over it as in WPF. -->
+          <TextBlock x:Name="MapHintText" Text="{Binding MapHint}" TextWrapping="Wrap" MaxWidth="900"
+                     Classes="Label" FontSize="10" Opacity="0.7"
+                     Margin="180,10,14,10" VerticalAlignment="Bottom" HorizontalAlignment="Left" />
+
+          <!-- colour-mode legend: gradient swatch + min/max labels so the map tint is interpretable -->
+          <Border x:Name="LegendBox" Background="{StaticResource PanelHi}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                  CornerRadius="4" Padding="10,7" Margin="180,0,0,34"
+                  HorizontalAlignment="Left" VerticalAlignment="Bottom">
+            <StackPanel>
+              <TextBlock x:Name="LegendTitleText" Text="{Binding LegendTitle}" Classes="Label" FontSize="10" Margin="0,0,0,4" />
+              <Border x:Name="LegendSwatch" Width="150" Height="10" CornerRadius="2" ClipToBounds="True"
+                      Background="{Binding Legend, Converter={x:Static local:LegendBrushConverter.Instance}}"
+                      BorderBrush="{StaticResource Border}" BorderThickness="1" />
+              <DockPanel Width="150" Margin="0,3,0,0">
+                <TextBlock x:Name="LegendMinText" Text="{Binding LegendMin}" Classes="Label" FontSize="9" DockPanel.Dock="Left" />
+                <TextBlock x:Name="LegendMaxText" Text="{Binding LegendMax}" Classes="Label" FontSize="9" HorizontalAlignment="Right" />
+              </DockPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- substation detail fly-out -->
+          <Border x:Name="SelectionPanel" Classes="Card" Background="{StaticResource PanelHi}"
+                  Width="250" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
+                  IsVisible="{Binding SelectionVisible}">
+            <StackPanel>
+              <DockPanel>
+                <TextBlock x:Name="SelKindText" Text="{Binding SelKind}" Classes="PanelHeader" DockPanel.Dock="Left" />
+                <Button x:Name="CloseSelectionButton" Content="&#x2715;" DockPanel.Dock="Right" HorizontalAlignment="Right"
+                        Click="CloseSelection_Click" Background="Transparent" BorderThickness="0"
+                        Foreground="{StaticResource Muted}" Cursor="Hand" Padding="4,0"
+                        ToolTip.Tip="Close" />
+              </DockPanel>
+              <TextBlock x:Name="SelNameText" Text="{Binding SelName}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0" />
+              <TextBlock x:Name="SelSubText" Text="{Binding SelSub}" Classes="Label" Margin="0,0,0,8" />
+              <ItemsControl x:Name="SelRowsList" ItemsSource="{Binding SelRows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="dash:KeyVal">
+                    <DockPanel Margin="0,2">
+                      <TextBlock Text="{Binding Key}" Classes="Label" DockPanel.Dock="Left" />
+                      <TextBlock Text="{Binding Value}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                    </DockPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock x:Name="SelConnectionsText" Text="{Binding SelConnections}" Classes="Label" Margin="0,8,0,2" />
+              <TextBlock x:Name="SelLinesText" Text="{Binding SelLines}" FontFamily="{DynamicResource MonoFont}" FontSize="10"
+                         Foreground="{StaticResource Muted}" TextWrapping="Wrap" />
+              <Button x:Name="OpenInExplorerButton" Content="OPEN IN EXPLORER " Classes="FlatBtn" Click="OpenInExplorer_Click"
+                      HorizontalAlignment="Left" Margin="0,10,0,0" Padding="10,3" FontSize="11" />
+            </StackPanel>
+          </Border>
+
+          <!-- live system HUD (GDA-bridge stream scalars): inertia * fragility * RoCoF headroom -->
+          <Border x:Name="HudPanel" Classes="Card" Background="{StaticResource PanelHi}"
+                  HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12"
+                  IsVisible="{Binding HudVisible}">
+            <StackPanel>
+              <TextBlock Text="LIVE SYSTEM  *  GDA BRIDGE" Classes="PanelHeader" Margin="0,0,0,8" />
+              <Grid ColumnDefinitions="Auto,20,Auto,20,Auto">
+                <!-- INERTIA -->
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="INERTIA" Classes="Label" />
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="HudInertiaText" Text="{Binding InertiaGvaS}" Classes="Value" FontSize="22" />
+                    <TextBlock Text="GVA.s" Classes="Unit" VerticalAlignment="Bottom" Margin="4,0,0,4" />
+                  </StackPanel>
+                  <Border Height="3" CornerRadius="1.5" Background="{StaticResource Accent}" Opacity="0.45" Margin="0,3,0,0" />
+                </StackPanel>
+
+                <!-- FRAGILITY: value tinted by condition + a coloured trend cue -->
+                <StackPanel Grid.Column="2">
+                  <TextBlock Text="FRAGILITY" Classes="Label" />
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="HudFragilityText" Text="{Binding FragilityIndex}" Classes="Value" FontSize="22"
+                               Foreground="{Binding FragilityColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+                    <TextBlock x:Name="HudFragilityTrendText" Text="{Binding FragilityTrend}" FontSize="11" FontWeight="SemiBold"
+                               Foreground="{Binding FragilityTrendColour, Converter={x:Static local:UiColourBrushConverter.Instance}}"
+                               VerticalAlignment="Bottom" Margin="6,0,0,5" />
+                  </StackPanel>
+                  <Border x:Name="HudFragilityBar" Height="3" CornerRadius="1.5" Margin="0,3,0,0"
+                          Background="{Binding FragilityColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+                </StackPanel>
+
+                <!-- RoCoF HEADROOM -->
+                <StackPanel Grid.Column="4">
+                  <TextBlock Text="RoCoF HEADROOM" Classes="Label" />
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="HudRocofText" Text="{Binding RocofHeadroomHzS}" Classes="Value" FontSize="22" />
+                    <TextBlock Text="Hz/s" Classes="Unit" VerticalAlignment="Bottom" Margin="4,0,0,4" />
+                  </StackPanel>
+                  <Border Height="3" CornerRadius="1.5" Background="{StaticResource Accent}" Opacity="0.45" Margin="0,3,0,0" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- RIGHT: what-if result + boundaries + alarms + log -->
+      <Grid Grid.Column="2" RowDefinitions="Auto,Auto,Auto,*">
+
+        <!-- GDA-bridge on-demand query result: verdict + binding constraint + violations, with a way back to live -->
+        <Border x:Name="QueryPanel" Classes="Card" Grid.Row="0" Margin="0,0,0,10"
+                BorderBrush="{StaticResource Accent}" BorderThickness="1"
+                IsVisible="{Binding QueryVisible}">
+          <StackPanel>
+            <DockPanel Margin="0,0,0,4">
+              <TextBlock Text="WHAT-IF  *  GDA BRIDGE" Classes="PanelHeader" DockPanel.Dock="Left" />
+              <Button x:Name="ReturnToLiveButton" Content="RETURN TO LIVE" Classes="FlatBtn" DockPanel.Dock="Right"
+                      HorizontalAlignment="Right" Padding="8,2" FontSize="10" Click="ReturnToLive_Click" />
+            </DockPanel>
+            <TextBlock x:Name="QueryTitleText" Text="{Binding QueryTitle}" FontSize="14" FontWeight="Bold" TextWrapping="Wrap" Margin="0,2,0,0" />
+            <TextBlock x:Name="QuerySubText" Text="{Binding QuerySub}" Classes="Label" Margin="0,2,0,8" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="VERDICT" Classes="Label" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <Border x:Name="QueryVerdictBadge" CornerRadius="3" Padding="10,2"
+                      Background="{Binding QueryVerdictColour, Converter={x:Static local:UiColourBrushConverter.Instance}}">
+                <TextBlock x:Name="QueryVerdictText" Text="{Binding QueryVerdict}" FontWeight="Bold" FontSize="13"
+                           Foreground="{StaticResource Bg}" />
+              </Border>
+            </StackPanel>
+            <TextBlock x:Name="QueryBindingText" Text="{Binding QueryBinding}" Classes="Label" Margin="0,8,0,4" TextWrapping="Wrap" />
+            <TextBlock Text="VIOLATIONS" Classes="PanelHeader" Margin="0,4,0,2" />
+            <TextBlock x:Name="QueryNoneText" Text="none reported" Classes="Label" FontStyle="Italic"
+                       IsVisible="{Binding QueryViolationsEmpty}" />
+            <ItemsControl x:Name="QueryViolationsList" ItemsSource="{Binding QueryViolations}" MaxHeight="200">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dash:ViolationEntry">
+                  <DockPanel Margin="0,3">
+                    <Ellipse Width="8" Height="8" DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,3,8,0"
+                             Fill="{Binding Colour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+                    <StackPanel>
+                      <DockPanel>
+                        <TextBlock Text="{Binding Element}" FontWeight="SemiBold" DockPanel.Dock="Left"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Detail}" Classes="Label" HorizontalAlignment="Right" Margin="8,0,0,0" />
+                      </DockPanel>
+                      <TextBlock Text="{Binding Message}" Classes="Label" FontSize="10"
+                                 TextWrapping="Wrap" Foreground="{StaticResource Muted}" />
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Grid.Row="1" Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="TRANSMISSION BOUNDARIES" Classes="PanelHeader" Margin="0,0,0,4" />
+            <ItemsControl x:Name="BoundaryList" ItemsSource="{Binding Boundaries}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dash:BoundaryRowModel">
+                  <Grid Margin="0,5" ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0">
+                      <TextBlock Classes="BoundaryName" Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                                 TextTrimming="CharacterEllipsis" />
+                      <Border Width="150" Height="6" Background="{StaticResource Track}" CornerRadius="3"
+                              HorizontalAlignment="Left" Margin="0,4,0,0" ClipToBounds="True">
+                        <Border Classes="BoundaryBar" Width="{Binding BarWidth}" Height="6" CornerRadius="3" HorizontalAlignment="Left"
+                                Background="{Binding BarColour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+                      </Border>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Right" Margin="8,0,0,0">
+                      <TextBlock Classes="BoundaryPct" Text="{Binding Pct}" FontWeight="Bold" HorizontalAlignment="Right" />
+                      <TextBlock Classes="Label BoundaryFlow" Text="{Binding Flow}" FontSize="10" HorizontalAlignment="Right" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Grid.Row="2" Margin="0,0,0,10">
+          <StackPanel>
+            <DockPanel Margin="0,0,0,4">
+              <TextBlock Text="ALARMS" Classes="PanelHeader" DockPanel.Dock="Left" />
+              <Button x:Name="ClearAlarmsButton" Content="CLEAR" Classes="FlatBtn" DockPanel.Dock="Right"
+                      HorizontalAlignment="Right" Padding="8,2" FontSize="10" Click="ClearAlarms_Click" />
+            </DockPanel>
+            <ItemsControl x:Name="AlarmList" ItemsSource="{Binding Alarms}" MaxHeight="150">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="dash:AlarmEntry">
+                  <DockPanel Margin="0,3">
+                    <Ellipse Classes="AlarmLamp" Width="9" Height="9" DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,8,0"
+                             Fill="{Binding Colour, Converter={x:Static local:UiColourBrushConverter.Instance}}" />
+                    <TextBlock Classes="Label AlarmTime" Text="{Binding Time}" DockPanel.Dock="Left"
+                               Margin="0,0,8,0" VerticalAlignment="Center" />
+                    <TextBlock Classes="AlarmText" Text="{Binding Text}" FontSize="11" FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock x:Name="AlarmsEmptyText" Text="no active alarms" Classes="Label" FontStyle="Italic"
+                       IsVisible="{Binding AlarmsEmpty}" Margin="0,2,0,0" />
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Grid.Row="3">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="EVENT LOG" Classes="PanelHeader" Margin="0,0,0,6" />
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="EventList" ItemsSource="{Binding Events}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="sys:String">
+                    <TextBlock Classes="EventLine" Text="{Binding}" FontFamily="{DynamicResource MonoFont}" FontSize="11"
+                               Foreground="{StaticResource Muted}" Margin="0,1" TextWrapping="Wrap" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </DockPanel>
+        </Border>
+
+        <!-- 4.2 follow-up: in AUTHOR the what-if and boundary values are the paused run's, not the edited case's (the
+             alarms and the event log are history, so they stay readable). -->
+        <Border x:Name="AuthorVeilRight" Grid.Row="0" Grid.RowSpan="2" Background="#C0101418" CornerRadius="4"
+                IsHitTestVisible="False" IsVisible="{ReflectionBinding AuthorPaused, FallbackValue=False}" Margin="0,0,0,10">
+          <TextBlock Text="AUTHOR  -  RUN PAUSED" Foreground="{StaticResource Amber}" FontWeight="Bold" FontSize="12"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </Grid>
+
+      <!-- 4.2 follow-up: in AUTHOR the map shows the case being edited, which is not solved; the telemetry beside it is
+           the paused run's last frame, so it is veiled and labelled rather than shown as that case's values. AuthorPaused
+           is the app dashboard's own (AppDashboardModel), hence the reflection bindings, hidden for any other model. -->
+      <Border x:Name="AuthorVeilLeft" Grid.Column="0" Background="#C0101418" CornerRadius="4"
+              IsHitTestVisible="False" IsVisible="{ReflectionBinding AuthorPaused, FallbackValue=False}">
+        <TextBlock x:Name="AuthorVeilText"
+                   Text="AUTHOR  -  the run is paused; these tiles hold its last values, not the case being edited (it is not solved until you return to RUN)"
+                   Foreground="{StaticResource Amber}" FontWeight="Bold" FontSize="13" TextWrapping="Wrap" TextAlignment="Center"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24,0" />
+      </Border>
+    </Grid>
+
+    <!-- Shared banner (WPF: over every tab, bottom centre): on a non-converged frame every value comes from an
+         unconverged iterate, so the dashboard carries this warning while it lasts. -->
+    <Panel x:Name="BannerHost" Grid.Row="1" IsHitTestVisible="False">
+    <Border x:Name="InvalidBanner" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10"
+            Background="#E6231A1A" BorderBrush="#FF5B5B" BorderThickness="1" CornerRadius="4" Padding="14,5"
+            IsHitTestVisible="False" IsVisible="{Binding InvalidState}">
+      <TextBlock x:Name="InvalidBannerText"
+                 Text="STATE NOT VALID  -  the power flow did not converge; every value on this tab comes from an unconverged iterate"
+                 Foreground="#FF5B5B" FontWeight="Bold" FontSize="12" />
+    </Border>
+    </Panel>
+  </Grid>
+</UserControl>

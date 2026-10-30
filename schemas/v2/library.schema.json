@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "library.schema.json",
+  "title": "GridSim v2 template library (gridsim-library/2)",
+  "description": "A file of fixed, standardised templates. The placeholder rules are enforced here with if/then/else: a placeholder template has every parameter and controller value null, an active one has none null. Rules that span templates or need the kind spec (a placeholder may not be a controller target, a controller ref must resolve to a template of the slot's kind, params checked against the kind's units and ranges, id@rev unique, per-parameter provenance keys naming real parameters) cannot be expressed in this schema subset and are enforced in code by V2LibraryChecker.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "templates"],
+  "properties": {
+    "schema": { "const": "gridsim-library/2" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "templates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/template" }
+    }
+  },
+  "$defs": {
+    "template": {
+      "title": "Template",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rev", "kind", "status", "title", "params", "provenance"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/templateId" },
+        "rev": { "$ref": "common.schema.json#/$defs/templateRev" },
+        "kind": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$" },
+        "status": { "$ref": "common.schema.json#/$defs/status" },
+        "title": { "type": "string", "pattern": "[^ ]" },
+        "description": { "type": "string" },
+        "params": {
+          "type": "object",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/paramValue" }
+        },
+        "controllers": { "$ref": "#/$defs/controllers" },
+        "provenance": { "$ref": "#/$defs/templateProvenance" }
+      },
+      "if": {
+        "required": ["status"],
+        "properties": { "status": { "const": "placeholder" } }
+      },
+      "then": {
+        "description": "A placeholder: every parameter value and every controller slot is null.",
+        "properties": {
+          "params": { "additionalProperties": { "type": "null" } },
+          "controllers": { "additionalProperties": { "type": "null" } }
+        }
+      },
+      "else": {
+        "description": "An active template: no parameter value and no controller slot is null (leave a key out instead).",
+        "properties": {
+          "params": { "additionalProperties": { "$ref": "common.schema.json#/$defs/presentParamValue" } },
+          "controllers": { "additionalProperties": { "$ref": "common.schema.json#/$defs/templateRef" } }
+        }
+      }
+    },
+
+    "controllers": {
+      "title": "Controller slots",
+      "description": "References to the exciter, PSS and governor templates this template uses. Each slot's target must be a template of the same-named kind (exciter, pss, governor) and must not be a placeholder (checked in code).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "exciter": { "$ref": "#/$defs/controllerSlot" },
+        "pss": { "$ref": "#/$defs/controllerSlot" },
+        "governor": { "$ref": "#/$defs/controllerSlot" }
+      }
+    },
+
+    "controllerSlot": {
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "common.schema.json#/$defs/templateRef" }
+      ]
+    },
+
+    "templateProvenance": {
+      "title": "Template provenance",
+      "description": "The template's _default provenance (required) plus optional per-parameter entries keyed by parameter name, as in v1 asset-classes.json.",
+      "type": "object",
+      "required": ["_default"],
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/provenance" }
+    }
+  }
+}

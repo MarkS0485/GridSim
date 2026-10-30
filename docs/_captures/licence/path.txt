@@ -1,0 +1,3 @@
+$ gridsim licence path
+$LOCALAPPDATA\GridSim\licence.gridsim
+[exit 0]

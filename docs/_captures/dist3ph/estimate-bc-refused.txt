@@ -1,0 +1,6 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json --method branch-current
+THREE-PHASE DISTRIBUTION (estimate) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+error: dist3ph estimate --method branch-current uses current phasors only; data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json also has 9 voltage magnitude(s), which it would ignore.
+[exit 1]

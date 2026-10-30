@@ -1,0 +1,6 @@
+$ gridsim replay-event
+usage: gridsim replay-event <id> [--catalog <file.json>] [--trace <neso.csv>] [--out <dir>]
+Built-in events: gb-2019-08-09, gb-2023-12-22, gb-largest-loss-1320
+Reproduces the RECORDED RoCoF/nadir with NO device. A counterfactual is only credible
+once the baseline is 'Reproduced'. Placeholder catalog figures are [VERIFY] until sourced.
+[exit 2]

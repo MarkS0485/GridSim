@@ -1,0 +1,6 @@
+$ python tools/crossval/physics_audit.py src/GridSim.Cli/bin/Release/net10.0/results/crossval-case145/solve-export.json
+physics audit: ? (145 buses), tol 0.0001 MVA
+  energy 0.00e+00 MW  KCL 1.35e-07 MW  S=VI 2.29e-08 MVAr  min branch loss -2.80e+02 MW
+  independent gate: PASS   exported gate: PASS   agree: True
+VERDICT: PASS
+[exit 0]

@@ -1,0 +1,15 @@
+{
+  "timestampUtc": "2026-07-01T10:18:36.0504305Z",
+  "gitCommit": "c41ef951-dirty",
+  "buildConfig": "Release",
+  "coreVersion": "0.1.0.0",
+  "runtime": ".NET 10.0.9",
+  "arch": "X64",
+  "serverGc": true,
+  "machineName": "curious-bohr",
+  "os": "Ubuntu 22.04.5 LTS",
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "logicalCores": 28,
+  "ramGb": 57,
+  "run": "bench  cases=153  runs=10  parallel=28"
+}

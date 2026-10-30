@@ -1,0 +1,31 @@
+# Keep the container build context small and free of anything local (F05). The Dockerfile copies only what the
+# web app needs; this list stops everything else from being sent to the Docker daemon at all.
+
+# Source control metadata (the commit is passed in with --build-arg SOURCE_REVISION instead).
+.git
+.github
+
+# Build outputs from a local build would otherwise overwrite the clean container build.
+**/bin/
+**/obj/
+artifacts/
+publish/
+
+# Local data that must never enter an image: GDA-derived models, run results, keys, editor state.
+gda-out/
+results/
+data/uk-full/
+# GR-894: the local inbox of reference documents (git-ignored) is not image content.
+data/reference-inbox/
+**/App_Data/
+.vs/
+.idea/
+*.user
+
+# Large folders the web app does not use.
+docs/
+review-progress/
+unity/
+tests/
+tools/
+brand/

@@ -1,0 +1,3 @@
+$ gridsim dcopf --dir data/uk
+error: dcopf does not take --dir (it is not one of dcopf's flags, so it would be silently ignored). Run 'gridsim dcopf --help' for the flags dcopf takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

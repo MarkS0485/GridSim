@@ -1,0 +1,13 @@
+{
+  "schema": "gridsim-rtu-pointmap/1",
+  "case": "case14",
+  "baseMva": 100.0,
+  "bindings": [
+    { "address": "IOA:1001", "kind": "VmPu",    "bus": 4,               "sigma": 0.01 },
+    { "address": "IOA:1002", "kind": "VmPu",    "bus": 5,               "sigma": 0.01 },
+    { "address": "IOA:1003", "kind": "VmPu",    "bus": 9, "baseKv": 132.0, "sigma": 0.01 },
+    { "address": "IOA:2001", "kind": "PFlowMw", "from": 1, "to": 2, "scale": 0.1, "sigma": 2.0 },
+    { "address": "IOA:2002", "kind": "PFlowMw", "from": 1, "to": 5, "scale": 0.1, "sigma": 2.0 },
+    { "address": "IOA:3001", "kind": "VaDeg",   "bus": 4, "datumAngleDeg": 10.0, "sigma": 0.5 }
+  ]
+}

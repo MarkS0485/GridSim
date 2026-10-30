@@ -1,0 +1,13 @@
+$ gridsim estimate case30 --synth --fdia-screen --out results/case30-fdia
+
+=== WLS state estimate: case30 ===
+  status: Converged   iterations: 4   max |dx|: 7.63E-009
+  measurements: 254   states: 59   redundancy (dof): 195
+  observability: observable (rank 59/59)
+  consistency: J = 203.68 vs chi2(95%) = 228.58 -> PASS
+  vs synthetic truth: max |dVm| = 7.267E-003 pu   max |dVa| = 3.474E-001 deg
+    fdia limit violation: Rating (6-8) value 34.6965 vs limit 32: branch 6->8 at 108.4% of 32 MVA [within estimate uncertainty; not counted]
+  FDIA screen: clear - chi-square PASSED and the state is physically plausible and anchor-consistent - no FDIA indicator. 1 limit breach(es) lie within 3 sigma of the estimate's uncertainty and are not counted.
+
+  -> results\case30-fdia
+[exit 0]

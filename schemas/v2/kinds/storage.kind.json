@@ -1,0 +1,944 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "storage",
+  "title": "Energy storage (DC store and chemistry)",
+  "description": "The energy store behind a converter: the v1 DC-source keys (DcSources.FromClass) and the scalar chemistry-preset parameters (BatteryChemistryLibrary). Omitted for want of a unit: cell capacity (Ah), resistances R0/R1/R2 (ohm), activation energies (J/mol), VMin/VMax (V), C-rate limits (1/h), self-discharge (per 30 days), cell mass (kg), specific heat (J/kg/K), passive cooling (W/K), calendar fade per sqrt(day): NOT DECLARED (finding for Mark): the closed unit vocabulary has no unit for these, so the parameter cannot be declared without inventing or misstating a unit. dcVoltageV was a unit gap until Q24 (2026-10) added V to the vocabulary; it is declared below.",
+  "params": {
+    "capacityMwh": {
+      "type": "number",
+      "unit": "MWh",
+      "min": 0,
+      "required": false,
+      "description": "Usable energy (MWh) of the DC store behind the converter; 0 or absent = unbounded (no store).",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass: absent => 0 (no store)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultCapacityMwh",
+          "value": 0.0
+        }
+      ]
+    },
+    "socInit": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Initial state of charge (fraction of capacityMwh).",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass: absent => 0.5",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultSocInit",
+          "value": 0.5
+        }
+      ]
+    },
+    "socMin": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Lower state-of-charge bound of the simple SoC bucket (used when no chemistry is set).",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass SocBucket: absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultSocMin",
+          "value": 0.0
+        }
+      ]
+    },
+    "socMax": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Upper state-of-charge bound of the simple SoC bucket (used when no chemistry is set).",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass SocBucket: absent => 1",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultSocMax",
+          "value": 1.0
+        }
+      ]
+    },
+    "batteryChemistry": {
+      "type": "enum",
+      "values": [
+        "none",
+        "LFP",
+        "NMC",
+        "LTO",
+        "Na-ion",
+        "VRFB",
+        "Lead-acid"
+      ],
+      "required": false,
+      "description": "Chemistry pack behind the converter. v1 stores a numeric code (0 or absent = none, 1 LFP, 2 NMC, 3 LTO, 4 Na-ion, 5 VRFB, 6 lead-acid; DcSources.ChemistryFromCode); v2 names it. No codeDefault: the v1 fallback is the numeric code 0, which is not one of these names.",
+      "codeDefaults": []
+    },
+    "dcVoltageV": {
+      "type": "number",
+      "unit": "V",
+      "min": 1,
+      "max": 1500,
+      "required": false,
+      "description": "DC pack voltage (V) of the battery store, used by PackModel.Sized to set the series cell count (round(dcVoltageV / cell nominal voltage), at least 1). Only read when a chemistry is set. The 1500 V ceiling is the low-voltage DC limit that utility battery packs are built to.",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass: absent => 1000 V",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultDcVoltageV",
+          "value": 1000.0
+        }
+      ]
+    },
+    "converterEfficiency": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "One-way converter efficiency between the chemistry pack and the grid.",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass: absent => 0.98",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultConverterEfficiency",
+          "value": 0.98
+        }
+      ]
+    },
+    "ambientC": {
+      "type": "number",
+      "unit": "degC",
+      "min": -60,
+      "max": 80,
+      "required": false,
+      "description": "Ambient temperature of the chemistry pack (degC).",
+      "codeDefaults": [
+        {
+          "consumer": "DcSources.FromClass: absent => 25 degC",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.DcSources.DefaultAmbientC",
+          "value": 25.0
+        }
+      ]
+    },
+    "cellSocMin": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Lower bound of the usable SoC window the BMS enforces on a chemistry pack (distinct from socMin, the SoC-bucket bound).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.SocMin",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.SocMin",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.SocMin",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.SocMin",
+          "value": 0.03
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.SocMin",
+          "value": 0.03
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.SocMin",
+          "value": 0.15
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.SocMin",
+          "value": 0.2
+        }
+      ]
+    },
+    "cellSocMax": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Upper bound of the usable SoC window the BMS enforces on a chemistry pack (distinct from socMax).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.SocMax",
+          "value": 0.95
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.SocMax",
+          "value": 0.95
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.SocMax",
+          "value": 0.95
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.SocMax",
+          "value": 0.97
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.SocMax",
+          "value": 0.97
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.SocMax",
+          "value": 0.85
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.SocMax",
+          "value": 0.98
+        }
+      ]
+    },
+    "coulombicEfficiency": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Coulombic efficiency on charge (fraction of charge stored).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.CoulombicEfficiency",
+          "value": 0.998
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.CoulombicEfficiency",
+          "value": 0.995
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.CoulombicEfficiency",
+          "value": 0.998
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.CoulombicEfficiency",
+          "value": 0.999
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.CoulombicEfficiency",
+          "value": 0.99
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.CoulombicEfficiency",
+          "value": 0.97
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.CoulombicEfficiency",
+          "value": 0.9
+        }
+      ]
+    },
+    "peukertExponent": {
+      "type": "number",
+      "unit": "1",
+      "min": 1,
+      "required": false,
+      "description": "Peukert exponent (1 = no rate effect).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.PeukertExponent",
+          "value": 1.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.PeukertExponent",
+          "value": 1.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.PeukertExponent",
+          "value": 1.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.PeukertExponent",
+          "value": 1.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.PeukertExponent",
+          "value": 1.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.PeukertExponent",
+          "value": 1.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.PeukertExponent",
+          "value": 1.15
+        }
+      ]
+    },
+    "deratingStartC": {
+      "type": "number",
+      "unit": "degC",
+      "min": -60,
+      "max": 120,
+      "required": false,
+      "description": "Cell temperature above which power derates linearly to zero at deratingEndC (degC).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.TDerateC",
+          "value": 45.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.TDerateC",
+          "value": 45.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.TDerateC",
+          "value": 40.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.TDerateC",
+          "value": 50.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.TDerateC",
+          "value": 45.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.TDerateC",
+          "value": 38.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.TDerateC",
+          "value": 40.0
+        }
+      ]
+    },
+    "deratingEndC": {
+      "type": "number",
+      "unit": "degC",
+      "min": -60,
+      "max": 120,
+      "required": false,
+      "description": "Cell temperature at which power reaches zero (degC).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.TMaxC",
+          "value": 55.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.TMaxC",
+          "value": 55.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.TMaxC",
+          "value": 50.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.TMaxC",
+          "value": 60.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.TMaxC",
+          "value": 55.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.TMaxC",
+          "value": 45.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.TMaxC",
+          "value": 50.0
+        }
+      ]
+    },
+    "minChargeTemperatureC": {
+      "type": "number",
+      "unit": "degC",
+      "min": -60,
+      "max": 120,
+      "required": false,
+      "description": "Cell temperature below which charging is not allowed (degC).",
+      "codeDefaults": [
+        {
+          "consumer": "ChemistryParameters property initialiser",
+          "ref": "instance:GridSim.Core:GridSim.Core.Storage.ChemistryParameters.TMinChargeC",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.TMinChargeC",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.TMinChargeC",
+          "value": 5.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.TMinChargeC",
+          "value": -20.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.TMinChargeC",
+          "value": -10.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.TMinChargeC",
+          "value": 5.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.TMinChargeC",
+          "value": -10.0
+        }
+      ]
+    },
+    "fastPolarisationTauS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Fast RC polarisation time constant tau1 (s).",
+      "codeDefaults": [
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Tau1",
+          "value": 10.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Tau1",
+          "value": 8.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Tau1",
+          "value": 5.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Tau1",
+          "value": 8.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Tau1",
+          "value": 2.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Tau1",
+          "value": 30.0
+        }
+      ]
+    },
+    "slowPolarisationTauS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Slow (diffusion) RC polarisation time constant tau2 (s).",
+      "codeDefaults": [
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Tau2",
+          "value": 400.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Tau2",
+          "value": 300.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Tau2",
+          "value": 150.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Tau2",
+          "value": 300.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Tau2",
+          "value": 60.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Tau2",
+          "value": 1200.0
+        }
+      ]
+    },
+    "ageingCalendarSocSensitivity": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Calendar-fade sensitivity to SoC, a_SoC.",
+      "codeDefaults": [
+        {
+          "consumer": "AgeingParameters constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AgeingParameters:.ctor:CalendarSocSensitivity",
+          "value": 0.6
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Ageing.CalendarSocSensitivity",
+          "value": 0.6
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Ageing.CalendarSocSensitivity",
+          "value": 0.6
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Ageing.CalendarSocSensitivity",
+          "value": 0.6
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Ageing.CalendarSocSensitivity",
+          "value": 0.6
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Ageing.CalendarSocSensitivity",
+          "value": 0.6
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Ageing.CalendarSocSensitivity",
+          "value": 0.6
+        }
+      ]
+    },
+    "ageingCyclesTo80Percent": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Equivalent full cycles to 80 % capacity at the reference condition.",
+      "codeDefaults": [
+        {
+          "consumer": "AgeingParameters constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AgeingParameters:.ctor:CyclesTo80Percent",
+          "value": 6000.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Ageing.CyclesTo80Percent",
+          "value": 6000.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Ageing.CyclesTo80Percent",
+          "value": 3500.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Ageing.CyclesTo80Percent",
+          "value": 20000.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Ageing.CyclesTo80Percent",
+          "value": 4000.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Ageing.CyclesTo80Percent",
+          "value": 20000.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Ageing.CyclesTo80Percent",
+          "value": 1200.0
+        }
+      ]
+    },
+    "ageingDodExponent": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Depth-of-discharge exponent of the cycle fade.",
+      "codeDefaults": [
+        {
+          "consumer": "AgeingParameters constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AgeingParameters:.ctor:DodExponent",
+          "value": 1.3
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Ageing.DodExponent",
+          "value": 1.3
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Ageing.DodExponent",
+          "value": 1.3
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Ageing.DodExponent",
+          "value": 1.3
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Ageing.DodExponent",
+          "value": 1.3
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Ageing.DodExponent",
+          "value": 1.3
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Ageing.DodExponent",
+          "value": 1.6
+        }
+      ]
+    },
+    "ageingResistanceGrowthPerFade": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Resistance growth per unit fade: R = R_new (1 + g fade).",
+      "codeDefaults": [
+        {
+          "consumer": "AgeingParameters constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AgeingParameters:.ctor:ResistanceGrowthPerFade",
+          "value": 2.5
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Ageing.ResistanceGrowthPerFade",
+          "value": 2.5
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Ageing.ResistanceGrowthPerFade",
+          "value": 2.5
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Ageing.ResistanceGrowthPerFade",
+          "value": 2.5
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Ageing.ResistanceGrowthPerFade",
+          "value": 2.5
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Ageing.ResistanceGrowthPerFade",
+          "value": 2.5
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Ageing.ResistanceGrowthPerFade",
+          "value": 2.5
+        }
+      ]
+    },
+    "auxStandbyFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Constant auxiliary draw as a fraction of rated power.",
+      "codeDefaults": [
+        {
+          "consumer": "AuxiliaryModel constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AuxiliaryModel:.ctor:StandbyFraction",
+          "value": 0.002
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Auxiliary.StandbyFraction",
+          "value": 0.002
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Auxiliary.StandbyFraction",
+          "value": 0.002
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Auxiliary.StandbyFraction",
+          "value": 0.002
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Auxiliary.StandbyFraction",
+          "value": 0.002
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Auxiliary.StandbyFraction",
+          "value": 0.003
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Auxiliary.StandbyFraction",
+          "value": 0.001
+        }
+      ]
+    },
+    "auxHvacCop": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "HVAC coefficient of performance; 0 = no HVAC.",
+      "codeDefaults": [
+        {
+          "consumer": "AuxiliaryModel constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AuxiliaryModel:.ctor:HvacCop",
+          "value": 3.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Auxiliary.HvacCop",
+          "value": 3.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Auxiliary.HvacCop",
+          "value": 3.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Auxiliary.HvacCop",
+          "value": 3.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Auxiliary.HvacCop",
+          "value": 3.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Auxiliary.HvacCop",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Auxiliary.HvacCop",
+          "value": 0.0
+        }
+      ]
+    },
+    "auxHvacSetpointC": {
+      "type": "number",
+      "unit": "degC",
+      "min": -60,
+      "max": 120,
+      "required": false,
+      "description": "Cell temperature the HVAC holds the pack at or below (degC).",
+      "codeDefaults": [
+        {
+          "consumer": "AuxiliaryModel constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AuxiliaryModel:.ctor:HvacSetpointC",
+          "value": 30.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Auxiliary.HvacSetpointC",
+          "value": 30.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Auxiliary.HvacSetpointC",
+          "value": 28.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Auxiliary.HvacSetpointC",
+          "value": 35.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Auxiliary.HvacSetpointC",
+          "value": 30.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Auxiliary.HvacSetpointC",
+          "value": 30.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Auxiliary.HvacSetpointC",
+          "value": 30.0
+        }
+      ]
+    },
+    "auxHvacCapacityFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Maximum heat the HVAC removes, as a fraction of rated power.",
+      "codeDefaults": [
+        {
+          "consumer": "AuxiliaryModel constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AuxiliaryModel:.ctor:HvacCapacityFraction",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Auxiliary.HvacCapacityFraction",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Auxiliary.HvacCapacityFraction",
+          "value": 0.06
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Auxiliary.HvacCapacityFraction",
+          "value": 0.08
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Auxiliary.HvacCapacityFraction",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Auxiliary.HvacCapacityFraction",
+          "value": 0.05
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Auxiliary.HvacCapacityFraction",
+          "value": 0.05
+        }
+      ]
+    },
+    "auxPumpFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Pump power while operating, as a fraction of the power moved (flow batteries).",
+      "codeDefaults": [
+        {
+          "consumer": "AuxiliaryModel constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Storage.AuxiliaryModel:.ctor:PumpFraction",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lfp preset (LFP)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lfp.Auxiliary.PumpFraction",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Nmc preset (NMC)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Nmc.Auxiliary.PumpFraction",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.Lto preset (LTO)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.Lto.Auxiliary.PumpFraction",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.SodiumIon preset (Na-ion)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.SodiumIon.Auxiliary.PumpFraction",
+          "value": 0.0
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.VanadiumFlow preset (VRFB)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.VanadiumFlow.Auxiliary.PumpFraction",
+          "value": 0.04
+        },
+        {
+          "consumer": "BatteryChemistryLibrary.LeadAcid preset (Lead-acid)",
+          "ref": "member:GridSim.Core:GridSim.Core.Storage.BatteryChemistryLibrary.LeadAcid.Auxiliary.PumpFraction",
+          "value": 0.0
+        }
+      ]
+    },
+    "capacityFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Representative capacity factor of storage plant for a snapshot dispatch.",
+      "codeDefaults": [
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: storage",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorStorage",
+          "value": 0.05
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: pumped / pumpedstorage / storage / battery (one arm shared with pumped hydro)",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorPumped",
+          "value": 0.2
+        },
+        {
+          "consumer": "SyntheticGb embedded generation: storage",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.EmbeddedStorageCf",
+          "value": 0.1
+        }
+      ]
+    }
+  }
+}

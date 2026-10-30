@@ -1,0 +1,134 @@
+@* A control-room strip chart of frequency (Hz) vs time after an event, with the GB limit lines
+   drawn in (50.0 nominal, 49.8 operational, 49.5 statutory, 48.8 LFDD - dashed). It overlays a grey
+   baseline trace and an optional green "+ device" trace so the compare reads at a glance. Faithful
+   inline-SVG port of GridSim.Wpf.Visuals.FrequencyTrace; series are passed as (time-s, Hz) arrays. *@
+
+<svg viewBox="0 0 @F(_w) @F(_h)" width="@F(Width)" height="@F(Height)"
+     class="ftrace" preserveAspectRatio="none">
+    <rect x="0" y="0" width="@F(_w)" height="@F(_h)" class="bg" />
+
+    @if (_w >= 60 && _h >= 50)
+    {
+        @* x gridlines + time labels every 5 s *@
+        @for (double t = 0; t <= _dur + 0.01; t += 5)
+        {
+            double x = MapX(t);
+            <line x1="@F(x)" y1="@F(PadT)" x2="@F(x)" y2="@F(_h - PadB)" class="grid" />
+            @SvgText(x, _h - PadB + 3, "axl", $"{t:0}s", "middle")
+        }
+
+        @* horizontal reference limit lines + Hz labels *@
+        @foreach (var rl in ActiveRefs)
+        {
+            double y = MapY(rl.Hz);
+            <line x1="@F(PadL)" y1="@F(y)" x2="@F(_w - PadR)" y2="@F(y)" class="@("ref " + rl.CssClass)" />
+            @SvgText(2, y, "axl", rl.Label, null, "middle")
+        }
+
+        @if (Baseline is { Count: > 1 })
+        {
+            <path d="@Curve(Baseline)" class="series base" fill="none" />
+        }
+        @if (Device is { Count: > 1 })
+        {
+            <path d="@Curve(Device)" class="series dev" fill="none" />
+        }
+
+        @if (Baseline is { Count: > 0 } || Device is { Count: > 0 })
+        {
+            double lx = _w - PadR - 92, ly = PadT + 2;
+            <line x1="@F(lx)" y1="@F(ly + 5)" x2="@F(lx + 16)" y2="@F(ly + 5)" class="series base" />
+            @SvgText(lx + 20, ly, "leg base-t", BaselineLabel)
+            @if (Device is { Count: > 0 })
+            {
+                <line x1="@F(lx)" y1="@F(ly + 18)" x2="@F(lx + 16)" y2="@F(ly + 18)" class="series dev" />
+                @SvgText(lx + 20, ly + 13, "leg dev-t", DeviceLabel)
+            }
+        }
+    }
+</svg>
+
+@code {
+    /// <summary>Baseline series as (time in seconds from the event, frequency in Hz) points.</summary>
+    [Parameter] public IReadOnlyList<(double T, double Hz)>? Baseline { get; set; }
+    /// <summary>Optional second series (e.g. with a TSGB device).</summary>
+    [Parameter] public IReadOnlyList<(double T, double Hz)>? Device { get; set; }
+    /// <summary>Reference limit lines; defaults to the GB set (50.0 / 49.8 / 49.5 / 48.8).</summary>
+    [Parameter] public IReadOnlyList<RefLine>? References { get; set; }
+    [Parameter] public string BaselineLabel { get; set; } = "baseline";
+    [Parameter] public string DeviceLabel { get; set; } = "+ device";
+    /// <summary>Vertical scale bounds. Defaults span the statutory over-freq ceiling to below LFDD.</summary>
+    [Parameter] public double FMin { get; set; } = 48.6;
+    [Parameter] public double FMax { get; set; } = 50.5;
+    [Parameter] public double Width { get; set; } = 640;
+    [Parameter] public double Height { get; set; } = 260;
+
+    private const double PadL = 38, PadR = 12, PadT = 10, PadB = 20;
+
+    /// <summary>A horizontal reference line: frequency, its label, and a css class for its style.</summary>
+    public sealed record RefLine(double Hz, string Label, string CssClass);
+
+    /// <summary>The GB frequency limit lines, drawn by default.</summary>
+    public static readonly IReadOnlyList<RefLine> GbLimits = new[]
+    {
+        new RefLine(50.0, "50.0", "nom"),
+        new RefLine(49.8, "49.8", "oper"),
+        new RefLine(49.5, "49.5", "stat"),
+        new RefLine(48.8, "48.8", "lfdd"),
+    };
+
+    /// <summary>
+    /// N297 (B4, October 2026; Ruling R1: Mark delegated EE calls 2026-10-04): the limit lines for a system with
+    /// <paramref name="bands"/> (the GB bands about its nominal), from the one Core list
+    /// (<see cref="GridSim.Core.Presentation.TripWhatIf.ReferenceLines"/>). For <see cref="GridSim.Core.Dynamics.FrequencyBands.Gb"/>
+    /// the lines, labels and classes are exactly <see cref="GbLimits"/>.
+    /// </summary>
+    public static IReadOnlyList<RefLine> For(GridSim.Core.Dynamics.FrequencyBands bands) =>
+        GridSim.Core.Presentation.TripWhatIf.ReferenceLines(bands).Select(r => new RefLine(r.Hz, r.Label, r.Kind)).ToList();
+
+    private double _w, _h, _dur;
+
+    private IReadOnlyList<RefLine> ActiveRefs => References ?? GbLimits;
+
+    protected override void OnParametersSet()
+    {
+        _w = Width;
+        _h = Height;
+        double d = Math.Max(Span(Baseline), Span(Device));
+        _dur = d <= 0 ? 30 : d;
+    }
+
+    private static double Span(IReadOnlyList<(double T, double Hz)>? s) =>
+        s is null || s.Count < 2 ? 0 : s[^1].T - s[0].T;
+
+    private double PlotW => _w - PadL - PadR;
+    private double PlotH => _h - PadT - PadB;
+    private double MapX(double t) => PadL + (_dur <= 0 ? 0 : t / _dur) * PlotW;
+    private double MapY(double f) => PadT + (FMax - f) / (FMax - FMin) * PlotH;
+
+    private string Curve(IReadOnlyList<(double T, double Hz)> pts)
+    {
+        double t0 = pts[0].T;
+        int step = Math.Max(1, pts.Count / 400);
+        var sb = new System.Text.StringBuilder();
+        bool first = true;
+        for (int i = 0; i < pts.Count; i += step)
+        {
+            double t = pts[i].T - t0;
+            double f = Math.Clamp(pts[i].Hz, FMin, FMax);
+            sb.Append(first ? 'M' : 'L').Append(' ').Append(F(MapX(t))).Append(' ').Append(F(MapY(f))).Append(' ');
+            first = false;
+        }
+        return sb.ToString();
+    }
+
+    private static string F(double d) => d.ToString("0.#", CultureInfo.InvariantCulture);
+
+    // Razor reserves the bare <text> tag, so SVG text is emitted as raw markup (the parent <svg> parses it as SVG).
+    private MarkupString SvgText(double x, double y, string cls, string content, string? anchor = null, string baseline = "hanging")
+    {
+        string a = anchor is null ? "" : $" text-anchor=\"{anchor}\"";
+        string esc = System.Net.WebUtility.HtmlEncode(content);
+        return (MarkupString)$"<text x=\"{F(x)}\" y=\"{F(y)}\" class=\"{cls}\"{a} dominant-baseline=\"{baseline}\">{esc}</text>";
+    }
+}

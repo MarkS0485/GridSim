@@ -1,0 +1,29 @@
+$ sed -n '24,50p' results/formats/replay-2023/baseline-frequency.json
+  "config": {
+    "nominalHz": 50,
+    "droopPu": 0.05,
+    "dampingPctPerHz": 1,
+    "responsiveFraction": 0,
+    "governorTimeConstantS": 8,
+    "stepSeconds": 0.02,
+    "durationSeconds": 159,
+    "initialFrequencyHz": 49.879
+  },
+  "systemResponseServices": [
+    {
+      "mw": 873,
+      "deadbandHz": 0.015,
+      "fullDeliveryDeviationHz": 0.5,
+      "timeConstantS": 0.3,
+      "kneeDeviationHz": 0.2,
+      "kneeFraction": 0.05
+    },
+    {
+      "mw": 150,
+      "deadbandHz": 0.1,
+      "fullDeliveryDeviationHz": 0.2,
+      "timeConstantS": 0.3,
+      "kneeDeviationHz": 0.1,
+      "kneeFraction": 0
+    },
+[exit 0]

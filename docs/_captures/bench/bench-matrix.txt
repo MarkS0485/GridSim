@@ -1,0 +1,338 @@
+$ gridsim bench --runs 1 --parallel 2 --out results/bench-quick.md
+    GridSim  -  2026-10-04 10:10:54 UTC
+    code:    git 3f9d9be3  |  GridSim.Core v1.95.147.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26200
+    cpu:     X64  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     bench-matrix  cases=27  engines=3  runs=1  parallel=2
+
+Full solver x backend matrix over the whole archive. Every **engine** below is swept across
+every case (Q-limits off, tol 1e-8, max 100 iters). Cells: `conv / iters / mismatch / mean ms`.
+BFS is radial-only (meshed cases show `n/a`). Dense solves are memory-gated (few concurrent)
+and ordered small->large; GPU engines run one case at a time and skip cases >3000 buses
+(consumer-GPU FP64 is slow). Absent accelerators are simply not listed as engines.
+
+**Engines this run:** `cpu-dense` - Dense Newton-Raphson, CPU LU; `cpu-sparse` - Sparse Newton-Raphson, CPU (direct LU / ILU0-BiCGSTAB); `bfs` - Backward-forward sweep (radial feeders only)
+
+_GPU engines not requested (pass `--gpu` to add ROCm/OpenCL/CUDA when a device is present)._
+
+## cpu-dense - Dense Newton-Raphson, CPU LU
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+note: GBreducednetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: GBreducednetwork.m: read mpc.gencost (66 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 1/27] GBreducednetwork (29 buses, 1 run(s))...
+note: GBnetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: GBnetwork.m: read mpc.gencost (394 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 1/27] GBnetwork (2224 buses, 1 run(s))...
+| GBreducednetwork | 29 | 66 | 99 | yes / 7 / 4.44E-013 / 49ms |
+note: pglib_opf_case3_lmbd.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case3_lmbd.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 2/27] pglib_opf_case3_lmbd (3 buses, 1 run(s))...
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | **NO** / 100 / 6.76E+000 / 0ms |
+note: pglib_opf_case5_pjm.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case5_pjm.m: read mpc.gencost (5 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 3/27] pglib_opf_case5_pjm (5 buses, 1 run(s))...
+| pglib_opf_case5_pjm | 5 | 5 | 6 | yes / 3 / 3.57E-011 / 0ms |
+[cpu-dense 4/27] case9 (WSCC) (9 buses, 1 run(s))...
+| case9 (WSCC) | 9 | 3 | 9 | yes / 4 / 1.65E-014 / 1ms |
+[cpu-dense 5/27] case14 (14 buses, 1 run(s))...
+| case14 | 14 | 5 | 20 | yes / 2 / 1.32E-010 / 1ms |
+[cpu-dense 6/27] cigre_mv (15 buses, 1 run(s))...
+| cigre_mv | 15 | 1 | 14 | yes / 5 / 9.45E-011 / 1ms |
+note: case18.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case18.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 7/27] case18 (18 buses, 1 run(s))...
+| case18 | 18 | 1 | 17 | yes / 4 / 5.97E-014 / 3ms |
+note: case22.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case22.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case22.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-dense 8/27] case22 (22 buses, 1 run(s))...
+| case22 | 22 | 1 | 21 | yes / 3 / 1.58E-012 / 1ms |
+[cpu-dense 9/27] case24_ieee_rts (24 buses, 1 run(s))...
+| case24_ieee_rts | 24 | 33 | 38 | yes / 4 / 6.52E-012 / 2ms |
+[cpu-dense 10/27] case30 (30 buses, 1 run(s))...
+| case30 | 30 | 6 | 41 | yes / 3 / 9.57E-010 / 2ms |
+note: pglib_opf_case30_as.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case30_as.m: read mpc.gencost (6 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case30_as.m: solved 3 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+[cpu-dense 11/27] pglib_opf_case30_as (30 buses, 1 run(s))...
+| pglib_opf_case30_as | 30 | 6 | 41 | yes / 4 / 8.79E-014 / 6ms |
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-dense 12/27] case33bw (33 buses, 1 run(s))...
+| case33bw | 33 | 1 | 32 | yes / 3 / 7.47E-009 / 6ms |
+[cpu-dense 13/27] case57 (57 buses, 1 run(s))...
+| case57 | 57 | 7 | 80 | yes / 3 / 3.45E-012 / 18ms |
+note: case69.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case69.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case69.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-dense 14/27] case69 (69 buses, 1 run(s))...
+| case69 | 69 | 1 | 68 | yes / 4 / 3.64E-012 / 5ms |
+note: pglib_opf_case73_ieee_rts.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case73_ieee_rts.m: read mpc.gencost (99 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 15/27] pglib_opf_case73_ieee_rts (73 buses, 1 run(s))...
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | yes / 7 / 3.18E-014 / 12ms |
+note: case85.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case85.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case85.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-dense 16/27] case85 (85 buses, 1 run(s))...
+| case85 | 85 | 1 | 84 | yes / 4 / 3.40E-013 / 6ms |
+[cpu-dense 17/27] case118 (118 buses, 1 run(s))...
+| case118 | 118 | 54 | 186 | yes / 3 / 1.51E-012 / 8ms |
+[cpu-dense 18/27] case145 (145 buses, 1 run(s))...
+| case145 | 145 | 50 | 453 | yes / 3 / 7.87E-012 / 19ms |
+note: pglib_opf_case162_ieee_dtc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case162_ieee_dtc.m: read mpc.gencost (12 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 19/27] pglib_opf_case162_ieee_dtc (162 buses, 1 run(s))...
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | **NO** / 100 / 2.57E+000 / 554ms |
+note: pglib_opf_case240_pserc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case240_pserc.m: read mpc.gencost (143 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 20/27] pglib_opf_case240_pserc (240 buses, 1 run(s))...
+| pglib_opf_case240_pserc | 240 | 143 | 448 | **NO** / 100 / 9.03E+001 / 1142ms |
+[cpu-dense 21/27] case300 (300 buses, 1 run(s))...
+| case300 | 300 | 69 | 411 | yes / 5 / 1.38E-012 / 47ms |
+note: case533mt_hi.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case533mt_hi.m: skipped 45 out-of-service branch(es).
+[cpu-dense 22/27] case533mt_hi (533 buses, 1 run(s))...
+| case533mt_hi | 533 | 1 | 532 | yes / 3 / 2.08E-013 / 98ms |
+| GBnetwork | 2224 | 394 | 3207 | yes / 3 / 5.77E-011 / 2314ms |
+note: pglib_opf_case588_sdet.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case588_sdet.m: kept 72 out-of-service generator(s) in the model, marked out of service (not solved).
+note: pglib_opf_case588_sdet.m: read mpc.gencost (167 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case588_sdet.m: solved 43 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+[cpu-dense 24/27] pglib_opf_case588_sdet (588 buses, 1 run(s))...
+| pglib_opf_case588_sdet | 588 | 95 | 686 | yes / 5 / 3.60E-009 / 162ms |
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 25/27] case1354pegase (1354 buses, 1 run(s))...
+| case1354pegase | 1354 | 260 | 1991 | yes / 4 / 3.97E-012 / 610ms |
+note: case2869pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case2869pegase.m: read mpc.gencost (510 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 26/27] case2869pegase (2869 buses, 1 run(s))...
+| case2869pegase | 2869 | 510 | 4582 | yes / 6 / 2.15E-009 / 5338ms |
+note: case9241pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case9241pegase.m: read mpc.gencost (1445 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-dense 27/27] case9241pegase (9241 buses, 1 run(s))...
+| case9241pegase | 9241 | 1445 | 16049 | yes / 6 / 2.13E-009 / 199934ms |
+
+## cpu-sparse - Sparse Newton-Raphson, CPU (direct LU / ILU0-BiCGSTAB)
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+note: GBreducednetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: GBreducednetwork.m: read mpc.gencost (66 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 1/27] GBreducednetwork (29 buses, 1 run(s))...
+note: GBnetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: GBnetwork.m: read mpc.gencost (394 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 1/27] GBnetwork (2224 buses, 1 run(s))...
+| GBreducednetwork | 29 | 66 | 99 | yes / 7 / 4.44E-013 / 63ms |
+note: pglib_opf_case3_lmbd.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case3_lmbd.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 2/27] pglib_opf_case3_lmbd (3 buses, 1 run(s))...
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | **NO** / 100 / 6.76E+000 / 0ms |
+note: pglib_opf_case5_pjm.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case5_pjm.m: read mpc.gencost (5 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 3/27] pglib_opf_case5_pjm (5 buses, 1 run(s))...
+| pglib_opf_case5_pjm | 5 | 5 | 6 | yes / 3 / 3.57E-011 / 0ms |
+[cpu-sparse 4/27] case9 (WSCC) (9 buses, 1 run(s))...
+| case9 (WSCC) | 9 | 3 | 9 | yes / 4 / 1.65E-014 / 0ms |
+[cpu-sparse 5/27] case14 (14 buses, 1 run(s))...
+| case14 | 14 | 5 | 20 | yes / 2 / 1.32E-010 / 0ms |
+[cpu-sparse 6/27] cigre_mv (15 buses, 1 run(s))...
+| cigre_mv | 15 | 1 | 14 | yes / 5 / 9.45E-011 / 0ms |
+| GBnetwork | 2224 | 394 | 3207 | yes / 3 / 5.77E-011 / 170ms |
+note: case18.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case18.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 8/27] case18 (18 buses, 1 run(s))...
+| case18 | 18 | 1 | 17 | yes / 4 / 5.97E-014 / 0ms |
+[cpu-sparse 9/27] case24_ieee_rts (24 buses, 1 run(s))...
+| case24_ieee_rts | 24 | 33 | 38 | yes / 4 / 6.52E-012 / 1ms |
+note: case22.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case22.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case22.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-sparse 10/27] case22 (22 buses, 1 run(s))...
+[cpu-sparse 10/27] case30 (30 buses, 1 run(s))...
+| case22 | 22 | 1 | 21 | yes / 3 / 1.58E-012 / 0ms |
+| case30 | 30 | 6 | 41 | yes / 3 / 9.57E-010 / 0ms |
+note: pglib_opf_case30_as.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case30_as.m: read mpc.gencost (6 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case30_as.m: solved 3 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+[cpu-sparse 12/27] pglib_opf_case30_as (30 buses, 1 run(s))...
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+| pglib_opf_case30_as | 30 | 6 | 41 | yes / 4 / 8.79E-014 / 1ms |
+[cpu-sparse 13/27] case33bw (33 buses, 1 run(s))...
+| case33bw | 33 | 1 | 32 | yes / 3 / 7.47E-009 / 1ms |
+[cpu-sparse 14/27] case57 (57 buses, 1 run(s))...
+note: case85.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case85.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case85.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-sparse 14/27] case85 (85 buses, 1 run(s))...
+| case85 | 85 | 1 | 84 | yes / 4 / 3.40E-013 / 1ms |
+| case57 | 57 | 7 | 80 | yes / 3 / 3.45E-012 / 41ms |
+[cpu-sparse 16/27] case118 (118 buses, 1 run(s))...
+| case118 | 118 | 54 | 186 | yes / 3 / 1.51E-012 / 3ms |
+note: case69.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case69.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case69.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[cpu-sparse 17/27] case69 (69 buses, 1 run(s))...
+| case69 | 69 | 1 | 68 | yes / 4 / 3.64E-012 / 6ms |
+note: pglib_opf_case73_ieee_rts.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case73_ieee_rts.m: read mpc.gencost (99 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 18/27] pglib_opf_case73_ieee_rts (73 buses, 1 run(s))...
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | yes / 7 / 3.18E-014 / 2ms |
+[cpu-sparse 19/27] case145 (145 buses, 1 run(s))...
+| case145 | 145 | 50 | 453 | yes / 3 / 7.87E-012 / 4ms |
+note: pglib_opf_case240_pserc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case240_pserc.m: read mpc.gencost (143 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 20/27] pglib_opf_case240_pserc (240 buses, 1 run(s))...
+note: pglib_opf_case162_ieee_dtc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case162_ieee_dtc.m: read mpc.gencost (12 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 20/27] pglib_opf_case162_ieee_dtc (162 buses, 1 run(s))...
+| pglib_opf_case240_pserc | 240 | 143 | 448 | **NO** / 100 / 9.03E+001 / 113ms |
+[cpu-sparse 21/27] case300 (300 buses, 1 run(s))...
+| case300 | 300 | 69 | 411 | yes / 5 / 1.38E-012 / 8ms |
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | **NO** / 100 / 2.57E+000 / 181ms |
+note: case533mt_hi.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case533mt_hi.m: skipped 45 out-of-service branch(es).
+[cpu-sparse 23/27] case533mt_hi (533 buses, 1 run(s))...
+| case533mt_hi | 533 | 1 | 532 | yes / 3 / 2.08E-013 / 29ms |
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 24/27] case1354pegase (1354 buses, 1 run(s))...
+| case1354pegase | 1354 | 260 | 1991 | yes / 4 / 3.97E-012 / 26ms |
+note: pglib_opf_case588_sdet.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case588_sdet.m: kept 72 out-of-service generator(s) in the model, marked out of service (not solved).
+note: pglib_opf_case588_sdet.m: read mpc.gencost (167 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case588_sdet.m: solved 43 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+[cpu-sparse 25/27] pglib_opf_case588_sdet (588 buses, 1 run(s))...
+| pglib_opf_case588_sdet | 588 | 95 | 686 | yes / 5 / 3.60E-009 / 15ms |
+note: case2869pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case2869pegase.m: read mpc.gencost (510 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 26/27] case2869pegase (2869 buses, 1 run(s))...
+| case2869pegase | 2869 | 510 | 4582 | yes / 6 / 2.15E-009 / 198ms |
+note: case9241pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case9241pegase.m: read mpc.gencost (1445 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[cpu-sparse 27/27] case9241pegase (9241 buses, 1 run(s))...
+| case9241pegase | 9241 | 1445 | 16049 | yes / 6 / 2.13E-009 / 1178ms |
+
+## bfs - Backward-forward sweep (radial feeders only)
+| Case | Buses | Gens | Branches | conv / iters / mismatch / mean ms |
+|------|------:|-----:|---------:|-----------------------------------|
+note: GBreducednetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: GBreducednetwork.m: read mpc.gencost (66 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| GBreducednetwork | 29 | 66 | 99 | n/a (meshed) |
+note: pglib_opf_case3_lmbd.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case3_lmbd.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| pglib_opf_case3_lmbd | 3 | 3 | 3 | n/a (meshed) |
+note: pglib_opf_case5_pjm.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case5_pjm.m: read mpc.gencost (5 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| pglib_opf_case5_pjm | 5 | 5 | 6 | n/a (meshed) |
+| case9 (WSCC) | 9 | 3 | 9 | n/a (meshed) |
+| case14 | 14 | 5 | 20 | n/a (meshed) |
+[bfs 1/27] cigre_mv (15 buses, 1 run(s))...
+| cigre_mv | 15 | 1 | 14 | yes / 11 / 6.23E-010 / 30ms |
+note: case18.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case18.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[bfs 2/27] case18 (18 buses, 1 run(s))...
+| case18 | 18 | 1 | 17 | yes / 11 / 1.37E-009 / 0ms |
+note: case22.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case22.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case22.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[bfs 3/27] case22 (22 buses, 1 run(s))...
+| case22 | 22 | 1 | 21 | yes / 6 / 1.91E-011 / 0ms |
+| case24_ieee_rts | 24 | 33 | 38 | n/a (meshed) |
+| case30 | 30 | 6 | 41 | n/a (meshed) |
+note: pglib_opf_case30_as.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case30_as.m: read mpc.gencost (6 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case30_as.m: solved 3 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+| pglib_opf_case30_as | 30 | 6 | 41 | n/a (meshed) |
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[bfs 4/27] case33bw (33 buses, 1 run(s))...
+| case33bw | 33 | 1 | 32 | yes / 8 / 6.82E-011 / 0ms |
+| case57 | 57 | 7 | 80 | n/a (meshed) |
+note: case69.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case69.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case69.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[bfs 5/27] case69 (69 buses, 1 run(s))...
+| case69 | 69 | 1 | 68 | yes / 8 / 5.28E-010 / 0ms |
+note: pglib_opf_case73_ieee_rts.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case73_ieee_rts.m: read mpc.gencost (99 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| pglib_opf_case73_ieee_rts | 73 | 99 | 120 | n/a (meshed) |
+note: case85.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case85.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case85.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[bfs 6/27] case85 (85 buses, 1 run(s))...
+| case85 | 85 | 1 | 84 | yes / 9 / 3.23E-010 / 1ms |
+| case118 | 118 | 54 | 186 | n/a (meshed) |
+| case145 | 145 | 50 | 453 | n/a (meshed) |
+note: pglib_opf_case162_ieee_dtc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case162_ieee_dtc.m: read mpc.gencost (12 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| pglib_opf_case162_ieee_dtc | 162 | 12 | 284 | n/a (meshed) |
+note: pglib_opf_case240_pserc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case240_pserc.m: read mpc.gencost (143 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| pglib_opf_case240_pserc | 240 | 143 | 448 | n/a (meshed) |
+note: GBnetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: GBnetwork.m: read mpc.gencost (394 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| GBnetwork | 2224 | 394 | 3207 | n/a (meshed) |
+| case300 | 300 | 69 | 411 | n/a (meshed) |
+note: pglib_opf_case588_sdet.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: pglib_opf_case588_sdet.m: kept 72 out-of-service generator(s) in the model, marked out of service (not solved).
+note: pglib_opf_case588_sdet.m: read mpc.gencost (167 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case588_sdet.m: solved 43 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+| pglib_opf_case588_sdet | 588 | 95 | 686 | n/a (meshed) |
+note: case533mt_hi.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case533mt_hi.m: skipped 45 out-of-service branch(es).
+[bfs 7/27] case533mt_hi (533 buses, 1 run(s))...
+| case533mt_hi | 533 | 1 | 532 | yes / 5 / 1.36E-012 / 4ms |
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| case1354pegase | 1354 | 260 | 1991 | n/a (meshed) |
+note: case2869pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case2869pegase.m: read mpc.gencost (510 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| case2869pegase | 2869 | 510 | 4582 | n/a (meshed) |
+note: case9241pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case9241pegase.m: read mpc.gencost (1445 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+| case9241pegase | 9241 | 1445 | 16049 | n/a (meshed) |
+
+## Comparison - mean solve time (ms), converged unless noted
+| Case | Buses | cpu-dense | cpu-sparse | bfs |
+|------|------:|------:|------:|------:|
+| GBnetwork | 2224 | 2314ms | 170ms | n/a |
+| GBreducednetwork | 29 | 49ms | 63ms | n/a |
+| pglib_opf_case3_lmbd | 3 | NO | NO | n/a |
+| pglib_opf_case5_pjm | 5 | 0ms | 0ms | n/a |
+| case9 (WSCC) | 9 | 1ms | 0ms | n/a |
+| case14 | 14 | 1ms | 0ms | n/a |
+| cigre_mv | 15 | 1ms | 0ms | 30ms |
+| case18 | 18 | 3ms | 0ms | 0ms |
+| case22 | 22 | 1ms | 0ms | 0ms |
+| case24_ieee_rts | 24 | 2ms | 1ms | n/a |
+| case30 | 30 | 2ms | 0ms | n/a |
+| pglib_opf_case30_as | 30 | 6ms | 1ms | n/a |
+| case33bw | 33 | 6ms | 1ms | 0ms |
+| case57 | 57 | 18ms | 41ms | n/a |
+| case69 | 69 | 5ms | 6ms | 0ms |
+| pglib_opf_case73_ieee_rts | 73 | 12ms | 2ms | n/a |
+| case85 | 85 | 6ms | 1ms | 1ms |
+| case118 | 118 | 8ms | 3ms | n/a |
+| case145 | 145 | 19ms | 4ms | n/a |
+| pglib_opf_case162_ieee_dtc | 162 | NO | NO | n/a |
+| pglib_opf_case240_pserc | 240 | NO | NO | n/a |
+| case300 | 300 | 47ms | 8ms | n/a |
+| case533mt_hi | 533 | 98ms | 29ms | 4ms |
+| pglib_opf_case588_sdet | 588 | 162ms | 15ms | n/a |
+| case1354pegase | 1354 | 610ms | 26ms | n/a |
+| case2869pegase | 2869 | 5338ms | 198ms | n/a |
+| case9241pegase | 9241 | 199934ms | 1178ms | n/a |
+[bench] done (3 engines x 27 cases) -> results\bench-quick.md
+[exit 0]

@@ -1,0 +1,64 @@
+{
+  "schema": "gridsim-measurements/1",
+  "case": "case14",
+  "baseMva": 100,
+  "takenUtc": "2026-07-20T13:45:13.25Z",
+  "note": "mapped from RTU interposer",
+  "measurements": [
+    {
+      "kind": "VmPu",
+      "value": 1.0210000276565552,
+      "sigma": 0.01,
+      "bus": 4,
+      "from": 0,
+      "to": 0,
+      "end": "From",
+      "source": "rtu",
+      "isBranch": false
+    },
+    {
+      "kind": "VmPu",
+      "value": 0.9869999885559082,
+      "sigma": 0.04,
+      "bus": 5,
+      "from": 0,
+      "to": 0,
+      "end": "From",
+      "source": "rtu",
+      "isBranch": false
+    },
+    {
+      "kind": "VmPu",
+      "value": 1.0454545454545454,
+      "sigma": 0.01,
+      "bus": 9,
+      "from": 0,
+      "to": 0,
+      "end": "From",
+      "source": "rtu",
+      "isBranch": false
+    },
+    {
+      "kind": "PFlowMw",
+      "value": 156.8,
+      "sigma": 2,
+      "bus": 0,
+      "from": 1,
+      "to": 2,
+      "end": "From",
+      "source": "rtu",
+      "isBranch": true
+    },
+    {
+      "kind": "VaDeg",
+      "value": -10.310000002384186,
+      "sigma": 0.5,
+      "bus": 4,
+      "from": 0,
+      "to": 0,
+      "end": "From",
+      "source": "rtu",
+      "isBranch": false
+    }
+  ]
+}

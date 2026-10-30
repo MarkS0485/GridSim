@@ -1,0 +1,19 @@
+$ sed -n '586,602p' results/formats/estimate-thin/estimate-export.json
+  "observability": {
+    "observable": false,
+    "rank": 13,
+    "stateSize": 17,
+    "unobservableBuses": [
+      5,
+      7,
+      8,
+      9
+    ],
+    "unobservableStates": [
+      "Vm@bus 5",
+      "Vm@bus 7",
+      "Vm@bus 8",
+      "Vm@bus 9"
+    ],
+    "unmeasuredIslandBuses": []
+[exit 0]

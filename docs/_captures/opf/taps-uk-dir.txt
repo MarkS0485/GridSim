@@ -1,0 +1,14 @@
+$ gridsim taps data/uk
+TAP SCHEDULE - GB reduced (10-zone) (10 OLTCs)  [minimise sum of squared deviation from 1.000 pu]
+  objective 2.789433E-002 -> 1.610133E-002  (improved)
+      T1 GSP N Scotland          1.0000 ->   1.0375
+      T2 GSP S Scotland          1.0000 ->   1.0375
+      T3 GSP N England           1.0000 ->   1.0375
+      T4 GSP Yorkshire           1.0000 ->   1.0375
+      T5 GSP N Wales & Mersey    1.0000 ->   1.0375
+      T6 GSP Midlands            1.0000 ->   1.0250
+      T7 GSP East Anglia         1.0000 ->   1.0375
+      T8 GSP London & SE         1.0000 ->   1.0250
+      T9 GSP South               1.0000 ->   1.0375
+      T10 GSP SW & S Wales       1.0000 ->   1.0375
+[exit 0]

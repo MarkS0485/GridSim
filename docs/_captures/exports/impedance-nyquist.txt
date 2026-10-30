@@ -1,0 +1,14 @@
+$ sed -n '4326,4337p' results/exports-docs/impedance-stability.json
+  "nyquist": {
+    "encirclements": 0,
+    "unstableModeCount": 0,
+    "stable": true,
+    "gainMarginDb": 19.106647182661302,
+    "phaseMarginDeg": -113.23481644618866,
+    "criticalFreqHz": 18.456253226988178,
+    "minDistToMinusOne": 0.8602759878103645
+  },
+  "scrSweep": [
+    {
+      "scr": 1,
+[exit 0]

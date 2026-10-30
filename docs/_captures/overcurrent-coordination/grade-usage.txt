@@ -1,0 +1,3 @@
+$ gridsim grade --chain iec-si:400:0.1 --current 2000
+error: --chain needs at least two relays (a primary and its backup), downstream first.
+[exit 2]

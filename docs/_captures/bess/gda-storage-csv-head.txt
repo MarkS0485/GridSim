@@ -1,0 +1,10 @@
+$ head -8 results/bess-gda/storage-counterfactual.csv
+# COUNTERFACTUAL: hypothetical storage on recorded history (ProvenanceTag.Counterfactual)
+index,site,request_mw,delivered_mw,aux_mw,soc,temp_c,limited
+0,NMC 5MW/10MWh @5,1.000,1.000,0.0100,0.70571,24.80,0
+1,NMC 5MW/10MWh @5,1.000,1.000,0.0100,0.66100,24.62,0
+2,NMC 5MW/10MWh @5,1.000,1.000,0.0100,0.61586,24.45,0
+3,NMC 5MW/10MWh @5,1.000,1.000,0.0100,0.57030,24.29,0
+4,NMC 5MW/10MWh @5,1.000,1.000,0.0100,0.52429,24.13,0
+5,NMC 5MW/10MWh @5,0.000,0.000,0.0100,0.52428,24.17,0
+[exit 0]

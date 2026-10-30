@@ -1,0 +1,3 @@
+$ gridsim gda --root $GDA_ROOT_NO_TEC --fleet
+Fleet build failed: GDA dataset folder not found: $GDA_ROOT_NO_TEC\NESO\RAWData\Transmission Entry Capacity (TEC) register
+[exit 1]

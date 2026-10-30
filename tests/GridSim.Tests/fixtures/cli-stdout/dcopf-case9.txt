@@ -1,0 +1,6 @@
+DC-OPF - IEEE 9-bus (WSCC) (9 buses)  [cheapest secure dispatch]
+  demand 315 MW  generation 315 MW  total cost 15,750 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 3         270.0 MW  @    50 GBP/MWh
+      gen bus 2          35.0 MW  @    50 GBP/MWh
+      gen bus 1          10.0 MW  @    50 GBP/MWh

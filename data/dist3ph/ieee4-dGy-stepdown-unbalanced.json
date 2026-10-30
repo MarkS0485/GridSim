@@ -1,0 +1,52 @@
+{
+  "schema": "gridsim-dist3ph/1",
+  "name": "IEEE 4 Node Test Feeder, D-GrY step-down, unbalanced",
+  "description": "IEEE PES Distribution System Analysis Subcommittee, IEEE 4 Node Test Feeder (W. H. Kersting), published case D-GrY (delta - grounded wye) step-down, unbalanced load, 1275 kW at 0.85 pf (phase a), 1800 kW at 0.9 pf (phase b) and 2375 kW at 0.95 pf (phase c), all lagging. Infinite 12.47 kV source at node 1; 2000 ft THREE-WIRE overhead line 1-2 (the delta side has no neutral); 6000 kVA 12.47/4.16 kV delta / grounded-wye transformer 2-3 (ANSI: the 4.16 kV side lags by 30 degrees) with Z = 1.0 + j6.0 %; 2500 ft four-wire overhead line 3-4; wye constant-power load at node 4. Line codes: the published geometry (phase conductors 336,400 26/7 ACSR, GMR 0.0244 ft, r 0.306 ohm/mile, at x = -4, -1.5, 3 ft and h = 28 ft; neutral 4/0 6/1 ACSR, GMR 0.00814 ft, r 0.592 ohm/mile, at x = 0, h = 24 ft) through Kersting's modified Carson equations (r + 0.0953 + j0.12134 (ln(1/GMR) + 7.93402) ohm/mile; 60 Hz, 100 ohm-m earth), the four-wire code Kron-reduced (identical to the gy-gy files), the three-wire code without a neutral. Published node voltages: tests/GridSim.Tests/Dist3phDeltaWyeTransformerTests.cs (also tabulated in the LBL Modelica Buildings library, IEEETests.Test4NodesFeeder).",
+  "baseMva": 6.0,
+  "buses": [
+    { "id": 1, "baseKvLL": 12.47, "source": { "magnitudePu": [1.0, 1.0, 1.0] } },
+    { "id": 2, "baseKvLL": 12.47 },
+    { "id": 3, "baseKvLL": 4.16 },
+    { "id": 4, "baseKvLL": 4.16 }
+  ],
+  "lineCodes": [
+    {
+      "id": "ieee4-overhead",
+      "unit": "ohm/mile",
+      "r": [
+        [0.45755108799674815, 0.15595005994412853, 0.1534848254947009],
+        [0.15595005994412856, 0.4666276021929273, 0.15800625374417016],
+        [0.1534848254947009, 0.15800625374417016, 0.46147239337530727]
+      ],
+      "x": [
+        [1.0780345407868444, 0.5016733333358068, 0.38493375201227714],
+        [0.5016733333358068, 1.048163373204583, 0.42364802055288314],
+        [0.3849337520122771, 0.42364802055288314, 1.0650579323735838]
+      ]
+    },
+    {
+      "id": "ieee4-overhead-3wire",
+      "unit": "ohm/mile",
+      "r": [
+        [0.4013, 0.0953, 0.0953],
+        [0.0953, 0.4013, 0.0953],
+        [0.0953, 0.0953, 0.4013]
+      ],
+      "x": [
+        [1.413270295078513, 0.8515312693943901, 0.7265972493136283],
+        [0.8515312693943901, 1.413270295078513, 0.7802092354751669],
+        [0.7265972493136283, 0.7802092354751669, 1.413270295078513]
+      ]
+    }
+  ],
+  "lines": [
+    { "id": "line1-2", "from": 1, "to": 2, "code": "ieee4-overhead-3wire", "length": 2000, "lengthUnit": "ft" },
+    { "id": "line3-4", "from": 3, "to": 4, "code": "ieee4-overhead", "length": 2500, "lengthUnit": "ft" }
+  ],
+  "transformers": [
+    { "id": "t2-3", "from": 2, "to": 3, "connection": "d-gy", "kva": 6000, "kvLLFrom": 12.47, "kvLLTo": 4.16, "rPercent": 1.0, "xPercent": 6.0 }
+  ],
+  "loads": [
+    { "id": "load4", "bus": 4, "connection": "wye", "model": "constant-power", "kw": [1275, 1800, 2375], "kvar": [790.1740314639554, 871.7797887081346, 780.6247497998002] }
+  ]
+}

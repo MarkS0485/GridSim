@@ -1,0 +1,226 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- UI programme Phase 1.1: the control-room control styles, ported from src/GridSim.Wpf/Theme.xaml on top of the
+       Fluent theme (dark variant). The colours, fonts and sizes come from Palette.axaml by the WPF names.
+
+       How the WPF styles map to Avalonia:
+       - a WPF keyed style (Style="{StaticResource FlatBtn}") is an Avalonia style class (Classes="FlatBtn"), with the
+         same name, so a ported page swaps one attribute for the other;
+       - a WPF implicit style (every TextBlock, every ComboBox) is a plain type selector here;
+       - where WPF replaced a whole control template only to recolour it (FlatBtn, TileBtn, RowLinkBtn, ComboBox), this
+         keeps Fluent's template and sets its parts (/template/ ContentPresenter#PART_ContentPresenter), so focus,
+         keyboard and accessibility behaviour stay Fluent's.
+       The resources are looked up with DynamicResource because they live in the application's resources
+       (App.axaml), not in this file.
+       Not ported yet: the PageHeader data template (it binds the asset pages' view models, which arrive with those
+       pages in Phase 1.6) and WPF's TextOptions.TextFormattingMode (Avalonia has no equivalent; it always lays text out
+       at ideal widths, which is what "Ideal" asked for). -->
+
+  <!-- The Fluent dark theme's own popup and menu backgrounds, set to the control-room panel colour so the menu bar,
+       its drop-downs and the combo-box lists match the panels (WPF had no menu bar; its combo-box list was Panel). -->
+  <Styles.Resources>
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#FF131A23" />
+    <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#FF26323F" />
+    <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#FF131A23" />
+    <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#FF26323F" />
+  </Styles.Resources>
+
+  <!-- ============ Window and menu bar ============ -->
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="{DynamicResource Panel}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+  </Style>
+
+  <!-- ============ Text styles ============ -->
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource BaseFontSize}" />
+  </Style>
+
+  <Style Selector="TextBlock.Label">
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+
+  <Style Selector="TextBlock.Value">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+
+  <Style Selector="TextBlock.Unit">
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="TextBlock.PanelHeader">
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+
+  <!-- D-DOC-145: the tag on every panel that shows fixed illustrative values rather than data. Same words and amber as
+       WPF and the web's STATIC DEMO eyebrow. Use it as <TextBlock Classes="StaticDemoTag" /> beside the panel header. -->
+  <Style Selector="TextBlock.StaticDemoTag">
+    <Setter Property="Text" Value="STATIC DEMO" />
+    <Setter Property="Foreground" Value="{DynamicResource Amber}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontSize" Value="10" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="ToolTip.Tip" Value="Fixed illustrative values, not data from the model, the solve or a feed." />
+  </Style>
+
+  <!-- ============ Flat control-room button ============ -->
+  <Style Selector="Button.FlatBtn">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <!-- WPF: only the border lights up (accent) on hover; the fill stays PanelHi. Pressed looks the same as hover. -->
+  <Style Selector="Button.FlatBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.FlatBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+  </Style>
+
+  <!-- A whole card as a button: the asset explorer's clickable tiles and rows. -->
+  <Style Selector="Button.TileBtn">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="Background" Value="{DynamicResource Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.TileBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.TileBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Accent}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+  </Style>
+
+  <!-- An inline text hyperlink: no chrome, hand cursor, dims on hover. Set the inner TextBlock's Foreground to Accent
+       so it reads as a link. -->
+  <Style Selector="Button.LinkBtn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <Style Selector="Button.LinkBtn:pointerover">
+    <Setter Property="Opacity" Value="0.75" />
+  </Style>
+  <Style Selector="Button.LinkBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.LinkBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
+  <!-- A list row that is itself a link: the dark row look, lifts on hover. -->
+  <!-- Parity sign-off (2026-10-24): the row stretches across its list as a WPF Button does (Fluent aligns a Button
+       left), so a row's column grid lines up with the list's header; ASSETS and AUTHOR had set it locally. -->
+  <Style Selector="Button.RowLinkBtn">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="Background" Value="{DynamicResource Row}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="10,7" />
+  </Style>
+  <Style Selector="Button.RowLinkBtn:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.RowLinkBtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource RowHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+  </Style>
+
+  <!-- ============ Cards / panels ============ -->
+  <Style Selector="Border.Card">
+    <Setter Property="Background" Value="{DynamicResource Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <!-- ============ Dark combo box (the source picker) ============ -->
+  <Style Selector="ComboBox">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="CornerRadius" Value="4" />
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+  <Style Selector="ComboBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+  </Style>
+  <Style Selector="ComboBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+    <Setter Property="Foreground" Value="{DynamicResource Accent}" />
+  </Style>
+
+  <!-- ============ Control-room tabs ============ -->
+  <Style Selector="TabControl.RoomTabs">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="TabItem.RoomTabItem">
+    <Setter Property="Foreground" Value="{DynamicResource Muted}" />
+    <Setter Property="FontFamily" Value="{DynamicResource UiFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Padding" Value="18,9" />
+    <Setter Property="Margin" Value="0,0,4,0" />
+    <Setter Property="CornerRadius" Value="4,4,0,0" />
+  </Style>
+  <Style Selector="TabItem.RoomTabItem:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+  </Style>
+  <Style Selector="TabItem.RoomTabItem:selected">
+    <Setter Property="Foreground" Value="{DynamicResource Text}" />
+    <Setter Property="Background" Value="{DynamicResource Panel}" />
+  </Style>
+  <!-- WPF draws a 2 px accent underline under the selected tab; Fluent's selection pipe is that underline. -->
+  <Style Selector="TabItem.RoomTabItem:selected /template/ Border#PART_SelectedPipe">
+    <Setter Property="Background" Value="{DynamicResource Accent}" />
+  </Style>
+
+  <!-- ============ Shell status bar ============ -->
+  <Style Selector="Border.StatusBar">
+    <Setter Property="Background" Value="{DynamicResource Panel}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Border}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="Height" Value="28" />
+  </Style>
+</Styles>

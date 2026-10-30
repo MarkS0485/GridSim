@@ -1,0 +1,3 @@
+$ gridsim nosuchbare.m --once
+error: MATPOWER case file not found: 'nosuchbare.m' (full path nosuchbare.m).
+[exit 1]

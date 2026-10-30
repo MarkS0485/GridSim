@@ -1,0 +1,5 @@
+$ gridsim validate docs/_captures/v2-schema/inputs/small/small.case.json
+OK    docs/_captures/v2-schema/inputs/small/small.case.json (gridsim-case/2)
+OK    docs\_captures\v2-schema\inputs\small\small.network.json (gridsim-network/2)
+validate: 2 of 2 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 0]

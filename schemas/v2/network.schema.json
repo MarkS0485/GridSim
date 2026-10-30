@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "network.schema.json",
+  "title": "GridSim v2 network file (gridsim-network/2)",
+  "description": "One network file of a v2 case: the placed elements (buses, generators, demands, lines, transformers, on-load tap changers, boundaries, protective devices). A case lists one or more network files and the network is their union. The element shapes are the v1 shapes (src/GridSim.Core/IO/Json/JsonDtos.cs and ProtectionDto.cs, member names as the bundled data spells them) with these differences: one file holds every element array instead of one file per array; demand.json becomes 'demands', transmission.json 'lines', onloadtapchanger.json 'oltcs'; v1 'dynamicsClass' (generator, line, transformer) and protection 'class' become 'template', a pinned template reference id@rev; the generator's converterInterfaced, converterFaultCurrentPu and gridForming move into a 'converter' block; the line's rPu0 and xPu0 are spelt r0Pu and x0Pu. New v2-only members (not carried by v1): generator subtransientXdPu, negativeSeqXPu (generator inService is carried by v1 too since F16); line type, inService; transformer type, r0Pu, x0Pu, windings, neutralXPu, inService. The loader puts the sequence members (subtransientXdPu, negativeSeqXPu, r0Pu, x0Pu, windings, neutralXPu) into the model, where the fault studies read them; a line or transformer with inService false is refused by the loader for now. ABSENCE RULE: an optional member that is absent takes exactly the v1 default (JsonDtos.cs, JsonDefaults), so a v1 case and its v2 projection describe the same network. Values on network elements are bare numbers (no {v, unit, prov} object form). Member names are case-sensitive and unknown members are refused everywhere. Rules this schema subset cannot express (unique names and ids, every bus reference resolving, a referenced template existing and being of the right kind, ZIP triples summing to 1) are the loader's job (V2CaseLoader, N065) and are not checked here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "properties": {
+    "schema": { "const": "gridsim-network/2" },
+    "description": { "type": "string" },
+    "buses": { "type": "array", "items": { "$ref": "#/$defs/bus" } },
+    "generators": { "type": "array", "items": { "$ref": "#/$defs/generator" } },
+    "demands": { "type": "array", "items": { "$ref": "#/$defs/demand" } },
+    "lines": { "type": "array", "items": { "$ref": "#/$defs/line" } },
+    "transformers": { "type": "array", "items": { "$ref": "#/$defs/transformer" } },
+    "oltcs": { "type": "array", "items": { "$ref": "#/$defs/oltc" } },
+    "boundaries": { "type": "array", "items": { "$ref": "#/$defs/boundary" } },
+    "protections": { "type": "array", "items": { "$ref": "#/$defs/protection" } }
+  },
+  "$defs": {
+    "name": {
+      "title": "Element name",
+      "description": "A name holding at least one non-blank character. Names are how boundaries, tap changers and (later) overrides address an element.",
+      "type": "string",
+      "pattern": "\\S"
+    },
+
+    "busId": {
+      "title": "Bus id",
+      "description": "A bus number, as in v1 buses.json.",
+      "type": "integer"
+    },
+
+    "zip": {
+      "title": "ZIP load model",
+      "description": "Voltage-dependent load at the bus (v1 BusZipDto): P(V) = Pd (ap V^2 + bp V + cp), Q(V) = Qd (aq V^2 + bq V + cq). All six coefficients are required, as the v1 loader requires; the rule that each triple sums to 1 is checked by the loader (JsonGridLoader.ParseZip), not here. Absent = constant power.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ap", "bp", "cp", "aq", "bq", "cq"],
+      "properties": {
+        "ap": { "type": "number" },
+        "bp": { "type": "number" },
+        "cp": { "type": "number" },
+        "aq": { "type": "number" },
+        "bq": { "type": "number" },
+        "cq": { "type": "number" }
+      }
+    },
+
+    "bus": {
+      "title": "Bus",
+      "description": "A bus (v1 BusDto). baseKv is required (N065, JSON v2 Phase 2): it has no default, as in the v1 loader since October 2026 (R179), because a silent 400 kV default scaled every kA figure of a fault study. Absent: type pq, vm 1, vaDeg/gs/bs/x/y 0, no name, no zip. v2 accepts only the three canonical type names; the v1 loader also takes aliases (ref, swing, gen) and, since October 2026 (N096), refuses any other word.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "baseKv"],
+      "properties": {
+        "id": { "$ref": "#/$defs/busId" },
+        "name": { "type": "string" },
+        "baseKv": { "type": "number", "exclusiveMinimum": 0 },
+        "type": { "enum": ["pq", "pv", "slack"] },
+        "vm": { "type": "number", "minimum": 0 },
+        "vaDeg": { "type": "number" },
+        "gs": { "type": "number" },
+        "bs": { "type": "number" },
+        "x": { "type": "number", "description": "Layout coordinate for the visualiser." },
+        "y": { "type": "number", "description": "Layout coordinate for the visualiser." },
+        "zip": { "$ref": "#/$defs/zip" },
+        "vminPu": { "type": "number", "exclusiveMinimum": 0, "description": "This bus's own lower voltage limit, pu (v1 vminPu, F17). Absent = the global band. Used only by checks asked for per-bus limits." },
+        "vmaxPu": { "type": "number", "exclusiveMinimum": 0, "description": "This bus's own upper voltage limit, pu (v1 vmaxPu, F17). Absent = the global band." }
+      }
+    },
+
+    "converter": {
+      "title": "Converter block",
+      "description": "The power-electronic interface of a generator (v1 converterInterfaced, converterFaultCurrentPu, gridForming). Absent block: interfaced inferred from the generator type, the default fault-current multiple, grid-following. Inside the block, an absent member takes the same default.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "interfaced": { "type": "boolean", "description": "Full-converter plant (fault current limited). Absent = inferred from the generator type." },
+        "faultCurrentPu": { "type": "number", "minimum": 0, "description": "Converter fault current k, multiples of rated current; 0 = none (LCC HVDC). Absent = Generator.DefaultConverterFaultCurrentPu." },
+        "gridForming": { "type": "boolean", "description": "Grid-forming (virtual synchronous machine) control. Absent = false." }
+      }
+    },
+
+    "generator": {
+      "title": "Generator",
+      "description": "A generating unit (v1 GenDto). Absent: type ccgt, capacityMva 0, outputMw from capacityMva x capacityFactor (capacityFactor from the type), voltageSetpoint 1, qMinMvar/qMaxMvar -/+ capacityMva, inertiaH 0, role pv, powerFlowOnly false, unitTransformerXPu 0, no template, no converter block, in service. unitTransformerXPu (the step-up transformer reactance on the unit rating) stays at generator level, not in the converter block: in gb-full it is carried by synchronous plant (nuclear, gas, hydro and others), where it is added to the machine reactance (SubtransientInit, Generator.FaultSourceReactancePu). v2-only: subtransientXdPu and negativeSeqXPu (on the unit rating; absent = the synthesised default). inService is carried by v1 too since F16 (October 2026): false = kept in the case but never solved.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bus"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "bus": { "$ref": "#/$defs/busId" },
+        "type": { "type": "string", "pattern": "^([a-z][a-z0-9-]*)?$", "description": "Technology (hydro, nuclear, wind-onshore, interconnector, ...): drives the default capacity factor and the asset binding rules. The empty string means no technology given (a converted MATPOWER unit; the same rule as v1, October 2026 with N101)." },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef", "description": "The asset template bound to this unit (v1 dynamicsClass); wins over a case binding rule." },
+        "capacityMva": { "type": "number", "minimum": 0 },
+        "outputMw": { "type": "number" },
+        "capacityFactor": { "type": "number", "minimum": 0, "maximum": 1 },
+        "voltageSetpoint": { "type": "number", "exclusiveMinimum": 0 },
+        "qMinMvar": { "anyOf": [ { "type": "number" }, { "enum": ["-Infinity"] } ], "description": "Lower reactive limit, MVAr. A number, or the string \"-Infinity\" for no lower limit (N101: the same rule as v1)." },
+        "qMaxMvar": { "anyOf": [ { "type": "number" }, { "enum": ["Infinity"] } ], "description": "Upper reactive limit, MVAr. A number, or the string \"Infinity\" for no upper limit (N101: the same rule as v1)." },
+        "inertiaH": { "type": "number", "minimum": 0 },
+        "role": { "enum": ["pv", "slack", "pq"] },
+        "powerFlowOnly": { "type": "boolean", "description": "A power-flow device (slack balancer, voltage-control unit), not physical plant." },
+        "unitTransformerXPu": { "type": "number", "minimum": 0 },
+        "converter": { "$ref": "#/$defs/converter" },
+        "subtransientXdPu": { "type": "number", "exclusiveMinimum": 0, "description": "Subtransient reactance X''d, per unit on the unit rating (P5, N234: reaches Generator.SubtransientXdPu). Absent = the fault studies' synthesised 0.20 pu. Refused on a converter-interfaced unit." },
+        "negativeSeqXPu": { "type": "number", "exclusiveMinimum": 0, "description": "Negative-sequence reactance X2, per unit on the unit rating (P5, N234: reaches Generator.NegativeSeqXPu). Absent = X''d. Refused on a converter-interfaced unit." },
+        "inService": { "type": "boolean" },
+        "pMinMw": { "type": "number", "description": "Minimum real output, MW (v1 pMinMw, F24). Absent = 0." },
+        "pMaxMw": { "anyOf": [ { "type": "number" }, { "enum": ["Infinity"] } ], "description": "Maximum real output, MW (v1 pMaxMw, F24). Absent = capacityMva. A number, or the string \"Infinity\" for no upper limit (N101: the same rule as v1)." },
+        "qOutputMvar": { "type": "number", "description": "Scheduled reactive output, MVAr (v1 qOutputMvar, F24). Absent = 0." }
+      }
+    },
+
+    "demand": {
+      "title": "Demand",
+      "description": "A demand (v1 DemandDto). Absent: qMvar from pMw and powerFactor, powerFactor 0.97 lagging. v2 refuses a power factor outside (0, 1]; the v1 loader clamped it to [0.01, 1].",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bus", "pMw"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "bus": { "$ref": "#/$defs/busId" },
+        "pMw": { "type": "number" },
+        "qMvar": { "type": "number" },
+        "powerFactor": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+      }
+    },
+
+    "line": {
+      "title": "Line",
+      "description": "A line or cable (v1 LineDto). r/x/b are per unit on the case base for ONE circuit; circuits identical circuits run in parallel. Absent: bPu 0, ratingMva 0 (unrated), circuits 1, lengthKm 0 (unknown), no equipment, r0Pu/x0Pu 0 (not supplied: the studies assume a multiple of the positive sequence), no template, in service. v2-only: type (a lineType template), inService.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "from", "to", "rPu", "xPu"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "from": { "$ref": "#/$defs/busId" },
+        "to": { "$ref": "#/$defs/busId" },
+        "type": { "$ref": "common.schema.json#/$defs/templateRef", "description": "The line type (conductor or cable) template." },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef", "description": "The passive-plant dynamics template bound to this line (v1 dynamicsClass); wins over a case binding rule." },
+        "rPu": { "type": "number" },
+        "xPu": { "type": "number" },
+        "bPu": { "type": "number" },
+        "ratingMva": { "type": "number", "minimum": 0 },
+        "circuits": { "type": "integer", "minimum": 1 },
+        "lengthKm": { "type": "number", "minimum": 0 },
+        "equipment": { "enum": ["ohl", "cable"] },
+        "r0Pu": { "type": "number", "description": "Zero-sequence series resistance, per unit on the case base (v1 rPu0)." },
+        "x0Pu": { "type": "number", "description": "Zero-sequence series reactance, per unit on the case base (v1 xPu0)." },
+        "tapRatio": { "type": "number", "exclusiveMinimum": 0, "description": "Off-nominal turns ratio (v1 tapRatio, F24: a converted MATPOWER transformer kept in branch order). Absent = 1." },
+        "phaseShiftDeg": { "type": "number", "description": "Phase shift, degrees (v1 phaseShiftDeg, F24). Absent = 0." },
+        "isTransformer": { "type": "boolean", "description": "The branch is a transformer (v1 isTransformer, F24). Absent = false." },
+        "ratingBMva": { "type": "number", "minimum": 0, "description": "Short-term rating B of one circuit, MVA (v1 ratingBMva, MATPOWER RATE_B, F20). Absent = 0 (not given)." },
+        "ratingCMva": { "type": "number", "minimum": 0, "description": "Emergency rating C of one circuit, MVA (v1 ratingCMva, MATPOWER RATE_C, F20). Absent = 0 (not given)." },
+        "inService": { "type": "boolean" }
+      }
+    },
+
+    "windingConnection": {
+      "title": "Winding connection",
+      "description": "Exactly the member names of GridSim.Core.Model.WindingConnection (pinned by a test).",
+      "enum": ["Delta", "WyeGrounded", "WyeUngrounded"]
+    },
+
+    "transformer": {
+      "title": "Transformer",
+      "description": "A two-winding transformer (v1 TransformerDto). Absent: tapRatio 1, phaseShiftDeg 0, ratingMva 0 (unrated), no template, in service. v2-only (the shapes of GridModel's Branch zero-sequence fields): type (a transformerType template), r0Pu and x0Pu (zero-sequence series impedance, per unit on the case base), windings (the from- and to-side connections), neutralXPu (from- and to-side neutral earthing reactance, per unit), inService.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "from", "to", "rPu", "xPu"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "from": { "$ref": "#/$defs/busId" },
+        "to": { "$ref": "#/$defs/busId" },
+        "type": { "$ref": "common.schema.json#/$defs/templateRef", "description": "The transformer type template." },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef", "description": "The passive-plant dynamics template bound to this transformer (v1 dynamicsClass); wins over a case binding rule." },
+        "rPu": { "type": "number" },
+        "xPu": { "type": "number" },
+        "tapRatio": { "type": "number", "exclusiveMinimum": 0 },
+        "phaseShiftDeg": { "type": "number" },
+        "ratingMva": { "type": "number", "minimum": 0 },
+        "ratingBMva": { "type": "number", "minimum": 0, "description": "Short-term rating B, MVA (v1 ratingBMva, MATPOWER RATE_B, N119). Absent = 0 (not given)." },
+        "ratingCMva": { "type": "number", "minimum": 0, "description": "Emergency rating C, MVA (v1 ratingCMva, MATPOWER RATE_C, N119). Absent = 0 (not given)." },
+        "r0Pu": { "type": "number", "minimum": 0, "description": "Zero-sequence leakage resistance, per unit on the case base (P5, N234: reaches Branch.R0). Needs x0Pu and windings." },
+        "x0Pu": { "type": "number", "exclusiveMinimum": 0, "description": "Zero-sequence leakage reactance, per unit on the case base (P5, N234: reaches Branch.X0). Needs windings. Absent = Z0 taken equal to Z1." },
+        "windings": {
+          "description": "The from- and to-side winding connections (P5, N234: reach Branch.FromWinding / ToWinding). They decide the transformer's zero-sequence path; without them the fault studies have no earthed neutral from this unit.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": {
+            "from": { "$ref": "#/$defs/windingConnection" },
+            "to": { "$ref": "#/$defs/windingConnection" }
+          }
+        },
+        "neutralXPu": {
+          "description": "Neutral earthing reactance of each side, per unit on the case base (P5, N234: reach Branch.FromNeutralXPu / ToNeutralXPu). Only on a WyeGrounded side; needs windings.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from": { "type": "number", "minimum": 0 },
+            "to": { "type": "number", "minimum": 0 }
+          }
+        },
+        "inService": { "type": "boolean" }
+      }
+    },
+
+    "oltc": {
+      "title": "On-load tap changer",
+      "description": "An on-load tap changer (v1 OltcDto) on the named transformer. Absent: targetVpu 1, minTap 0.9, maxTap 1.1, stepPu 0.0125, deadbandPu 0.01.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transformer", "controlsBus"],
+      "properties": {
+        "transformer": { "$ref": "#/$defs/name" },
+        "controlsBus": { "$ref": "#/$defs/busId" },
+        "targetVpu": { "type": "number", "exclusiveMinimum": 0 },
+        "minTap": { "type": "number", "exclusiveMinimum": 0 },
+        "maxTap": { "type": "number", "exclusiveMinimum": 0 },
+        "stepPu": { "type": "number", "exclusiveMinimum": 0 },
+        "deadbandPu": { "type": "number", "minimum": 0 }
+      }
+    },
+
+    "boundary": {
+      "title": "Boundary",
+      "description": "A transfer boundary (v1 BoundaryDto): the named branches whose signed flows sum to the boundary flow. Absent branches = none; a branch's absent direction = 1.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "limitMw"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "limitMw": { "type": "number" },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["branch"],
+            "properties": {
+              "branch": { "$ref": "#/$defs/name" },
+              "direction": { "enum": [1, -1] }
+            }
+          }
+        }
+      }
+    },
+
+    "protection": {
+      "title": "Protective device",
+      "description": "A placed protective device (v1 ProtectionInstanceDto). template replaces v1 'class' and names a template of kind protection. Absent: capacityMw 0, no target branch.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "template", "monitorBus"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef" },
+        "monitorBus": { "$ref": "#/$defs/busId" },
+        "capacityMw": { "type": "number", "minimum": 0 },
+        "targetBranch": { "$ref": "#/$defs/name" }
+      }
+    }
+  }
+}

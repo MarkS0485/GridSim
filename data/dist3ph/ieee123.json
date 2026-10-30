@@ -1,0 +1,3701 @@
+{
+  "schema": "gridsim-dist3ph/1",
+  "name": "IEEE 123 Node Test Feeder",
+  "description": "IEEE 123 Node Test Feeder (IEEE PES Distribution System Analysis Subcommittee; data and published power-flow results in docs/reference/models/S289-feeder123.zip: line, configuration, spot load, capacitor, switch and regulator data, and 'IEEE 123 Node Test Feeder Letterhead.doc'). Line codes are the document's configurations 1-12 (Z ohm/mile and B uS/mile as printed, 4 decimals). Source node 150 at 1.0 pu, 4.16 kV; the substation transformer is not modelled (the published results start at node 150 = 1.0000 pu). Regulators RG1-RG4 are ideal step regulators on the taps the published results report (7/7/7, -1, 0/-1, 8/1/5; 0.625 % per step) at the node named in the regulator data, each with its own output node (ids 9001-9004, named RG1-RG4 as in the published voltage profile). Closed switches have no impedance (the data gives none). Open switches 54-94 and 151-300 are listed open; 250-251, 450-451 and 300-350 tie to nodes outside this feeder and are omitted. Transformer XFM-1 and node 610 are omitted: they serve no load, so they carry no current and change no other voltage. Spot load at node 4 is given as 'Y-PR' in the spreadsheet, read as Y-PQ (the published results list it as a wye constant-power load, 40 kW + 20 kvar).",
+  "baseMva": 5.0,
+  "buses": [
+    {
+      "id": 1,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 2,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 3,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 4,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 5,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 6,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 7,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 8,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 9,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 10,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 11,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 12,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 13,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 14,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 15,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 16,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 17,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 18,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 19,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 20,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 21,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 22,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 23,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 24,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 25,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 26,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 27,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 28,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 29,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 30,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 31,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 32,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 33,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 34,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 35,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 36,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 37,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 38,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 39,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 40,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 41,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 42,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 43,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 44,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 45,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 46,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 47,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 48,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 49,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 50,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 51,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 52,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 53,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 54,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 55,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 56,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 57,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 58,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 59,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 60,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 61,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 62,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 63,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 64,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 65,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 66,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 67,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 68,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 69,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 70,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 71,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 72,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 73,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 74,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 75,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 76,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 77,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 78,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 79,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 80,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 81,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 82,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 83,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 84,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 85,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 86,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 87,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 88,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 89,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 90,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 91,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 92,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 93,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 94,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 95,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 96,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 97,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 98,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 99,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 100,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 101,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 102,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 103,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 104,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 105,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 106,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 107,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 108,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 109,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 110,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 111,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 112,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 113,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 114,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 135,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 149,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 150,
+      "baseKvLL": 4.16,
+      "source": {
+        "magnitudePu": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": 151,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 152,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 160,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 197,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 250,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 300,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 450,
+      "baseKvLL": 4.16
+    },
+    {
+      "id": 9001,
+      "baseKvLL": 4.16,
+      "name": "RG1"
+    },
+    {
+      "id": 9002,
+      "baseKvLL": 4.16,
+      "name": "RG2"
+    },
+    {
+      "id": 9003,
+      "baseKvLL": 4.16,
+      "name": "RG3"
+    },
+    {
+      "id": 9004,
+      "baseKvLL": 4.16,
+      "name": "RG4"
+    }
+  ],
+  "lineCodes": [
+    {
+      "id": "config1",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4576,
+          0.156,
+          0.1535
+        ],
+        [
+          0.156,
+          0.4666,
+          0.158
+        ],
+        [
+          0.1535,
+          0.158,
+          0.4615
+        ]
+      ],
+      "x": [
+        [
+          1.078,
+          0.5017,
+          0.3849
+        ],
+        [
+          0.5017,
+          1.0482,
+          0.4236
+        ],
+        [
+          0.3849,
+          0.4236,
+          1.0651
+        ]
+      ],
+      "b": [
+        [
+          5.6765,
+          -1.8319,
+          -0.6982
+        ],
+        [
+          -1.8319,
+          5.9809,
+          -1.1645
+        ],
+        [
+          -0.6982,
+          -1.1645,
+          5.3971
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config2",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4666,
+          0.158,
+          0.156
+        ],
+        [
+          0.158,
+          0.4615,
+          0.1535
+        ],
+        [
+          0.156,
+          0.1535,
+          0.4576
+        ]
+      ],
+      "x": [
+        [
+          1.0482,
+          0.4236,
+          0.5017
+        ],
+        [
+          0.4236,
+          1.0651,
+          0.3849
+        ],
+        [
+          0.5017,
+          0.3849,
+          1.078
+        ]
+      ],
+      "b": [
+        [
+          5.9809,
+          -1.1645,
+          -1.8319
+        ],
+        [
+          -1.1645,
+          5.3971,
+          -0.6982
+        ],
+        [
+          -1.8319,
+          -0.6982,
+          5.6765
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config3",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4615,
+          0.1535,
+          0.158
+        ],
+        [
+          0.1535,
+          0.4576,
+          0.156
+        ],
+        [
+          0.158,
+          0.156,
+          0.4666
+        ]
+      ],
+      "x": [
+        [
+          1.0651,
+          0.3849,
+          0.4236
+        ],
+        [
+          0.3849,
+          1.078,
+          0.5017
+        ],
+        [
+          0.4236,
+          0.5017,
+          1.0482
+        ]
+      ],
+      "b": [
+        [
+          5.3971,
+          -0.6982,
+          -1.1645
+        ],
+        [
+          -0.6982,
+          5.6765,
+          -1.8319
+        ],
+        [
+          -1.1645,
+          -1.8319,
+          5.9809
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config4",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4615,
+          0.158,
+          0.1535
+        ],
+        [
+          0.158,
+          0.4666,
+          0.156
+        ],
+        [
+          0.1535,
+          0.156,
+          0.4576
+        ]
+      ],
+      "x": [
+        [
+          1.0651,
+          0.4236,
+          0.3849
+        ],
+        [
+          0.4236,
+          1.0482,
+          0.5017
+        ],
+        [
+          0.3849,
+          0.5017,
+          1.078
+        ]
+      ],
+      "b": [
+        [
+          5.3971,
+          -1.1645,
+          -0.6982
+        ],
+        [
+          -1.1645,
+          5.9809,
+          -1.8319
+        ],
+        [
+          -0.6982,
+          -1.8319,
+          5.6765
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config5",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4666,
+          0.156,
+          0.158
+        ],
+        [
+          0.156,
+          0.4576,
+          0.1535
+        ],
+        [
+          0.158,
+          0.1535,
+          0.4615
+        ]
+      ],
+      "x": [
+        [
+          1.0482,
+          0.5017,
+          0.4236
+        ],
+        [
+          0.5017,
+          1.078,
+          0.3849
+        ],
+        [
+          0.4236,
+          0.3849,
+          1.0651
+        ]
+      ],
+      "b": [
+        [
+          5.9809,
+          -1.8319,
+          -1.1645
+        ],
+        [
+          -1.8319,
+          5.6765,
+          -0.6982
+        ],
+        [
+          -1.1645,
+          -0.6982,
+          5.3971
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config6",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4576,
+          0.1535,
+          0.156
+        ],
+        [
+          0.1535,
+          0.4615,
+          0.158
+        ],
+        [
+          0.156,
+          0.158,
+          0.4666
+        ]
+      ],
+      "x": [
+        [
+          1.078,
+          0.3849,
+          0.5017
+        ],
+        [
+          0.3849,
+          1.0651,
+          0.4236
+        ],
+        [
+          0.5017,
+          0.4236,
+          1.0482
+        ]
+      ],
+      "b": [
+        [
+          5.6765,
+          -0.6982,
+          -1.8319
+        ],
+        [
+          -0.6982,
+          5.3971,
+          -1.1645
+        ],
+        [
+          -1.8319,
+          -1.1645,
+          5.9809
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config7",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4576,
+          0.0,
+          0.1535
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1535,
+          0.0,
+          0.4615
+        ]
+      ],
+      "x": [
+        [
+          1.078,
+          0.0,
+          0.3849
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.3849,
+          0.0,
+          1.0651
+        ]
+      ],
+      "b": [
+        [
+          5.1154,
+          0.0,
+          -1.0549
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          -1.0549,
+          0.0,
+          5.1704
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config8",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.4576,
+          0.1535,
+          0.0
+        ],
+        [
+          0.1535,
+          0.4615,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "x": [
+        [
+          1.078,
+          0.3849,
+          0.0
+        ],
+        [
+          0.3849,
+          1.0651,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "b": [
+        [
+          5.1154,
+          -1.0549,
+          0.0
+        ],
+        [
+          -1.0549,
+          5.1704,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config9",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          1.3292,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "x": [
+        [
+          1.3475,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "b": [
+        [
+          4.5193,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config10",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.3292,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "x": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.3475,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "b": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          4.5193,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config11",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.3292
+        ]
+      ],
+      "x": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.3475
+        ]
+      ],
+      "b": [
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          4.5193
+        ]
+      ],
+      "bUnit": "uS/mile"
+    },
+    {
+      "id": "config12",
+      "unit": "ohm/mile",
+      "r": [
+        [
+          1.5209,
+          0.5198,
+          0.4924
+        ],
+        [
+          0.5198,
+          1.5329,
+          0.5198
+        ],
+        [
+          0.4924,
+          0.5198,
+          1.5209
+        ]
+      ],
+      "x": [
+        [
+          0.7521,
+          0.2775,
+          0.2157
+        ],
+        [
+          0.2775,
+          0.7162,
+          0.2775
+        ],
+        [
+          0.2157,
+          0.2775,
+          0.7521
+        ]
+      ],
+      "b": [
+        [
+          67.2242,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          67.2242,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          67.2242
+        ]
+      ],
+      "bUnit": "uS/mile"
+    }
+  ],
+  "lines": [
+    {
+      "id": "L1-2",
+      "from": 1,
+      "to": 2,
+      "code": "config10",
+      "length": 175.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L1-3",
+      "from": 1,
+      "to": 3,
+      "code": "config11",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L1-7",
+      "from": 1,
+      "to": 7,
+      "code": "config1",
+      "length": 300.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L3-4",
+      "from": 3,
+      "to": 4,
+      "code": "config11",
+      "length": 200.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L3-5",
+      "from": 3,
+      "to": 5,
+      "code": "config11",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L5-6",
+      "from": 5,
+      "to": 6,
+      "code": "config11",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L7-8",
+      "from": 7,
+      "to": 8,
+      "code": "config1",
+      "length": 200.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L8-12",
+      "from": 8,
+      "to": 12,
+      "code": "config10",
+      "length": 225.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L8-9",
+      "from": 8,
+      "to": 9,
+      "code": "config9",
+      "length": 225.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L8-13",
+      "from": 8,
+      "to": 13,
+      "code": "config1",
+      "length": 300.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L9-14",
+      "from": 9002,
+      "to": 14,
+      "code": "config9",
+      "length": 425.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L13-34",
+      "from": 13,
+      "to": 34,
+      "code": "config11",
+      "length": 150.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L13-18",
+      "from": 13,
+      "to": 18,
+      "code": "config2",
+      "length": 825.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L14-11",
+      "from": 14,
+      "to": 11,
+      "code": "config9",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L14-10",
+      "from": 14,
+      "to": 10,
+      "code": "config9",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L15-16",
+      "from": 15,
+      "to": 16,
+      "code": "config11",
+      "length": 375.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L15-17",
+      "from": 15,
+      "to": 17,
+      "code": "config11",
+      "length": 350.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L18-19",
+      "from": 18,
+      "to": 19,
+      "code": "config9",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L18-21",
+      "from": 18,
+      "to": 21,
+      "code": "config2",
+      "length": 300.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L19-20",
+      "from": 19,
+      "to": 20,
+      "code": "config9",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L21-22",
+      "from": 21,
+      "to": 22,
+      "code": "config10",
+      "length": 525.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L21-23",
+      "from": 21,
+      "to": 23,
+      "code": "config2",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L23-24",
+      "from": 23,
+      "to": 24,
+      "code": "config11",
+      "length": 550.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L23-25",
+      "from": 23,
+      "to": 25,
+      "code": "config2",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L25-26",
+      "from": 9003,
+      "to": 26,
+      "code": "config7",
+      "length": 350.0,
+      "lengthUnit": "ft",
+      "phases": "ac"
+    },
+    {
+      "id": "L25-28",
+      "from": 25,
+      "to": 28,
+      "code": "config2",
+      "length": 200.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L26-27",
+      "from": 26,
+      "to": 27,
+      "code": "config7",
+      "length": 275.0,
+      "lengthUnit": "ft",
+      "phases": "ac"
+    },
+    {
+      "id": "L26-31",
+      "from": 26,
+      "to": 31,
+      "code": "config11",
+      "length": 225.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L27-33",
+      "from": 27,
+      "to": 33,
+      "code": "config9",
+      "length": 500.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L28-29",
+      "from": 28,
+      "to": 29,
+      "code": "config2",
+      "length": 300.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L29-30",
+      "from": 29,
+      "to": 30,
+      "code": "config2",
+      "length": 350.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L30-250",
+      "from": 30,
+      "to": 250,
+      "code": "config2",
+      "length": 200.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L31-32",
+      "from": 31,
+      "to": 32,
+      "code": "config11",
+      "length": 300.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L34-15",
+      "from": 34,
+      "to": 15,
+      "code": "config11",
+      "length": 100.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L35-36",
+      "from": 35,
+      "to": 36,
+      "code": "config8",
+      "length": 650.0,
+      "lengthUnit": "ft",
+      "phases": "ab"
+    },
+    {
+      "id": "L35-40",
+      "from": 35,
+      "to": 40,
+      "code": "config1",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L36-37",
+      "from": 36,
+      "to": 37,
+      "code": "config9",
+      "length": 300.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L36-38",
+      "from": 36,
+      "to": 38,
+      "code": "config10",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L38-39",
+      "from": 38,
+      "to": 39,
+      "code": "config10",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L40-41",
+      "from": 40,
+      "to": 41,
+      "code": "config11",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L40-42",
+      "from": 40,
+      "to": 42,
+      "code": "config1",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L42-43",
+      "from": 42,
+      "to": 43,
+      "code": "config10",
+      "length": 500.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L42-44",
+      "from": 42,
+      "to": 44,
+      "code": "config1",
+      "length": 200.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L44-45",
+      "from": 44,
+      "to": 45,
+      "code": "config9",
+      "length": 200.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L44-47",
+      "from": 44,
+      "to": 47,
+      "code": "config1",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L45-46",
+      "from": 45,
+      "to": 46,
+      "code": "config9",
+      "length": 300.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L47-48",
+      "from": 47,
+      "to": 48,
+      "code": "config4",
+      "length": 150.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L47-49",
+      "from": 47,
+      "to": 49,
+      "code": "config4",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L49-50",
+      "from": 49,
+      "to": 50,
+      "code": "config4",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L50-51",
+      "from": 50,
+      "to": 51,
+      "code": "config4",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L51-151",
+      "from": 51,
+      "to": 151,
+      "code": "config4",
+      "length": 500.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L52-53",
+      "from": 52,
+      "to": 53,
+      "code": "config1",
+      "length": 200.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L53-54",
+      "from": 53,
+      "to": 54,
+      "code": "config1",
+      "length": 125.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L54-55",
+      "from": 54,
+      "to": 55,
+      "code": "config1",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L54-57",
+      "from": 54,
+      "to": 57,
+      "code": "config3",
+      "length": 350.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L55-56",
+      "from": 55,
+      "to": 56,
+      "code": "config1",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L57-58",
+      "from": 57,
+      "to": 58,
+      "code": "config10",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L57-60",
+      "from": 57,
+      "to": 60,
+      "code": "config3",
+      "length": 750.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L58-59",
+      "from": 58,
+      "to": 59,
+      "code": "config10",
+      "length": 250.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L60-61",
+      "from": 60,
+      "to": 61,
+      "code": "config5",
+      "length": 550.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L60-62",
+      "from": 60,
+      "to": 62,
+      "code": "config12",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L62-63",
+      "from": 62,
+      "to": 63,
+      "code": "config12",
+      "length": 175.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L63-64",
+      "from": 63,
+      "to": 64,
+      "code": "config12",
+      "length": 350.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L64-65",
+      "from": 64,
+      "to": 65,
+      "code": "config12",
+      "length": 425.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L65-66",
+      "from": 65,
+      "to": 66,
+      "code": "config12",
+      "length": 325.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L67-68",
+      "from": 67,
+      "to": 68,
+      "code": "config9",
+      "length": 200.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L67-72",
+      "from": 67,
+      "to": 72,
+      "code": "config3",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L67-97",
+      "from": 67,
+      "to": 97,
+      "code": "config3",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L68-69",
+      "from": 68,
+      "to": 69,
+      "code": "config9",
+      "length": 275.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L69-70",
+      "from": 69,
+      "to": 70,
+      "code": "config9",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L70-71",
+      "from": 70,
+      "to": 71,
+      "code": "config9",
+      "length": 275.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L72-73",
+      "from": 72,
+      "to": 73,
+      "code": "config11",
+      "length": 275.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L72-76",
+      "from": 72,
+      "to": 76,
+      "code": "config3",
+      "length": 200.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L73-74",
+      "from": 73,
+      "to": 74,
+      "code": "config11",
+      "length": 350.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L74-75",
+      "from": 74,
+      "to": 75,
+      "code": "config11",
+      "length": 400.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L76-77",
+      "from": 76,
+      "to": 77,
+      "code": "config6",
+      "length": 400.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L76-86",
+      "from": 76,
+      "to": 86,
+      "code": "config3",
+      "length": 700.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L77-78",
+      "from": 77,
+      "to": 78,
+      "code": "config6",
+      "length": 100.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L78-79",
+      "from": 78,
+      "to": 79,
+      "code": "config6",
+      "length": 225.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L78-80",
+      "from": 78,
+      "to": 80,
+      "code": "config6",
+      "length": 475.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L80-81",
+      "from": 80,
+      "to": 81,
+      "code": "config6",
+      "length": 475.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L81-82",
+      "from": 81,
+      "to": 82,
+      "code": "config6",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L81-84",
+      "from": 81,
+      "to": 84,
+      "code": "config11",
+      "length": 675.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L82-83",
+      "from": 82,
+      "to": 83,
+      "code": "config6",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L84-85",
+      "from": 84,
+      "to": 85,
+      "code": "config11",
+      "length": 475.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L86-87",
+      "from": 86,
+      "to": 87,
+      "code": "config6",
+      "length": 450.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L87-88",
+      "from": 87,
+      "to": 88,
+      "code": "config9",
+      "length": 175.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L87-89",
+      "from": 87,
+      "to": 89,
+      "code": "config6",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L89-90",
+      "from": 89,
+      "to": 90,
+      "code": "config10",
+      "length": 225.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L89-91",
+      "from": 89,
+      "to": 91,
+      "code": "config6",
+      "length": 225.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L91-92",
+      "from": 91,
+      "to": 92,
+      "code": "config11",
+      "length": 300.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L91-93",
+      "from": 91,
+      "to": 93,
+      "code": "config6",
+      "length": 225.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L93-94",
+      "from": 93,
+      "to": 94,
+      "code": "config9",
+      "length": 275.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L93-95",
+      "from": 93,
+      "to": 95,
+      "code": "config6",
+      "length": 300.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L95-96",
+      "from": 95,
+      "to": 96,
+      "code": "config10",
+      "length": 200.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L97-98",
+      "from": 97,
+      "to": 98,
+      "code": "config3",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L98-99",
+      "from": 98,
+      "to": 99,
+      "code": "config3",
+      "length": 550.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L99-100",
+      "from": 99,
+      "to": 100,
+      "code": "config3",
+      "length": 300.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L100-450",
+      "from": 100,
+      "to": 450,
+      "code": "config3",
+      "length": 800.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L101-102",
+      "from": 101,
+      "to": 102,
+      "code": "config11",
+      "length": 225.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L101-105",
+      "from": 101,
+      "to": 105,
+      "code": "config3",
+      "length": 275.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L102-103",
+      "from": 102,
+      "to": 103,
+      "code": "config11",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L103-104",
+      "from": 103,
+      "to": 104,
+      "code": "config11",
+      "length": 700.0,
+      "lengthUnit": "ft",
+      "phases": "c"
+    },
+    {
+      "id": "L105-106",
+      "from": 105,
+      "to": 106,
+      "code": "config10",
+      "length": 225.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L105-108",
+      "from": 105,
+      "to": 108,
+      "code": "config3",
+      "length": 325.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L106-107",
+      "from": 106,
+      "to": 107,
+      "code": "config10",
+      "length": 575.0,
+      "lengthUnit": "ft",
+      "phases": "b"
+    },
+    {
+      "id": "L108-109",
+      "from": 108,
+      "to": 109,
+      "code": "config9",
+      "length": 450.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L108-300",
+      "from": 108,
+      "to": 300,
+      "code": "config3",
+      "length": 1000.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L109-110",
+      "from": 109,
+      "to": 110,
+      "code": "config9",
+      "length": 300.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L110-111",
+      "from": 110,
+      "to": 111,
+      "code": "config9",
+      "length": 575.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L110-112",
+      "from": 110,
+      "to": 112,
+      "code": "config9",
+      "length": 125.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L112-113",
+      "from": 112,
+      "to": 113,
+      "code": "config9",
+      "length": 525.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L113-114",
+      "from": 113,
+      "to": 114,
+      "code": "config9",
+      "length": 325.0,
+      "lengthUnit": "ft",
+      "phases": "a"
+    },
+    {
+      "id": "L135-35",
+      "from": 135,
+      "to": 35,
+      "code": "config4",
+      "length": 375.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L149-1",
+      "from": 149,
+      "to": 1,
+      "code": "config1",
+      "length": 400.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L152-52",
+      "from": 152,
+      "to": 52,
+      "code": "config1",
+      "length": 400.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L160-67",
+      "from": 9004,
+      "to": 67,
+      "code": "config6",
+      "length": 350.0,
+      "lengthUnit": "ft"
+    },
+    {
+      "id": "L197-101",
+      "from": 197,
+      "to": 101,
+      "code": "config3",
+      "length": 250.0,
+      "lengthUnit": "ft"
+    }
+  ],
+  "switches": [
+    {
+      "id": "SW13-152",
+      "from": 13,
+      "to": 152,
+      "closed": true
+    },
+    {
+      "id": "SW18-135",
+      "from": 18,
+      "to": 135,
+      "closed": true
+    },
+    {
+      "id": "SW60-160",
+      "from": 60,
+      "to": 160,
+      "closed": true
+    },
+    {
+      "id": "SW97-197",
+      "from": 97,
+      "to": 197,
+      "closed": true
+    },
+    {
+      "id": "SW150-149",
+      "from": 9001,
+      "to": 149,
+      "closed": true
+    },
+    {
+      "id": "SW54-94",
+      "from": 54,
+      "to": 94,
+      "closed": false
+    },
+    {
+      "id": "SW151-300",
+      "from": 151,
+      "to": 300,
+      "closed": false
+    }
+  ],
+  "regulators": [
+    {
+      "id": "RG1",
+      "from": 150,
+      "to": 9001,
+      "tapStepPercent": 0.625,
+      "taps": [
+        7,
+        7,
+        7
+      ]
+    },
+    {
+      "id": "RG2",
+      "from": 9,
+      "to": 9002,
+      "tapStepPercent": 0.625,
+      "taps": [
+        -1,
+        0,
+        0
+      ],
+      "phases": "a"
+    },
+    {
+      "id": "RG3",
+      "from": 25,
+      "to": 9003,
+      "tapStepPercent": 0.625,
+      "taps": [
+        0,
+        0,
+        -1
+      ],
+      "phases": "ac"
+    },
+    {
+      "id": "RG4",
+      "from": 160,
+      "to": 9004,
+      "tapStepPercent": 0.625,
+      "taps": [
+        8,
+        1,
+        5
+      ]
+    }
+  ],
+  "capacitors": [
+    {
+      "id": "C83",
+      "bus": 83,
+      "kvar": [
+        200,
+        200,
+        200
+      ]
+    },
+    {
+      "id": "C88",
+      "bus": 88,
+      "kvar": [
+        50,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "C90",
+      "bus": 90,
+      "kvar": [
+        0,
+        50,
+        0
+      ]
+    },
+    {
+      "id": "C92",
+      "bus": 92,
+      "kvar": [
+        0,
+        0,
+        50
+      ]
+    }
+  ],
+  "loads": [
+    {
+      "id": "S1",
+      "bus": 1,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S2",
+      "bus": 2,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S4",
+      "bus": 4,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S5",
+      "bus": 5,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S6",
+      "bus": 6,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S7",
+      "bus": 7,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S9",
+      "bus": 9,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S10",
+      "bus": 10,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S11",
+      "bus": 11,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S12",
+      "bus": 12,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S16",
+      "bus": 16,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S17",
+      "bus": 17,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S19",
+      "bus": 19,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S20",
+      "bus": 20,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S22",
+      "bus": 22,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S24",
+      "bus": 24,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S28",
+      "bus": 28,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S29",
+      "bus": 29,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S30",
+      "bus": 30,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S31",
+      "bus": 31,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S32",
+      "bus": 32,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S33",
+      "bus": 33,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S34",
+      "bus": 34,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S35",
+      "bus": 35,
+      "connection": "delta",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S37",
+      "bus": 37,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S38",
+      "bus": 38,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S39",
+      "bus": 39,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S41",
+      "bus": 41,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S42",
+      "bus": 42,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S43",
+      "bus": 43,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S45",
+      "bus": 45,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S46",
+      "bus": 46,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S47",
+      "bus": 47,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        35.0,
+        35.0,
+        35.0
+      ],
+      "kvar": [
+        25.0,
+        25.0,
+        25.0
+      ]
+    },
+    {
+      "id": "S48",
+      "bus": 48,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        70.0,
+        70.0,
+        70.0
+      ],
+      "kvar": [
+        50.0,
+        50.0,
+        50.0
+      ]
+    },
+    {
+      "id": "S49",
+      "bus": 49,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        35.0,
+        70.0,
+        35.0
+      ],
+      "kvar": [
+        25.0,
+        50.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S50",
+      "bus": 50,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S51",
+      "bus": 51,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S52",
+      "bus": 52,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S53",
+      "bus": 53,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S55",
+      "bus": 55,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S56",
+      "bus": 56,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S58",
+      "bus": 58,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S59",
+      "bus": 59,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S60",
+      "bus": 60,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S62",
+      "bus": 62,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S63",
+      "bus": 63,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S64",
+      "bus": 64,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        0.0,
+        75.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        35.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S65",
+      "bus": 65,
+      "connection": "delta",
+      "model": "constant-impedance",
+      "kw": [
+        35.0,
+        35.0,
+        70.0
+      ],
+      "kvar": [
+        25.0,
+        25.0,
+        50.0
+      ]
+    },
+    {
+      "id": "S66",
+      "bus": 66,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        75.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        35.0
+      ]
+    },
+    {
+      "id": "S68",
+      "bus": 68,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S69",
+      "bus": 69,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S70",
+      "bus": 70,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S71",
+      "bus": 71,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S73",
+      "bus": 73,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S74",
+      "bus": 74,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S75",
+      "bus": 75,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S76",
+      "bus": 76,
+      "connection": "delta",
+      "model": "constant-current",
+      "kw": [
+        105.0,
+        70.0,
+        70.0
+      ],
+      "kvar": [
+        80.0,
+        50.0,
+        50.0
+      ]
+    },
+    {
+      "id": "S77",
+      "bus": 77,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S79",
+      "bus": 79,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S80",
+      "bus": 80,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S82",
+      "bus": 82,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S83",
+      "bus": 83,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S84",
+      "bus": 84,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S85",
+      "bus": 85,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S86",
+      "bus": 86,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S87",
+      "bus": 87,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S88",
+      "bus": 88,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S90",
+      "bus": 90,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S92",
+      "bus": 92,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S94",
+      "bus": 94,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S95",
+      "bus": 95,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S96",
+      "bus": 96,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        20.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        10.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S98",
+      "bus": 98,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S99",
+      "bus": 99,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S100",
+      "bus": 100,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S102",
+      "bus": 102,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        10.0
+      ]
+    },
+    {
+      "id": "S103",
+      "bus": 103,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S104",
+      "bus": 104,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        0.0,
+        40.0
+      ],
+      "kvar": [
+        0.0,
+        0.0,
+        20.0
+      ]
+    },
+    {
+      "id": "S106",
+      "bus": 106,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S107",
+      "bus": 107,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        0.0,
+        40.0,
+        0.0
+      ],
+      "kvar": [
+        0.0,
+        20.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S109",
+      "bus": 109,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S111",
+      "bus": 111,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S112",
+      "bus": 112,
+      "connection": "wye",
+      "model": "constant-current",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S113",
+      "bus": 113,
+      "connection": "wye",
+      "model": "constant-impedance",
+      "kw": [
+        40.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        20.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "id": "S114",
+      "bus": 114,
+      "connection": "wye",
+      "model": "constant-power",
+      "kw": [
+        20.0,
+        0.0,
+        0.0
+      ],
+      "kvar": [
+        10.0,
+        0.0,
+        0.0
+      ]
+    }
+  ]
+}

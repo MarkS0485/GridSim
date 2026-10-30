@@ -1,0 +1,20 @@
+$ gridsim grade --chain iec-si:400:0.1,iec-si:400:0.3,iec-si:400:0.6 --current 1647,4000
+Overcurrent grading  -  3 relays (downstream first), CTI 0.4 s
+  R1: IecStandardInverse, pickup 400, time dial 0.1
+  R2: IecStandardInverse, pickup 400, time dial 0.3
+  R3: IecStandardInverse, pickup 400, time dial 0.6
+
+  fault current 1647
+  | pair | primary s | backup s | margin s | verdict |
+  |------|-----------|----------|----------|---------|
+  | R1->R2 | 0.4876 | 1.4629 | 0.9753 | OK |
+  | R2->R3 | 1.4629 | 2.9259 | 1.4629 | OK |
+
+  fault current 4000
+  | pair | primary s | backup s | margin s | verdict |
+  |------|-----------|----------|----------|---------|
+  | R1->R2 | 0.2971 | 0.8912 | 0.5941 | OK |
+  | R2->R3 | 0.8912 | 1.7824 | 0.8912 | OK |
+
+GRADED: every pair coordinated at every current; binding margin 0.5941 s (CTI 0.4 s).
+[exit 0]

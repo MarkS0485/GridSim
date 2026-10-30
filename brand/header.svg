@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 500" width="1500" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0C1520"/><stop offset="55%" stop-color="#0A0E13"/><stop offset="100%" stop-color="#080B10"/>
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="70%" cy="18%" r="60%">
+      <stop offset="0" stop-color="#123047" stop-opacity=".8"/><stop offset="100%" stop-color="#0A0E13" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00B8D4"/><stop offset="1" stop-color="#3FA9F5"/>
+    </linearGradient>
+    <radialGradient id="tileGlow" cx="38%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#15304a"/><stop offset="55%" stop-color="#0c1620"/><stop offset="100%" stop-color="#080B10"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="ar"><rect width="96" height="96" rx="22"/></clipPath>
+  </defs>
+  <rect width="1500" height="500" fill="url(#bg)"/>
+  <rect width="1500" height="500" fill="url(#bgGlow)"/>
+  <g stroke="#141C26" stroke-width="1">
+    <line x1="0" y1="125" x2="1500" y2="125"/><line x1="0" y1="250" x2="1500" y2="250"/><line x1="0" y1="375" x2="1500" y2="375"/>
+    <line x1="150" y1="0" x2="150" y2="500"/><line x1="300" y1="0" x2="300" y2="500"/><line x1="450" y1="0" x2="450" y2="500"/>
+    <line x1="600" y1="0" x2="600" y2="500"/><line x1="750" y1="0" x2="750" y2="500"/><line x1="900" y1="0" x2="900" y2="500"/>
+    <line x1="1050" y1="0" x2="1050" y2="500"/><line x1="1200" y1="0" x2="1200" y2="500"/><line x1="1350" y1="0" x2="1350" y2="500"/>
+  </g>
+  <g opacity=".5" fill="none" stroke-width="4" stroke-linecap="round">
+    <path d="M980 360 L980 250 L1080 200" stroke="#274a63"/>
+    <path d="M1080 200 L1200 250 L1200 360" stroke="#274a63"/>
+    <path d="M1080 200 L1330 150" stroke="#3a2a4a"/>
+    <path d="M1200 250 L1360 300" stroke="#274a63"/>
+  </g>
+  <g fill="#0A0E13" stroke-width="4">
+    <circle cx="980" cy="360" r="9" stroke="#3FA9F5"/><circle cx="1200" cy="360" r="9" stroke="#00B8D4"/>
+    <circle cx="1330" cy="150" r="8" stroke="#9B0056"/><circle cx="1360" cy="300" r="7" stroke="#F3C13A"/>
+    <circle cx="1080" cy="200" r="11" stroke="#3FA9F5"/>
+  </g>
+  <line x1="60" y1="430" x2="1440" y2="430" stroke="#F3C13A" stroke-width="2.5" stroke-dasharray="2 14" stroke-linecap="round" opacity=".7"/>
+  <text x="72" y="420" font-family="ui-monospace,Consolas,monospace" font-size="15" fill="#F3C13A" opacity=".75">LFDD 48.8 Hz</text>
+  <path d="M0 300 L560 300 C650 300 690 402 760 405 C835 408 865 250 940 240 C1010 231 1070 300 1160 300 L1500 300"
+    fill="none" stroke="url(#fade)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="760" cy="405" r="16" fill="#2FD27F" opacity=".16" filter="url(#soft)"/>
+  <circle cx="760" cy="405" r="9" fill="#2FD27F"/>
+  <!-- avatar mark -->
+  <g transform="translate(96,150)">
+    <g clip-path="url(#ar)">
+      <rect width="96" height="96" fill="url(#tileGlow)"/>
+      <line x1="12" y1="34" x2="84" y2="34" stroke="#F3C13A" stroke-width="1.6" stroke-dasharray="1 5" opacity=".7"/>
+      <path d="M11 40 L38 40 C45 40 49 68 55 69 C61 70 63 34 70 32 C76 30 82 42 86 41" fill="none" stroke="#3FA9F5" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="55" cy="69" r="6" fill="#2FD27F"/><circle cx="55" cy="69" r="2.5" fill="#0A0E13"/>
+    </g>
+  </g>
+  <!-- wordmark -->
+  <text x="216" y="204" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="76" font-weight="800" letter-spacing="-2" fill="#E6EDF3">Grid<tspan fill="#3FA9F5">Sim</tspan></text>
+  <text x="220" y="250" font-family="ui-monospace,Consolas,monospace" font-size="21" letter-spacing="3" fill="#8A97A6">PHYSICS-FIRST GB GRID SIMULATION &amp; EVIDENCE ENGINE</text>
+  <text x="220" y="284" font-family="ui-monospace,Consolas,monospace" font-size="16" letter-spacing="2.5" fill="#4E6377">load flow · frequency dynamics · RoCoF · validated to machine epsilon</text>
+</svg>

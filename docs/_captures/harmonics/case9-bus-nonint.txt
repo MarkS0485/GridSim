@@ -1,0 +1,3 @@
+$ gridsim harmonics case9 --bus abc
+error: --bus expected an integer but got 'abc'
+[exit 2]

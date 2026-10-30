@@ -1,0 +1,11 @@
+$ gridsim pf data/matpower/pegase/case9241pegase.m --top 3
+Power flow - case9241pegase (9241 buses)
+  converged in 14 iteration(s), mismatch 9.94E-011 pu   losses 8010.800 MW / -8029.429 MVAr
+  voltage range 0.7888 - 1.1559 pu
+  lowest voltages:
+      bus 2159   0.7888 pu    -39.448 deg
+      bus 7822   0.7888 pu    -39.448 deg
+      bus 2635   0.8159 pu    -37.603 deg
+note: case9241pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case9241pegase.m: read mpc.gencost (1445 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[exit 0]

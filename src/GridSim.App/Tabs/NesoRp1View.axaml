@@ -1,0 +1,375 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             xmlns:controls="using:GridSim.App.Controls"
+             xmlns:rp1="using:GridSim.Ui.Tabs.NesoRp1"
+             x:Class="GridSim.App.Tabs.NesoRp1View"
+             x:DataType="rp1:NesoRp1Model">
+  <!-- UI programme Phase 1.6 (third batch): the NESO RP1 tab, a port of src/GridSim.Wpf/Views/NesoRp1View.xaml. Same
+       texts, same layout order (title with the LFDD chip; the N301 not-applicable line; LEFT generation and inertia |
+       CENTRE stability, narrative and market | RIGHT network constraint and cost), the same theme brushes and literal
+       colours, the Gauge and Sparkline instruments from Controls/, and every token colour from the shared NesoRp1Model
+       through TokenBrush (the bytes WPF shows). The DataContext is the shared NesoRp1Model. The row clicks call the
+       model's InspectFuel / InspectBm / InspectIc (the WPF commands); the drill-down pages they build are raised on
+       NesoRp1Model.InspectRequested for the inspector overlay, which sits in InspectorSlot over the whole tab (the
+       ported InspectorView, named Inspector; NesoRp1View.axaml.cs shows each raised page in it, as WPF NesoRp1Vm). -->
+  <Grid Margin="10" RowDefinitions="Auto,*">
+
+    <!-- ============ title ============ -->
+    <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Left">
+          <TextBlock Text="NESO RP1  *  SITUATIONAL AWARENESS" Classes="PanelHeader" FontSize="13" />
+          <TextBlock Text="where am I now  *  where am I going  *  how long do I have"
+                     Classes="Label" FontSize="10" Margin="0,2,0,0" />
+        </StackPanel>
+        <StackPanel x:Name="HeaderLfdd" DockPanel.Dock="Right" HorizontalAlignment="Right" IsVisible="{Binding IsPageVisible}">
+          <TextBlock Text="LFDD RISK" Classes="Label" FontSize="9" HorizontalAlignment="Right" />
+          <Border x:Name="HeaderLfddChip" CornerRadius="4" Padding="12,3" Margin="0,2,0,0"
+                  Background="{Binding LfddColour, Converter={x:Static tabs:TokenBrush.Instance}}">
+            <TextBlock x:Name="HeaderLfddText" Text="{Binding LfddGrade}" Foreground="White" FontWeight="Bold" FontSize="13" />
+          </Border>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- ============ N301 (LF3, Ruling R1): the page does not apply to a case whose nominal is not 50 Hz ============
+         RP1 is a NESO GB 50 Hz product page. On such a case the body below is hidden and this one-line reason
+         (the same text as the web Rp1Tab) is shown instead; the model still computes every figure. -->
+    <Border x:Name="NotApplicableCard" Grid.Row="1" Classes="Card" Padding="14,10" VerticalAlignment="Top"
+            IsVisible="{Binding IsNotApplicableVisible}">
+      <TextBlock x:Name="NotApplicableText" Text="{Binding NotApplicableReason}" Classes="Label" FontSize="12" TextWrapping="Wrap" />
+    </Border>
+
+    <!-- ============ 5x5 body: LEFT | CENTRE (stability / narrative / market) | RIGHT ============ -->
+    <!-- Parity sign-off (2026-10-24): the body needs about 720 px of height for every card to show whole (the PURCHASED
+         TIME dial was squeezed under its own caption and LIVE CREDIBLE LOSS lost its last row on the default window).
+         It fills a taller window exactly as before; on a shorter one it keeps 720 px and scrolls, its content kept 18 px
+         clear of the overlay scroll bar. -->
+    <ScrollViewer x:Name="PageBodyScroll" Grid.Row="1" IsVisible="{Binding IsPageVisible}"
+                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid x:Name="PageBody" MinHeight="720" Margin="0,0,18,0" IsVisible="{Binding IsPageVisible}" ColumnDefinitions="1.1*,10,2.3*,10,1.1*">
+
+      <!-- ================= LEFT COLUMN : GENERATION & INERTIA ================= -->
+      <Border Grid.Column="0" Classes="Card" Padding="10">
+        <Grid RowDefinitions="Auto,Auto,*">
+          <TextBlock Grid.Row="0" Text="GENERATION &amp; INERTIA" Classes="PanelHeader" />
+
+          <!-- three inertia gauges: total liquid vs petrol vs water (MIF fuel-gauge) -->
+          <UniformGrid Grid.Row="1" Columns="3" Margin="0,8,0,0">
+            <controls:Gauge x:Name="InertiaTotalGauge" Caption="GVA.s TOTAL" Unit="GVA.s" Height="120"
+                            ValueText="{Binding InertiaTotalText}" Value="{Binding InertiaTotalValue}"
+                            Minimum="0" Maximum="400" />
+            <controls:Gauge x:Name="InertiaIntrinsicGauge" Caption="GVA.s(i)" Unit="intrinsic" Height="120"
+                            ValueText="{Binding InertiaIntrinsicText}" Value="{Binding InertiaIntrinsicValue}"
+                            Minimum="0" Maximum="400" RedTo="0.255" AmberTo="0.39" />
+            <controls:Gauge x:Name="InertiaProxyGauge" Caption="GVA.s(p)" Unit="market" Height="120"
+                            ValueText="{Binding InertiaProxyText}" Value="{Binding InertiaProxyValue}"
+                            Minimum="0" Maximum="400" />
+          </UniformGrid>
+          <TextBlock Grid.Row="1" Text="petrol vs water" Classes="Label" FontSize="9"
+                     HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,-4" />
+
+          <!-- generation stack (per-fuel bars): output / headroom / inertia, synchronous vs converter -->
+          <Grid Grid.Row="2" Margin="0,10,0,0" RowDefinitions="Auto,*,Auto">
+            <TextBlock Grid.Row="0" Text="DISPATCH STACK  *  output / headroom / inertia" Classes="Label" FontSize="9" />
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+              <ItemsControl x:Name="GenStackList" ItemsSource="{Binding GenStack}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="rp1:Rp1GenRowModel">
+                    <!-- Parity (2026-10-24, T6-T15 comparison): the WPF RowLinkBtn template draws its row with a fixed 10,7 padding and
+                         ignores the Padding set on the Button, so the WPF rows are 10,7 whatever the XAML says. Avalonia honours the local
+                         value, which made these rows much tighter than WPF; they now carry the 10,7 the WPF rows show. -->
+                    <Button Classes="RowLinkBtn" Padding="10,7" Margin="0,1" Click="Fuel_Click"
+                            ToolTip.Tip="Click to see the constituent units">
+                      <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Border Grid.Column="0" Width="9" Height="9" CornerRadius="2"
+                                Background="{Binding SwatchColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                VerticalAlignment="Center" Margin="0,0,7,0" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                          <DockPanel>
+                            <Border DockPanel.Dock="Right" CornerRadius="2" Padding="4,0" Margin="4,0,0,0"
+                                    Background="{Binding KindColour, Converter={x:Static tabs:TokenBrush.Instance}}">
+                              <TextBlock Text="{Binding Kind}" Foreground="#0B0F14" FontSize="8" FontWeight="Bold" />
+                            </Border>
+                            <TextBlock Text="{Binding Fuel}" Foreground="{StaticResource Text}" FontSize="11" />
+                          </DockPanel>
+                          <ProgressBar Height="4" MinHeight="4" Margin="0,3,6,0" Minimum="0" Maximum="100"
+                                       Value="{Binding OutputPercent, Mode=OneWay}"
+                                       Foreground="{Binding SwatchColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                       Background="{StaticResource Track}" BorderThickness="0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="82">
+                          <TextBlock Text="{Binding Output}" Classes="Value" FontSize="11" TextAlignment="Right" />
+                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding Headroom}" Classes="Label" FontSize="9" Foreground="#66808A" />
+                            <TextBlock Text="  " FontSize="9" />
+                            <TextBlock Text="{Binding Inertia}" Classes="Label" FontSize="9" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+            <Grid Grid.Row="2" Margin="0,8,0,0" ColumnDefinitions="*,*">
+              <StackPanel Grid.Column="0">
+                <TextBlock Text="SYNCHRONOUS" Classes="Label" FontSize="9" />
+                <TextBlock x:Name="SynchronousText" Text="{Binding SynchronousGw}" Foreground="#2FD27F" FontWeight="Bold" FontSize="20" />
+              </StackPanel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="CONVERTER" Classes="Label" FontSize="9" />
+                <TextBlock x:Name="ConverterText" Text="{Binding ConverterGw}" Foreground="#8492A0" FontWeight="Bold" FontSize="20" />
+              </StackPanel>
+            </Grid>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- ================= CENTRE : STABILITY / NARRATIVE / MARKET ================= -->
+      <Grid Grid.Column="2" RowDefinitions="2*,Auto,2*">
+
+        <!-- TOP CENTRE : the stability calculation (2x2) -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,*" RowDefinitions="*,*">
+
+          <!-- purchased time : the hero gauge -->
+          <Border x:Name="PurchasedCard" Grid.Row="0" Grid.Column="0" Classes="Card" Margin="0,0,5,5" Padding="10" ClipToBounds="True">
+            <!-- Parity sign-off (2026-10-24): the dial sits beside the read-out, not above it, so it has the card's whole
+                 height (stacked, it was squeezed under its own caption on the default window). -->
+            <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*">
+              <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="PURCHASED TIME" Classes="PanelHeader" />
+              <controls:Gauge x:Name="PurchasedGauge" Grid.Row="1" Grid.Column="0" Caption="ride-through" Unit="s" Margin="0,4,6,0"
+                              ValueText="{Binding PurchasedText}" Value="{Binding PurchasedValue}"
+                              Minimum="0" Maximum="10" RedTo="0.2" AmberTo="0.5" />
+              <StackPanel Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock x:Name="PurchasedText" HorizontalAlignment="Center" FontWeight="Bold" FontSize="26" Text="{Binding PurchasedText}"
+                           Foreground="{Binding PurchasedColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                <!-- wraps onto a second line when the half card is too narrow for both parts -->
+                <WrapPanel x:Name="PurchasedDesignRow" Orientation="Horizontal" HorizontalAlignment="Center">
+                  <TextBlock Text="correlated cluster (not secured) " Classes="Label" FontSize="9" />
+                  <TextBlock x:Name="PurchasedDesignText" Text="{Binding PurchasedDesign}" Classes="Label" FontSize="9" Foreground="#F3C13A" />
+                </WrapPanel>
+              </StackPanel>
+            </Grid>
+          </Border>
+
+          <!-- live credible loss -->
+          <Border x:Name="CredibleLossCard" Grid.Row="0" Grid.Column="1" Classes="Card" Margin="5,0,0,5" Padding="10" ClipToBounds="True">
+            <StackPanel>
+              <TextBlock Text="LIVE CREDIBLE LOSS" Classes="PanelHeader" />
+              <DockPanel Margin="0,8,0,0">
+                <TextBlock x:Name="LargestUnitText" DockPanel.Dock="Right" Text="{Binding LargestUnit}" Classes="Value" FontSize="22"
+                           Foreground="{Binding UnitColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                <TextBlock x:Name="LargestUnitLabelText" Text="{Binding LargestUnitLabel}" Classes="Label" VerticalAlignment="Center" />
+              </DockPanel>
+              <DockPanel Margin="0,4,0,0">
+                <TextBlock x:Name="LargestGroupText" DockPanel.Dock="Right" Text="{Binding LargestGroup}" Classes="Value" FontSize="22"
+                           Foreground="{Binding GroupColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                <TextBlock x:Name="LargestGroupLabelText" Text="{Binding LargestGroupLabel}" Classes="Label" VerticalAlignment="Center" />
+              </DockPanel>
+              <Border Height="1" Background="#22FFFFFF" Margin="0,8" />
+              <DockPanel>
+                <TextBlock x:Name="DesignBasisText" DockPanel.Dock="Right" Text="{Binding DesignBasis}" Classes="Label" Foreground="#F3C13A" />
+                <TextBlock Text="correlated cluster (not secured)" Classes="Label" />
+              </DockPanel>
+              <DockPanel Margin="0,2,0,0">
+                <!-- N040 (S3, October 2026): 1,800 MW is NOT superseded. NESO FRCR 2025 (docs/reference S052)
+                     s.4.1 p.10 and s.7.1 treat it as the FUTURE largest loss to be secured, so it is shown
+                     plainly (no strikethrough) with its source. -->
+                <TextBlock x:Name="FictionText" DockPanel.Dock="Right" Text="{Binding Fiction}" Classes="Label" />
+                <TextBlock Text="future largest loss (FRCR 2025)" Classes="Label" />
+              </DockPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- inertia by source (seconds) -->
+          <Border Grid.Row="1" Grid.Column="0" Classes="Card" Margin="0,5,5,0" Padding="10">
+            <StackPanel>
+              <TextBlock Text="INERTIA BY SOURCE  *  seconds" Classes="PanelHeader" />
+              <ItemsControl x:Name="InertiaBySourceList" ItemsSource="{Binding InertiaBySource}" Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="rp1:Rp1InertiaRowModel">
+                    <Button Classes="RowLinkBtn" Padding="10,7" Margin="0,1" Click="Fuel_Click"
+                            ToolTip.Tip="Click to see the constituent units">
+                      <DockPanel>
+                        <Border DockPanel.Dock="Left" Width="10" Height="10" CornerRadius="2" Margin="0,0,6,0"
+                                Background="{Binding SwatchColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Seconds}" Classes="Value" FontSize="12" />
+                        <TextBlock Text="{Binding Fuel}" Classes="Label" />
+                      </DockPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
+          <!-- stability trend -->
+          <Border Grid.Row="1" Grid.Column="1" Classes="Card" Margin="5,5,0,0" Padding="10">
+            <Grid RowDefinitions="Auto,*,Auto">
+              <!-- D-DOC-148: the trace holds the last FrequencyRiskPresenter.TraceCapacity (60) state FRAMES, one per solved
+                   frame, so its span in time depends on the step; it is labelled in frames, not minutes. -->
+              <TextBlock x:Name="StabilityTrendTitleText" Grid.Row="0" Text="{Binding StabilityTrendTitle}" Classes="PanelHeader" />
+              <controls:Sparkline x:Name="StabilityTraceChart" Grid.Row="1" Values="{Binding StabilityTrace}" Caption="PURCHASED TIME" Margin="0,6,0,0" />
+              <StackPanel Grid.Row="2" Orientation="Horizontal">
+                <TextBlock Text="dyn MIF " Classes="Label" />
+                <TextBlock x:Name="DynamicMifText" Text="{Binding DynamicMif}" Classes="Value" FontSize="12" />
+                <TextBlock Text="   RoCoF " Classes="Label" />
+                <TextBlock x:Name="RocofText" Text="{Binding Rocof}" Classes="Value" FontSize="12" />
+              </StackPanel>
+            </Grid>
+          </Border>
+        </Grid>
+
+        <!-- CENTRE STRIP : the system narrative (handover sentence) -->
+        <Border Grid.Row="1" Classes="Card" Margin="0,10" Padding="12,8"
+                Background="#141C24" BorderBrush="#2A3A4A" BorderThickness="1">
+          <TextBlock x:Name="NarrativeText" Text="{Binding Narrative}" TextWrapping="Wrap" Foreground="#CFE0EA"
+                     FontFamily="{StaticResource MonoFont}" FontSize="12" />
+        </Border>
+
+        <!-- BOTTOM CENTRE : market / BM / IC / LFDD (2x2) -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,*" RowDefinitions="*,*">
+
+          <!-- imbalance price + rolling chart -->
+          <Border Grid.Row="0" Grid.Column="0" Classes="Card" Margin="0,0,5,5" Padding="10">
+            <Grid RowDefinitions="Auto,*">
+              <DockPanel Grid.Row="0">
+                <TextBlock x:Name="ImbalancePriceText" DockPanel.Dock="Right" Text="{Binding ImbalancePrice}" Classes="Value" FontSize="20" />
+                <TextBlock Text="IMBALANCE PRICE  *  GBP/MWh" Classes="PanelHeader" VerticalAlignment="Center" />
+              </DockPanel>
+              <controls:Sparkline x:Name="PriceTraceChart" Grid.Row="1" Values="{Binding PriceTrace}" Caption="STREAMED" Margin="0,6,0,0" />
+            </Grid>
+          </Border>
+
+          <!-- BM stability delta -->
+          <Border Grid.Row="0" Grid.Column="1" Classes="Card" Margin="5,0,0,5" Padding="10">
+            <Grid RowDefinitions="Auto,Auto,*">
+              <TextBlock Grid.Row="0" Text="BM STABILITY DELTA" Classes="PanelHeader" />
+              <TextBlock x:Name="BmSummaryText" Grid.Row="1" Text="{Binding BmSummary}" Classes="Label" FontSize="10" Margin="0,2,0,4" />
+              <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="BmDeltaList" ItemsSource="{Binding BmDelta}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="rp1:Rp1BmRowModel">
+                      <Button Classes="RowLinkBtn" Padding="10,7" Margin="0,1" Click="Bm_Click"
+                              ToolTip.Tip="Click for the acceptance detail">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                          <Border Grid.Column="0" Width="8" Height="8" CornerRadius="4" VerticalAlignment="Center" Margin="0,0,6,0"
+                                  Background="{Binding DirColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Unit}" Classes="Label" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Text="{Binding Kind}" FontSize="10" VerticalAlignment="Center" Margin="6,0"
+                                     Foreground="{Binding DirColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          <TextBlock Grid.Column="3" Text="{Binding Mw}" Classes="Value" FontSize="11"
+                                     VerticalAlignment="Center" Width="56" TextAlignment="Right" />
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
+          </Border>
+
+          <!-- interconnector summary -->
+          <Border Grid.Row="1" Grid.Column="0" Classes="Card" Margin="0,5,5,0" Padding="10">
+            <Grid RowDefinitions="Auto,*">
+              <TextBlock Grid.Row="0" Text="INTERCONNECTORS  *  o correlated trip" Classes="PanelHeader" />
+              <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+                <ItemsControl x:Name="InterconnectorList" ItemsSource="{Binding Interconnectors}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="rp1:Rp1IcRowModel">
+                      <Button Classes="RowLinkBtn" Padding="10,7" Margin="0,1" Click="Ic_Click"
+                              ToolTip.Tip="Click for flow + correlated-trip group">
+                        <Grid ColumnDefinitions="Auto,*,Auto">
+                          <Ellipse Grid.Column="0" Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0"
+                                   Fill="{Binding FlagColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="Label" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="2" Text="{Binding Flow}" FontSize="11" VerticalAlignment="Center"
+                                     Foreground="{Binding FlowColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Grid>
+          </Border>
+
+          <!-- LFDD risk indicator -->
+          <Border Grid.Row="1" Grid.Column="1" Classes="Card" Margin="5,5,0,0" Padding="10">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+              <TextBlock Text="LFDD RISK" Classes="PanelHeader" HorizontalAlignment="Center" />
+              <Border x:Name="LfddChip" CornerRadius="8" Padding="24,10" Margin="0,10,0,0"
+                      Background="{Binding LfddColour, Converter={x:Static tabs:TokenBrush.Instance}}">
+                <TextBlock x:Name="LfddText" Text="{Binding LfddGrade}" Foreground="White" FontWeight="Bold" FontSize="24" />
+              </Border>
+              <TextBlock x:Name="LfddPurchasedText" Text="{Binding PurchasedText}" FontWeight="Bold" FontSize="16"
+                         HorizontalAlignment="Center" Margin="0,8,0,0"
+                         Foreground="{Binding PurchasedColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+              <TextBlock Text="purchased time" Classes="Label" FontSize="9" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </Grid>
+
+      <!-- ================= RIGHT COLUMN : NETWORK CONSTRAINT & COHERENCE COST ================= -->
+      <Border Grid.Column="4" Classes="Card" Padding="10">
+        <Grid RowDefinitions="Auto,*,Auto,1.2*">
+          <TextBlock Grid.Row="0" Text="NETWORK CONSTRAINT &amp; COST" Classes="PanelHeader" />
+
+          <!-- boundary transfers vs limit + trend -->
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+            <StackPanel>
+              <TextBlock x:Name="BoundaryNoteText" Text="{Binding BoundaryNote}" Classes="Label" FontSize="9"
+                         TextWrapping="Wrap" Foreground="#66808A" />
+              <ItemsControl x:Name="BoundaryList" ItemsSource="{Binding BoundaryBars}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="rp1:Rp1BoundaryRowModel">
+                    <Grid Margin="0,3" ColumnDefinitions="*,Auto,Auto">
+                      <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding Name}" Foreground="{StaticResource Text}" FontSize="11" />
+                        <ProgressBar Height="4" MinHeight="4" Margin="0,3,8,0" Minimum="0" Maximum="120"
+                                     Value="{Binding LoadingPercent, Mode=OneWay}"
+                                     Foreground="{Binding LoadingColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                     Background="{StaticResource Track}" BorderThickness="0" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding Loading}" FontWeight="Bold" FontSize="12" VerticalAlignment="Center" Margin="6,0"
+                                 Foreground="{Binding LoadingColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                      <TextBlock Grid.Column="2" Text="{Binding Trend}" FontSize="12" VerticalAlignment="Center"
+                                 Foreground="{Binding TrendColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+
+          <TextBlock Grid.Row="2" Text="COHERENCE COST  *  GBP/h by constraint" Classes="Label"
+                     FontSize="9" Margin="0,8,0,0" />
+          <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+            <ItemsControl x:Name="ConstraintList" ItemsSource="{Binding ConstraintCosts}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="rp1:Rp1ConstraintRowModel">
+                  <Grid Margin="0,2" ColumnDefinitions="Auto,*,Auto">
+                    <Ellipse Grid.Column="0" Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0"
+                             Fill="{Binding BindingColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="Label" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding CostPerHour}" Classes="Value"
+                               FontSize="11" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
+    </Grid>
+    </ScrollViewer>
+
+    <!-- drill-down inspector overlay (spans the whole tab): the ported inspector view, shown while a page is open -->
+    <ContentControl x:Name="InspectorSlot" Grid.Row="0" Grid.RowSpan="2">
+      <tabs:InspectorView x:Name="Inspector" />
+    </ContentControl>
+  </Grid>
+</UserControl>

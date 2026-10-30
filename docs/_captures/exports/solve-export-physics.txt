@@ -1,0 +1,25 @@
+$ sed -n '1862,1884p' results/exports-docs/solve-export.json
+  "physics": {
+    "gatePass": true,
+    "hardGateLaws": [
+      1,
+      2,
+      3,
+      6,
+      8
+    ],
+    "laws": [
+      {
+        "number": 1,
+        "name": "Conservation of energy",
+        "statement": "Sigma(generation - load) = Sigma losses",
+        "status": "Holds",
+        "residual": 4.263256414560601E-14,
+        "unit": "MW",
+        "tolerance": 1E-06,
+        "detail": "independent dissipation 4.641021 MW (branch 4.6410 \u002B shunt 0.0000) vs reported loss 4.641021 MW"
+      },
+      {
+        "number": 2,
+        "name": "Ohm\u0027s law",
+[exit 0]

@@ -1,0 +1,3 @@
+$ gridsim screen case14 --csv results/exports-docs/screen.csv
+error: screen: case 'IEEE 14-bus' carries no inertia data (no in-service rotating machine has H > 0; converter-type units count no inertia), so the RoCoF of a loss cannot be computed; the screen would report the 1 MWs inertia floor's artefact. Use a case with generator inertia constants (for example uk or gb-synthetic). Exit 1.
+[exit 1]

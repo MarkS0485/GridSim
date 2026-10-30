@@ -1,0 +1,3 @@
+$ gridsim estimate case14 --synth --method newton --out results/err
+error: --method expected 'wls', 'huber', 'lav', 'lav-lp', 'lav-irls', 'schweppe-gm', 'qr', 'constrained' or 'feasible' but got 'newton'
+[exit 2]

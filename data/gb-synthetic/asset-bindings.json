@@ -1,0 +1,7 @@
+[
+  { "matchType": "onshore",        "class": "gfl-wind-2024" },
+  { "matchType": "offshore",       "class": "gfl-wind-2024" },
+  { "matchType": "wind",           "class": "gfl-wind-2024" },
+  { "matchType": "solar",          "class": "gfl-solar-2024" },
+  { "matchType": "storage",        "class": "gfm-bess-2024" }
+]

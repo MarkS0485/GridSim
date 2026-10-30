@@ -1,0 +1,4 @@
+[submodule "docs/Public/GB"]
+	path = docs/Public/GB
+	url = https://github.com/MarkS0485/GridSim-GB-Documents.git
+	branch = main

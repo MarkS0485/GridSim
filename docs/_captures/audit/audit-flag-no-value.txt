@@ -1,0 +1,3 @@
+$ gridsim --audit-log
+error: --audit-log expected an audit log file path but got ''
+[exit 2]

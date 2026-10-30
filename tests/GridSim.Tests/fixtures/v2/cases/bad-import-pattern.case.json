@@ -1,0 +1,38 @@
+{
+  // INVALID fixture, derived from good.case.json: an import pattern without the gridsim. prefix.
+  "schema": "gridsim-case/2",
+  "name": "Fixture case (two buses)",
+  "description": "Hand-written fixture for V2CaseSchemaTests. Not a real network.",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "gridCodeProfile": "gridsim.gridcode.gb@1",
+  "solverProfile": "gridsim.solver.default@1",
+  "network": ["good.network.json", "extra/more.network.json"],
+  "imports": [
+    { "library": "library/machines.json", "templates": ["gridsim.machine.*", "gridsim.exciter.sexs@1", "pss.*"] },
+    { "library": "library/everything.json", "templates": ["gridsim.*"] }
+  ],
+  "localTemplates": [
+    {
+      "id": "gridsim.local.fixture-gfl",
+      "rev": 1,
+      "kind": "gridFollowingInverter",
+      "status": "active",
+      "title": "Fixture grid-following inverter",
+      "params": { "deadbandHz": 0.015, "droopGainMwPerHzPerMw": { "v": 2.0, "prov": { "tag": "Recorded", "note": "fixture" } } },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "fixture values [VERIFY]" } }
+    }
+  ],
+  "bindings": [
+    { "matchType": "wind*", "template": "gridsim.local.fixture-gfl@1" },
+    { "matchType": "solar", "template": "gridsim.local.fixture-gfl@1" }
+  ],
+  "overrides": [
+    {
+      "template": "gridsim.machine.genrou-nuclear@1",
+      "params": { "h": 4.0 },
+      "reason": "Station-specific inertia from the operator's data sheet",
+      "shadow": "explicit",
+      "provenance": { "tag": "Recorded", "note": "fixture" }
+    }
+  ]
+}

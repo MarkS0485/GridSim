@@ -1,0 +1,281 @@
+@using GridSim.Web.Projection
+
+@* THE HUMAN SCALE - the same solved physics re-expressed in units a person can feel. Faithful port of the WPF
+   HumanScaleView. Every number is an honest conversion of a real streamed quantity; only the framing is for fun. *@
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage hs">
+
+        @* ============ HERO: Britain's single largest engine ============ *@
+        <div class="card hs-hero">
+            <div class="hs-badge-row">
+                <div class="card-h">BRITAIN'S SINGLE LARGEST ENGINE</div>
+                <span class="hs-badge">JUST FOR FUN</span>
+            </div>
+            <div class="hs-hero-value">@Hum(D.Engine.ShaftHp) hp</div>
+            <p class="hs-hero-line">
+                Every synchronous generator in Britain is bolted to one invisible crankshaft turning at
+                @D.Engine.Rpm.ToString("F0") rpm. Right now it develops @Hum(D.Engine.ShaftHp) horsepower -
+                comfortably the most powerful engine in the country, and nobody can see it.
+            </p>
+
+            <div class="card-eyebrow hs-facts-h">ABSURD, BUT TRUE</div>
+            <ul class="hs-facts">
+                <li>Its crankshaft is wrung with @Hum(D.Engine.TorqueFtLb) ft.lb of torque - the same as
+                    @Hum(D.Engine.TorqueMNm * 1e6 / CarTorqueNm) family cars flooring it in perfect unison.</li>
+                <li>Slam the brakes on it and you would claw back @Hum(D.Regen.SpinKwh) kWh of spin - enough to
+                    charge @Hum(D.Units.SpinEvs) electric cars from dead flat.</li>
+                <li>The rotor is turning so fast its turbine-blade tips move at Mach @D.Engine.BladeTipMach.ToString("F1") -
+                    give or take, the speed of sound.</li>
+                <li>At this exact second Britain is boiling the equivalent of @Hum(D.Units.DemandKettles) kettles.</li>
+                <li>@Fact5</li>
+            </ul>
+        </div>
+
+        @* ============ THE TWIST - the only reading with physics behind it (needs a network solve) ============ *@
+        @if (!Raw)
+        {
+        <div class="card hs-twist">
+            <div class="hs-badge-row">
+                <div class="card-h">THE TWIST - the crankshaft is 1,000 km of torsion bar</div>
+                <span class="hs-badge ok">THIS ONE IS REAL</span>
+            </div>
+            <p class="hs-note">
+                The shaft isn't rigid. Scotland's rotors run permanently ahead of London's, by tens of degrees,
+                and that wind-up IS the transmission: power south = (V1 x V2 / X) x sin delta. Slacken the angle and the
+                flow stops. For the 3,000-rpm two-pole sets, electrical degrees are mechanical degrees - this is a
+                real rotor twist, measured off your own solve.
+            </p>
+
+            <div class="hs-twist-grid">
+                @* headline wind-up + regional gauge *@
+                <div class="hs-twist-left">
+                    <div class="hs-twist-headline">
+                        <span class="hs-twist-total" style="color:@TwistColor">@D.TotalTwistDeg.ToString("F1") deg</span>
+                        <span class="hs-unit">end to end</span>
+                    </div>
+                    <div class="hs-twist-slip">
+                        @D.PctToPoleSlip.ToString("F0")% of the way to the 90 deg pole-slip wall |
+                        @D.DistanceTo90Deg.ToString("F0") deg of headroom
+                    </div>
+                    <div class="hs-wall">
+                        <div class="hs-wall-fill" style="width:@Clamp01Pct(D.PctToPoleSlip / 100.0);background:@TwistColor"></div>
+                        <div class="hs-wall-redline" title="90 deg - pole slip"></div>
+                    </div>
+                    <div class="hs-wall-scale"><span>0 deg</span><span>redline 90 deg</span></div>
+
+                    <div class="card-eyebrow hs-region-h">ROTOR LEAD BY REGION vs THE SOUTH</div>
+                    @if (D.Regions.Count == 0)
+                    {
+                        <p class="hs-note">No banded buses in this model.</p>
+                    }
+                    else
+                    {
+                        @foreach (TwistRegionDto reg in D.Regions)
+                        {
+                            <div class="hs-region-row">
+                                <span class="hs-region-label">@reg.Label</span>
+                                <span class="hs-region-deg">@Signed(reg.MeanLeadDeg) deg</span>
+                                <div class="hs-region-bar">
+                                    <Bar Value="Math.Abs(reg.MeanLeadDeg)" Max="90" Color="@WebPalette.Loading(Math.Abs(reg.MeanLeadDeg) / 60.0)" />
+                                    <span class="hs-region-detail">@reg.BusCount buses | spans @SignedInt(reg.MinLeadDeg) to @SignedInt(reg.MaxLeadDeg) deg</span>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    <p class="hs-note hs-corridor">@Corridor</p>
+                </div>
+
+                @* ranked synchronous machines - the measurement *@
+                <div class="card hs-panelhi hs-twist-right">
+                    <div class="card-h">EVERY MACHINE, RANKED BY LEAD</div>
+                    <p class="hs-note">@Lead</p>
+                    <div class="hs-machines">
+                        @foreach (TwistMachineDto m in D.Machines)
+                        {
+                            <div class="hs-mach-row">
+                                <span class="hs-mach-deg" style="color:@WebPalette.Loading(Math.Abs(m.LeadDeg) / 60.0)">@Signed(m.LeadDeg) deg</span>
+                                <div class="hs-mach-mid">
+                                    <span class="hs-mach-name">@m.Name</span>
+                                    <div class="hs-mach-bar">
+                                        <Bar Value="Math.Abs(m.LeadDeg)" Max="@MachMax" Color="@WebPalette.Loading(Math.Abs(m.LeadDeg) / 60.0)" />
+                                    </div>
+                                </div>
+                                <span class="hs-mach-mw">@m.Mw.ToString("N0") MW</span>
+                            </div>
+                        }
+                        @if (D.Machines.Count == 0)
+                        {
+                            <p class="hs-note">No synchronous machines online.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        }
+        else
+        {
+            @* Raw replay: the rotor-twist needs solved bus-voltage angles. Rather than show an empty gauge that
+               claims to be "measured off your own solve", explain honestly that this replay doesn't solve. *@
+            <div class="card hs-twist">
+                <div class="hs-badge-row">
+                    <div class="card-h">THE TWIST - the crankshaft is 1,000 km of torsion bar</div>
+                    <span class="hs-badge">NEEDS A SOLVE</span>
+                </div>
+                <p class="hs-note">
+                    The rotor wind-up between Scotland and London is real - but reading it needs the network's solved
+                    bus-voltage angles, and this is a pure raw replay with no power-flow solve. GridSim's desktop build
+                    measures it off the solve; here it's left out rather than faked. (See the ABOUT tab.)
+                </p>
+            </div>
+        }
+
+        @* ============ THE GRAND ENGINE ============ *@
+        <div class="card-eyebrow hs-sec-h">THE GRAND ENGINE - the whole grid as one giant motor</div>
+        <div class="panel-grid hs-three">
+            <div class="card">
+                <div class="card-h">SHAFT TORQUE</div>
+                <div class="hs-val">@Hum(D.Engine.TorqueFtLb) <span class="hs-val-u">ft.lb</span></div>
+                <div class="hs-sub">@D.Engine.TorqueMNm.ToString("F2") MN.m</div>
+                <div class="hs-sub">the shaft twists like @Hum(D.Engine.TorqueMNm * 1e6 / CarTorqueNm) family cars flooring it at once (~200 Nm each)</div>
+            </div>
+            <div class="card hs-panelhi">
+                <div class="card-h">SHAFT HORSEPOWER</div>
+                <div class="hs-val accent">@Hum(D.Engine.ShaftHp) <span class="hs-val-u">hp</span></div>
+                <div class="hs-sub">@D.Engine.ShaftGw.ToString("F2") GW on the shaft</div>
+                <div class="hs-sub">= @Hum(D.Engine.ShaftHp / CarHp) family cars (130 hp) or @Hum(D.Engine.ShaftHp / F1Hp) Formula 1 cars (1000 hp)</div>
+            </div>
+            <div class="card">
+                <div class="card-h">GRID SPEED</div>
+                <div class="hs-val">@D.Engine.Rpm.ToString("F0") <span class="hs-val-u">rpm</span></div>
+                <div class="hs-sub">every synchronous machine, locked in step</div>
+                <div class="hs-sub">blade tips ~@D.Engine.BladeTipMs.ToString("F0") m/s - about Mach @D.Engine.BladeTipMach.ToString("F1")</div>
+            </div>
+        </div>
+
+        @* ============ REGENERATIVE BRAKING ============ *@
+        <div class="card-eyebrow hs-sec-h">REGENERATIVE BRAKING - the spinning mass as an energy bank</div>
+        <div class="panel-grid hs-regen">
+            <div class="card hs-panelhi">
+                <div class="card-h">STORED SPIN - if you regened every last joule</div>
+                <div class="hs-val ok">@Hum(D.Regen.SpinKwh) <span class="hs-val-u">kWh</span></div>
+                <div class="hs-sub">@D.Regen.SpinGj.ToString("F0") GJ spinning in every generator</div>
+                <div class="hs-sub2">= @Hum(D.Units.SpinEvs) EVs charged flat-to-full (60 kWh)</div>
+                <div class="hs-sub2">= @Hum(D.Units.SpinHomeDays) homes powered for a whole day (8 kWh)</div>
+                <div class="hs-sub2">= @Hum(D.Units.SpinKettleBoils) kettle boils</div>
+            </div>
+            <div class="card">
+                <div class="card-h">LIVE BRAKING POWER</div>
+                <div class="hs-val" style="color:@RegenColor">@Hum(D.Regen.RegenHp) <span class="hs-val-u">hp</span></div>
+                <div class="hs-regen-dir" style="color:@RegenColor">@RegenDirLabel</div>
+                <div class="hs-sub">@RegenNote</div>
+                <div class="hs-sub">spinning down at <b>@D.Regen.RocofRpmPerS.ToString("F1") rpm/s</b></div>
+            </div>
+        </div>
+
+        @* ============ IN THINGS YOU CAN HOLD ============ *@
+        <div class="card-eyebrow hs-sec-h">IN THINGS YOU CAN HOLD - the load, counted in household appliances</div>
+        <div class="panel-grid hs-hold">
+            <div class="card">
+                <div class="card-h">THE LOAD RIGHT NOW</div>
+                <div class="hs-sub">@((Frame!.Headline.DemandMw / 1000.0).ToString("F2")) GW being drawn right now</div>
+                <div class="hs-hold-big">@Hum(D.Units.DemandKettles) kettles on the boil</div>
+                <div class="hs-sub">@Hum(D.Units.DemandHomes) homes' worth of draw</div>
+                <div class="hs-sub">@Hum(D.Units.DemandShowers) electric showers running</div>
+            </div>
+            <div class="card hs-panelhi">
+                <div class="card-h">LOST IN THE WIRES</div>
+                <div class="hs-sub">@Frame!.Headline.LossMw.ToString("F0") MW lost as heat in the wires</div>
+                <div class="hs-hold-big accent">@Hum(D.Units.LossKettles) kettles, boiled for nothing</div>
+                <div class="hs-sub">enough to run @Hum(D.Units.LossHomes) homes - just warming the cables</div>
+            </div>
+        </div>
+
+        <p class="muted-note hs-caption">
+            The framing here is for fun - 12 million cars, kettles by the million. The maths underneath is honest:
+            every figure is a straight conversion of a real streamed quantity (generation, inertia, RoCoF, losses,
+            and the solved bus voltage angles). Nothing here feeds a decision; it exists to make the numbers feel real.
+        </p>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    /// <summary>Pure raw replay (no solve): the rotor-twist section is replaced with an honest note.</summary>
+    [Parameter] public bool Raw { get; set; }
+
+    private HumanScaleDto? D => Frame?.HumanScale;
+
+    // Everyday anchors (order-of-magnitude, mirror the WPF twin's inline comparisons).
+    private const double CarTorqueNm = 200.0;
+    private const double CarHp = 130.0;
+    private const double F1Hp = 1000.0;
+
+    // Format a bare count as a rounded, comma-grouped whole number (49,876,321) - the full run of digits is the joke.
+    private static string Hum(double v) => Math.Round(Math.Abs(v)).ToString("N0", CultureInfo.InvariantCulture);
+    private static string Signed(double d) => d.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture);
+    private static string SignedInt(double d) => d.ToString("+0;-0;0", CultureInfo.InvariantCulture);
+    private static string Clamp01Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+
+    // Data-driven colour for the wind-up headline + wall fill (WPF Palette.Loading(worst/60)).
+    private string TwistColor => WebPalette.Loading(D is null ? 0 : D.WorstLeadDeg / 60.0);
+
+    // Machine bar scale: at least 30 deg so a quiet grid still reads, else the worst lead (WPF machMax).
+    private double MachMax
+    {
+        get
+        {
+            if (D is null || D.Machines.Count == 0) return 30.0;
+            double max = 0;
+            foreach (TwistMachineDto m in D.Machines) max = Math.Max(max, Math.Abs(m.LeadDeg));
+            return Math.Max(30.0, max);
+        }
+    }
+
+    // Regen direction colouring: amber when delivering, green when soaking up, muted when coasting.
+    private bool Delivering => D?.Regen.Direction == "DELIVERING";
+    private bool Coasting => D is null || D.Regen.Direction == "COASTING";
+    private string RegenColor => Coasting ? "var(--muted)" : Delivering ? "var(--warn)" : "var(--ok)";
+    private string RegenDirLabel => D?.Regen.Direction switch
+    {
+        "DELIVERING" => "DELIVERING  (frequency falling)",
+        "SOAKING UP" => "SOAKING UP  (frequency rising)",
+        _ => "COASTING  (frequency steady)"
+    };
+    private string RegenNote => D is null ? "" : Coasting
+        ? "the grand flywheel is holding its speed - no net braking right now"
+        : $"the flywheel is trading {D.Regen.RegenMw:F0} MW with the grid to fight the frequency drift";
+
+    // Fact5 flips between the loss line (coasting) and the regen line (braking), mirroring the WPF twin.
+    private string Fact5 => D is null ? "" : Coasting
+        ? $"{Frame!.Headline.LossMw:F0} MW is leaking away as pure heat in the wires - enough to run {Hum(D.Units.LossHomes)} homes on waste alone."
+        : $"The flywheel is trading {D.Regen.RegenMw:F0} MW with the grid to hold its speed - a {Hum(D.Regen.RegenHp)} hp "
+          + (Delivering ? "shove to stop it slowing." : "brake to stop it running away.");
+
+    // Headline machine line + the working corridor (biggest adjacent-band gap), computed from the projected DTO.
+    private string Lead => D is null || D.Machines.Count == 0
+        ? "No synchronous machines online to twist the shaft."
+        : $"{D.Machines[0].Name} is furthest ahead, its rotor held {Signed(D.Machines[0].LeadDeg)} deg in front of the south "
+          + $"while it pushes {D.Machines[0].Mw:N0} MW down the shaft.";
+
+    private string Corridor
+    {
+        get
+        {
+            if (D is null || D.Regions.Count < 2) return "";
+            double best = 0; string a = "", b = "";
+            for (int i = 0; i < D.Regions.Count - 1; i++)
+            {
+                double gap = D.Regions[i].MeanLeadDeg - D.Regions[i + 1].MeanLeadDeg;
+                if (Math.Abs(gap) > Math.Abs(best)) { best = gap; a = D.Regions[i].Label; b = D.Regions[i + 1].Label; }
+            }
+            return $"The working twist sits between {a} and {b}: {Math.Abs(best):F1} deg of wind-up, and every megawatt crossing it is carried by that angle.";
+        }
+    }
+}

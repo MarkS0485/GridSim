@@ -1,0 +1,3 @@
+$ gridsim --dir docs/_captures/networks/inputs/no-basekv --once
+error: cannot load case folder 'docs/_captures/networks/inputs/no-basekv': buses.json: 2 bus(es) have no baseKv, which is required (the base voltage in kV; it no longer defaults to 400 kV): 1 ('North'), 2 ('South').
+[exit 1]

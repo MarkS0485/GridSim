@@ -1,0 +1,29 @@
+$ gridsim h0-study --event gb-largest-loss-1320
+
+=== H=0 counterfactual: GB normal infeed loss risk screening (SQSS): single 1320 MW infeed trip [VERIFY] ===
+  input provenance: [CuratedPlaceholder]  (event 'gb-largest-loss-1320' is effectively CuratedPlaceholder, the weakest of its parts): a design-basis study, not a reproduction of history; every figure below inherits it and none is Recorded.
+  baseline gate: Reproduced   dP=1320 MW (first 5 s; 1320 MW over the whole event)   LFDD stage: 48.8 Hz
+  GFM class: gfm-vsm-study-2024   GFL class: gfl-wind-2024   (Ev is virtual control inertia, NEVER in real E)
+  GFM fraction realised by whole units: 0.25 -> 0.392, 0.50 -> 0.588, 0.75 -> 0.833
+
+  corner Best: cell = nadir Hz / verdict  (HELD=formed & clear of LFDD, LFDD=below stage, CASC=Loss-of-Mains cascade, NaN=un-formable)
+   scale\gfm |       0.00       0.25       0.50       0.75       1.00
+  -------------------------------------------------------------------
+        1.00 | 49.76 HELD 49.67 HELD 49.56 HELD 49.41 HELD 49.51 HELD
+        0.50 | 49.58 HELD 49.48 HELD 49.40 HELD 49.25 HELD 49.47 HELD
+        0.25 | 49.31 HELD 49.21 HELD 49.16 HELD 49.06 HELD 49.44 HELD
+        0.00 |   -    NaN 41.09 CASC 44.66 CASC 48.70 CASC 49.40 HELD
+
+  corner Worst: cell = nadir Hz / verdict  (HELD=formed & clear of LFDD, LFDD=below stage, CASC=Loss-of-Mains cascade, NaN=un-formable)
+   scale\gfm |       0.00       0.25       0.50       0.75       1.00
+  -------------------------------------------------------------------
+        1.00 | 49.74 HELD 49.40 HELD 49.09 HELD 48.80 CASC 49.21 HELD
+        0.50 | 49.51 HELD 49.19 HELD 48.84 HELD 48.79 CASC 49.17 HELD
+        0.25 | 49.13 HELD 48.85 HELD 48.80 CASC 48.70 CASC 49.14 HELD
+        0.00 |   -    NaN 28.42 CASC 37.11 CASC 44.52 CASC 49.10 HELD
+
+  28/40 cells HELD (formed, clear of LFDD); 2 forming-dependent (H=0, no grid-forming source).
+  Note: forming-dependent cells are expected DATA, not an error - the run still exits 0.
+
+  -> results\h0-study-gb-largest-loss-1320
+[exit 0]

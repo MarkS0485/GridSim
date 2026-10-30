@@ -1,0 +1,21 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json estimate --measurements results/realtime/ieee4-gross.json
+THREE-PHASE DISTRIBUTION (estimate) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+  measurements: 9 voltage magnitude(s), 9 current phasor(s), 0 nominal-voltage pseudo-measurement(s); method wls
+  estimate CONVERGED in 6 iteration(s), objective J = 1.786474E+004
+  | bus | kV LL | phase | |V| pu | |V| V (LN) | angle deg | VUF % |
+  |-----|-------|-------|--------|------------|-----------|-------|
+  | 1 | 12.47 | a | 1.000000 | 7199.56 | 0.000 | 0.0000 |
+  | 1 | 12.47 | b | 1.000000 | 7199.56 | -120.000 |  |
+  | 1 | 12.47 | c | 1.000000 | 7199.56 | 120.000 |  |
+  | 2 | 12.47 | a | 0.995014 | 7163.66 | -0.138 | 0.3046 |
+  | 2 | 12.47 | b | 0.987604 | 7110.31 | -120.186 |  |
+  | 2 | 12.47 | c | 0.983721 | 7082.35 | 119.264 |  |
+  | 3 | 4.16 | a | 0.959906 | 2305.48 | -2.256 | 1.9561 |
+  | 3 | 4.16 | b | 0.938732 | 2254.63 | -123.627 |  |
+  | 3 | 4.16 | c | 0.917673 | 2204.05 | 114.781 |  |
+  | 4 | 4.16 | a | 0.904287 | 2171.90 | -3.872 | 6.2964 |
+  | 4 | 4.16 | b | 0.800764 | 1923.26 | -127.040 |  |
+  | 4 | 4.16 | c | 0.769559 | 1848.31 | 102.847 |  |
+[exit 0]

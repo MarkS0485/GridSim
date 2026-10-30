@@ -1,0 +1,20 @@
+$ cat results/exports-docs/transient/run-metadata.json
+{
+  "timestampUtc": "2026-10-04T14:30:20.0514408Z",
+  "backend": "cpu",
+  "gitCommit": "98048023",
+  "buildConfig": "Release",
+  "coreVersion": "1.95.154.0",
+  "runtime": ".NET 10.0.12",
+  "arch": "X64",
+  "serverGc": true,
+  "simdTier": "Avx256",
+  "simdLanes": 4,
+  "simdFma": true,
+  "machineName": "LAPTOP",
+  "os": "Microsoft Windows 10.0.26200",
+  "cpu": "X64",
+  "logicalCores": 8,
+  "ramGb": 8.3,
+  "run": "transient  case=case9  minutes=1  dt=100ms  slices=600  solver=Newton-Raphson (dense)"
+}[exit 0]

@@ -1,0 +1,22 @@
+$ sed -n '125,144p' results/exports-docs/replay-2019/baseline-frequency.json
+  "recurrence": [
+    "df = f - f0",
+    "pEvent(t) = sum of deltaPMw over events with atSeconds \u003C= t \u002B 1e-6*dt",
+    "pGovTarget = -(df/f0)/droopPu * responsiveFraction*demand ;  pGov \u002B= (pGovTarget-pGov)/governorTau * dt",
+    "ffrTarget = clamp(-(FFR/0.5)*df, -FFR, \u002BFFR) if |df|\u003Edeadband else 0 ;  pFfr \u002B= (ffrTarget-pFfr)/max(dt,ffrTau) * dt",
+    "pImbalance = pEvent \u002B pGov \u002B pFfr - damping*df",
+    "rocof = f0/(2E) * pImbalance ;  f \u002B= rocof*dt"
+  ],
+  "headline": {
+    "initialRocofHzPerS": -0.17097330951595094,
+    "nadirHz": 48.84096136852519,
+    "nadirSeconds": 76,
+    "settleHz": 48.89159962877177
+  },
+  "points": [
+    {
+      "t": 0,
+      "hz": 50,
+      "rocofHzPerS": 0
+    },
+[exit 0]

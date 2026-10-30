@@ -1,0 +1,3 @@
+$ gridsim harmonics case9 --bus 999
+error: harmonics: --bus 999 is not a bus of IEEE 9-bus (WSCC).
+[exit 2]

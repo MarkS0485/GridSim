@@ -1,0 +1,21 @@
+$ gridsim dist3ph docs/_captures/dist3ph/ieee4-delta-bad.json
+THREE-PHASE DISTRIBUTION (sweep) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: docs/_captures/dist3ph/ieee4-delta-bad.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+  0 regulator(s), 0 closed switch(es), 0 open switch(es) (not branches), 0 capacitor bank(s), 0 single- or two-phase branch(es), 1 delta / grounded-wye transformer(s)
+  sweep CONVERGED in 36 iteration(s), max voltage change 8.554E-011 pu (tolerance 1.000E-010)
+  | bus | kV LL | phase | |V| pu | |V| V (LN) | angle deg | VUF % |
+  |-----|-------|-------|--------|------------|-----------|-------|
+  | 1 | 12.47 | a | 1.000000 | 7199.56 | 0.000 | 0.0000 |
+  | 1 | 12.47 | b | 1.000000 | 7199.56 | -120.000 |  |
+  | 1 | 12.47 | c | 1.000000 | 7199.56 | 120.000 |  |
+  | 2 | 12.47 | a | 0.989929 | 7127.05 | -0.287 | 0.1702 |
+  | 2 | 12.47 | b | 0.988985 | 7120.25 | -120.475 |  |
+  | 2 | 12.47 | c | 0.987944 | 7112.76 | 119.723 |  |
+  | 3 | 4.16 | a | 0.953579 | 2290.28 | -32.398 | 1.7593 |
+  | 3 | 4.16 | b | 0.941634 | 2261.60 | -153.814 |  |
+  | 3 | 4.16 | c | 0.921800 | 2213.96 | 85.178 |  |
+  | 4 | 4.16 | a | 0.898018 | 2156.84 | -34.244 | 6.0198 |
+  | 4 | 4.16 | b | 0.806129 | 1936.14 | -157.034 |  |
+  | 4 | 4.16 | c | 0.770026 | 1849.43 | 73.394 |  |
+[exit 0]

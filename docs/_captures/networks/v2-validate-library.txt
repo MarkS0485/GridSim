@@ -1,0 +1,4 @@
+$ gridsim validate data/library/placeholders/unmodelled-sites.json
+OK    data/library/placeholders/unmodelled-sites.json (gridsim-library/2)
+validate: 1 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 0]

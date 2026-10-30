@@ -1,0 +1,3 @@
+$ gridsim emt case14 --duration 0.01 --event switch:3@0.005:open
+emt: EMT case has events that cannot act: switch event at 0.005 s names element 3, which is not a switch. Valid switch ids: none.
+[exit 2]

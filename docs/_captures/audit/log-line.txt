@@ -1,0 +1,3 @@
+$ head -n 1 results/ch26.log
+{"format":"gridsim-audit/1","seq":0,"runUtc":"2026-10-04T11:01:57.2144688Z","stateUtc":"2024-03-01T12:00:00.0000000Z","provenance":"Synthetic","summary":"actor=analyst@workstation action=estimate inputs=case-id:23CF1F80D96A7350F3BB4001DC5422B2B3BC021EA4EFB31264FE199A68D4C271,synthetic-measurements:A59ED1067B27834A405D499E1C4090C10BAD6DF51800370A6923B10F54D6F53F outcome=exit=0 method=Wls status=Converged observable=True J=80.01052231478454 chi2=PASS dof=95 removed=0 measurements=122","prevHash":"GENESIS","hash":"1B78AE0F3653078034D6F6D46E71BDC42CB5B2156DFDD7FAFED0C3B80347E8A4"}
+[exit 0]

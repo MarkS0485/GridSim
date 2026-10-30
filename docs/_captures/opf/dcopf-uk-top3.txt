@@ -1,0 +1,10 @@
+$ gridsim dcopf uk --top 3
+DC-OPF - GB reduced (10-zone) (20 buses)  [cheapest secure dispatch]
+  demand 39,500 MW  generation 39,500 MW  total cost 705,500 GBP/h  (network-constrained redispatch applied)
+  dispatch (by output):
+      gen bus 7       8,000.0 MW  @     1 GBP/MWh
+      gen bus 2       4,000.0 MW  @     1 GBP/MWh
+      gen bus 9       4,000.0 MW  @     1 GBP/MWh
+  binding line limits:
+      branch 1    L2-3 B6 boundary  4,400.0 MW / 4,400 MVA
+[exit 0]

@@ -1,0 +1,44 @@
+$ gridsim nminus1-sweep case118 --losses --parallel 4
+    GridSim  -  2026-10-19 17:39:19 UTC
+    code:    git v1.95.294-168-g786a2162  |  GridSim.Core v1.95.462.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     nminus1-sweep  cases=1  parallel=4  sample=full  vlimits=per-bus
+
+| Case | Buses | Branches | Screened | Secure | Violations | Islanded | Not solved | Solves/s | Wall s | Base viol |
+|------|------:|---------:|---------:|-------:|-----------:|---------:|-----------:|---------:|-------:|----------:|
+| case118 | 118 | 186 | 186 | 164 | 13 | 9 | 0 | 799 | 0.2 | 0 |
+
+### Loss contingency - case118 (base losses: 132.48 MW)
+| Outage | Delta MW | Post MW | Loading % |
+|--------|--------:|--------:|----------:|
+| 8-5 (tx) | +66.66 | 199.14 | 0.0 |
+| 38-37 (tx) | +36.91 | 169.39 | 0.0 |
+| 38-65 | +35.00 | 167.48 | 0.0 |
+| 26-30 | +33.10 | 165.58 | 0.0 |
+| 30-17 (tx) | +17.11 | 149.59 | 0.0 |
+| 64-65 | +14.59 | 147.07 | 0.0 |
+| 89-92 | +14.02 | 146.50 | 0.0 |
+| 25-27 | +11.37 | 143.85 | 0.0 |
+| 63-64 | +10.04 | 142.52 | 0.0 |
+| 63-59 (tx) | +10.02 | 142.50 | 0.0 |
+| 100-103 | +9.48 | 141.96 | 0.0 |
+| 69-70 | +8.28 | 140.76 | 0.0 |
+| 68-69 (tx) | +8.05 | 140.53 | 0.0 |
+| 23-25 | +7.98 | 140.46 | 0.0 |
+| 103-110 | +7.30 | 139.78 | 0.0 |
+| 89-90 | +7.11 | 139.59 | 0.0 |
+| 69-75 | +5.10 | 137.59 | 0.0 |
+| 88-89 | +4.58 | 137.06 | 0.0 |
+| 42-49 | +4.44 | 136.92 | 0.0 |
+| 42-49 | +4.44 | 136.92 | 0.0 |
+| (9 non-converged) | | | |
+
+[n-1] case118: 118 buses, screening 186 outages on 4 threads...
+[n-1] case118: running loss contingency sweep...
+[n-1] done -> results\nminus1-sweep.md
+[n-1] verdict: 1 of 1 case(s) not N-1 secure (exit 3).
+[exit 3]

@@ -1,0 +1,16 @@
+$ cat docs/_captures/harmonics/spectra-case9.json
+{
+  "schema": "gridsim-harmonics/1",
+  "case": "IEEE 9-bus (WSCC)",
+  "baseMva": 100.0,
+  "takenUtc": "2026-08-01T12:00:00Z",
+  "note": "Metered 6-pulse drive at bus 9 (example)",
+  "sources": [
+    { "bus": 9, "sourceType": "6-pulse", "fundamentalCurrentPu": 0.5, "provenance": "Recorded",
+      "spectrum": [ { "order": 5, "magnitudePercent": 18.0, "phaseDeg": 0.0 },
+                    { "order": 7, "magnitudePercent": 11.0, "phaseDeg": 0.0 },
+                    { "order": 11, "magnitudePercent": 4.5, "phaseDeg": 0.0 },
+                    { "order": 13, "magnitudePercent": 3.0, "phaseDeg": 0.0 } ] }
+  ]
+}
+[exit 0]

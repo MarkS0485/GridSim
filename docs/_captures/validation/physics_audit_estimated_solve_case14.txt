@@ -1,0 +1,6 @@
+$ python tools/crossval/physics_audit.py results/est-case14s/estimated-solve-export.json
+physics audit: ? (14 buses), tol 0.0001 MVA
+  energy 2.49e-14 MW  KCL 1.90e+00 MW  S=VI 1.35e+00 MVAr  min branch loss -3.55e-15 MW
+  independent gate: FAIL   exported gate: FAIL   agree: True
+VERDICT: FAIL
+[exit 1]

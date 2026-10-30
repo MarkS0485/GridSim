@@ -1,0 +1,3 @@
+$ gridsim modal case14
+modal: IEEE 14-bus has no synchronous machine with an inertia constant (H > 0), so there is no rotor angle to linearise. This case carries no dynamic data: a MATPOWER file has no inertia (or frequency) fields, so every unit loads with H = 0 (the nominal-frequency note, if shown, is a separate 50 Hz assumption and not the reason for this exit; for a 60 Hz system pass --frequency-hz 60, which matters to every frequency result). Use a JSON case directory that gives each machine its inertiaH (for GB: gb, gb-reduced, gb-synthetic, uk or gb-full). Core said: No synchronous machines with inertia: the classical stability model has no rotor to integrate.
+[exit 2]

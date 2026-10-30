@@ -1,0 +1,5 @@
+$ gridsim audit show results/ch26-interpose.log
+#0 run=2026-10-04T11:53:12.6645240Z state=- provenance=Recorded hash=1F5D5E446B6D0C44EFF7A804E0A5BCA5B242697487874D858797EF837AA529DE actor=analyst@workstation action=interpose inputs=crosswalk:8A758EDA1F5FB76D5886D6BBF45819DA7D63BDB0AA078EA41CC8A958F933C6E3 outcome=started protocol=iec104 listen=127.0.0.1:2404 monitor=True
+#1 run=2026-10-04T11:53:19.5097560Z state=- provenance=Recorded hash=1DD22B9CB0793868602D39EE484B6AED8D025E90F182866E4F7CCB3474651DC9 actor=analyst@workstation action=interpose inputs=crosswalk:8A758EDA1F5FB76D5886D6BBF45819DA7D63BDB0AA078EA41CC8A958F933C6E3 outcome=exit=0 stopped accepted=11 rejected=1 decode-errors=1 map-errors=0 points=10 windows-written=0 duplicate-names=0 client-resets=0 unsupported-type-ids=5x1
+OK results/ch26-interpose.log: 2 entries, head 1DD22B9CB0793868602D39EE484B6AED8D025E90F182866E4F7CCB3474651DC9
+[exit 0]

@@ -1,0 +1,150 @@
+using System.Globalization;
+using System.Reflection;
+using GridSim.Core.Diagnostics;
+using GridSim.Core.IO;
+using GridSim.Core.Numerics;
+using GridSim.Core.PowerFlow;
+
+var inv = CultureInfo.InvariantCulture;
+Type luT = typeof(SparseLu);
+const BindingFlags NP = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance;
+
+
+// Build the Jacobian exactly as the production engines hold it: the structural pattern from
+// SparseNewtonRaphsonPowerFlow.BuildJacobianStructure, values copied in from the captured dense Jacobian.
+CsrMatrix ProductionJacobian(GridSim.Core.Model.GridModel model, SolveTrace tr, double[,] jdense)
+{
+    int nb = model.BusCount;
+    var index = new Dictionary<int, int>(nb);
+    for (int i = 0; i < nb; i++) index[model.Buses[i].Id] = i;
+    Type spT = typeof(SparseLu).Assembly.GetType("GridSim.Core.PowerFlow.SparseNewtonRaphsonPowerFlow")!;
+    var y = spT.GetMethod("BuildY", NP)!.Invoke(null, new object[] { model, index })!;
+    int[] pPos = Enumerable.Repeat(-1, nb).ToArray(), qPos = Enumerable.Repeat(-1, nb).ToArray();
+    int[] pvpq = tr.Passes[0].PvPqIndices, pq = tr.Passes[0].PqIndices;
+    for (int k = 0; k < pvpq.Length; k++) pPos[pvpq[k]] = k;
+    for (int k = 0; k < pq.Length; k++) qPos[pq[k]] = pvpq.Length + k;
+    int mm = pvpq.Length + pq.Length;
+    var slots = new int[4 * ((ComplexCsr)y).RowPtr[nb]];
+    var jac = (CsrMatrix)spT.GetMethod("BuildJacobianStructure", NP)!.Invoke(null, new object[] { y, pPos, qPos, mm, slots })!;
+    for (int r = 0; r < mm; r++)
+        for (int k = jac.RowPtr[r]; k < jac.RowPtr[r + 1]; k++) jac.Val[k] = jdense[r, jac.ColIdx[k]];
+    return jac;
+}
+int NonZero(CsrMatrix mat) { int c = 0; foreach (double v in mat.Val) if (v != 0.0) c++; return c; }
+
+// ---- Part 1: case9 Jacobian, pass 1, iteration 1 -------------------------------------------------
+var trace = new SolveTrace { CaptureJacobian = true };
+var res = new NewtonRaphsonPowerFlow().Solve(IeeeCases.Case9(), new PowerFlowOptions { Trace = trace });
+var it = trace.Passes[0].Iterations[0];
+double[][] jj = it.Jacobian; double[,] jd = new double[jj.Length, jj.Length]; for (int r0 = 0; r0 < jj.Length; r0++) for (int c0 = 0; c0 < jj.Length; c0++) jd[r0, c0] = jj[r0][c0];
+int m = jd.GetLength(0);
+CsrMatrix a = ProductionJacobian(IeeeCases.Case9(), trace, jd);
+Console.WriteLine($"case9 pass 1 iteration 1: Jacobian order {m}, structural nnz {a.Val.Length} of {m * m} ({100.0 * a.Val.Length / (m * m):F1} %), numerically non-zero {NonZero(a)}");
+Console.WriteLine($"equation rows: P of buses [{string.Join(",", trace.Passes[0].PvPqIndices)}], Q of buses [{string.Join(",", trace.Passes[0].PqIndices)}] (0-based bus index)");
+Console.WriteLine($"max |J_ij| = {NumericTolerances.MaxAbs(a.Val).ToString("R", inv)}  pivot floor = {NumericTolerances.PivotFloor(NumericTolerances.MaxAbs(a.Val)).ToString("R", inv)}");
+
+int[] q = (int[])luT.GetMethod("Ordering", NP)!.Invoke(null, new object[] { a })!;
+Console.WriteLine("RCM ordering q (pivot step k -> original column): " + string.Join(" ", q));
+
+object fact = luT.GetMethod("FactorWithOrdering", NP)!.Invoke(null, new object[] { a, q })!;
+Type fT = fact.GetType();
+T Get<T>(string n) => (T)fT.GetField(n, NP)!.GetValue(fact)!;
+int[] pinv = Get<int[]>("_pinv"), lp = Get<int[]>("_lp"), up = Get<int[]>("_up");
+double[] ux = Get<double[]>("_ux");
+int[] pivRow = new int[m];
+for (int r = 0; r < m; r++) pivRow[pinv[r]] = r;
+Console.WriteLine("pivot row p (pivot step k -> original row):   " + string.Join(" ", pivRow));
+Console.WriteLine($"nnz(L) incl. unit diagonal = {lp[m]}, nnz(U) incl. pivots = {up[m]}, nnz(A) = {a.Val.Length}, fill = {lp[m] + up[m] - m - a.Val.Length}");
+Console.WriteLine("k  col q[k]  pivot row  U(k,k)");
+for (int k = 0; k < m; k++)
+    Console.WriteLine($"{k,2} {q[k],6} {pivRow[k],10}  {ux[up[k + 1] - 1].ToString("E6", inv)}");
+
+double[] f = it.Mismatch;
+double[] xs = (double[])fT.GetMethod("Solve", NP)!.Invoke(fact, new object[] { f })!;
+var jc = (double[,])jd.Clone(); var xd = (double[])f.Clone();
+new DenseLuSolver().SolveInPlace(jc, xd);
+double maxd = 0; int identical = 0;
+for (int i = 0; i < m; i++) { maxd = Math.Max(maxd, Math.Abs(xs[i] - xd[i])); if (BitConverter.DoubleToInt64Bits(xs[i]) == BitConverter.DoubleToInt64Bits(xd[i])) identical++; }
+double maxdx = 0; for (int i = 0; i < m; i++) maxdx = Math.Max(maxdx, Math.Abs(xs[i]));
+double maxTr = 0; for (int i = 0; i < m; i++) maxTr = Math.Max(maxTr, Math.Abs(xs[i] - it.Correction[i]));
+Console.WriteLine($"sparse solve vs the iteration's recorded correction: max |diff| = {maxTr.ToString("E3", inv)}");
+Console.WriteLine($"sparse solve vs dense LU solve: max |dx| = {maxdx.ToString("E6", inv)}, max |diff| = {maxd.ToString("E3", inv)}, bit-identical components = {identical} of {m}");
+var ax = new double[m]; a.Multiply(xs, ax);
+double rmax = 0; for (int i = 0; i < m; i++) rmax = Math.Max(rmax, Math.Abs(ax[i] - f[i]));
+Console.WriteLine($"max |J dx - f| (sparse solution) = {rmax.ToString("E3", inv)}");
+Console.WriteLine($"converged: {res.Converged}, iterations: {res.Iterations}");
+
+// ---- Part 2: RCM of case14 -----------------------------------------------------------------------
+Console.WriteLine();
+var t14 = new SolveTrace { CaptureJacobian = true };
+new NewtonRaphsonPowerFlow().Solve(IeeeCases.Case14(), new PowerFlowOptions { Trace = t14 });
+double[][] jj14 = t14.Passes[0].Iterations[0].Jacobian; double[,] j14 = new double[jj14.Length, jj14.Length]; for (int r0 = 0; r0 < jj14.Length; r0++) for (int c0 = 0; c0 < jj14.Length; c0++) j14[r0, c0] = jj14[r0][c0]; int m14 = j14.GetLength(0);
+CsrMatrix a14 = ProductionJacobian(IeeeCases.Case14(), t14, j14);
+int[] q14 = (int[])luT.GetMethod("Ordering", NP)!.Invoke(null, new object[] { a14 })!;
+int Bandwidth(CsrMatrix mat, int[] perm)
+{
+    var pos = new int[mat.N]; for (int k = 0; k < mat.N; k++) pos[perm[k]] = k;
+    int bw = 0;
+    for (int i = 0; i < mat.N; i++) for (int k = mat.RowPtr[i]; k < mat.RowPtr[i + 1]; k++) bw = Math.Max(bw, Math.Abs(pos[i] - pos[mat.ColIdx[k]]));
+    return bw;
+}
+int[] ident = Enumerable.Range(0, m14).ToArray();
+int Fill(CsrMatrix mat, int[] perm)
+{
+    object fa = luT.GetMethod("FactorWithOrdering", NP)!.Invoke(null, new object[] { mat, perm })!;
+    var t = fa.GetType();
+    var l = (int[])t.GetField("_lp", NP)!.GetValue(fa)!; var u = (int[])t.GetField("_up", NP)!.GetValue(fa)!;
+    return l[mat.N] + u[mat.N] - mat.N;
+}
+Console.WriteLine($"case14 pass 1 iteration 1: Jacobian order {m14}, structural nnz {a14.Val.Length}, numerically non-zero {NonZero(a14)}");
+Console.WriteLine("RCM ordering q: " + string.Join(" ", q14));
+Console.WriteLine($"half-bandwidth natural = {Bandwidth(a14, ident)}, RCM = {Bandwidth(a14, q14)}");
+Console.WriteLine($"nnz(L)+nnz(U)-n natural = {Fill(a14, ident)}, RCM = {Fill(a14, q14)}");
+
+// ---- Part 3: the two builders on a row with many stamps ------------------------------------------
+Console.WriteLine();
+// Search deterministic random rows of 20 stamps (5 distinct columns, many duplicates) for one where the
+// real builder's unstable sort changes the summation order of some cell.
+for (int seed = 0; seed < 100000; seed++)
+{
+    var rg = new Random(seed);
+    var st = new List<(int col, double v)>();
+    for (int k = 0; k < 20; k++) st.Add((rg.Next(0, 5), (rg.NextDouble() - 0.5) * Math.Pow(10, rg.Next(-8, 9))));
+    var rb = new CsrMatrix.Builder(5); var cb = new ComplexCsr.Builder(5);
+    foreach (var (col, v) in st) { rb.Add(0, col, v); cb.Add(0, col, v, 0.0); }
+    CsrMatrix rm = rb.Build(); ComplexCsr cm = cb.Build();
+    // reference: insertion-order sum per column, starting from +0.0
+    var refv = new double[5]; var seen = new bool[5];
+    foreach (var (col, v) in st) { refv[col] += v; seen[col] = true; }
+    bool differs = false;
+    for (int k = rm.RowPtr[0]; k < rm.RowPtr[1]; k++)
+        if (BitConverter.DoubleToInt64Bits(rm.Val[k]) != BitConverter.DoubleToInt64Bits(refv[rm.ColIdx[k]])) differs = true;
+    bool cdiff = false;
+    for (int k = cm.RowPtr[0]; k < cm.RowPtr[1]; k++)
+        if (BitConverter.DoubleToInt64Bits(cm.G[k]) != BitConverter.DoubleToInt64Bits(refv[cm.ColIdx[k]])) cdiff = true;
+    if (cdiff) { Console.WriteLine($"UNEXPECTED: ComplexCsr differs at seed {seed}"); break; }
+    if (differs)
+    {
+        Console.WriteLine($"seed {seed}: row 0 with 20 stamps over 5 columns; real CsrMatrix.Builder differs from insertion-order sum");
+        Console.WriteLine("col  insertion-order sum (bits)    ComplexCsr.Builder (bits)     CsrMatrix.Builder (bits)");
+        for (int k = rm.RowPtr[0]; k < rm.RowPtr[1]; k++)
+        {
+            int c = rm.ColIdx[k];
+            Console.WriteLine($"{c,3}  {BitConverter.DoubleToInt64Bits(refv[c]):X16}  {BitConverter.DoubleToInt64Bits(cm.G[k]):X16}  {BitConverter.DoubleToInt64Bits(rm.Val[k]):X16}");
+        }
+        break;
+    }
+    if (seed == 99999) Console.WriteLine("no differing row found in 100000 seeds");
+}
+
+// ---- Part 4: Dot vs DotExact -----------------------------------------------------------------------
+Console.WriteLine();
+Type sk = typeof(SparseLu).Assembly.GetType("GridSim.Core.Numerics.SimdKernels")!;
+var rng = new Random(12345);
+int len = 1000; var x = new double[len]; var y = new double[len];
+for (int i = 0; i < len; i++) { x[i] = rng.NextDouble() - 0.5; y[i] = rng.NextDouble() - 0.5; }
+double dv = (double)sk.GetMethod("Dot", NP, null, new[] { typeof(double[]), typeof(int), typeof(double[]), typeof(int), typeof(int) }, null)!.Invoke(null, new object[] { x, 0, y, 0, len })!;
+double de = (double)sk.GetMethod("DotExact", NP)!.Invoke(null, new object[] { x, 0, y, 0, len })!;
+Console.WriteLine(SimdCapabilities.Describe());
+Console.WriteLine($"Dot      (1000 terms, seed 12345) = {dv.ToString("R", inv)}  bits {BitConverter.DoubleToInt64Bits(dv):X16}");
+Console.WriteLine($"DotExact (1000 terms, seed 12345) = {de.ToString("R", inv)}  bits {BitConverter.DoubleToInt64Bits(de):X16}");

@@ -1,0 +1,7 @@
+$ gridsim dist3ph data/dist3ph/ieee123.json harmonics --bus 100 --spectrum 6-pulse --current 0.01
+THREE-PHASE DISTRIBUTION (harmonics) - IEEE 123 Node Test Feeder   [EXPERIMENTAL]
+  file: data/dist3ph/ieee123.json
+  128 buses, 127 branches, 85 loads, base 5 MVA (three-phase)
+  4 regulator(s), 5 closed switch(es), 2 open switch(es) (not branches), 4 capacitor bank(s), 60 single- or two-phase branch(es)
+dist3ph harmonics: the three-phase harmonic penetration cannot model this feeder's single- or two-phase branches and step-voltage regulators, and will not solve it with them left out. It supports three-phase series-impedance lines and accepts constant-power wye loads, plus line charging, shunt capacitors, constant-current or constant-impedance (ZIP) loads, delta loads and closed switches (zero-impedance branches) (capacitors and line charging as susceptances scaled by the order, closed switches as one node; loads of every kind, constant-power wye included, are accepted and left out of Y(h): the study is network only). Use the three-phase sweep for this feeder.
+[exit 1]

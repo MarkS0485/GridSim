@@ -1,0 +1,24 @@
+{
+  "schema": "gridsim-library/2",
+  "title": "Refused by the library schema",
+  "templates": [
+    {
+      "id": "gridsim.placeholder.site.Example",
+      "rev": 1,
+      "kind": "site",
+      "status": "placeholder",
+      "title": "Example",
+      "params": { "generation": "gridsim.machine.demo@1", "demand": null },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "No source" } }
+    },
+    {
+      "id": "gridsim.exciter.demo",
+      "rev": 1,
+      "kind": "exciter",
+      "status": "active",
+      "title": "Demo exciter",
+      "params": { "model": null },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "Example" } }
+    }
+  ]
+}

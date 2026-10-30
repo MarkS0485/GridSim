@@ -1,0 +1,394 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mach="using:GridSim.Ui.Tabs.Machine"
+             xmlns:dashv="using:GridSim.App.Dashboard"
+             xmlns:ctl="using:GridSim.App.Controls"
+             x:Class="GridSim.App.Tabs.MachineView"
+             x:DataType="mach:MachineModel">
+  <!-- UI programme Phase 1.6: THE MACHINE tab, ported from src/GridSim.Wpf/Views/MachineView.xaml. Texts, order, sizes
+       and colours are the WPF ones; every value is bound to the shared MachineModel, its colours (the WPF Color,
+       DevBrush, DivBrush, AccumBrush, BessBrush, VoltBrush, QBrush) through UiColourBrushConverter, the AT LIMIT
+       badge's bool straight to IsVisible. The dials are the ported Gauge instrument and the two traces the ported
+       Sparkline. -->
+  <!-- T4 rebalance (2026-10-24): the page scrolls as a whole, so the spinning grid always has its natural height (the
+       headline, both 70 px traces as in WPF and the whole shaft) instead of squeezing its traces to nothing on the default
+       window. The fuel-in and power-out cards are capped at the spinning grid's height (their lists scroll inside, as in
+       WPF), so the scroll extent is set by the spinning grid and the instruments, never by a long list. On a tall window
+       the first row still takes the spare height, as before. The right margin (28 = 10 + the 18 px overlay scroll bar
+       allowance) keeps the bar off the instruments. -->
+  <ScrollViewer x:Name="MachinePageScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+  <Grid x:Name="MachinePageGrid" Margin="10,10,28,10" RowDefinitions="*,Auto,Auto">
+    <!-- rows: the machine; mechanical instruments; electrical instruments -->
+
+    <!-- ============ the machine: fuel in -> shaft -> power out ============ -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,1.5*,Auto,*">
+
+      <!-- fuel in -->
+      <Border x:Name="FuelInCard" Classes="Card" Grid.Column="0" Padding="12,8" MaxHeight="{Binding #SpinningGridCard.Bounds.Height}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+            <TextBlock Text="FUEL IN" Classes="PanelHeader" FontSize="13" />
+            <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="TotalInText" Text="{Binding TotalIn}" FontSize="26" FontWeight="Bold" />
+              <TextBlock Text=" GW pushing the machine" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,4" />
+            </StackPanel>
+            <TextBlock x:Name="SyncSplitText" Text="{Binding SyncSplit}" Classes="Label" FontSize="10" />
+            <TextBlock x:Name="Co2Text" Text="{Binding Co2}" Classes="Label" FontSize="10" />
+          </StackPanel>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="FuelInList" ItemsSource="{Binding FuelIn}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mach:StreamRowModel">
+                  <StackPanel Margin="0,4">
+                    <DockPanel>
+                      <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2" VerticalAlignment="Center" Margin="0,0,7,0" DockPanel.Dock="Left"
+                                 Fill="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                      <TextBlock Text="{Binding Gw}" FontWeight="Bold" FontSize="12" Width="62" TextAlignment="Right" DockPanel.Dock="Left" />
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" Margin="8,0,0,0" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="17,0,0,0" />
+                    <TextBlock Text="{Binding Inertia}" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="17,0,0,0" />
+                    <Border Height="6" Width="170" Background="{StaticResource Track}" CornerRadius="3" HorizontalAlignment="Left" Margin="17,2,0,0">
+                      <Border Width="{Binding BarWidth}" Height="6" CornerRadius="3" HorizontalAlignment="Left"
+                              Background="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <TextBlock Grid.Column="1" Text="&#x2192;" FontSize="28" Foreground="{StaticResource Muted}"
+                 VerticalAlignment="Center" Margin="6,0" />
+
+      <!-- the spinning grid + the transmission shaft by voltage, top to bottom as in WPF: the headline, the two recent
+           traces, the shaft. Parity sign-off (2026-10-24): the window used to give this row less height than the panel
+           asks for, and the traces were squeezed to nothing. The page now scrolls (see the top of the file), so every
+           part has its natural height; the card and every part still clip to their slots as a guard. -->
+      <Border x:Name="SpinningGridCard" Classes="Card" Grid.Column="2" Background="{StaticResource PanelHi}" Padding="12,8" ClipToBounds="True">
+        <DockPanel x:Name="SpinningGridPanel">
+          <TextBlock DockPanel.Dock="Top" Text="THE SPINNING GRID  -  every generator locked together as one rotating mass"
+                     Classes="PanelHeader" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,4" />
+
+          <!-- live headline: frequency, RPM, stored spin -->
+          <StackPanel x:Name="SpinningGridHeadline" DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,4" ClipToBounds="True">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+              <TextBlock x:Name="FreqText" Text="{Binding Freq}" FontSize="46" FontWeight="Bold" />
+              <TextBlock Text=" Hz" Classes="Unit" FontSize="16" VerticalAlignment="Bottom" Margin="0,0,0,9" />
+              <TextBlock x:Name="RpmText" Text="{Binding Rpm}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Bottom" Margin="16,0,0,6" />
+              <TextBlock Text=" RPM" Classes="Unit" FontSize="11" VerticalAlignment="Bottom" Margin="0,0,0,7" />
+            </StackPanel>
+            <TextBlock x:Name="FreqTrendText" Text="{Binding FreqTrend}" Classes="Label" FontSize="10" HorizontalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Margin="0,3,0,0" HorizontalAlignment="Center">
+              <TextBlock x:Name="InertiaText" Text="{Binding Inertia}" FontSize="16" FontWeight="Bold" />
+              <TextBlock Text=" GVAs of stored spin" Classes="Label" VerticalAlignment="Bottom" Margin="2,0,0,1" />
+            </StackPanel>
+            <TextBlock x:Name="SpinEnergyText" Text="{Binding SpinEnergy}" Classes="Label" FontSize="10" HorizontalAlignment="Center" />
+
+            <!-- electrical headline: the same machine, held at voltage -->
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0" HorizontalAlignment="Center">
+              <TextBlock x:Name="VoltAvgText" Text="{Binding VoltAvg}" FontSize="20" FontWeight="Bold"
+                         Foreground="{Binding VoltColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+              <TextBlock x:Name="VoltDevHeadText" Text="{Binding VoltDev}" Classes="Label" VerticalAlignment="Bottom" Margin="8,0,0,3" />
+            </StackPanel>
+            <TextBlock x:Name="VoltSpreadHeadText" Text="{Binding VoltSpread}" Classes="Label" FontSize="10" HorizontalAlignment="Center" />
+            <TextBlock x:Name="VoltSpreadKvHeadText" Text="{Binding VoltSpreadKv}" Classes="Label" FontSize="10" HorizontalAlignment="Center" />
+          </StackPanel>
+
+          <!-- shaft at the bottom -->
+          <StackPanel DockPanel.Dock="Bottom" Margin="0,6,0,0" ClipToBounds="True">
+            <TextBlock Text="THE SHAFT  POWER RIDING EACH VOLTAGE  ACTUAL vs NOMINAL" Classes="Label" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,3" />
+            <ItemsControl x:Name="LayersList" ItemsSource="{Binding Layers}" HorizontalAlignment="Center">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mach:VoltageLayerModel">
+                  <DockPanel Margin="0,3" Width="440">
+                    <TextBlock Text="{Binding Label}" Classes="Label" Width="56" FontSize="10" VerticalAlignment="Center" />
+                    <StackPanel DockPanel.Dock="Right" Width="118" Margin="6,0,0,0" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding KvActual}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right"
+                                 Foreground="{Binding DevColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                      <TextBlock Text="{Binding KvDev}" Classes="Label" FontSize="9" HorizontalAlignment="Right" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Share}" Classes="Label" FontSize="10" DockPanel.Dock="Right" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Gw}" FontWeight="Bold" FontSize="11" DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center" />
+                    <!-- centre-anchored voltage deviation: left = low, centre tick = on-nominal, right = high.
+                         DevBar is the marker's pixel position along the 170-wide track (0.5*track = nominal). -->
+                    <Grid Width="170" Height="12" HorizontalAlignment="Left" VerticalAlignment="Center">
+                      <Border Background="{StaticResource Track}" CornerRadius="4" />
+                      <!-- nominal centre tick -->
+                      <Line StartPoint="85,0" EndPoint="85,12" Stroke="{StaticResource Muted}" StrokeThickness="1" />
+                      <!-- deviation marker: a width-DevBar spacer pushes a 3px bar to the DevBar position -->
+                      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Border Width="{Binding DevBar}" Height="12" Background="Transparent" />
+                        <Border Width="3" Height="12" CornerRadius="1.5" Margin="-1.5,0,0,0"
+                                Background="{Binding DevColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                      </StackPanel>
+                    </Grid>
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <!-- the two recent traces, each the WPF 70 px -->
+          <Grid x:Name="SpinningGridTraces" RowDefinitions="Auto,Auto" VerticalAlignment="Top" ClipToBounds="True">
+            <!-- recent speed -->
+            <DockPanel Grid.Row="0" Margin="0,4,0,0" ClipToBounds="True">
+              <TextBlock DockPanel.Dock="Top" Text="SPEED  RECENT" Classes="Label" FontSize="10" HorizontalAlignment="Center" />
+              <ctl:Sparkline x:Name="FreqSparkline" Values="{Binding FreqTrace}" ShowMinMax="True" Height="70" Margin="8,2,8,0" />
+            </DockPanel>
+
+            <!-- recent voltage (electrical) -->
+            <DockPanel Grid.Row="1" Margin="0,4,0,0" ClipToBounds="True">
+              <TextBlock DockPanel.Dock="Top" Text="VOLTAGE  RECENT" Classes="Label" FontSize="10" HorizontalAlignment="Center" />
+              <ctl:Sparkline x:Name="VoltSparkline" Values="{Binding VoltTrace}" ShowMinMax="True" Height="70" Margin="8,2,8,0" />
+            </DockPanel>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <TextBlock Grid.Column="3" Text="&#x2192;" FontSize="28" Foreground="{StaticResource Muted}"
+                 VerticalAlignment="Center" Margin="6,0" />
+
+      <!-- power out -->
+      <Border x:Name="PowerOutCard" Classes="Card" Grid.Column="4" Padding="12,8" MaxHeight="{Binding #SpinningGridCard.Bounds.Height}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+            <TextBlock Text="POWER OUT" Classes="PanelHeader" FontSize="13" />
+            <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="TotalOutText" Text="{Binding TotalOut}" FontSize="26" FontWeight="Bold" />
+              <TextBlock Text=" GW being drawn off" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,4" />
+            </StackPanel>
+            <TextBlock x:Name="LossesText" Text="{Binding Losses}" Classes="Label" FontSize="10" />
+          </StackPanel>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="DemandOutList" ItemsSource="{Binding DemandOut}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mach:StreamRowModel">
+                  <StackPanel Margin="0,4">
+                    <DockPanel>
+                      <TextBlock Text="{Binding Gw}" FontWeight="Bold" FontSize="12" HorizontalAlignment="Right" DockPanel.Dock="Right" />
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+                    <Border Height="6" Width="170" Background="{StaticResource Track}" CornerRadius="3" HorizontalAlignment="Left" Margin="0,2,0,0">
+                      <Border Width="{Binding BarWidth}" Height="6" CornerRadius="3" HorizontalAlignment="Left"
+                              Background="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Grid>
+
+    <!-- ============ ROW 1  -  mechanical instruments: dials + mains clock + the battery ============ -->
+    <Grid Grid.Row="1" Margin="0,10,0,0" ColumnDefinitions="Auto,*,*">
+      <!-- columns: the dial bank; mains clock divergence; BESS -->
+
+      <!-- the four dials, the heart of the dashboard -->
+      <Border Classes="Card" Grid.Column="0" Background="{StaticResource PanelHi}" Padding="12,6" Margin="0,0,5,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="THE INSTRUMENTS  -  speed, torque in and out, and how hard it's being shoved"
+                     Classes="Label" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,2" />
+          <!-- commanded-vs-delivered torque gap: the reason the speed is off 50 Hz -->
+          <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,3,0,0">
+            <TextBlock Text="TORQUE GAP  " Classes="Label" FontSize="10" VerticalAlignment="Center" />
+            <TextBlock x:Name="TorqueDivText" Text="{Binding TorqueDiv}" FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
+                       Foreground="{Binding DivColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+            <TextBlock Text=" MNm  " Classes="Unit" FontSize="10" VerticalAlignment="Center" />
+            <TextBlock x:Name="DivMwText" Text="{Binding DivMw}" Classes="Label" FontSize="10" VerticalAlignment="Center" />
+            <TextBlock Text="   " />
+            <TextBlock x:Name="DivNoteText" Text="{Binding DivNote}" Classes="Label" FontSize="10" VerticalAlignment="Center" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <!-- GRID SPEED: 2970-3030 RPM (49.5-50.5 Hz, the statutory band; N273: the band about the case's own
+                 nominal, bound from MachineModel.RpmGaugeMin / RpmGaugeMax, so 3570-3630 RPM for a 60 Hz case).
+                 Operational edges 49.8/50.2 Hz sit at fractions 0.30/0.70, statutory 49.5/50.5 at 0.0/1.0. Both edges
+                 band symmetrically: amber outside the operational band, red at the statutory extremes. -->
+            <ctl:Gauge x:Name="GridSpeedGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="GRID SPEED" Unit="RPM" ValueText="{Binding Rpm}"
+                       Value="{Binding RpmValue}" Minimum="{Binding RpmGaugeMin}" Maximum="{Binding RpmGaugeMax}"
+                       AmberFrom="{StaticResource GaugeAmberFrac}" RedFrom="0.95" AmberTo="{StaticResource GaugeAmberFracLow}" RedTo="0.05" />
+            <ctl:Gauge x:Name="TorqueCmdGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="TORQUE COMMANDED" Unit="MNm" ValueText="{Binding TorqueCmdText}"
+                       Value="{Binding TorqueCmdValue}" Minimum="0" Maximum="200"
+                       AmberFrom="0.80" RedFrom="0.92" />
+            <ctl:Gauge x:Name="TorqueActGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="TORQUE DELIVERED" Unit="MNm" ValueText="{Binding TorqueActText}"
+                       Value="{Binding TorqueActValue}" Minimum="0" Maximum="200"
+                       AmberFrom="0.80" RedFrom="0.92" />
+            <ctl:Gauge x:Name="StressGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="STRESS  -  how hard it's shoved" Unit="% of safe shove"
+                       ValueText="{Binding StressText}"
+                       Value="{Binding StressPct}" Minimum="0" Maximum="100"
+                       AmberFrom="0.40" RedFrom="0.70" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- MAINS CLOCK DIVERGENCE -->
+      <Border Classes="Card" Grid.Column="1" Margin="5,0" Padding="12,8">
+        <StackPanel>
+          <DockPanel>
+            <TextBlock Text="MAINS CLOCK DIVERGENCE" Classes="PanelHeader" FontSize="11" DockPanel.Dock="Left" />
+            <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1" HorizontalAlignment="Right">
+              <TextBlock Text="SIMULATED" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource Muted}" />
+            </Border>
+          </DockPanel>
+          <TextBlock Text="accumulated Hzs  50 = clock seconds off  -  synthetic, not solved" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+          <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+            <TextBlock x:Name="TimeErrorText" Text="{Binding TimeError}" FontSize="30" FontWeight="Bold"
+                       Foreground="{Binding AccumColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+          </StackPanel>
+          <TextBlock x:Name="TimeErrorNoteText" Text="{Binding TimeErrorNote}" Classes="Label" FontSize="{StaticResource MicroFontSize}" TextWrapping="Wrap" />
+          <TextBlock x:Name="AccumText" Text="{Binding Accum}" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="0,2,0,0" />
+          <TextBlock x:Name="AccumNoteText" Text="{Binding AccumNote}" Classes="Label" FontSize="{StaticResource MicroFontSize}" FontWeight="Bold" />
+
+          <!-- potential missed regen: over-spin that could have been harvested (assumptions in the note) -->
+          <TextBlock Text="POTENTIAL MISSED REGEN" Classes="Label" FontSize="{StaticResource MicroFontSize}" FontWeight="Bold" Margin="0,6,0,0" />
+          <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="RegenMwhText" Text="{Binding RegenMwhText}" FontSize="16" FontWeight="Bold" />
+            <TextBlock Text=" MWh of over-spin" Classes="Label" FontSize="{StaticResource MicroFontSize}" VerticalAlignment="Bottom" Margin="2,0,0,1" />
+          </StackPanel>
+          <TextBlock x:Name="RegenMoneyText" Text="{Binding RegenMoney}" Classes="Label" FontSize="{StaticResource MicroFontSize}" TextWrapping="Wrap" />
+          <TextBlock x:Name="RegenHomesText" Text="{Binding RegenHomes}" Classes="Label" FontSize="{StaticResource MicroFontSize}" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- GRID BATTERY  BESS -->
+      <Border Classes="Card" Grid.Column="2" Margin="5,0,0,0" Padding="12,8" Background="{StaticResource PanelHi}">
+        <StackPanel>
+          <DockPanel>
+            <TextBlock Text="GRID BATTERY  BESS" Classes="PanelHeader" FontSize="11" DockPanel.Dock="Left" />
+            <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1" HorizontalAlignment="Right">
+              <TextBlock x:Name="BessModeText" Text="{Binding BessMode}" FontSize="8.5" FontWeight="Bold"
+                         Foreground="{Binding BessColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+            </Border>
+          </DockPanel>
+          <DockPanel>
+            <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1" HorizontalAlignment="Right" DockPanel.Dock="Right">
+              <TextBlock Text="SIMULATED" FontSize="8.5" FontWeight="Bold" Foreground="{StaticResource Muted}" />
+            </Border>
+            <TextBlock Text="leans against the divergence  -  synthetic, not solved" Classes="Label" FontSize="{StaticResource MicroFontSize}" TextWrapping="Wrap" />
+          </DockPanel>
+          <TextBlock x:Name="BessPowerText" Text="{Binding BessPower}" FontSize="20" FontWeight="Bold" Margin="0,2,0,1"
+                     Foreground="{Binding BessColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+          <DockPanel>
+            <TextBlock x:Name="BessSocText" Text="{Binding BessSocText}" FontWeight="Bold" FontSize="11" DockPanel.Dock="Right" Margin="6,0,0,0" />
+            <Border Height="8" Background="{StaticResource Track}" CornerRadius="4" VerticalAlignment="Center">
+              <Border x:Name="BessSocBar" Width="{Binding BessSocBar}" Height="8" CornerRadius="4" HorizontalAlignment="Left"
+                      Background="{Binding BessColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+            </Border>
+          </DockPanel>
+          <TextBlock x:Name="BessEnergyText" Text="{Binding BessEnergy}" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="0,2,0,0" />
+          <TextBlock x:Name="BessThroughputText" Text="{Binding BessThroughput}" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- ============ ROW 2  -  electrical instruments: voltage, reactive, taps (the same machine, held at voltage) ============ -->
+    <Grid Grid.Row="2" Margin="0,8,0,0" ColumnDefinitions="Auto,*,*,*">
+      <!-- columns: the electrical dial bank; system voltage; reactive balance; tap-changer fleet -->
+
+      <!-- the four electrical dials, mirroring the mechanical bank above -->
+      <Border Classes="Card" Grid.Column="0" Background="{StaticResource PanelHi}" Padding="12,6" Margin="0,0,5,0">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="THE ELECTRICAL INSTRUMENTS  -  voltage, reactive balance, where the taps sit, regulation strain"
+                     Classes="Label" FontSize="10" HorizontalAlignment="Center" Margin="0,0,0,2" />
+          <StackPanel Orientation="Horizontal">
+            <!-- SYSTEM VOLTAGE: 0.94-1.06 pu (statutory band). Amber outside ~+/-0.04, red at the extremes. -->
+            <ctl:Gauge x:Name="SystemVoltageGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="SYSTEM VOLTAGE" Unit="pu" ValueText="{Binding VoltAvg}"
+                       Value="{Binding VoltAvgValue}" Minimum="0.94" Maximum="1.06"
+                       AmberFrom="{StaticResource GaugeAmberFrac}" RedFrom="{StaticResource GaugeRedFrac}" AmberTo="{StaticResource GaugeAmberFracLow}" RedTo="{StaticResource GaugeRedFracLow}" />
+            <ctl:Gauge x:Name="ReactiveGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="REACTIVE GENERATED" Unit="Mvar" ValueText="{Binding QGenText}"
+                       Value="{Binding QGenValue}" Minimum="0" Maximum="{Binding QScaleMax}"
+                       AmberFrom="0.80" RedFrom="0.92" />
+            <ctl:Gauge x:Name="TapPositionGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="AVG TAP POSITION" Unit="% off nominal" ValueText="{Binding TapPosText}"
+                       Value="{Binding TapPosValue}" Minimum="-10" Maximum="10"
+                       AmberFrom="0.75" RedFrom="{StaticResource GaugeRedFrac}" AmberTo="0.25" RedTo="{StaticResource GaugeRedFracLow}" />
+            <ctl:Gauge x:Name="RegulationGauge" Width="150" Height="138" Margin="2,0"
+                       Caption="REGULATION STRESS" Unit="% of safe travel" ValueText="{Binding RegStressText}"
+                       Value="{Binding RegStressPct}" Minimum="0" Maximum="100"
+                       AmberFrom="0.40" RedFrom="0.70" />
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- SYSTEM VOLTAGE -->
+      <Border Classes="Card" Grid.Column="1" Margin="5,0" Padding="12,8">
+        <StackPanel>
+          <TextBlock Text="SYSTEM VOLTAGE" Classes="PanelHeader" FontSize="11" />
+          <TextBlock Text="the grid is never perfectly nominal" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+          <TextBlock x:Name="VoltDevText" Text="{Binding VoltDev}" FontSize="26" FontWeight="Bold" Margin="0,2,0,0"
+                     Foreground="{Binding VoltColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+          <TextBlock x:Name="VoltSpreadText" Text="{Binding VoltSpread}" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="0,2,0,0" />
+          <TextBlock x:Name="VoltSpreadKvText" Text="{Binding VoltSpreadKv}" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+        </StackPanel>
+      </Border>
+
+      <!-- REACTIVE BALANCE -->
+      <Border Classes="Card" Grid.Column="2" Margin="5,0" Padding="12,8">
+        <StackPanel>
+          <TextBlock Text="REACTIVE BALANCE" Classes="PanelHeader" FontSize="11" />
+          <TextBlock Text="VARs produced vs absorbed  -  the torque of voltage" Classes="Label" FontSize="{StaticResource MicroFontSize}" TextWrapping="Wrap" />
+          <TextBlock x:Name="QNetText" Text="{Binding QNet}" FontSize="22" FontWeight="Bold" Margin="0,2,0,0"
+                     Foreground="{Binding QColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+          <TextBlock x:Name="QNoteText" Text="{Binding QNote}" Classes="Label" FontSize="{StaticResource MicroFontSize}" TextWrapping="Wrap" />
+          <DockPanel Margin="0,2,0,0">
+            <TextBlock x:Name="QGenText" Text="{Binding QGenText}" FontWeight="Bold" FontSize="11" />
+            <TextBlock Text=" gen  " Classes="Label" FontSize="10" />
+            <TextBlock x:Name="QAbsText" Text="{Binding QAbsText}" FontWeight="Bold" FontSize="11" />
+            <TextBlock Text=" absorbed (Mvar)" Classes="Label" FontSize="10" />
+          </DockPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- TAP-CHANGER FLEET -->
+      <Border Classes="Card" Grid.Column="3" Margin="5,0,0,0" Padding="12,8" Background="{StaticResource PanelHi}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top">
+            <TextBlock Text="TAP-CHANGER FLEET" Classes="PanelHeader" FontSize="11" />
+            <TextBlock x:Name="TapAvgText" Text="{Binding TapAvg}" FontSize="16" FontWeight="Bold" Margin="0,2,0,0" />
+            <TextBlock x:Name="TapLimitsText" Text="{Binding TapLimits}" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+            <TextBlock x:Name="TapRegErrText" Text="{Binding TapRegErr}" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+            <TextBlock x:Name="TapSummaryText" Text="{Binding TapSummary}" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="0,0,0,4" />
+          </StackPanel>
+          <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="118">
+            <ItemsControl x:Name="TapsList" ItemsSource="{Binding Taps}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="mach:TapRowModel">
+                  <StackPanel Margin="0,3">
+                    <DockPanel>
+                      <TextBlock Text="{Binding OffNom}" FontWeight="Bold" FontSize="11" HorizontalAlignment="Right" DockPanel.Dock="Right"
+                                 Foreground="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                      <Border Background="#3A1F1F" CornerRadius="6" Padding="5,0" DockPanel.Dock="Right" Margin="6,0,6,0"
+                              VerticalAlignment="Center" IsVisible="{Binding AtLimit}">
+                        <TextBlock Text="AT LIMIT" FontSize="8" FontWeight="Bold"
+                                   Foreground="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                      </Border>
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="11" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding Step}" Classes="Label" FontSize="9" />
+                    <TextBlock Text="{Binding Err}" Classes="Label" FontSize="9" />
+                    <Border Height="6" Width="170" Background="{StaticResource Track}" CornerRadius="3" HorizontalAlignment="Left" Margin="0,2,0,0">
+                      <Border Width="{Binding BarWidth}" Height="6" CornerRadius="3" HorizontalAlignment="Left"
+                              Background="{Binding Colour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    </Border>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </Grid>
+  </ScrollViewer>
+</UserControl>

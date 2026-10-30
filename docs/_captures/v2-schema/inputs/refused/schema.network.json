@@ -1,0 +1,10 @@
+{
+  "schema": "gridsim-network/2",
+  "buses": [
+    { "id": 1, "name": "North 400", "type": "slack" },
+    { "id": 2, "name": "South 400", "baseKv": 400, "type": "swing" }
+  ],
+  "generators": [
+    { "name": "North CCGT", "bus": 1, "capacityMVA": 600 }
+  ]
+}

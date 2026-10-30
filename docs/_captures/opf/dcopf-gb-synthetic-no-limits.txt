@@ -1,0 +1,8 @@
+$ gridsim dcopf gb-synthetic --no-limits --top 3
+DC-OPF - GB synthetic (2227 buses)  [cheapest secure dispatch]
+  demand 39,291 MW  generation 39,291 MW  total cost 525,359 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 45      8,000.0 MW  @     1 GBP/MWh
+      gen bus 4       4,000.0 MW  @     1 GBP/MWh
+      gen bus 60      4,000.0 MW  @     1 GBP/MWh
+[exit 0]

@@ -1,0 +1,10 @@
+$ gridsim estimate case14 --measurements docs/_captures/estimation/case14-planted.json --method schweppe-gm --out results/case14-planted-schweppe-gm
+
+=== Schweppe GM state estimate: case14 ===
+  status: Converged   iterations: 41   max |dx|: 1.28E-009
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  consistency: J = 1391.18 vs chi2(95%) = 118.75 -> FAIL
+
+  -> results\case14-planted-schweppe-gm
+[exit 0]

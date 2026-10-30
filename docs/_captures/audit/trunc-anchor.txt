@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26-trunc.log --anchor-count 2 --anchor-head A5875A1F529483C92876C3ED0CC801B6EE0F452C5C033E3B1BAB7317D18D45DA
+TAMPERED results/ch26-trunc.log: entry 1: the file holds 1 entries but the anchor records 2: the entries from index 1 onward were removed (tail truncation) (1 entries verified before it)
+[exit 3]

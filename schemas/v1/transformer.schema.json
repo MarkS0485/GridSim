@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "transformer.schema.json",
+  "title": "GridSim v1 transformer.json",
+  "description": "The two-winding transformers of the case, one record each. Optional file. Tap changers and boundaries refer to transformers by name. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/transformer"
+  },
+  "$defs": {
+    "transformer": {
+      "title": "Transformer",
+      "description": "A two-winding transformer (v1 TransformerDto). Absent: r/x 0, tapRatio 1, phaseShiftDeg 0, ratingMva 0 (unrated), no dynamics class.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Branch name; tap changers and boundaries find transformers by it. Absent: none.",
+          "type": "string"
+        },
+        "from": {
+          "title": "From bus",
+          "description": "Tapped-side bus (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "to": {
+          "title": "To bus",
+          "description": "Other-side bus (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "rPu": {
+          "title": "Resistance (pu)",
+          "description": "Series resistance, per unit on the case base. Absent: 0.",
+          "type": "number"
+        },
+        "xPu": {
+          "title": "Reactance (pu)",
+          "description": "Series reactance, per unit on the case base. Absent: 0.",
+          "type": "number"
+        },
+        "tapRatio": {
+          "title": "Tap ratio (pu)",
+          "description": "Off-nominal turns ratio. Absent: 1.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "phaseShiftDeg": {
+          "title": "Phase shift (deg)",
+          "description": "Phase-shift angle. Absent: 0.",
+          "type": "number"
+        },
+        "ratingMva": {
+          "title": "Rating (MVA)",
+          "description": "Thermal rating. Absent: 0 = unrated.",
+          "type": "number",
+          "minimum": 0
+        },
+        "ratingBMva": {
+          "title": "Short-term rating B (MVA)",
+          "description": "Short-term rating (MATPOWER RATE_B; N119, as transmission.json since F20). Used only when a contingency screen is asked to judge post-fault loading against rating B. Absent: 0 (not given; such a check then uses ratingMva).",
+          "type": "number",
+          "minimum": 0
+        },
+        "ratingCMva": {
+          "title": "Emergency rating C (MVA)",
+          "description": "Emergency rating (MATPOWER RATE_C; N119, as transmission.json since F20). Used only when a contingency screen is asked to judge post-fault loading against rating C. Absent: 0 (not given; such a check then uses ratingMva).",
+          "type": "number",
+          "minimum": 0
+        },
+        "dynamicsClass": {
+          "title": "Dynamics class",
+          "description": "Name of a passive-plant asset class in asset-classes.json bound to this transformer. Absent: none.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

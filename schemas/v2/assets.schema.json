@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "assets.schema.json",
+  "title": "GridSim v2 asset overlay (gridsim-assets/2)",
+  "description": "Phase 5a (2026-10-20): an asset overlay file, listed by a case manifest's 'assets' member. It describes physical assets the electrical model does not hold (substations, busbar sections, switchgear, conductor and tower types, line routes and spans, earth wires, soil zones, earth paths, three-winding transformers, HVDC links) as flat records. Each record has an id unique across every overlay file of the case, a kind (an overlay kind spec under schemas/v2/kinds/overlay), an optional parent (another record's id: nesting is by parent, never by inner arrays), refs (role to target: a bus by id, a line, transformer, generator or demand by name, or another record by id), and params (scalars only, checked against the kind spec exactly as template parameters are). The overlay is CARRIED, NOT USED BY THE SOLVER: the authored electrical data stays authoritative, and a case loads to the same model and results with or without its overlay. Rules this subset cannot express (the kind existing, params against the kind, ids unique, parents existing, acyclic and of an allowed kind, each role declared by the kind with the right target type, every ref resolving) are enforced in code by V2AssetChecker (GridSim.Core.IO.Json.Overlay).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "records"],
+  "properties": {
+    "schema": { "const": "gridsim-assets/2" },
+    "description": { "type": "string" },
+    "records": {
+      "type": "array",
+      "description": "The overlay records, in any order (a parent may come after its children).",
+      "items": { "$ref": "#/$defs/record" }
+    }
+  },
+  "$defs": {
+    "recordId": {
+      "title": "Record id",
+      "description": "An overlay record id: a letter or digit, then letters, digits, '.', '_', ':' or '-'. Unique across every overlay file of the case (matched case-sensitively).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+    },
+
+    "name": {
+      "title": "Element name",
+      "description": "The name of a network element, exactly as the case's network files spell it.",
+      "type": "string",
+      "pattern": "\\S"
+    },
+
+    "record": {
+      "title": "Overlay record",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "refs", "params"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string", "pattern": "^[a-z][A-Za-z0-9]*$", "description": "An overlay kind (schemas/v2/kinds/overlay/<kind>.kind.json)." },
+        "parent": { "$ref": "#/$defs/recordId", "description": "The id of the record this one sits under; it must be of one of the kind's parentKinds." },
+        "refs": {
+          "type": "object",
+          "description": "Role to target. Each role must be declared by the kind, with the target type the kind gives it.",
+          "additionalProperties": { "$ref": "#/$defs/ref" }
+        },
+        "params": {
+          "type": "object",
+          "description": "Scalar parameter values, bare or in the {v, unit, prov} object form, checked against the kind spec (KindSpecRegistry.CheckParams).",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/presentParamValue" }
+        },
+        "prov": { "$ref": "common.schema.json#/$defs/provenance", "description": "Where the record as a whole came from." },
+        "note": { "type": "string" }
+      }
+    },
+
+    "ref": {
+      "title": "Reference",
+      "description": "One target, written as an object with exactly one member that names its type: {\"bus\": 12}, {\"line\": \"L1\"}, {\"transformer\": \"T1\"}, {\"generator\": \"G1\"}, {\"demand\": \"D1\"} or {\"record\": \"sub.north\"}.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["bus"], "properties": { "bus": { "type": "integer" } } },
+        { "type": "object", "additionalProperties": false, "required": ["line"], "properties": { "line": { "$ref": "#/$defs/name" } } },
+        { "type": "object", "additionalProperties": false, "required": ["transformer"], "properties": { "transformer": { "$ref": "#/$defs/name" } } },
+        { "type": "object", "additionalProperties": false, "required": ["generator"], "properties": { "generator": { "$ref": "#/$defs/name" } } },
+        { "type": "object", "additionalProperties": false, "required": ["demand"], "properties": { "demand": { "$ref": "#/$defs/name" } } },
+        { "type": "object", "additionalProperties": false, "required": ["record"], "properties": { "record": { "$ref": "#/$defs/recordId" } } }
+      ]
+    }
+  }
+}

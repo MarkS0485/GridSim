@@ -1,0 +1,3 @@
+$ gridsim pf pypsa-gb-zonal
+error loading case 'pypsa-gb-zonal': case 'pypsa-gb-zonal' cannot be solved: it is a zonal transport model (zones joined by links that have a MW capacity and no impedance), so it has no AC or DC power flow. Show it with 'gridsim zonal pypsa-gb-zonal'.
+[exit 1]

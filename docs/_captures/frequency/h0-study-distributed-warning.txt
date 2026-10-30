@@ -1,0 +1,18 @@
+$ gridsim h0-study --event gb-largest-loss-1320 --inertia-model distributed --sync-inertia-scale 1 --gfm-fraction 0 --corners best
+
+=== H=0 counterfactual: GB normal infeed loss risk screening (SQSS): single 1320 MW infeed trip [VERIFY] ===
+  input provenance: [CuratedPlaceholder]  (event 'gb-largest-loss-1320' is effectively CuratedPlaceholder, the weakest of its parts): a design-basis study, not a reproduction of history; every figure below inherits it and none is Recorded.
+  baseline gate: Reproduced   dP=1320 MW (first 5 s; 1320 MW over the whole event)   LFDD stage: 48.8 Hz
+  GFM class: gfm-vsm-study-2024   GFL class: gfl-wind-2024   (Ev is virtual control inertia, NEVER in real E)
+
+  corner Best: cell = nadir Hz / verdict  (HELD=formed & clear of LFDD, LFDD=below stage, CASC=Loss-of-Mains cascade, NaN=un-formable)
+   scale\gfm |       0.00
+  -----------------------
+        1.00 | 49.76 HELD
+
+  1/1 cells HELD (formed, clear of LFDD); 0 forming-dependent (H=0, no grid-forming source).
+  Note: forming-dependent cells are expected DATA, not an error - the run still exits 0.
+
+  -> results\h0-study-gb-largest-loss-1320
+warning: --inertia-model distributed is not honored by 'h0-study' - it runs the lumped scalar model. Only 'trip' integrates the distributed multi-domain model (and 'transient' reports the speed-domain split but still integrates lumped).
+[exit 0]

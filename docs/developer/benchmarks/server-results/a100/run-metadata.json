@@ -1,0 +1,16 @@
+{
+  "timestampUtc": "2026-07-02T14:17:34.7867740Z",
+  "backend": "cpu",
+  "gitCommit": "8ec809d2-dirty",
+  "buildConfig": "Release",
+  "coreVersion": "0.1.0.0",
+  "runtime": ".NET 10.0.9",
+  "arch": "X64",
+  "serverGc": true,
+  "machineName": "brave-heisenberg",
+  "os": "Ubuntu 22.04.5 LTS",
+  "cpu": "AMD EPYC 9554 64-Core Processor",
+  "logicalCores": 28,
+  "ramGb": 118,
+  "run": "bench-matrix  cases=25  engines=3  runs=5  parallel=28  note=\u0022A100 box: EPYC 28c/118GB, CPU parallel=28\u0022"
+}

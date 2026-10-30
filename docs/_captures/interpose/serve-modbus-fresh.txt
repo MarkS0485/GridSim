@@ -1,0 +1,5 @@
+$ gridsim serve case14 --measurements-dir results/interpose-docs/modbus --method wls
+serving wls estimator over 2 window(s) from results/interpose-docs/modbus
+horizon guard: now=2026-10-03T12:58:13.1160204Z, newest processable=2026-09-26T11:58:13.1160204Z
+done: processed 0, converged 0, rejected-fresh 2, failed 0
+[exit 0]

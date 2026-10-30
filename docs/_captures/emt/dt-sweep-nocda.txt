@@ -1,0 +1,9 @@
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 20 --probe v:5 --no-cda --out emt-x
+emt case14: 2,500 steps @ 20us, 3 factorization(s), peak |probe| 2.972, 16 ms -> emt-x
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 10 --probe v:5 --no-cda --out emt-x
+emt case14: 5,000 steps @ 10us, 3 factorization(s), peak |probe| 2.989, 31 ms -> emt-x
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 5 --probe v:5 --no-cda --out emt-x
+emt case14: 10,000 steps @ 5us, 3 factorization(s), peak |probe| 2.996, 52 ms -> emt-x
+[exit 0]

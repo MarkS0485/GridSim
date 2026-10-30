@@ -1,0 +1,6 @@
+$ gridsim serve case14 --measurements-dir results/interpose-docs/iec104-full --method wls
+serving wls estimator over 1 window(s) from results/interpose-docs/iec104-full
+horizon guard: now=2026-10-03T12:58:13.9315822Z, newest processable=2026-09-26T11:58:13.9315822Z
+  #0 2026-07-20T13:45:12.5000000Z OK J=0.00 chi2=PASS
+done: processed 1, converged 1, rejected-fresh 0, failed 0
+[exit 0]

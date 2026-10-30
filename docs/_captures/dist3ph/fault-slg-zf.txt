@@ -1,0 +1,12 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json fault --bus 3 --type slg --zf 0.05
+THREE-PHASE DISTRIBUTION (fault) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+  fault at bus 3 (4.16 kV LL), Zf = 0.05 pu (resistive), prefault E1 = 1.0 pu, infinite source;
+  each branch reduced to its transposed-equivalent sequence impedances (z1 = z2 = zs - zm, z0 = zs + 2 zm).
+  Thevenin Z0 = 0.021305 + j0.088314 pu   Z1 = 0.014473 + j0.069164 pu   Z2 = 0.014473 + j0.069164 pu
+  current base at this bus 832.717 A
+  | fault | current pu | current A |
+  |-------|------------|-----------|
+  | slg | 9.919461 | 8260.10 |
+[exit 0]

@@ -1,0 +1,6 @@
+$ gridsim convert docs/_captures/v2-schema/inputs/small/small.case.json results/v2-schema/small-v1
+converted docs/_captures/v2-schema/inputs/small/small.case.json -> results/v2-schema/small-v1: 3 buses, 2 generators (0 out of service), 3 branches
+  note: the authored asset-dynamics bundle (asset-classes.json / asset-bindings.json) is not written; copy those files across by hand if the written case needs them.
+  round trip: the written case solves bit-identically (converged; 3 bus voltages and angles, 3 line flows and the losses compared bit for bit, study options with the OLTC loop)
+note: small.case.json: import 'gridsim.placeholder.site.SMR' from 'library/placeholders/unmodelled-sites.json' resolved to gridsim.placeholder.site.SMR@1 (the highest revision there).
+[exit 0]

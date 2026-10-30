@@ -1,0 +1,285 @@
+<UserControl x:Class="GridSim.Wpf.Views.MachineEngineerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viz="clr-namespace:GridSim.Wpf.Visuals"
+             xmlns:v="clr-namespace:GridSim.Wpf.Views">
+    <Grid Margin="10" DataContext="{Binding Mechanical}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="1.15*" />
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- title -->
+        <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14,8" Margin="0,0,0,10">
+            <StackPanel>
+                <TextBlock Text="MECHANICAL / PLANT ENGINEER  *  what the MACHINES are doing" Style="{StaticResource PanelHeader}" FontSize="13" />
+                <TextBlock Text="MW / loading / inertia / ramp / RoCoF-margin REAL from the model  *  MVAr, power factor, excitation need reactive-dispatch telemetry (not in the presolved feed)  *  AVR, torsional, temps, certified-J flagged synthetic until a plant feed is wired"
+                           Style="{StaticResource Label}" FontSize="9" Margin="0,2,0,0" Foreground="#66808A" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+
+        <!-- ===================== SECTION 1 : PER-MACHINE STATE (risk-sorted) ===================== -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Padding="10">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Text="PER-MACHINE STATE  *  most-stressed first" Style="{StaticResource PanelHeader}" />
+                <!-- header -->
+                <Grid Grid.Row="1" Margin="0,6,14,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="60" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="1" Text="MACHINE" Style="{StaticResource Label}" FontSize="9" />
+                    <TextBlock Grid.Column="2" Text="FUEL" Style="{StaticResource Label}" FontSize="9" />
+                    <TextBlock Grid.Column="3" Text="MW" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                    <TextBlock Grid.Column="4" Text="MVAr" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                    <TextBlock Grid.Column="5" Text="POWER FACTOR" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                    <TextBlock Grid.Column="6" Text="EXC%*" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                    <TextBlock Grid.Column="7" Text="AVR*" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                    <TextBlock Grid.Column="8" Text="GOV*" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                </Grid>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Machines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource RowLinkBtn}" Padding="2,1" Margin="0,1"
+                                        Command="{Binding DataContext.InspectMachineCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" ToolTip="Click for full machine detail">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="70" />
+                                        <ColumnDefinition Width="70" />
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="70" />
+                                        <ColumnDefinition Width="90" />
+                                        <ColumnDefinition Width="60" />
+                                    </Grid.ColumnDefinitions>
+                                    <Ellipse Grid.Column="0" Width="8" Height="8" Fill="{Binding RiskBrush}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="{StaticResource Text}" FontSize="11" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Border Width="8" Height="8" CornerRadius="2" Background="{Binding Swatch}" Margin="0,0,5,0" />
+                                        <TextBlock Text="{Binding Fuel}" Style="{StaticResource Label}" />
+                                    </StackPanel>
+                                    <TextBlock Grid.Column="3" Text="{Binding Mw}" Style="{StaticResource Value}" FontSize="11" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4" Text="{Binding Mvar}" Style="{StaticResource Value}" FontSize="11" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="5" Text="{Binding Pf}" Foreground="{Binding RiskBrush}" FontFamily="{StaticResource MonoFont}" FontSize="11" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="6" Text="{Binding ExcPct}" Style="{StaticResource Label}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="7" Text="{Binding Avr}" Style="{StaticResource Label}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="8" Text="{Binding Gov}" Style="{StaticResource Label}" FontSize="10" TextAlignment="Right" VerticalAlignment="Center" />
+                                </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ===================== SECTIONS 2-5 : 2x2 ===================== -->
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Section 2 : Shaft & Torsional + Thermal (middle-left) -->
+            <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,5,5" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="SHAFT / TORSIONAL &amp; THERMAL" Style="{StaticResource PanelHeader}" />
+                    <TextBlock Grid.Row="1" Text="cumulative torque-pulse count from MW steps (proxy) * stator/rotor temp synthetic"
+                               Style="{StaticResource Label}" FontSize="9" Foreground="#66808A" TextWrapping="Wrap" Margin="0,2,0,4" />
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Machines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Pulses, StringFormat='{}{0} pulses'}" Style="{StaticResource Label}" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding PeakStress}" Foreground="#F3C13A" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Width="120">
+                                            <TextBlock Text="{Binding StatorTemp}" Style="{StaticResource Value}" FontSize="10" />
+                                            <TextBlock Text=" / " Style="{StaticResource Label}" FontSize="10" />
+                                            <TextBlock Text="{Binding RotorTemp}" Style="{StaticResource Value}" FontSize="10" />
+                                            <TextBlock Text="{Binding ThermalTrend}" Foreground="#F3C13A" FontSize="10" Margin="4,0,0,0" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <!-- Section 3 : Protection Envelope (middle-right) -->
+            <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource Card}" Margin="5,0,0,5" Padding="10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.1*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Text="PROTECTION ENVELOPE" Style="{StaticResource PanelHeader}" />
+
+                    <!-- P-Q capability for the most-stressed machine -->
+                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,6,8,0">
+                        <TextBlock Text="{Binding Selected.Name, StringFormat='P-Q * {0}'}" Style="{StaticResource Label}" FontSize="9" />
+                        <viz:PqDiagram Height="150" Margin="0,4,0,0"
+                                       Pg="{Binding Selected.Pg}" Qg="{Binding Selected.Qg}"
+                                       Qmin="{Binding Selected.Qmin}" Qmax="{Binding Selected.Qmax}" Pmax="{Binding Selected.Pmax}" />
+                    </StackPanel>
+
+                    <!-- RoCoF relay margin: current vs BOTH the original 0.125 and relaxed 1.0 thresholds -->
+                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,6,0,0">
+                        <TextBlock Text="RoCoF RELAY MARGIN" Style="{StaticResource Label}" FontSize="9" />
+                        <TextBlock Text="{Binding RocofNow}" Style="{StaticResource Value}" FontSize="20" />
+                        <TextBlock Text="{Binding RocofLegacyMargin}" Foreground="{Binding RocofLegacyBrush}" FontSize="10" Margin="0,6,0,0" />
+                        <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding RocofLegacyPct, Mode=OneWay}"
+                                     Foreground="{Binding RocofLegacyBrush}" Background="{StaticResource Track}" BorderThickness="0" Margin="0,2,0,0" />
+                        <TextBlock Text="{Binding RocofModernMargin}" Foreground="{Binding RocofModernBrush}" FontSize="10" Margin="0,6,0,0" />
+                        <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding RocofModernPct, Mode=OneWay}"
+                                     Foreground="{Binding RocofModernBrush}" Background="{StaticResource Track}" BorderThickness="0" Margin="0,2,0,0" />
+                        <TextBlock Text="the limit was relaxed to fit the condition, not the condition to the limit"
+                                   Style="{StaticResource Label}" FontSize="8" Foreground="#66808A" TextWrapping="Wrap" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Section 4 : Inertia Per Unit (bottom-left) -->
+            <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource Card}" Margin="0,5,5,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="INERTIA PER UNIT  *  GVA.s(i) asset-level" Style="{StaticResource PanelHeader}" />
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                        <ItemsControl ItemsSource="{Binding Machines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding HseSec, StringFormat='H {0}'}" Style="{StaticResource Label}" FontSize="10" Margin="6,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding TestDate, StringFormat='test {0}'}" Style="{StaticResource Label}" FontSize="9" Foreground="#66808A" Margin="6,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="3" Text="{Binding KeGvaS, StringFormat='{}{0} GVA.s'}" Style="{StaticResource Value}" FontSize="11" Width="90" TextAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <Grid Grid.Row="2" Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="sum ASSET KE" Style="{StaticResource Label}" FontSize="9" />
+                            <TextBlock Text="{Binding SumKe}" Foreground="#2FD27F" FontWeight="Bold" FontSize="15" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="REPORTED (i)" Style="{StaticResource Label}" FontSize="9" />
+                            <TextBlock Text="{Binding ReportedTotal}" Style="{StaticResource Value}" FontSize="15" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="SYNTHETIC GAP" Style="{StaticResource Label}" FontSize="9" />
+                            <TextBlock Text="{Binding SyntheticGap}" Foreground="#F3C13A" FontWeight="Bold" FontSize="15" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <!-- Section 5 : Fleet Trajectory (bottom-right) -->
+            <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}" Margin="5,5,0,0" Padding="10">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="FLEET TRAJECTORY  *  MW/min" Style="{StaticResource PanelHeader}" />
+                    <DockPanel Grid.Row="1" Margin="0,6,0,0">
+                        <StackPanel DockPanel.Dock="Right">
+                            <TextBlock Text="PROJECTED (i) +15 min" Style="{StaticResource Label}" FontSize="9" TextAlignment="Right" />
+                            <TextBlock Text="{Binding ProjInertia}" Foreground="{Binding ProjBrush}" FontWeight="Bold" FontSize="16" TextAlignment="Right" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding FleetTrend}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                        <ItemsControl ItemsSource="{Binding Machines}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding RampArrow}" Foreground="{Binding RampBrush}" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding RampMwMin, StringFormat='{}{0} MW/min'}" Foreground="{Binding RampBrush}" FontFamily="{StaticResource MonoFont}" FontSize="11" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <ItemsControl Grid.Row="3" ItemsSource="{Binding CommittedStarts}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Note}" Style="{StaticResource Label}" FontSize="9" Foreground="#66808A" TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- closing line -->
+        <TextBlock Grid.Row="3" Margin="2,8,0,0" Foreground="#66808A" FontSize="10" TextWrapping="Wrap"
+                   Text="The operator view tells you what the SYSTEM is doing. The mechanical view tells you what the MACHINES are doing. The system is made of machines." />
+
+        <!-- drill-down inspector overlay (spans the whole tab) -->
+        <v:InspectorView Grid.Row="0" Grid.RowSpan="4" DataContext="{Binding Inspector}" />
+    </Grid>
+</UserControl>

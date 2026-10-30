@@ -1,0 +1,548 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "synchronousMachine",
+  "title": "Synchronous machine",
+  "description": "Rotating machine data: inertia, GENROU reactances and time constants, sequence and step-up data, and the per-fuel snapshot capacity factor. Inertia and dynamics wiring are Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired); inertiaH stays true because it also sets the Mark-gated frequency / inertia model, and the GENROU synthesis ratios stay true (no file reads them).",
+  "params": {
+    "inertiaH": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "max": 20,
+      "required": false,
+      "markGated": true,
+      "description": "Inertia constant H (s on the machine MVA base). Inertia: Mark-gated. FuelMap and SyntheticGb disagree for nuclear (5.0 vs 4.0).",
+      "codeDefaults": [
+        {
+          "consumer": "GDA FuelMap.Classify: nuclear",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHNuclear",
+          "value": 5.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: pumped-storage",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHPumpedStorage",
+          "value": 3.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: ccgt",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHCcgt",
+          "value": 5.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: ocgt",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHOcgt",
+          "value": 4.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: chp",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHChp",
+          "value": 2.5
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: coal",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHCoal",
+          "value": 4.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: biomass",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHBiomass",
+          "value": 4.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: hydro",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHHydro",
+          "value": 3.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: gas",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHGas",
+          "value": 4.0
+        },
+        {
+          "consumer": "GDA FuelMap.Classify: recip",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.InertiaHRecip",
+          "value": 1.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: North Scotland Hydro (hydro)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=North Scotland Hydro].H",
+          "value": 3.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Torness Nuclear (nuclear)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Torness Nuclear].H",
+          "value": 4.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Heysham Nuclear (nuclear)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Heysham Nuclear].H",
+          "value": 4.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: North England CCGT (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=North England CCGT].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Drax Biomass (biomass)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Drax Biomass].H",
+          "value": 4.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Yorkshire CCGT (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Yorkshire CCGT].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: North Wales CCGT (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=North Wales CCGT].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Midlands CCGT (marginal) (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Midlands CCGT (marginal)].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Sizewell B Nuclear (nuclear)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Sizewell B Nuclear].H",
+          "value": 4.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: London CCGT (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=London CCGT].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: South CCGT (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=South CCGT].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Hinkley Point Nuclear (nuclear)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Hinkley Point Nuclear].H",
+          "value": 4.0
+        },
+        {
+          "consumer": "SyntheticGb transmission fleet: Pembroke CCGT (ccgt)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Fleet[Name=Pembroke CCGT].H",
+          "value": 5.0
+        },
+        {
+          "consumer": "Generator record default (no H given => 0, the unit is held in dynamic studies)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Generator:.ctor:H",
+          "value": 0.0
+        }
+      ]
+    },
+    "damping": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Mechanical damping D of the RMS machine model.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI RMS transient-stability study (Program.cs RunRmsStability)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SyntheticMachineDamping",
+          "value": 0.0
+        }
+      ]
+    },
+    "xdPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Synchronous reactance Xd (pu on the machine base).",
+      "codeDefaults": []
+    },
+    "xdpPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Transient reactance X'd (pu on the machine base).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI synthetic machine X'd when a case carries no dynamic data (CliDefaults.SyntheticXdpPu)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.SyntheticXdpPu",
+          "value": 0.3
+        }
+      ]
+    },
+    "xdppPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Subtransient reactance X''d (pu on the machine base). The fault-study fallback (0.20) differs from the GENROU synthesis ratio applied to the synthetic X'd (0.8 x 0.30 = 0.24).",
+      "codeDefaults": [
+        {
+          "consumer": "Short-circuit fallback X''d (FaultAnalysis.DefaultSubtransientXdPu; also Iec60909.DefaultSubtransientXdPu)",
+          "ref": "member:GridSim.Core:GridSim.Core.Protection.FaultAnalysis.DefaultSubtransientXdPu",
+          "value": 0.2
+        },
+        {
+          "consumer": "Harmonic model generator fallback X''d (HarmonicModelOptions.GeneratorFallbackXdPu)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Harmonics.HarmonicModelOptions.GeneratorFallbackXdPu",
+          "value": 0.2
+        }
+      ]
+    },
+    "xqPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Quadrature synchronous reactance Xq (pu on the machine base).",
+      "codeDefaults": []
+    },
+    "xqpPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Quadrature transient reactance X'q (pu on the machine base).",
+      "codeDefaults": []
+    },
+    "xqppPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Quadrature subtransient reactance X''q (pu on the machine base).",
+      "codeDefaults": []
+    },
+    "negativeSeqXPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "Negative-sequence reactance X2 (pu on the machine base); 0 = use X''d.",
+      "codeDefaults": [
+        {
+          "consumer": "Generator record default (0 = defaults to the effective X''d)",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Generator:.ctor:NegativeSeqXPu",
+          "value": 0.0
+        }
+      ]
+    },
+    "unitTransformerXPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "Generator step-up transformer reactance (pu on the machine base); 0 = none modelled.",
+      "codeDefaults": [
+        {
+          "consumer": "Generator record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Generator:.ctor:UnitTransformerXPu",
+          "value": 0.0
+        }
+      ]
+    },
+    "tdopS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Open-circuit transient d-axis time constant T'do (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouTdopS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouTdopS",
+          "value": 8.0
+        }
+      ]
+    },
+    "tdoppS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Open-circuit subtransient d-axis time constant T''do (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouTdoppS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouTdoppS",
+          "value": 0.03
+        }
+      ]
+    },
+    "tqopS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Open-circuit transient q-axis time constant T'qo (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouTqopS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouTqopS",
+          "value": 0.4
+        }
+      ]
+    },
+    "tqoppS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Open-circuit subtransient q-axis time constant T''qo (s).",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouTqoppS)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouTqoppS",
+          "value": 0.05
+        }
+      ]
+    },
+    "xdOverXdpRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "GENROU synthesis ratio Xd / X'd, used only to synthesise a clearly indicative machine from X'd.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouXdOverXdp)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouXdOverXdp",
+          "value": 3.0
+        }
+      ]
+    },
+    "xdppOverXdpRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "GENROU synthesis ratio X''d / X'd.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouXdppOverXdp)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouXdppOverXdp",
+          "value": 0.8
+        }
+      ]
+    },
+    "xqOverXdpRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "GENROU synthesis ratio Xq / X'd.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouXqOverXdp)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouXqOverXdp",
+          "value": 2.5
+        }
+      ]
+    },
+    "xqpOverXdpRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "GENROU synthesis ratio X'q / X'd.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouXqpOverXdp)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouXqpOverXdp",
+          "value": 1.5
+        }
+      ]
+    },
+    "xqppOverXdpRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "GENROU synthesis ratio X''q / X'd.",
+      "codeDefaults": [
+        {
+          "consumer": "CLI GENROU synthesis (CliDefaults.GenrouXqppOverXdp)",
+          "ref": "member:GridSim.Cli:GridSim.Cli.CliDefaults.GenrouXqppOverXdp",
+          "value": 0.8
+        }
+      ]
+    },
+    "capacityFactor": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Representative capacity factor for a snapshot dispatch, by fuel. FuelMap (GDA build) and Dispatcher (Core) disagree for most fuels (inconsistency register).",
+      "codeDefaults": [
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: nuclear",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorNuclear",
+          "value": 0.9
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: ccgt",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorCcgt",
+          "value": 0.45
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: ocgt",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorOcgt",
+          "value": 0.05
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: gas",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorGas",
+          "value": 0.35
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: coal",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorCoal",
+          "value": 0.0
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: biomass",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorBiomass",
+          "value": 0.65
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: chp",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorChp",
+          "value": 0.55
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: hydro",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorHydro",
+          "value": 0.35
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: pumped-storage",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorPumpedStorage",
+          "value": 0.1
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: recip",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorRecip",
+          "value": 0.1
+        },
+        {
+          "consumer": "GDA FuelMap.CapacityFactor: any other type (fallback)",
+          "ref": "member:GridSim.Gda:GridSim.Gda.FuelMap.CapacityFactorOther",
+          "value": 0.3
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: nuclear",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorNuclear",
+          "value": 0.9
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: biomass",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorBiomass",
+          "value": 0.7
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: hydro",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorHydro",
+          "value": 0.4
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: pumped / pumpedstorage (one arm shared with storage and battery)",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorPumped",
+          "value": 0.2
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: ccgt / gas",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorCcgt",
+          "value": 0.5
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: ocgt / peaker",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorOcgt",
+          "value": 0.05
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: coal",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorCoal",
+          "value": 0.0
+        },
+        {
+          "consumer": "Core Dispatcher.DefaultCapacityFactor: any other type (fallback)",
+          "ref": "member:GridSim.Core:GridSim.Core.Dispatch.Dispatcher.DefaultCapacityFactorOther",
+          "value": 0.4
+        },
+        {
+          "consumer": "SyntheticGb embedded generation: biomass",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.EmbeddedBiomassCf",
+          "value": 0.7
+        }
+      ]
+    },
+    "fuelType": {
+      "type": "string",
+      "required": false,
+      "description": "Generator technology / fuel label (drives converter inference and capacity-factor lookup).",
+      "codeDefaults": [
+        {
+          "consumer": "JSON generator with no type (JsonDefaults.GeneratorType)",
+          "ref": "member:GridSim.Core:GridSim.Core.IO.Json.JsonDefaults.GeneratorType",
+          "value": "ccgt"
+        }
+      ]
+    },
+    "xlPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Stator leakage reactance Xl (pu on the machine base), below X''d. Used only by the GENROU q-axis saturation scale (Xq - Xl) / (Xd - Xl) (N045). Absent: 0, the leakage-free limit Xq / Xd.",
+      "codeDefaults": [
+        {
+          "consumer": "SubtransientInit.MachineData record default (Xl; absent: 0, the leakage-free limit)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.SubtransientInit+MachineData:.ctor:Xl",
+          "value": 0.0
+        },
+        {
+          "consumer": "SubtransientMachine.Parameters record default (LeakageReactance; absent: 0)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.SubtransientMachine+Parameters:.ctor:LeakageReactance",
+          "value": 0.0
+        }
+      ]
+    },
+    "saturationS10": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Open-circuit saturation factor S(1.0) at 1.0 pu air-gap flux (PSS/E GENROU S(1.0)). Give it with saturationS12 or not at all; absent: unsaturated.",
+      "codeDefaults": []
+    },
+    "saturationS12": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Open-circuit saturation factor S(1.2) at 1.2 pu air-gap flux (PSS/E GENROU S(1.2)); above S(1.0) when S(1.0) is above 0.",
+      "codeDefaults": []
+    }
+  }
+}

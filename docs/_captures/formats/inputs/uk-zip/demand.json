@@ -1,0 +1,12 @@
+[
+  { "name": "North Scotland",       "bus": 101, "pMw": 600,  "powerFactor": 0.97 },
+  { "name": "South Scotland",       "bus": 102, "pMw": 2200, "powerFactor": 0.97 },
+  { "name": "North England",        "bus": 103, "pMw": 5500, "powerFactor": 0.97 },
+  { "name": "Yorkshire & Humber",   "bus": 104, "pMw": 4500, "powerFactor": 0.97 },
+  { "name": "North Wales & Mersey", "bus": 105, "pMw": 3500, "powerFactor": 0.97 },
+  { "name": "Midlands",             "bus": 106, "pMw": 6500, "powerFactor": 0.97 },
+  { "name": "East Anglia",          "bus": 107, "pMw": 3000, "powerFactor": 0.97 },
+  { "name": "London & South East",  "bus": 108, "pMw": 8500, "powerFactor": 0.97 },
+  { "name": "South",                "bus": 109, "pMw": 3500, "powerFactor": 0.97 },
+  { "name": "South West & S Wales", "bus": 110, "pMw": 1700, "powerFactor": 0.97 }
+]

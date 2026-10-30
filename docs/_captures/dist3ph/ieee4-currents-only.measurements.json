@@ -1,0 +1,78 @@
+{
+  "schema": "gridsim-dist3ph-measurements/1",
+  "description": "SYNTHETIC currents-only subset of data/dist3ph/ieee4-gyGy-stepdown-unbalanced.measurements.json, for the branch-current estimator (no voltage magnitudes).",
+  "currents": [
+    {
+      "from": 1,
+      "to": 2,
+      "phase": "a",
+      "realPu": 0.670785,
+      "imagPu": -0.485777,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "phase": "b",
+      "realPu": -1.105339,
+      "imagPu": -0.571979,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 1,
+      "to": 2,
+      "phase": "c",
+      "realPu": 0.152737,
+      "imagPu": 1.63104,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "phase": "a",
+      "realPu": 0.670785,
+      "imagPu": -0.485777,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "phase": "b",
+      "realPu": -1.105339,
+      "imagPu": -0.571979,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 2,
+      "to": 3,
+      "phase": "c",
+      "realPu": 0.152737,
+      "imagPu": 1.63104,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "phase": "a",
+      "realPu": 0.670785,
+      "imagPu": -0.485777,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "phase": "b",
+      "realPu": -1.105339,
+      "imagPu": -0.571979,
+      "sigmaPu": 0.001
+    },
+    {
+      "from": 3,
+      "to": 4,
+      "phase": "c",
+      "realPu": 0.152737,
+      "imagPu": 1.63104,
+      "sigmaPu": 0.001
+    }
+  ]
+}

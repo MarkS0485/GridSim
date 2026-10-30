@@ -1,0 +1,125 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+    <div class="panel-grid">
+        <div class="card">
+            <div class="card-h">MIX</div>
+            <div class="stat-row"><span>Total generation</span><b>@D.TotalGenMw.ToString("N0") MW</b></div>
+            <div class="stat-row"><span>Synchronous</span><b>@((D.SyncMw/1000).ToString("0.0")) GW | @((D.SyncFraction*100).ToString("0"))%</b></div>
+            <div class="stat-row"><span>Converter</span><b>@((D.ConverterMw/1000).ToString("0.0")) GW</b></div>
+            <div class="splitbar">
+                <div class="seg sync" style="width:@Pct(D.SyncFraction)"></div>
+                <div class="seg conv" style="width:@Pct(1-D.SyncFraction)"></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-h">INERTIA & CARBON</div>
+            <div class="stat-row"><span>System inertia</span><b>@D.InertiaGvaS.ToString("0.0") GVA.s</b></div>
+            <div class="stat-row"><span>Renewable</span><b>@((D.RenewableFraction*100).ToString("0"))% | @D.RenewableMw.ToString("N0") MW</b></div>
+            <div class="stat-row"><span>Fossil</span><b>@D.FossilMw.ToString("N0") MW</b></div>
+            <div class="stat-row"><span>Net interconnector</span><b>@D.NetImportMw.ToString("+#,0;-#,0;0") MW</b></div>
+            <div class="stat-row"><span>Indicative carbon</span><b>@D.CarbonKgPerKwh.ToString("0.000") kg/kWh</b></div>
+            <div class="stability-note">@D.StabilityNote</div>
+        </div>
+    </div>
+
+    @if (D.EmbeddedGenMw > 1)
+    {
+        <div class="card">
+            <div class="card-h">BEHIND-THE-METER GENERATION - a demand reduction, not a grid supply</div>
+            <div class="panel-grid four">
+                <div class="mini"><span class="mv" style="color:var(--ok)">@Gw(D.EmbeddedGenMw)</span><span class="ml">EST behind-the-meter | GW</span></div>
+                <div class="mini"><span class="mv">@Gw(MeteredDemand)</span><span class="ml">Metered grid demand (ND) | GW</span></div>
+                <div class="mini"><span class="mv">@Gw(UnderlyingDemand)</span><span class="ml">Underlying home demand | GW</span></div>
+                <div class="mini"><span class="mv">@SharePct%</span><span class="ml">of home demand met behind the meter</span></div>
+            </div>
+            <div class="muted-note">
+                Metered grid demand <b>@MeteredDemand.ToString("N0") MW</b> &nbsp;+&nbsp; EST behind-the-meter
+                <b>@D.EmbeddedGenMw.ToString("N0") MW</b> &nbsp;=&nbsp; underlying home demand
+                <b>@UnderlyingDemand.ToString("N0") MW</b>. Rooftop / field <b>solar</b> and distribution-connected
+                (<b>embedded</b>) <b>wind</b> are generated where they're used, so they never cross the transmission
+                meter - they show as a <b>reduction on the grid</b> (lower metered demand), but the home still consumes
+                the energy. This is why total generation can sit far above the metered demand at a sunny midday. See the
+                <b>ABOUT</b> tab for exactly how this is calculated.
+            </div>
+        </div>
+    }
+
+    @if (D.ImportLinks.Count > 0)
+    {
+        <div class="card">
+            <div class="card-h">INTERCONNECTORS</div>
+            <table class="grid">
+                <tbody>
+                    @foreach (ImportLinkDto ic in D.ImportLinks)
+                    {
+                        <tr>
+                            <td>@ic.Name</td>
+                            <td class="r">@ic.Mw.ToString("N0") MW</td>
+                            <td class="@(ic.Importing ? "imp" : "exp")">@(ic.Importing ? "^ Import" : "v Export")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @* The TSGB what-if is a trip SIMULATION (swing-equation frequency response) - it belongs to the desktop
+       solver, not the pure raw replay, so it's hidden in replay-only mode. *@
+    @if (!Raw)
+    {
+        <TsgbWhatIf InertiaGvaS="D.InertiaGvaS"
+                    DemandMw="@(Frame!.Headline.DemandMw)"
+                    LargestLossMw="@(Frame!.Operator?.LargestLossMw ?? 0)"
+                    LargestLossName='@(Frame!.Operator?.LargestLossName ?? "-")'
+                    NominalHz="NominalHz" />
+    }
+
+    <div class="card grow">
+        <div class="card-h">FUEL STACK</div>
+        <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Fuel</th><th class="r">MW</th><th class="r">Share</th><th class="r">Inertia GVA.s</th><th>Type</th></tr></thead>
+            <tbody>
+                @foreach (FuelRowDto r in D.Fuels)
+                {
+                    <tr>
+                        <td><span class="swatch" style="--c:@r.Color"></span>@r.Fuel</td>
+                        <td class="r">@r.Mw.ToString("N0")</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(r.SharePercent/100);--c:@r.Color"></span></div>
+                            @r.SharePercent.ToString("0.0")%
+                        </td>
+                        <td class="r">@r.InertiaGvaS.ToString("0.00")</td>
+                        <td>@(r.Synchronous ? "Synchronous" : "Converter")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        </div>
+    </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    /// <summary>Pure raw replay: hide the trip-simulation what-if (a solver feature).</summary>
+    [Parameter] public bool Raw { get; set; }
+    /// <summary>N297 (B4, 2026-10): the session case's nominal frequency, handed to the TSGB what-if.</summary>
+    [Parameter] public double NominalHz { get; set; } = GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
+    private GenInertiaDto? D => Frame?.GenInertia;
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+
+    // Behind-the-meter reconciliation: the metered transmission demand (ND) is suppressed by embedded generation,
+    // so underlying (home) demand = metered + behind-the-meter.
+    private double MeteredDemand => Frame?.Headline.DemandMw ?? 0;
+    private double UnderlyingDemand => MeteredDemand + (D?.EmbeddedGenMw ?? 0);
+    private string SharePct => (UnderlyingDemand > 1 ? (D!.EmbeddedGenMw / UnderlyingDemand * 100) : 0).ToString("0");
+    private static string Gw(double mw) => (mw / 1000.0).ToString("0.0");
+}

@@ -1,0 +1,25 @@
+$ sed -n '633,655p' results/exports-docs/h0-2019/h0-study.json
+  "cells": [
+    {
+      "syncInertiaScale": 1,
+      "gfmFraction": 0,
+      "corner": "Best",
+      "systemInertiaGvaS": 171.7,
+      "deviceRotationalInertiaMwS": 0,
+      "virtualInertiaMwS": 0,
+      "formingDampingMwPerHz": 0,
+      "effectiveFormingInertiaMwS": 171700,
+      "bareInertiaRocofHzPerS": -0.40302853814793244,
+      "bareFormedRocofHzPerS": -0.17829782753450985,
+      "bareFormedNadirHz": 48.98681515159653,
+      "rocofHzPerS": -0.2451162273846339,
+      "nadirHz": 49.5118123129261,
+      "nadirSeconds": 83.4,
+      "settleHz": 49.55362029493078,
+      "fleet": {
+        "trippedCount": 1,
+        "totalTrippedMw": 800,
+        "netFleetMwAtNadir": 2297.16961723434
+      },
+      "formingDependent": false,
+[exit 0]

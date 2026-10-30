@@ -1,0 +1,15 @@
+$ gridsim fault case14 --bus 4 --type slg
+Single line to ground (phase a) fault  -  case14  bus 4  Zf=j0.000 pu
+  phase currents: Ia 0.000 pu  Ib 0.000 pu  Ic 0.000 pu
+  earth current |3I0|: 0.000 pu   sequence |I1| 0.000  |I2| 0.000  |I0| 0.000 pu
+  faulted bus phase voltages: Va 1.018  Vb 1.018  Vc 1.018 pu
+  driving-point Z1 0.0166+j0.0803  Z2 0.0166+j0.0803  Z0 infinite (no earth path in the zero sequence)
+  the fault bus reaches no earthed neutral in the zero sequence: no earth current can flow.
+  (generator X''d synthesised at 0.20 pu where not supplied, X2 = X''d where not supplied; line Z0 = 3 x Z1 where not supplied; loads neglected in the zero sequence; converter units keep their prefault current)
+  relays operating on the faulted state: 0 (phase elements on the phase currents and voltages; 50N/51N/21N/46 on the sequence currents)
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+
+PROTECTION SIMULATION: a single line to ground (phase a) fault at bus 4 would drive 0 relay operation(s).
+fault: the model carries no transformer winding connections at all (MATPOWER and JSON v1 cannot hold them), so it has no earthed neutral and no earth-fault current can be computed from it; the result above reflects missing data. Exit 3.
+[exit 3]

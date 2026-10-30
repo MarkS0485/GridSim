@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:al="using:GridSim.Ui.Tabs.AuditLog"
+        x:Class="GridSim.App.Tabs.AuditLogWindow"
+        x:DataType="al:AuditLogModel"
+        Title="{x:Static al:AuditLogModel.WindowTitle}"
+        Width="1000" Height="560"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Panel}">
+  <!-- UI programme Phase 1.6 (third batch): the audit-log viewer, a port of the WPF AuditLogWindow (built in code in
+       src/GridSim.Wpf/AuditLogWindow.cs). Same texts (from the shared AuditLogModel's constants), same layout order
+       (the anchor bar with OPEN LOG...; the note; the verdict; the entries filling the rest), the theme's Panel
+       background and Text labels, and the verdict in the theme's Text, Green or Red for the model's tone, as WPF. The
+       DataContext is the window's own AuditLogModel, which decides everything shown (Core's AuditLogDisplay, verified
+       first: a tampered log shows only its TAMPERED verdict). -->
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+      <TextBlock Text="{x:Static al:AuditLogModel.AnchorCountLabel}" VerticalAlignment="Center" Foreground="{StaticResource Text}" />
+      <TextBox x:Name="CountBox" Width="70" Margin="4,0,12,0" Text="{Binding AnchorCount}" />
+      <TextBlock Text="{x:Static al:AuditLogModel.AnchorHeadLabel}" VerticalAlignment="Center" Foreground="{StaticResource Text}" />
+      <TextBox x:Name="HeadBox" Width="300" Margin="4,0,12,0" Text="{Binding AnchorHead}" />
+      <Button x:Name="OpenButton" Classes="FlatBtn" Padding="8,2,8,2" Content="{x:Static al:AuditLogModel.OpenButtonText}" Click="Open_Click" />
+    </StackPanel>
+    <TextBlock x:Name="NoteText" DockPanel.Dock="Top" Text="{x:Static al:AuditLogModel.Note}" TextWrapping="Wrap"
+               Margin="0,6,0,0" VerticalAlignment="Center" Foreground="{StaticResource Text}" />
+    <TextBlock x:Name="VerdictText" DockPanel.Dock="Top" Text="{Binding Verdict}" TextWrapping="Wrap" FontWeight="Bold"
+               Margin="0,8,0,8" Foreground="{StaticResource Text}" />
+    <!-- fills the rest -->
+    <TextBox x:Name="EntriesBox" Text="{Binding Entries, Mode=OneWay}" IsReadOnly="True" TextWrapping="NoWrap"
+             AcceptsReturn="True" FontFamily="{StaticResource MonoFont}"
+             ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" />
+  </DockPanel>
+</Window>

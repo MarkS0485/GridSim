@@ -1,0 +1,7 @@
+$ gridsim interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14-full.json --measurements-dir results/interpose-docs/iec104-full --window-ms 5000 --ticks 2
+interpose IEC 60870-5-104: listening 127.0.0.1:2404, case 'case14', 28 binding(s)
+windows -> results/interpose-docs/iec104-full (guard deferred; estimable only once >169 h old)
+headless: stops after 2 frame(s).
+  window 2026-07-20T13:45:12.5000000Z: 28 measurement(s) -> 20260720T134512500Z-000000.json
+stopped: accepted 2, rejected 0, decode-errors 0, points 28, windows-written 1
+[exit 0]

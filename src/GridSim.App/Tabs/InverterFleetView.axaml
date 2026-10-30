@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:inv="using:GridSim.Ui.Tabs.InverterFleet"
+             xmlns:dashv="using:GridSim.App.Dashboard"
+             x:Class="GridSim.App.Tabs.InverterFleetView"
+             x:DataType="inv:InverterFleetModel">
+  <!-- UI programme Phase 1.6: the INVERTER FLEET tab, ported from src/GridSim.Wpf/Views/InverterFleetView.xaml. Texts,
+       order, sizes and colours are the WPF ones; every value is bound to the shared InverterFleetModel, its colours
+       (the WPF TrippedBrush, ModeBrush) through UiColourBrushConverter. -->
+  <Grid Margin="10" RowDefinitions="Auto,*">
+
+    <!-- ============ fleet summary ============ -->
+    <Border Grid.Row="0" Classes="Card" Padding="16,12" Margin="0,0,0,10">
+      <StackPanel>
+        <TextBlock Text="INVERTER FLEET  *  authored sample&#8594;compute&#8594;actuate dynamics" Classes="PanelHeader" />
+        <TextBlock x:Name="StatusText" Text="{Binding Status}" Classes="Label" Margin="0,4,0,12" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal">
+          <StackPanel Margin="0,0,44,0">
+            <TextBlock Text="NET FLEET RESPONSE" Classes="Label" />
+            <TextBlock x:Name="NetFleetMwText" Text="{Binding NetFleetMw}" Classes="Value" FontSize="28" />
+          </StackPanel>
+          <StackPanel Margin="0,0,44,0">
+            <TextBlock Text="CLASSES" Classes="Label" />
+            <TextBlock x:Name="ClassCountText" Text="{Binding ClassCount}" Classes="Value" FontSize="28" />
+          </StackPanel>
+          <StackPanel Margin="0,0,44,0">
+            <TextBlock Text="BOUND UNITS" Classes="Label" />
+            <TextBlock x:Name="TotalUnitsText" Text="{Binding TotalUnits}" Classes="Value" FontSize="28" />
+          </StackPanel>
+          <StackPanel>
+            <TextBlock Text="TRIPPED (LoM)" Classes="Label" />
+            <TextBlock x:Name="TotalTrippedText" Text="{Binding TotalTripped}" Classes="Value" FontSize="28"
+                       Foreground="{Binding TrippedColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+          </StackPanel>
+        </StackPanel>
+        <TextBlock x:Name="LomWarningText" Text="{Binding LomWarning}" Foreground="#F5615C" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap" />
+        <TextBlock x:Name="ProvenanceText" Text="{Binding Provenance}" Foreground="#F3C13A" FontSize="11" Margin="0,10,0,0" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <!-- ============ per-class table ============ -->
+    <Border Grid.Row="1" Classes="Card" Padding="16,12">
+      <StackPanel>
+        <TextBlock Text="PER-CLASS RESPONSE" Classes="PanelHeader" />
+        <Grid Margin="0,10,0,6" ColumnDefinitions="2.2*,1.4*,*,*,*,*">
+          <TextBlock Grid.Column="0" Text="CLASS" Classes="Label" />
+          <TextBlock Grid.Column="1" Text="MODE" Classes="Label" />
+          <TextBlock Grid.Column="2" Text="UNITS" Classes="Label" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="3" Text="ONLINE MW" Classes="Label" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="4" Text="TRIPPED" Classes="Label" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="5" Text="SoC" Classes="Label" HorizontalAlignment="Right" />
+        </Grid>
+        <ItemsControl x:Name="ClassesList" ItemsSource="{Binding Classes}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="inv:InverterFleetRowModel">
+              <Grid Margin="0,4" ColumnDefinitions="2.2*,1.4*,*,*,*,*">
+                <TextBlock Grid.Column="0" Text="{Binding ClassName}" Foreground="#C9D4DF" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Text="{Binding Mode}"
+                           Foreground="{Binding ModeColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                <TextBlock Grid.Column="2" Text="{Binding Count}" Foreground="#C9D4DF" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="3" Text="{Binding OnlineMw}" Foreground="#C9D4DF" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="4" Text="{Binding Tripped}" HorizontalAlignment="Right"
+                           Foreground="{Binding TrippedColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                <TextBlock Grid.Column="5" Text="{Binding Soc}" Foreground="#8A97A6" HorizontalAlignment="Right" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="Grid-forming units inject synthetic inertia (power &#8733; df/dt) and ride through; grid-following units droop on measured local frequency and trip on RoCoF/vector-shift."
+                   Foreground="#8A97A6" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

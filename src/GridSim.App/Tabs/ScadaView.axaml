@@ -1,0 +1,192 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             xmlns:sc="using:GridSim.Ui.Tabs.Scada"
+             x:Class="GridSim.App.Tabs.ScadaView"
+             x:DataType="sc:ScadaModel">
+  <!-- UI programme Phase 1.6: the SCADA tab, a port of src/GridSim.Wpf/Views/ScadaView.xaml. Same texts, same layout
+       order (title strip; the telemetry register with its filter and counts beside the event / alarm log), the same
+       theme brushes, and every colour from the shared ScadaModel's tokens through TokenBrush (the bytes WPF shows).
+       The WPF commands are click handlers here over the same model methods: a register row (OpenPoint), a row's ACK
+       (Ack) and ACK ALL (AckAll). The DataContext is the shared ScadaModel. -->
+  <UserControl.Styles>
+    <!-- WPF: a register row is a button whose template is a padded border with a faint bottom rule, lit on hover. -->
+    <Style Selector="Button.ScadaRow">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="#16202B" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="12,3" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.ScadaRow:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.ScadaRow:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="#16202B" />
+      <Setter Property="BorderBrush" Value="#16202B" />
+    </Style>
+    <!-- WPF: an acknowledged row's ACK button is disabled and drawn in the muted colour. -->
+    <Style Selector="Button.FlatBtn:disabled /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Foreground" Value="{DynamicResource Muted}" />
+      <Setter Property="Background" Value="{DynamicResource PanelHi}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="10" RowDefinitions="Auto,*">
+
+    <!-- ============ title strip ============ -->
+    <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Left">
+          <TextBlock Text="SCADA  SUPERVISORY CONTROL AND DATA ACQUISITION  -  SIMULATED"
+                     Classes="PanelHeader" FontSize="13" />
+          <TextBlock Text="synthetic telemetry  prediction target for future ML"
+                     Classes="Label" FontSize="10" Margin="0,2,0,0" />
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Right" Text="RTU LINK  SIMULATED" Classes="Label"
+                   FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Center" />
+      </DockPanel>
+    </Border>
+
+    <!-- ============ console body: register (left) + event log (right) ============ -->
+    <Grid Grid.Row="1" ColumnDefinitions="3*,10,2*">
+
+      <!-- ============ POINT REGISTER ============ -->
+      <Border Grid.Column="0" Classes="Card" Padding="0">
+        <DockPanel>
+          <!-- header: title + filter + counts -->
+          <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                  BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="TELEMETRY REGISTER" Classes="PanelHeader"
+                         VerticalAlignment="Center" />
+              <TextBlock x:Name="GoodCountText" DockPanel.Dock="Right" Text="{Binding GoodCount}" Classes="Label"
+                         FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Center"
+                         Margin="10,0,0,0" />
+              <TextBlock x:Name="PointCountText" DockPanel.Dock="Right" Text="{Binding PointCount}" Classes="Label"
+                         FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Center"
+                         Margin="10,0,0,0" />
+              <TextBlock DockPanel.Dock="Right" Text="filter" Classes="Label" FontSize="10"
+                         VerticalAlignment="Center" Margin="10,0,6,0" />
+              <Border DockPanel.Dock="Right" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}"
+                      BorderThickness="1" CornerRadius="4" Width="220" Margin="0">
+                <TextBox x:Name="FilterBox" Text="{Binding Filter, Mode=TwoWay}"
+                         Background="Transparent" Foreground="{StaticResource Text}" BorderThickness="0"
+                         FontFamily="{StaticResource MonoFont}" FontSize="11" Padding="8,4" MinHeight="0"
+                         VerticalContentAlignment="Center" CaretBrush="{StaticResource Accent}"
+                         ToolTip.Tip="Filter the register by tag or description" />
+              </Border>
+            </DockPanel>
+          </Border>
+
+          <!-- column heads -->
+          <Border DockPanel.Dock="Top" Padding="12,5" BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="2.4*,3*,1.1*,0.7*,0.7*,0.8*,0.8*">
+              <TextBlock Grid.Column="0" Text="TAG" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+              <TextBlock Grid.Column="1" Text="DESCRIPTION" Classes="Label" FontSize="{StaticResource MicroFontSize}" />
+              <TextBlock Grid.Column="2" Text="VALUE" Classes="Label" FontSize="{StaticResource MicroFontSize}" HorizontalAlignment="Right" />
+              <TextBlock Grid.Column="3" Text="UNITS" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="6,0,0,0" />
+              <TextBlock Grid.Column="4" Text="LOAD" Classes="Label" FontSize="{StaticResource MicroFontSize}" HorizontalAlignment="Right" />
+              <TextBlock Grid.Column="5" Text="QUAL" Classes="Label" FontSize="{StaticResource MicroFontSize}" Margin="6,0,0,0" />
+              <TextBlock Grid.Column="6" Text="STAMP" Classes="Label" FontSize="{StaticResource MicroFontSize}" HorizontalAlignment="Right" />
+            </Grid>
+          </Border>
+
+          <!-- rows -->
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="PointList" ItemsSource="{Binding Points}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="sc:ScadaPointModel">
+                  <Button Classes="ScadaRow" IsVisible="{Binding Visible}" Click="Point_Click"
+                          ToolTip.Tip="Open this asset in the explorer">
+                    <Grid ColumnDefinitions="2.4*,3*,1.1*,0.7*,0.7*,0.8*,0.8*">
+                      <TextBlock Grid.Column="0" Text="{Binding Tag}" FontFamily="{StaticResource MonoFont}"
+                                 FontSize="11" Foreground="{StaticResource Accent}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="1" Text="{Binding Description}" FontSize="11"
+                                 Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="6,0,6,0" />
+                      <TextBlock Grid.Column="2" Text="{Binding Value}" FontFamily="{StaticResource MonoFont}"
+                                 FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" />
+                      <TextBlock Grid.Column="3" Text="{Binding Units}" Classes="Label"
+                                 FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="4" Text="{Binding Load}" FontFamily="{StaticResource MonoFont}"
+                                 FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"
+                                 Foreground="{Binding LoadColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" />
+                      <Border Grid.Column="5" Background="{StaticResource Track}" CornerRadius="7" Padding="6,1"
+                              HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Quality}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="8.5" FontWeight="Bold"
+                                   Foreground="{Binding QualityColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                      </Border>
+                      <TextBlock Grid.Column="6" Text="{Binding Stamp}" FontFamily="{StaticResource MonoFont}"
+                                 FontSize="10" Foreground="{StaticResource Muted}" HorizontalAlignment="Right" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <!-- ============ EVENT / ALARM LOG ============ -->
+      <Border Grid.Column="2" Classes="Card" Padding="0">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                  BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Left" Text="EVENT / ALARM LOG" Classes="PanelHeader"
+                         VerticalAlignment="Center" />
+              <Button x:Name="AckAllButton" DockPanel.Dock="Right" Content="ACK ALL" Classes="FlatBtn"
+                      Click="AckAll_Click" Padding="10,3" FontSize="10" />
+              <Border DockPanel.Dock="Right" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}"
+                      BorderThickness="1" CornerRadius="7" Padding="8,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock x:Name="UnackedText" Text="{Binding Unacked}" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                             FontWeight="Bold" Foreground="{StaticResource Red}" />
+                  <TextBlock Text=" UNACKED" Classes="Label" FontSize="{StaticResource MicroFontSize}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Border>
+            </DockPanel>
+          </Border>
+
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="EventList" ItemsSource="{Binding Events}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="sc:ScadaEventModel">
+                  <Border Padding="10,5" Opacity="{Binding RowOpacity}" BorderBrush="#16202B" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+
+                      <!-- priority chip -->
+                      <Border Grid.Column="0" Background="{StaticResource Track}" CornerRadius="6" Padding="6,1"
+                              VerticalAlignment="Top" Margin="0,1,8,0">
+                        <TextBlock Text="{Binding Priority}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="9" FontWeight="Bold"
+                                   Foreground="{Binding PriorityColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                      </Border>
+
+                      <TextBlock Grid.Column="1" Text="{Binding Stamp}" FontFamily="{StaticResource MonoFont}"
+                                 FontSize="10" Foreground="{StaticResource Muted}" VerticalAlignment="Top"
+                                 Margin="0,2,8,0" />
+
+                      <StackPanel Grid.Column="2">
+                        <TextBlock Text="{Binding Source}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="10" Foreground="{StaticResource Accent}"
+                                   TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Message}" FontSize="11" FontWeight="SemiBold"
+                                   TextWrapping="Wrap" Margin="0,1,0,0" />
+                      </StackPanel>
+
+                      <Button Grid.Column="3" Classes="FlatBtn" Content="{Binding AckLabel}" Click="Ack_Click"
+                              IsEnabled="{Binding !Acked}" Padding="8,2" FontSize="{StaticResource MicroFontSize}"
+                              VerticalAlignment="Top" Margin="8,0,0,0" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

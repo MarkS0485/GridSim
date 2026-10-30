@@ -1,0 +1,7 @@
+$ cat results/gda-stalybridge/system.json
+{
+  "name": "GB/NGED ex-GDA [Stalybridge 132kV]",
+  "baseMva": 100,
+  "frequencyHz": 50
+}
+[exit 0]

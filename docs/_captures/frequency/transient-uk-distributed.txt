@@ -1,0 +1,5 @@
+$ gridsim transient uk --minutes 0.1 --dt-ms 100 --inertia-model distributed
+[transient] uk: done in 0.3s  nadir 50.000Hz  maxRoCoF -0.005Hz/s  exports 1  -> results\transient-uk-20261019-183828
+[transient] uk: 60 slices @ 100ms (0.1 min) on Newton-Raphson (dense)...
+[transient] distributed inertia: 3 speed domains, deltaGVa 56 % (per-tick integration remains the lumped live model; a distributed live integrator is a follow-up)
+[exit 0]

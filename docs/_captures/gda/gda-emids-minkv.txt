@@ -1,0 +1,38 @@
+$ gridsim gda --root $GDA_ROOT --licence EMIDS --minkv 132 --solve
+GridSim  -  GDA ingestion from $GDA_ROOT  (NGED)
+==========================================================================
+Built in 1324 ms  -  GB/NGED ex-GDA >=132kV
+
+  Raw LTDS nodes          22,590
+  Electrical buses           474   (busbar/disconnector ties merged: 770)
+  Series circuits            323   (cables & lines)
+  Transformers (2w/3w)       190 / 2   (+2 star nodes)
+  Total branches             519
+  Demand points              824   matched 824, total 8.90 GW
+  Generators                   2   (0.00 GW capacity, 894 unmatched)
+  System inertia             0.0 GVAs
+  OLTCs                      190
+  Connected islands            3   (largest 418 buses)
+
+  Buses by voltage:
+      132 kV       280
+       66 kV         1
+       33 kV       147
+       25 kV         6
+       11 kV        40
+
+   16 GSP infeed(s) modelled as slack buses; primary = bus 3 (Warwick 132kV Main 2, 132 kV).
+   WARNING ties: 2 zero-impedance circuit(s) whose Equipment is not a busbar or switch were merged as busbar ties (check for missing R/X cells): ANNE1_703-ANNE1_MAIN1 'Circuit'; ANNE1_803-ANNE1_MAIN4 'Circuit'.
+   Generation join: 1 row(s) joined by primary name alone: their GSP group does not list that primary in the demand table, but the name is unique to one GSP group.
+   Generation: 1 matched row(s), 5.0 MW export capacity, are not connected yet and were left out (statuses: 'Accepted').
+   Demand: 814 row(s), 8699.8 MW below the 132 kV cut were folded onto their nearest boundary bus (losses and voltage drop below the cut are not modelled).
+   Demand: 1294 row(s), 14331.8 MW are on nodes outside this build's network (other areas of the carve, or nodes on no in-scope element) and were not included.
+   Filtered to >=132 kV.
+   Licence = EMIDS.
+   Geolocated 361/474 buses from substations.csv.
+   validation: warning: 16 slack (reference) buses  -  treating as a multi-island system.
+
+Solving with the sparse (ILU0/BiCGSTAB) backend...
+Converged in 126 ms (4 NR, 10 OLTC, mismatch 1.76E-009)
+Generation 8.97 GW  Demand 8.90 GW  Losses 84.9 MW  V 0.921-1.007 p.u.
+[exit 0]

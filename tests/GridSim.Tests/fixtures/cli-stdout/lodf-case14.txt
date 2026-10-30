@@ -1,0 +1,13 @@
+LODF - IEEE 14-bus (14 buses): outage of branch 3 (2->4) redistributes onto:
+    branch 6    4->5           LODF -0.6761  (-67.6% of the lost flow)
+    branch 4    2->5           LODF  0.4421  ( 44.2% of the lost flow)
+    branch 5    3->4           LODF  0.2855  ( 28.5% of the lost flow)
+    branch 2    2->3           LODF  0.2855  ( 28.5% of the lost flow)
+    branch 1    1->5           LODF  0.2724  ( 27.2% of the lost flow)
+    branch 0    1->2           LODF -0.2724  (-27.2% of the lost flow)
+    branch 9    5->6           LODF  0.0384  (  3.8% of the lost flow)
+    branch 7    4->7           LODF -0.0244  ( -2.4% of the lost flow)
+    branch 14   7->9           LODF -0.0244  ( -2.4% of the lost flow)
+    branch 17   10->11         LODF -0.0231  ( -2.3% of the lost flow)
+    branch 10   6->11          LODF  0.0231  (  2.3% of the lost flow)
+    branch 15   9->10          LODF -0.0231  ( -2.3% of the lost flow)

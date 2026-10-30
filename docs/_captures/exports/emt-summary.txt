@@ -1,0 +1,12 @@
+$ cat results/exports-docs/emt/summary.md
+# EMT run: case14
+
+- steps: 2,500 @ 20 us (dur 0.05s)
+- source: bus 1, amp 1 pu, 50 Hz
+- refactorizations: 3
+- peak |probe|: 6.90333
+- wall: 134.8 ms (18,551 steps/s)
+- rule: Trapezoidal, CDA: True
+
+A forward model trajectory, not a claim about the real grid.
+[exit 0]

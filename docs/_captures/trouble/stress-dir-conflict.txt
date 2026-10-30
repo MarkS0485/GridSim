@@ -1,0 +1,3 @@
+$ gridsim stress case14 --dir data/uk
+error: stress: a positional case 'case14' and --dir 'data/uk' were both given and name different networks. Give one of them.
+[exit 2]

@@ -1,0 +1,3 @@
+$ gridsim nminus1 case14 --no-such-flag
+error: unknown flag '--no-such-flag' (misspelled?). Run 'gridsim nminus1 --help' for the flags nminus1 takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

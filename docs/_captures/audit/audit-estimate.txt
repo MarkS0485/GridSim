@@ -1,0 +1,12 @@
+$ gridsim estimate case14 --synth --audit-log results/audit-docs.log
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 2.72E-009
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  consistency: J = 80.01 vs chi2(95%) = 118.75 -> PASS
+  vs synthetic truth: max |dVm| = 1.330E-003 pu   max |dVa| = 2.248E-001 deg
+
+  -> results\estimate-case14
+audit: results\audit-docs.log entries=1 head=6451AC6679837D9B2BF5BBB635A309D83107CC719F1B654A13E9CCB7E1BF7EC7
+[exit 0]

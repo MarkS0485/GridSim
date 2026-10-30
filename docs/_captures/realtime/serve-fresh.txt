@@ -1,0 +1,6 @@
+$ gridsim serve case9 --measurements-dir results/realtime/windows --method ekf --utc-now 2024-03-01T12:00:00Z
+serving ekf estimator over 4 window(s) from results/realtime/windows
+horizon guard: now=2024-03-01T12:00:00.0000000Z, newest processable=2024-02-23T11:00:00.0000000Z
+done: processed 0, converged 0, rejected-fresh 4, failed 0
+error: no window produced a usable estimate: all 4 window(s) are newer than the 169 h horizon.
+[exit 3]

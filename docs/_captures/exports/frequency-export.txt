@@ -1,0 +1,36 @@
+$ head -n 34 results/exports-docs/replay-2019/baseline-frequency.json
+{
+  "schema": "gridsim-frequency-export/1",
+  "meta": {
+    "event": "gb-2019-08-09",
+    "gitCommit": "v1.95.294-168-g786a2162",
+    "timestampUtc": "2026-10-19T17:36:40.0997096Z",
+    "elapsedMs": 0,
+    "machine": "LAPTOP / Microsoft Windows 10.0.26300",
+    "provenance": "DerivedFromRecorded"
+  },
+  "inertia": {
+    "systemInertiaMwS": 215000,
+    "deviceRotationalInertiaMwS": 0,
+    "effectiveInertiaMwS": 215000,
+    "note": "E excludes fast response; FFR is a power injection (see fastResponse), never stored energy."
+  },
+  "fastResponse": {
+    "fastResponseMw": 0,
+    "timeConstantS": 0.5,
+    "deadbandHz": 0.015,
+    "note": "Separate labelled column - a power injection that arrests the nadir, distinct from inertia."
+  },
+  "demandMw": 21100,
+  "config": {
+    "nominalHz": 50,
+    "droopPu": 0.05,
+    "dampingPctPerHz": 3.3175355450236967,
+    "responsiveFraction": 0,
+    "governorTimeConstantS": 8,
+    "stepSeconds": 0.02,
+    "durationSeconds": 120
+  },
+  "systemResponseServices": [
+    {
+[exit 0]

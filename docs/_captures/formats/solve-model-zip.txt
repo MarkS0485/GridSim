@@ -1,0 +1,19 @@
+$ sed -n '129,145p' results/formats/uk-zip-solve.json
+        "type": "Pq",
+        "baseKv": 132,
+        "pd": 600,
+        "qd": 150.3741746120811,
+        "gs": 0,
+        "bs": 0,
+        "vm": 1,
+        "name": "North Scotland 132kV",
+        "zip": {
+          "ap": 0.2,
+          "bp": 0.3,
+          "cp": 0.5,
+          "aq": 0.2,
+          "bq": 0.3,
+          "cq": 0.5
+        }
+      },
+[exit 0]

@@ -1,0 +1,33 @@
+$ gridsim nminus1 case14
+GridSim  -  N-1 branch screening: IEEE 14-bus
+==========================================================================
+Base case: 1 pre-existing violation(s), reported once here and not counted against any outage: overvoltage 1.090 p.u.
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+1-2                             NO SOLUTION   no solution
+9-10                            VIOLATIONx1       0%       0%  1.010  1.090
+9-14                            VIOLATIONx1       0%       0%  0.997  1.090
+10-11                           VIOLATIONx1       0%       0%  1.010  1.090
+1-5                             base only         0%       0%  1.002  1.090
+2-3                             base only         0%       0%  0.954  1.090
+2-4                             base only         0%       0%  1.007  1.090
+2-5                             base only         0%       0%  1.010  1.090
+3-4                             base only         0%       0%  1.010  1.090
+4-5                             base only         0%       0%  1.010  1.090
+4-7 (tx)                        base only         0%       0%  1.010  1.090
+4-9 (tx)                        base only         0%       0%  1.010  1.090
+5-6 (tx)                        base only         0%       0%  0.994  1.090
+6-11                            base only         0%       0%  1.010  1.090
+6-12                            base only         0%       0%  1.010  1.090
+6-13                            base only         0%       0%  0.998  1.090
+7-8                             base only         0%       0%  1.010  1.090
+7-9                             base only         0%       0%  1.010  1.090
+12-13                           base only         0%       0%  1.010  1.090
+13-14                           base only         0%       0%  1.010  1.090
+--------------------------------------------------------------------------
+20 outages screened  16 secure  3 with violations  0 islanded  1 not solved
+(16 of the secure outages are 'base only': they add no violation, but the base case's own violations remain in their state)
+  4-7 (tx): makes base-case violation(s) worse: overvoltage 1.068 p.u.
+  7-9: makes base-case violation(s) worse: overvoltage 1.067 p.u.
+Verdict: NOT SECURE, 1 base-case violation(s) and 4 insecure outage(s) (exit 3).
+[exit 3]

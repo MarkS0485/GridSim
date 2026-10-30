@@ -1,0 +1,6 @@
+$ gridsim dcopf docs/_captures/opf/tri3 --no-limits
+DC-OPF - Three-bus worked example (3 buses)  [cheapest secure dispatch]
+  demand 100 MW  generation 100 MW  total cost 1,000 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 1         100.0 MW  @    10 GBP/MWh
+[exit 0]

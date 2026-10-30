@@ -1,0 +1,221 @@
+{
+ "note": "GB interconnector fleet: landing (onshore terminus) + approximate offshore sea point in world coords (equirectangular, x 0..1 west->east, y north-down). Routes/labels from GridSim.Wpf.Visuals.Interconnectors; landing/sea coords are approximate for schematic placement.",
+ "box": {
+  "lonMin": -8.2,
+  "lonMax": 1.9,
+  "latMin": 49.8,
+  "latMax": 59
+ },
+ "links": [
+  {
+   "name": "Moyle",
+   "country": "N. Ireland",
+   "landing": "Auchencrosh",
+   "landingLonLat": [
+    -4.95,
+    55.05
+   ],
+   "seaLonLat": [
+    -5.55,
+    54.9
+   ],
+   "landingWorld": [
+    0.32178,
+    0.42935
+   ],
+   "seaWorld": [
+    0.26238,
+    0.44565
+   ]
+  },
+  {
+   "name": "North Sea Link",
+   "country": "Norway",
+   "landing": "Blyth",
+   "landingLonLat": [
+    -1.51,
+    55.13
+   ],
+   "seaLonLat": [
+    0.9,
+    56.4
+   ],
+   "landingWorld": [
+    0.66238,
+    0.42065
+   ],
+   "seaWorld": [
+    0.90099,
+    0.28261
+   ]
+  },
+  {
+   "name": "EWIC",
+   "country": "Ireland",
+   "landing": "Deeside",
+   "landingLonLat": [
+    -3.03,
+    53.22
+   ],
+   "seaLonLat": [
+    -4.6,
+    53.35
+   ],
+   "landingWorld": [
+    0.51188,
+    0.62826
+   ],
+   "seaWorld": [
+    0.35644,
+    0.61413
+   ]
+  },
+  {
+   "name": "Viking Link",
+   "country": "Denmark",
+   "landing": "Bicker Fen",
+   "landingLonLat": [
+    -0.2,
+    52.95
+   ],
+   "seaLonLat": [
+    1.5,
+    53.3
+   ],
+   "landingWorld": [
+    0.79208,
+    0.65761
+   ],
+   "seaWorld": [
+    0.9604,
+    0.61957
+   ]
+  },
+  {
+   "name": "IFA",
+   "country": "France",
+   "landing": "Sellindge",
+   "landingLonLat": [
+    0.95,
+    51.1
+   ],
+   "seaLonLat": [
+    1.5,
+    50.85
+   ],
+   "landingWorld": [
+    0.90594,
+    0.8587
+   ],
+   "seaWorld": [
+    0.9604,
+    0.88587
+   ]
+  },
+  {
+   "name": "ElecLink",
+   "country": "France",
+   "landing": "Folkestone",
+   "landingLonLat": [
+    1.18,
+    51.08
+   ],
+   "seaLonLat": [
+    1.6,
+    50.88
+   ],
+   "landingWorld": [
+    0.92871,
+    0.86087
+   ],
+   "seaWorld": [
+    0.9703,
+    0.88261
+   ]
+  },
+  {
+   "name": "NemoLink",
+   "country": "Belgium",
+   "landing": "Richborough",
+   "landingLonLat": [
+    1.32,
+    51.29
+   ],
+   "seaLonLat": [
+    1.8,
+    51.45
+   ],
+   "landingWorld": [
+    0.94257,
+    0.83804
+   ],
+   "seaWorld": [
+    0.9901,
+    0.82065
+   ]
+  },
+  {
+   "name": "BritNed",
+   "country": "Netherlands",
+   "landing": "Grain",
+   "landingLonLat": [
+    0.68,
+    51.44
+   ],
+   "seaLonLat": [
+    1.75,
+    51.9
+   ],
+   "landingWorld": [
+    0.87921,
+    0.82174
+   ],
+   "seaWorld": [
+    0.98515,
+    0.77174
+   ]
+  },
+  {
+   "name": "IFA2",
+   "country": "France",
+   "landing": "Chilling",
+   "landingLonLat": [
+    -1.28,
+    50.85
+   ],
+   "seaLonLat": [
+    -1.1,
+    50.15
+   ],
+   "landingWorld": [
+    0.68515,
+    0.88587
+   ],
+   "seaWorld": [
+    0.70297,
+    0.96196
+   ]
+  },
+  {
+   "name": "Greenlink",
+   "country": "Ireland",
+   "landing": "Pembroke",
+   "landingLonLat": [
+    -4.98,
+    51.68
+   ],
+   "seaLonLat": [
+    -5.65,
+    51.9
+   ],
+   "landingWorld": [
+    0.31881,
+    0.79565
+   ],
+   "seaWorld": [
+    0.25248,
+    0.77174
+   ]
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+$ head -n 20 results/exports-docs/smallsignal.json
+{
+  "schema": "gridsim-smallsignal/1",
+  "label": "WSCC-9",
+  "f0": 50,
+  "inverterStatesIncluded": false,
+  "states": [
+    {
+      "index": 0,
+      "kind": "SwingAngle",
+      "ownerId": 1,
+      "name": "d.delta_gen1",
+      "synthetic": false
+    },
+    {
+      "index": 1,
+      "kind": "SwingAngle",
+      "ownerId": 2,
+      "name": "d.delta_gen2",
+      "synthetic": false
+    },
+[exit 0]

@@ -1,0 +1,8 @@
+$ cat results/exports-docs/inputs/shunts.json
+{
+  "format": "gridsim-switched-shunts/1",
+  "shunts": [
+    { "bus": 5, "stepMvar": 10, "minSteps": 0, "maxSteps": 4, "initialSteps": 0, "vminPu": 1.02, "vmaxPu": 1.04, "name": "C5" }
+  ]
+}
+[exit 0]

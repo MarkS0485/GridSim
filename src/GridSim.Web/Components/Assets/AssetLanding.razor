@@ -1,0 +1,102 @@
+@* The explorer landing page: every asset class in the running model as a live drill-down tile
+   (count + a headline live metric + a mini bar). Mirrors GridSim.Wpf AssetHomeVm. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET EXPLORER</div>
+    <div class="card-h" style="margin-bottom:2px">ASSETS</div>
+    <div class="muted-note" style="margin-top:0">every asset class in the running model - drill down to the unit</div>
+</div>
+
+<div class="case-grid" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">
+    @foreach (Tile t in Tiles())
+    {
+        <div class="card" role="button" tabindex="0"
+             style="text-align:left;cursor:pointer;border-color:var(--edge);display:flex;flex-direction:column;gap:10px"
+             @onclick="t.Open">
+            <div style="display:flex;align-items:center;gap:8px">
+                <span class="card-h" style="margin:0">@t.Title</span>
+                <span class="card-eyebrow" style="margin:0 0 0 auto;background:var(--track);padding:2px 7px;border-radius:var(--r-pill)">@t.Tag</span>
+            </div>
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:10px">
+                <div>
+                    <div style="font-size:2.1em;font-weight:700;font-variant-numeric:tabular-nums;line-height:1">@t.Count</div>
+                    <div class="card-eyebrow" style="margin:2px 0 0">UNITS</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:1.6em;font-weight:700;font-variant-numeric:tabular-nums;color:@t.Color">@t.Metric<span style="font-size:0.55em;color:var(--muted)">@t.Unit</span></div>
+                    <div class="card-eyebrow" style="margin:2px 0 0">@t.MetricLabel</div>
+                </div>
+            </div>
+            <div class="uibar"><span style="width:@Pct(t.BarFrac);background:@t.Color"></span></div>
+            <div class="muted-note" style="margin-top:0">@t.Detail</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private sealed record Tile(string Title, string Tag, string Count, string Metric, string Unit,
+        string MetricLabel, string Color, double BarFrac, string Detail, Action Open);
+
+    private List<Tile> Tiles()
+    {
+        var gens = Graph.Generators.Where(g => !g.Interconnector).ToList();
+        var ics = Graph.Generators.Where(g => g.Interconnector).ToList();
+        var txs = Graph.Branches.Where(b => b.IsTransformer).ToList();
+        var ckts = Graph.Branches.Where(b => !b.IsTransformer).ToList();
+
+        double genPg = gens.Sum(g => g.Pg), genCap = gens.Where(g => g.Capped).Sum(g => g.PmaxMw);
+        double icNet = ics.Sum(g => g.Pg), icCap = ics.Where(g => g.Capped).Sum(g => g.PmaxMw);
+        bool importing = icNet > 5, exporting = icNet < -5;
+
+        var txRated = txs.Where(b => b.RatingMva > 0).ToList();
+        double txMean = txRated.Count > 0 ? txRated.Average(b => b.LoadingPercent) : 0;
+        var cktRated = ckts.Where(b => b.RatingMva > 0).ToList();
+        double cktMax = cktRated.Count > 0 ? cktRated.Max(b => b.LoadingPercent) : 0;
+
+        int outOfBand = Graph.Buses.Count(b => b.Solved && (b.Vm < 0.94 || b.Vm > 1.06));
+        var vByBus = Graph.Buses.ToDictionary(b => b.Id, b => b);
+        int inBand = Graph.Oltcs.Count(o => vByBus.TryGetValue(o.ControlsBus, out var b) && b.Solved
+                                            && Math.Abs(b.Vm - o.TargetVpu) <= o.DeadbandPu);
+
+        return new List<Tile>
+        {
+            new("GENERATORS", "FLEET", gens.Count.ToString(), $"{genPg / 1000.0:F1}", " GW", "DISPATCHED OUTPUT",
+                "var(--accent)", genCap > 0 ? Math.Min(1, genPg / genCap) : 0,
+                "thermal | nuclear | hydro | wind | solar - by fuel, down to the unit",
+                () => Nav.Open(new AssetRoute(AssetPage.GenFleet, Title: "GENERATORS"))),
+            new("INTERCONNECTORS", "LIVE", ics.Count.ToString(), $"{icNet / 1000.0:+0.00;-0.00;0.00}", " GW",
+                importing ? "NET IMPORT" : exporting ? "NET EXPORT" : "BALANCED",
+                WebPalette.Voltage(importing ? 1.0 : exporting ? 1.05 : 0.98),
+                icCap > 0 ? Math.Min(1, Math.Abs(icNet) / icCap) : 0,
+                "the GB import links - signed flow, capacity, landing site",
+                () => Nav.Open(new AssetRoute(AssetPage.IcFleet, Title: "INTERCONNECTORS"))),
+            new("TRANSFORMERS", "FLEET", txs.Count.ToString(), txRated.Count > 0 ? $"{txMean:F0}" : "-",
+                txRated.Count > 0 ? "%" : "", "MEAN LOADING", WebPalette.Loading(txMean / 100.0),
+                Math.Min(1, txMean / 100.0),
+                "GSP and grid transformers by voltage band, OLTC state per unit",
+                () => Nav.Open(new AssetRoute(AssetPage.TxFleet, Title: "TRANSFORMERS"))),
+            new("CABLES & LINES", "FLEET", ckts.Count.ToString(), cktRated.Count > 0 ? $"{cktMax:F0}" : "-",
+                cktRated.Count > 0 ? "%" : "", "PEAK CIRCUIT LOADING", WebPalette.Loading(cktMax / 100.0),
+                Math.Min(1, cktMax / 100.0),
+                "transmission corridors and circuits - loading, rating, route",
+                () => Nav.Open(new AssetRoute(AssetPage.CktFleet, Title: "CABLES & LINES"))),
+            new("SUBSTATIONS", "FLEET", Graph.Buses.Count.ToString(), outOfBand.ToString(), "",
+                outOfBand == 0 ? "ALL IN VOLTAGE BAND" : "BUSES OUT OF BAND",
+                WebPalette.Voltage(outOfBand == 0 ? 1.0 : 1.06),
+                Graph.Buses.Count > 0 ? Math.Min(1, (double)outOfBand / Graph.Buses.Count) : 0,
+                "every electrical bus - voltage, demand, connected plant",
+                () => Nav.Open(new AssetRoute(AssetPage.SubFleet, Title: "SUBSTATIONS"))),
+            new("TAP CHANGERS", "FLEET", Graph.Oltcs.Count.ToString(),
+                Graph.Oltcs.Count > 0 ? $"{inBand} / {Graph.Oltcs.Count}" : "-", "", "ON-TARGET (IN DEADBAND)",
+                WebPalette.Loading(Graph.Oltcs.Count > 0 && inBand == Graph.Oltcs.Count ? 0.0 : 0.7),
+                Graph.Oltcs.Count > 0 ? (double)inBand / Graph.Oltcs.Count : 0,
+                "on-load tap changers and the buses they regulate",
+                () => Nav.Open(new AssetRoute(AssetPage.TapFleet, Title: "TAP CHANGERS"))),
+        };
+    }
+
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+}

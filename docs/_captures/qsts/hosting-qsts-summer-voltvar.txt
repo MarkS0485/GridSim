@@ -1,0 +1,16 @@
+$ gridsim hosting case33bw.m --method qsts --study docs/_captures/qsts/summer33.json --resource-profile solar --buses 6,18,33 --max-mw 8 --tolerance-mw 0.01 --pv-function volt-var --mva-per-mw 1.1
+Hosting capacity (PV, qsts method) - case33bw (33 buses), engine Backward-forward sweep
+  3 candidate bus(es), search 0..8 MW to 0.01 MW, 23 size evaluations in 2.16 s (1 thread(s))
+  time series: 48 step(s) of 1800 s, resource profile solar, allowed time outside limits 0 s
+  limits: 0.94-1.05 pu, loading 100 %, no reverse-power check
+  bus        hosting MW  fails at MW  limiting constraint
+  18             2.1719       2.1797  overvoltage: bus 18 at 1.0501 pu for 1800 s
+  33             3.5234       3.5313  overvoltage: bus 33 at 1.0500 pu for 1800 s
+  6                   8           >8  none within the search range
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case33bw.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+[hosting] --reverse-branch auto: no named branch leaves the slack bus, so there is no reverse-power check (name one with --reverse-branch).
+[exit 0]

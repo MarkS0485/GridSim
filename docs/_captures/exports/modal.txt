@@ -1,0 +1,49 @@
+$ gridsim modal case9 --damping 0.05 --export results/exports-docs/smallsignal.json
+Exported small-signal model (6 states) -> results\exports-docs\smallsignal.json
+GridSim  -  SMALL-SIGNAL / MODAL STABILITY  *  WSCC-9
+==================================================================
+3 machine(s), 6 state(s)  *  X'd = Anderson-Fouad  *  inverters off  *  damping D = 0.050
+
+   sigma (1/s)  omega (rad/s)    f (Hz)      zeta   mode
+       -0.0010        -6.9578    1.1074    0.0001   oscillatory
+       -0.0010         6.9578    1.1074    0.0001   oscillatory
+       -0.0030       -12.4975    1.9890    0.0002   oscillatory
+       -0.0030        12.4975    1.9890    0.0002   oscillatory
+       -0.0010         0.0000    0.0000    1.0000   real
+        0.0000         0.0000    0.0000    0.0000   real
+
+Least-damped oscillatory mode: 1.107 Hz, zeta = 0.0001  (poorly damped)
+Right-half-plane eigenvalues (small-signal unstable): 0
+Minimum oscillatory damping ratio: 0.0001
+
+Dominant participation (which state drives each oscillatory mode):
+    1.107 Hz (zeta  0.0001) : d.delta_gen2 36%, d.omega_gen2 36%, d.omega_gen1 11%
+    1.107 Hz (zeta  0.0001) : d.delta_gen2 36%, d.omega_gen2 36%, d.omega_gen1 11%
+    1.989 Hz (zeta  0.0002) : d.delta_gen3 44%, d.omega_gen3 44%, d.omega_gen2 6%
+    1.989 Hz (zeta  0.0002) : d.delta_gen3 44%, d.omega_gen3 44%, d.omega_gen2 6%
+
+s-plane (imag up, real right; '*' stable pole, 'X' RHP/unstable, left of axis = damped):
+                         |                         
+ *                       |                         
+                         |                         
+                         |                         
+                         |                         
+                 *       |                         
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+-----------------*-------*-------------------------
+                         |                         
+                         |                         
+                         |                         
+                         |                         
+                 *       |                         
+                         |                         
+                         |                         
+                         |                         
+ *                       |                         
+                         |
+
+Eigenvalues of A = [[0, ws I],[-M^-1 K_L, -M^-1 D]] (true asymmetric K_L; Francis-QR, biorthonormal participation).
+[exit 0]

@@ -1,0 +1,12 @@
+[
+  { "transformer": "T1 GSP N Scotland",       "controlsBus": 101, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T2 GSP S Scotland",       "controlsBus": 102, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T3 GSP N England",        "controlsBus": 103, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T4 GSP Yorkshire",        "controlsBus": 104, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T5 GSP N Wales & Mersey", "controlsBus": 105, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T6 GSP Midlands",         "controlsBus": 106, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T7 GSP East Anglia",      "controlsBus": 107, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T8 GSP London & SE",      "controlsBus": 108, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T9 GSP South",            "controlsBus": 109, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 },
+  { "transformer": "T10 GSP SW & S Wales",    "controlsBus": 110, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 }
+]

@@ -1,0 +1,4 @@
+[
+  { "name": "embedded-dg-lom",  "class": "prot-lom-legacy",  "monitorBus": 1, "capacityMw": 800 },
+  { "name": "system-lfdd-1",    "class": "prot-lfdd-stage1", "monitorBus": 1, "capacityMw": 632 }
+]

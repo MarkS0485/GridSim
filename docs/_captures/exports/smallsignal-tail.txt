@@ -1,0 +1,6 @@
+$ sed -n '214,217p' results/exports-docs/smallsignal.json
+  "rhpEigenvalueCount": 0,
+  "minDampingRatio": 0.00015662814899597232,
+  "participationAvailable": true,
+  "exitCode": 0
+[exit 0]

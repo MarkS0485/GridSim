@@ -1,0 +1,16 @@
+{
+  "timestampUtc": "2026-07-02T15:46:03.9566298Z",
+  "backend": "gpu/cuda (NVIDIA H100 PCIe [CUDA] \u2014 FP64 is fast (data-centre GPU) (driver probe: cuInit=0 driverVer=12080 cuDeviceGetCount rc=0 count=1))",
+  "gitCommit": "8ec809d2-dirty",
+  "buildConfig": "Release",
+  "coreVersion": "0.1.0.0",
+  "runtime": ".NET 10.0.9",
+  "arch": "X64",
+  "serverGc": true,
+  "machineName": "curious-fermi",
+  "os": "Ubuntu 24.04.3 LTS",
+  "cpu": "AMD EPYC 9554 64-Core Processor",
+  "logicalCores": 28,
+  "ramGb": 177.1,
+  "run": "bench-matrix  cases=25  engines=5  runs=5  parallel=1  note=\u0022H100 PCIe R570 \u002B EPYC 28c: parallel=1 (uncontended latency)\u0022"
+}

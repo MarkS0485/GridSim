@@ -1,0 +1,6 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json harmonics --bus 4 --spectrum nope --current 0.2
+THREE-PHASE DISTRIBUTION (harmonics) - IEEE 4-node test feeder, grounded-wye / grounded-wye step-down, unbalanced load   [EXPERIMENTAL]
+  file: data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json
+  4 buses, 3 branches, 1 loads, base 6 MVA (three-phase)
+error: --spectrum expected one of 6-pulse, 12-pulse, pv-inverter, ev-charger, heat-pump-inverter, arc-furnace, saturated-transformer, 6-pulse-g5, 12-pulse-g5, afe-g5, ideal but got 'nope'
+[exit 2]

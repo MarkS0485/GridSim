@@ -1,0 +1,20 @@
+{
+  "schema": "gridsim-network/2",
+  "buses": [
+    { "id": 1, "name": "North 400", "baseKv": 400, "type": "slack" },
+    { "id": 2, "name": "Wind 400", "baseKv": 400 },
+    { "id": 3, "name": "South 400", "baseKv": 400 }
+  ],
+  "generators": [
+    { "name": "North CCGT", "bus": 1, "type": "ccgt", "capacityMva": 600, "outputMw": 200, "role": "slack" },
+    { "name": "Wind farm", "bus": 2, "type": "wind-onshore", "capacityMva": 200, "outputMw": 120 }
+  ],
+  "demands": [
+    { "name": "South load", "bus": 3, "pMw": 300, "qMvar": 80 }
+  ],
+  "lines": [
+    { "name": "L1-2", "from": 1, "to": 2, "rPu": 0.002, "xPu": 0.02, "bPu": 0.1, "ratingMva": 500 },
+    { "name": "L2-3", "from": 2, "to": 3, "rPu": 0.003, "xPu": 0.03, "bPu": 0.1, "ratingMva": 500 },
+    { "name": "L1-3", "from": 1, "to": 3, "rPu": 0.004, "xPu": 0.04, "bPu": 0.1, "ratingMva": 500 }
+  ]
+}

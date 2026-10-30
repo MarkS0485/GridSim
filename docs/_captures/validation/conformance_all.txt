@@ -1,0 +1,108 @@
+$ gridsim conformance
+    GridSim  -  2026-10-20 05:22:24 UTC
+    code:    git v1.95.294-173-g203c6b9c  |  GridSim.Core v1.95.467.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     conformance  cases=27  tol=BaseMva*1e-8  allowances=on
+
+Physical-law conformance sweep. GATE = every hard law (energy/Ohm/Joule/KCL/complex-power)
+holds, i.e. the solved state is physically admissible. NOTE: lake-scale sweep over stored
+estimated/presolved states runs via tools/crossval/physics_audit.py (this verb sweeps cases).
+Tolerance: BaseMva x 1e-8 MVA per case (the solver's convergence tolerance on that case's base).
+
+| case | buses | conv | gate | worst hard law | residual |
+|------|------:|:----:|:----:|----------------|---------:|
+| GBnetwork | 2224 | yes | PASS | Complex power S = V I* | 7.29E-009 |
+| GBreducednetwork | 29 | yes | PASS | Complex power S = V I* | 1.72E-010 |
+| pglib_opf_case3_lmbd | 3 | no | allowed | (unconverged: MaxIterations; known, see below) | - |
+| pglib_opf_case5_pjm | 5 | yes | PASS | Complex power S = V I* | 3.57E-009 |
+| case9 (WSCC) | 9 | yes | PASS | Kirchhoff's current law | 1.69E-012 |
+| case14 | 14 | yes | PASS | Complex power S = V I* | 1.32E-008 |
+| cigre_mv | 15 | yes | PASS | Complex power S = V I* | 6.23E-008 |
+| case18 | 18 | yes | PASS | Complex power S = V I* | 1.37E-008 |
+| case22 | 22 | yes | PASS | Kirchhoff's current law | 1.93E-011 |
+| case24_ieee_rts | 24 | yes | PASS | Kirchhoff's current law | 6.52E-010 |
+| case30 | 30 | yes | PASS | Kirchhoff's current law | 9.57E-008 |
+| pglib_opf_case30_as | 30 | yes | PASS | Complex power S = V I* | 3.38E-008 |
+| case33bw | 33 | yes | PASS | Complex power S = V I* | 6.82E-010 |
+| case57 | 57 | yes | PASS | Kirchhoff's current law | 3.45E-010 |
+| case69 | 69 | yes | PASS | Kirchhoff's current law | 5.28E-009 |
+| pglib_opf_case73_ieee_rts | 73 | yes | PASS | Complex power S = V I* | 1.34E-007 |
+| case85 | 85 | yes | PASS | Kirchhoff's current law | 3.23E-010 |
+| case118 | 118 | yes | PASS | Complex power S = V I* | 3.13E-012 |
+| case145 | 145 | yes | PASS | Kirchhoff's current law | 1.35E-007 |
+| pglib_opf_case162_ieee_dtc | 162 | no | allowed | (unconverged: MaxIterations; known, see below) | - |
+| pglib_opf_case240_pserc | 240 | no | allowed | (unconverged: MaxIterations; known, see below) | - |
+| case300 | 300 | yes | PASS | Complex power S = V I* | 1.19E-010 |
+| case533mt_hi | 533 | yes | PASS | Kirchhoff's current law | 8.90E-010 |
+| pglib_opf_case588_sdet | 588 | yes | PASS | Ohm's law | 5.13E-010 |
+| case1354pegase | 1354 | yes | PASS | Complex power S = V I* | 7.43E-007 |
+| case2869pegase | 2869 | yes | PASS | Complex power S = V I* | 4.79E-010 |
+| case9241pegase | 9241 | yes | PASS | Complex power S = V I* | 9.95E-009 |
+
+Conformance: **24/24** converged cases physically admissible (all hard laws hold); 0 skipped; 3 known unconverged (allowed); 0 unconverged and not allowed.
+
+Allowed unconverged cases (the documented list in src/GridSim.Cli/ConformanceAllowances.cs; --no-allowances turns it off):
+- pglib_opf_case3_lmbd: PGLib-OPF 3-bus optimisation operating point (data/matpower/nesta); Newton from its stored voltages does not converge in 100 iterations
+- pglib_opf_case162_ieee_dtc: PGLib-OPF 162-bus optimisation operating point (data/matpower/nesta); Newton from its stored voltages does not converge in 100 iterations
+- pglib_opf_case240_pserc: PGLib-OPF 240-bus optimisation operating point (data/matpower/nesta); Newton from its stored voltages does not converge in 100 iterations
+note: GBnetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: GBnetwork.m: read mpc.gencost (394 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: GBreducednetwork.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: GBreducednetwork.m: read mpc.gencost (66 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case3_lmbd.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case3_lmbd.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case3_lmbd.m: 3 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: pglib_opf_case5_pjm.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case5_pjm.m: read mpc.gencost (5 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case5_pjm.m: 6 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: case18.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case18.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case22.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case22.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case22.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case22.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+note: pglib_opf_case30_as.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case30_as.m: read mpc.gencost (6 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case30_as.m: solved 3 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+note: pglib_opf_case30_as.m: 41 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: case33bw.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case33bw.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case33bw.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case33bw.m: skipped 5 out-of-service branch(es).
+note: case33bw.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+note: case69.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case69.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case69.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case69.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+note: pglib_opf_case73_ieee_rts.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case73_ieee_rts.m: read mpc.gencost (99 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case73_ieee_rts.m: 120 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: case85.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case85.m: the file has 2 indexed assignment(s) after the matrices (mpc.branch, mpc.bus); MATLAB statements are not run, so they are not applied (a raw-unit distribution feeder is converted by the unit normaliser instead).
+note: case85.m: read mpc.gencost (1 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case85.m: raw engineering units detected (branch impedance in ohms, demand in kW / kVAr, as in the published distribution feeders); converted to per-unit and MW: R and X divided by Zbase = baseKV^2 / baseMVA of the from bus, Pd, Qd, Gs and Bs divided by 1000.
+note: pglib_opf_case162_ieee_dtc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case162_ieee_dtc.m: read mpc.gencost (12 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case162_ieee_dtc.m: 284 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: pglib_opf_case240_pserc.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case240_pserc.m: read mpc.gencost (143 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case240_pserc.m: 448 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: case533mt_hi.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case533mt_hi.m: skipped 45 out-of-service branch(es).
+note: pglib_opf_case588_sdet.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: pglib_opf_case588_sdet.m: kept 72 out-of-service generator(s) in the model, marked out of service (not solved).
+note: pglib_opf_case588_sdet.m: read mpc.gencost (167 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: pglib_opf_case588_sdet.m: solved 43 PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.
+note: pglib_opf_case588_sdet.m: 686 in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case2869pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case2869pegase.m: read mpc.gencost (510 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+note: case9241pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case9241pegase.m: read mpc.gencost (1445 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[conformance] 24/24 admissible -> results\conformance\conformance.md
+[exit 0]

@@ -1,0 +1,4 @@
+$ head -n 4 results/exports-docs/stress.csv
+case,buses,max_loadability,vmin_at_max,commit
+case14,14,1.75,0.714,98048023
+[exit 0]

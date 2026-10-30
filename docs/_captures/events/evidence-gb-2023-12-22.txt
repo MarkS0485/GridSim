@@ -1,0 +1,14 @@
+$ gridsim evidence --event gb-2023-12-22
+
+=== Evidence dossier: GB 22 Dec 2023 excursion (IFA + Cottam, settlement-measured) ===
+  when: 2023-12-22T13:09:51.0000000Z   event provenance: DerivedFromRecorded   baseline gate: Marginal
+
+  column                                          RoCoF    nadir  LFDD   dev inertia  dev FFR
+  --------------------------------------------------------------------------------------------
+  recorded                                    -0.102Hz/s  49.27Hz    no        0.0GVAs  0.00GW   [Recorded]
+  simulated (no device)                       -0.123Hz/s  48.98Hz    no        0.0GVAs  0.00GW   [DerivedFromRecorded]
+
+  Baseline Marginal - counterfactual withheld. Reproduce the record first ([VERIFY] the event figures/tolerances).
+
+  -> results\evidence-gb-2023-12-22
+[exit 3]

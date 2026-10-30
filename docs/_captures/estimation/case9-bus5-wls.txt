@@ -1,0 +1,11 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bus5.json --out results/case9-bus5-wls
+
+=== WLS state estimate: case9 ===
+  status: Converged   iterations: 17   max |dx|: 6.78E-009
+  measurements: 24   states: 17   redundancy (dof): 6
+  observability: observable (rank 17/17)
+  consistency: J = 0.45 vs chi2(95%) = 12.57 -> PASS
+  removed bad data (pass 0): PInjMw @ bus 5  rN = 6.7
+
+  -> results\case9-bus5-wls
+[exit 0]

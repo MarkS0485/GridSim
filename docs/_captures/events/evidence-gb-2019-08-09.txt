@@ -1,0 +1,21 @@
+$ gridsim evidence --event gb-2019-08-09
+
+=== Evidence dossier: GB 9 Aug 2019 disturbance (Hornsea + Little Barford) ===
+  when: 2019-08-09T15:52:33.0000000Z   event provenance: DerivedFromRecorded   baseline gate: Reproduced
+
+  column                                          RoCoF    nadir  LFDD   dev inertia  dev FFR
+  --------------------------------------------------------------------------------------------
+  recorded                                    -0.170Hz/s  48.80Hz   YES        0.0GVAs  0.00GW   [Recorded]
+  simulated (no device)                       -0.171Hz/s  48.84Hz    no        0.0GVAs  0.00GW   [DerivedFromRecorded]
+  counterfactual (device @ 215 GVA.s)         -0.147Hz/s  49.07Hz    no       30.0GVAs  1.00GW   [Counterfactual]
+
+  single-vs-fleet @ 215 GVA.s: aggregate nadir 49.07 Hz vs 100-unit fleet 49.07 Hz (FFR@nadir 1000 vs 1000 MW).
+
+  AVOIDED COST: 892 MW shed x 0.50 h x GBP 6,000/MWh = GBP 2,676,000  [CuratedPlaceholder]
+                (recorded LFDD energy avoided (MW shed x duration h) x VoLL (GBP/MWh) - grounded in the record, not a marketing figure)
+                VoLL [CuratedPlaceholder]   duration [CuratedPlaceholder]
+
+  Baseline Reproduced; counterfactual device DOES keep the nadir above LFDD; avoided cost GBP 2,676,000 (CuratedPlaceholder)
+
+  -> results\evidence-gb-2019-08-09
+[exit 0]

@@ -1,0 +1,16 @@
+$ gridsim stability case9 --screen
+GridSim  -  TRANSIENT STABILITY SCREEN (classical multi-machine)  *  WSCC-9
+==================================================================
+3 machines (0 converter / power-flow-only / zero-inertia units held)  *  3 generator-bus faults  *  X'd = Anderson-Fouad
+
+ Rank  Fault bus   CCT (ms)
+    1          3        302   <- most critical
+    2          2        312   NON-MONOTONE: holds again at 320 ms
+    3          1        498   NON-MONOTONE: holds again at 502 ms
+
+Self-clearing 3-phase fault at each generator bus; lower critical clearing time = less margin.
+CCT = longest clearing time on the 2 ms integration-step grid that keeps synchronism (clearing one step, 2 ms, later loses it); resolution 2 ms.
+A CCT of 0 ms means even an instantaneous clear loses synchronism; 1000 ms means no clearing time in the 1000 ms search window loses it.
+It is the first loss from below: the 16 steps (32 ms) below it are checked to hold and as many above it are probed; NON-MONOTONE marks a later clearing time that holds again (a stable pocket).
+Each trial is judged over the 5 s after the fault clears (the documented default window: first-swing stability, the range in which the classical constant-E' model holds); an undamped system can lose synchronism on a later swing, so a longer window can give a shorter CCT.
+[exit 0]

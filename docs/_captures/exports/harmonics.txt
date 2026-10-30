@@ -1,0 +1,8 @@
+$ gridsim harmonics case9 --spectra docs/_captures/harmonics/spectra-case9.json --enableExport=results/exports-docs/harmonic-export.json
+harmonics: case IEEE 9-bus (WSCC), 1 source(s), orders 24
+  worst voltage THD : 4.71% at bus 9 (relative to the solved fundamental voltage)
+  resonance (bus 9): order 7, |Z|=0.658 pu, sharpness 3.8
+  fine sweep peak  : h=7.4750 (448.50 Hz), |Z|=0.688 pu, positive sequence
+  IEEE-519         : 1/9 buses compliant
+  export -> results\exports-docs\harmonic-export.json
+[exit 0]

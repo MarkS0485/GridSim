@@ -1,0 +1,3 @@
+$ gridsim replay-event --dump-catalog results/dump-events.json
+wrote built-in catalog (3 events) -> results\dump-events.json
+[exit 0]

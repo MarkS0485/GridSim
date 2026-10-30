@@ -1,0 +1,3 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json sweep --bus 4
+error: dist3ph sweep does not take --bus (allowed: --tol, --max-iter).
+[exit 2]

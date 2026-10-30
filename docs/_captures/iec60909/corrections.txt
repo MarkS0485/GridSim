@@ -1,0 +1,10 @@
+$ gridsim iec60909 case9 --bus 5 --corrections --rated-pf 0.85
+IEC 60909-0 impedance corrections (rated power factor 0.85): 3 applied
+  K_G: 3 element(s), 0.9952 to 0.9952
+IEC 60909 - IEEE 9-bus (WSCC), bus 5, three-phase, Maximum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 1.4704922481380072 kA  (8.787037136393673 pu)
+  ip    = 4.1489859743256465 kA  (kappa 1.9950979824670259, R/X 0.10515164200194041, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 1.4704922481380072 kA    Ik = 1.4704922481380072 kA
+  Ith   = 1.4902483842353555 kA  (m 0.027050599492004706)    idc(tb) = 0.0394803296514012 kA
+  Zth   = 0.01309117083708773 + j0.12449801627297606 pu
+[exit 0]

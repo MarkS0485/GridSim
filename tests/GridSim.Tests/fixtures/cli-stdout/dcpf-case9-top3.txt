@@ -1,0 +1,7 @@
+DC power flow - IEEE 9-bus (WSCC) (9 buses, 9 branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+  island ref bus 1          9 buses  demand      315.0 MW  scheduled generation      320.3 MW  reference injects       67.0 MW
+  0 of 9 rated branch(es) above 100% of RateA
+  largest flows:
+      branch 6     8-2                   8 -> 2         -163.00 MW     65.2% of 250 MVA
+      branch 7     8-9                   8 -> 9           86.97 MW     34.8% of 250 MVA
+      branch 3     3-6                   3 -> 6           85.00 MW     28.3% of 300 MVA

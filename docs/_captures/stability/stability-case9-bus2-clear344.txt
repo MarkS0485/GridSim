@@ -1,0 +1,15 @@
+$ gridsim stability case9 --fault-bus 2 --clear 344
+GridSim  -  TRANSIENT STABILITY (classical multi-machine)  *  WSCC-9
+==================================================================
+3 machines (0 converter / power-flow-only / zero-inertia units held)  *  fault bus 2  *  X'd = Anderson-Fouad
+
+  Bus   H sys (s)   |E'| pu  delta0 (deg)
+    1      58.509     1.047           0.9
+    2      12.288     1.034          14.8
+    3       3.853     1.017          11.3
+
+3-phase fault at bus 2, cleared after 344 ms  ->  UNSTABLE (loss of synchronism)
+law 9 (synchronism, scored from this run): VIOLATED: largest rotor angle from the centre of inertia 9639.7 deg (limit 180 deg, the out-of-step criterion); peak speed deviation 13.521 Hz, reported, not scored (no frequency band in a fault study)
+
+Classical model: constant E' behind X'd over the Kron-reduced network, RK4 swing.
+[exit 0]

@@ -1,0 +1,4 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-bad.json --hti --out results/trouble-tmp/hti
+error: --hti could not identify the bad data on this set: singular matrix in DSE covariance inverse (pivot 1.344E-014 at column 2).
+       the suspect measurements are not jointly identifiable (too little redundancy around them); run without --hti for largest-normalised-residual removal, or add measurements.
+[exit 3]

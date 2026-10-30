@@ -1,0 +1,48 @@
+$ gridsim --dir data/uk --once
+GridSim  -  GB reduced (10-zone)
+20 buses  24 branches  29 generators  base 10000 MVA  50 Hz
+========================================================================
+Converged (3 NR iters, 3 OLTC passes, max mismatch 1.29E-011 p.u.)
+Generator output 39.56 GW  Demand 39.50 GW  Losses 55.6 MW  Inertia 171.7 GVAs
+
+Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)
+------------------------------------------------------------------------------
+  1  North Scotland 400kV           400   1.040     3.10    2150.0    -315.9
+  2  South Scotland 400kV           400   1.040     2.27    2975.0    -208.1
+  3  North England 400kV            400   1.040     0.41    4130.0     794.9
+  4  Yorkshire & Humber 400kV       400   1.040     0.19    4220.0     561.5
+  5  North Wales & Mersey 400kV     400   1.040     0.31    2950.0     166.7
+  6  Midlands 400kV                 400   1.040     0.00    4890.6     885.0
+  7  East Anglia 400kV              400   1.040     0.27    6035.0    -167.3
+  8  London & South East 400kV      400   1.040    -0.28    4100.0    2403.8
+  9  South 400kV                    400   1.040     0.11    3350.0     299.3
+ 10  South West & S Wales 400kV     400   1.040     0.93    4755.0    -439.0
+101  North Scotland 132kV           132   1.002     2.93    -600.0    -150.4
+102  South Scotland 132kV           132   0.999     1.65   -2200.0    -551.4
+103  North England 132kV            132   1.006    -1.12   -5500.0   -1378.4
+104  Yorkshire & Humber 132kV       132   1.008    -1.06   -4500.0   -1127.8
+105  North Wales & Mersey 132kV     132   1.010    -0.66   -3500.0    -877.2
+106  Midlands 132kV                 132   1.005    -1.81   -6500.0   -1629.1
+107  East Anglia 132kV              132   0.998    -0.58   -3000.0    -751.9
+108  London & South East 132kV      132   1.002    -2.66   -8500.0   -2130.3
+109  South 132kV                    132   1.010    -0.86   -3500.0    -877.2
+110  South West & S Wales 132kV     132   1.000     0.44   -1700.0    -426.1
+
+Boundary                          Flow(MW)  Limit(MW)  Loading
+----------------------------------------------------------------
+B4 Upper North (Scotland)           1550      3200    48.4% 
+B6 Scotland-England (SCOTEX)        2322      6600    35.2% 
+B7/B8 North-Midlands                1247     12000    10.4% 
+SW Peninsula & S Wales (expor...      3051      4500    67.8% 
+
+Most-loaded branches:
+  T6 GSP Midlands                 6508 MW    84.6%
+  T3 GSP N England                5505 MW    81.7%
+  T8 GSP London & SE              8513 MW    80.7%
+  T4 GSP Yorkshire                4504 MW    77.8%
+  T7 GSP East Anglia              3002 MW    77.7%
+
+Voltage range: 0.998 - 1.040 p.u. (in band)
+Total losses: 55.57 MW, -5918.65 MVAr
+Protection simulation: 1 event(s) suggested  -  e.g. on Moyle, relay 32 (Reverse power) would likely operate (Moyle is absorbing 150.0 MW (reverse/motoring past the 5 MW pickup)). Run `protection-check` for the full list.
+[exit 0]

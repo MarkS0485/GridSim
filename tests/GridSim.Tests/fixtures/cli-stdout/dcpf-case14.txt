@@ -1,0 +1,16 @@
+DC power flow - IEEE 14-bus (14 buses, 20 branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+  island ref bus 1         14 buses  demand      259.0 MW  scheduled generation      272.4 MW  reference injects      219.0 MW
+  0 of 0 rated branch(es) above 100% of RateA
+  largest flows:
+      branch 0     1-2                   1 -> 2          147.88 MW  unrated
+      branch 1     1-5                   1 -> 5           71.12 MW  unrated
+      branch 2     2-3                   2 -> 3           70.05 MW  unrated
+      branch 6     4-5                   4 -> 5          -62.34 MW  unrated
+      branch 3     2-4                   2 -> 4           55.23 MW  unrated
+      branch 9     5-6                   5 -> 6           42.08 MW  unrated
+      branch 4     2-5                   2 -> 5           40.90 MW  unrated
+      branch 14    7-9                   7 -> 9           28.99 MW  unrated
+      branch 7     4-7                   4 -> 7           28.99 MW  unrated
+      branch 5     3-4                   3 -> 4          -24.15 MW  unrated
+      branch 12    6-13                  6 -> 13          17.03 MW  unrated
+      branch 8     4-9                   4 -> 9           16.63 MW  unrated

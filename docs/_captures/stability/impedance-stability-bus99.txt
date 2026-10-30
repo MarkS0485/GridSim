@@ -1,0 +1,3 @@
+$ gridsim impedance-stability case9 --bus 99
+impedance-stability: no generator to attach a converter model to.
+[exit 2]

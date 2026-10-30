@@ -1,0 +1,3 @@
+$ python make_series.py
+case demand 53285 MW, 48 steps, first {'timeUtc': '2026-09-01T00:00:00Z', 'systemLoadFactor': 0.403}, last {'timeUtc': '2026-09-01T23:30:00Z', 'systemLoadFactor': 0.4193}
+[exit 0]

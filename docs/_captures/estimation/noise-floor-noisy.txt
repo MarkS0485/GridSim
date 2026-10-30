@@ -1,0 +1,13 @@
+$ gridsim estimate-noise-floor results/nf2 --out results/nf2-report
+
+=== Measurement noise floor: 5 estimate(s), 547 residual(s) (0 NaN skipped) ===
+  source                   kind         count  k_robust    k_std     bias  verdict
+  synthetic                PFlowMw        175     1.796    1.350   -0.202  MISCALIBRATED: scale sigma by 1.796
+  synthetic                QFlowMvar      185     1.666    1.357   -0.119  MISCALIBRATED: scale sigma by 1.666
+  synthetic                VmPu            56     1.572    1.179   -0.125  MISCALIBRATED: scale sigma by 1.572
+  synthetic                QInjMvar        65     1.370    1.135   -0.121  MISCALIBRATED: scale sigma by 1.370
+  synthetic                PInjMw          66     1.137    1.193    0.080  ok
+  4 of 5 class(es) miscalibrated (tolerance 0.25, k = true noise / declared sigma)
+
+  -> results\nf2-report
+[exit 0]

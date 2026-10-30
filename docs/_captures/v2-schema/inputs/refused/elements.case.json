@@ -1,0 +1,10 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Refused at the network elements",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "network": ["elements.network.json"],
+  "imports": [
+    { "library": "library/placeholders/unmodelled-sites.json", "templates": ["gridsim.placeholder.site.SMR@1"] }
+  ],
+  "bindings": [ { "matchType": "nuclear", "template": "gridsim.placeholder.site.SMR@1" } ]
+}

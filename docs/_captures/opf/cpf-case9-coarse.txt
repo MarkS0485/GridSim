@@ -1,0 +1,5 @@
+$ gridsim cpf case9 --step 0.5 --min-step 0.01
+CPF - IEEE 9-bus (WSCC) (9 buses)  [load scaled uniformly, slack absorbs the balance]
+  max loadability lambda = 2.359375  (base demand 315.0 MW -> 743.2 MW at the last converged point; nose bracketed to 0.01)
+  margin 135.94% above base load
+[exit 0]

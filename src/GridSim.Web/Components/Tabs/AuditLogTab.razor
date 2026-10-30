@@ -1,0 +1,110 @@
+@* AUDIT LOG tab (N151): show a hash-chained gridsim-audit/1 log, verified first. The viewer picks the file in the
+   browser and it is uploaded into memory (capped at AuditLogDisplay.MaxLogBytes); the server never opens a path the
+   viewer typed. Everything shown comes from Core's AuditLogDisplay, the one display path the desktop shell also uses
+   and whose lines match `gridsim audit show`: a log that verifies shows every entry (AuditLogFile.Describe) and the
+   OK line with its anchor; a log that does NOT verify shows NOTHING but the TAMPERED verdict (nothing after a broken
+   link can be trusted, and a clean prefix shown beside a tampered tail would read as evidence). Presentation only:
+   nothing is computed and nothing is written. *@
+@using GridSim.Core.Presentation
+
+<div class="tabpage">
+    <div class="rp1-hero @HeroTone">
+        <div class="hero-main">
+            <span class="hero-v">AUDIT LOG</span>
+            <span class="hero-l">hash-chained run record (gridsim-audit/1), verified before anything is shown</span>
+        </div>
+        <div class="hero-grade">@HeroMark</div>
+    </div>
+
+    <div class="card">
+        <div class="card-h">CHOOSE A LOG</div>
+        <p class="note">A log written by <code>gridsim --audit-log &lt;file&gt;</code>. The whole chain is checked; an
+        optional anchor (the entry count and head hash recorded elsewhere, for example the OK line of an earlier check)
+        also catches a log cut short at the end or rewritten end to end, which the chain alone cannot see.</p>
+        <div class="runbar">
+            <label class="prov">anchor count <input class="busselect" style="width:7em" @bind="_anchorCount" disabled="@_busy" /></label>
+            <label class="prov">anchor head <input class="busselect" style="width:22em" @bind="_anchorHead" disabled="@_busy" /></label>
+            <InputFile OnChange="Load" disabled="@_busy" />
+        </div>
+    </div>
+
+    @if (_busy)
+    {
+        <div class="card"><div class="prompt"><span class="spinner"></span> Verifying the log...</div></div>
+    }
+    else if (_error is not null)
+    {
+        <div class="card">
+            <div class="prompt"><strong>NOT CHECKED.</strong>
+                <div class="note" style="margin-top:8px">@_error</div>
+            </div>
+        </div>
+    }
+    else if (_result is { Verified: false } bad)
+    {
+        @* Tampered: the verdict only. No entry is rendered, not even the clean prefix. *@
+        <div class="card">
+            <div class="card-h">TAMPERED</div>
+            <pre class="note">@bad.Verdict</pre>
+        </div>
+    }
+    else if (_result is { } ok)
+    {
+        <div class="card">
+            <div class="card-h">VERIFIED - @ok.EntryLines.Count ENTRIES</div>
+            <pre class="note" style="white-space:pre-wrap">@(string.Join("\n", ok.EntryLines))</pre>
+            <pre class="note">@ok.Verdict</pre>
+            <p class="note">Record the count and head hash above somewhere the log's writer cannot reach; enter them as
+            the anchor next time to detect later tail truncation or a whole-log rewrite.</p>
+        </div>
+    }
+</div>
+
+@code {
+    private string? _anchorCount;
+    private string? _anchorHead;
+    private bool _busy;
+    private string? _error;
+    private AuditLogDisplayResult? _result;
+
+    private string HeroTone => _error is not null || _result is { Verified: false } ? "g-red"
+        : _result is { Verified: true } ? "g-green" : "g-amber";
+
+    private string HeroMark => _result is { Verified: true } ? "OK" : _result is { Verified: false } ? "X" : "?";
+
+    private async Task Load(InputFileChangeEventArgs e)
+    {
+        if (_busy) return;
+        _result = null;
+        _error = null;
+        if (!AuditLogDisplay.TryParseAnchor(_anchorCount, _anchorHead, out var anchor, out string? anchorError))
+        {
+            _error = anchorError;
+            return;
+        }
+        _busy = true;
+        StateHasChanged();
+        try
+        {
+            IBrowserFile file = e.File;
+            // OpenReadStream refuses (IOException) a file above the cap rather than reading it; the cap is the same one
+            // AuditLogDisplay.FromBytes enforces.
+            using var ms = new MemoryStream();
+            await using (Stream s = file.OpenReadStream(AuditLogDisplay.MaxLogBytes))
+                await s.CopyToAsync(ms);
+            byte[] bytes = ms.ToArray();
+            string label = string.IsNullOrWhiteSpace(file.Name) ? "uploaded log" : file.Name;
+            _result = await Task.Run(() => AuditLogDisplay.FromBytes(bytes, label, anchor));
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or InvalidOperationException)
+        {
+            // An oversized or unreadable upload: say so, show no entries (never an empty "verified" log).
+            _error = $"The log could not be read: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+}

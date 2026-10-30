@@ -1,0 +1,3 @@
+$ gridsim audit verify results/ch26-delete.log
+TAMPERED results/ch26-delete.log: entry 0: the entry's sequence number is 1 but it is at position 0: an entry was deleted, inserted or moved here (0 entries verified before it)
+[exit 3]

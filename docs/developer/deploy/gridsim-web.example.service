@@ -1,0 +1,58 @@
+# GridSim web app as a systemd service (example; F05). For a host without Docker.
+#
+# Install:
+#   1. Publish the web app:  dotnet publish src/GridSim.Web -c Release -p:PublishProfile=portable
+#      and copy artifacts/publish/gridsim-web/ to /opt/gridsim-web (or unpack the release zip there).
+#   2. Install the ASP.NET Core 10 runtime, create the service user:  useradd --system --home /opt/gridsim-web gridsim
+#   3. Copy this file to /etc/systemd/system/gridsim-web.service, adjust the paths and settings marked below, then
+#        systemctl daemon-reload && systemctl enable --now gridsim-web
+#   4. Put nginx in front (docs/developer/deploy/nginx-gridsim.example.conf proxies to 127.0.0.1:5540).
+#
+# Settings are environment variables (the same names compose.yml sets). Anything secret or machine-specific can go
+# in an EnvironmentFile owned by root and readable only by the service, never in this repository.
+[Unit]
+Description=GridSim web app (Blazor Server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=gridsim
+WorkingDirectory=/opt/gridsim-web
+ExecStart=/usr/bin/dotnet /opt/gridsim-web/GridSim.Web.dll
+Restart=on-failure
+RestartSec=5
+
+# Same address as the Compose deployment, so one nginx file serves both.
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5540
+Environment=ASPNETCORE_ENVIRONMENT=Production
+# Data-protection key ring (must be writable by the service user unless it is a shared, pre-populated ring).
+Environment=Auth__KeysDirectory=/var/lib/gridsim-web/keys
+StateDirectory=gridsim-web
+# Optional: replay-only is the Production default (appsettings.Production.json); single sign-on and the GDA bridge
+# are off unless set here or in the EnvironmentFile:
+#   Environment=GridSim__BridgeEndpoint=ws://bridge.example.internal:8770/ws/bridge
+#   Environment=GridSim__BridgeAllowUnencrypted=true    (ws:// stops start-up without it; private network only)
+#   Environment=Sso__Enabled=true
+#   Environment=Sso__Authority=https://login.example.com
+#   Environment=Auth__ApplicationName=YourEstateName
+#   Environment=Auth__CookieDomain=.example.com
+#   Environment=Sso__PublicOrigin=https://gridsim.example.com
+# Key ring encryption at rest (D-DOC-064): on Linux the default (Auth__KeyProtection=auto) encrypts only with a
+# certificate and otherwise logs a warning at start-up. Put the password in the EnvironmentFile, never here:
+#   Environment=Auth__KeyCertificatePath=/etc/gridsim-web/keyring.pfx
+#   (EnvironmentFile line: Auth__KeyCertificatePassword=...)
+# Most sessions held at once (D-DOC-076; default 64):
+#   Environment=GridSim__MaxSessions=64
+# Site identity (analytics, share card, security.txt, footer links) is off unless set; see docs/developer/deploy/README.md:
+#   Environment=Site__SecurityTxt__Contact=mailto:security@example.com
+#   Environment=Site__SecurityTxt__Expires=2027-01-31T23:59:59Z
+# EnvironmentFile=-/etc/gridsim-web/env
+
+# Hardening: the app needs no privileges, no home directory and no writes outside its state directory.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

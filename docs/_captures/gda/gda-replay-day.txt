@@ -1,0 +1,9 @@
+$ gridsim gda-replay --series results/nd-2026-09-01.json --case gb-full --export-every 24 --out results/gda-replay-nd
+
+=== Historical state estimate: gb-full over nd-2026-09-01 ===
+  reconstructed 48 timestamps  (2026-09-01T00:00:00.0000000Z .. 2026-09-01T23:30:00.0000000Z)
+  non-converged: 0
+  system loss over the series: 71.2 .. 174.2 MW
+
+  -> results\gda-replay-nd
+[exit 0]

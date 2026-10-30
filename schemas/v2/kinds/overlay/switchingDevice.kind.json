@@ -1,0 +1,24 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "switchingDevice",
+  "title": "Switching device (asset overlay)",
+  "description": "Phase 5a asset overlay kind. A circuit breaker, disconnector or earth switch in a substation, with its normal state. It sits between busbar sections (from, to) or between a section and the circuit it switches (line, transformer, generator or demand). Carried beside the model, never used by the solver: the switch states do not change the authored topology (the check that the states imply a bus split the authored buses do not show is slice 5c).",
+  "params": {
+    "device": { "type": "enum", "values": ["breaker", "disconnector", "earthSwitch"], "required": true, "description": "What the device is.", "codeDefaults": [] },
+    "normalOpen": { "type": "boolean", "required": true, "description": "True when the device is open in the normal running arrangement.", "codeDefaults": [] },
+    "ratedCurrentA": { "type": "number", "unit": "A", "min": 0, "required": false, "description": "Rated normal current, amperes.", "codeDefaults": [] },
+    "breakingCurrentA": { "type": "number", "unit": "A", "min": 0, "required": false, "description": "Rated short-circuit breaking current of a breaker, amperes (RMS).", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "from": { "target": "record", "required": true, "recordKinds": ["busbarSection"], "description": "The busbar section on one side." },
+      "to": { "target": "record", "required": false, "recordKinds": ["busbarSection"], "description": "The busbar section on the other side (absent for a bay device or an earth switch)." },
+      "line": { "target": "line", "required": false, "description": "The line the device switches (a line bay)." },
+      "transformer": { "target": "transformer", "required": false, "description": "The transformer the device switches (a transformer bay)." },
+      "generator": { "target": "generator", "required": false, "description": "The generator the device switches (a generator bay)." },
+      "demand": { "target": "demand", "required": false, "description": "The demand the device switches (a feeder bay)." }
+    },
+    "parentKinds": ["substation"],
+    "parentRequired": true
+  }
+}

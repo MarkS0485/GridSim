@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "generation.schema.json",
+  "title": "GridSim v1 generation.json",
+  "description": "The generating units of the case, one record each. Required file (it may be an empty array). The case editor groups units into stations by type and name. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/generator"
+  },
+  "$defs": {
+    "generator": {
+      "title": "Generator",
+      "description": "A generating unit (v1 GenDto). Absent: type ccgt, capacityMva 0, outputMw = capacityMva x capacityFactor (capacityFactor from the type), voltageSetpoint 1, qMinMvar / qMaxMvar = -/+ capacityMva, inertiaH 0, role pv, no dynamics class, converter flags inferred from the type, powerFlowOnly false, unitTransformerXPu 0, gridForming false.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bus"
+      ],
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Unit or station name. Units sharing a type and a name form one station in the case editor. Absent: none.",
+          "type": "string"
+        },
+        "bus": {
+          "title": "Bus",
+          "description": "The bus the unit is connected to (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "type": {
+          "title": "Technology",
+          "description": "Fuel or technology (hydro, nuclear, wind-onshore, interconnector, ...): drives the default capacity factor and the asset binding rules. Lower case letters, digits and '-', or the empty string for no technology given (what convert writes for a MATPOWER unit, which has none; the loader reads it as written; October 2026, with N101). Absent: ccgt.",
+          "type": "string",
+          "pattern": "^([a-z][a-z0-9-]*)?$"
+        },
+        "capacityMva": {
+          "title": "Capacity (MVA)",
+          "description": "Rated capacity of the unit; also its Pmax, its MVA base and the default reactive limits. Absent: 0.",
+          "type": "number",
+          "minimum": 0
+        },
+        "outputMw": {
+          "title": "Output (MW)",
+          "description": "Explicit dispatch. Absent: capacityMva x capacityFactor.",
+          "type": "number"
+        },
+        "capacityFactor": {
+          "title": "Capacity factor (0..1)",
+          "description": "Share of capacity dispatched when outputMw is absent. Absent: the type's default (Dispatcher.DefaultCapacityFactor).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "voltageSetpoint": {
+          "title": "Voltage setpoint (pu)",
+          "description": "Terminal voltage the unit holds when it controls its bus. Absent: 1.0 pu.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "qMinMvar": {
+          "title": "Minimum reactive power (Mvar)",
+          "description": "Lower reactive limit. Absent: -capacityMva. A number, or the string \"-Infinity\" for no lower limit (MATPOWER's -Inf, written by convert; N101, October 2026: the loader, these schemas and the v2 schemas share this one rule).",
+          "anyOf": [
+            { "type": "number" },
+            { "enum": [ "-Infinity" ] }
+          ]
+        },
+        "qMaxMvar": {
+          "title": "Maximum reactive power (Mvar)",
+          "description": "Upper reactive limit. Absent: +capacityMva. A number, or the string \"Infinity\" for no upper limit (MATPOWER's Inf, written by convert; N101).",
+          "anyOf": [
+            { "type": "number" },
+            { "enum": [ "Infinity" ] }
+          ]
+        },
+        "inertiaH": {
+          "title": "Inertia constant H (s)",
+          "description": "Stored kinetic energy per MVA of rating. Absent: 0 (no inertia).",
+          "type": "number",
+          "minimum": 0
+        },
+        "role": {
+          "title": "Role",
+          "description": "pv (controls its bus voltage), pq (fixed injection, the bus keeps its type) or slack (reference and balancing unit). The loader refuses any other word, and a null, since October 2026 (N096 / N098), as this schema does. Absent: pv.",
+          "enum": [
+            "pv",
+            "pq",
+            "slack"
+          ]
+        },
+        "dynamicsClass": {
+          "title": "Dynamics class",
+          "description": "Name of an asset class in asset-classes.json bound to this unit; wins over a binding rule. Absent: none (binding rules apply).",
+          "type": "string"
+        },
+        "converterInterfaced": {
+          "title": "Converter interfaced",
+          "description": "Full-converter plant, whose fault current is limited (fault studies). Absent: inferred from the type.",
+          "type": "boolean"
+        },
+        "converterFaultCurrentPu": {
+          "title": "Converter fault current (x rated)",
+          "description": "Converter fault current k, as a multiple of rated current; 0 = no fault current (LCC HVDC). Absent: Generator.DefaultConverterFaultCurrentPu.",
+          "type": "number",
+          "minimum": 0
+        },
+        "powerFlowOnly": {
+          "title": "Power-flow-only device",
+          "description": "A power-flow device (slack balancer, voltage-control unit), not physical plant. Absent: false.",
+          "type": "boolean"
+        },
+        "unitTransformerXPu": {
+          "title": "Unit transformer reactance (pu on unit rating)",
+          "description": "Step-up transformer reactance, added to the machine reactance in fault studies. Absent: 0.",
+          "type": "number",
+          "minimum": 0
+        },
+        "gridForming": {
+          "title": "Grid forming",
+          "description": "Converter plant with grid-forming control. Absent: false.",
+          "type": "boolean"
+        },
+        "inService": {
+          "title": "In service",
+          "description": "false = kept in the case but never solved (F16; MATPOWER status 0). Absent: true.",
+          "type": "boolean"
+        },
+        "pMinMw": {
+          "title": "Minimum real output (MW)",
+          "description": "Lower real-power limit (F24). Absent: 0.",
+          "type": "number"
+        },
+        "pMaxMw": {
+          "title": "Maximum real output (MW)",
+          "description": "Upper real-power limit (F24). Absent: capacityMva. A number, or the string \"Infinity\" for no upper limit (MATPOWER's Inf, written by convert; N101).",
+          "anyOf": [
+            { "type": "number" },
+            { "enum": [ "Infinity" ] }
+          ]
+        },
+        "qOutputMvar": {
+          "title": "Scheduled reactive output (Mvar)",
+          "description": "Scheduled reactive output (F24). Absent: 0.",
+          "type": "number"
+        }
+      }
+    }
+  }
+}

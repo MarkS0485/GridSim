@@ -1,0 +1,8 @@
+$ gridsim validate docs/_captures/v2-schema/inputs/refused/schema.case.json
+OK    docs/_captures/v2-schema/inputs/refused/schema.case.json (gridsim-case/2)
+FAIL  docs\_captures\v2-schema\inputs\refused\schema.network.json (gridsim-network/2): 3 error(s)
+        /buses/0: missing required member 'baseKv'.
+        /buses/1/type: value "swing" is not one of the allowed values ["pq", "pv", "slack"].
+        /generators/0/capacityMVA: unknown member 'capacityMVA' is not allowed here. Allowed: name, bus, type, template, capacityMva, outputMw, capacityFactor, voltageSetpoint, qMinMvar, qMaxMvar, inertiaH, role, powerFlowOnly, unitTransformerXPu, converter, subtransientXdPu, negativeSeqXPu, inService, pMinMw, pMaxMw, qOutputMvar.
+validate: 1 of 2 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 3]

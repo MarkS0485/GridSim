@@ -1,0 +1,13 @@
+$ sed -n '356,366p' results/formats/estimate-thin/estimate-export.json
+  "estimate": {
+    "status": "Unobservable",
+    "converged": false,
+    "iterations": 0,
+    "maxStateUpdate": "Infinity",
+    "objectiveJ": 74302.14,
+    "degreesOfFreedom": -4,
+    "chiSquareThreshold": "NaN",
+    "chiSquarePassed": null,
+    "chiSquareTest": 0,
+    "irlsCapReached": false,
+[exit 0]

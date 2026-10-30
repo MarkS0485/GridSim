@@ -1,0 +1,16 @@
+$ head -n 14 results/exports-docs/estimate/residuals.csv
+# GridSim  -  2026-10-04 14:30:21 UTC
+# code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     estimate  case=case14  measurements=122  source=synthetic
+kind,location,value,sigma,predicted,residual,normalized_residual,critical
+VmPu,bus 1,1.0603366153490539,0.004,1.0600177496207248,3.188657E-004,0.085,False
+PInjMw,bus 1,230.50994250325303,1,231.5359777506207,-1.026035E+000,1.633,False
+QInjMvar,bus 1,-16.387551951145515,1,-16.02951780147939,-3.580341E-001,0.538,False
+VmPu,bus 2,1.0458945760543186,0.004,1.0448823911434171,1.012185E-003,0.269,False
+PInjMw,bus 2,17.170793445468924,1,17.517053380283411,-3.462599E-001,0.669,False
+[exit 0]

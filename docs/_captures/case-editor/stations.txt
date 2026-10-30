@@ -1,0 +1,25 @@
+GRIDSIM CASE EDITOR 1.95.113  data/uk (v1)  20 buses  [BUNDLED]
+Case > Generation > ccgt
+station                                     units   capacity MVA
+London CCGT                                 1       2000.0
+Midlands CCGT (marginal)                    1       9000.0
+North England CCGT                          1       2000.0
+North Wales CCGT                            1       3000.0
+Pembroke CCGT                               1       2000.0
+South CCGT                                  1       3000.0
+Yorkshire CCGT                              1       4000.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+row 1/7
+F1 Help  Enter Open  Esc Up  F2 Edit  U Undo  F9 Check  F10 Save  F12 Quit

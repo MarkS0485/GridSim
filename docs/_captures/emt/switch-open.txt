@@ -1,0 +1,4 @@
+$ gridsim emt case14 --duration 0.03 --freq 50 --probe v:5 --event fault:5@0.01:0.01 --event switch:1000000@0.02:open --out emt-switch
+emt case14: 1,500 steps @ 20us, 5 factorization(s), peak |probe| 3.504, 11 ms -> emt-switch
+emt: 2 floating node(s) pinned at 0 V in the initial-condition solve.
+[exit 0]

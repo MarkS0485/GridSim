@@ -1,0 +1,7 @@
+GridSim starter map: France (RTE) - open transmission model
+
+Source: ENTSO-E transmission map via GridKit / PyPSA-Eur (data/entsoegridkit).
+Geography (c) OpenStreetMap contributors, ODbL; packaging PyPSA-Eur, CC-BY-4.0.
+https://www.openstreetmap.org/copyright
+
+Impedances synthesised per voltage class where the source lacks R/X; demand is a synthetic snapshot. Indicative, not planning-grade.

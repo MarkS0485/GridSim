@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GridSim.App (UI programme, Phase 0.4): the Avalonia half of the cross-platform desktop app. It holds the AXAML
+       views, the theme and (later) the custom-drawn controls and platform services; the logic they show lives in
+       GridSim.Ui, which has no user-interface framework at all. This project is a class library so the desktop head
+       (GridSim.App.Desktop), the headless tests and later the mobile heads all start the same App.
+       It must never reference GridSim.Wpf, GridSim.Web, GridSim.Gda or GridSim.Gpu (AppProjectReferenceTests).
+       Version: set once for every project in Directory.Build.props (F02); do not add one here. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.App</RootNamespace>
+    <AssemblyName>GridSim.App</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <!-- Every binding in the AXAML is compiled (checked at build time against the view model's x:DataType), so a
+         misspelt property fails the build instead of showing a blank field at run time. -->
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!-- Package admission (UI programme 0.4, approved by Mark 2026-10-20). Every version is pinned exactly; every package
+       and its transitive dependencies are listed in THIRD-PARTY-NOTICES.md (ThirdPartyNoticesTests reads this
+       project's packages.lock.json and fails on a missing row).
+       SkiaSharp and HarfBuzzSharp are the versions Avalonia.Skia 11.3.22 itself depends on (2.88.9 and 8.3.1.1),
+       stated here so the native rendering and text-shaping libraries are pinned by this project, not only floated in
+       by Avalonia. Change them only together with Avalonia, to the versions its Avalonia.Skia names. -->
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Skia" Version="11.3.22" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <PackageReference Include="HarfBuzzSharp" Version="8.3.1.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Ui\GridSim.Ui.csproj" />
+  </ItemGroup>
+
+</Project>

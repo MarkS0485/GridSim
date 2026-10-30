@@ -1,0 +1,9 @@
+$ gridsim interpose --audit-log /tmp/test.log
+usage: gridsim interpose [case] --protocol <name> (--listen host:port | --port N) --crosswalk <map.json>
+                         [--measurements-dir <dir>] [--source-id <id>] [--window-ms N]
+                         [--monitor] [--ticks N]
+       gridsim interpose --list-protocols
+Receives live RTU/SCADA frames, corrects & decodes them, and writes gridsim-measurements/1 windows.
+Live frames feed the estimator only after ageing past the 169 h horizon (monitor-only until then).
+audit: C:\Users\analyst\AppData\Local\Temp\test.log entries=1 head=82DEFBC5C5C313F5B00F0966A11079151D1A3826FC676F35F58202F117F0ECA7
+[exit 2]

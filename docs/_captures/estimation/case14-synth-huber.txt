@@ -1,0 +1,11 @@
+$ gridsim estimate case14 --synth --method huber
+
+=== Huber M-estimator state estimate: case14 ===
+  status: Converged   iterations: 13   max |dx|: 8.11E-009
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  consistency: J = 80.18 vs chi2(95%) = 118.75 -> PASS
+  vs synthetic truth: max |dVm| = 1.218E-003 pu   max |dVa| = 2.220E-001 deg
+
+  -> results\estimate-case14
+[exit 0]

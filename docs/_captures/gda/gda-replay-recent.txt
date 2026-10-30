@@ -1,0 +1,3 @@
+$ gridsim gda-replay --series results/nd-too-recent.json --case gb-full --out results/gda-replay-recent
+REJECTED (forward inference): GDA time-series timestamp 2026-10-02T12:00:00.0000000Z is newer than the historical horizon 2026-09-26T11:33:47.1181361Z (data must lag real time by >=169 h). GridSim replays history only - it never processes recent or future data, so it cannot forward-infer.
+[exit 2]

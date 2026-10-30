@@ -1,0 +1,5 @@
+$ gridsim data/matpower/pegase/case1354pegase.m --once --enableExport=results/formats/pegase-solve.json
+[export] sparse-newton: converged=True iters=9 maxMis=7.43E-009  ->  results\formats\pegase-solve.json
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[exit 0]

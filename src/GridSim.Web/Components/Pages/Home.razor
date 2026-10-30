@@ -1,0 +1,61 @@
+@page "/"
+@inject CaseCatalog Catalog
+@inject GridSim.Web.Sessions.SessionManager Sessions
+@inject NavigationManager Nav
+
+<PageTitle>GridSim - @(Sessions.ReplayOnly ? "Grid Replay" : "Grid Control Suite")</PageTitle>
+
+<header class="masthead">
+    <h1>GridSim <span class="sub">@(Sessions.ReplayOnly ? "Grid Replay" : "Grid Control Suite")</span></h1>
+    <p class="tagline">GB transmission grid - watch &amp; feel it replay from the public data.</p>
+</header>
+
+@if (Sessions.ReplayOnly)
+{
+    <section class="case-picker"><p class="empty">Opening the raw public-data replay...</p></section>
+}
+else
+{
+<section class="case-picker">
+    <h2>Load a model</h2>
+    <div class="case-grid">
+        @if (Sessions.BridgeConfigured)
+        {
+            <a class="case-card bridge" href="/dashboard/live-bridge">
+                <span class="case-kind">Live bridge</span>
+                @* This card opens gb-full on the presolved source (SessionManager.IsBridgeRequest), so the label says so; it
+                   used to read "live stream", which is a different server source (October 2026). *@
+                <span class="case-label">GDA lake: presolved states (gb-full)</span>
+                <span class="case-id">live-bridge</span>
+            </a>
+            <a class="case-card bridge" href="/dashboard/bridge:gb-spine@estimated">
+                <span class="case-kind">Estimated bridge</span>
+                <span class="case-label">GDA lake | WLS-estimated states (chi-square-gated)</span>
+                <span class="case-id">bridge:gb-spine&#64;estimated</span>
+            </a>
+        }
+        @foreach (CaseEntry e in Catalog.Entries)
+        {
+            <a class="case-card @(e.IsReplay ? "replay" : "")" href="/dashboard/@e.Id">
+                <span class="case-kind">@e.Kind</span>
+                <span class="case-label">@e.Label</span>
+                <span class="case-id">@e.Id</span>
+            </a>
+        }
+    </div>
+    @if (Catalog.Entries.Count == 0)
+    {
+        <p class="empty">No models discovered next to the app.</p>
+    }
+</section>
+}
+
+@code {
+    // A replay-only instance never shows the solver case picker: land straight on the raw public-data replay.
+    // NavigateTo in OnInitialized is the standard redirect (it also flows correctly through static prerender).
+    protected override void OnInitialized()
+    {
+        if (Sessions.ReplayOnly)
+            Nav.NavigateTo($"/dashboard/{Sessions.LandingCaseId}");   // N346: the first configured replay case (default gb-full)
+    }
+}

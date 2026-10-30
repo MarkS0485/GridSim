@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GridSim.App.Dialogs.DocumentWindow"
+        Width="900" Height="700" MinWidth="480" MinHeight="320"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg}">
+  <!-- UI programme Phase 1.1: the viewer for a document shipped beside the app (LICENSE.md, THIRD-PARTY-NOTICES.md).
+       It shows the file as shipped, as plain text. A missing or unreadable file shows the reason in red instead of an
+       empty page (GridSim.Ui.Shell.ShippedDocument). -->
+  <DockPanel Margin="12">
+    <TextBlock x:Name="PathText" DockPanel.Dock="Top" Classes="Label" Margin="0,0,0,8" TextWrapping="Wrap" />
+    <TextBlock x:Name="ProblemText" DockPanel.Dock="Top" Foreground="{StaticResource Red}" FontWeight="Bold"
+               TextWrapping="Wrap" Margin="0,0,0,8" IsVisible="False" />
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+      <Button x:Name="CloseButton" Classes="FlatBtn" Content="Close" IsDefault="True" IsCancel="True" Click="Close_Click" />
+    </StackPanel>
+    <Border Classes="Card">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <SelectableTextBlock x:Name="DocumentText" TextWrapping="Wrap" FontFamily="{StaticResource MonoFont}"
+                             Foreground="{StaticResource Text}" />
+      </ScrollViewer>
+    </Border>
+  </DockPanel>
+</Window>

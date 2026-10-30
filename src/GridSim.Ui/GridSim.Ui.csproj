@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GridSim.Ui (UI programme, Phase 0.2, the strangler extraction): the platform-neutral half of the desktop
+       control suite. It holds the logic the WPF window used to carry inline and that a second front end (the planned
+       Avalonia app) must share without copying: the simulation host (load a model, run the LiveSim / PresolvedReplay
+       loop, produce frames), the model catalogue, the persisted settings, the geography overlay data and the colour
+       ramps. It has NO user-interface framework at all: no WPF (System.Windows, PresentationFramework, WindowsBase) and
+       no Avalonia; a test (UiProjectNeutralityTests) fails the run if one creeps in. WPF stays the parity oracle: it
+       references this project and drives it.
+       It references Core only (no Gpu or Gda) and no third-party package.
+       Version: set once for every project in Directory.Build.props (F02); do not add one here. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.Ui</RootNamespace>
+    <AssemblyName>GridSim.Ui</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- The host-frame equality and neutrality tests drive the internal host members directly. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="GridSim.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Core\GridSim.Core.csproj" />
+  </ItemGroup>
+
+</Project>

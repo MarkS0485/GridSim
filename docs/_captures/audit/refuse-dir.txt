@@ -1,0 +1,3 @@
+$ gridsim estimate case14 --synth --audit-log results/nodir/x.log
+error: --audit-log 'results/nodir/x.log': Cannot use audit anchor 'results\nodir\x.log.anchor': its directory does not exist.
+[exit 1]

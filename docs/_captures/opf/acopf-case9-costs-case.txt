@@ -1,0 +1,9 @@
+$ gridsim acopf data/matpower/lib/case9.m --costs case
+ACOPF (DC dispatch + AC loss loop) - case9 (9 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+  converged in 4 iteration(s)  losses 3.906 MW  cost 5,310.47 cost units/h (generator cost curves)
+      gen bus 2        135.96 MW  marginal   24.3134 cost units/MWh
+      gen bus 3         95.16 MW  marginal   24.3134 cost units/MWh
+      gen bus 1         87.79 MW  marginal   24.3134 cost units/MWh
+note: case9.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case9.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[exit 0]

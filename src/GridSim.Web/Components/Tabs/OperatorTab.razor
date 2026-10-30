@@ -1,0 +1,138 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+    <div class="panel-grid four">
+        <div class="mini"><span class="mv">@D.FrequencyHz.ToString("0.000")</span><span class="ml">Frequency Hz</span></div>
+        <div class="mini"><span class="mv">@D.InertiaGvaS.ToString("0.0")</span><span class="ml">Inertia GVA.s</span></div>
+        <div class="mini"><span class="mv">@D.LargestLossMw.ToString("N0")</span><span class="ml">Largest loss MW | N-1@(string.IsNullOrWhiteSpace(D.LargestLossName) ? "" : " | " + D.LargestLossName)</span></div>
+        <div class="mini"><span class="mv">@((D.SyncFraction*100).ToString("0"))%</span><span class="ml">Synchronous share</span></div>
+    </div>
+
+    <div class="panel-grid four">
+        <div class="mini"><span class="mv">@D.RocofHzPerS.ToString("+0.000;-0.000;0.000")</span><span class="ml">RoCoF Hz/s</span></div>
+        <div class="mini"><span class="mv">@D.DemandMw.ToString("N0")</span><span class="ml">Demand MW</span></div>
+        <div class="mini"><span class="mv">@D.GenerationMw.ToString("N0")</span><span class="ml">Generation MW</span></div>
+        <div class="mini"><span class="mv">@D.LossMw.ToString("N0")</span><span class="ml">Losses MW</span></div>
+    </div>
+
+    @if (D.Lake is not null)
+    {
+        <div class="card lake">
+            <div class="card-h">GDA LAKE | SYSTEM OPERATOR</div>
+            @if (!string.IsNullOrWhiteSpace(D.Lake.Warning))
+            {
+                <div class="lake-warn">@D.Lake.Warning</div>
+            }
+            <div class="panel-grid four">
+                <div class="stat-row"><span>Response</span><b>@Fmt(D.Lake.ResponseMw) MW</b></div>
+                <div class="stat-row"><span>Reserve</span><b>@Fmt(D.Lake.ReserveMw) MW</b></div>
+                <div class="stat-row"><span>Derated margin</span><b>@Fmt(D.Lake.DeratedMarginMw) MW</b></div>
+                <div class="stat-row"><span>Net interconnector</span><b>@Fmt(D.Lake.NetInterconnectorMw) MW</b></div>
+                <div class="stat-row"><span>Outturn inertia</span><b>@Fmt(D.Lake.OutturnInertiaGvaS) GVA.s</b></div>
+                <div class="stat-row"><span>Market inertia</span><b>@Fmt(D.Lake.MarketInertiaGvaS) GVA.s</b></div>
+            </div>
+            @if (D.Lake.BalancingActions.Count > 0)
+            {
+                <div class="card-h" style="margin-top:12px">BALANCING MECHANISM</div>
+                <table class="grid">
+                    <thead><tr><th>BMU</th><th>Kind</th><th class="r">Level MW</th><th class="r">Price GBP/MWh</th><th>Fuel</th></tr></thead>
+                    <tbody>
+                        @foreach (OpBmActionDto a in D.Lake.BalancingActions)
+                        {
+                            <tr><td>@a.BmUnit</td><td>@a.Kind</td><td class="r">@a.LevelMw.ToString("N0")</td><td class="r">@a.PriceGbpMwh.ToString("0.00")</td><td>@a.Fuel</td></tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            @if (D.Lake.Constraints.Count > 0)
+            {
+                <div class="card-h" style="margin-top:12px">ACTIVE CONSTRAINTS</div>
+                <table class="grid">
+                    <thead><tr><th>Constraint</th><th class="r">Flow MW</th><th class="r">Limit MW</th><th class="r">Cost GBP</th><th>Status</th></tr></thead>
+                    <tbody>
+                        @foreach (OpConstraintDto c in D.Lake.Constraints)
+                        {
+                            <tr class="@(c.Binding ? "over" : "")">
+                                <td>@c.Name</td>
+                                <td class="r">@c.FlowMw.ToString("N0")</td>
+                                <td class="r">@c.LimitMw.ToString("N0")</td>
+                                <td class="r">@Gbp(c.CostGbp)</td>
+                                <td>@(c.Binding ? "* binding" : "o ok")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    }
+
+    <div class="card grow">
+        <div class="card-h">BOUNDARY TRANSFERS</div>
+        <div class="tablescroll">
+        @if (D.Boundaries.Count == 0)
+        {
+            <div class="muted-note">This model defines no transmission boundaries.</div>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Boundary</th><th class="r">Flow MW</th><th class="r">Limit MW</th><th class="r">Headroom</th><th class="r">Loading</th></tr></thead>
+                <tbody>
+                    @foreach (OpBoundaryRowDto b in D.Boundaries)
+                    {
+                        <tr class="@(b.Overloaded ? "over" : "")">
+                            <td>@b.Name</td>
+                            <td class="r">@b.FlowMw.ToString("N0")</td>
+                            <td class="r">@b.LimitMw.ToString("N0")</td>
+                            <td class="r">@b.HeadroomMw.ToString("N0")</td>
+                            <td class="r">
+                                <div class="minibar"><span style="width:@Pct(b.LoadingPercent/100);--c:@LoadColor(b.LoadingPercent)"></span></div>
+                                @b.LoadingPercent.ToString("0")%
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h">GENERATION STACK | fuel dispatch</div>
+        <div class="stat-row"><span>Synchronous</span><b>@D.SyncGw.ToString("0.0") GW</b></div>
+        <div class="stat-row"><span>Converter</span><b>@D.ConverterGw.ToString("0.0") GW</b></div>
+        <div class="splitbar"><span class="seg sync" style="width:@Pct(D.SyncFraction)"></span><span class="seg conv" style="width:@Pct(1-D.SyncFraction)"></span></div>
+        <table class="grid" style="margin-top:12px">
+            <thead><tr><th>Fuel</th><th class="r">MW</th><th class="r">Share</th></tr></thead>
+            <tbody>
+                @foreach (OpFuelRowDto r in D.Fuel)
+                {
+                    <tr>
+                        <td><span class="swatch" style="--c:@r.Color"></span>@r.Fuel</td>
+                        <td class="r">@r.Mw.ToString("N0")</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(r.SharePercent/100);--c:@r.Color"></span></div>
+                            @r.SharePercent.ToString("0.0")%
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private OperatorDto? D => Frame?.Operator;
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+    private static string LoadColor(double pct) => pct >= 100 ? "var(--bad)" : pct >= 80 ? "var(--warn)" : "var(--ok)";
+    private static string Fmt(double? v) => v.HasValue ? v.Value.ToString("N0") : "-";
+    private static string Gbp(double v) => "GBP " + v.ToString("N0");
+}

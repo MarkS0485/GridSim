@@ -1,0 +1,6 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Refused at the schema checks",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "network": ["schema.network.json"]
+}

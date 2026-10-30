@@ -1,0 +1,6 @@
+$ gridsim dcpf docs/_captures/v2-schema/inputs/refused/elements.case.json
+error loading case 'docs/_captures/v2-schema/inputs/refused/elements.case.json': cannot load JSON v2 case 'docs/_captures/v2-schema/inputs/refused/elements.case.json': elements.case.json: JSON v2 case refused at the network elements: 3 problem(s):
+  elements.network.json: /lines/0/type: a line type is valid JSON v2, but GridSim's model does not carry it yet (the v2 loader does not bind line or transformer types yet); remove it to load this case today.
+  elements.network.json: /lines/0/inService: an out-of-service line is valid JSON v2, but GridSim's model does not carry it yet (of the network fields v1 cannot hold, the v2 loader reads only fault sequence data so far); remove it to load this case today.
+  elements.case.json: /bindings/0/template: template gridsim.placeholder.site.SMR@1 is a placeholder; a placeholder holds no values and can never be bound to an element.
+[exit 1]

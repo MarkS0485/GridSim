@@ -1,0 +1,9 @@
+$ gridsim dcpf docs/_captures/opf/tri3
+DC power flow - Three-bus worked example (3 buses, 3 branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+  island ref bus 1          3 buses  demand      100.0 MW  scheduled generation      102.0 MW  reference injects       90.0 MW
+  1 of 3 rated branch(es) above 100% of RateA
+  largest flows:
+      branch 0     L13                   1 -> 3           63.33 MW    105.6% of 60 MVA
+      branch 1     L23                   2 -> 3           36.67 MW     18.3% of 200 MVA
+      branch 2     L12                   1 -> 2           26.67 MW     13.3% of 200 MVA
+[exit 0]

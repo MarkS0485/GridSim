@@ -1,0 +1,332 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GridSim.App"
+        xmlns:hosting="using:GridSim.Ui.Hosting"
+        xmlns:map="using:GridSim.App.Map"
+        xmlns:dashboard="using:GridSim.App.Dashboard"
+        xmlns:tabs="using:GridSim.App.Tabs"
+        xmlns:models="using:GridSim.Ui.Models"
+        xmlns:dialogs="using:GridSim.App.Dialogs"
+        xmlns:assets="using:GridSim.App.Assets"
+        x:Class="GridSim.App.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1580" Height="940" MinWidth="1100" MinHeight="700"
+        WindowState="Maximized"
+        Background="{StaticResource Bg}">
+  <!-- UI programme Phase 1.1: the shell. A menu bar generated from the command registry (filled in by the code-behind;
+       on macOS it moves to the system menu bar and this one is hidden), the window body, and a status bar. The size,
+       the minimum size and the maximised start are the WPF window's (WPF does not save the window's size or place
+       between sessions, so neither does this).
+       Phase 1.2: the run pipeline (the transport bar's WPF PAUSE, STEP, SPEED and SOLVER controls, plus Step once) and
+       the error area, which shows any refusal and any frame that is not a valid state, in the theme's alarm colour; it
+       is shown whether or not a case has loaded, so a refused first case is still explained.
+       Integration (2026-10-20): the window is laid out as the WPF MainWindow.xaml, top to bottom:
+         - the HEADER (WPF row 0): the GRIDSIM title, the NETWORK and SOLVER pickers, the substation search box, LOAD
+           RUN... and AUDIT LOG... (slice 1.7), and at the right the dashboard's clock and tick and its status lamp, bound
+           to the window's one dashboard model. The licence tier is in the window title, as in WPF (slice 1.7);
+         - the room TABS (WPF row 1) in the WPF order with the WPF headers. NETWORK is the dashboard view
+           (Dashboard/DashboardView: the telemetry column, the map card with WPF's veil, hint, legend and selection
+           fly-out over the map, the what-if, boundary, alarm and event-log column), with the network map and its hover
+           tip in the dashboard's MapSlot. Then GENERATION & INERTIA, THE MACHINE, SCADA, OPERATOR, MARKET, NESO RP1,
+           MECHANICAL, HUMAN SCALE, SPEED DOMAINS, INVERTER FLEET, EXPERIMENTAL, HARMONICS (slice 1.7), CYCLE and ASSETS
+           (UI programme ASSETS A3, at its WPF place after CYCLE). Not here: ABOUT (About is the Help menu's About box,
+           so ASSETS is the last tab). The WPF STATE NOT VALID banner lies over every tab;
+         - the TRANSPORT BAR (WPF row 2) and the status bar (WPF row 3, the footer).
+       The temporary live panel of Phase 1.2 is gone (WPF has none): its values are on the dashboard tiles, in the WPF
+       form. Every tab is fed from the dashboard's tab hooks only (MainWindowViewModel, TabModels). -->
+
+  <DockPanel>
+    <Menu x:Name="MenuBar" DockPanel.Dock="Top" />
+
+    <!-- ============ HEADER (the WPF header row) ============ -->
+    <Border x:Name="HeaderBar" DockPanel.Dock="Top" Height="58" Background="{StaticResource Panel}"
+            BorderBrush="{StaticResource Accent}" BorderThickness="0,0,0,2">
+      <DockPanel LastChildFill="False" Margin="16,0">
+        <!-- The status lamp and the clock: the window's one dashboard, shown over every tab as in WPF. Declared FIRST
+             (2026-10-24): a DockPanel lays its children out in order, so these always get their full width; when the
+             window is too narrow for the whole header, the right end of the left-hand group is clipped instead of the
+             clock and lamp being drawn over. -->
+        <Border x:Name="HeaderStatusBox" DockPanel.Dock="Right" Background="{StaticResource PanelHi}" CornerRadius="4"
+                Padding="12,4" VerticalAlignment="Center" BorderBrush="{StaticResource Border}" BorderThickness="1">
+          <StackPanel Orientation="Horizontal">
+            <Ellipse x:Name="HeaderStatusLamp" Width="12" Height="12" VerticalAlignment="Center"
+                     Fill="{Binding Dashboard.StatusColour, Converter={x:Static dashboard:UiColourBrushConverter.Instance}}" />
+            <TextBlock x:Name="HeaderStatusText" Text="{Binding Dashboard.Status}" Margin="8,0,0,0" VerticalAlignment="Center"
+                       FontWeight="Bold" FontSize="13" />
+          </StackPanel>
+        </Border>
+        <StackPanel x:Name="HeaderClockBox" DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+          <TextBlock x:Name="HeaderClockText" Text="{Binding Dashboard.Clock}" FontSize="22" FontWeight="Bold"
+                     FontFamily="{StaticResource MonoFont}" />
+          <TextBlock Text="  tick " Classes="Label" VerticalAlignment="Center" />
+          <TextBlock x:Name="HeaderTickText" Text="{Binding Dashboard.Tick}" Classes="Label" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Ellipse DockPanel.Dock="Left" Width="14" Height="14" VerticalAlignment="Center"
+                 Fill="{StaticResource Accent}" Margin="0,0,10,0" />
+        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="20" FontWeight="Bold"
+                   Foreground="{StaticResource Text}">
+          <Run Text="GRID" /><Run Text="SIM" Foreground="{StaticResource Accent}" /><Run Text="    GB TRANSMISSION CONTROL" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Muted}" />
+        </TextBlock>
+        <!-- (Slice 1.7: "v<version>  -  <tier> licence" is in the window title, as WPF has it, no longer here.) -->
+
+        <!-- Slice 1.7: the rest of the WPF header, in the WPF order with the WPF texts, sizes and tool tips.
+             NETWORK: the source picker (the model catalogue; choosing a source loads it, as WPF's SelectionChanged runs
+             SwitchTo). SOLVER: the power-flow engine and the engine in use (moved here from the transport bar, where it
+             sat until this slice, to its WPF place; disabled for a replay, as in WPF). The substation search box: type a
+             name and press Enter to centre the map on the first substation whose name contains it and select it (WPF
+             Search_KeyDown); while it has the focus the single-key map and step shortcuts stand aside (TypingGuard).
+             LOAD RUN... and AUDIT LOG... run the File menu's own commands (Open run folder..., Audit log...). -->
+        <TextBlock DockPanel.Dock="Left" Text="NETWORK" Classes="Label" VerticalAlignment="Center" Margin="14,0,6,0" ClipToBounds="True" />
+        <ComboBox x:Name="SourcePicker" DockPanel.Dock="Left" Width="200" VerticalAlignment="Center" ClipToBounds="True"
+                  ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="models:ModelSource">
+              <TextBlock Text="{Binding Converter={x:Static dialogs:CaseListLabel.Converter}}" TextTrimming="CharacterEllipsis" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <TextBlock DockPanel.Dock="Left" Text="SOLVER" Classes="Label" VerticalAlignment="Center" Margin="12,0,6,0" ClipToBounds="True" />
+        <ComboBox x:Name="SolverPicker" DockPanel.Dock="Left" Width="150" VerticalAlignment="Center" ClipToBounds="True"
+                  IsEnabled="{Binding Run.CanChooseSolver}"
+                  ItemsSource="{x:Static hosting:TransportChoices.Solvers}" SelectedItem="{Binding Run.SelectedSolver}"
+                  ToolTip.Tip="Power-flow engine. Auto picks per network: radial to sweep, large to sparse, else dense.">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="hosting:SolverChoice"><TextBlock Text="{Binding Label}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock x:Name="ActiveSolverText" DockPanel.Dock="Left" Classes="Label" VerticalAlignment="Center" Margin="6,0,0,0"
+                   ClipToBounds="True" TextTrimming="CharacterEllipsis" MaxWidth="118"
+                   ToolTip.Tip="{Binding Run.ActiveSolverText}"
+                   Foreground="{StaticResource Accent}" Text="{Binding Run.ActiveSolverText}" />
+
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Left" Width="150" VerticalAlignment="Center" Margin="16,0,0,0" ClipToBounds="True"
+                 Foreground="{StaticResource Text}" ToolTip.Tip="Type a substation name, press Enter" />
+        <TextBlock DockPanel.Dock="Left" Text=" find" Classes="Label" VerticalAlignment="Center" Margin="4,0,0,0" ClipToBounds="True" />
+
+        <Button x:Name="LoadRunButton" DockPanel.Dock="Left" Classes="FlatBtn" Content=" LOAD RUN..." Click="LoadRun_Click"
+                VerticalAlignment="Center" Margin="16,0,0,0" ClipToBounds="True"
+                ToolTip.Tip="Load a pre-solved run directory (transient / gda-replay exports) and step through it." />
+        <Button x:Name="AuditLogButton" DockPanel.Dock="Left" Classes="FlatBtn" Content=" AUDIT LOG..." Click="AuditLog_Click"
+                VerticalAlignment="Center" Margin="8,0,0,0" ClipToBounds="True"
+                ToolTip.Tip="Open a gridsim-audit/1 log: verified first; a tampered log shows only the TAMPERED verdict." />
+
+      </DockPanel>
+    </Border>
+
+    <!-- ============ STATUS BAR (the WPF footer row) ============ -->
+    <Border DockPanel.Dock="Bottom" Classes="StatusBar">
+      <DockPanel LastChildFill="True">
+        <TextBlock x:Name="VersionFooter" DockPanel.Dock="Right" Classes="Label" VerticalAlignment="Center"
+                   Text="{Binding VersionText}" />
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Spacing="16">
+          <TextBlock x:Name="StatusText" Classes="Label" VerticalAlignment="Center" Text="{Binding StatusText}" />
+          <TextBlock x:Name="ProblemText" VerticalAlignment="Center" FontWeight="Bold"
+                     Foreground="{StaticResource Red}" Text="{Binding ProblemText}" IsVisible="{Binding HasProblem}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- ============ TRANSPORT BAR (the WPF global transport bar under the tabs; its run controls) ============ -->
+    <!-- Slice 1.7: laid out as the WPF bar (a dock panel: the buttons and pickers from the left, the frame read-out at
+         the right, the scrubber filling the middle), with the WPF replay and map controls added:
+           - RESTART and STEP BACK (replay only, as in WPF): back to frame 1, one frame back; each restarts the timeline;
+           - COLOR, FLEET, DNO and GSP: the View menu's own commands (Colour by, Fleet, DNO areas, GSP regions), each
+             showing its state as WPF does (COLOR names the colouring; a toggle is dimmed while its layer is off; DNO and
+             GSP are disabled and dimmed without local geography);
+           - the scrubber (replay only): drag to any frame; a backward move restarts the timeline, as in WPF.
+         STEP ONCE is this app's own (it is the WPF next-frame button on a replay, and a single solve on a live case). -->
+    <Border x:Name="TransportBar" DockPanel.Dock="Bottom" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}"
+            BorderThickness="0,1,0,1" Padding="14,6" IsVisible="{Binding Run.HasRun}">
+      <DockPanel LastChildFill="True">
+        <Button x:Name="PlayPauseButton" DockPanel.Dock="Left" Classes="FlatBtn" Content="{Binding Run.PlayPauseLabel}"
+                Click="PlayPause_Click" Margin="0,0,10,0" ToolTip.Tip="Play or pause (F5)" />
+
+        <!-- replay only, as in WPF: restart and step back -->
+        <Button x:Name="RestartButton" DockPanel.Dock="Left" Classes="FlatBtn" Content="&#x21ba;" Width="34" Margin="0,0,4,0"
+                Click="Restart_Click" IsVisible="{Binding Run.IsReplay}" ToolTip.Tip="Restart from frame 1" />
+        <Button x:Name="StepBackButton" DockPanel.Dock="Left" Classes="FlatBtn" Content="&#x25c0;" Width="34" Margin="0,0,4,0"
+                Click="StepBack_Click" IsVisible="{Binding Run.IsReplay}" ToolTip.Tip="Previous frame" />
+        <Button x:Name="StepOnceButton" DockPanel.Dock="Left" Classes="FlatBtn" Content="STEP ONCE" Click="StepOnce_Click"
+                Margin="0,0,10,0" ToolTip.Tip="Advance exactly one frame (F6)" IsVisible="{Binding Run.CanStepOnce}" />
+
+        <!-- live only, as in WPF: the simulated time each solve advances -->
+        <TextBlock DockPanel.Dock="Left" Text="STEP" Classes="Label" VerticalAlignment="Center" Margin="0,0,6,0"
+                   IsVisible="{Binding Run.IsLive}" />
+        <ComboBox x:Name="StepPicker" DockPanel.Dock="Left" Width="90" VerticalAlignment="Center" Margin="0,0,10,0"
+                  IsVisible="{Binding Run.IsLive}"
+                  ItemsSource="{x:Static hosting:TransportChoices.Steps}" SelectedItem="{Binding Run.SelectedStep}"
+                  ToolTip.Tip="Simulation time per step (dt). Fine steps integrate the swing equation - watch RoCoF live.">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="hosting:StepChoice"><TextBlock Text="{Binding Label}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <Button x:Name="SpeedButton" DockPanel.Dock="Left" Classes="FlatBtn" Width="52" Margin="0,0,10,0"
+                Content="{Binding Run.SpeedLabel}" Click="Speed_Click" IsEnabled="{Binding Run.CanChooseSpeed}"
+                ToolTip.Tip="Playback speed - how fast it plays in real time (live: solves/s; replay: frames/s)." />
+
+        <!-- (Slice 1.7: the SOLVER picker and the engine in use moved to the header, their WPF place.) -->
+
+        <!-- map overlays (act on the map); their text, opacity and enabled state are set by the code-behind -->
+        <Button x:Name="ColorButton" DockPanel.Dock="Left" Classes="FlatBtn" Content=" LOADING" Width="116" Margin="0,0,8,0"
+                Click="Color_Click"
+                ToolTip.Tip="Cycle the map colouring: line loading, voltage, asset condition, branch stress (last two from the GDA bridge)." />
+        <Button x:Name="FleetButton" DockPanel.Dock="Left" Classes="FlatBtn" Content=" FLEET" Width="86" Margin="0,0,10,0"
+                Click="Fleet_Click"
+                ToolTip.Tip="Overlay the generation fleet on the map: one diamond per unit, coloured by fuel and sized by capacity." />
+        <Button x:Name="DnoButton" DockPanel.Dock="Left" Classes="FlatBtn" Content=" DNO" Width="66" Margin="0,0,6,0"
+                Click="Dno_Click" ToolTip.Tip="Overlay the real GB DNO licence-area boundaries (key: D)." />
+        <Button x:Name="GspRegionButton" DockPanel.Dock="Left" Classes="FlatBtn" Content=" GSP" Width="66" Margin="0,0,6,0"
+                Click="GspRegion_Click" ToolTip.Tip="Overlay the real GB GSP-region boundaries (key: R)." />
+
+        <!-- Slice 1.8, bridge only (as in WPF, after the map buttons): which GDA zone/case to stream, the historical start
+             it anchors on (never inside the horizon) and the reconstruction it replays. Shown only while the feed is a
+             bridge source; changing one while streaming restarts the stream (BridgeSession). WPF texts, widths, tips. -->
+        <TextBlock x:Name="BridgeZoneLabel" DockPanel.Dock="Left" Text="ZONE" Classes="Label" VerticalAlignment="Center"
+                   Margin="8,0,6,0" IsVisible="{Binding Run.IsBridge}" />
+        <ComboBox x:Name="BridgeZonePicker" DockPanel.Dock="Left" Width="210" VerticalAlignment="Center" Margin="0,0,10,0"
+                  IsVisible="{Binding Run.IsBridge}"
+                  ItemsSource="{x:Static hosting:BridgeChoices.Zones}" SelectedItem="{Binding Run.Bridge.SelectedZone}"
+                  ToolTip.Tip="GDA network the bridge streams (each a DNO zone case, plus GB-full). Switching restarts the stream.">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="hosting:BridgeZoneChoice"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock x:Name="BridgeStartLabel" DockPanel.Dock="Left" Text="FROM" Classes="Label" VerticalAlignment="Center"
+                   Margin="0,0,6,0" IsVisible="{Binding Run.IsBridge}" />
+        <ComboBox x:Name="BridgeStartPicker" DockPanel.Dock="Left" Width="120" VerticalAlignment="Center" Margin="0,0,10,0"
+                  IsVisible="{Binding Run.IsBridge}"
+                  ItemsSource="{x:Static hosting:BridgeChoices.Starts}" SelectedItem="{Binding Run.Bridge.SelectedStart}"
+                  ToolTip.Tip="Historical start the stream replays from. Always behind the no-forward-inference horizon.">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="hosting:BridgeStartChoice"><TextBlock Text="{Binding Label}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock x:Name="BridgeSourceLabel" DockPanel.Dock="Left" Text="SRC" Classes="Label" VerticalAlignment="Center"
+                   Margin="0,0,6,0" IsVisible="{Binding Run.IsBridge}" />
+        <ComboBox x:Name="BridgeSourcePicker" DockPanel.Dock="Left" Width="120" VerticalAlignment="Center" Margin="0,0,10,0"
+                  IsVisible="{Binding Run.IsBridge}"
+                  ItemsSource="{x:Static hosting:BridgeChoices.Sources}" SelectedItem="{Binding Run.Bridge.SelectedSource}"
+                  ToolTip.Tip="Reconstruction the stream replays: PRESOLVED = demand-scaled re-solve lake; ESTIMATED = measurement-fitted WLS lake (per-frame chi-square quality on the status pill); LIVE = static solve, scalars only. Switching restarts the stream.">
+          <ComboBox.ItemTemplate>
+            <DataTemplate x:DataType="hosting:BridgeSourceChoice"><TextBlock Text="{Binding Label}" /></DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+
+        <!-- replay only, as in WPF: where the cursor is (right) and the scrubber (fills the middle) -->
+        <TextBlock x:Name="FrameReadout" DockPanel.Dock="Right" Classes="Label" VerticalAlignment="Center" Margin="12,0,0,0"
+                   Foreground="{StaticResource Accent}" Text="{Binding Run.FrameReadout}" IsVisible="{Binding Run.IsReplay}" />
+        <Slider x:Name="Scrubber" VerticalAlignment="Center" Margin="12,0" Minimum="0"
+                Maximum="{Binding Run.ScrubberMaximum}" Value="{Binding Run.ScrubberValue, Mode=TwoWay}"
+                IsSnapToTickEnabled="True" TickFrequency="1" SmallChange="1" LargeChange="5"
+                IsVisible="{Binding Run.IsReplay}" ToolTip.Tip="Scrub through the exported frames." />
+      </DockPanel>
+    </Border>
+
+    <!-- ============ ERROR AREA (fail loud) ============ -->
+    <Border x:Name="ErrorArea" DockPanel.Dock="Top" Margin="14,10,14,0" Padding="14,6" CornerRadius="4"
+            Background="#E6231A1A" BorderBrush="{StaticResource Red}" BorderThickness="1" IsVisible="{Binding Run.HasError}">
+      <TextBlock x:Name="ErrorText" Foreground="{StaticResource Red}" FontWeight="Bold" TextWrapping="Wrap"
+                 Text="{Binding Run.ErrorText}" />
+    </Border>
+
+    <!-- ============ TABS (the WPF room tabs, in the WPF order with the WPF headers) ============ -->
+    <Panel>
+      <TabControl x:Name="TabHost" Classes="RoomTabs" Margin="6,2,6,0" SelectionChanged="Tabs_SelectionChanged">
+        <!-- NETWORK: the dashboard view, showing the window's one dashboard (its host is set by the code-behind), with
+             the network map and its hover tip in the dashboard's MapSlot. The map panel's own data context is the
+             window's view model (set by the code-behind): its bindings below read the map's hover state. -->
+        <TabItem Header="NETWORK" Classes="RoomTabItem">
+          <dashboard:DashboardView x:Name="NetworkDashboard">
+            <dashboard:DashboardView.Map>
+              <Panel x:Name="MapPanel" x:DataType="vm:MainWindowViewModel">
+                <map:SchematicControl x:Name="Schematic" />
+                <!-- The hover tip (a non-interactive overlay, placed by the code-behind next to the pointer). -->
+                <Canvas x:Name="HoverLayer" IsHitTestVisible="False">
+                  <Border x:Name="HoverTip" IsVisible="{Binding Map.HoverVisible}" Background="{StaticResource PanelHi}"
+                          BorderBrush="{StaticResource Accent}" BorderThickness="1" CornerRadius="4" Padding="8,5">
+                    <TextBlock x:Name="HoverText" FontSize="11" Foreground="{StaticResource Text}" Text="{Binding Map.HoverText}" />
+                  </Border>
+                </Canvas>
+              </Panel>
+            </dashboard:DashboardView.Map>
+          </dashboard:DashboardView>
+        </TabItem>
+
+        <!-- GENERATION & INERTIA shows the dashboard model itself (set by the code-behind), as the WPF tab binds the
+             window's dashboard. -->
+        <TabItem Header="GENERATION &amp; INERTIA" Classes="RoomTabItem">
+          <tabs:GenerationView x:Name="GenerationTab" />
+        </TabItem>
+
+        <TabItem Header="THE MACHINE" Classes="RoomTabItem">
+          <tabs:MachineView x:Name="MachineTab" DataContext="{Binding Tabs.Machine}" />
+        </TabItem>
+
+        <TabItem Header="SCADA" Classes="RoomTabItem">
+          <tabs:ScadaView x:Name="ScadaTab" DataContext="{Binding Tabs.Scada}" />
+        </TabItem>
+
+        <TabItem Header="OPERATOR" Classes="RoomTabItem">
+          <tabs:OperatorView x:Name="OperatorTab" DataContext="{Binding Tabs.Operator}" />
+        </TabItem>
+
+        <TabItem Header="MARKET" Classes="RoomTabItem">
+          <tabs:MarketView x:Name="MarketTab" DataContext="{Binding Tabs.Market}" />
+        </TabItem>
+
+        <TabItem Header="NESO RP1" Classes="RoomTabItem">
+          <tabs:NesoRp1View x:Name="NesoRp1Tab" DataContext="{Binding Tabs.NesoRp1}" />
+        </TabItem>
+
+        <TabItem Header="MECHANICAL" Classes="RoomTabItem">
+          <tabs:MachineEngineerView x:Name="MechanicalTab" DataContext="{Binding Tabs.Mechanical}" />
+        </TabItem>
+
+        <TabItem Header="HUMAN SCALE" Classes="RoomTabItem">
+          <tabs:HumanScaleView x:Name="HumanScaleTab" DataContext="{Binding Tabs.HumanScale}" />
+        </TabItem>
+
+        <TabItem Header="SPEED DOMAINS" Classes="RoomTabItem">
+          <tabs:DomainsView x:Name="DomainsTab" DataContext="{Binding Tabs.Domains}" />
+        </TabItem>
+
+        <TabItem Header="INVERTER FLEET" Classes="RoomTabItem">
+          <tabs:InverterFleetView x:Name="InverterFleetTab" DataContext="{Binding Tabs.InverterFleet}" />
+        </TabItem>
+
+        <TabItem Header="EXPERIMENTAL" Classes="RoomTabItem">
+          <tabs:ExperimentalView x:Name="ExperimentalTab" DataContext="{Binding Tabs.Experimental}" />
+        </TabItem>
+
+        <!-- HARMONICS (UI programme slice 1.7), at its WPF place between EXPERIMENTAL and CYCLE: four fixed texts from
+             the shared HarmonicsModel, fed nothing per frame, as in WPF. -->
+        <TabItem Header="HARMONICS" Classes="RoomTabItem">
+          <tabs:HarmonicsView x:Name="HarmonicsTab" DataContext="{Binding Tabs.Harmonics}" />
+        </TabItem>
+
+        <TabItem Header="CYCLE" Classes="RoomTabItem">
+          <tabs:CycleView x:Name="CycleTab" DataContext="{Binding Tabs.Cycle}" />
+        </TabItem>
+
+        <!-- ASSETS (UI programme ASSETS A3), at its WPF place after CYCLE: the explorer tree and the A2 pages, shown
+             through the navigator the dashboard's tab hook feeds first (TabModels.Assets). -->
+        <TabItem Header="ASSETS" Classes="RoomTabItem">
+          <assets:AssetsView x:Name="AssetsTab" DataContext="{Binding Tabs.Assets}" />
+        </TabItem>
+      </TabControl>
+
+      <!-- Shared banner over every tab (WPF): on a non-converged frame every analysis tab is fed the unconverged iterate
+           (voltages, flows, tap and inertia read-outs), so each tab carries this warning while it lasts. -->
+      <Border x:Name="TabInvalidBanner" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10"
+              Background="#E6231A1A" BorderBrush="#FF5B5B" BorderThickness="1" CornerRadius="4" Padding="14,5"
+              IsHitTestVisible="False" IsVisible="{Binding Dashboard.InvalidState}">
+        <TextBlock Text="STATE NOT VALID  -  the power flow did not converge; every value on this tab comes from an unconverged iterate"
+                   Foreground="#FF5B5B" FontWeight="Bold" FontSize="12" />
+      </Border>
+    </Panel>
+  </DockPanel>
+</Window>

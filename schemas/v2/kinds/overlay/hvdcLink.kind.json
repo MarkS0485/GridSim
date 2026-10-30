@@ -1,0 +1,19 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "hvdcLink",
+  "title": "HVDC link (asset overlay)",
+  "description": "Phase 5a asset overlay kind. An HVDC link described over the authored converter generators (the converters stay authored as converter-interfaced generators). Carried beside the model, never used by the solver.",
+  "params": {
+    "technology": { "type": "enum", "values": ["lcc", "vsc"], "required": false, "description": "Line-commutated (LCC) or voltage-source (VSC) converters.", "codeDefaults": [] },
+    "ratedMw": { "type": "number", "unit": "MW", "min": 0, "required": false, "description": "Rated transfer, MW.", "codeDefaults": [] },
+    "dcVoltageKv": { "type": "number", "unit": "kV", "min": 0, "required": false, "description": "Rated DC voltage (pole to earth), kV.", "codeDefaults": [] },
+    "cableLengthKm": { "type": "number", "unit": "km", "min": 0, "required": false, "description": "DC cable or line length, kilometres.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "sendingConverter": { "target": "generator", "required": true, "description": "The authored converter generator at this end of the link." },
+      "receivingConverter": { "target": "generator", "required": false, "description": "The authored converter generator at the far end (absent when the far end is outside the case)." }
+    },
+    "parentKinds": []
+  }
+}

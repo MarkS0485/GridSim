@@ -1,0 +1,83 @@
+@* GSP and grid transformers by voltage band - loading, rating and OLTC state per unit, live-solved,
+   ordered heaviest-loaded first, capped to 200. Mirrors GridSim.Wpf TransformerFleetVm. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET CLASS</div>
+    <div class="card-h" style="margin-bottom:2px">TRANSFORMERS</div>
+    <div class="muted-note" style="margin-top:0">by voltage band - loading, rating and OLTC state | <span class="txt-ok">LIVE-SOLVED</span></div>
+</div>
+
+<div class="panel-grid four">
+    <div class="mini"><span class="mv">@_txs.Count</span><span class="ml">Transformers</span></div>
+    <div class="mini"><span class="mv" style="font-size:1em">@_bands</span><span class="ml">Voltage bands</span></div>
+    <div class="mini"><span class="mv">@(_rated > 0 ? $"{_meanLoad:F0}%" : "-")</span><span class="ml">Mean loading</span></div>
+    <div class="mini"><span class="mv">@Graph.Oltcs.Count / @_txs.Count</span><span class="ml">OLTC fitted</span></div>
+</div>
+
+<div class="card grow" style="margin-bottom:0">
+    <div class="card-h">FLEET REGISTER@(_note is "" ? "" : $" | {_note}")</div>
+    <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Transformer</th><th>Band</th><th class="r">Rating</th><th class="r">Loading</th><th class="r">Flow</th><th class="r">Tap</th><th>OLTC</th></tr></thead>
+            <tbody>
+                @foreach (BranchAssetDto b in _shown)
+                {
+                    double frac = b.RatingMva > 0 ? b.LoadingPercent / 100.0 : 0;
+                    <tr @onclick="() => Nav.OpenTransformer(b.Index, b.Name)">
+                        <td>@b.Name</td>
+                        <td class="mono">@Band(b)</td>
+                        <td class="r">@(b.RateAMva > 0 ? $"{b.RateAMva:F0} MVA" : "-")</td>
+                        <td class="r">
+                            <div class="minibar"><span style="width:@Pct(frac);--c:@WebPalette.Loading(frac)"></span></div>
+                            @(b.RatingMva > 0 ? $"{b.LoadingPercent:F0}%" : "-")
+                        </td>
+                        <td class="r">@b.PFromMw.ToString("+#,0;-#,0;0")</td>
+                        <td class="r mono">@b.TapRatio.ToString("F3")</td>
+                        <td>@(_oltcTx.Contains(b.Name) ? "OLTC" : "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private const int MaxRows = 200;
+
+    private List<BranchAssetDto> _txs = new();
+    private List<BranchAssetDto> _shown = new();
+    private Dictionary<int, double> _kv = new();
+    private HashSet<string> _oltcTx = new();
+    private double _meanLoad;
+    private int _rated;
+    private string _bands = "-", _note = "";
+
+    protected override void OnParametersSet()
+    {
+        _kv = Graph.Buses.ToDictionary(b => b.Id, b => b.BaseKv);
+        _oltcTx = Graph.Oltcs.Select(o => o.Transformer).ToHashSet(StringComparer.Ordinal);
+        _txs = Graph.Branches.Where(b => b.IsTransformer).ToList();
+
+        var ratedRows = _txs.Where(b => b.RatingMva > 0).ToList();
+        _rated = ratedRows.Count;
+        _meanLoad = _rated > 0 ? ratedRows.Average(b => b.LoadingPercent) : 0;
+
+        var bandSet = _txs.Select(Band).Where(s => s != "-").Distinct().OrderByDescending(s => s).Take(3);
+        _bands = bandSet.Any() ? string.Join(" / ", bandSet) : "-";
+
+        _shown = _txs.OrderByDescending(b => b.RatingMva > 0 ? b.LoadingPercent : 0).Take(MaxRows).ToList();
+        _note = _txs.Count > MaxRows ? $"showing {MaxRows} of {_txs.Count} | heaviest first" : "";
+    }
+
+    private string Band(BranchAssetDto b)
+    {
+        double hi = _kv.GetValueOrDefault(b.From), lo = _kv.GetValueOrDefault(b.To);
+        if (lo > hi) (hi, lo) = (lo, hi);
+        return hi <= 0 && lo <= 0 ? "-" : $"{hi:F0}->{lo:F0} kV";
+    }
+
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+}

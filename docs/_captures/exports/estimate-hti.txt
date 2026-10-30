@@ -1,0 +1,15 @@
+$ gridsim estimate case14 --measurements docs/_captures/estimation/case14-planted.json --hti --fdia-screen --out results/exports-docs/estimate-planted
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 2.88E-009
+  measurements: 122   states: 27   redundancy (dof): 92
+  observability: observable (rank 27/27)
+  consistency: J = 78.65 vs chi2(95%) = 115.39 -> PASS
+  removed bad data (HTI pass 0): VmPu @ bus 9  t = 17.9  estimated error = -0.0764948 pu
+  removed bad data (HTI pass 0): PFlowMw @ branch 2->3 (from)  t = 13.6  estimated error = 0.23808 pu_base_mva (23.808 MW)
+  removed bad data (HTI pass 0): PInjMw @ bus 4  t = 7.2  estimated error = 0.272927 pu_base_mva (27.2927 MW)
+  bad-data method: HTI, 2 pass(es), 10 iteration(s) in all, stopped: ChiSquarePassed
+  FDIA screen: clear - chi-square PASSED and the state is physically plausible and anchor-consistent - no FDIA indicator.
+
+  -> results\exports-docs\estimate-planted
+[exit 0]

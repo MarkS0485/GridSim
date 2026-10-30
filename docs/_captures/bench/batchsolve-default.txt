@@ -1,0 +1,6 @@
+$ gridsim batchsolve
+GridSim  -  batched dense solve: 64 systems x 64x64   backend batched-dense-lu (cpu)
+==============================================================================
+correctness: 64/64 solved   max|Delta| vs CPU reference = 0.000E+000
+timing (median of 5): backend 1.1 ms   cpu-reference 0.9 ms   backend 57940 solves/s
+[exit 0]

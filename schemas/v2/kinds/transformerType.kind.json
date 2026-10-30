@@ -1,0 +1,221 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "transformerType",
+  "title": "Transformer type",
+  "description": "Electrical type of a transformer (per-unit, percent-on-rating and X/R side by side; the per-unit values are authoritative). Tap-changer control and the thermal state live on the oltc kind.",
+  "params": {
+    "rPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Series resistance, pu on the system base.",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400/275 kV supergrid transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Sgt400To275RPu",
+          "value": 0.0004
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer to 132 kV",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtRPu",
+          "value": 0.001
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryTxRPu",
+          "value": 0.004
+        },
+        {
+          "consumer": "SyntheticGb 33/11 kV secondary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.SecondaryTxRPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "SyntheticGb 11/6.6 kV legacy transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.LegacyTxRPu",
+          "value": 0.04
+        }
+      ]
+    },
+    "xPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Series reactance, pu on the system base.",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400/275 kV supergrid transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Sgt400To275XPu",
+          "value": 0.012
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer to 132 kV",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtXPu",
+          "value": 0.02
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryTxXPu",
+          "value": 0.06
+        },
+        {
+          "consumer": "SyntheticGb 33/11 kV secondary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.SecondaryTxXPu",
+          "value": 0.22
+        },
+        {
+          "consumer": "SyntheticGb 11/6.6 kV legacy transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.LegacyTxXPu",
+          "value": 0.5
+        },
+        {
+          "consumer": "GDA build: reactance given to a degenerate (missing or zero) LTDS transformer",
+          "ref": "member:GridSim.Gda:GridSim.Gda.GdaBuildDefaults.MinTransformerXPu",
+          "value": 0.0001
+        }
+      ]
+    },
+    "tapRatio": {
+      "type": "number",
+      "unit": "pu@transformer",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "description": "Fixed off-nominal tap ratio (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer to 132 kV",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtTapRatio",
+          "value": 0.99
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryTxTapRatio",
+          "value": 0.97
+        },
+        {
+          "consumer": "SyntheticGb 33/11 kV secondary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.SecondaryTxTapRatio",
+          "value": 0.97
+        },
+        {
+          "consumer": "SyntheticGb 11/6.6 kV legacy transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.LegacyTxTapRatio",
+          "value": 0.99
+        }
+      ]
+    },
+    "ratedMva": {
+      "type": "number",
+      "unit": "MVA",
+      "min": 0,
+      "required": false,
+      "description": "Rating (MVA).",
+      "codeDefaults": [
+        {
+          "consumer": "SyntheticGb 400/275 kV supergrid transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.Sgt400To275RateMva",
+          "value": 1000.0
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer to 132 kV",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtRateMva",
+          "value": 750.0
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryTxRateMva",
+          "value": 180.0
+        },
+        {
+          "consumer": "SyntheticGb 33/11 kV secondary transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.SecondaryTxRateMva",
+          "value": 30.0
+        },
+        {
+          "consumer": "SyntheticGb 11/6.6 kV legacy transformer",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.LegacyTxRateMva",
+          "value": 12.0
+        },
+        {
+          "consumer": "GDA build: MVA base for a percent-on-rating impedance when the transformer has no rating",
+          "ref": "member:GridSim.Gda:GridSim.Gda.GdaBuildDefaults.TransformerRatingFallbackMva",
+          "value": 100.0
+        }
+      ]
+    },
+    "hvKv": {
+      "type": "number",
+      "unit": "kV",
+      "min": 0,
+      "required": false,
+      "description": "High-voltage winding rated voltage (kV).",
+      "codeDefaults": []
+    },
+    "lvKv": {
+      "type": "number",
+      "unit": "kV",
+      "min": 0,
+      "required": false,
+      "description": "Low-voltage winding rated voltage (kV).",
+      "codeDefaults": []
+    },
+    "impedancePercent": {
+      "type": "number",
+      "unit": "%",
+      "min": 0,
+      "required": false,
+      "description": "Short-circuit impedance, percent on the rating.",
+      "codeDefaults": []
+    },
+    "xOverR": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Reactance-to-resistance ratio.",
+      "codeDefaults": []
+    },
+    "r0Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Zero-sequence resistance, pu on the system base.",
+      "codeDefaults": []
+    },
+    "x0Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Zero-sequence reactance, pu on the system base.",
+      "codeDefaults": []
+    },
+    "neutralXPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Neutral earthing reactance, pu on the system base.",
+      "codeDefaults": []
+    },
+    "windings": {
+      "type": "integer",
+      "unit": "1",
+      "min": 2,
+      "max": 3,
+      "required": false,
+      "description": "Number of windings (2 or 3).",
+      "codeDefaults": []
+    },
+    "vectorGroup": {
+      "type": "string",
+      "required": false,
+      "description": "IEC vector group, for example YNd11.",
+      "codeDefaults": []
+    }
+  }
+}

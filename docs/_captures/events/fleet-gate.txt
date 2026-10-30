@@ -1,0 +1,4 @@
+$ gridsim fleet --event gb-2023-12-22 --out results/fleet-gb-2023-12-22
+GATE FAILED: baseline verdict is Marginal, not Reproduced - Marginal: RoCoF sim -0.123 vs rec -0.102 Hz/s (20 % err); nadir sim 48.98 vs rec 49.27 Hz (0.30 Hz err); RMSE n/a (no trace)
+Fix the event's [VERIFY] figures (or tolerances) until 'replay-event' reports Reproduced, then re-run.
+[exit 3]

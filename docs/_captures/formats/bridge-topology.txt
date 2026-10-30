@@ -1,0 +1,22 @@
+$ sed -n '26,45p' tests/GridSim.Tests/BridgeProtocolTests.cs
+    {
+      "type": "topology",
+      "model": {
+        "name": "toy3",
+        "baseMva": 100,
+        "buses": [
+          { "id": 1, "type": "Slack", "baseKv": 400, "name": "Slack400" },
+          { "id": 2, "type": "Pv",    "baseKv": 400, "name": "Gen400" },
+          { "id": 3, "type": "Pq",    "baseKv": 132, "pd": 80, "qd": 20, "name": "Load132" }
+        ],
+        "generators": [
+          { "bus": 1, "pg": 0,   "name": "SlackGen" },
+          { "bus": 2, "pg": 120, "vg": 1.02, "mBase": 200, "h": 4.0, "name": "UnitA", "type": "CCGT" }
+        ],
+        "branches": [
+          { "from": 1, "to": 2, "r": 0.004, "x": 0.04, "b": 0.02, "rateAMva": 500, "name": "L1-2" },
+          { "from": 2, "to": 3, "r": 0.006, "x": 0.08, "tap": 1.0, "rateAMva": 250, "name": "T2-3", "isTransformer": true }
+        ]
+      }
+    }
+[exit 0]

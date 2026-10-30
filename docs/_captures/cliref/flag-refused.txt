@@ -1,0 +1,3 @@
+$ gridsim trip --top 5
+error: trip does not take --top (it is not one of trip's flags, so it would be silently ignored). Run 'gridsim trip --help' for the flags trip takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

@@ -1,0 +1,10 @@
+$ gridsim crossval case118
+[crossval] solved 'case118' (converged, 6 iters) -> src\GridSim.Cli\bin\Release\net10.0\results\crossval-case118\solve-export.json
+
+=== Cross-validation vs pandapower: case118 ===
+  buses compared: 118
+  max |delta Vm|: 6.661E-016 pu   max |delta Va|: 0.0000 deg
+  tolerance: 1.0E-003   -> AGREES
+
+  -> src\GridSim.Cli\bin\Release\net10.0\results\crossval-case118
+[exit 0]

@@ -1,0 +1,2370 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sys="using:System"
+             xmlns:nav="using:GridSim.Ui.Assets.Navigation"
+             xmlns:pages="using:GridSim.Ui.Assets.Pages"
+             xmlns:idx="using:GridSim.Ui.Assets.Index"
+             xmlns:ov="using:GridSim.Ui.Assets.Overviews"
+             xmlns:olay="using:GridSim.Ui.Assets.Overlay"
+             xmlns:assets="using:GridSim.App.Assets"
+             xmlns:ctl="using:GridSim.App.Controls"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             x:Class="GridSim.App.Assets.AssetsView"
+             x:DataType="nav:AssetNavigatorModel">
+  <!-- UI programme ASSETS A3: the ASSETS tab, in the split layout of the ASSETS plan (section 3.2, Mark's decisions in
+       section 8): the header row (ASSETS home, BACK and FORWARD over the navigator's history, the search box, the crumb,
+       SHOW ON MAP, the RUN mode badge and the TIME-ALIGNED sim clock), the explorer tree on the left (the search
+       matches in its place while a search is typed), and on the right the sub-tabs over the page, OVERVIEW being the
+       A2 page itself.
+
+       The page templates below are the WPF ones (src/GridSim.Wpf/Views/Assets: AssetExplorerView.xaml and the four
+       *Templates.xaml), carried over verbatim: the same texts in the same order, the same layout, sizes and margins, the
+       STATIC DEMO tags beside the same panel headers, every value bound to the same A2 page property. Only the WPF
+       mechanics are translated, one way each (AssetsViewParityTests reads both sets of files and checks it):
+         - a keyed WPF style (Style="{StaticResource Card}") is a style class (Classes="Card", Theme/ControlRoom.axaml);
+         - a brush (MetricBrush, Bar, FuelBrush ...) is its colour token (MetricColour, BarColour, FuelColour ...)
+           through TokenBrush, the same four bytes;
+         - a Visibility is the bool behind it on IsVisible (AssetVis is AssetVisible; BoolToVis of HasOltc is HasOltc);
+         - a command (Open, Select, Toggle, OpenLanding, OpenBus, OpenHv ...) is a click handler in the code-behind that
+           runs the A2 action or method behind it, the link buttons keeping their CommandParameter binding (the id read at
+           click time, as in WPF);
+         - the four WPF DataTriggers are style classes (Chip.On, SubsystemStatus.Ok) and an IsVisible (HasGroup);
+         - the WPF visuals are the ported controls (Controls/: Gauge, Sparkline, Phasor, SubstationMap,
+           TransformerSchematic), the last two drawing the A1 display lists, so the pictures are WPF's.
+       Added on the substation and transformer pages: an IEC VIEW toggle that shows the A1b toolkit diagram of the same
+       data (AssetDiagramView); a click on one of its symbols opens that asset and selects it in the tree.
+       The data context is the navigator (GridSim.Ui AssetNavigatorModel), fed by the dashboard's tab hook (TabModels).
+
+       UI programme ASSETS B2 (extending the A3 split layout, same visual style): the PROPERTIES sub-tab (the case
+       record's fields as written, read-only, with the solver's own value beside a field where it has one, labelled) and
+       the CONNECTIONS sub-tab (the model adjacency and the case's where-used list, each row a link that selects its node)
+       sit beside OVERVIEW over the page; a sub-tab with nothing to show is not offered, and when the model's source has
+       no case records the reason is shown under the sub-tabs. The new class pages (DEMANDS, BOUNDARIES, PROTECTIONS,
+       ASSET CLASSES, OUT OF SERVICE) and their members are one page type, AssetOverviewPage, with its own template at the
+       end of the page templates.
+
+       UI programme ASSETS slice 5-view (extending the same split layout, same visual style, Run mode, read-only): the
+       case's asset overlay (carried, not used by the solver). The OVERLAY class node, its kinds and its records, and the
+       records nested under the model assets they attach to, open AssetOverviewPage pages too (the template below, which
+       also draws a substation record's sections and switchgear on the A1b toolkit when it has any). The OVERLAY sub-tab
+       lists the records attached to a model asset; on an overlay record PROPERTIES is the record as written and CHECK
+       its overlay checker problems. Every overlay page and sub-tab says "carried, not used by the solver". -->
+
+  <UserControl.Styles>
+    <!-- A WPF Button stretches across its cell or row by default (FrameworkElement.HorizontalAlignment = Stretch); an
+         Avalonia Button sizes to its content. The asset cards and rows fill their cell or row, as in WPF. -->
+    <Style Selector="Button.TileBtn">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.RowLinkBtn">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+    <!-- WPF DataTrigger IsOn / Active = True on a filter chip: accent border and text. -->
+    <Style Selector="Button.Chip.On">
+      <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+      <Setter Property="Foreground" Value="{StaticResource Accent}" />
+    </Style>
+    <!-- WPF subsystem status chip: amber, green when Ok. -->
+    <Style Selector="TextBlock.SubsystemStatus">
+      <Setter Property="Foreground" Value="{StaticResource Amber}" />
+    </Style>
+    <Style Selector="TextBlock.SubsystemStatus.Ok">
+      <Setter Property="Foreground" Value="{StaticResource Green}" />
+    </Style>
+    <!-- The IEC VIEW toggle: the flat control-room button look, accent while on. -->
+    <Style Selector="ToggleButton.IecToggle">
+      <Setter Property="Foreground" Value="{StaticResource Text}" />
+      <Setter Property="Background" Value="{StaticResource PanelHi}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Border}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="FontSize" Value="10" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="ToggleButton.IecToggle:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{StaticResource PanelHi}" />
+      <Setter Property="BorderBrush" Value="{StaticResource Accent}" />
+      <Setter Property="Foreground" Value="{StaticResource Accent}" />
+    </Style>
+    <!-- The explorer tree: each item's expansion is the node's own (the navigator opens the path to a selection). -->
+    <Style Selector="TreeViewItem" x:DataType="nav:AssetTreeNode">
+      <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+      <!-- ASSETS A3 follow-up (2026-10-24): a group's rows are virtualised (only the rows in view are made), so a
+           gb-full voltage group of over a thousand buses no longer builds every row when it is opened. -->
+      <Setter Property="ItemsPanel">
+        <ItemsPanelTemplate>
+          <VirtualizingStackPanel />
+        </ItemsPanelTemplate>
+      </Setter>
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <!-- The WPF PageHeader template (Theme.xaml): every page's eyebrow, title and sub line. -->
+    <DataTemplate x:Key="PageHeader" DataType="pages:AssetPageModel">
+      <StackPanel Margin="2,0,0,14">
+        <TextBlock Text="{Binding Eyebrow}" Classes="Label" FontSize="10" />
+        <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+        <TextBlock Text="{Binding Sub}" Classes="Label" FontSize="12" Margin="0,2,0,0" />
+      </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="TxReadingRow" DataType="pages:TransformerReadingModel">
+      <DockPanel Margin="0,3">
+        <Border DockPanel.Dock="Right" Background="{StaticResource Track}" CornerRadius="7" Padding="7,1" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Status}" FontSize="9" FontWeight="Bold" Foreground="{Binding ChipColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+        </Border>
+        <TextBlock Text="{Binding Value}" DockPanel.Dock="Right" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}"
+             Margin="12,0,10,0" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding Label}" Classes="Label" VerticalAlignment="Center" TextWrapping="Wrap" />
+      </DockPanel>
+    </DataTemplate>
+
+    <!-- ASSETS B2: one CONNECTIONS link (relation, what, detail); a click selects the node it names. -->
+    <DataTemplate x:Key="ConnectionRowTemplate" DataType="idx:ConnectionRow">
+      <Button Classes="RowLinkBtn" Click="Connection_Click" IsEnabled="{Binding CanOpen}" Margin="0,0,0,4" Padding="8,4">
+        <Grid ColumnDefinitions="260,*,Auto">
+          <TextBlock Grid.Column="0" Text="{Binding Relation}" Classes="Label" FontSize="11" VerticalAlignment="Center"
+                     TextWrapping="Wrap" Margin="0,0,12,0" />
+          <TextBlock Grid.Column="1" Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="2" Text="{Binding Detail}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}"
+                     VerticalAlignment="Center" Margin="12,0,0,0" />
+        </Grid>
+      </Button>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <DockPanel Margin="12">
+
+    <!-- explorer header: navigation + the time strip every page is aligned to -->
+    <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12" Padding="12,8">
+      <DockPanel>
+        <!-- WPF ASSETS (home) and BACK; FORWARD and the search box are the tree's (plan section 3.2). -->
+        <Button x:Name="HomeButton" Content=" ASSETS" Classes="FlatBtn" Click="Home_Click" IsEnabled="{Binding IsRunMode}"
+                DockPanel.Dock="Left" Margin="0,0,8,0" />
+        <Button x:Name="BackButton" Content=" BACK" Classes="FlatBtn" Click="Back_Click" IsEnabled="{Binding IsRunMode}"
+                IsVisible="{Binding CanGoBack}" DockPanel.Dock="Left" Margin="0,0,8,0" />
+        <Button x:Name="ForwardButton" Content=" FORWARD" Classes="FlatBtn" Click="Forward_Click" IsEnabled="{Binding IsRunMode}"
+                IsVisible="{Binding CanGoForward}" DockPanel.Dock="Left" Margin="0,0,8,0" />
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Left" Width="240" IsEnabled="{Binding IsRunMode}" VerticalAlignment="Center" Margin="4,0,0,0"
+                 Text="{Binding SearchText, Mode=TwoWay}" Watermark="search: name / bus id / kind"
+                 ToolTip.Tip="Type a name, a bus id or a kind; Enter opens the bus with that id, else the first match" />
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+          <Button x:Name="ShowOnMapButton" Content="SHOW ON MAP" Classes="FlatBtn" Click="ShowOnMap_Click"
+                  IsEnabled="{Binding CanShowOnMap}" Margin="0,0,14,0"
+                  ToolTip.Tip="Switch to NETWORK and select this bus or branch on the map" />
+          <!-- UI programme Phase 4.1: the A3 RUN badge is now the RUN / AUTHOR toggle. A click switches mode through the
+               window's Author mode (AUTHOR: pause the run, open the case file for editing; RUN: Save / Discard / Cancel
+               for unsaved changes, then reload the saved case). AUTHOR is offered for case files on the desktop only;
+               for any other source the reason is shown beside it (plan Q9). -->
+          <Button x:Name="ModeToggle" Click="ModeToggle_Click" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                  VerticalAlignment="Center" Margin="0,0,14,0" BorderThickness="0"
+                  ToolTip.Tip="RUN shows the solved case live; AUTHOR edits the case file (desktop, case files only). Click to switch.">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock x:Name="ModeBadge" Text="{Binding ModeLabel}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Accent}" />
+              <TextBlock x:Name="ModeSwitchText" Text="{Binding ModeSwitchLabel}" FontSize="9" Foreground="{StaticResource Muted}" Margin="6,0,0,0" />
+            </StackPanel>
+          </Button>
+          <TextBlock Text="TIME-ALIGNED  " Classes="Label" VerticalAlignment="Center" IsVisible="{Binding IsRunMode}" />
+          <TextBlock x:Name="TimeText" Text="{Binding TimeLabel}" FontFamily="{StaticResource MonoFont}" FontSize="13"
+                     FontWeight="Bold" Foreground="{StaticResource Accent}" VerticalAlignment="Center" IsVisible="{Binding IsRunMode}" />
+        </StackPanel>
+        <!-- Phase 4.1: why AUTHOR was not entered (plan Q9), or why RUN was not resumed -->
+        <TextBlock x:Name="ModeNoteText" DockPanel.Dock="Bottom" Text="{Binding ModeNote}" IsVisible="{Binding HasModeNote}"
+                   Foreground="{StaticResource Amber}" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" />
+        <TextBlock x:Name="CrumbText" Text="{Binding Crumb}" Classes="Label" FontSize="12" IsVisible="{Binding IsRunMode}"
+                   VerticalAlignment="Center" Margin="14,0,0,0" TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+    </Border>
+
+    <Panel>
+    <!-- UI programme Phase 4.1: AUTHOR mode, in the same split layout (AuthorView.axaml), over the case file's records.
+         Shown only in AUTHOR; the RUN layout below (every live page) is hidden then, so no live value is on screen. -->
+    <Panel x:Name="AuthorHost" IsVisible="{Binding IsAuthoring}">
+      <assets:AuthorView x:Name="AuthorPane" DataContext="{Binding Author}" />
+    </Panel>
+
+    <Grid x:Name="RunBody" ColumnDefinitions="300,6,*" IsVisible="{Binding IsRunMode}">
+      <!-- the explorer tree (or, while a search is typed, its matches) -->
+      <Border Grid.Column="0" Classes="Card" Padding="6">
+        <DockPanel>
+          <TextBlock x:Name="SearchNoteText" DockPanel.Dock="Top" Text="{Binding SearchNote}" Classes="Label" FontSize="10"
+                     Margin="4,0,0,6" IsVisible="{Binding IsSearching}" />
+          <Panel>
+            <TreeView x:Name="Tree" ItemsSource="{Binding Roots}" SelectionChanged="Tree_SelectionChanged"
+                      IsVisible="{Binding !IsSearching}">
+              <TreeView.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+              </TreeView.ItemsPanel>
+              <TreeView.ItemTemplate>
+                <TreeDataTemplate DataType="nav:AssetTreeNode" ItemsSource="{Binding Children}">
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
+                  </StackPanel>
+                </TreeDataTemplate>
+              </TreeView.ItemTemplate>
+            </TreeView>
+            <ScrollViewer IsVisible="{Binding IsSearching}" VerticalScrollBarVisibility="Auto">
+              <ItemsControl x:Name="SearchHitList" ItemsSource="{Binding SearchHits}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="nav:AssetTreeNode">
+                    <Button Classes="RowLinkBtn" Click="Hit_Click" Margin="0,0,0,4" Padding="8,4" HorizontalAlignment="Stretch">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Path}" Classes="Label" FontSize="10" TextTrimming="CharacterEllipsis" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Panel>
+        </DockPanel>
+      </Border>
+
+      <GridSplitter Grid.Column="1" Background="Transparent" ResizeDirection="Columns" />
+
+      <!-- the sub-tabs over the page (only the ones with something to show), and the page -->
+      <DockPanel Grid.Column="2">
+        <TabStrip x:Name="SubTabStrip" DockPanel.Dock="Top" ItemsSource="{Binding SubTabs}"
+                  SelectedItem="{Binding SelectedSubTab, Mode=TwoWay}" Margin="0,0,0,8" />
+
+        <!-- ASSETS B2: why PROPERTIES is not offered for this source (plan Q9), when it is not -->
+        <TextBlock x:Name="SubTabNoteText" DockPanel.Dock="Top" Text="{Binding SubTabNote}" IsVisible="{Binding HasSubTabNote}"
+                   Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="4,0,0,8" />
+
+        <Panel>
+        <!-- OVERVIEW: the current page, matched to its view by type -->
+        <ContentControl x:Name="PageHost" Content="{Binding Current}" IsVisible="{Binding IsOverviewShown}">
+          <ContentControl.DataTemplates>
+          <!-- ===== landing page: asset-class tiles ===== -->
+          <DataTemplate DataType="assets:AssetHomePage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Classes}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="2" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:AssetClassCardModel">
+                      <!-- live summary card: class identity + count, a headline live metric, and a mini bar -->
+                      <Button Classes="TileBtn" Click="Open_Click"
+                          Margin="0,0,12,12" Padding="18,16" VerticalContentAlignment="Top">
+                        <StackPanel>
+                          <!-- title + tag chip -->
+                          <DockPanel>
+                            <TextBlock Text="{Binding Title}" Classes="PanelHeader" FontSize="13"
+                                 DockPanel.Dock="Left" VerticalAlignment="Center" />
+                            <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1"
+                                HorizontalAlignment="Right" VerticalAlignment="Center">
+                              <TextBlock Text="{Binding Tag}" FontSize="9" FontWeight="Bold"
+                                   Foreground="{StaticResource Muted}" />
+                            </Border>
+                          </DockPanel>
+
+                          <!-- count + live headline metric, side by side -->
+                          <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="Auto" />
+                              <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <!-- the count of units in this class -->
+                            <StackPanel Grid.Column="0" VerticalAlignment="Bottom">
+                              <TextBlock Text="{Binding Count}" Classes="Value" FontSize="34" />
+                              <TextBlock Text="UNITS" Classes="Label" FontSize="9" Margin="2,0,0,0" />
+                            </StackPanel>
+
+                            <!-- the live headline metric, accent/health coloured -->
+                            <StackPanel Grid.Column="1" VerticalAlignment="Bottom" HorizontalAlignment="Right">
+                              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding Metric}" FontSize="28" FontWeight="Bold"
+                                     Foreground="{Binding MetricColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                                <TextBlock Text="{Binding MetricUnit}" Classes="Unit"
+                                     VerticalAlignment="Bottom" Margin="0,0,0,5" />
+                              </StackPanel>
+                              <TextBlock Text="{Binding MetricLabel}" Classes="Label" FontSize="9"
+                                   HorizontalAlignment="Right" Margin="0,1,0,0" />
+                            </StackPanel>
+                          </Grid>
+
+                          <!-- mini bar: live metric as a fraction of its class scale -->
+                          <Border Width="220" Height="6" Background="{StaticResource Track}" CornerRadius="3"
+                              HorizontalAlignment="Left" Margin="0,12,0,0">
+                            <Border Width="{Binding BarWidth}" Height="6" Background="{Binding MetricColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                CornerRadius="3" HorizontalAlignment="Left" />
+                          </Border>
+
+                          <!-- the class description -->
+                          <TextBlock Text="{Binding Detail}" Classes="Label"
+                               TextWrapping="Wrap" Margin="0,12,0,0" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== interconnector fleet ===== -->
+          <DataTemplate DataType="assets:InterconnectorFleetPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="TOTAL CAPACITY" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding TotalCap}" Classes="Value" />
+                      <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="NET FLOW" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding NetFlow}" Classes="Value" />
+                      <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="IMPORTING" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Importing}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="LARGEST FLOW" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Largest}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0"
+                         TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Links}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:LinkFleetRowModel">
+                      <Button Classes="TileBtn" Click="Open_Click" Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Text="{Binding Route}" Classes="Label" FontSize="10" />
+                          </StackPanel>
+                          <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                              VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="{Binding Badge}" FontSize="9" FontWeight="Bold"
+                                 Foreground="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          </Border>
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <Border Width="240" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                HorizontalAlignment="Left">
+                              <Border Width="{Binding BarWidth}" Height="7" Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                  CornerRadius="3" HorizontalAlignment="Left" />
+                            </Border>
+                          </StackPanel>
+                          <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,4,0">
+                            <TextBlock Text="{Binding Flow}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                              <TextBlock Text="{Binding Util}" Classes="Label" FontSize="10" />
+                              <TextBlock Text=" of " Classes="Label" FontSize="10" />
+                              <TextBlock Text="{Binding Capacity}" Classes="Label" FontSize="10" />
+                            </StackPanel>
+                          </StackPanel>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== interconnector unit dashboard ===== -->
+          <DataTemplate DataType="pages:InterconnectorDetailModel">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="FLOW" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Flow}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="CAPACITY" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Capacity}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="UTILISATION" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Util}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="DIRECTION" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                      <Ellipse Width="12" Height="12" Fill="{Binding DirectionColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding Direction}" FontSize="20" FontWeight="Bold" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="340" />
+                </Grid.ColumnDefinitions>
+
+                <Border Classes="Card" Grid.Column="0" Margin="0,0,12,0">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="FLOW  RECENT SIM HISTORY" Classes="PanelHeader" Margin="0,0,0,8" />
+                    <ctl:Sparkline Values="{Binding Trace}" MinHeight="120" />
+                  </DockPanel>
+                </Border>
+
+                <Border Classes="Card" Grid.Column="1" VerticalAlignment="Top">
+                  <StackPanel>
+                    <TextBlock Text="LANDING ZONE" Classes="PanelHeader" Margin="0,0,0,8" />
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Substation" Classes="Label" Width="110" />
+                      <Button Classes="LinkBtn" Click="Landing_Click" CommandParameter="{Binding LandingBusId}"
+                          HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                        <TextBlock Text="{Binding Landing}" FontWeight="SemiBold" Foreground="{StaticResource Accent}" />
+                      </Button>
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Voltage level" Classes="Label" Width="110" />
+                      <TextBlock Text="{Binding LandingKv}" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Bus voltage" Classes="Label" Width="110" />
+                      <TextBlock Text="{Binding LandingVm}" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Co-located" Classes="Label" Width="110" />
+                      <TextBlock Text="{Binding Colocated}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    </DockPanel>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== generator fleet ===== -->
+          <DataTemplate DataType="assets:GeneratorFleetPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="TOTAL OUTPUT" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding TotalOutput}" Classes="Value" />
+                      <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="UNITS ONLINE" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Online}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="SYNCHRONOUS SHARE" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Synchronous}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="LARGEST UNIT" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Largest}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0"
+                         TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <TextBlock DockPanel.Dock="Top" Text="{Binding CountNote}" Classes="Label"
+                   FontSize="11" Margin="2,0,0,8" />
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Units}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:GenFleetRowModel">
+                      <Button Classes="TileBtn" Click="Open_Click" Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+
+                          <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Bold" FontSize="14"
+                               VerticalAlignment="Center" />
+
+                          <!-- fuel chip: a coloured dot + the fuel name -->
+                          <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                              VerticalAlignment="Center" Margin="0,0,16,0">
+                            <StackPanel Orientation="Horizontal">
+                              <Ellipse Width="8" Height="8" Fill="{Binding FuelColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                  VerticalAlignment="Center" Margin="0,0,6,0" />
+                              <TextBlock Text="{Binding Fuel}" FontSize="9" FontWeight="Bold"
+                                   Foreground="{Binding FuelColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                            </StackPanel>
+                          </Border>
+
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <Border Width="240" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                HorizontalAlignment="Left">
+                              <Border Width="{Binding BarWidth}" Height="7" Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                  CornerRadius="3" HorizontalAlignment="Left" />
+                            </Border>
+                          </StackPanel>
+
+                          <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,16,0">
+                            <TextBlock Text="{Binding Output}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding Util}" Classes="Label" FontSize="10"
+                                 HorizontalAlignment="Right" />
+                          </StackPanel>
+
+                          <Border Grid.Column="4" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                              VerticalAlignment="Center" Margin="0,0,4,0">
+                            <TextBlock Text="{Binding Inertia}" FontFamily="{StaticResource MonoFont}"
+                                 FontSize="10" FontWeight="Bold" Foreground="{StaticResource Muted}" />
+                          </Border>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== generator unit dashboard ===== -->
+          <DataTemplate DataType="pages:GeneratorDetailModel">
+           <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="OUTPUT" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Output}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="CAPACITY" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Capacity}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="UTILISATION" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Util}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="FUEL CLASS" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                      <Ellipse Width="12" Height="12" Fill="{Binding FuelColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                      <TextBlock Text="{Binding Fuel}" FontSize="18" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <!-- operating point line: P, Q (signed), S, PF, leading/lagging -->
+              <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12">
+                <DockPanel>
+                  <Border DockPanel.Dock="Right" Background="{StaticResource Track}" CornerRadius="7" Padding="9,3"
+                      VerticalAlignment="Center">
+                    <TextBlock Text="{Binding LeadLag}" FontSize="11" FontWeight="Bold"
+                         Foreground="{Binding LeadLagColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                  </Border>
+                  <StackPanel>
+                    <TextBlock Text="OPERATING POINT" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding OperatingPoint}" FontFamily="{StaticResource MonoFont}"
+                         FontSize="14" FontWeight="SemiBold" Margin="0,5,0,0" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+
+              <!-- instruments row: output dial  power-factor phasor disc -->
+              <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Classes="Card" Margin="0,0,6,0">
+                  <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="OUTPUT vs CAPACITY"
+                         Classes="PanelHeader" Margin="0,0,0,4" />
+                    <ctl:Gauge Caption="LOADING" Unit="MW"
+                         Value="{Binding OutputMw}" Minimum="0" Maximum="{Binding CapacityMw}"
+                         ValueText="{Binding OutputDialText}" AmberFrom="0.85" RedFrom="0.95"
+                         Width="150" Height="150" />
+                  </DockPanel>
+                </Border>
+
+                <Border Grid.Column="1" Classes="Card" Margin="6,0,0,0">
+                  <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                      <TextBlock Text="PHASOR  POWER FACTOR" Classes="PanelHeader" DockPanel.Dock="Left" />
+                      <TextBlock Text="{Binding PowerFactor}" Classes="Label" FontSize="11"
+                           HorizontalAlignment="Right" />
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Classes="Label" FontSize="10"
+                         TextWrapping="Wrap" Margin="0,4,0,0"
+                         Text="V at 0 deg reference  I swung by phi = atan2(Q, P)  lagging exports VArs, leading absorbs (Q estimated from the solved frame)" />
+                    <ctl:Phasor P="{Binding PhasorP}" Q="{Binding PhasorQ}" SMax="{Binding PhasorSMax}"
+                          Height="180" MinWidth="180" />
+                  </DockPanel>
+                </Border>
+              </Grid>
+
+              <!-- estimated fuel burn + inertia contribution -->
+              <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <DockPanel Margin="0,0,0,8">
+                      <TextBlock Text="{Binding FuelBurnTitle}" Classes="PanelHeader" DockPanel.Dock="Left" />
+                      <TextBlock Text="estimated" Classes="Label" FontSize="9"
+                           HorizontalAlignment="Right" />
+                    </DockPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding FuelBurnPrimary}" Classes="Value" />
+                      <TextBlock Text="{Binding FuelBurnPrimaryUnit}" Classes="Unit"
+                           VerticalAlignment="Bottom" Margin="6,0,0,6" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding FuelBurnCo2}" FontSize="14" FontWeight="SemiBold"
+                         Foreground="{StaticResource Amber}" Margin="0,2,0,0" />
+                    <TextBlock Text="{Binding FuelBurnNote}" Classes="Label" FontSize="10"
+                         TextWrapping="Wrap" Margin="0,8,0,0" />
+                  </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1" Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="INERTIA CONTRIBUTION" Classes="PanelHeader" Margin="0,0,0,8" />
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Inertia constant" Classes="Label" Width="130" />
+                      <TextBlock Text="{Binding Inertia}" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Stored energy" Classes="Label" Width="130" />
+                      <TextBlock Text="{Binding StoredEnergy}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    </DockPanel>
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="Share of grid spin" Classes="Label" Width="130" />
+                      <TextBlock Text="{Binding InertiaShare}" FontWeight="Bold"
+                           Foreground="{StaticResource Accent}" />
+                    </DockPanel>
+                    <!-- a thin bar for the share of total system inertia (-scaled width) -->
+                    <Border Width="300" Height="6" Background="{StaticResource Track}" CornerRadius="3"
+                        HorizontalAlignment="Left" Margin="0,4,0,4">
+                      <Border Width="{Binding InertiaShareBar}" Height="6" Background="{StaticResource Accent}"
+                          CornerRadius="3" HorizontalAlignment="Left" />
+                    </Border>
+                    <DockPanel Margin="0,3">
+                      <TextBlock Text="System total" Classes="Label" Width="130" />
+                      <TextBlock Text="{Binding SystemInertia}" FontWeight="SemiBold" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding InertiaFraming}" Classes="Label" FontSize="10"
+                         TextWrapping="Wrap" Margin="0,8,0,0" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="360" />
+                </Grid.ColumnDefinitions>
+
+                <!-- left column: live output history + subsystem register -->
+                <DockPanel Grid.Column="0" Margin="0,0,12,0">
+                  <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Top" Text="OUTPUT  RECENT SIM HISTORY"
+                           Classes="PanelHeader" Margin="0,0,0,8" />
+                      <ctl:Sparkline Values="{Binding Trace}" MinHeight="120" />
+                    </DockPanel>
+                  </Border>
+
+                  <Border Classes="Card" VerticalAlignment="Top">
+                    <StackPanel>
+                      <DockPanel Margin="0,0,0,8">
+                        <TextBlock Text="SUBSYSTEMS" Classes="PanelHeader" DockPanel.Dock="Left" />
+                        <TextBlock Classes="StaticDemoTag" />
+                      </DockPanel>
+                      <ItemsControl ItemsSource="{Binding Subsystems}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="pages:SubsystemRow">
+                            <Grid Margin="0,5">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="72" />
+                                <ColumnDefinition Width="*" />
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                              <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="6,1"
+                                  HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Status}" FontSize="9" FontWeight="Bold"
+                                       Classes="SubsystemStatus" Classes.Ok="{Binding Ok}" />
+                              </Border>
+                              <TextBlock Grid.Column="2" Text="{Binding Note}" Classes="Label"
+                                   FontSize="11" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   Margin="10,0,0,0" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DockPanel>
+
+                <!-- right column: nameplate / connection + event log -->
+                <DockPanel Grid.Column="1">
+                  <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12">
+                    <StackPanel>
+                      <TextBlock Text="NAMEPLATE &amp; CONNECTION" Classes="PanelHeader" Margin="0,0,0,8" />
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Voltage setpoint" Classes="Label" Width="120" />
+                        <TextBlock Text="{Binding VSet}" FontWeight="SemiBold" />
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Reactive output" Classes="Label" Width="120" />
+                        <TextBlock Text="{Binding Reactive}" FontWeight="SemiBold" />
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Reactive limits" Classes="Label" Width="120" />
+                        <TextBlock Text="{Binding ReactiveLimits}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      </DockPanel>
+                      <Border Height="1" Background="{StaticResource Border}" Margin="0,8" />
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Connected bus" Classes="Label" Width="120" />
+                        <Button Classes="LinkBtn" Click="GeneratorBus_Click" CommandParameter="{Binding BusId}"
+                            HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                          <TextBlock Text="{Binding Bus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                               Foreground="{StaticResource Accent}" />
+                        </Button>
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Voltage level" Classes="Label" Width="120" />
+                        <TextBlock Text="{Binding BusKv}" FontWeight="SemiBold" />
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Solved voltage" Classes="Label" Width="120" />
+                        <TextBlock Text="{Binding BusVm}" FontWeight="SemiBold" />
+                      </DockPanel>
+                    </StackPanel>
+                  </Border>
+
+                  <Border Classes="Card" VerticalAlignment="Top">
+                    <StackPanel>
+                      <DockPanel Margin="0,0,0,8">
+                        <TextBlock Text="EVENT LOG" Classes="PanelHeader" DockPanel.Dock="Left" />
+                        <TextBlock Classes="StaticDemoTag" />
+                      </DockPanel>
+                      <ItemsControl ItemsSource="{Binding Events}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate DataType="pages:EventRow">
+                            <DockPanel Margin="0,4">
+                              <TextBlock Text="{Binding Time}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="11" Foreground="{StaticResource Accent}" Width="64"
+                                   DockPanel.Dock="Left" />
+                              <TextBlock Text="{Binding Text}" Classes="Label" FontSize="11"
+                                   TextWrapping="Wrap" />
+                            </DockPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DockPanel>
+              </Grid>
+            </DockPanel>
+           </ScrollViewer>
+          </DataTemplate>
+
+          <!-- ===== generator phasor fleet ===== -->
+          <DataTemplate DataType="assets:PhasorFleetPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="TOTAL OUTPUT" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding TotalOutput}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="UNITS ONLINE" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Online}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="ANGLE SPREAD" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding AngleSpread}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <TextBlock DockPanel.Dock="Top" Text="{Binding CountNote}" Classes="Label"
+                   FontSize="11" Margin="2,0,0,8" />
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Tiles}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="8" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:PhasorTileModel">
+                      <Button Classes="TileBtn" Click="Open_Click"
+                          Margin="5" Padding="10">
+                        <StackPanel>
+                          <!-- name + fuel chip -->
+                          <DockPanel Margin="0,0,0,4">
+                            <Ellipse Width="8" Height="8" Fill="{Binding FuelColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="11"
+                                 TextTrimming="CharacterEllipsis"
+                                 ToolTip.Tip="{Binding Name}" />
+                          </DockPanel>
+
+                          <!-- phasor disc -->
+                          <ctl:Phasor P="{Binding P}" Q="{Binding Q}" SMax="{Binding SMax}"
+                               ShowPowerFactor="False"
+                               Height="140" Width="140" HorizontalAlignment="Center" />
+
+                          <!-- key numbers -->
+                          <StackPanel Margin="0,4,0,0">
+                            <DockPanel Margin="0,2">
+                              <TextBlock Text="Output" Classes="Label" FontSize="10" Width="52" />
+                              <TextBlock Text="{Binding Output}" FontWeight="SemiBold" FontSize="11" />
+                            </DockPanel>
+                            <DockPanel Margin="0,2">
+                              <TextBlock Text="Angle" Classes="Label" FontSize="10" Width="52" />
+                              <TextBlock Text="{Binding Angle}" FontWeight="SemiBold" FontSize="11" />
+                            </DockPanel>
+                            <DockPanel Margin="0,2">
+                              <TextBlock Text="Voltage" Classes="Label" FontSize="10" Width="52" />
+                              <TextBlock Text="{Binding Voltage}" FontWeight="SemiBold" FontSize="11" />
+                            </DockPanel>
+                            <DockPanel Margin="0,2">
+                              <TextBlock Text="{Binding Pf}" FontFamily="{StaticResource MonoFont}"
+                                   FontSize="10" FontWeight="Bold" />
+                              <Border Background="{StaticResource Track}" CornerRadius="7" Padding="6,1"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding LeadLag}" FontSize="9" FontWeight="Bold"
+                                     Foreground="{Binding LeadLagColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                              </Border>
+                            </DockPanel>
+                          </StackPanel>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== transformer fleet ===== -->
+          <DataTemplate DataType="assets:TransformerFleetPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="TRANSFORMERS" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Count}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="VOLTAGE BANDS" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Bands}" FontSize="20" FontWeight="Bold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="MEAN LOADING" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding MeanLoading}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="OLTC FITTED" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding OltcFitted}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <TextBlock DockPanel.Dock="Top" Text="{Binding CapNote}" Classes="Label"
+                   FontSize="11" Margin="2,0,0,8" />
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:TransformerFleetRowModel">
+                      <Button Classes="TileBtn" Click="Open_Click" Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="240" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Text="{Binding Band}" Classes="Label" FontSize="10" />
+                          </StackPanel>
+                          <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                              VerticalAlignment="Center" Margin="0,0,16,0"
+                              IsVisible="{Binding HasOltc}">
+                            <TextBlock Text="{Binding Oltc}" FontSize="9" FontWeight="Bold"
+                                 Foreground="{StaticResource Accent}" />
+                          </Border>
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <Border Width="240" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                HorizontalAlignment="Left">
+                              <Border Width="{Binding BarWidth}" Height="7" Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                  CornerRadius="3" HorizontalAlignment="Left" />
+                            </Border>
+                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                              <TextBlock Text="{Binding Loading}" Classes="Label" FontSize="10" />
+                              <TextBlock Text="  tap " Classes="Label" FontSize="10" />
+                              <TextBlock Text="{Binding Tap}" Classes="Label" FontSize="10"
+                                   FontFamily="{StaticResource MonoFont}" />
+                            </StackPanel>
+                          </StackPanel>
+                          <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,4,0">
+                            <TextBlock Text="{Binding Flow}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding Rating}" Classes="Label" FontSize="10"
+                                 HorizontalAlignment="Right" />
+                          </StackPanel>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== transformer unit dashboard ===== -->
+          <DataTemplate DataType="assets:TransformerDetailPage">
+           <!-- Parity sign-off (2026-10-24): the whole page scrolls, as the generator page does, so the schematic, the
+                dials and everything below them can be reached in any window (WPF scrolled only the lower part, and
+                on a short window the dials and the history were out of reach). -->
+           <ScrollViewer x:Name="TransformerPageScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <DockPanel Margin="0,0,18,0">
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <!-- transformer schematic diagram. Parity sign-off (2026-10-24): before the page scrolled as a whole, a short
+                   window squeezed this card below its 480 px and, Avalonia not clipping a squeezed slot as WPF does, the
+                   schematic spilled under the dials card. The page now gives every card its full height; both cards also
+                   clip, so nothing could ever be drawn over anything. -->
+              <Border x:Name="TransformerSchematicCard" DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12" ClipToBounds="True">
+                <StackPanel>
+                  <!-- D-DOC-145: the schematic draws the live loading, flow, voltages and tap, but its top-oil and
+                    hot-spot temperatures are the fixed demo values, so the header says so. -->
+                  <!-- A3: the A1 schematic (WPF's, drawn from the same display list) and, behind IEC VIEW, the A1b toolkit
+                       single-line diagram of the same values; a click on the HV or LV busbar there opens that substation. -->
+                  <DockPanel Margin="0,0,0,8">
+                    <TextBlock DockPanel.Dock="Right" Classes="StaticDemoTag" Text="TEMPERATURES: STATIC DEMO" />
+                    <ToggleButton x:Name="IecToggle" DockPanel.Dock="Right" Classes="IecToggle" Content="IEC VIEW" Margin="0,0,12,0"
+                                  ToolTip.Tip="Show the single-line diagram drawn with IEC 60617 symbols; click a busbar to open its substation" />
+                    <TextBlock Text="TRANSFORMER SCHEMATIC" Classes="PanelHeader" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <assets:AssetDiagramView x:Name="TransformerDiagram" Height="480" Page="{Binding}"
+                                           IsVisible="{Binding #IecToggle.IsChecked}" SymbolClicked="Diagram_SymbolClicked" />
+                  <ctl:TransformerSchematic x:Name="TransformerPicture" Height="480" IsVisible="{Binding !#IecToggle.IsChecked}"
+                    LoadingPct="{Binding LoadingPct}" FlowMw="{Binding FlowMw}"
+                    RatingMva="{Binding RatingNum}" TapRatio="{Binding TapNum}"
+                    HvKvNom="{Binding HvKvNom}" LvKvNom="{Binding LvKvNom}"
+                    HvKvLive="{Binding HvKvLiveNum}" LvKvLive="{Binding LvKvLiveNum}"
+                    TopOilC="{Binding TopOilC}" HotSpotC="{Binding HotSpotC}"
+                    HasOltc="{Binding HasOltc}" TapMin="{Binding TapMinNum}" TapMax="{Binding TapMaxNum}" />
+                </StackPanel>
+              </Border>
+
+              <!-- dials over the live electrical headlines: loading + the two thermal estimates,
+                then flow / rating / tap as compact readouts beside them -->
+              <Border x:Name="TransformerDialsCard" DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12" ClipToBounds="True">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <ctl:Gauge Grid.Column="0" Width="130" Height="120" Margin="0,0,8,0"
+                       Caption="LOADING" Unit="%" Minimum="0" Maximum="120"
+                       AmberFrom="0.583" RedFrom="0.833" Value="{Binding LoadingPct}" />
+                  <ctl:Gauge Grid.Column="1" Width="130" Height="120" Margin="8,0"
+                       Caption="TOP-OIL  DEMO" Unit=" degC" Minimum="0" Maximum="110"
+                       AmberFrom="0.773" RedFrom="0.909" Value="{Binding TopOilC}" />
+                  <ctl:Gauge Grid.Column="2" Width="130" Height="120" Margin="8,0"
+                       Caption="HOT-SPOT  DEMO" Unit=" degC" Minimum="0" Maximum="140"
+                       AmberFrom="0.786" RedFrom="0.893" Value="{Binding HotSpotC}" />
+                  <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,8,0">
+                    <TextBlock Text="FLOW (HV -> LV)" Classes="PanelHeader" HorizontalAlignment="Right" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,10" HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding FlowFrom}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                    <TextBlock Text="RATING" Classes="PanelHeader" HorizontalAlignment="Right" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,10" HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding Rating}" Classes="Value" />
+                      <TextBlock Text=" MVA" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                    <TextBlock Text="TAP RATIO" Classes="PanelHeader" HorizontalAlignment="Right" />
+                    <TextBlock Text="{Binding Tap}" Classes="Value" FontFamily="{StaticResource MonoFont}"
+                         Margin="0,2,0,0" HorizontalAlignment="Right" />
+                  </StackPanel>
+                </Grid>
+              </Border>
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="360" />
+                  </Grid.ColumnDefinitions>
+
+                  <!-- left column: live trace + thermal + DGA -->
+                  <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="LOADING  RECENT SIM HISTORY" Classes="PanelHeader" Margin="0,0,0,8" />
+                        <ctl:Sparkline Values="{Binding Trace}" MinHeight="120" />
+                      </DockPanel>
+                    </Border>
+
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="THERMAL" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Thermal}" ItemTemplate="{StaticResource TxReadingRow}" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="DISSOLVED GAS ANALYSIS" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Dga}" ItemTemplate="{StaticResource TxReadingRow}" />
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+
+                  <!-- right column: nameplate / OLTC + protection + event log -->
+                  <StackPanel Grid.Column="1">
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <TextBlock Text="VOLTAGE &amp; REACTIVE FLOW" Classes="PanelHeader" Margin="0,0,0,8" />
+
+                        <!-- voltage IN (HV) -->
+                        <TextBlock Text="VOLTAGE IN (HV)" Classes="Label" FontSize="10" />
+                        <DockPanel Margin="0,2,0,0">
+                          <TextBlock Text="{Binding HvVm}" DockPanel.Dock="Right" FontWeight="SemiBold"
+                               FontFamily="{StaticResource MonoFont}" />
+                          <Button Classes="LinkBtn" Click="Hv_Click" CommandParameter="{Binding HvBusId}"
+                              HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                            <TextBlock Text="{Binding HvBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                 Foreground="{StaticResource Accent}" />
+                          </Button>
+                        </DockPanel>
+                        <DockPanel Margin="0,1,0,0">
+                          <TextBlock Text="{Binding HvKvLive}" DockPanel.Dock="Right" Classes="Label"
+                               FontFamily="{StaticResource MonoFont}" />
+                          <TextBlock Text="{Binding HvKv}" Classes="Label" />
+                        </DockPanel>
+
+                        <Border Height="1" Background="{StaticResource Border}" Margin="0,8" />
+
+                        <!-- voltage OUT (LV) -->
+                        <TextBlock Text="VOLTAGE OUT (LV)" Classes="Label" FontSize="10" />
+                        <DockPanel Margin="0,2,0,0">
+                          <TextBlock Text="{Binding LvVm}" DockPanel.Dock="Right" FontWeight="SemiBold"
+                               FontFamily="{StaticResource MonoFont}" />
+                          <Button Classes="LinkBtn" Click="Lv_Click" CommandParameter="{Binding LvBusId}"
+                              HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                            <TextBlock Text="{Binding LvBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                 Foreground="{StaticResource Accent}" />
+                          </Button>
+                        </DockPanel>
+                        <DockPanel Margin="0,1,0,0">
+                          <TextBlock Text="{Binding LvKvLive}" DockPanel.Dock="Right" Classes="Label"
+                               FontFamily="{StaticResource MonoFont}" />
+                          <TextBlock Text="{Binding LvKv}" Classes="Label" />
+                        </DockPanel>
+
+                        <Border Height="1" Background="{StaticResource Border}" Margin="0,8" />
+
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Tap ratio (HV/LV)" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Tap}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Reactive in (HV)" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Qhv}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Reactive in (LV)" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Qlv}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Flow LV -> HV" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding FlowTo}" FontWeight="SemiBold" />
+                        </DockPanel>
+                      </StackPanel>
+                    </Border>
+
+                    <!-- OLTC card: only when the transformer is regulated -->
+                    <Border Classes="Card" Margin="0,0,0,12"
+                        IsVisible="{Binding HasOltc}">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Text="ON-LOAD TAP CHANGER" Classes="PanelHeader" DockPanel.Dock="Left" />
+                          <Border Background="{StaticResource Track}" CornerRadius="7" Padding="7,2" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding OltcState}" FontSize="9" FontWeight="Bold" Foreground="{Binding OltcColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          </Border>
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Regulates" Classes="Label" Width="100" />
+                          <Button Classes="LinkBtn" Click="OltcBus_Click" CommandParameter="{Binding OltcBusId}"
+                              HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                            <TextBlock Text="{Binding OltcBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                 Foreground="{StaticResource Accent}" />
+                          </Button>
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Target" Classes="Label" Width="100" />
+                          <TextBlock Text="{Binding OltcTarget}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Live voltage" Classes="Label" Width="100" />
+                          <TextBlock Text="{Binding OltcLive}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" Foreground="{Binding OltcColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Tap range" Classes="Label" Width="100" />
+                          <TextBlock Text="{Binding OltcRange}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Step" Classes="Label" Width="100" />
+                          <TextBlock Text="{Binding OltcStep}" FontWeight="SemiBold" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Deadband" Classes="Label" Width="100" />
+                          <TextBlock Text="{Binding OltcDeadband}" FontWeight="SemiBold" />
+                        </DockPanel>
+                      </StackPanel>
+                    </Border>
+
+                    <!-- ASSETS fix S7 (2026-10-20): the PROTECTION panel lists the case's own protection settings for this
+                         transformer when the case has any (protections.json), and then it is not a demo: its STATIC DEMO
+                         tag shows only while the panel shows the demo rows (ProtectionIsDemo), as in WPF. -->
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" IsVisible="{Binding ProtectionIsDemo}" />
+                          <TextBlock Text="PROTECTION" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Protection}" ItemTemplate="{StaticResource TxReadingRow}" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="EVENT LOG" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Events}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pages:TransformerEventModel">
+                              <DockPanel Margin="0,3">
+                                <Ellipse Width="8" Height="8" Fill="{Binding ChipColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center"
+                                    DockPanel.Dock="Left" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Time}" Classes="Label" Width="78" DockPanel.Dock="Left"
+                                     FontFamily="{StaticResource MonoFont}" />
+                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                              </DockPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </Grid>
+              </ScrollViewer>
+            </DockPanel>
+           </ScrollViewer>
+          </DataTemplate>
+
+          <!-- ===== tap-changer fleet ===== -->
+          <DataTemplate DataType="assets:TapChangerFleetPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="TAP CHANGERS" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Count}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="IN DEADBAND" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding InBand}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="MEAN TARGET" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding MeanTarget}" Classes="Value" FontFamily="{StaticResource MonoFont}" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:TapChangerRowModel">
+                      <Button Classes="TileBtn" Click="Open_Click" Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="260" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding Transformer}" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Text="{Binding Range}" Classes="Label" FontSize="10" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Bus}" FontWeight="SemiBold" FontSize="13" />
+                            <StackPanel Orientation="Horizontal">
+                              <TextBlock Text="target " Classes="Label" FontSize="10" />
+                              <TextBlock Text="{Binding Target}" Classes="Label" FontSize="10"
+                                   FontFamily="{StaticResource MonoFont}" />
+                            </StackPanel>
+                          </StackPanel>
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="16,0,16,0">
+                            <TextBlock Text="{Binding Live}" FontWeight="Bold" FontSize="15" FontFamily="{StaticResource MonoFont}"
+                                 HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding Deviation}" Classes="Label" FontSize="10"
+                                 FontFamily="{StaticResource MonoFont}" HorizontalAlignment="Right" />
+                          </StackPanel>
+                          <Border Grid.Column="3" Background="{StaticResource Track}" CornerRadius="7" Padding="8,3"
+                              VerticalAlignment="Center" Margin="0,0,4,0">
+                            <TextBlock Text="{Binding State}" FontSize="10" FontWeight="Bold" Foreground="{Binding ChipColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                          </Border>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== cables & lines fleet ===== -->
+          <DataTemplate DataType="assets:CircuitFleetPage">
+            <DockPanel>
+              <!-- PageHeader resolves from the host ContentControl's resources -->
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="CIRCUITS" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Count}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="LIVE TRANSFER" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Transfer}" Classes="Value" />
+                      <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="HIGHEST LOADED" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Hottest}" FontSize="16" FontWeight="Bold" Margin="0,8,0,0"
+                         TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="ABOVE 80%" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Stressed}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <!-- voltage-band filter chips -->
+              <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Bands}" Margin="0,0,0,10">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="pages:BandChipModel">
+                    <Button Classes="FlatBtn Chip" Classes.On="{Binding IsOn}" Click="Chip_Click"
+                              Content="{Binding Label}" Margin="0,0,8,0" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock DockPanel.Dock="Bottom" Text="{Binding Note}" Classes="Label"
+                   FontSize="10" Margin="2,8,0,0" />
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Circuits}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:CircuitFleetRowModel">
+                      <Button Classes="TileBtn" Click="Open_Click" Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="240" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Text="{Binding Endpoints}" Classes="Label" FontSize="10" />
+                          </StackPanel>
+                          <Border Grid.Column="1" Background="{StaticResource Track}" CornerRadius="7" Padding="7,2"
+                              VerticalAlignment="Center" Margin="0,0,16,0">
+                            <TextBlock Text="{Binding BandLabel}" FontSize="9" FontWeight="Bold"
+                                 Foreground="{StaticResource Muted}" />
+                          </Border>
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <Border Width="240" Height="7" Background="{StaticResource Track}" CornerRadius="3"
+                                HorizontalAlignment="Left">
+                              <Border Width="{Binding BarWidth}" Height="7" Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                  CornerRadius="3" HorizontalAlignment="Left" />
+                            </Border>
+                            <TextBlock Text="{Binding Loading}" Classes="Label" FontSize="10" Margin="0,3,0,0" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,4,0">
+                            <TextBlock Text="{Binding Flow}" FontWeight="Bold" FontSize="15" HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding Rating}" Classes="Label" FontSize="10"
+                                 HorizontalAlignment="Right" />
+                          </StackPanel>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== corridor unit dashboard ===== -->
+          <DataTemplate DataType="assets:CircuitDetailPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <!-- dials (loading + conductor temp) with flow / rating / losses alongside -->
+              <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+                  <ctl:Gauge Grid.Column="0" Width="140" Height="124" Margin="0,0,8,0"
+                       Caption="LOADING" Unit="%" Minimum="0" Maximum="120"
+                       AmberFrom="0.583" RedFrom="0.833" Value="{Binding LoadingPct}" />
+                  <ctl:Gauge Grid.Column="1" Width="140" Height="124" Margin="8,0"
+                       Caption="CONDUCTOR  DEMO" Unit=" degC" Minimum="0" Maximum="110"
+                       AmberFrom="0.682" RedFrom="0.818" Value="{Binding ConductorC}" />
+                  <StackPanel Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="16,0,8,0">
+                    <TextBlock Text="FLOW (FROM -> TO)" Classes="PanelHeader" HorizontalAlignment="Right" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,10" HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding Flow}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                    <TextBlock Text="RATING" Classes="PanelHeader" HorizontalAlignment="Right" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,10" HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding Rating}" Classes="Value" />
+                      <TextBlock Text=" MVA" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                    <TextBlock Text="REAL LOSS" Classes="PanelHeader" HorizontalAlignment="Right" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0" HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding Ploss}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </Border>
+
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="360" />
+                </Grid.ColumnDefinitions>
+
+                <!-- left column: history sparkline + voltage in/out + reactive balance + impedance -->
+                <ScrollViewer Grid.Column="0" Margin="0,0,12,0" VerticalScrollBarVisibility="Auto">
+                  <StackPanel>
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="LOADING  RECENT SIM HISTORY"
+                             Classes="PanelHeader" Margin="0,0,0,8" />
+                        <ctl:Sparkline Values="{Binding Trace}" MinHeight="120" />
+                      </DockPanel>
+                    </Border>
+
+                    <!-- voltage in / out, oriented by the direction of real power -->
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <TextBlock Text="VOLTAGE IN / OUT" Classes="PanelHeader" Margin="0,0,0,8" />
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                          </Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="IN" Classes="Label" FontSize="10" />
+                            <Button Classes="LinkBtn" Click="In_Click" CommandParameter="{Binding VInBusId}"
+                                HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                              <TextBlock Text="{Binding VInBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                   Foreground="{StaticResource Accent}" />
+                            </Button>
+                            <TextBlock Text="{Binding VIn}" FontWeight="Bold" FontSize="18" FontFamily="{StaticResource MonoFont}"
+                                 Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding VInKv}" Classes="Label" FontSize="11"
+                                 FontFamily="{StaticResource MonoFont}" />
+                          </StackPanel>
+                          <StackPanel Grid.Column="1">
+                            <TextBlock Text="OUT" Classes="Label" FontSize="10" />
+                            <Button Classes="LinkBtn" Click="Out_Click" CommandParameter="{Binding VOutBusId}"
+                                HorizontalAlignment="Left" ToolTip.Tip="Open this substation">
+                              <TextBlock Text="{Binding VOutBus}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                   Foreground="{StaticResource Accent}" />
+                            </Button>
+                            <TextBlock Text="{Binding VOut}" FontWeight="Bold" FontSize="18" FontFamily="{StaticResource MonoFont}"
+                                 Margin="0,2,0,0" />
+                            <TextBlock Text="{Binding VOutKv}" Classes="Label" FontSize="11"
+                                 FontFamily="{StaticResource MonoFont}" />
+                          </StackPanel>
+                        </Grid>
+                        <Border Height="1" Background="{StaticResource Border}" Margin="0,10" />
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="deltaV (in - out)" Classes="Label" Width="120" />
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding DeltaV}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                            <TextBlock Text="    " Classes="Label" />
+                            <TextBlock Text="{Binding DeltaKv}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                          </StackPanel>
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Angle spread" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding AngleSpread}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                      </StackPanel>
+                    </Border>
+
+                    <!-- reactive balance: Q into each end, the net consumed/generated, verdict + currents -->
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <TextBlock Text="REACTIVE BALANCE" Classes="PanelHeader" Margin="0,0,0,8" />
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Q into IN end" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Qin}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Q into OUT end" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Qout}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Net Q loss" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Qloss}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <TextBlock Text="{Binding Qverdict}" Foreground="{Binding QverdictColour, Converter={x:Static tabs:TokenBrush.Instance}}" FontWeight="SemiBold"
+                             FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
+                        <Border Height="1" Background="{StaticResource Border}" Margin="0,10" />
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Current  IN end" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Iin}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Current  OUT end" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Iout}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Real loss" Classes="Label" Width="120" />
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Ploss}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" />
+                            <TextBlock Text=" MW  " Classes="Label" />
+                            <TextBlock Text="{Binding PlossPct}" Classes="Label" />
+                          </StackPanel>
+                        </DockPanel>
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card">
+                      <StackPanel>
+                        <TextBlock Text="SERIES IMPEDANCE (SANE DEFAULTS)" Classes="PanelHeader" Margin="0,0,0,8" />
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Series R" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Rpu}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Series X" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Xpu}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="Charging B" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding Bpu}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" />
+                        </DockPanel>
+                        <DockPanel Margin="0,3">
+                          <TextBlock Text="X / R ratio" Classes="Label" Width="120" />
+                          <TextBlock Text="{Binding XoverR}" FontFamily="{StaticResource MonoFont}" FontWeight="SemiBold" />
+                        </DockPanel>
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </ScrollViewer>
+
+                <!-- right column: static route-integrity / thermal / civil / event log -->
+                <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                  <StackPanel>
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="ROUTE INTEGRITY" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding RouteIntegrity}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pages:CircuitStatusRowModel">
+                              <DockPanel Margin="0,3">
+                                <Ellipse Width="9" Height="9" Fill="{Binding DotColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center"
+                                    DockPanel.Dock="Left" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Value}" Classes="Label"
+                                     DockPanel.Dock="Right" HorizontalAlignment="Right" TextAlignment="Right" />
+                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" />
+                              </DockPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="THERMAL ENVELOPE" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Thermal}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pages:CircuitStatusRowModel">
+                              <DockPanel Margin="0,3">
+                                <Ellipse Width="9" Height="9" Fill="{Binding DotColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center"
+                                    DockPanel.Dock="Left" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Value}" Classes="Label"
+                                     DockPanel.Dock="Right" HorizontalAlignment="Right" TextAlignment="Right" />
+                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" />
+                              </DockPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="ACCESS &amp; CIVIL" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Access}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pages:CircuitStatusRowModel">
+                              <DockPanel Margin="0,3">
+                                <Ellipse Width="9" Height="9" Fill="{Binding DotColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center"
+                                    DockPanel.Dock="Left" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Value}" Classes="Label"
+                                     DockPanel.Dock="Right" HorizontalAlignment="Right" TextAlignment="Right"
+                                     TextWrapping="Wrap" MaxWidth="180" />
+                                <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" />
+                              </DockPanel>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card">
+                      <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                          <TextBlock Classes="StaticDemoTag" DockPanel.Dock="Right" />
+                          <TextBlock Text="EVENT LOG" Classes="PanelHeader" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding EventLog}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="sys:String">
+                              <TextBlock Text="{Binding}" Classes="Label" FontSize="11"
+                                   FontFamily="{StaticResource MonoFont}" Margin="0,2" TextWrapping="Wrap" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== substations fleet ===== -->
+          <DataTemplate DataType="assets:SubstationFleetPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="BUSES" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding BusCount}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="VOLTAGE LEVELS" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Levels}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="TOTAL DEMAND" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding TotalDemand}" Classes="Value" />
+                      <TextBlock Text=" GW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="OUT OF BAND" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding OutOfBand}" Classes="Value" />
+                      <TextBlock Text=" buses  0.94-1.06 pu" Classes="Unit" VerticalAlignment="Bottom" Margin="6,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <!-- voltage-level filter chips -->
+              <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12" Padding="10,8">
+                <DockPanel>
+                  <TextBlock Text="VOLTAGE LEVEL" Classes="Label" FontSize="10"
+                       VerticalAlignment="Center" DockPanel.Dock="Left" Margin="0,0,12,0" />
+                  <TextBlock Text="{Binding Showing}" Classes="Label" FontSize="10"
+                       VerticalAlignment="Center" HorizontalAlignment="Right" DockPanel.Dock="Right" Margin="12,0,0,0" />
+                  <ItemsControl ItemsSource="{Binding Filters}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="pages:KvFilterChipModel">
+                        <Button Classes="FlatBtn Chip" Classes.On="{Binding Active}" Click="Chip_Click"
+                                  Content="{Binding Label}" Margin="0,0,6,0" Padding="10,3" FontSize="11" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </DockPanel>
+              </Border>
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="pages:SubstationFleetRowModel">
+                      <Button Classes="TileBtn" Click="Open_Click" Margin="0,0,0,8">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="90" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="100" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="Bold" FontSize="14"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="1" Text="{Binding Kv}" Classes="Label"
+                               FontSize="12" VerticalAlignment="Center" />
+                          <Border Grid.Column="2" Background="{StaticResource Track}" CornerRadius="7" Padding="9,2"
+                              VerticalAlignment="Center" Margin="0,0,12,0">
+                            <StackPanel Orientation="Horizontal">
+                              <Ellipse Width="9" Height="9" Fill="{Binding VmColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                              <TextBlock Text="{Binding Vm}" FontFamily="{StaticResource MonoFont}"
+                                   FontWeight="Bold" FontSize="12" Foreground="{Binding VmColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                              <TextBlock Text=" pu" Classes="Label" FontSize="10" VerticalAlignment="Center" />
+                            </StackPanel>
+                          </Border>
+                          <TextBlock Grid.Column="3" Text="{Binding Demand}" FontWeight="SemiBold" FontSize="13"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" />
+                          <TextBlock Grid.Column="4" Text="{Binding Gen}" Classes="Label" FontSize="12"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,16,0" />
+                          <TextBlock Grid.Column="5" Text="{Binding Connections}" Classes="Label" FontSize="11"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+
+          <!-- ===== substation unit dashboard ===== -->
+          <DataTemplate DataType="assets:SubstationDetailPage">
+           <!-- Parity sign-off (2026-10-24): the whole page scrolls, so the single-line diagram is never squeezed (its
+                labels were drawn past the card's bottom edge) and everything below it can be reached; the content
+                keeps 18 px clear at the right of the overlay scroll bar. -->
+           <ScrollViewer x:Name="SubstationPageScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <DockPanel Margin="0,0,18,0">
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,12">
+                <Border Classes="Card" Margin="0,0,6,0">
+                  <StackPanel>
+                    <TextBlock Text="VOLTAGE" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <Ellipse Width="12" Height="12" Fill="{Binding VoltageColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" Margin="0,0,8,2" />
+                      <TextBlock Text="{Binding Voltage}" Classes="Value" />
+                      <TextBlock Text=" pu" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="ANGLE" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding Angle}" Classes="Value" Margin="0,4,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="DEMAND" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Demand}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <TextBlock Text="{Binding Reactive}" Classes="Label" FontSize="11" />
+                      <TextBlock Text=" MVAr reactive" Classes="Label" FontSize="11" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0">
+                  <StackPanel>
+                    <TextBlock Text="GENERATION" Classes="PanelHeader" />
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                      <TextBlock Text="{Binding Generation}" Classes="Value" />
+                      <TextBlock Text=" MW" Classes="Unit" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+                <Border Classes="Card" Margin="6,0,0,0">
+                  <StackPanel>
+                    <TextBlock Text="BUS TYPE" Classes="PanelHeader" />
+                    <TextBlock Text="{Binding BusType}" FontSize="22" FontWeight="Bold" Margin="0,6,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                      <TextBlock Text="{Binding BaseKv}" Classes="Label" FontSize="11" />
+                      <TextBlock Text=" kV base" Classes="Label" FontSize="11" />
+                    </StackPanel>
+                  </StackPanel>
+                </Border>
+              </UniformGrid>
+
+              <!-- substation electrical map -->
+              <Border x:Name="SubstationDiagramCard" DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12" ClipToBounds="True">
+                <StackPanel>
+                  <!-- A3: the A1 picture (WPF's, drawn from the same display list) and, behind IEC VIEW, the A1b toolkit
+                       single-line diagram of the same data; a click on a bay there opens that connection or unit. -->
+                  <DockPanel Margin="0,0,0,8">
+                    <ToggleButton x:Name="IecToggle" DockPanel.Dock="Right" Classes="IecToggle" Content="IEC VIEW"
+                                  ToolTip.Tip="Show the single-line diagram drawn with IEC 60617 symbols; click a bay to open its asset" />
+                    <TextBlock Text="ELECTRICAL SINGLE-LINE DIAGRAM" Classes="PanelHeader" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <ctl:SubstationMap x:Name="SubstationPicture" Height="500" Data="{Binding MapInput}"
+                                     IsVisible="{Binding !#IecToggle.IsChecked}" />
+                  <assets:AssetDiagramView x:Name="SubstationDiagram" Height="500" Page="{Binding}"
+                                           IsVisible="{Binding #IecToggle.IsChecked}" SymbolClicked="Diagram_SymbolClicked" />
+                </StackPanel>
+              </Border>
+
+              <!-- GDA per-asset drill-down (task T-J): real envelope / BESS / tap / consumer
+                data, pulled on demand from the bridge's op="asset". Hidden outside bridge mode. -->
+              <Border DockPanel.Dock="Bottom" Classes="Card" Margin="0,12,0,0"
+                  IsVisible="{Binding AssetVisible}">
+                <DockPanel>
+                  <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <TextBlock Text="GDA PER-ASSET DATA" Classes="PanelHeader" DockPanel.Dock="Left" />
+                    <TextBlock Text="{Binding AssetStatus}" Classes="Label" FontSize="10"
+                         HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="240">
+                    <ItemsControl ItemsSource="{Binding AssetInsights}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="pages:AssetInsightRow">
+                          <StackPanel Margin="0,0,0,5">
+                            <TextBlock Text="{Binding Group}" Classes="Label" FontSize="10"
+                                   Foreground="{StaticResource Accent}" Margin="0,6,0,3" IsVisible="{Binding HasGroup}" />
+                            <TextBlock Text="{Binding Head}" FontWeight="SemiBold" FontSize="13"
+                                 TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Sub}" Classes="Label" FontSize="11"
+                                 TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </DockPanel>
+              </Border>
+
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="360" />
+                </Grid.ColumnDefinitions>
+
+                <!-- left column: voltage history + connections -->
+                <DockPanel Grid.Column="0" Margin="0,0,12,0">
+                  <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12">
+                    <DockPanel>
+                      <TextBlock DockPanel.Dock="Top" Text="VOLTAGE  RECENT SIM HISTORY"
+                           Classes="PanelHeader" Margin="0,0,0,8" />
+                      <ctl:Sparkline Values="{Binding Trace}" Stroke="{Binding VoltageColour, Converter={x:Static tabs:TokenBrush.Instance}}" MinHeight="110" />
+                    </DockPanel>
+                  </Border>
+
+                  <Border Classes="Card">
+                    <DockPanel>
+                      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="CONNECTIONS" Classes="PanelHeader" DockPanel.Dock="Left" />
+                        <TextBlock Text="{Binding ConnNote}" Classes="Label" FontSize="10"
+                             HorizontalAlignment="Right" />
+                      </DockPanel>
+                      <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="360">
+                        <ItemsControl ItemsSource="{Binding Connections}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pages:ConnectionRowModel">
+                              <Button Classes="RowLinkBtn" Click="Open_Click" Margin="0,0,0,6"
+                                  ToolTip.Tip="Open this circuit / transformer">
+                                <Grid>
+                                  <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="Auto" />
+                                  </Grid.ColumnDefinitions>
+                                  <StackPanel Grid.Column="0">
+                                    <StackPanel Orientation="Horizontal">
+                                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                           TextTrimming="CharacterEllipsis" />
+                                      <TextBlock Text="{Binding Kind}" Classes="Label" FontSize="9"
+                                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                      <TextBlock Text="-> " Classes="Label" FontSize="10" />
+                                      <TextBlock Text="{Binding OtherEnd}" Classes="Label" FontSize="10"
+                                           TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Width="220" Height="5" Background="{StaticResource Track}" CornerRadius="2"
+                                        HorizontalAlignment="Left" Margin="0,5,0,0">
+                                      <Border Width="{Binding BarWidth}" Height="5" Background="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                          CornerRadius="2" HorizontalAlignment="Left" />
+                                    </Border>
+                                  </StackPanel>
+                                  <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Flow}" FontWeight="Bold" FontSize="13" HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding Direction}" Classes="Label" FontSize="10"
+                                         HorizontalAlignment="Right" />
+                                  </StackPanel>
+                                  <TextBlock Grid.Column="2" Text="{Binding Loading}" FontWeight="SemiBold" FontSize="13"
+                                       Foreground="{Binding BarColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                </Grid>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                    </DockPanel>
+                  </Border>
+                </DockPanel>
+
+                <!-- right column: connected plant + supply context -->
+                <DockPanel Grid.Column="1">
+                  <Border DockPanel.Dock="Top" Classes="Card" Margin="0,0,0,12">
+                    <DockPanel>
+                      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <TextBlock Text="CONNECTED PLANT" Classes="PanelHeader" DockPanel.Dock="Left" />
+                        <TextBlock Text="{Binding PlantNote}" Classes="Label" FontSize="10"
+                             HorizontalAlignment="Right" />
+                      </DockPanel>
+                      <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="260">
+                        <ItemsControl ItemsSource="{Binding Plant}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="pages:PlantRowModel">
+                              <Button Classes="RowLinkBtn" Click="Open_Click" Margin="0,0,0,6"
+                                  ToolTip.Tip="Open this generator">
+                                <DockPanel>
+                                  <Border DockPanel.Dock="Left" Width="10" Height="10" CornerRadius="5"
+                                      Background="{Binding FuelColour, Converter={x:Static tabs:TokenBrush.Instance}}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                  <TextBlock DockPanel.Dock="Right" Text="{Binding Output}" FontWeight="Bold"
+                                       FontSize="13" VerticalAlignment="Center" Margin="8,0,0,0" />
+                                  <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="13"
+                                         TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Fuel}" Foreground="{Binding FuelColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                                         FontSize="10" FontWeight="SemiBold" />
+                                  </StackPanel>
+                                </DockPanel>
+                              </Button>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </ScrollViewer>
+                    </DockPanel>
+                  </Border>
+
+                  <Border Classes="Card" VerticalAlignment="Top">
+                    <StackPanel>
+                      <TextBlock Text="SUPPLY CONTEXT" Classes="PanelHeader" Margin="0,0,0,8" />
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Net injection" Classes="Label" Width="130" />
+                        <TextBlock Text="{Binding NetInjection}" FontWeight="SemiBold" />
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Role" Classes="Label" Width="130" />
+                        <TextBlock Text="{Binding Role}" FontWeight="SemiBold" />
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Transformers" Classes="Label" Width="130" />
+                        <TextBlock Text="{Binding Transformers}" FontWeight="SemiBold" />
+                      </DockPanel>
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="Lines" Classes="Label" Width="130" />
+                        <TextBlock Text="{Binding Lines}" FontWeight="SemiBold" />
+                      </DockPanel>
+                    </StackPanel>
+                  </Border>
+                </DockPanel>
+              </Grid>
+            </DockPanel>
+           </ScrollViewer>
+          </DataTemplate>
+
+          <!-- ===== UI programme ASSETS B2: the class pages of plan S8 and their members (one page type) ===== -->
+          <DataTemplate DataType="ov:AssetOverviewPage">
+            <DockPanel>
+              <ContentControl DockPanel.Dock="Top" Content="{Binding}" ContentTemplate="{StaticResource PageHeader}" />
+
+              <ItemsControl x:Name="OverviewTiles" DockPanel.Dock="Top" ItemsSource="{Binding Tiles}" IsVisible="{Binding HasTiles}"
+                            Margin="0,0,0,12">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="ov:OverviewTile">
+                    <Border Classes="Card" Margin="0,0,12,0">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Label}" Classes="PanelHeader" />
+                        <TextBlock Text="{Binding Value}" Classes="Value" FontFamily="{StaticResource MonoFont}" Margin="0,4,0,0" />
+                        <TextBlock Text="{Binding Note}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <Border DockPanel.Dock="Top" Classes="Card" IsVisible="{Binding HasFacts}" Margin="0,0,0,12">
+                <ItemsControl x:Name="OverviewFacts" ItemsSource="{Binding Facts}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="ov:OverviewFact">
+                      <DockPanel Margin="0,3">
+                        <TextBlock Text="{Binding Label}" Classes="Label" Width="190" />
+                        <TextBlock Text="{Binding Value}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                      </DockPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Border>
+
+              <!-- Phase 5e: an overlay record's kind tables (soil zone, earth path, earth wire, a substation's earthing, and
+                   later kinds), units in the column titles; display only (the link rows below are the links) -->
+              <ItemsControl x:Name="OverviewTables" DockPanel.Dock="Top" ItemsSource="{Binding Tables}" IsVisible="{Binding HasTables}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="ov:OverviewTable">
+                    <Border Classes="Card" Margin="0,0,0,12">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Title}" Classes="PanelHeader" Margin="0,0,0,6" />
+                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                          <StackPanel>
+                            <ItemsControl ItemsSource="{Binding Columns}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="sys:String">
+                                  <TextBlock Text="{Binding}" Classes="Label" FontSize="10" Width="170" TextWrapping="Wrap" Margin="0,0,8,4" />
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ItemsControl ItemsSource="{Binding Rows}">
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="ov:OverviewTableRow">
+                                  <ItemsControl ItemsSource="{Binding Cells}">
+                                    <ItemsControl.ItemsPanel>
+                                      <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                      </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                      <DataTemplate DataType="sys:String">
+                                        <TextBlock Text="{Binding}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}" Width="170"
+                                                   TextWrapping="Wrap" Margin="0,2,8,2" />
+                                      </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                  </ItemsControl>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </StackPanel>
+                        </ScrollViewer>
+                        <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" Classes="Label" FontSize="10" TextWrapping="Wrap" Margin="0,6,0,0" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <!-- Phase 5c (first drawn in slice 5-view): a substation overlay record's topology on the A1b toolkit: busbar
+                   sections, couplers, bays with their switchgear (IEC 60617 symbols), switch states as written, each section
+                   coloured by the solved voltage of the bus it collapses to (no switching is simulated); a click on a
+                   section or device opens its record, on a bay's far end the asset it switches -->
+              <Border DockPanel.Dock="Top" Classes="Card" IsVisible="{Binding HasDiagram}" Margin="0,0,0,12">
+                <StackPanel>
+                  <TextBlock Text="SINGLE-LINE VIEW OF THE OVERLAY  (SWITCH STATES AS WRITTEN; COLOURS FROM THE SOLVED BUS VOLTAGES)" Classes="PanelHeader" Margin="0,0,0,8" />
+                  <assets:AssetDiagramView x:Name="OverlayDiagram" Height="320" Page="{Binding}" IsVisible="{Binding HasDiagram}"
+                                           SymbolClicked="Diagram_SymbolClicked" />
+                </StackPanel>
+              </Border>
+
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <Button x:Name="InverterFleetButton" DockPanel.Dock="Right" Content="OPEN INVERTER FLEET" Classes="FlatBtn"
+                        Click="InverterFleet_Click" IsVisible="{Binding LinksToInverterFleet}" Margin="12,0,0,0"
+                        ToolTip.Tip="Switch to the INVERTER FLEET tab: the live roll-up of the authored classes" />
+                <TextBlock Text="{Binding Note}" IsVisible="{Binding HasNote}" Classes="Label" FontSize="11" TextWrapping="Wrap"
+                           VerticalAlignment="Center" />
+              </DockPanel>
+
+              <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding RowsNote}" IsVisible="{Binding HasRowsNote}" Classes="Label" FontSize="10" />
+                <TextBlock Text="{Binding RowsHeader}" Classes="PanelHeader" />
+              </DockPanel>
+
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="OverviewRows" ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="ov:OverviewRow">
+                      <Button Classes="TileBtn" Click="OverviewRow_Click" IsEnabled="{Binding CanOpen}" Margin="0,0,0,6">
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14" />
+                            <TextBlock Text="{Binding Detail}" Classes="Label" FontSize="10" />
+                          </StackPanel>
+                          <TextBlock Grid.Column="1" Text="{Binding Value}" FontWeight="Bold" FontSize="14"
+                                     FontFamily="{StaticResource MonoFont}" VerticalAlignment="Center" Margin="16,0,4,0" />
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </DockPanel>
+          </DataTemplate>
+          </ContentControl.DataTemplates>
+        </ContentControl>
+
+        <!-- ===== UI programme ASSETS B2: PROPERTIES, the case record as written (Run mode: read-only) ===== -->
+        <ContentControl x:Name="PropertiesHost" Content="{Binding Properties}" IsVisible="{Binding IsPropertiesShown}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate DataType="idx:AssetProperties">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                  <TextBlock Text="CASE RECORD  (READ-ONLY IN RUN MODE)" Classes="Label" FontSize="10" />
+                  <TextBlock x:Name="PropertiesHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                  <TextBlock Text="{Binding Shape}" Classes="Label" FontSize="12" Margin="0,2,0,0" />
+                  <TextBlock Text="{Binding SolvedNote}" Classes="Label" FontSize="11" Margin="0,2,0,0" />
+                </StackPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="230,*,230,90,*" Margin="8,0,8,6">
+                  <TextBlock Grid.Column="0" Text="FIELD" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="1" Text="AS WRITTEN" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="2" Text="STATE" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="3" Text="UNIT" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="4" Text="SOLVER'S VALUE" Classes="PanelHeader" />
+                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl x:Name="PropertyRows" ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="idx:PropertyRow">
+                        <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                          <Grid ColumnDefinitions="230,*,230,90,*" RowDefinitions="Auto,Auto">
+                            <StackPanel Grid.Column="0">
+                              <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Field}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{Binding Literal}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap"
+                                       Margin="0,0,12,0" />
+                            <TextBlock Grid.Column="2" Text="{Binding State}" Classes="Label" TextWrapping="Wrap" Margin="0,0,12,0" />
+                            <TextBlock Grid.Column="3" Text="{Binding Unit}" Classes="Label" TextWrapping="Wrap" />
+                            <StackPanel Grid.Column="4" IsVisible="{Binding HasSolved}">
+                              <TextBlock Text="{Binding SolvedValue}" FontWeight="SemiBold" FontFamily="{StaticResource MonoFont}"
+                                         Foreground="{StaticResource Accent}" />
+                              <TextBlock Text="{Binding SolvedCaption}" Classes="Label" FontSize="10" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="5" Text="{Binding Help}" Classes="Label" FontSize="10"
+                                       TextWrapping="Wrap" Margin="0,3,0,0" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </DockPanel>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <!-- ===== UI programme ASSETS B2: CONNECTIONS, the model adjacency and the where-used list (links) ===== -->
+        <ContentControl x:Name="ConnectionsHost" Content="{Binding Connections}" IsVisible="{Binding IsConnectionsShown}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate DataType="idx:AssetConnections">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                  <TextBlock Text="CONNECTED IN THE MODEL" Classes="PanelHeader" Margin="0,0,0,8" />
+                  <ItemsControl x:Name="ModelConnections" ItemsSource="{Binding Model}" ItemTemplate="{StaticResource ConnectionRowTemplate}" />
+                  <TextBlock Text="WHERE USED IN THE CASE FILE" Classes="PanelHeader" IsVisible="{Binding HasWhereUsed}" Margin="0,14,0,8" />
+                  <ItemsControl x:Name="WhereUsedConnections" ItemsSource="{Binding WhereUsed}" IsVisible="{Binding HasWhereUsed}"
+                                ItemTemplate="{StaticResource ConnectionRowTemplate}" />
+                </StackPanel>
+              </ScrollViewer>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <!-- ===== UI programme ASSETS slice 5-view: PROPERTIES of an overlay record, the record as written (read-only) ===== -->
+        <ContentControl x:Name="OverlayPropertiesHost" Content="{Binding OverlayProperties}" IsVisible="{Binding IsPropertiesShown}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate DataType="olay:OverlayRecordProperties">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                  <TextBlock Text="OVERLAY RECORD  (READ-ONLY IN RUN MODE; CARRIED, NOT USED BY THE SOLVER)" Classes="Label" FontSize="10" />
+                  <TextBlock x:Name="OverlayPropertiesHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                  <TextBlock Text="{Binding Kind}" Classes="Label" FontSize="12" Margin="0,2,0,0" />
+                  <TextBlock x:Name="OverlayPropertiesNote" Text="{Binding Note}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="230,*,230,90" Margin="8,0,8,6">
+                  <TextBlock Grid.Column="0" Text="MEMBER" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="1" Text="AS WRITTEN" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="2" Text="STATE" Classes="PanelHeader" />
+                  <TextBlock Grid.Column="3" Text="UNIT" Classes="PanelHeader" />
+                </Grid>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl x:Name="OverlayPropertyRows" ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="idx:PropertyRow">
+                        <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                          <Grid ColumnDefinitions="230,*,230,90" RowDefinitions="Auto,Auto">
+                            <StackPanel Grid.Column="0">
+                              <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Field}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1" Text="{Binding Literal}" FontFamily="{StaticResource MonoFont}" TextWrapping="Wrap"
+                                       Margin="0,0,12,0" />
+                            <TextBlock Grid.Column="2" Text="{Binding State}" Classes="Label" TextWrapping="Wrap" Margin="0,0,12,0" />
+                            <TextBlock Grid.Column="3" Text="{Binding Unit}" Classes="Label" TextWrapping="Wrap" />
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Text="{Binding Help}" Classes="Label" FontSize="10"
+                                       TextWrapping="Wrap" Margin="0,3,0,0" />
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </DockPanel>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <!-- ===== slice 5-view: OVERLAY, the overlay records attached to a model asset (links to the records) ===== -->
+        <ContentControl x:Name="OverlayHost" Content="{Binding OverlayList}" IsVisible="{Binding IsOverlayShown}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate DataType="olay:AssetOverlayList">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                  <TextBlock Text="ASSET OVERLAY  (CARRIED, NOT USED BY THE SOLVER)" Classes="Label" FontSize="10" />
+                  <TextBlock x:Name="OverlayListHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                  <TextBlock x:Name="OverlayListNote" Text="{Binding Note}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Text="OVERLAY RECORDS ATTACHED TO THIS ASSET" Classes="PanelHeader" Margin="0,0,0,8" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl x:Name="OverlayRows" ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource ConnectionRowTemplate}" />
+                </ScrollViewer>
+              </DockPanel>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+
+        <!-- ===== slice 5-view: CHECK, an overlay record's problems from the overlay checker ===== -->
+        <ContentControl x:Name="CheckHost" Content="{Binding OverlayCheck}" IsVisible="{Binding IsCheckShown}">
+          <ContentControl.ContentTemplate>
+            <DataTemplate DataType="olay:OverlayCheck">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="2,0,0,14">
+                  <TextBlock Text="OVERLAY CHECK  (CARRIED, NOT USED BY THE SOLVER)" Classes="Label" FontSize="10" />
+                  <TextBlock x:Name="CheckHeading" Text="{Binding Heading}" FontSize="24" FontWeight="Bold" Margin="0,2,0,0" />
+                  <TextBlock x:Name="CheckNote" Text="{Binding Note}" Classes="Label" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+                <!-- Phase 5c: a substation's topology warnings (implied bus split or coupling), never errors -->
+                <StackPanel DockPanel.Dock="Top" IsVisible="{Binding HasWarnings}" Margin="0,0,0,10">
+                  <TextBlock Text="{x:Static olay:OverlayCheck.WarningsSection}" Classes="PanelHeader" Margin="0,0,0,6" />
+                  <ItemsControl x:Name="CheckWarnings" ItemsSource="{Binding Warnings}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="olay:OverlayCheckRow">
+                        <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Message}" FontWeight="SemiBold" Foreground="{StaticResource Amber}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Pointer}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <!-- Phase 5f onwards: kind-specific consistency notes (a 3W transformer's legs against its nameplate, an HVDC
+                     link's end signs), display only, never errors -->
+                <StackPanel DockPanel.Dock="Top" IsVisible="{Binding HasNotes}" Margin="0,0,0,10">
+                  <TextBlock Text="{x:Static olay:OverlayCheck.NotesSection}" Classes="PanelHeader" Margin="0,0,0,6" />
+                  <ItemsControl x:Name="CheckNotes" ItemsSource="{Binding Notes}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="olay:OverlayCheckRow">
+                        <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Message}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Pointer}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <ItemsControl x:Name="CheckRows" ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate DataType="olay:OverlayCheckRow">
+                        <Border Classes="Card" Margin="0,0,0,4" Padding="8,5">
+                          <StackPanel>
+                            <TextBlock Text="{Binding Message}" FontWeight="SemiBold" Foreground="{StaticResource Amber}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Pointer}" Classes="Label" FontSize="10" FontFamily="{StaticResource MonoFont}" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+              </DockPanel>
+            </DataTemplate>
+          </ContentControl.ContentTemplate>
+        </ContentControl>
+        </Panel>
+      </DockPanel>
+    </Grid>
+    </Panel>
+  </DockPanel>
+</UserControl>

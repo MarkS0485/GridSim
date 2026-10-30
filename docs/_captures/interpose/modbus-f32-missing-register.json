@@ -1,0 +1,1 @@
+{"schema":"gridsim-rtu-pointmap/1","case":"case14","bindings":[{"address":"MB:U1:3:@103","kind":"PInjMw","bus":3,"dataType":"F32"}]}

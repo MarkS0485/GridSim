@@ -1,0 +1,10 @@
+$ python tools/crossval/mc_estimate_sweep.py
+  full/n0.5  runs=10 dof=863 dVm mean 1.34e-03 max 2.54e-03 pu   chi pass 10/10
+  full/n1    runs=10 dof=863 dVm mean 2.68e-03 max 5.07e-03 pu   chi pass 10/10
+  full/n2    runs=10 dof=843 dVm mean 6.28e-03 max 1.12e-02 pu   chi pass 0/10
+  half-flow  runs=10 dof=491 dVm mean 3.06e-03 max 3.98e-03 pu   chi pass 10/10
+  no-flow    runs=10 dof=119 dVm mean 3.64e-03 max 4.92e-03 pu   chi pass 10/10
+  sparse     runs=10 dof=244 dVm mean 3.79e-03 max 5.30e-03 pu   chi pass 10/10
+  inj-only   runs=10 dof=30 dVm mean 5.25e-03 max 8.66e-03 pu   chi pass 10/10
+[ok] tools\crossval\mc_estimate_sweep_case118.json
+[exit 0]

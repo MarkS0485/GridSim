@@ -1,0 +1,4 @@
+Loss attribution - IEEE 9-bus (WSCC) (9 buses)  [which generators cause the 4.6 MW of losses]
+  gen bus 2         2.16 MW to losses  (  47% of total)
+  gen bus 1         1.33 MW to losses  (  29% of total)
+  gen bus 3         1.15 MW to losses  (  25% of total)

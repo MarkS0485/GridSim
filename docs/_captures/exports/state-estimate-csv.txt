@@ -1,0 +1,14 @@
+$ head -n 12 results/exports-docs/gda-replay/state-estimate.csv
+# GridSim  -  2026-10-04 14:31:28 UTC
+# code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     gda-replay  case=case9  series=synthetic-case9  steps=48
+index,time_utc,load_factor,converged,iterations,max_mismatch,total_loss_mw,vmin_pu,vmax_pu
+# COUNTERFACTUAL: hypothetical storage added to recorded history (ProvenanceTag.Counterfactual) - never an input to another replay
+0,2024-01-01T00:00:00.0000000Z,0.7000,True,4,3.698E-015,2.189,1.02356,1.04076
+1,2024-01-01T00:30:00.0000000Z,0.6782,True,2,2.242E-009,2.086,1.02500,1.04117
+[exit 0]

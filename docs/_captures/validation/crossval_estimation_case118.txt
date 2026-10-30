@@ -1,0 +1,13 @@
+$ python tools/crossval/crossval_estimation.py results/est-case118
+There are 9 branches which are considered as trafos - due to ratio unequal 0 or 1 - but connect same voltage levels.
+{
+  "schema": "gridsim-crossval-estimation/1",
+  "tool": "pandapower.estimation",
+  "case": "case118",
+  "buses_compared": 118,
+  "max_dvm_pu": 2.3570034812792073e-13,
+  "max_dva_deg": 5.151257198576786e-11,
+  "within_tolerance": true,
+  "rows": [
+...
+[exit 0]

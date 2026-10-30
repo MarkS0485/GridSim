@@ -1,0 +1,9 @@
+$ python bridge_probe.py '{"action":"start","case":"zone-nged","start":"2026-09-01T10:00:00Z","fps":144,"source":"estimated"}' 2
+info      {"message": "GridSim-Bridge connected", "cases": ["gb-full", "gb-spine", "zone-enwl", "zone-nged", "zone-npg", "zone-spen", "zone-ssen", "zone-ukpn"]}
+info      {"message": "No estimated lake for 'zone-nged'; streaming the live on-demand solve instead (build with NetworkModel/build_estimated_state.py for per-bus frame-by-frame replay)."}
+info      {"message": "Requested start is past available scalar data; clamped to 2026-08-15T23:00:00+00:00 -> 2026-08-22T23:00:00+00:00"}
+topology  case=zone-nged  buses=1292  branches=1406
+info      {"message": "Streaming zone-nged: 337 settlement periods 2026-08-15T23:00:00+00:00 -> 2026-08-22T23:00:00+00:00 at 144 FPS"}
+state     t=2026-08-15T23:00:00+00:00  source=None  buses=1292
+state     t=2026-08-15T23:30:00+00:00  source=None  buses=1292
+[exit 0]

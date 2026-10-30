@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GridSim — Brand Kit v1</title>
+</head>
+<body>
+<style>
+  :root{
+    --ink:#0A0E13; --ink2:#0E141B; --panel:#131A23; --panel-hi:#1B2430;
+    --line:#1E2733; --line-2:#243040;
+    --blue:#3FA9F5; --cyan:#00B8D4; --green:#2FD27F; --amber:#F3C13A; --red:#FF5B5B;
+    --text:#E6EDF3; --muted:#8A97A6; --faint:#5A6675;
+    --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Consolas,monospace;
+    --sans:system-ui,"Segoe UI",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --maxw:1120px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(1200px 600px at 78% -8%, #10202e 0%, transparent 60%),
+      radial-gradient(900px 500px at 8% 110%, #0d1a1a 0%, transparent 55%),
+      var(--ink);
+    color:var(--text);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;padding:0 20px 100px;}
+  .wrap{max-width:var(--maxw);margin:0 auto}
+  a{color:var(--blue);text-decoration:none}
+
+  /* ---- header ---- */
+  header.top{display:flex;align-items:center;justify-content:space-between;gap:20px;
+    padding:26px 2px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brandline{display:flex;align-items:center;gap:14px}
+  .brandline .avatar-sm{width:46px;height:46px;border-radius:11px;overflow:hidden;
+    box-shadow:0 0 0 1px var(--line-2), 0 8px 24px -12px #000}
+  .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--cyan)}
+  .status{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap}
+  .status b{color:var(--green);font-weight:600}
+  .status .dot{color:var(--green)}
+
+  h1.word{font-size:clamp(30px,4.4vw,52px);font-weight:800;letter-spacing:-.02em;margin:0;line-height:1}
+  h1.word .s{color:var(--blue)}
+  .tagline{color:var(--muted);margin:14px 0 0;max-width:56ch;font-size:16px}
+
+  /* ---- section scaffold ---- */
+  section{margin:64px 0 0}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.26em;text-transform:uppercase;
+    color:var(--faint);display:flex;align-items:center;gap:12px;margin:0 0 20px}
+  .eyebrow::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,var(--line),transparent)}
+  h2{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 22px;max-width:64ch;font-size:15px}
+
+  /* ---- panels ---- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--ink2) 100%);
+    border:1px solid var(--line);border-radius:16px;padding:22px}
+  .card h3{margin:0 0 3px;font-size:15px;font-weight:650}
+  .card .desc{color:var(--muted);font-size:13px;margin:0 0 18px;min-height:34px}
+  .concept-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--blue);border:1px solid var(--line-2);border-radius:999px;padding:3px 9px}
+  .row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .head-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:16px}
+
+  /* avatar renders */
+  .tile{border-radius:22px;overflow:hidden;box-shadow:0 0 0 1px var(--line-2),0 20px 50px -24px #000}
+  .tile.big{width:200px;height:200px}
+  .circ{border-radius:50%;overflow:hidden;box-shadow:0 0 0 1px var(--line-2)}
+  .sizes{display:flex;align-items:flex-end;gap:16px;margin-top:18px}
+  .sizes figure{margin:0;text-align:center}
+  .sizes figcaption{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:7px;letter-spacing:.08em}
+  svg{display:block}
+
+  /* banner */
+  .banner{width:100%;border-radius:14px;overflow:hidden;border:1px solid var(--line-2);
+    box-shadow:0 30px 70px -40px #000}
+  .banner svg{width:100%;height:auto}
+  .banner-note{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin:12px 2px 0;display:flex;gap:8px;align-items:center}
+  .swatch-line{width:22px;height:2px;background:var(--amber);display:inline-block}
+
+  /* lockups */
+  .locks{display:grid;grid-template-columns:1.3fr 1fr;gap:20px}
+  @media(max-width:760px){.locks{grid-template-columns:1fr}}
+  .lockcard{background:var(--ink2);border:1px solid var(--line);border-radius:14px;
+    padding:30px;display:flex;align-items:center;justify-content:center;min-height:132px}
+  .lockcard.light{background:#EEF2F6}
+  .wm{display:flex;align-items:center;gap:14px}
+  .wm .wtext{font-weight:800;letter-spacing:-.02em;font-size:30px;line-height:1}
+  .wm .wtext .s{color:var(--blue)}
+  .wm.on-light .wtext{color:#0A0E13}
+  .wm.stacked{flex-direction:column;gap:12px}
+  .strap{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+
+  /* palette */
+  .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  @media(max-width:760px){.swatches{grid-template-columns:repeat(2,1fr)}}
+  .sw{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--ink2)}
+  .sw .chip{height:66px}
+  .sw .meta{padding:9px 11px}
+  .sw .nm{font-size:12.5px;font-weight:600}
+  .sw .hex{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.03em}
+  .sw .use{font-size:10.5px;color:var(--faint);margin-top:3px}
+
+  /* export */
+  .exp{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:760px){.exp{grid-template-columns:1fr}}
+  .exp .card{padding:18px}
+  .exp .dim{font-family:var(--mono);color:var(--blue);font-size:13px}
+  .exp ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13px}
+  .exp li{margin:4px 0}
+  .foot{margin-top:60px;padding-top:22px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+  @media (prefers-reduced-motion:no-preference){
+    .draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 2.1s cubic-bezier(.6,.05,.2,1) .25s forwards}
+    @keyframes draw{to{stroke-dashoffset:0}}
+    .pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.6s ease-in-out 2.1s infinite}
+    @keyframes pulse{0%,100%{opacity:.55;r:9}50%{opacity:1;r:12}}
+    .flick{animation:flick 5s steps(1) infinite}
+    @keyframes flick{0%,97%{opacity:1}98%{opacity:.4}99%{opacity:1}}
+  }
+</style>
+
+<!-- =========================================================
+     SVG DEFS — the two avatar marks, defined once, reused via <use>
+     ========================================================= -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="traceGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00B8D4"/><stop offset=".55" stop-color="#3FA9F5"/><stop offset="1" stop-color="#3FA9F5"/>
+    </linearGradient>
+    <radialGradient id="tileGlow" cx="38%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#15304a"/><stop offset="55%" stop-color="#0c1620"/><stop offset="100%" stop-color="#080B10"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- CONCEPT A — the Nadir -->
+    <symbol id="markNadir" viewBox="0 0 400 400">
+      <rect width="400" height="400" rx="0" fill="url(#tileGlow)"/>
+      <g stroke="#16202B" stroke-width="1">
+        <line x1="0" y1="100" x2="400" y2="100"/><line x1="0" y1="200" x2="400" y2="200"/>
+        <line x1="0" y1="300" x2="400" y2="300"/>
+        <line x1="100" y1="0" x2="100" y2="400"/><line x1="200" y1="0" x2="200" y2="400"/>
+        <line x1="300" y1="0" x2="300" y2="400"/>
+      </g>
+      <!-- LFDD floor -->
+      <line x1="48" y1="286" x2="352" y2="286" stroke="#F3C13A" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round" opacity=".85"/>
+      <text x="352" y="278" text-anchor="end" font-family="ui-monospace,Consolas,monospace" font-size="15" fill="#F3C13A" opacity=".9">48.8</text>
+      <!-- nadir trace -->
+      <path class="draw" d="M46 150 L150 150 C180 150 194 262 216 266 C240 270 250 128 280 120 C306 113 328 160 354 156"
+        fill="none" stroke="url(#traceGrad)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="46" cy="150" r="8" fill="#3FA9F5"/>
+      <circle cx="354" cy="156" r="8" fill="#3FA9F5"/>
+      <!-- nadir node holds above the floor -->
+      <circle cx="216" cy="266" r="20" fill="#2FD27F" opacity=".18" filter="url(#soft)"/>
+      <circle class="pulse" cx="216" cy="266" r="10" fill="#2FD27F"/>
+      <circle cx="216" cy="266" r="4.5" fill="#0A0E13"/>
+    </symbol>
+
+    <!-- CONCEPT B — the Node -->
+    <symbol id="markNode" viewBox="0 0 400 400">
+      <rect width="400" height="400" fill="url(#tileGlow)"/>
+      <g stroke="#16202B" stroke-width="1">
+        <line x1="0" y1="100" x2="400" y2="100"/><line x1="0" y1="200" x2="400" y2="200"/><line x1="0" y1="300" x2="400" y2="300"/>
+        <line x1="100" y1="0" x2="100" y2="400"/><line x1="200" y1="0" x2="200" y2="400"/><line x1="300" y1="0" x2="300" y2="400"/>
+      </g>
+      <!-- edges (tube-map corridors) -->
+      <g fill="none" stroke-width="13" stroke-linecap="round">
+        <path d="M92 300 L92 176 L200 116" stroke="#3FA9F5"/>
+        <path d="M200 116 L308 176 L308 300" stroke="#00B8D4"/>
+        <path d="M92 176 L200 200 L308 176" stroke="#9B0056"/>
+        <path d="M200 200 L200 284" stroke="#EE7C0E"/>
+      </g>
+      <!-- buses -->
+      <g>
+        <circle cx="92" cy="300" r="15" fill="#0A0E13" stroke="#3FA9F5" stroke-width="7"/>
+        <circle cx="308" cy="300" r="15" fill="#0A0E13" stroke="#00B8D4" stroke-width="7"/>
+        <circle cx="92" cy="176" r="13" fill="#0A0E13" stroke="#9B0056" stroke-width="7"/>
+        <circle cx="308" cy="176" r="13" fill="#0A0E13" stroke="#9B0056" stroke-width="7"/>
+        <circle cx="200" cy="284" r="14" fill="#0A0E13" stroke="#EE7C0E" stroke-width="7"/>
+        <circle cx="200" cy="200" r="13" fill="#0A0E13" stroke="#F3C13A" stroke-width="7"/>
+        <!-- slack / source -->
+        <circle cx="200" cy="116" r="24" fill="#2FD27F" opacity=".16" filter="url(#soft)"/>
+        <circle class="pulse" cx="200" cy="116" r="17" fill="#2FD27F"/>
+        <circle cx="200" cy="116" r="7" fill="#0A0E13"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brandline">
+      <div class="avatar-sm"><svg viewBox="0 0 400 400" width="46" height="46"><use href="#markNadir"/></svg></div>
+      <div>
+        <div class="kicker">Brand kit · v1</div>
+        <div style="font-weight:700;font-size:15px;margin-top:2px">GridSim social identity</div>
+      </div>
+    </div>
+    <div class="status">
+      <span><span class="dot flick">●</span> <b>50.00</b> Hz</span>
+      <span>RoCoF <b style="color:var(--amber)">0.31</b> Hz/s</span>
+      <span>held <b>+1.2</b> Hz above LFDD</span>
+    </div>
+  </header>
+
+  <section style="margin-top:40px">
+    <h1 class="word">Grid<span class="s">Sim</span></h1>
+    <p class="tagline">A visual identity for the GridSim account — drawn from the product itself: the control-room canvas, the electric-blue frequency trace, and the nadir that holds above the floor. Not the TSGB red-white-blue; GridSim's own palette.</p>
+  </section>
+
+  <!-- AVATAR CONCEPTS -->
+  <section>
+    <p class="eyebrow">01 — Profile avatar · two routes</p>
+    <h2>The mark</h2>
+    <p class="lead">X crops avatars to a circle and renders them as small as 48&nbsp;px, so the mark has to survive both. Both routes are built on the deep canvas and stay legible when tiny. Pick one as the account's face.</p>
+    <div class="grid2">
+
+      <div class="card">
+        <div class="head-row">
+          <div><h3>Concept A — “Nadir”</h3><p class="desc">The signature frequency dip holding above the amber LFDD floor. The product’s thesis in one glyph; reads as a live pulse at small sizes.</p></div>
+          <span class="concept-tag">recommended</span>
+        </div>
+        <div class="row">
+          <div class="tile big"><svg viewBox="0 0 400 400" width="200" height="200"><use href="#markNadir"/></svg></div>
+          <div class="sizes">
+            <figure><div class="circ" style="width:96px;height:96px"><svg viewBox="0 0 400 400" width="96" height="96"><use href="#markNadir"/></svg></div><figcaption>96 · circle</figcaption></figure>
+            <figure><div class="circ" style="width:48px;height:48px"><svg viewBox="0 0 400 400" width="48" height="48"><use href="#markNadir"/></svg></div><figcaption>48 · circle</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head-row">
+          <div><h3>Concept B — “Node”</h3><p class="desc">A compact tube-map network with a green slack bus. Leans on the schematic side of GridSim; more literal “grid”, busier at 48&nbsp;px.</p></div>
+          <span class="concept-tag" style="color:var(--muted)">alt</span>
+        </div>
+        <div class="row">
+          <div class="tile big"><svg viewBox="0 0 400 400" width="200" height="200"><use href="#markNode"/></svg></div>
+          <div class="sizes">
+            <figure><div class="circ" style="width:96px;height:96px"><svg viewBox="0 0 400 400" width="96" height="96"><use href="#markNode"/></svg></div><figcaption>96 · circle</figcaption></figure>
+            <figure><div class="circ" style="width:48px;height:48px"><svg viewBox="0 0 400 400" width="48" height="48"><use href="#markNode"/></svg></div><figcaption>48 · circle</figcaption></figure>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- HEADER BANNER -->
+  <section>
+    <p class="eyebrow">02 — Header · 1500 × 500</p>
+    <h2>The banner</h2>
+    <p class="lead">Full-bleed control-room strip: the wordmark and positioning line held in the center-safe band, a faint network across the width, and the live trace sweeping to a nadir that holds above the floor. The bottom-left avatar overlap and the mobile side-crop are kept clear.</p>
+
+    <div class="banner">
+      <svg viewBox="0 0 1500 500" role="img" aria-label="GridSim X header banner">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#0C1520"/><stop offset="55%" stop-color="#0A0E13"/><stop offset="100%" stop-color="#080B10"/>
+          </linearGradient>
+          <radialGradient id="bgGlow" cx="70%" cy="18%" r="60%">
+            <stop offset="0" stop-color="#123047" stop-opacity=".8"/><stop offset="100%" stop-color="#0A0E13" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#00B8D4"/><stop offset="1" stop-color="#3FA9F5"/>
+          </linearGradient>
+        </defs>
+        <rect width="1500" height="500" fill="url(#bg)"/>
+        <rect width="1500" height="500" fill="url(#bgGlow)"/>
+        <!-- grid -->
+        <g stroke="#141C26" stroke-width="1">
+          <line x1="0" y1="125" x2="1500" y2="125"/><line x1="0" y1="250" x2="1500" y2="250"/><line x1="0" y1="375" x2="1500" y2="375"/>
+          <g>
+            <line x1="150" y1="0" x2="150" y2="500"/><line x1="300" y1="0" x2="300" y2="500"/><line x1="450" y1="0" x2="450" y2="500"/>
+            <line x1="600" y1="0" x2="600" y2="500"/><line x1="750" y1="0" x2="750" y2="500"/><line x1="900" y1="0" x2="900" y2="500"/>
+            <line x1="1050" y1="0" x2="1050" y2="500"/><line x1="1200" y1="0" x2="1200" y2="500"/><line x1="1350" y1="0" x2="1350" y2="500"/>
+          </g>
+        </g>
+        <!-- faint network on the right -->
+        <g opacity=".5" fill="none" stroke-width="4" stroke-linecap="round">
+          <path d="M980 360 L980 250 L1080 200" stroke="#274a63"/>
+          <path d="M1080 200 L1200 250 L1200 360" stroke="#274a63"/>
+          <path d="M1080 200 L1330 150" stroke="#3a2a4a"/>
+          <path d="M1200 250 L1360 300" stroke="#274a63"/>
+        </g>
+        <g fill="#0A0E13" stroke-width="4">
+          <circle cx="980" cy="360" r="9" stroke="#3FA9F5"/><circle cx="1200" cy="360" r="9" stroke="#00B8D4"/>
+          <circle cx="1330" cy="150" r="8" stroke="#9B0056"/><circle cx="1360" cy="300" r="7" stroke="#F3C13A"/>
+          <circle cx="1080" cy="200" r="11" stroke="#3FA9F5"/>
+        </g>
+
+        <!-- LFDD floor + live trace across full width -->
+        <line x1="60" y1="430" x2="1440" y2="430" stroke="#F3C13A" stroke-width="2.5" stroke-dasharray="2 14" stroke-linecap="round" opacity=".7"/>
+        <text x="72" y="420" font-family="ui-monospace,Consolas,monospace" font-size="15" fill="#F3C13A" opacity=".75">LFDD 48.8 Hz</text>
+        <path class="draw" d="M0 300 L560 300 C650 300 690 402 760 405 C835 408 865 250 940 240 C1010 231 1070 300 1160 300 L1500 300"
+          fill="none" stroke="url(#fade)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="760" cy="405" r="16" fill="#2FD27F" opacity=".16" filter="url(#soft)"/>
+        <circle class="pulse" cx="760" cy="405" r="9" fill="#2FD27F"/>
+
+        <!-- wordmark lockup (center-safe band, clear of bottom-left avatar) -->
+        <g transform="translate(96,196)">
+          <g transform="translate(0,-2)">
+            <svg x="0" y="-46" width="96" height="96" viewBox="0 0 400 400"><use href="#markNadir"/></svg>
+          </g>
+          <text x="120" y="6" font-family="system-ui,Segoe UI,sans-serif" font-size="76" font-weight="800" letter-spacing="-2" fill="#E6EDF3">Grid<tspan fill="#3FA9F5">Sim</tspan></text>
+          <text x="124" y="52" font-family="ui-monospace,Consolas,monospace" font-size="21" letter-spacing="3" fill="#8A97A6">PHYSICS-FIRST GB GRID SIMULATION &amp; EVIDENCE ENGINE</text>
+          <text x="124" y="86" font-family="ui-monospace,Consolas,monospace" font-size="16" letter-spacing="2.5" fill="#4E6377">load flow · frequency dynamics · RoCoF · validated to machine epsilon</text>
+        </g>
+      </svg>
+    </div>
+    <p class="banner-note"><span class="swatch-line"></span> amber = LFDD floor · green node = nadir held above it · avatar sits bottom-left (kept clear)</p>
+  </section>
+
+  <!-- WORDMARK LOCKUPS -->
+  <section>
+    <p class="eyebrow">03 — Wordmark · lockups</p>
+    <h2>Wordmark</h2>
+    <p class="lead"><b>Grid</b> in text-white, <b style="color:var(--blue)">Sim</b> in electric blue — the split marks the two halves of the product (the network, and the simulation over it). Works on dark and light.</p>
+    <div class="locks">
+      <div class="lockcard">
+        <div class="wm">
+          <svg viewBox="0 0 400 400" width="56" height="56" style="border-radius:12px"><use href="#markNadir"/></svg>
+          <div>
+            <div class="wtext">Grid<span class="s">Sim</span></div>
+            <div class="strap" style="margin-top:7px">grid · frequency · evidence</div>
+          </div>
+        </div>
+      </div>
+      <div class="lockcard light">
+        <div class="wm on-light">
+          <svg viewBox="0 0 400 400" width="56" height="56" style="border-radius:12px"><use href="#markNode"/></svg>
+          <div class="wtext">Grid<span class="s">Sim</span></div>
+        </div>
+      </div>
+      <div class="lockcard" style="grid-column:1/-1">
+        <div class="wm stacked">
+          <svg viewBox="0 0 400 400" width="72" height="72" style="border-radius:16px"><use href="#markNadir"/></svg>
+          <div class="wtext" style="font-size:34px">Grid<span class="s">Sim</span></div>
+          <div class="strap">@gridsim · handle to claim</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PALETTE -->
+  <section>
+    <p class="eyebrow">04 — Palette · from Palette.cs</p>
+    <h2>Colour system</h2>
+    <p class="lead">The account never invents colour — every value is lifted from GridSim's own renderer, so posts, charts and screenshots sit in one world. Blue leads; green/amber/red are <em>state</em>, not decoration.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0A0E13"></div><div class="meta"><div class="nm">Canvas</div><div class="hex">#0A0E13</div><div class="use">ground / avatar tile</div></div></div>
+      <div class="sw"><div class="chip" style="background:#131A23"></div><div class="meta"><div class="nm">Panel</div><div class="hex">#131A23</div><div class="use">cards / raised</div></div></div>
+      <div class="sw"><div class="chip" style="background:#3FA9F5"></div><div class="meta"><div class="nm">Electric&nbsp;blue</div><div class="hex">#3FA9F5</div><div class="use">primary / trace</div></div></div>
+      <div class="sw"><div class="chip" style="background:#00B8D4"></div><div class="meta"><div class="nm">Cyan</div><div class="hex">#00B8D4</div><div class="use">secondary accent</div></div></div>
+      <div class="sw"><div class="chip" style="background:#2FD27F"></div><div class="meta"><div class="nm">Secure&nbsp;green</div><div class="hex">#2FD27F</div><div class="use">held / good</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F3C13A"></div><div class="meta"><div class="nm">Amber</div><div class="hex">#F3C13A</div><div class="use">limit / warning</div></div></div>
+      <div class="sw"><div class="chip" style="background:#FF5B5B"></div><div class="meta"><div class="nm">Alarm&nbsp;red</div><div class="hex">#FF5B5B</div><div class="use">breach / critical</div></div></div>
+      <div class="sw"><div class="chip" style="background:#9B0056"></div><div class="meta"><div class="nm">Line&nbsp;magenta</div><div class="hex">#9B0056</div><div class="use">schematic corridor</div></div></div>
+      <div class="sw"><div class="chip" style="background:#1E2733"></div><div class="meta"><div class="nm">Slate</div><div class="hex">#1E2733</div><div class="use">grid / borders</div></div></div>
+      <div class="sw"><div class="chip" style="background:#E6EDF3"></div><div class="meta"><div class="nm">Text</div><div class="hex">#E6EDF3</div><div class="use">headings / body</div></div></div>
+    </div>
+  </section>
+
+  <!-- EXPORT -->
+  <section>
+    <p class="eyebrow">05 — Handoff</p>
+    <h2>Export &amp; specs</h2>
+    <p class="lead">Standalone SVGs are written alongside this page (<span style="font-family:var(--mono);font-size:13px;color:var(--blue)">gridsim-brand/</span>) — open in a browser and export to PNG at these sizes, or hand to a designer.</p>
+    <div class="exp">
+      <div class="card"><div class="dim">400 × 400</div><h3 style="margin:6px 0 0;font-size:14px">Profile avatar</h3><ul><li>PNG, exact square</li><li>reads in circle crop</li><li>legible to 48 px</li><li><code>avatar-nadir.svg</code></li></ul></div>
+      <div class="card"><div class="dim">1500 × 500</div><h3 style="margin:6px 0 0;font-size:14px">Header banner</h3><ul><li>keep text center-safe</li><li>avatar overlaps bottom-left</li><li>sides crop on mobile</li><li><code>header.svg</code></li></ul></div>
+      <div class="card"><div class="dim">Fonts</div><h3 style="margin:6px 0 0;font-size:14px">Production faces</h3><ul><li>Wordmark: <b>Inter</b> 800</li><li>Data/labels: <b>JetBrains&nbsp;Mono</b></li><li>(preview uses system stacks)</li></ul></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>GridSim — brand kit v1 · palette from src/GridSim.Wpf/Visuals/Palette.cs</span>
+    <span>@gridsim · not TSGB-branded</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,7 @@
+﻿$ gridsim batchsolve --count 10 --n 32 --runs 2
+GridSim  -  batched dense solve: 10 systems x 32x32   backend batched-dense-lu (cpu)
+==============================================================================
+correctness: 10/10 solved   max|Δ| vs CPU reference = 0.000E+000
+timing (median of 2): backend 0.2 ms   cpu-reference 0.3 ms   backend 41771 solves/s
+
+[exit 0]

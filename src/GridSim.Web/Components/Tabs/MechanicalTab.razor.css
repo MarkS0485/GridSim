@@ -1,0 +1,68 @@
+/* MECHANICAL tab - provenance banner, the protection-envelope split (P-Q + dual RoCoF bars),
+   and clickable machine rows. Value-driven colours come from WebPalette / CSS status vars;
+   nothing hard-codes hex here. */
+
+.provenance {
+    font-size: 0.8em;
+    line-height: 1.5;
+    color: var(--muted);
+    padding: 8px 12px;
+    border: 1px solid var(--edge);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+.provenance b { color: var(--ink); }
+
+.tag-real, .tag-syn, .tag-ok, .tag-warn, .tag-bad {
+    font-weight: 700;
+    font-size: 0.9em;
+    letter-spacing: 0.5px;
+}
+.tag-real, .tag-ok { color: var(--ok); }
+.tag-warn { color: var(--warn); }
+.tag-syn, .tag-bad { color: var(--bad); }
+
+/* protection envelope: P-Q diagram beside the dual RoCoF-limit bars */
+.envelope {
+    display: grid;
+    grid-template-columns: minmax(260px, 1.1fr) 1fr;
+    gap: var(--sp-4);
+    align-items: start;
+}
+.pq-col { min-width: 0; }
+.pq-cap {
+    font-size: 0.82em;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+}
+.muted-inline { color: var(--muted); font-weight: 400; }
+
+.rocof-col { display: flex; flex-direction: column; gap: 4px; }
+.rocof-now {
+    font-size: 1.9em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+.rocof-unit { font-size: 0.5em; color: var(--muted); font-weight: 600; }
+.rocof-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--sp-2);
+    font-size: 0.8em;
+    color: var(--muted);
+    margin-top: 6px;
+}
+.rocof-line em { font-style: normal; opacity: 0.8; }
+
+/* clickable machine rows */
+tr.clickable { cursor: pointer; }
+tr.clickable:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.chev { color: var(--muted); width: 1em; }
+
+@media (max-width: 720px) {
+    .envelope { grid-template-columns: 1fr; }
+}

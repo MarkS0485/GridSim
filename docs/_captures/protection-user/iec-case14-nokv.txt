@@ -1,0 +1,3 @@
+$ gridsim iec60909 case14 --bus 4
+iec60909: fault bus 4 has no base kV; IEC 60909 needs a nominal voltage.
+[exit 1]

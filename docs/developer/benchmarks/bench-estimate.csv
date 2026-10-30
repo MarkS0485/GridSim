@@ -1,0 +1,11 @@
+case,buses,measurements,states,backend,converged,iterations,mean_ms,runs,commit
+case14,14,122,27,dense,True,5,4.79,5,unknown
+case14,14,122,27,sparse,True,5,9.39,5,unknown
+case30,30,254,59,dense,True,4,12.25,5,unknown
+case30,30,254,59,sparse,True,4,12.03,5,unknown
+case57,57,491,113,dense,True,5,39.95,5,unknown
+case57,57,491,113,sparse,True,5,35.01,5,unknown
+case118,118,1098,235,dense,True,6,73.35,5,unknown
+case118,118,1098,235,sparse,True,6,55.27,5,unknown
+case300,300,2544,599,dense,True,9,954.82,5,unknown
+case300,300,2544,599,sparse,True,9,330.11,5,unknown

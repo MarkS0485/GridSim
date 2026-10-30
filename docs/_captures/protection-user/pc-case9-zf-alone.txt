@@ -1,0 +1,3 @@
+$ gridsim protection-check case9 --zf 0.5
+error: --zf is the fault impedance of a --fault-bus study; add --fault-bus.
+[exit 2]

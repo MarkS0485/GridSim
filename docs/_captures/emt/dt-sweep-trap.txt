@@ -1,0 +1,24 @@
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 200 --probe v:5 --out emt-sweep
+emt case14: 250 steps @ 200us, 5 factorization(s), peak |probe| 1.804, 5 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 100 --probe v:5 --out emt-sweep
+emt case14: 500 steps @ 100us, 5 factorization(s), peak |probe| 2.513, 5 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 50 --probe v:5 --out emt-sweep
+emt case14: 1,000 steps @ 50us, 5 factorization(s), peak |probe| 2.804, 10 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 20 --probe v:5 --out emt-sweep
+emt case14: 2,500 steps @ 20us, 5 factorization(s), peak |probe| 2.943, 18 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 10 --probe v:5 --out emt-sweep
+emt case14: 5,000 steps @ 10us, 5 factorization(s), peak |probe| 2.976, 43 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 5 --probe v:5 --out emt-sweep
+emt case14: 10,000 steps @ 5us, 5 factorization(s), peak |probe| 2.99, 60 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 2 --probe v:5 --out emt-sweep
+emt case14: 25,000 steps @ 2us, 5 factorization(s), peak |probe| 2.997, 122 ms -> emt-sweep
+[exit 0]
+$ gridsim emt case14 --duration 0.05 --freq 50 --event fault:5@0.01:0.01 --event clear:5@0.03 --dt-us 1 --probe v:5 --out emt-sweep
+emt case14: 50,000 steps @ 1us, 5 factorization(s), peak |probe| 2.999, 208 ms -> emt-sweep
+[exit 0]

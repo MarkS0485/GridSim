@@ -1,0 +1,10 @@
+$ gridsim dist3ph data/dist3ph/ieee4-gyGy-stepdown-unbalanced.json transient
+error: dist3ph mode 'transient' is not one of sweep, fault, estimate, harmonics, to-v2.
+usage: gridsim dist3ph <feeder.json> [sweep] [--tol 1e-10] [--max-iter 200]
+       gridsim dist3ph <feeder.json> fault --bus ID [--type all|3ph|slg|ll|llg] [--zf PU]
+       gridsim dist3ph <feeder.json> estimate --measurements <m.json> [--method wls|wlav|branch-current] [--tol 1e-10] [--max-iter 50]
+                                      [--robust-passes 8] [--robust-floor 0.001]   (wlav only)
+       gridsim dist3ph <feeder.json> harmonics --bus ID --spectrum TYPE --current PU [--afe feeder]
+       gridsim dist3ph <feeder.json> to-v2 --to <out.json>   (N339: write the JSON v2 form, then prove it reads back bit for bit)
+       (experimental; feeder format gridsim-dist3ph/1 or /2, see user manual ch. 7 and technical ch. 18; a radial .m case or JSON case folder is lifted balanced)
+[exit 2]

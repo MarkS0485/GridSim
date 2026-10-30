@@ -1,0 +1,3 @@
+$ gridsim protection-check case30 --cascade --oc 1.0 --alarms docs/_captures/protection-user/inputs/soe-bad.csv
+error reading --alarms 'docs/_captures/protection-user/inputs/soe-bad.csv': docs/_captures/protection-user/inputs/soe-bad.csv line 3: expected 5 fields (at_s,device,from,to,description), got 3: '0.35,50,28'.
+[exit 1]

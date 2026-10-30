@@ -1,0 +1,2 @@
+CHECK PASSED: the case loads, validates and is within the licence (20 buses).
+exit code 0

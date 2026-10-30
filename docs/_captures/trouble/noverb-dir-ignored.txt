@@ -1,0 +1,3 @@
+$ gridsim case14 --dir data/uk --once
+error: the case run (no verb) takes one case and the global switches only, so '--dir' would be silently ignored. A flag of a verb needs that verb first (gridsim <verb> <case> ...); run 'gridsim --help' for the verb list, or see docs/manual/0019 CLI reference.md.
+[exit 2]

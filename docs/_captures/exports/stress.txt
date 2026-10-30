@@ -1,0 +1,16 @@
+$ gridsim stress case14 --out results/exports-docs/stress.md
+    GridSim  -  2026-10-20 05:26:19 UTC
+    code:    git v1.95.294-173-g203c6b9c  |  GridSim.Core v1.95.467.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     stress  cases=1  load 0.5->2 step 0.05  parallel=8
+
+| Case | Buses | Max loadability (x base) | Vmin at collapse | Notes |
+|------|------:|-------------------------:|-----------------:|-------|
+| case14 | 14 | 1.75 | 0.714 |  |
+[stress] case14: 31 load points on 8 threads...
+[stress] done -> results\exports-docs\stress.md
+[exit 0]

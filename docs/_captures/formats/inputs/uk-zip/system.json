@@ -1,0 +1,5 @@
+{
+  "name": "GB reduced (10-zone)",
+  "baseMva": 10000,
+  "frequencyHz": 50
+}

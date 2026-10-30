@@ -1,0 +1,56 @@
+{
+  "description": "UI programme Phase 4.4 test fixture (2026-10-21): the template members merged into a JSON v2 projection of data/uk (a temporary copy, never data/) by UiTemplateFixture and the App tests. Three local inverter templates (two bound by type rules, one unbound), the bindings for the case's onshore, offshore and solar generators, and one override. Not real plant data: every value is a test value.",
+  "localTemplates": [
+    {
+      "id": "gridsim.local.wind-gfl",
+      "rev": 1,
+      "kind": "gridFollowingInverter",
+      "status": "active",
+      "title": "Wind grid-following inverter (test fixture)",
+      "description": "grid-following",
+      "params": {
+        "deadbandHz": 0.05,
+        "droopGainMwPerHzPerMw": 2.0,
+        "actuateTauS": { "v": 0.25, "unit": "s", "prov": { "tag": "Synthetic", "note": "test fixture" } },
+        "rocofTripHzPerS": 1.0
+      },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "test fixture values [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.local.solar-gfm",
+      "rev": 1,
+      "kind": "gridFormingInverter",
+      "status": "active",
+      "title": "Solar grid-forming inverter (test fixture)",
+      "description": "grid-forming",
+      "params": {
+        "synInertiaMwsPerHz": 400,
+        "dampingMwPerHz": 2000,
+        "actuateTauS": 0.05
+      },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "test fixture values [VERIFY]" } }
+    },
+    {
+      "id": "gridsim.local.spare-gfl",
+      "rev": 1,
+      "kind": "gridFollowingInverter",
+      "status": "active",
+      "title": "Spare grid-following inverter (test fixture, bound to nothing)",
+      "params": { "deadbandHz": 0.1 },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "test fixture values [VERIFY]" } }
+    }
+  ],
+  "bindings": [
+    { "matchType": "onshore", "template": "gridsim.local.wind-gfl@1" },
+    { "matchType": "offshore", "template": "gridsim.local.wind-gfl@1" },
+    { "matchType": "solar", "template": "gridsim.local.solar-gfm@1" }
+  ],
+  "overrides": [
+    {
+      "template": "gridsim.local.wind-gfl@1",
+      "params": { "deadbandHz": 0.08 },
+      "reason": "test fixture: a site-specific deadband",
+      "shadow": "explicit"
+    }
+  ]
+}

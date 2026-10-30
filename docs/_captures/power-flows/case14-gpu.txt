@@ -1,0 +1,30 @@
+$ gridsim case14 --once --gpu
+GridSim  -  IEEE 14-bus
+14 buses  20 branches  5 generators  base 100 MVA  50 Hz
+========================================================================
+Converged (2 NR iters, 0 OLTC passes, max mismatch 1.32E-010 p.u.)
+Generator output 0.27 GW  Demand 0.26 GW  Losses 13.4 MW  Inertia not in the data (no generator H)
+
+Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)
+------------------------------------------------------------------------------
+  1                                   -   1.060     0.00     232.4     -16.5
+  2                                   -   1.045    -4.98      18.3      30.9
+  3                                   -   1.010   -12.73     -94.2       6.1
+  4                                   -   1.018   -10.31     -47.8       3.9
+  5                                   -   1.020    -8.77      -7.6      -1.6
+  6                                   -   1.070   -14.22     -11.2       5.2
+  7                                   -   1.062   -13.36       0.0       0.0
+  8                                   -   1.090   -13.36       0.0      17.6
+  9                                   -   1.056   -14.94     -29.5     -16.6
+ 10                                   -   1.051   -15.10      -9.0      -5.8
+ 11                                   -   1.057   -14.79      -3.5      -1.8
+ 12                                   -   1.055   -15.08      -6.1      -1.6
+ 13                                   -   1.050   -15.16     -13.5      -5.8
+ 14                                   -   1.036   -16.03     -14.9      -5.0
+kV '-': base voltage not in the data for 14 of 14 bus(es) (the case gives 0).
+
+Voltage range: 1.010 - 1.090 p.u. (OUT OF BAND)
+Total losses: 13.39 MW, 8.94 MVAr
+Protection simulation: no relay would operate on this state (generic settings).
+[gpu] no usable gpu device found - falling back to the CPU backend.
+[exit 0]

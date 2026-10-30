@@ -1,0 +1,5 @@
+$ gridsim validate data/uk/buses.json
+FAIL  data/uk/buses.json (no tag): 1 error(s)
+        /schema: not a GridSim v2 document: no "schema" tag (expected one of gridsim-case/2, gridsim-network/2, gridsim-library/2, gridsim-kind/2, gridsim-dynamics/2, gridsim-dist3ph/2).
+validate: 0 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 3]

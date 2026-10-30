@@ -1,0 +1,340 @@
+{
+  "schema": "gridsim-event-catalog/1",
+  "events": [
+    {
+      "id": "gb-2019-08-09",
+      "title": "GB 9 Aug 2019 disturbance (Hornsea \u002B Little Barford)",
+      "whenUtc": "2019-08-09T15:52:33Z",
+      "preEventInertiaMwS": 215000,
+      "preEventDemandMw": 21100,
+      "losses": [
+        {
+          "atSeconds": 0.1,
+          "deltaPMw": -150,
+          "what": "distributed generation vector-shift trip (Ofgem 2.4.2)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 0.5,
+          "deltaPMw": -737,
+          "what": "Hornsea 1 deload 799-\u003E62 MW (Ofgem 2.4.3)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 1,
+          "deltaPMw": -244,
+          "what": "Little Barford steam turbine trip (Ofgem 2.4.4)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 1,
+          "deltaPMw": -390,
+          "what": "distributed generation RoCoF-protection trip, 350-430 MW est. (Ofgem 2.4.6; ESO timeline 16:52:34)",
+          "provenance": "DerivedFromRecorded"
+        },
+        {
+          "atSeconds": 40,
+          "deltaPMw": -100,
+          "what": "unattributed net reduction over 30 s (Ofgem 2.4.9)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 58,
+          "deltaPMw": -210,
+          "what": "Little Barford GT1a steam-pressure trip (Ofgem 2.4.10)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 65,
+          "deltaPMw": -200,
+          "what": "distributed generation tripped at 49 Hz (Ofgem 2.4.11)",
+          "provenance": "Recorded"
+        },
+        {
+          "atSeconds": 76,
+          "deltaPMw": -550,
+          "what": "additional distributed generation lost at LFDD instant (Ofgem 2.4.13)",
+          "provenance": "DerivedFromRecorded"
+        },
+        {
+          "atSeconds": 90,
+          "deltaPMw": -187,
+          "what": "Little Barford GT1b manual trip (Ofgem 2.4.15)",
+          "provenance": "Recorded"
+        }
+      ],
+      "recordedActions": [
+        {
+          "atSeconds": 76,
+          "deltaPMw": 892,
+          "what": "LFDD stage 1: 892 MW net demand disconnected, 1.15 M customers (Ofgem 2.4.12)",
+          "provenance": "Recorded",
+          "kind": "DemandDisconnection"
+        }
+      ],
+      "outcome": {
+        "initialRocofHzPerS": -0.17,
+        "nadirHz": 48.8,
+        "settleHz": 50,
+        "lfddMwShed": 892,
+        "provenance": "Recorded",
+        "notes": "Arrest 49.1 Hz at 25 s, plateau 49.2 Hz at 45 s, below 48.8 Hz at ~76 s -\u003E LFDD, 50 Hz within 5 min (Ofgem 2.4.8-2.4.16).",
+        "rocofMeasurementWindowS": 0,
+        "nadirSeconds": 75.9
+      },
+      "provenance": "Recorded",
+      "notes": "Credibility-gate target event, sourced from the Ofgem investigation report. The curated operating point (215 GVA*s / 21.1 GW) mirrors the measured catalog data/events/gb-2019-08-09-estimated.json.",
+      "responseServices": [
+        {
+          "mw": 266,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 5,
+          "what": "Dynamic primary/secondary, BM (mandatory response): 266 MW delivered of 284 [325] held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 231,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 5,
+          "what": "Dynamic primary/secondary, NBM (FFR): 231 MW delivered of 280 [270] held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 165,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 0.5,
+          "what": "Enhanced Frequency Response, NBM: 165 MW delivered of 227 held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 198,
+          "deadbandHz": 0.3,
+          "fullDeliveryDeviationHz": 0.3,
+          "timeConstantS": 15,
+          "what": "Static, triggered at 49.7 Hz within 30 s, NBM secondary: 198 MW delivered of [285] held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 200,
+          "deadbandHz": 0.4,
+          "fullDeliveryDeviationHz": 0.4,
+          "timeConstantS": 0.5,
+          "what": "Static, triggered at 49.6 Hz within 1 s, BM: 200 MW delivered of 200 held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 30,
+          "deadbandHz": 0.4,
+          "fullDeliveryDeviationHz": 0.4,
+          "timeConstantS": 0.5,
+          "what": "Static, triggered at 49.6 Hz within 1 s, NBM: 30 MW delivered of 31 held (ESO S192 Table 3)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0,
+          "kneeFraction": 0
+        }
+      ],
+      "responseServicesComplete": true,
+      "demandEffect": {
+        "mwPerHz": 700,
+        "what": "Demand effect: about 350 MW at 49.5 Hz for the event\u0027s 29 GW demand (ESO S192 Tables 3 and 4 footnote)",
+        "provenance": "Recorded"
+      },
+      "totalLossMw": 2768
+    },
+    {
+      "id": "gb-2023-12-22",
+      "title": "GB 22 Dec 2023 excursion (IFA \u002B Cottam, settlement-measured)",
+      "whenUtc": "2023-12-22T13:09:51Z",
+      "preEventInertiaMwS": 161000,
+      "preEventDemandMw": 22400,
+      "losses": [
+        {
+          "atSeconds": 0.5,
+          "deltaPMw": -1000,
+          "what": "IFA trip (settlement-measured: Sellindge 1,988-\u003E999 MW, time-weighting exact)",
+          "provenance": "DerivedFromRecorded"
+        },
+        {
+          "atSeconds": 9.5,
+          "deltaPMw": -345,
+          "what": "Cottam CCGT trip (settlement-measured: T_CDCL-1 345 MW-\u003E0, 32% of period delivered; assigned to the trace\u0027s second fall)",
+          "provenance": "DerivedFromRecorded"
+        }
+      ],
+      "recordedActions": [
+        {
+          "atSeconds": 19,
+          "deltaPMw": 25.6,
+          "what": "BM recovery ramp (BOALF net instructed-level delta)",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 29,
+          "deltaPMw": 25.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 39,
+          "deltaPMw": 25.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 49,
+          "deltaPMw": 25.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 59,
+          "deltaPMw": 25.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 69,
+          "deltaPMw": 25.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 79,
+          "deltaPMw": 125.3,
+          "what": "BM recovery ramp (fast phase)",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 89,
+          "deltaPMw": 125.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 99,
+          "deltaPMw": 125.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 109,
+          "deltaPMw": 125.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 119,
+          "deltaPMw": 125.3,
+          "what": "BM recovery ramp",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        },
+        {
+          "atSeconds": 129,
+          "deltaPMw": 125.3,
+          "what": "BM recovery ramp (net \u002B904 MW by 13:12:00)",
+          "provenance": "DerivedFromRecorded",
+          "kind": "OperatorInstruction"
+        }
+      ],
+      "outcome": {
+        "initialRocofHzPerS": -0.102,
+        "nadirHz": 49.275,
+        "settleHz": 50,
+        "lfddMwShed": 0,
+        "provenance": "Recorded",
+        "notes": "Below 49.5 Hz for ~59 s; no LFDD. Two-stage fall on the trace (13:09:51 arrest ~49.65, second fall 13:10:00) matching the two metered losses.",
+        "rocofMeasurementWindowS": 1
+      },
+      "provenance": "Recorded",
+      "notes": "Second sourced event, measured end to end: losses from settlement metering (gsp_ic_flows \u002B B1610), outcome from NESO\u0027s public 1-second trace, operating point measured (recorded inertia \u002B WLS-estimated demand \u002B trace pre-event frequency), response services measured (EAC cleared volumes), BM recovery measured (BOALF).",
+      "responseServices": [
+        {
+          "mw": 873,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.5,
+          "timeConstantS": 0.3,
+          "what": "Dynamic Containment low (DCL, EAC auction 70 cleared)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0.2,
+          "kneeFraction": 0.05
+        },
+        {
+          "mw": 150,
+          "deadbandHz": 0.1,
+          "fullDeliveryDeviationHz": 0.2,
+          "timeConstantS": 0.3,
+          "what": "Dynamic Moderation low (DML, EAC auction 70 cleared)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0.1,
+          "kneeFraction": 0
+        },
+        {
+          "mw": 203,
+          "deadbandHz": 0.015,
+          "fullDeliveryDeviationHz": 0.2,
+          "timeConstantS": 4,
+          "what": "Dynamic Regulation low (DRL, EAC auction 70 cleared)",
+          "provenance": "Recorded",
+          "kneeDeviationHz": 0.015,
+          "kneeFraction": 0
+        }
+      ],
+      "responseServicesComplete": true,
+      "preEventFrequencyHz": 49.879,
+      "totalLossMw": 1345
+    },
+    {
+      "id": "gb-largest-loss-1320",
+      "title": "GB normal infeed loss risk screening (SQSS): single 1320 MW infeed trip [VERIFY]",
+      "whenUtc": "2020-01-01T12:00:00Z",
+      "preEventInertiaMwS": 200000,
+      "preEventDemandMw": 35000,
+      "losses": [
+        {
+          "atSeconds": 1,
+          "deltaPMw": -1320,
+          "what": "SQSS normal infeed loss risk, 1320 MW (NETS SQSS v2.10 ch.11)",
+          "provenance": "Recorded"
+        }
+      ],
+      "recordedActions": [],
+      "outcome": {
+        "initialRocofHzPerS": -0.165,
+        "nadirHz": 49.2,
+        "settleHz": 49.8,
+        "lfddMwShed": 0,
+        "provenance": "CuratedPlaceholder",
+        "notes": "Nominal secured-loss screening case, not a specific recorded event.",
+        "rocofMeasurementWindowS": 0
+      },
+      "provenance": "CuratedPlaceholder",
+      "notes": "Design-basis screening loss. Figures [VERIFY].",
+      "responseServicesComplete": false,
+      "totalLossMw": 1320
+    }
+  ]
+}

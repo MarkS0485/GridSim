@@ -1,0 +1,12 @@
+$ gridsim estimate case14 --measurements docs/_captures/estimation/case14-planted.json --method lav --out results/case14-planted-lav
+
+=== LAV (linear programming) state estimate: case14 ===
+  status: Converged   iterations: 5   max |dx|: 1.76E-011
+  measurements: 122   states: 27   redundancy (dof): 95
+  observability: observable (rank 27/27)
+  objective: sum |r| / sigma = 137.52 (the LAV objective, over 122 measurements)
+  consistency: no chi-square verdict (J = 1387.83, information only)
+  NOTE: the LAV objective is not chi-square distributed (and J at the LAV state is not the least-squares minimum), so no chi-square test applies to a LAV estimate; use --method wls or huber for a consistency verdict.
+
+  -> results\case14-planted-lav
+[exit 0]

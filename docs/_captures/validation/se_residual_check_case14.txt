@@ -1,0 +1,9 @@
+$ python tools/crossval/se_residual_check.py results/est-case14 --leverage --fd
+[se-check] residual honesty: max |(z - h_indep) - reported| = 3.877e-13
+[se-check] objective: recomputed J = 80.010522  reported = 80.010522  |dJ| = 2.132e-13
+[se-check] --fd self-check: max |analytic - central-difference| = 6.594e-08
+[se-check] optimality: independent gauss-newton step |dx|_inf = 5.736e-12
+[se-check] leverage: max K = 0.751022659   export flags 0 critical
+
+[se-check] PASS: residuals honest, objective consistent, x_hat is the independent WLS optimum
+[exit 0]

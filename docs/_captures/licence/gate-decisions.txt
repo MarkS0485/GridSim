@@ -1,0 +1,12 @@
+$ scratch gate demo over GridSim.Core (throw-away keypair)
+free, 1500 buses : True
+free, 1501 buses : False
+This network has 1,501 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+free, 3539 buses, bundled: True
+lapsed status: Commercial Code * Example Ltd * unlimited buses * EXPIRED 2025-12-31 * for GridSim 1.x * id doc002
+lapsed, 1500 buses: True
+lapsed, 9000 buses: False
+Your Commercial Code licence expired on 2025-12-31, so the free Personal tier applies: this network has 9,000 buses and the free tier allows 1,500. Renew or ask about a new term: gdatooling@proton.me
+academic status: Academic * user@example.com * 5,000 buses * expires 2027-10-03 * for GridSim 1.x * id doc003
+This network has 5,001 buses; your Academic licence allows 5,000. A larger or commercial licence removes the limit: gdatooling@proton.me
+[exit 0]

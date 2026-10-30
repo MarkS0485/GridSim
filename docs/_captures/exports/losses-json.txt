@@ -1,0 +1,28 @@
+$ head -n 26 results/exports-docs/losses.json
+{
+  "schema": "gridsim-cli-result/1",
+  "tool": "gridsim 1.95.154+980480233a8133443733913137418a9f4fc82d18",
+  "verb": "losses",
+  "args": [
+    "losses",
+    "case14",
+    "--json",
+    "results/exports-docs/losses.json",
+    "--csv",
+    "results/exports-docs/losses.csv"
+  ],
+  "exitCode": 0,
+  "summary": {
+    "case": "IEEE 14-bus",
+    "buses": 14,
+    "total_p_loss_mw": 13.393272357431766,
+    "total_q_loss_mvar": 30.122388044873993,
+    "shunt_p_mw": 0,
+    "reconciliation_residual_mw": 2.362554596402333E-13
+  },
+  "tables": {
+    "branches": [
+      {
+        "name": "",
+        "from": 1,
+[exit 0]

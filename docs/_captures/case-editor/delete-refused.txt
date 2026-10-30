@@ -1,0 +1,25 @@
+data/uk (v1)  20 buses  [BUNDLED]  [MODIFIED: 1 file(s)]
+Case > Buses > 400 kV
+#      id      name                          kV       type   vm
+#0     1       North Scotland 400kV          400
+#1     2       South Scotland 400kV          400
+#2     3       North England 400kV           400
+#3     4       Yorkshire & Humber 400kV      400
+#4     5       North Wales & Mersey 400kV    400
+#5     6       Midlands 400kV                400
+#6     7       East Anglia 400kV             400
+#7     8       London & South East 400kV     400
+#8     9       South 400kV                   400
+#9     10      South West & S Wales 400kV    400
+
+
+
+
+
+
+
+
+
+
+Delete refused: 4 record(s) refer to buses.json #0 bus 1 'North Scotland 400kV':
+F1 Help  Enter Open  Esc Up  F2 Edit  U Undo  F9 Check  F10 Save  F12 Quit

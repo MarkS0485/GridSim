@@ -1,0 +1,2 @@
+Reciprocity (experimental) - IEEE 9-bus (WSCC) (9 buses)
+  status: Holds   residual: 0.000E+000 pu   admittance symmetric (Y = Y^T) to 0.00E+000 pu

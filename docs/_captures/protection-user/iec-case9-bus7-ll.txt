@@ -1,0 +1,8 @@
+$ gridsim iec60909 case9 --bus 7 --type ll
+IEC 60909 - IEEE 9-bus (WSCC), bus 7, line-to-line, Maximum (60 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 1.4267281519796298 kA  (8.525521484970616 pu)
+  ip    = 4.03539660469819 kA  (kappa 2, R/X 0.059150094882557964, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 1.4267281519796298 kA    Ik = 1.4267281519796298 kA  (unbalanced fault: IEC 60909-0 takes no decay, Ik = Ib = Ik'')
+  Ith   = 1.4605753733860125 kA  (m 0.048010143260821356)    idc(tb) = 0.21698031690831515 kA
+  Zth   = 0.006597803772079404 + j0.11154341823422752 pu
+[exit 0]

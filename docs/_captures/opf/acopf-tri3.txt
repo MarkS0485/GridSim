@@ -1,0 +1,6 @@
+$ gridsim acopf docs/_captures/opf/tri3
+ACOPF (DC dispatch + AC loss loop) - Three-bus worked example (3 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+  converged in 1 iteration(s)  losses -0.000 MW  cost 2,700 GBP/h
+      gen bus 1          80.0 MW  @    10 GBP/MWh
+      gen bus 2          20.0 MW  @    95 GBP/MWh
+[exit 0]

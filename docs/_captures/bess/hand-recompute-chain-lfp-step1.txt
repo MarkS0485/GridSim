@@ -1,0 +1,15 @@
+$ python hand.py   (independent re-computation of step 1 of: gridsim chain case9 --mode daily --steps 6 --bess lfp:5:5:10 --policy peak-shave, first of 30 substeps)
+start of step 1: SoC=0.4998333 T=25.00 C V1=0 V2=0 fade=0.000408227
+pack: Ns=304 Np=40 cells=12160  nominal 10.02466 MWh
+OCV = 3.27 + 0.998333*(3.29-3.27) = 3.2899667 V (entropic term 0 at 298.15 K)
+R0(25C) = 2.5002083e-04 ohm; ageing factor 1+2.5*fade = 1.0010206; R0 = 2.5027600e-04 ohm
+DC request = -5 MW * 0.98 = -4900000 W; per cell p = -402.9605 W
+disc = E^2 - 4 R0 p = 11.227286; I = (E - sqrt(disc))/(2 R0) = -121.3612 A
+limits: C-rate 139.94 A, SoC-ceiling room 949.7 A -> neither binds (|I|=121.36 A)
+terminal V = E - I R0 = 3.320340 V; DC power = V*I*cells = -4900000.0 W; AC = DC/0.98 = -5.000000 MW
+V1 = -0.014578 V, V2 = -0.015281 V
+heat per cell: I2R0 1769.4 + RC1 424.6 + RC2 311.0 + entropic 868.4 = 3373.4 J; pack 4.1021e+07 J
+m cp = 5.4*1100*12160 = 72230400.0 J/K; T no HVAC = 298.15 + 4.1021e+07/72230400.0 = 298.7179 K = 25.568 C
+I_eff = I*0.995 = -120.7544 A; dSoC charge = 0.057526; self-discharge = 5.556e-06; SoC = 0.557353
+calendar: stress 1.034412e-03, tEq 0.155746 d, fade 0.000415444; cycle: EFC 0.028896, fade 9.6318e-07
+[exit 0]

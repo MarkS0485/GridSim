@@ -1,0 +1,15 @@
+$ sed -n '353,365p' tests/GridSim.Tests/BridgeProtocolTests.cs
+        {
+          "type": "result",
+          "op": "propagation",
+          "at": "2026-07-01T00:00:00Z",
+          "payload": {
+            "corridors": [
+              { "from": 101, "to": 102, "tau": 0.0421, "km": 42.3, "vKmS": 1004.0, "class": "branch" },
+              { "from": 102, "to": 110, "tau": 0.1240, "km": 130.5, "vKmS": 1052.0, "class": "gen_pair" },
+              { "from": 110, "to": 999, "tau": null,   "km": null,  "vKmS": null,   "class": "branch" }
+            ],
+            "provenance": "distances + inertia REAL; wave_speed + tau MODELLED - unvalidated at scale"
+          }
+        }
+[exit 0]

@@ -1,0 +1,25 @@
+@* StatRow - a label/value line inside a Card (WPF Label + tabular Value).
+   Value may be plain text (Value) or arbitrary content (ChildContent).
+   Status colours the value via --ok/--warn/--bad; colour is never the only cue. *@
+
+<div class="stat-row">
+    <span>@Label</span>
+    <b class="@StatusClass">@if (ChildContent is not null) { @ChildContent } else { @Value }</b>
+</div>
+
+@code {
+    [Parameter] public string? Label { get; set; }
+    /// <summary>Plain-text value; ignored when ChildContent is supplied.</summary>
+    [Parameter] public string? Value { get; set; }
+    /// <summary>"ok" | "warn" | "bad" | null - tints the value.</summary>
+    [Parameter] public string? Status { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private string StatusClass => Status switch
+    {
+        "ok" => "ok",
+        "warn" => "warn",
+        "bad" => "bad",
+        _ => ""
+    };
+}

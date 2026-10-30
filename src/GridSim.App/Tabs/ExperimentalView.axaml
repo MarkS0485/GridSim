@@ -1,0 +1,104 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             xmlns:ex="using:GridSim.Ui.Tabs.Experimental"
+             x:Class="GridSim.App.Tabs.ExperimentalView"
+             x:DataType="ex:ExperimentalModel">
+  <!-- UI programme Phase 1.6 (third batch): the EXPERIMENTAL tab, a port of src/GridSim.Wpf/Views/ExperimentalView.xaml.
+       Same texts, same layout order (the gate verdict; the experimental models; the law table and the traced flows;
+       the provenance line), the same literal colours, and every token colour from the shared ExperimentalModel through
+       TokenBrush (the bytes WPF shows). The DataContext is the shared ExperimentalModel; its models run off the UI
+       thread, and only while this tab is showing (Active). -->
+  <Grid Margin="10" RowDefinitions="Auto,Auto,*,Auto">
+
+    <!-- ============ gate verdict ============ -->
+    <Border Grid.Row="0" Classes="Card" Padding="16,12" Margin="0,0,0,10">
+      <StackPanel>
+        <TextBlock Text="PHYSICS CONFORMANCE" Classes="PanelHeader" />
+        <TextBlock x:Name="StatusText" Text="{Binding Status}" Classes="Label" Margin="0,4,0,12" TextWrapping="Wrap" />
+        <TextBlock x:Name="GateText" Text="{Binding Gate}" FontWeight="Bold" FontSize="20"
+                   Foreground="{Binding GateColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+      </StackPanel>
+    </Border>
+
+    <!-- ============ experimental attributions ============ -->
+    <Border Grid.Row="1" Classes="Card" Padding="16,12" Margin="0,0,0,10">
+      <StackPanel>
+        <TextBlock Text="EXPERIMENTAL MODELS  *  opt-in, off the validated path" Classes="PanelHeader" />
+        <WrapPanel Orientation="Horizontal" Margin="0,10,0,0">
+          <StackPanel Margin="0,0,44,8">
+            <TextBlock Text="RECIPROCITY (Y = Y^T)" Classes="Label" />
+            <TextBlock x:Name="ReciprocityText" Text="{Binding Reciprocity}" Classes="Value" FontSize="15" />
+          </StackPanel>
+          <StackPanel Margin="0,0,44,8">
+            <TextBlock Text="CONTINUUM WAVE" Classes="Label" />
+            <TextBlock x:Name="WaveText" Text="{Binding Wave}" Classes="Value" FontSize="15" />
+            <TextBlock x:Name="WaveSplitText" Text="{Binding WaveSplit}" Foreground="#8A97A6" FontSize="12" TextWrapping="Wrap" MaxWidth="360" />
+          </StackPanel>
+          <StackPanel Margin="0,0,44,8">
+            <TextBlock Text="CARBON INTENSITY" Classes="Label" />
+            <TextBlock x:Name="CarbonText" Text="{Binding Carbon}" Classes="Value" FontSize="15" />
+          </StackPanel>
+        </WrapPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- ============ law table + traced flows ============ -->
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+      <StackPanel>
+        <Border Classes="Card" Padding="16,12" Margin="0,0,0,10">
+          <StackPanel>
+            <TextBlock Text="PHYSICAL-LAW AUDIT  *  independent per-branch recompute" Classes="PanelHeader" />
+            <Grid Margin="0,10,0,4" ColumnDefinitions="34,*,130,150,60">
+              <TextBlock Grid.Column="0" Text="#" Classes="Label" />
+              <TextBlock Grid.Column="1" Text="LAW" Classes="Label" />
+              <TextBlock Grid.Column="2" Text="STATUS" Classes="Label" />
+              <TextBlock Grid.Column="3" Text="RESIDUAL" Classes="Label" />
+              <TextBlock Grid.Column="4" Text="GATE" Classes="Label" />
+            </Grid>
+            <Border Height="1" Background="#1E2733" Margin="0,0,0,4" />
+            <ItemsControl x:Name="LawList" ItemsSource="{Binding Laws}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="ex:LawRowModel">
+                  <Grid Margin="0,3" ColumnDefinitions="34,*,130,150,60">
+                    <TextBlock Grid.Column="0" Text="{Binding Number}" Foreground="#8A97A6" />
+                    <TextBlock Grid.Column="1" Text="{Binding Name}" Foreground="#E6EDF3" />
+                    <TextBlock Grid.Column="2" Text="{Binding StatusText}" FontWeight="SemiBold"
+                               Foreground="{Binding StatusColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+                    <TextBlock Grid.Column="3" Text="{Binding Residual}" Foreground="#C9D4DF" />
+                    <StackPanel Grid.Column="4" Orientation="Horizontal">
+                      <TextBlock Text="{Binding Gated}" Foreground="#E0A05A" FontSize="10" FontWeight="Bold" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Unit}" Foreground="#5C6773" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <Border Classes="Card" Padding="16,12">
+          <StackPanel>
+            <TextBlock Text="POWER-FLOW TRACE  *  Bialek proportional sharing (top generator -> load)" Classes="PanelHeader" />
+            <TextBlock x:Name="TraceStatusText" Text="{Binding TraceStatus}" Foreground="#8A97A6" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" />
+            <ItemsControl x:Name="FlowList" ItemsSource="{Binding TopFlows}" Margin="0,8,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="ex:TraceRowModel">
+                  <Grid Margin="0,3" ColumnDefinitions="170,30,170,*">
+                    <TextBlock Grid.Column="0" Text="{Binding From}" Foreground="#3FA9F5" FontWeight="SemiBold" />
+                    <TextBlock Grid.Column="1" Text="->" Foreground="#5C6773" />
+                    <TextBlock Grid.Column="2" Text="{Binding To}" Foreground="#E6EDF3" />
+                    <TextBlock Grid.Column="3" Text="{Binding Mw}" Foreground="#C9D4DF" FontWeight="SemiBold" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- ============ provenance ============ -->
+    <TextBlock x:Name="ProvenanceText" Grid.Row="3" Text="{Binding Provenance}" Foreground="#8A97A6" FontSize="12" Margin="2,10,0,0" TextWrapping="Wrap" />
+  </Grid>
+</UserControl>

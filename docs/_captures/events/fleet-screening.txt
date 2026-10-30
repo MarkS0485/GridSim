@@ -1,0 +1,19 @@
+$ gridsim fleet --event gb-largest-loss-1320 --units 1,10,100 --inertia 60 --out results/fleet-gb-largest-loss-1320
+
+=== Fleet emergent behaviour: GB normal infeed loss risk screening (SQSS): single 1320 MW infeed trip [VERIFY] ===
+  input provenance: [CuratedPlaceholder]  (event 'gb-largest-loss-1320' is effectively CuratedPlaceholder, the weakest of its parts): a design-basis study, not a reproduction of history; every figure below inherits it and none is Recorded.
+  system inertia: 60 GVA.s   device budget: 40 GVA.s inertia + 1.50 GW FFR   stagger: 10.00 s
+  (same TOTAL budget split N ways - intrinsic inertia N-additive, FFR non-additive)
+
+   units |       RoCoF |    nadir |  FFR @ nadir |   peak FFR | LFDD
+  --------------------------------------------------------------------------
+       1 |   -0.330Hz/s |  49.64Hz |      1008MW |    1050MW | no
+      10 |   -0.330Hz/s |  49.30Hz |       544MW |     879MW | no
+     100 |   -0.330Hz/s |  49.28Hz |       516MW |     906MW | no
+
+  RoCoF the same across unit counts (-0.330 vs -0.330 Hz/s): intrinsic inertia is N-additive.
+  At the nadir the 100-unit staggered fleet has 516 MW online vs 1008 MW for 1 aggregate unit (51 %): FFR is non-additive when it counts.
+  Consequence: fleet nadir 49.28 Hz vs 1-unit 49.64 Hz (0.36 Hz deeper).
+
+  -> results\fleet-gb-largest-loss-1320
+[exit 0]

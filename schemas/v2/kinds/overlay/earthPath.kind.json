@@ -1,0 +1,16 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "earthPath",
+  "title": "Earth path (asset overlay)",
+  "description": "Phase 5a asset overlay kind. The earth return path of a bus: the station earth grid resistance and the soil it sits in. Carried beside the model, never used by the solver: transformer neutral earthing stays the authored neutralXPu.",
+  "params": {
+    "resistanceOhm": { "type": "number", "unit": "ohm", "min": 0, "required": true, "description": "Earth grid resistance to remote earth, ohms.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "bus": { "target": "bus", "required": true, "description": "The authored bus whose earth path this is." },
+      "soil": { "target": "record", "required": false, "recordKinds": ["soilZone"], "description": "The soil zone the earth grid sits in." }
+    },
+    "parentKinds": ["substation"]
+  }
+}

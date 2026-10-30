@@ -1,0 +1,15 @@
+$ gridsim chain case9 --steps 4 --bess na-ion:5:8:15
+GridSim - storage time series  *  case9  *  4 x 0.5 h  *  mode=fixed  *  policy=peak-shave
+prices: none.  Chemistry presets are CuratedPlaceholder [VERIFY] (representative cells).
+
+| Step | Hour | Load x | Demand MW | Price | Na-ion 8MW/15MWh @5: MW / SoC / T deg C | Slack MW | Vmin | Conv |
+|---:|---:|---:|---:|---:|---|---:|---:|:-:|
+| 0 | 0.0 | 1.000 | 315 | - |     8.0 / 0.228 / 29.8 | 64 | 0.996 | y |
+| 1 | 0.5 | 1.000 | 315 | - |     5.2 / 0.030 / 30.0 (SoC floor) | 66 | 0.996 | y |
+| 2 | 1.0 | 1.000 | 315 | - |     0.0 / 0.030 / 29.8 (SoC floor) | 72 | 0.996 | y |
+| 3 | 1.5 | 1.000 | 315 | - |     0.0 / 0.030 / 29.7 (SoC floor) | 72 | 0.996 | y |
+
+Na-ion 8MW/15MWh @5: out 6.6 MWh, in 0.0 MWh, aux 0.07 MWh, stored change -7.5 MWh, round trip -, 0.22 equivalent full cycles
+    ageing over the run: calendar 0.0414 %, cycle 0.0013 % (rainflow, depth-aware: 0.0009 %), deepest cycle 47 % SoC
+[chain] done -> results\chain-storage-case9.md
+[exit 0]

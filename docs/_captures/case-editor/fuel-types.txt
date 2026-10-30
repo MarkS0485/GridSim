@@ -1,0 +1,25 @@
+GRIDSIM CASE EDITOR 1.95.113  data/uk (v1)  20 buses  [BUNDLED]
+Case > Generation
+fuel type             stations  units   capacity MVA
+biomass               1         1       2600.0
+ccgt                  7         7       25000.0
+hydro                 1         1       1300.0
+interconnector        10        10      10300.0
+nuclear               4         4       8100.0
+offshore              2         2       10000.0
+onshore               3         3       8000.0
+solar                 1         1       4000.0
+
+
+
+
+
+
+
+
+
+
+
+
+row 1/8
+F1 Help  Enter Open  Esc Up  F2 Edit  U Undo  F9 Check  F10 Save  F12 Quit

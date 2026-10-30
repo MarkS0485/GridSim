@@ -1,0 +1,8 @@
+$ cat results/exports-docs/estimate-planted/fdia-screen.json
+{
+  "schema": "gridsim-fdia-screen/1",
+  "verdict": "clear",
+  "summary": "chi-square PASSED and the state is physically plausible - no FDIA indicator.",
+  "status": "Converged",
+  "chiSquareTest": "Passed"
+}[exit 0]

@@ -1,0 +1,11 @@
+$ gridsim pf pegase/case1354pegase.m --top 3
+Power flow - case1354pegase (1354 buses)
+  converged in 9 iteration(s), mismatch 7.43E-009 pu   losses 1672.143 MW / 6183.204 MVAr
+  voltage range 0.9810 - 1.1080 pu
+  lowest voltages:
+      bus 5350   0.9810 pu    -24.794 deg
+      bus 720    0.9816 pu    -27.128 deg
+      bus 7353   0.9827 pu    -22.489 deg
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+[exit 0]

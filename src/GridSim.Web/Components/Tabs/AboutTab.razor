@@ -1,0 +1,95 @@
+@* ABOUT - what this replay is, and (crucially) what updates when. The public lake mixes cadences: 1-second
+   frequency, 30-minute settlement data, and a fixed physical backdrop. This tab tells the viewer which is which
+   so nothing reads as "broken" when it holds still. Pure static explainer - no per-frame data. *@
+
+<div class="tabpage about">
+
+    <div class="card about-hero">
+        <div class="card-h">WHAT YOU'RE WATCHING</div>
+        <p class="about-lead">
+            A <b>pure raw replay of the public grid record</b> - the actual data GB's system operator and market
+            published, played back on its own clock. There is <b>no power-flow solve, no inference, no forecast</b>:
+            every number on screen is a real measurement being replayed, nothing is computed or predicted.
+        </p>
+        <p class="about-lead">
+            Because it's the real record, it arrives at the cadence the record was published at - and those
+            cadences differ. That's the key thing to know, so here's exactly what moves when:
+        </p>
+    </div>
+
+    <div class="panel-grid about-grid">
+        <div class="card about-live">
+            <div class="card-h">EVERY SECOND - live</div>
+            <ul class="about-list">
+                <li><b>System frequency</b> and <b>RoCoF</b> - from NESO's 1-second frequency feed, the fastest data in the lake.</li>
+                <li>The network map's <b>frequency wash</b> (blue&nbsp;&lt;-&gt;&nbsp;green&nbsp;&lt;-&gt;&nbsp;red with the frequency).</li>
+                <li>Frequency-derived readouts: the grand engine's <b>RPM</b> and <b>blade-tip speed</b>, the
+                    <b>regen braking</b> exchange, and RP1's <b>purchased time</b> - all honest functions of the live frequency.</li>
+            </ul>
+        </div>
+
+        <div class="card about-step">
+            <div class="card-h">EVERY 30 MINUTES - settlement cadence</div>
+            <ul class="about-list">
+                <li><b>Demand</b>, <b>generation mix</b>, <b>system inertia</b>, <b>interconnector flows</b>,
+                    and the <b>operator / market</b> figures.</li>
+                <li>These are published per <b>settlement period</b> (half-hourly), so they hold their exact value
+                    for 30&nbsp;minutes and then step. They're <i>not</i> frozen - they're at half-hourly resolution,
+                    which is genuinely all the public data carries. Turn the speed up to see them step more often.</li>
+            </ul>
+        </div>
+
+        <div class="card about-fixed">
+            <div class="card-h">FIXED - the backdrop (no solve)</div>
+            <ul class="about-list">
+                <li>The <b>network map</b> is the physical GB transmission graph (public ETYS topology) - a
+                    backdrop, not a live power-flow. So there are no per-bus voltages or line flows,
+                    <b>losses read 0</b> and <b>average voltage 1.000</b>.</li>
+                <li>The RP1 <b>per-unit / N-1 tables</b> and HUMAN SCALE's <b>rotor-twist</b> come from that static
+                    topology - a network solve would make them live, and this replay deliberately doesn't solve.</li>
+            </ul>
+        </div>
+
+        <div class="card about-range">
+            <div class="card-h">RANGE &amp; SOURCES</div>
+            <ul class="about-list">
+                <li>Scrub or pick any date from roughly <b>2014 to 2026</b> - bounded by NESO's 1-second frequency
+                    dataset (demand and generation reach further back).</li>
+                <li>NESO publishes the 1-second frequency with a lag, so the most recent weeks may not be available
+                    yet; the replay lands on the newest data that exists. A processor now regenerates it automatically
+                    whenever new frequency data is obtained.</li>
+                <li>All data is public NESO / GB system sources. This is a <b>replay</b>, not a simulation - GridSim's
+                    desktop build does the power-flow physics; here it just plays the record back.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card about-btm">
+        <div class="card-h">BEHIND-THE-METER GENERATION - how we estimate it</div>
+        <p class="about-lead">
+            On a sunny summer midday you'll see <b>total generation sit ~15-20&nbsp;GW above the metered demand</b>.
+            That's not an error - it's <b>behind-the-meter (embedded) generation</b>: rooftop and field <b>solar</b>
+            plus distribution-connected (<b>embedded</b>) <b>wind</b>. It's generated where it's used, so it never
+            crosses the transmission meter - it shows up as a <b>reduction on the grid</b> (a lower metered demand),
+            while the home still consumes the energy.
+        </p>
+        <ul class="about-list">
+            <li><b>EST behind-the-meter = embedded solar + embedded wind</b>, taken <i>directly</i> from NESO's
+                published generation-mix estimates (their SOLAR and embedded-wind figures). No modelling of our own -
+                we add two numbers NESO already publishes.</li>
+            <li>It's flagged <b>EST</b> because embedded generation isn't transmission-metered - NESO <i>estimates</i>
+                it (a monitored sample scaled up), and we inherit that estimate as-is.</li>
+            <li><b>Underlying (home) demand = metered transmission demand (ND) + behind-the-meter.</b> The metered ND is
+                what the grid sees; adding back the offset gives what was actually consumed.</li>
+        </ul>
+        <p class="muted-note">
+            Robust because it's an identity, not a forecast: metered demand + behind-the-meter = underlying demand, and
+            total generation ~ underlying demand +/- interconnector flows. Every term is a published figure.
+        </p>
+    </div>
+
+    <p class="muted-note about-foot">
+        Controls: play / pause, speed, the scrubber and the date-picker all move the replay across the full range.
+        The clock top-right is the exact instant on screen, to the second.
+    </p>
+</div>

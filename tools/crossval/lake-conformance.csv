@@ -1,0 +1,10 @@
+case,route,era,periods,admissible,worst_residual_mva
+gb-spine,estimated,2017,4,4,1.108970e-09
+gb-spine,estimated,2019,4,4,7.993197e-10
+gb-spine,estimated,2023,4,4,9.459722e-10
+gb-spine,estimated,2024,8,8,1.768089e-09
+gb-spine,estimated,2026,32,32,1.841461e-09
+gb-spine,presolved,2019,5,4,2.833312e+03
+gb-spine,presolved,2023,4,4,3.944809e-10
+gb-spine,presolved,2024,4,4,9.828227e-10
+gb-spine,presolved,2026,33,29,3.172734e+03

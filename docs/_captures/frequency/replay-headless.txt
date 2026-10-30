@@ -1,0 +1,8 @@
+$ gridsim replay --frames 5
+Loading frequency-sample.csv (600 s) and upsampling to 20 ms...
+[     0/14951] 00:00:00.000  50.1050 Hz  RoCoF  0.0010  @50 sps
+[     1/14951] 00:00:00.020  50.1050 Hz  RoCoF  0.0010  @50 sps
+[     2/14951] 00:00:00.040  50.1050 Hz  RoCoF  0.0010  @50 sps
+[     3/14951] 00:00:00.060  50.1051 Hz  RoCoF  0.0010  @50 sps
+[     4/14951] 00:00:00.080  50.1051 Hz  RoCoF  0.0010  @50 sps
+[exit 0]

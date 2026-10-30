@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:tabs="using:GridSim.App.Tabs"
+             xmlns:controls="using:GridSim.App.Controls"
+             xmlns:mk="using:GridSim.Ui.Tabs.Market"
+             x:Class="GridSim.App.Tabs.MarketView"
+             x:DataType="mk:MarketModel">
+  <!-- UI programme Phase 1.6: the MARKET tab, a port of src/GridSim.Wpf/Views/MarketView.xaml. Same texts, same layout
+       order (title; six headline price tiles; the imbalance price trace beside the interconnectors), the same theme
+       brushes, the Sparkline instrument from Controls/, and every colour from the shared MarketModel's tokens through
+       TokenBrush (the bytes WPF shows). The DataContext is the shared MarketModel. -->
+  <Grid Margin="10" RowDefinitions="Auto,Auto,*">
+
+    <!-- ============ title ============ -->
+    <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
+      <StackPanel>
+        <TextBlock Text="MARKET  WHOLESALE &amp; BALANCING" Classes="PanelHeader" FontSize="13" />
+        <TextBlock Text="prices, imbalance, interconnectors and carbon  -  streamed from the GDA lake"
+                   Classes="Label" FontSize="10" Margin="0,2,0,0" />
+      </StackPanel>
+    </Border>
+
+    <!-- ============ headline price tiles ============ -->
+    <Border Grid.Row="1" Classes="Card" Padding="12" Margin="0,0,0,10">
+      <UniformGrid Columns="6">
+        <StackPanel Margin="6">
+          <TextBlock Text="IMBALANCE PRICE" Classes="Label" />
+          <TextBlock x:Name="ImbalancePriceText" Text="{Binding ImbalancePrice}" Classes="Value"
+                     Foreground="{Binding ImbalanceColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+          <TextBlock Text="GBP/MWh" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="MARKET INDEX" Classes="Label" />
+          <TextBlock x:Name="MarketIndexText" Text="{Binding MarketIndex}" Classes="Value" FontSize="20" />
+          <TextBlock Text="APX / N2EX" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="BSUoS" Classes="Label" />
+          <TextBlock x:Name="BsuosText" Text="{Binding Bsuos}" Classes="Value" FontSize="20" />
+          <TextBlock Text="GBP/MWh" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="CONSTRAINT COST" Classes="Label" />
+          <TextBlock x:Name="ConstraintCostText" Text="{Binding ConstraintCost}" Classes="Value" FontSize="20" />
+          <TextBlock Text="thermal, today" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="CARBON" Classes="Label" />
+          <TextBlock x:Name="CarbonText" Text="{Binding Carbon}" Classes="Value" FontSize="20"
+                     Foreground="{Binding CarbonColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+          <TextBlock x:Name="RenewableShareText" Text="{Binding RenewableShare, StringFormat='renewable {0}'}" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="DEMAND" Classes="Label" />
+          <TextBlock x:Name="DemandText" Text="{Binding Demand}" Classes="Value" FontSize="20" />
+          <TextBlock x:Name="DemandForecastText" Text="{Binding DemandForecast, StringFormat='fcast {0}'}" Classes="Unit" />
+        </StackPanel>
+      </UniformGrid>
+    </Border>
+
+    <!-- ============ body: price trace + interconnectors ============ -->
+    <Grid Grid.Row="2" ColumnDefinitions="1.6*,10,1*">
+
+      <Border Grid.Column="0" Classes="Card" Padding="12">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="IMBALANCE PRICE  -  recent settlement periods (GBP/MWh)"
+                     Classes="PanelHeader" Margin="0,0,0,8" />
+          <controls:Sparkline x:Name="PriceTraceChart" Values="{Binding PriceTrace}" Caption="STREAMED FROM LAKE" />
+        </DockPanel>
+      </Border>
+
+      <Border Grid.Column="2" Classes="Card" Padding="0">
+        <DockPanel>
+          <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                  BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+            <TextBlock Text="INTERCONNECTORS" Classes="PanelHeader" />
+          </Border>
+          <ItemsControl x:Name="InterconnectorList" ItemsSource="{Binding Interconnectors}" Margin="0,4">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="mk:MktInterconnectorRowModel">
+                <Grid Margin="12,4" ColumnDefinitions="1.4*,Auto,1*">
+                  <TextBlock Grid.Column="0" Text="{Binding Name}" Foreground="{StaticResource Text}"
+                             FontSize="11" VerticalAlignment="Center" />
+                  <Border Grid.Column="1" CornerRadius="3" Padding="5,1" Margin="4,0"
+                          Background="{Binding FlowColour, Converter={x:Static tabs:TokenBrush.Instance}}">
+                    <TextBlock Text="{Binding Direction}" Foreground="Black" FontSize="9" FontWeight="Bold" />
+                  </Border>
+                  <TextBlock Grid.Column="2" Text="{Binding Flow}"
+                             Foreground="{Binding FlowColour, Converter={x:Static tabs:TokenBrush.Instance}}"
+                             FontFamily="{StaticResource MonoFont}" FontSize="12" HorizontalAlignment="Right"
+                             VerticalAlignment="Center" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

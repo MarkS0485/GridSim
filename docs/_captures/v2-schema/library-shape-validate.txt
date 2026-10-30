@@ -1,0 +1,9 @@
+$ gridsim validate docs/_captures/v2-schema/inputs/library/shape.library.json
+FAIL  docs/_captures/v2-schema/inputs/library/shape.library.json (gridsim-library/2): 5 error(s)
+        /templates/0/provenance/_default/note: string "No source" does not match the pattern "\\[VERIFY\\]".
+        /templates/0/params/generation: expected type null, found string.
+        /templates/1/params/model: value null matches none of the 2 anyOf alternatives:
+        /templates/1/params/model: [anyOf alternative 0] expected type number or string or boolean, found null.
+        /templates/1/params/model: [anyOf alternative 1] expected type object, found null.
+validate: 0 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0\schemas\v2)
+[exit 3]

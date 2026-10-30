@@ -1,0 +1,5 @@
+$ gridsim nosuchcase --once
+error: unknown command or case 'nosuchcase'.
+Run a case (case9|case14|case30|case57|case118|case300|case145|case24|cigre|uk), a .m file,
+or a verb (transient, stability, modal, replay-event, scenario, fleet, evidence, gda-replay, crossval, estimate, bench, ...).
+[exit 2]

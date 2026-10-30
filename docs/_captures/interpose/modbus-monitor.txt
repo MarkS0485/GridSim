@@ -1,0 +1,16 @@
+$ gridsim interpose case14 --protocol modbus --listen 127.0.0.1:5020 --crosswalk docs/_captures/interpose/modbus-case14.json --monitor --ticks 6
+interpose Modbus TCP: listening 127.0.0.1:5020, case 'case14', 3 binding(s)
+monitor mode: decoding to console only, no windows written.
+headless: stops after 6 frame(s).
+  MB:U1:3:@100               1030  Good         -
+  MB:U1:3:@101              65416  Good         -
+  MB:U1:3:@102              17142  Good         -
+  MB:U1:3:@103              59769  Good         -
+  MB:U1:3:@100               1031  Good         -
+  MB:U1:3:@101              65436  Good         -
+  MB:U1:3:@102              17154  Good         -
+  MB:U1:3:@103              32768  Good         -
+  MB:U2:3:0                    11  Good         -
+  MB:U2:3:1                    22  Good         -
+stopped: accepted 6, rejected 0, decode-errors 1, points 10, windows-written 0
+[exit 0]

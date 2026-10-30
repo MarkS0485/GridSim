@@ -1,0 +1,82 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="card">
+            <div class="card-h">SPEED DOMAINS</div>
+            <div class="panel-grid four">
+                <div class="mini"><span class="mv">@D.DomainCount</span><span class="ml">Domains</span></div>
+                <div class="mini"><span class="mv">@D.DeltaGvaPercent.ToString("0")%</span><span class="ml">delta-GVa dominance</span></div>
+                <div class="mini" style="grid-column:span 2"><span class="mv" style="font-size:0.95rem">@D.DominantText</span><span class="ml">Dominant domain</span></div>
+            </div>
+            <div class="warn-note">Domain structure &amp; GVad are grounded in the model; per-bus spatial spread &amp; propagation delay are UNVALIDATED AT SCALE.</div>
+        </div>
+
+        <div class="card">
+            <div class="card-h">GVad DOMINANCE | apparent-power stiffness sum(S x C) per domain</div>
+            @foreach (var d in D.Domains)
+            {
+                <div class="domainbar-row">
+                    <div class="db-name"><b>@d.Name</b><br /><span class="db-sub">@d.Speed</span></div>
+                    <div class="db-track">
+                        <div class="db-fill" style="width:@Pct(d.BarFrac);--c:@Accent(d)"></div>
+                        <span class="db-val">@d.GvadGva.ToString("0.00") GVA@(d.Dominant ? "  * DOMINANT" : "")</span>
+                    </div>
+                </div>
+            }
+            <div class="muted-note">@D.GapText</div>
+        </div>
+
+        <div class="card">
+            <div class="card-h">SPINNING INERTIA | real stored kinetic energy (GVA.s) per domain</div>
+            @foreach (var d in D.Domains)
+            {
+                <div class="domainbar-row">
+                    <div class="db-name"><b>@d.Name</b><br /><span class="db-sub">@d.Kind</span></div>
+                    <div class="db-track">
+                        <div class="db-fill" style="width:@Pct(d.InertiaBarFrac);--c:@Accent(d)"></div>
+                        <span class="db-val">@d.InertiaGvaS.ToString("0.00") GVA.s</span>
+                    </div>
+                </div>
+            }
+            <div class="muted-note">Apparent-power stiffness is split evenly, but real rotational inertia sits almost entirely in the synchronous thermal domain - inverters carry GVad but no spinning energy. This is what a lumped scalar hides.</div>
+        </div>
+
+        <div class="card">
+            <div class="card-h">PER-DOMAIN DETAIL</div>
+            @* The WPF tab's one-line status sentence (R099 parity), built by TabProjections.DomainsStatusText. *@
+            @if (!string.IsNullOrEmpty(D.StatusText))
+            {
+                <div class="muted-note">@D.StatusText</div>
+            }
+            <table class="grid">
+                <thead><tr><th>Domain</th><th>Speed</th><th>Kind</th><th class="r">Machines</th><th class="r">GVad GVA</th><th class="r">Inertia GVA.s</th></tr></thead>
+                <tbody>
+                    @foreach (var d in D.Domains)
+                    {
+                        <tr>
+                            <td><span class="swatch" style="--c:@Accent(d)"></span>@d.Name@(d.Dominant ? " *" : "")</td>
+                            <td>@d.Speed</td>
+                            <td>@d.Kind</td>
+                            <td class="r">@d.Machines</td>
+                            <td class="r">@d.GvadGva.ToString("0.00")</td>
+                            <td class="r">@d.InertiaGvaS.ToString("0.00")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private DomainsDto? D => Frame?.Domains;
+    private static string Pct(double f) => $"{System.Math.Clamp(f, 0, 1) * 100:0.#}%";
+    private static string Accent(DomainRowDto d) => d.Dominant ? "var(--ok)" : d.Synchronous ? "var(--info)" : "var(--series-async)";
+}

@@ -1,0 +1,67 @@
+@using GridSim.Web.Projection
+
+@if (F is null)
+{
+    <div class="stub">Inverter-fleet dynamics are OFF for this session (run with asset dynamics enabled to model the inverter fleet's sample->compute->actuate behaviour).</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="card">
+            <div class="card-h">INVERTER FLEET | authored sample->compute->actuate dynamics</div>
+            <div class="panel-grid four">
+                <div class="mini"><span class="mv">@F.NetFleetMw.ToString("+0;-0;0") MW</span><span class="ml">Net fleet response</span></div>
+                <div class="mini"><span class="mv">@F.ClassCount</span><span class="ml">Asset classes</span></div>
+                <div class="mini"><span class="mv">@F.TotalUnits</span><span class="ml">Bound units</span></div>
+                <div class="mini"><span class="mv @(F.TotalTripped > 0 ? "alarm" : "")">@F.TotalTripped</span><span class="ml">Tripped (LoM)</span></div>
+            </div>
+            @if (F.TrippedMw > 0)
+            {
+                <div class="warn-note strong">
+                    ! @F.TrippedMw.ToString("0") MW of embedded generation has tripped on RoCoF/vector-shift protection and been added to the deficit - the 2019-08-09 feedback loop.
+                </div>
+            }
+            <div class="warn-note">
+                Every control parameter (droop/df-dt gains, detection/actuate timings, relay settings) is vendor-proprietary and literature-approximated [VERIFY]; the fleet response is UNVALIDATED AT SCALE. Capacity &amp; location are grounded; the curve SHAPE is assumption-driven.
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-h">PER-CLASS RESPONSE</div>
+            <table class="grid">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Mode</th>
+                        <th class="r">Units</th>
+                        <th class="r">Online MW</th>
+                        <th class="r">Tripped</th>
+                        <th class="r">SoC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in F.Classes)
+                    {
+                        <tr>
+                            <td style="font-weight:600">@c.ClassName</td>
+                            <td class="@ModeClass(c.Mode)">@c.Mode</td>
+                            <td class="r">@c.Count</td>
+                            <td class="r val-strong">@c.OnlineMw.ToString("+0.0;-0.0;0")</td>
+                            <td class="r @(c.TrippedCount > 0 ? "bad" : "val-dim")">@c.TrippedCount</td>
+                            <td class="r val-dim">@(c.SocPercent > 0 ? c.SocPercent.ToString("0") + "%" : "-")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <div class="muted-note">
+                Grid-forming units inject synthetic inertia (power proportional to df/dt) and ride through; grid-following units droop on measured local frequency and trip on RoCoF/vector-shift - what the synchronous fleet cannot account for.
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private InverterFleetDto? F => Frame?.InverterFleet;
+    private static string ModeClass(string mode) => mode == "grid-forming" ? "mode-forming" : "mode-following";
+}

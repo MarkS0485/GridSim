@@ -1,0 +1,14 @@
+$ gridsim crossval case300
+[crossval] solved 'case300' (converged, 7 iters) -> src\GridSim.Cli\bin\Release\net10.0\results\crossval-case300\solve-export.json
+[crossval] validation FAILED (python, exit 4): There are 12 branches which are considered as trafos - due to ratio unequal 0 or 1 - but connect same voltage levels.
+numba cannot be imported and numba functions are disabled.
+Probably the execution is slow.
+Please install numba to gain a massive speedup.
+(or if you prefer slow execution, set the flag numba=False to avoid this warning!)
+numba cannot be imported and numba functions are disabled.
+Probably the execution is slow.
+Please install numba to gain a massive speedup.
+(or if you prefer slow execution, set the flag numba=False to avoid this warning!)
+crossval: pandapower solve failed: Power Flow nr did not converge after 100 iterations!
+           export is at src\GridSim.Cli\bin\Release\net10.0\results\crossval-case300\solve-export.json.
+[exit 3]

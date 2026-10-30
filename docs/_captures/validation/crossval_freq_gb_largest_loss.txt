@@ -1,0 +1,14 @@
+$ python tools/crossval/crossval_freq.py results/rev-gb-largest-loss-1320/baseline-frequency.json
+{
+  "schema": "gridsim-crossval-freq/1",
+  "tool": "scipy.integrate.solve_ivp",
+  "checked": true,
+  "rocof_gridsim": -0.165,
+  "rocof_scipy": -0.16484122658675915,
+  "d_rocof": 0.00015877341324085914,
+  "nadir_gridsim": 49.242009502955256,
+  "nadir_scipy": 49.241793420076675,
+  "d_nadir": 0.00021608287858043695,
+  "within_tolerance": true
+}
+[exit 0]

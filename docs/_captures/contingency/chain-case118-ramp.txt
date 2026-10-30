@@ -1,0 +1,25 @@
+$ gridsim chain case118 --mode ramp --steps 6 --ramp-pct 10
+    GridSim  -  2026-10-19 17:39:29 UTC
+    code:    git v1.95.294-168-g786a2162  |  GridSim.Core v1.95.462.0  |  build Release
+    runtime: .NET 10.0.12  X64  GC=Server
+    machine: LAPTOP  Microsoft Windows 10.0.26300
+    cpu:     Intel(R) Core(TM) i3-N305  -  8 logical cores  -  8 GB RAM
+    simd:    Avx256  (4 doubles/step)  FMA=True
+    backend: cpu
+    run:     chain  case=case118  steps=6  mode=ramp  ramp=10%
+
+Each step feeds the previous solved voltages in as the initial condition (warm start).
+mode=fixed: same operating point re-solved (expect iters->1, no drift).  ramp: +10% load/step.  daily: 24h demand curve.
+
+| Step | Load x | Warm-start iters | Mismatch | Vmin | Vmax |
+|-----:|-------:|-----------------:|---------:|-----:|-----:|
+| 0 | 1.000 | 6 | 2.85E-014 | 0.943 | 1.050 |
+| 1 | 1.100 | 6 | 5.70E-014 | 0.943 | 1.050 |
+| 2 | 1.200 | 6 | 1.14E-013 | 0.941 | 1.050 |
+| 3 | 1.300 | 8 | 1.05E-009 | 0.933 | 1.050 |
+| 4 | 1.400 | 10 | 2.66E-010 | 0.919 | 1.050 |
+| 5 | 1.500 | 9 | 5.70E-014 | 0.904 | 1.050 |
+
+Cold (flat-start) iters: 8.  Max warm-start iters over 5 warm-started step(s) (steps 1-5; step 0 starts from the case): 10.  
+[chain] done -> results\chain-case118.md
+[exit 0]

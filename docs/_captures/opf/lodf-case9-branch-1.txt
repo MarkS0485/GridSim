@@ -1,0 +1,8 @@
+$ gridsim lodf case9 --branch 1
+LODF - IEEE 9-bus (WSCC) (9 buses): outage of branch 1 (4->5) redistributes onto:
+    branch 4    6->7           LODF -1.0000  (-100.0% of the lost flow)
+    branch 7    8->9           LODF -1.0000  (-100.0% of the lost flow)
+    branch 8    9->4           LODF -1.0000  (-100.0% of the lost flow)
+    branch 5    7->8           LODF -1.0000  (-100.0% of the lost flow)
+    branch 2    5->6           LODF -1.0000  (-100.0% of the lost flow)
+[exit 0]

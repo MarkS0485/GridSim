@@ -1,0 +1,7 @@
+$ gridsim dcopf case14 --csv results/exports-docs/dcopf.csv
+DC-OPF - IEEE 14-bus (14 buses)  [cheapest secure dispatch]
+  demand 259 MW  generation 259 MW  total cost 12,950 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 1         259.0 MW  @    50 GBP/MWh
+[dcopf] wrote results\exports-docs\dcopf.csv, results\exports-docs\dcopf-binding_lines.csv, results\exports-docs\dcopf-islands.csv, results\exports-docs\dcopf-summary.csv
+[exit 0]

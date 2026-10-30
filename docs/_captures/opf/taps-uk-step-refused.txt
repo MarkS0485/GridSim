@@ -1,0 +1,3 @@
+$ gridsim taps uk --step 3
+error: taps does not take --step (it is not one of taps's flags, so it would be silently ignored). Run 'gridsim taps --help' for the flags taps takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

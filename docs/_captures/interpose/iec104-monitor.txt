@@ -1,0 +1,16 @@
+$ gridsim interpose case14 --protocol iec104 --listen 127.0.0.1:2404 --crosswalk docs/_captures/interpose/iec104-case14.json --monitor --ticks 12
+interpose IEC 60870-5-104: listening 127.0.0.1:2404, case 'case14', 6 binding(s)
+monitor mode: decoding to console only, no windows written.
+headless: stops after 12 frame(s).
+  IOA:1001                  1.018  Good         2026-07-20T13:45:12.5000000Z
+  IOA:1002                  0.987  NonTopical   2026-07-20T13:45:12.5000000Z
+  IOA:1003                    138  Good         2026-07-20T13:45:12.5000000Z
+  IOA:1001                  1.021  Good         2026-07-20T13:45:13.2500000Z
+  IOA:2001                   1568  Good         -
+  IOA:2002                    400  Invalid      -
+  IOA:3001                  -0.31  Good         -
+  IOA:4001                      1  Good         2026-07-20T13:45:12.5000000Z
+  IOA:1001                  1.019  Good         2026-07-20T13:45:14.0000000Z
+  IOA:3001                  -0.35  Invalid      -
+stopped: accepted 11, rejected 1, decode-errors 1, points 10, windows-written 0
+[exit 0]

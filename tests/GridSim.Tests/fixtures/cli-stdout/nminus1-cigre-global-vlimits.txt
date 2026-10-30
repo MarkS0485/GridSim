@@ -1,0 +1,22 @@
+GridSim  -  N-1 branch screening: CIGRE MV benchmark (TF C6.04.02)
+==========================================================================
+Base case: 2 pre-existing violation(s), reported once here and not counted against any outage: branch 0-1 104%; undervoltage 0.923 p.u.
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+1-2                             ISLANDED      islanded
+2-3                             ISLANDED      islanded
+3-4                             ISLANDED      islanded
+4-5                             ISLANDED      islanded
+5-6                             ISLANDED      islanded
+7-8                             ISLANDED      islanded
+8-9                             ISLANDED      islanded
+9-10                            ISLANDED      islanded
+10-11                           ISLANDED      islanded
+3-8                             ISLANDED      islanded
+12-13                           ISLANDED      islanded
+13-14                           ISLANDED      islanded
+0-1 (tx)                        ISLANDED      islanded
+0-12 (tx)                       ISLANDED      islanded
+--------------------------------------------------------------------------
+14 outages screened  0 secure  0 with violations  14 islanded
+Verdict: NOT SECURE, 2 base-case violation(s) and 14 insecure outage(s) (exit 3).

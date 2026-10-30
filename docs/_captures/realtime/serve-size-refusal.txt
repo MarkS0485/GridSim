@@ -1,0 +1,7 @@
+$ gridsim serve pegase/case1354pegase.m --measurements-dir results/realtime/windows --method ekf
+note: case1354pegase.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system.
+note: case1354pegase.m: read mpc.gencost (260 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+serving ekf estimator over 4 window(s) from results/realtime/windows
+horizon guard: now=2026-10-04T18:39:08.4645915Z, newest processable=2026-09-27T17:39:08.4645915Z
+error: serve --method ekf: The Kalman filter is dense (s x s covariance inverted every window) and is limited to 2500 states; this case has 2707 (1354 buses). Use the snapshot WLS estimator, which switches to the sparse backend at this size.
+[exit 2]

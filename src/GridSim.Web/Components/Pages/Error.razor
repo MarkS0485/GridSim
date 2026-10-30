@@ -1,0 +1,32 @@
+@page "/Error"
+@using System.Diagnostics
+
+@* D-DOC-170: the page Program.cs names in UseExceptionHandler("/Error"). Before it existed, an unhandled exception
+   outside Development was re-executed against a route nobody served, so the visitor got an empty 500 (or the router's
+   "Nothing at this address") instead of an error page. This page says only that the request failed and gives the
+   request id an operator can find in the log: no exception text, stack or path is shown (they can name files and
+   settings of the host). Static server rendering, so it works even when the interactive circuit cannot start. *@
+
+<PageTitle>GridSim - error</PageTitle>
+
+<div class="load-error">
+    <h1>Something went wrong</h1>
+    <p>The server could not complete this request; the details are in the server log.</p>
+    @if (!string.IsNullOrEmpty(RequestId))
+    {
+        <p>Request id (quote it when reporting the problem): <code>@RequestId</code></p>
+    }
+    <a href="/">Back to the start page</a>
+</div>
+
+@code {
+    /// <summary>The current HTTP request (cascaded during static server rendering).</summary>
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+
+    /// <summary>The trace id of the failed request: the ambient activity id when tracing is on, else the request's
+    /// own trace identifier, the same value ASP.NET Core writes to the log for that request.</summary>
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

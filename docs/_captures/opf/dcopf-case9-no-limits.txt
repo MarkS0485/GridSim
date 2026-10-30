@@ -1,0 +1,8 @@
+$ gridsim dcopf case9 --no-limits
+DC-OPF - IEEE 9-bus (WSCC) (9 buses)  [cheapest secure dispatch]
+  demand 315 MW  generation 315 MW  total cost 15,750 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 1         250.0 MW  @    50 GBP/MWh
+      gen bus 2          55.0 MW  @    50 GBP/MWh
+      gen bus 3          10.0 MW  @    50 GBP/MWh
+[exit 0]

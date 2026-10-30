@@ -1,0 +1,8 @@
+$ gridsim impedance-stability case9 --pll-bw 80 --scr 0.3 --scr-min 0.1
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
+  operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
+  nyquist         : encirclements -2  unstable-modes 2  GM -5.2 dB  PM 26.8 deg  minDist 0.426  -> UNSTABLE
+  SCR boundary    : critical SCR 0.51  (weak-grid instability below this)
+  cross-check (C) : RHP eigenvalues 0  agreement differs (structures differ; Routh oracle is decisive - see tests)  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
+  provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
+[exit 0]

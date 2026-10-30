@@ -1,0 +1,8 @@
+$ gridsim interpose case14 --protocol modbus --listen 127.0.0.1:5020 --crosswalk docs/_captures/interpose/modbus-case14.json --measurements-dir results/interpose-docs/modbus --window-ms 2000 --ticks 6
+interpose Modbus TCP: listening 127.0.0.1:5020, case 'case14', 3 binding(s)
+windows -> results/interpose-docs/modbus (guard deferred; estimable only once >169 h old)
+headless: stops after 6 frame(s).
+  window 2026-10-03T12:57:29.4041298Z: 3 measurement(s) -> 20261003T125729404Z-000000.json
+  window 2026-10-03T12:57:30.5534610Z: 3 measurement(s) -> 20261003T125730553Z-000001.json
+stopped: accepted 6, rejected 0, decode-errors 1, points 10, windows-written 2
+[exit 0]

@@ -1,0 +1,158 @@
+@* A reusable drill-down overlay: click an aggregate (a fuel, a boundary, a machine) and this
+   shows how it is made up - constituent rows plus combined totals/averages - with a back-stack so
+   a paused frame becomes fully explorable. Port of GridSim.Wpf.Views.InspectorView / InspectorVm.
+
+   A tab drives it via @ref: build an InspectLevel and call inspector.Show(level). When a drillable
+   row is clicked, OnRowClick fires with the row; the tab builds the next level and calls Show again
+   (which pushes the current page onto the back-stack). Back pops; Close/ESC/backdrop dismiss. *@
+
+@namespace GridSim.Web.Components.Overlays
+
+@if (_current is not null)
+{
+    <div class="ins-backdrop" tabindex="0" @ref="_root" @onkeydown="OnKeyDown" @onclick="OnBackdropClick">
+        <div class="ins-card" @onclick:stopPropagation="true">
+            <div class="ins-head">
+                @if (_back.Count > 0)
+                {
+                    <button class="ins-flat ins-back" @onclick="Back">&lt; back</button>
+                }
+                <div class="ins-titles">
+                    <div class="ins-title">@_current.Title</div>
+                    @if (!string.IsNullOrEmpty(_current.Subtitle))
+                    {
+                        <div class="ins-sub">@_current.Subtitle</div>
+                    }
+                </div>
+                <button class="ins-flat ins-close" @onclick="Close" aria-label="Close">x</button>
+            </div>
+
+            @if (_current.Stats.Count > 0)
+            {
+                <div class="ins-stats">
+                    @foreach (var s in _current.Stats)
+                    {
+                        <div class="ins-stat">
+                            <div class="ins-stat-l">@s.Label</div>
+                            <div class="ins-stat-v" style="@ColorStyle(s.ValueColor)">@s.Value</div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="ins-rows">
+                @foreach (var r in _current.Rows)
+                {
+                    <button class="ins-row @(r.Drillable ? "drill" : "")" @onclick="() => RowClicked(r)" disabled="@(!r.Drillable)">
+                        <span class="ins-swatch" style="@SwatchStyle(r.Swatch)"></span>
+                        <span class="ins-row-main">
+                            <span class="ins-row-primary">@r.Primary</span>
+                            @if (!string.IsNullOrEmpty(r.Sub))
+                            {
+                                <span class="ins-row-sub">@r.Sub</span>
+                            }
+                        </span>
+                        @if (!string.IsNullOrEmpty(r.Value))
+                        {
+                            <span class="ins-row-value" style="@ColorStyle(r.ValueColor)">@r.Value</span>
+                        }
+                        @if (r.Drillable)
+                        {
+                            <span class="ins-chevron">></span>
+                        }
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>Fires when a drillable row is clicked; the tab builds and Show()s the next level.</summary>
+    [Parameter] public EventCallback<InspectRow> OnRowClick { get; set; }
+    /// <summary>Fires when the overlay is fully dismissed (close / ESC / backdrop).</summary>
+    [Parameter] public EventCallback OnClosed { get; set; }
+
+    private InspectLevel? _current;
+    private readonly Stack<InspectLevel> _back = new();
+    private ElementReference _root;
+    private bool _focusPending;
+
+    /// <summary>True while the overlay is showing a page.</summary>
+    public bool IsOpen => _current is not null;
+
+    /// <summary>Open the inspector, or push a new page onto it if it is already open.</summary>
+    public void Show(InspectLevel level)
+    {
+        if (_current is not null) _back.Push(_current);
+        _current = level;
+        _focusPending = true;
+        StateHasChanged();
+    }
+
+    /// <summary>Alias for <see cref="Show"/> - reads naturally when drilling deeper.</summary>
+    public void Push(InspectLevel level) => Show(level);
+
+    private void Back()
+    {
+        if (_back.Count == 0) { Close(); return; }
+        _current = _back.Pop();
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        _back.Clear();
+        _current = null;
+        StateHasChanged();
+        if (OnClosed.HasDelegate) _ = OnClosed.InvokeAsync();
+    }
+
+    private async Task RowClicked(InspectRow r)
+    {
+        if (r.Drillable && OnRowClick.HasDelegate)
+            await OnRowClick.InvokeAsync(r);
+    }
+
+    private void OnBackdropClick() => Close();
+
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") Close();
+        else if (e.Key == "Backspace" && _back.Count > 0) Back();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending && _current is not null)
+        {
+            _focusPending = false;
+            try { await _root.FocusAsync(); } catch { /* element gone; ignore */ }
+        }
+    }
+
+    // ---- data-driven colour helpers (hex supplied by the tab via WebPalette) ----
+    private static string? ColorStyle(string? hex) => hex is null ? null : $"color:{hex}";
+    private static string? SwatchStyle(string? hex) => hex is null ? null : $"background:{hex}";
+
+    // ---- level / stat / row model ---------------------------------------------
+    /// <summary>A headline combined/averaged figure shown as a tile at the top of a page.</summary>
+    public sealed record InspectStat(string Label, string Value, string? ValueColor = null);
+
+    /// <summary>One constituent row; set Drillable to make it push a new level via OnRowClick.</summary>
+    public sealed record InspectRow(
+        string Primary,
+        string? Sub = null,
+        string Value = "",
+        string? Swatch = null,
+        string? ValueColor = null,
+        bool Drillable = false,
+        object? Payload = null);
+
+    /// <summary>One page of the inspector: a title, stat tiles and constituent rows.</summary>
+    public sealed record InspectLevel(
+        string Title,
+        string? Subtitle,
+        IReadOnlyList<InspectStat> Stats,
+        IReadOnlyList<InspectRow> Rows);
+}

@@ -1,0 +1,6 @@
+$ gridsim serve case9 --measurements-dir results/ch31-future-dir
+serving wls estimator over 1 window(s) from results/ch31-future-dir
+horizon guard: now=2026-10-04T11:53:30.3707312Z, newest processable=2026-09-27T10:53:30.3707312Z
+done: processed 0, converged 0, rejected-fresh 1, failed 0
+error: no window produced a usable estimate: all 1 window(s) are newer than the 169 h horizon.
+[exit 3]

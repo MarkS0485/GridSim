@@ -1,0 +1,35 @@
+$ gridsim gda --root $GDA_ROOT --dno npg --no-geo
+GridSim  -  GDA ingestion from $GDA_ROOT  (NPG)
+==========================================================================
+Built in 149 ms  -  GB/NPg ex-GDA
+
+  Raw LTDS nodes           3,210
+  Electrical buses         3,197   (busbar/disconnector ties merged: 13)
+  Series circuits          1,656   (cables & lines)
+  Transformers (2w/3w)       939 / 0   (+0 star nodes)
+  Total branches           2,595
+  Demand points               34   matched 34, total 0.26 GW
+  Generators                  14   (0.12 GW capacity, 977 unmatched)
+  System inertia             0.1 GVAs
+  OLTCs                      937
+  Connected islands          649   (largest 137 buses)
+
+  Buses by voltage:
+      132 kV       461
+       66 kV       646
+       33 kV     1,269
+       22 kV        37
+       20 kV         9
+       12 kV       310
+       11 kV       459
+        7 kV         2
+        6 kV         4
+
+   652 GSP infeed(s) modelled as slack buses; primary = bus 304 (OSGODBY GT3, 33 kV).
+   OLTC: 2 transformer(s) publish a 0 %/0 % tap range (no on-load tap changer); no OLTC created for them.
+   WARNING ties: 13 zero-impedance circuit(s) whose Equipment is not a busbar or switch were merged as busbar ties (check for missing R/X cells): POTTER HOUSE 66KV|66-POTTER HOUSE 11KV|66 'Circuit'; WEST MIDDLEMERE ROAD LSI|33-IMMINGHAM-GOXHILL ROAD LSI-WEST MIDDLEMERE ROAD LSI-TEE|33 'Circuit'; WOLD NEWTON-STAINTON LSI-KIRMOND LSI-TEE|33-STAINTON LSI|33 'Circuit'; BARUGH GT1|66-BARUGH T1|66 'Circuit'; BRIGHOUSE T1|33-BRIGHOUSE GT1|33 'Circuit'; ....
+   Generation join: 307 row(s) joined by primary name alone: their GSP group does not list that primary in the demand table, but the name is unique to one GSP group.
+   Generation: 2 matched row(s), 15.2 MW export capacity, are not connected yet and were left out (statuses: 'Accepted').
+   WARNING demand: 623 row(s), 12337.7 MW are on nodes outside this build's network (nodes on no in-service element) and were not included.
+   validation: warning: 652 slack (reference) buses  -  treating as a multi-island system.
+[exit 0]

@@ -1,0 +1,501 @@
+@* Harmonics tab: a real frequency-domain harmonic study, surfaced from the Core engine
+   (HarmonicPenetration / HarmonicIndices / HarmonicImpedanceScan / HarmonicCompliance). The study is heavy
+   (a per-order complex solve over the whole network + a driving-point resonance scan), so it runs ON DEMAND
+   from the RUN STUDY button - SimSession.RunHarmonicsStudy() computes it, caches it by model, and gates it by
+   bus count. This tab renders the spectrum, THD/indices, the resonance scan and the IEEE-519 / G5-5 verdicts.
+   N151: a SOURCES selector picks the default synthetic source (unchanged, the default) or the opt-in per-converter
+   rule of Core (G5 Issue 5 Table B.3, rated or dispatched: the CLI's harmonics --converter-sources); the tab lists
+   what that rule left out, and any source component the study did not analyse (N075 ComponentsOutsideOrders). *@
+@using System.Globalization
+@using GridSim.Web.Projection
+
+<div class="tabpage harmonics">
+    <div class="rp1-hero @HeroTone">
+        <div class="hero-main">
+            <span class="hero-v">HARMONICS</span>
+            <span class="hero-l">frequency-domain penetration | resonance | IEEE&nbsp;519 / G5&#47;5 compliance</span>
+        </div>
+        <div class="hero-grade">&#8767;</div>
+    </div>
+
+    @if (RunStudy is null)
+    {
+        <div class="card">
+            <div class="card-h">STUDY NOT WIRED</div>
+            <p class="note">The HARMONICS study runs against the live session model, but this tab has not been
+            handed the session's run-study callback yet. Once the dashboard passes
+            <code>RunStudy="_session.RunHarmonicsStudy"</code>, the RUN STUDY button below runs the engine.</p>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-h">FREQUENCY-DOMAIN HARMONIC STUDY</div>
+            <div class="runbar">
+                @if (RunStudyWith is not null)
+                {
+                    @* N151: the source choice. Changing it clears the shown result: a result is only ever shown under
+                       the choice that produced it. *@
+                    <label class="prov">sources
+                        <select class="busselect" disabled="@_running" value="@_choice"
+                                @onchange="e => ChooseSources((string)e.Value!)">
+                            <option value="@HarmonicSourceChoice.Synthetic">one synthetic six-pulse source, G5 Table B.3 (default)</option>
+                            <option value="@HarmonicSourceChoice.SyntheticIdeal">one synthetic six-pulse source, idealised 1/h</option>
+                            <option value="@HarmonicSourceChoice.ConverterRated">per converter, rated (G5 Table B.3)</option>
+                            <option value="@HarmonicSourceChoice.ConverterDispatched">per converter, dispatched (G5 Table B.3)</option>
+                        </select>
+                    </label>
+                }
+                <button class="runbtn" disabled="@_running" @onclick="Run">
+                    @(_running ? "RUNNING..." : (_result is null ? "RUN STUDY" : "RE-RUN STUDY"))
+                </button>
+                <span class="prov">
+                    @if (_running)
+                    {
+                        <text>Solving Y(h) x V = I across @Orders orders + the driving-point scan...</text>
+                    }
+                    else if (_result is { HeavyModelsSkipped: false } rp)
+                    {
+                        <text>source spectra: @rp.ProvenanceTag | @rp.Orders.Count orders</text>
+                    }
+                    else
+                    {
+                        <text>On demand: a per-order complex solve over the whole network (heavy) - not a per-frame quantity.</text>
+                    }
+                </span>
+            </div>
+        </div>
+
+        @if (_running)
+        {
+            <div class="card"><div class="prompt"><span class="spinner"></span> Running the harmonic study...</div></div>
+        }
+        else if (_result is null)
+        {
+            <div class="card">
+                <div class="prompt">
+                    Press <strong>RUN STUDY</strong> to solve the harmonic penetration, the driving-point
+                    resonance scan and the IEEE&nbsp;519 / G5&#47;5 compliance verdict for the current model.
+                    @if (_choice == HarmonicSourceChoice.Synthetic)
+                    {
+                        <div class="note" style="margin-top:8px">The study injects one synthetic six-pulse source (the
+                        G5 Issue 5 Table B.3 six-pulse profile) at the largest-demand bus. @HarmonicsDto.PerConverterLimitation</div>
+                    }
+                    else if (_choice == HarmonicSourceChoice.SyntheticIdeal)
+                    {
+                        <div class="note" style="margin-top:8px">The study injects one synthetic six-pulse source with
+                        the idealised 1/h spectrum at the largest-demand bus. @HarmonicsDto.PerConverterLimitation</div>
+                    }
+                    else
+                    {
+                        <div class="note" style="margin-top:8px">The study injects one G5 Issue 5 Table B.3 source per
+                        converter-interfaced unit (@(_choice == HarmonicSourceChoice.ConverterRated ? "rated" : "dispatched")
+                        current; self-commutated units take the active-front-end profile, line-commutated the twelve-pulse
+                        profile [VERIFY]) over orders 2 to 50, the same rule as <code>gridsim harmonics --converter-sources</code>.</div>
+                    }
+                </div>
+            </div>
+        }
+        else if (_result is { Failed: true } rf)
+        {
+            @* A failed study is an error, never a skip: show the engine's reason and how to fix it. *@
+            <div class="card">
+                <div class="prompt">
+                    <strong>STUDY FAILED.</strong>
+                    <div class="note" style="margin-top:8px">@rf.Error</div>
+                    <div class="note">No harmonic result is shown because none could be computed for this model.
+                    Press RE-RUN STUDY after the model changes, or run <code>gridsim harmonics &lt;case&gt;</code>
+                    from the CLI for the full diagnostic.</div>
+                </div>
+            </div>
+        }
+        else if (_result is { HeavyModelsSkipped: true } rs)
+        {
+            <div class="card">
+                <div class="prompt">
+                    <strong>Study skipped.</strong>
+                    <div class="note" style="margin-top:8px">@rs.ProvenanceTag</div>
+                    <div class="note">The on-demand harmonic solve is gated on large networks so it never blocks
+                    the control-room UI. Run <code>gridsim harmonics &lt;case&gt;</code> from the CLI for the full study.</div>
+                </div>
+            </div>
+        }
+        else
+        {
+            var res = _result;   // capture: local null-state survives the interleaved instance-method calls below
+            var worst = WorstBus;
+            var wlim = worst is null ? null : LimitFor(worst.BusId);
+            @* ---- 0. N151: what the sources left out (never dropped without a word) ----------- *@
+            @if (res.ComponentsOutsideOrders is { Count: > 0 } outside)
+            {
+                <div class="card">
+                    <div class="card-h">WARNING - @outside.Count SOURCE COMPONENT(S) NOT ANALYSED</div>
+                    <p class="note">These components are at harmonic orders this study does not analyse
+                    (orders @(string.Join(",", res.Orders))), so they contributed nothing and the THD below is understated
+                    by them. The CLI refuses such a source set outright.</p>
+                    <ul class="note">
+                        @foreach (string c in outside)
+                        {
+                            <li>@c</li>
+                        }
+                    </ul>
+                </div>
+            }
+            @if (res.ConverterSources is { } conv)
+            {
+                <div class="card">
+                    <div class="card-h">PER-CONVERTER SOURCES - @conv.Level level</div>
+                    <StatRow Label="Self-commutated (active front end)" Value="@($"{conv.SelfCommutated} unit(s)")" />
+                    <StatRow Label="Line-commutated (twelve-pulse [VERIFY])" Value="@($"{conv.LineCommutated} unit(s)")" />
+                    <StatRow Label="Triplen components left out (balanced study)"
+                             Status="@(conv.OmittedComponents.Count > 0 ? "warn" : "ok")"
+                             Value="@($"{conv.OmittedComponents.Count}")" />
+                    <StatRow Label="Converter units not modelled"
+                             Status="@(conv.UnitsNotModelled.Count > 0 ? "warn" : "ok")"
+                             Value="@($"{conv.UnitsNotModelled.Count}")" />
+                    @if (conv.OmittedComponents.Count > 0)
+                    {
+                        <details class="note">
+                            <summary>Left out: the triplen (zero-sequence) components the balanced study cannot carry</summary>
+                            <ul>
+                                @foreach (string c in conv.OmittedComponents)
+                                {
+                                    <li>@c</li>
+                                }
+                            </ul>
+                        </details>
+                    }
+                    @if (conv.UnitsNotModelled.Count > 0)
+                    {
+                        <details class="note">
+                            <summary>Not modelled: converter units that became no source</summary>
+                            <ul>
+                                @foreach (string u in conv.UnitsNotModelled)
+                                {
+                                    <li>@u</li>
+                                }
+                            </ul>
+                        </details>
+                    }
+                </div>
+            }
+            @* ---- 1. THD / indices summary ------------------------------------------------ *@
+            <div class="panel-grid">
+                <div class="card">
+                    <div class="card-h">VOLTAGE-THD INDICES</div>
+                    <StatRow Label="Worst-bus voltage THD" Status="@ThdStatus(worst)"
+                             Value="@($"{res.Indices.WorstThdPct:0.00}% at bus {res.Indices.WorstBusId}")" />
+                    <StatRow Label="Buses IEEE-519 compliant"
+                             Status="@(CompliantCount == res.Compliance.Count ? "ok" : "bad")"
+                             Value="@($"{CompliantCount} / {res.Compliance.Count}")" />
+                    <StatRow Label="Buses within G5/5 planning level"
+                             Status="@(G55Count == res.Compliance.Count ? "ok" : "warn")"
+                             Value="@($"{G55Count} / {res.Compliance.Count}")" />
+                    @if (res.Scan is { } sc)
+                    {
+                        <StatRow Label="Resonance (driving-point scan)"
+                                 Value="@($"order {sc.ResonanceOrder} | |Z| {sc.PeakMagnitude:0.###} pu | sharpness {sc.DampingSharpness:0.0}x")" />
+                    }
+                </div>
+
+                <div class="card">
+                    <div class="card-h">WORST BUS - @WorstBusLabel</div>
+                    @if (worst is not null)
+                    {
+                        <StatRow Label="Voltage THD" Status="@ThdStatus(worst)"
+                                 Value="@($"{worst.ThdPct:0.00}%")" />
+                        <Bar Value="worst.ThdPct" Max="@Math.Max(worst.ThdPct, wlim?.ThdLimitPct ?? 1)"
+                             Color="@BarColor(worst.ThdPct, wlim?.ThdLimitPct ?? 0)" />
+                        @if (wlim is not null)
+                        {
+                            <StatRow Label="IEEE-519 THD limit" Value="@($"{wlim.ThdLimitPct:0.0}%")" />
+                            <StatRow Label="Worst individual harmonic"
+                                     Value="@($"order {wlim.WorstIhdOrder} | {wlim.WorstIhdPct:0.00}% (limit {wlim.IhdLimitPct:0.0}%)")" />
+                            <StatRow Label="G5/5 THD planning level" Value="@($"{wlim.G55ThdPlanningPct:0.0}%")" />
+                        }
+                    }
+                </div>
+            </div>
+
+            @* ---- 2. Spectrum bar chart --------------------------------------------------- *@
+            <div class="card">
+                <div class="runbar" style="justify-content:space-between">
+                    <div class="card-h" style="margin:0">VOLTAGE SPECTRUM - per-order distortion (%V)</div>
+                    <label class="prov">bus
+                        <select class="busselect" value="@_selectedBusId"
+                                @onchange="e => _selectedBusId = int.Parse((string)e.Value!)">
+                            @foreach (var b in res.BusSpectra)
+                            {
+                                <option value="@b.BusId">bus @b.BusId | @b.BaseKv.ToString("0") kV | THD @b.ThdPct.ToString("0.00")%</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                @{
+                    var sp = SelectedSpectrum;
+                }
+                @if (sp is { Orders.Count: > 0 })
+                {
+                    double maxMag = Math.Max(sp.Orders.Max(o => o.MagnitudePct), 0.05);
+                    int n = sp.Orders.Count;
+                    <svg class="hsvg" viewBox="0 0 720 240" preserveAspectRatio="xMidYMid meet" role="img"
+                         aria-label="Per-order voltage distortion spectrum at bus @sp.BusId">
+                        @for (int g = 0; g <= 4; g++)
+                        {
+                            double frac = g / 4.0;
+                            double y = Pt + (1 - frac) * PlotH;
+                            <line class="axis" x1="@F(PlotL)" y1="@F(y)" x2="@F(ChartW - Pr)" y2="@F(y)" />
+                            @SvgText(PlotL - 5, y, (maxMag * frac).ToString("0.##"), "end", "--muted", 8.5, "middle")
+                        }
+                        @for (int i = 0; i < n; i++)
+                        {
+                            var o = sp.Orders[i];
+                            double bw = PlotW / n;
+                            double cx = PlotL + (i + 0.5) * bw;
+                            double bh = o.MagnitudePct / maxMag * PlotH;
+                            <rect class="hbar" x="@F(cx - bw * 0.34)" y="@F(Pt + PlotH - bh)"
+                                  width="@F(bw * 0.68)" height="@F(bh)" rx="1" />
+                            @if (n <= 26)
+                            {
+                                @SvgText(cx, Pt + PlotH + 4, o.Order.ToString(), "middle", "--muted", 8)
+                            }
+                        }
+                        @SvgText(PlotL - 5, Pt - 4, "%V", "end", "--muted", 8.5, "auto")
+                        @SvgText(ChartW - Pr, Pt + PlotH + 16, "harmonic order", "end", "--muted", 8.5)
+                    </svg>
+                    <p class="note">Individual-harmonic distortion IHD = |V&#8341;| / |V&#8321;| at bus @sp.BusId
+                    (@sp.BaseKv.ToString("0") kV); the fundamental (h=1) carries no injection and is omitted.</p>
+                }
+                else
+                {
+                    <p class="note">No spectrum for the selected bus.</p>
+                }
+            </div>
+
+            @* ---- 3. Impedance / resonance scan ------------------------------------------- *@
+            @if (res.Scan is { Points.Count: > 1 } scan)
+            {
+                double maxZ = Math.Max(scan.Points.Max(p => p.ZMagnitude), 1e-9);
+                int minOrd = scan.Points.Min(p => p.Order);
+                int maxOrd = scan.Points.Max(p => p.Order);
+                int span = Math.Max(maxOrd - minOrd, 1);
+                string zpath = ZPath(scan.Points, maxZ, minOrd, span);
+                double resX = PlotL + (double)(scan.ResonanceOrder - minOrd) / span * PlotW;
+                double peakY = Pt + (1 - scan.PeakMagnitude / maxZ) * PlotH;
+                <div class="card">
+                    <div class="card-h">DRIVING-POINT IMPEDANCE SCAN - bus @scan.BusId</div>
+                    <svg class="hsvg" viewBox="0 0 720 240" preserveAspectRatio="xMidYMid meet" role="img"
+                         aria-label="Driving-point impedance magnitude versus harmonic order at bus @scan.BusId">
+                        @for (int g = 0; g <= 4; g++)
+                        {
+                            double frac = g / 4.0;
+                            double y = Pt + (1 - frac) * PlotH;
+                            <line class="axis" x1="@F(PlotL)" y1="@F(y)" x2="@F(ChartW - Pr)" y2="@F(y)" />
+                            @SvgText(PlotL - 5, y, (maxZ * frac).ToString("0.##"), "end", "--muted", 8.5, "middle")
+                        }
+                        @foreach (int ord in ScanTicks(minOrd, maxOrd))
+                        {
+                            double x = PlotL + (double)(ord - minOrd) / span * PlotW;
+                            @SvgText(x, Pt + PlotH + 4, ord.ToString(), "middle", "--muted", 8)
+                        }
+                        <line class="resline" x1="@F(resX)" y1="@F(Pt)" x2="@F(resX)" y2="@F(Pt + PlotH)" />
+                        <path class="zcurve" d="@zpath" />
+                        <circle class="zdot" cx="@F(resX)" cy="@F(peakY)" r="3.5" />
+                        @SvgText(Math.Min(resX + 4, ChartW - Pr), Pt + 2,
+                                 $"resonance h{scan.ResonanceOrder} | |Z|={scan.PeakMagnitude:0.###} pu", "start", "--bad", 9, "hanging")
+                        @SvgText(PlotL - 5, Pt - 4, "|Z| pu", "end", "--muted", 8.5, "auto")
+                        @SvgText(ChartW - Pr, Pt + PlotH + 16, "harmonic order", "end", "--muted", 8.5)
+                    </svg>
+                    <p class="note">|Z&#8342;&#8342;(h)| driving-point impedance; a tall, lightly-damped peak
+                    (sharpness @scan.DampingSharpness.ToString("0.0")x) is the resonance a grid shedding
+                    synchronous (harmonic-damping) machines develops.</p>
+                </div>
+            }
+
+            @* ---- 4. IEEE-519 / G5-5 compliance table ------------------------------------ *@
+            <div class="card">
+                <div class="card-h">IEEE-519 / G5&#47;5 COMPLIANCE - per bus</div>
+                <div style="overflow-x:auto">
+                    <table class="grid">
+                        <thead>
+                            <tr>
+                                <th>Bus</th><th class="r">kV</th><th class="r">THD %</th>
+                                <th class="r">519 limit</th><th class="r">Worst IHD</th><th class="r">IHD limit</th>
+                                <th class="r">G5/5 level</th><th>IEEE 519</th><th>G5/5</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in res.Compliance.OrderByDescending(r => r.ThdPct))
+                            {
+                                <tr class="@(c.CompliantIeee519 ? "" : "over")">
+                                    <td>@c.BusId</td>
+                                    <td class="r">@c.BaseKv.ToString("0")</td>
+                                    <td class="r">@c.ThdPct.ToString("0.00")</td>
+                                    <td class="r">@c.ThdLimitPct.ToString("0.0")</td>
+                                    <td class="r">h@(c.WorstIhdOrder) | @c.WorstIhdPct.ToString("0.00")%</td>
+                                    <td class="r">@c.IhdLimitPct.ToString("0.0")</td>
+                                    <td class="r">@c.G55ThdPlanningPct.ToString("0.0")</td>
+                                    <td class="@(c.CompliantIeee519 ? "pass" : "fail")">@(c.CompliantIeee519 ? "PASS" : "FAIL")</td>
+                                    <td class="@(c.CompliantG55 ? "pass" : "fail")">@(c.CompliantG55 ? "PASS" : "FAIL")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="note">IEEE 519-2014 bus voltage-distortion limits tighten with voltage level; the G5/5
+                column is the UK headline THD planning level (per-order G5/5 tables are a documented refinement).
+                Source spectra: @res.ProvenanceTag.</p>
+                @* R099: say which source the study injected and that per-converter sources are not modelled. *@
+                <p class="note">Sources: @(res.SourceNote ?? HarmonicsDto.PerConverterLimitation)</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>The live frame (unused for the study itself, which runs against the session model, but kept so
+    /// the tab can react to feed changes / show context).</summary>
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+
+    /// <summary>Runs the on-demand harmonic study against the session's current model and returns the rollup
+    /// (cached + bus-count gated inside <c>SimSession.RunHarmonicsStudy</c>). Null until the dashboard wires it.</summary>
+    [Parameter] public Func<HarmonicsDto>? RunStudy { get; set; }
+
+    /// <summary>N151: runs the study with a chosen set of sources (<c>SimSession.RunHarmonicsStudyWith</c>). When
+    /// set, the tab shows the SOURCES selector and uses this instead of <see cref="RunStudy"/>; the default choice is
+    /// <see cref="HarmonicSourceChoice.Synthetic"/>, exactly the study <see cref="RunStudy"/> runs.</summary>
+    [Parameter] public Func<HarmonicSourceChoice, HarmonicsDto>? RunStudyWith { get; set; }
+
+    private HarmonicSourceChoice _choice = HarmonicSourceChoice.Synthetic;
+
+    private HarmonicsDto? _result;
+    private bool _running;
+    private int _selectedBusId;
+
+    // Chart geometry (fixed viewBox; CSS scales the svg to the card width).
+    private const double ChartW = 720, ChartH = 240, PlotL = 46, Pr = 14, PtT = 14, Pb = 28;
+    private const double Pt = PtT;
+    private static double PlotW => ChartW - PlotL - Pr;
+    private static double PlotH => ChartH - PtT - Pb;
+
+    private int Orders => _result?.Orders.Count ?? 24;   // Core default order set is 24 (odd 3..49)
+
+    private HarmonicBusSpectrumDto? SelectedSpectrum =>
+        _result?.BusSpectra.FirstOrDefault(s => s.BusId == _selectedBusId)
+        ?? _result?.BusSpectra.FirstOrDefault();
+
+    private HarmonicBusSpectrumDto? WorstBus
+    {
+        get
+        {
+            var r = _result;
+            if (r is null) return null;
+            int worstId = r.Indices.WorstBusId;
+            return r.BusSpectra.FirstOrDefault(s => s.BusId == worstId) ?? r.BusSpectra.FirstOrDefault();
+        }
+    }
+
+    private string WorstBusLabel
+    {
+        get { var w = WorstBus; return w is null ? "-" : $"bus {w.BusId} | {w.BaseKv:0} kV"; }
+    }
+
+    private HarmonicComplianceRowDto? LimitFor(int busId) =>
+        _result?.Compliance.FirstOrDefault(c => c.BusId == busId);
+
+    private int CompliantCount => _result?.Compliance.Count(c => c.CompliantIeee519) ?? 0;
+    private int G55Count => _result?.Compliance.Count(c => c.CompliantG55) ?? 0;
+
+    private string HeroTone
+    {
+        get
+        {
+            var r = _result;
+            if (r is { Failed: true }) return "g-red";      // a failed study is an error, not a neutral skip
+            if (r is null || r.HeavyModelsSkipped) return "g-amber";
+            return r.Compliance.Count(c => c.CompliantIeee519) < r.Compliance.Count ? "g-red" : "g-green";
+        }
+    }
+
+    private async Task Run()
+    {
+        if (RunStudy is null || _running) return;
+        _running = true;
+        _result = null;
+        StateHasChanged();
+        try
+        {
+            // Offload the heavy per-order solve from the render/sync context so the UI stays responsive.
+            HarmonicSourceChoice choice = _choice;   // the choice at the moment of the press
+            HarmonicsDto dto = await Task.Run(() => RunStudyWith is not null ? RunStudyWith(choice) : RunStudy!());
+            _result = dto;
+            if (!dto.HeavyModelsSkipped) _selectedBusId = dto.Indices.WorstBusId;
+        }
+        catch (Exception ex)
+        {
+            // An unexpected engine exception must neither escape the Blazor event handler (which tears the
+            // circuit down) nor leave the button stuck on RUNNING. Show it as a failed study, naming the
+            // exception type so it is clearly an error and not a normal "skipped" state. (The expected
+            // singular-network case is already turned into a Failure DTO by SimSession.StudyHarmonics.)
+            _result = HarmonicsDto.Failure($"{ex.GetType().Name}: {ex.Message}");
+        }
+        finally
+        {
+            _running = false;
+            StateHasChanged();
+        }
+    }
+
+    // N151: a new source choice is a different study, so the old result is cleared rather than shown under it.
+    private void ChooseSources(string value)
+    {
+        if (_running || !Enum.TryParse(value, out HarmonicSourceChoice c) || c == _choice) return;
+        _choice = c;
+        _result = null;
+    }
+
+    private string ThdStatus(HarmonicBusSpectrumDto? b)
+    {
+        if (b is null) return "";
+        var lim = LimitFor(b.BusId);
+        if (lim is null) return "";
+        return b.ThdPct <= lim.ThdLimitPct ? "ok" : "bad";
+    }
+
+    // Data-driven bar/limit colour via WebPalette (loading ramp): green well within limit -> red at/over it.
+    private static string BarColor(double value, double limit) =>
+        limit <= 0 ? WebPalette.Loading(0) : WebPalette.Loading(value / limit);
+
+    private static IEnumerable<int> ScanTicks(int minOrd, int maxOrd)
+    {
+        int span = Math.Max(maxOrd - minOrd, 1);
+        int step = Math.Max(2, (int)Math.Ceiling(span / 12.0));
+        for (int h = minOrd; h <= maxOrd; h += step) yield return h;
+        if ((maxOrd - minOrd) % step != 0) yield return maxOrd;
+    }
+
+    private static string ZPath(IReadOnlyList<ImpedanceScanPointDto> pts, double maxZ, int minOrd, int span)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < pts.Count; i++)
+        {
+            double x = PlotL + (double)(pts[i].Order - minOrd) / span * PlotW;
+            double y = Pt + (1 - pts[i].ZMagnitude / maxZ) * PlotH;
+            sb.Append(i == 0 ? 'M' : 'L').Append(' ').Append(F(x)).Append(' ').Append(F(y)).Append(' ');
+        }
+        return sb.ToString();
+    }
+
+    private static string F(double d) => d.ToString("0.##", CultureInfo.InvariantCulture);
+
+    // Razor reserves the bare <text> tag, so SVG text is emitted as raw markup (the parent <svg> parses it as
+    // SVG). Injected markup does not receive the CSS-isolation scope attribute, so colour/size are set inline
+    // via CSS variables (no hard-coded hex).
+    private static MarkupString SvgText(double x, double y, string content, string anchor = "middle",
+        string varName = "--muted", double size = 9, string baseline = "hanging")
+    {
+        string esc = System.Net.WebUtility.HtmlEncode(content);
+        return (MarkupString)($"<text x=\"{F(x)}\" y=\"{F(y)}\" text-anchor=\"{anchor}\" " +
+            $"dominant-baseline=\"{baseline}\" style=\"fill:var({varName});font-size:{F(size)}px;font-weight:600\">{esc}</text>");
+    }
+}

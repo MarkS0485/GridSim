@@ -1,0 +1,101 @@
+$ gridsim nminus1 --dir data/intl/ireland-all-island
+GridSim  -  N-1 branch screening: Ireland all-island (EirGrid + SONI) - open transmission model
+==========================================================================
+Base case: 1 pre-existing violation(s), reported once here and not counted against any outage: overvoltage 1.126 p.u.
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+L3105 6062-6067                 ISLANDED      islanded
+L1437 6063-6077                 ISLANDED      islanded
+L14631 6069-6083                ISLANDED      islanded
+TX16082 7033-7034 (tx)          ISLANDED      islanded
+L10420 6067-6068                VIOLATIONx1      23%       0%  1.020  1.159
+L10419 6068-6069                VIOLATIONx1      24%       0%  1.020  1.161
+L10404 6075-6076                VIOLATIONx1      30%       0%  1.019  1.167
+L13030 6071-7197                VIOLATIONx1      26%       0%  1.020  1.200
+L13794 6075-7672                VIOLATIONx1      29%       0%  1.019  1.164
+L14257 6067-7800                VIOLATIONx1      24%       0%  1.020  1.166
+L10418 6069-8427                VIOLATIONx1      27%       0%  1.020  1.210
+L3100 6076-8427                 VIOLATIONx1      30%       0%  1.018  1.169
+L8578 5285-5286                 base only        23%       0%  1.020  1.116
+L8579 5286-5287                 base only        24%       0%  1.020  1.112
+L8580 5287-5288                 base only        24%       0%  1.020  1.116
+L8581 5288-5290                 base only        24%       0%  1.020  1.110
+L9915 5291-5292                 base only        22%       0%  1.020  1.125
+L9916 5289-5292                 base only        22%       0%  1.020  1.121
+L6501 5291-5293                 base only        22%       0%  1.020  1.123
+L2824 5290-5293                 base only        47%       0%  1.020  1.103
+L1419 5292-5293                 base only        22%       0%  1.020  1.122
+L9432 5290-5294                 base only        21%       0%  1.020  1.106
+L9431 5294-5295                 base only        21%       0%  1.020  1.120
+L9908 6071-6072                 base only        22%       0%  1.020  1.126
+L10416 6070-6074                base only        22%       0%  1.020  1.129
+L9917 6089-6097                 base only        22%       0%  1.020  1.124
+L9434 6095-6099                 base only        21%       0%  1.020  1.119
+L8036 5285-6056                 base only        22%       0%  1.020  1.114
+L8037 6054-6056                 base only        21%       0%  1.020  1.120
+L8043 6056-6057                 base only        22%       0%  1.020  1.125
+L1425 6057-6058                 base only        22%       0%  1.020  1.122
+L1426 6054-6058                 base only        22%       0%  1.020  1.123
+L1427 6058-6059                 base only        21%       0%  1.020  1.112
+L9447 6059-6060                 base only        22%       0%  1.020  1.123
+L1421 5290-6061                 base only        23%       0%  1.020  1.102
+L1424 6057-6061                 base only        21%       0%  1.020  1.109
+L1434 6059-6077                 base only        22%       0%  1.020  1.129
+L9448 6060-6079                 base only        21%       0%  1.020  1.118
+L10964 6055-6080                base only        20%       0%  1.020  1.061
+L9446 6061-6081                 base only        21%       0%  1.020  1.108
+L9437 5295-6082                 base only        21%       0%  1.020  1.110
+L1436 6077-6083                 base only        25%       0%  1.020  1.136
+L10963 6080-6086                secure           20%       0%  1.019  1.056
+L3119 6087-6088                 base only        37%       0%  1.020  1.112
+L9918 6088-6089                 base only        22%       0%  1.020  1.124
+L9438 6082-6090                 base only        21%       0%  1.020  1.114
+L10965 6055-6091                secure           20%       0%  0.994  1.020
+L9445 6081-6092                 base only        21%       0%  1.020  1.110
+L1429 6090-6092                 base only        22%       0%  1.020  1.123
+L1435 6083-6092                 base only        34%       0%  1.020  1.156
+L2826 6092-6093                 base only        23%       0%  1.020  1.118
+L9439 6092-6094                 base only        21%       0%  1.020  1.119
+L9440 6090-6094                 base only        22%       0%  1.020  1.121
+L9433 5295-6095                 base only        21%       0%  1.020  1.114
+L2261 6093-6096                 base only        22%       0%  1.020  1.124
+L2260 6096-6097                 base only        22%       0%  1.020  1.124
+L9919 6088-6097                 base only        22%       0%  1.020  1.124
+L8052 6097-7033                 base only        22%       0%  1.020  1.122
+L9435 6099-7033                 base only        21%       0%  1.020  1.119
+L2262 6096-7033                 base only        22%       0%  1.020  1.123
+L2148 6070-7197                 base only        22%       0%  1.020  1.134
+L2825 6090-7276                 base only        22%       0%  1.020  1.123
+L13632 7033-7276                base only        22%       0%  1.020  1.121
+L13633 6092-7276                base only        22%       0%  1.020  1.125
+L13793 6071-7672                base only        22%       0%  1.020  1.131
+L9907 6072-7672                 base only        22%       0%  1.019  1.126
+L10236 6085-7691                base only        25%       0%  1.020  1.127
+L13478 6087-7691                base only        24%       0%  1.020  1.124
+L13479 6083-7691                base only        35%       0%  1.020  1.186
+L14256 6070-7800                base only        22%       0%  1.020  1.128
+L13031 7197-7800                base only        22%       0%  1.020  1.128
+L13221 6092-8165                base only        22%       0%  1.020  1.124
+L13222 6087-8165                base only        25%       0%  1.020  1.124
+L10237 6085-8165                base only        28%       0%  1.020  1.122
+L10415 6074-8427                base only        22%       0%  1.020  1.126
+L2823 5289-8472                 base only        21%       0%  1.020  1.120
+L1420 5290-8472                 base only        24%       0%  1.020  1.120
+L2259 5293-8472                 base only        22%       0%  1.020  1.121
+TX15941 6054-6055 (tx)          base only        22%       0%  1.020  1.129
+TX15942 6079-6080 (tx)          base only        22%       0%  1.020  1.125
+TX15943 6085-6086 (tx)          base only        23%       0%  1.020  1.173
+TX15944 6090-6091 (tx)          base only        23%       0%  1.020  1.174
+--------------------------------------------------------------------------
+82 outages screened  70 secure  8 with violations  4 islanded
+(68 of the secure outages are 'base only': they add no violation, but the base case's own violations remain in their state)
+  L1434 6059-6077: makes base-case violation(s) worse: overvoltage 1.128 p.u.
+  L1436 6077-6083: makes base-case violation(s) worse: overvoltage 1.136 p.u.
+  L1435 6083-6092: makes base-case violation(s) worse: overvoltage 1.156 p.u.
+  L2148 6070-7197: makes base-case violation(s) worse: overvoltage 1.134 p.u.
+  L13793 6071-7672: makes base-case violation(s) worse: overvoltage 1.131 p.u.
+  L13479 6083-7691: makes base-case violation(s) worse: overvoltage 1.186 p.u.
+  TX15943 6085-6086 (tx): makes base-case violation(s) worse: overvoltage 1.173 p.u.
+  TX15944 6090-6091 (tx): makes base-case violation(s) worse: overvoltage 1.174 p.u.
+Verdict: NOT SECURE, 1 base-case violation(s) and 12 insecure outage(s) (exit 3).
+[exit 3]

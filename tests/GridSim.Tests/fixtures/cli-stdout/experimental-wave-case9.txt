@@ -1,0 +1,11 @@
+Continuum electromechanical-wave model - IEEE 9-bus (WSCC) (9 buses)
+  The linearised swing is a damped wave equation M d2(delta)/dt2 + D d(delta)/dt + K_L delta = P.
+  Its normal modes are the network's inter-area electromechanical oscillations.
+  centre-of-inertia (null) mode : 0.0000 Hz
+  dominant inter-area mode      : 0.9013 Hz
+  all inter-area modes (Hz)     : 0.901, 1.683
+  medium 'stiffness' (mean K)   : 112.1 MW/rad
+  coupling asymmetry set aside  : 22.7 MW/rad (largest |k_ij - k_ji|, transfer conductances; the symmetric part is analysed)
+  medium 'density' (mean H)     : 24.88 s
+  dominant mode shape           : (bus 2, bus 3)  swings AGAINST  (bus 1)
+  (Inertia is the density term; damping D is the viscosity analogue. Undamped modes shown.)

@@ -1,0 +1,14 @@
+$ gridsim trip results/protection-user/uv-inert --asset-dynamics
+Asset dynamics: on  (9 class(es), 1 protection(s), 1 unit(s) tripped, 500 MW lost to LoM)
+GridSim  -  contingency on GB synthetic
+================================================================
+Tripped:        Hinkley Point Nuclear  (2880 MW lost, nuclear)
+System inertia: 171.7 -> 158.9 GVAs after the trip
+Peak RoCoF:     -0.369 Hz/s  (largest |df/dt| over the run)
+Nadir:          49.271 Hz  (t+6.2 s)
+Settling:       49.623 Hz
+
+50.05 Hz |***=-::,..            ....,,,::::------------------------:::::::| 49.27 Hz (nadir)
+
+...at HALF the inertia (79.5 GVAs): RoCoF -0.906 Hz/s, nadir 47.872 Hz
+[exit 0]

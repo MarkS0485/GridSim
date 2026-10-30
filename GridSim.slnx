@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GridSim.App/GridSim.App.csproj" />
+    <Project Path="src/GridSim.App.Desktop/GridSim.App.Desktop.csproj" />
+    <Project Path="src/GridSim.Cli/GridSim.Cli.csproj" />
+    <Project Path="src/GridSim.Core/GridSim.Core.csproj" />
+    <Project Path="src/GridSim.Gda/GridSim.Gda.csproj" />
+    <Project Path="src/GridSim.Gpu/GridSim.Gpu.csproj" />
+    <Project Path="src/GridSim.SchemaEditor/GridSim.SchemaEditor.csproj" />
+    <Project Path="src/GridSim.Ui/GridSim.Ui.csproj" />
+    <Project Path="src/GridSim.Web/GridSim.Web.csproj" />
+    <Project Path="src/GridSim.Wpf/GridSim.Wpf.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GridSim.App.Tests/GridSim.App.Tests.csproj" />
+    <Project Path="tests/GridSim.Tests/GridSim.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/AssetSmoke/AssetSmoke.csproj" />
+    <Project Path="tools/UiSmoke/UiSmoke.csproj" />
+  </Folder>
+</Solution>

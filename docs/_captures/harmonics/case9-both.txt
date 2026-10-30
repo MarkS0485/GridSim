@@ -1,0 +1,3 @@
+$ gridsim harmonics case9 --spectra docs/_captures/harmonics/spectra-case9.json --synth-sources
+error: --spectra and --synth-sources are mutually exclusive (a measured source file, or the synthetic default).
+[exit 2]

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "GridSim v2 shared definitions",
+  "description": "Definitions shared by every v2 document type. This file holds $defs only and is never a document schema in its own right. Enforced by the hand-rolled subset validator in src/GridSim.Core/IO/Json/Schema (System.Text.Json only); a keyword outside the supported subset is refused at load.",
+  "$defs": {
+    "unit": {
+      "title": "Unit",
+      "description": "The closed unit vocabulary. A unit written in a file must equal the kind spec's unit exactly; there is no conversion and no aliasing. pu@system, pu@machine and pu@transformer are per unit on the system, machine and transformer base respectively; '1' is dimensionless. The last five (MW.s/Hz, MW/Hz, MW/s/MW, V, min) were added by Q24 (2026-10) for the seven v1 asset-class keys that had no unit: synthetic-inertia gains (MW per Hz/s), absolute damping (MW per Hz), slew limits per MW of rating, DC pack voltage, and thermal time constants in minutes. The last six (m, mm, mm2, A, ohm, ohm.m) were added by Phase 5a (2026-10-20) for the asset overlay kinds (schemas/v2/kinds/overlay): lengths, heights and spans in metres, conductor diameters in millimetres, conductor cross-sections in square millimetres, rated currents in amperes, earth-path resistances in ohms and soil resistivity in ohm metres. No solver input uses them.",
+      "enum": ["1", "pu@system", "pu@machine", "pu@transformer", "s", "Hz", "Hz/s", "MW", "MVA", "Mvar", "kV", "km", "ohm/km", "uS/km", "%", "MWh", "MW/min", "MW/Hz/MW", "degC", "deg", "MW.s/Hz", "MW/Hz", "MW/s/MW", "V", "min", "m", "mm", "mm2", "A", "ohm", "ohm.m"]
+    },
+
+    "provenanceTag": {
+      "title": "Provenance tag",
+      "description": "Where a value came from. Exactly the member names of GridSim.Core.Diagnostics.ProvenanceTag (matched case-sensitively; v1 parsing ignored case, v2 does not).",
+      "enum": ["Recorded", "DerivedFromRecorded", "CuratedPlaceholder", "Synthetic", "Counterfactual", "Interpolated", "UnvalidatedAtScale"]
+    },
+
+    "provenance": {
+      "title": "Provenance",
+      "description": "A provenance tag and a plain-English note. The honesty rule carried over from v1 (AssetClass.ValidateProvenance): a CuratedPlaceholder note must contain the literal token [VERIFY].",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tag", "note"],
+      "properties": {
+        "tag": { "$ref": "#/$defs/provenanceTag" },
+        "note": { "type": "string" }
+      },
+      "if": {
+        "required": ["tag"],
+        "properties": { "tag": { "const": "CuratedPlaceholder" } }
+      },
+      "then": {
+        "properties": { "note": { "type": "string", "pattern": "\\[VERIFY\\]" } }
+      }
+    },
+
+    "quantity": {
+      "title": "Quantity",
+      "description": "A number. Either a bare number, which takes the kind spec's unit and the template's _default provenance, or an object {v, unit, prov} whose own unit (if written) must equal the spec's unit exactly and whose prov gives that one value its own provenance. Only v is required in the object form.",
+      "anyOf": [
+        { "type": "number" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["v"],
+          "properties": {
+            "v": { "type": "number" },
+            "unit": { "$ref": "#/$defs/unit" },
+            "prov": { "$ref": "#/$defs/provenance" }
+          }
+        }
+      ]
+    },
+
+    "valueObject": {
+      "title": "Parameter value, object form",
+      "description": "The object form of a template parameter value: {v, unit, prov}. v is a number, string or boolean as the kind spec's parameter type requires (checked against the kind in code, by KindSpecRegistry). unit is only meaningful for number and integer parameters.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["v"],
+      "properties": {
+        "v": { "type": ["number", "string", "boolean"] },
+        "unit": { "$ref": "#/$defs/unit" },
+        "prov": { "$ref": "#/$defs/provenance" }
+      }
+    },
+
+    "presentParamValue": {
+      "title": "Parameter value, present",
+      "description": "A template parameter value that is set: a bare number, string or boolean, or the object form. Never null.",
+      "anyOf": [
+        { "type": ["number", "string", "boolean"] },
+        { "$ref": "#/$defs/valueObject" }
+      ]
+    },
+
+    "paramValue": {
+      "title": "Parameter value",
+      "description": "A template parameter value: null (only in a placeholder template) or a present value.",
+      "anyOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/presentParamValue" }
+      ]
+    },
+
+    "templateId": {
+      "title": "Template id",
+      "description": "A library template id: the prefix 'gridsim.' then dot-separated segments of letters, digits, '_' and '-'.",
+      "type": "string",
+      "pattern": "^gridsim\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*$"
+    },
+
+    "templateRev": {
+      "title": "Template revision",
+      "description": "A template revision number, from 1. A published id@rev is immutable: a change is a new revision.",
+      "type": "integer",
+      "minimum": 1
+    },
+
+    "templateRef": {
+      "title": "Template reference",
+      "description": "A reference to one template revision, written id@rev (for example gridsim.exciter.sexs@1). Pinned: an id without its @rev is refused.",
+      "type": "string",
+      "pattern": "^gridsim\\.[A-Za-z0-9][A-Za-z0-9_-]*(\\.[A-Za-z0-9][A-Za-z0-9_-]*)*@[1-9][0-9]*$"
+    },
+
+    "status": {
+      "title": "Template status",
+      "description": "active: every value set, usable. placeholder: every value null, a named slot standing in for something not yet (or not publicly) modelled; never usable as a controller target.",
+      "enum": ["active", "placeholder"]
+    }
+  }
+}

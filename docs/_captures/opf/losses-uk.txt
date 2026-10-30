@@ -1,0 +1,38 @@
+$ gridsim losses uk
+Loss allocation - GB reduced (10-zone) (20 buses, 24 branches)
+  Total losses: 53.68 MW  (reactive: -5974.15 MVAr)
+  Reconciliation residual: 3.81E-012 MW
+
+  Zone losses:
+  | Zone | P Loss MW | Q Loss MVAr | Branches |
+  |------|----------:|------------:|---------:|
+  | B6 Scotland-England (SCOTEX) | 7.53 | -789.99 | 1 |
+  | SW Peninsula & S Wales (export) | 3.94 | -1150.33 | 2 |
+  | B4 Upper North (Scotland) | 2.24 | -626.56 | 1 |
+  | B7/B8 North-Midlands | 0.68 | -1453.40 | 3 |
+  | Other | 39.29 | -1953.86 | 17 |
+
+  Top 20 branch losses:
+  | Branch | From | To | P Loss MW | Q Loss MVAr | Loading % | Type |
+  |--------|-----:|---:|----------:|------------:|----------:|------|
+  | T8 GSP London & SE | 8 | 108 | 12.367 | 363.723 | 80.6 | tx |
+  | L2-3 B6 boundary | 2 | 3 | 7.529 | -789.991 | 54.7 | line |
+  | T6 GSP Midlands | 6 | 106 | 7.188 | 211.403 | 84.5 | tx |
+  | T3 GSP N England | 3 | 103 | 5.131 | 150.912 | 81.6 | tx |
+  | T4 GSP Yorkshire | 4 | 104 | 3.425 | 100.731 | 77.8 | tx |
+  | L9-10 South-SW | 9 | 10 | 2.719 | -513.611 | 49.0 | line |
+  | L1-2 N-S Scotland | 1 | 2 | 2.240 | -626.558 | 40.5 | line |
+  | T5 GSP N Wales & Mersey | 5 | 105 | 2.066 | 60.763 | 72.5 | tx |
+  | T9 GSP South | 9 | 109 | 2.066 | 60.763 | 72.5 | tx |
+  | L7-8 E Anglia-London | 7 | 8 | 2.007 | -358.491 | 52.7 | line |
+  | T7 GSP East Anglia | 7 | 107 | 1.516 | 44.579 | 77.6 | tx |
+  | L5-10 N Wales-SW | 5 | 10 | 1.224 | -636.721 | 30.6 | line |
+  | L8-9 London-South | 8 | 9 | 0.998 | -314.496 | 37.3 | line |
+  | T2 GSP S Scotland | 2 | 102 | 0.813 | 23.921 | 75.8 | tx |
+  | T10 GSP SW & S Wales | 10 | 110 | 0.485 | 14.264 | 70.3 | tx |
+  | L5-6 N Wales-Midlands | 5 | 6 | 0.457 | -482.149 | 22.4 | line |
+  | L6-8 Midlands-London | 6 | 8 | 0.432 | -428.315 | 23.2 | line |
+  | L6-7 Midlands-E Anglia | 6 | 7 | 0.373 | -428.911 | 20.9 | line |
+  | L3-4 N England-Yorks | 3 | 4 | 0.270 | -429.936 | 18.8 | line |
+  | L4-6 Yorks-Midlands | 4 | 6 | 0.193 | -430.714 | 16.2 | line |
+[exit 0]

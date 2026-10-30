@@ -1,0 +1,22 @@
+$ gridsim stability case9 --export results/exports-docs/classical.json
+GridSim  -  TRANSIENT STABILITY (classical multi-machine)  *  WSCC-9
+==================================================================
+3 machines (0 converter / power-flow-only / zero-inertia units held)  *  fault bus 7  *  X'd = Anderson-Fouad
+
+  Bus   H sys (s)   |E'| pu  delta0 (deg)
+    1      58.509     1.047           0.9
+    2      12.288     1.034          14.8
+    3       3.853     1.017          11.3
+
+Critical clearing time for a 3-phase fault at bus 7:  550 ms
+(the longest the fault can persist before the fleet loses synchronism on self-clear)
+  (bracket: clearing at 550 ms holds synchronism, at 552 ms it is lost)
+  NON-MONOTONE: clearing at 558 ms holds synchronism again (a stable pocket above the first loss); the reported CCT is the first loss from below, so do not read a longer clearing time as safe.
+CCT = longest clearing time on the 2 ms integration-step grid that keeps synchronism (clearing one step, 2 ms, later loses it); resolution 2 ms.
+A CCT of 0 ms means even an instantaneous clear loses synchronism; 1000 ms means no clearing time in the 1000 ms search window loses it.
+It is the first loss from below: the 16 steps (32 ms) below it are checked to hold and as many above it are probed; NON-MONOTONE marks a later clearing time that holds again (a stable pocket).
+Each trial is judged over the 5 s after the fault clears (the documented default window: first-swing stability, the range in which the classical constant-E' model holds); an undamped system can lose synchronism on a later swing, so a longer window can give a shorter CCT.
+
+Classical model: constant E' behind X'd over the Kron-reduced network, RK4 swing.
+Exported classical trajectory (3 machines, 101 samples) -> results\exports-docs\classical.json
+[exit 0]

@@ -1,0 +1,3 @@
+$ gridsim lodf uk --branch 0
+LODF - GB reduced (10-zone): outage of branch 0 (1->2) ISLANDS the system (bridge line); LODF undefined.
+[exit 0]

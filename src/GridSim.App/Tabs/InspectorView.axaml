@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:insp="using:GridSim.Ui.Tabs.Inspector"
+             xmlns:dashv="using:GridSim.App.Dashboard"
+             x:Class="GridSim.App.Tabs.InspectorView"
+             x:DataType="insp:InspectorModel"
+             IsVisible="{Binding IsOpen}">
+  <!-- UI programme Phase 1.6: the drill-down inspector overlay, ported from src/GridSim.Wpf/Views/InspectorView.xaml.
+       Texts, order, sizes and colours are the WPF ones. Every value is bound to the shared InspectorModel; the WPF
+       Visibility / BackVisibility / Chevron are its bools (IsOpen, CanBack, a row's HasDrill) bound to IsVisible, the
+       tile and row brushes its colour tokens through UiColourBrushConverter, and the WPF commands (CloseCommand,
+       BackCommand, a row's Drill) are click handlers calling the model (Close, Back, DrillIn). -->
+
+  <!-- full-tab backdrop; the card floats centre-right so the panel behind stays partly visible -->
+  <Grid Background="#B8090D12">
+    <Border Classes="Card" Background="#0E141B" BorderBrush="#2A3A4A" BorderThickness="1"
+            CornerRadius="8" Width="560" MaxHeight="640" HorizontalAlignment="Center" VerticalAlignment="Center"
+            Padding="0">
+      <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- header -->
+        <Border Grid.Row="0" Background="#141C24" CornerRadius="8,8,0,0" Padding="14,10">
+          <DockPanel>
+            <Button x:Name="BackButton" DockPanel.Dock="Left" Content="&lt; back" Click="Back_Click"
+                    IsVisible="{Binding CanBack}" Classes="FlatBtn" Margin="0,0,10,0" />
+            <Button x:Name="CloseButton" DockPanel.Dock="Right" Content="x" Click="Close_Click" Classes="FlatBtn" />
+            <StackPanel>
+              <TextBlock x:Name="TitleText" Text="{Binding Title}" Classes="PanelHeader" FontSize="15" />
+              <TextBlock x:Name="SubtitleText" Text="{Binding Subtitle}" Classes="Label" FontSize="10" Margin="0,2,0,0" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+
+        <!-- combined / averaged stat tiles -->
+        <ItemsControl x:Name="StatsList" Grid.Row="1" ItemsSource="{Binding Stats}" Margin="12,12,12,4">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="insp:InspectStatModel">
+              <Border Background="#11FFFFFF" CornerRadius="5" Margin="3" Padding="8,6">
+                <StackPanel>
+                  <TextBlock Text="{Binding Label}" Classes="Label" FontSize="8" />
+                  <TextBlock Text="{Binding Value}" FontWeight="Bold" FontSize="15"
+                             Foreground="{Binding ValueColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- constituent rows -->
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="12,4,12,12">
+          <ItemsControl x:Name="RowsList" ItemsSource="{Binding Rows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="insp:InspectRowModel">
+                <!-- Parity (2026-10-24, T6-T15 comparison): the WPF RowLinkBtn template draws its row with a fixed 10,7 padding and
+                     ignores the Padding set on the Button, so the WPF rows are 10,7 whatever the XAML says. Avalonia honours the local
+                     value, which made these rows much tighter than WPF; they now carry the 10,7 the WPF rows show. -->
+                <Button Classes="RowLinkBtn" Padding="10,7" Margin="0,2" Click="Row_Click">
+                  <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Border Grid.Column="0" Width="9" Height="9" CornerRadius="2" VerticalAlignment="Center" Margin="0,0,8,0"
+                            Background="{Binding SwatchColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Primary}" Foreground="{StaticResource Text}" FontSize="12" />
+                      <TextBlock Text="{Binding Sub}" Classes="Label" FontSize="9" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding Value}" Classes="Value" FontSize="13" VerticalAlignment="Center"
+                               Foreground="{Binding ValueColour, Converter={x:Static dashv:UiColourBrushConverter.Instance}}" />
+                    <TextBlock Grid.Column="3" Text=">" Foreground="#5A6B7A" FontSize="16" FontWeight="Bold"
+                               VerticalAlignment="Center" Margin="8,0,0,0" IsVisible="{Binding HasDrill}" />
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

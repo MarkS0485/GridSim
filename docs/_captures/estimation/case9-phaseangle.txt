@@ -1,0 +1,12 @@
+$ gridsim estimate case9 --synth --phaseangle 1:10.0:2024-03-01T12:00:00Z:50.0 7:10.7275:2024-03-01T12:00:00Z:50.0 9:6.0112:2024-03-01T12:00:00Z:50.0 --phaseangle-sigma 0.5 --out results/case9-phaseangle
+  phaseangle: injected 2 VaDeg row(s) at 2024-03-01 12:00:00Z (mode AutoReference, sigma 0.5 deg)
+
+=== WLS state estimate: case9 ===
+  status: Converged   iterations: 5   max |dx|: 1.84E-011
+  measurements: 65   states: 17   redundancy (dof): 48
+  observability: observable (rank 17/17)
+  consistency: J = 43.07 vs chi2(95%) = 65.17 -> PASS
+  vs synthetic truth: max |dVm| = 5.918E-004 pu   max |dVa| = 6.065E-002 deg
+
+  -> results\case9-phaseangle
+[exit 0]

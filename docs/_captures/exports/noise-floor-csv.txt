@@ -1,0 +1,16 @@
+$ head -n 16 results/exports-docs/noise-floor/noise-floor.csv
+# GridSim  -  2026-10-04 14:35:09 UTC
+# code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     estimate-noise-floor  exports=1  skipped-non-converged=0  samples=122
+source,kind,count,spread_robust,spread_std,bias,suggested_sigma_scale,miscalibrated
+synthetic,QInjMvar,14,1.1825479925667144,0.93302204184988125,-0.17391889373940495,1.1825479925667144,False
+synthetic,PFlowMw,40,1.0758801392421329,0.79909543407213657,-0.11921574898423581,1.0758801392421329,False
+synthetic,QFlowMvar,40,1.0481207722311126,0.8865119790428293,-0.05958625259041006,1.0481207722311126,False
+synthetic,VmPu,14,0.98388255398924207,0.84922574108164928,-0.18734780464406331,0.98388255398924207,False
+synthetic,PInjMw,14,1.0109505299492152,0.87123781863344785,-0.0057258981188841318,1.0109505299492152,False
+[exit 0]

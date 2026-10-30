@@ -1,0 +1,33 @@
+$ gridsim nminus2 --dir data/intl/ireland-all-island --candidates 6
+GridSim  -  N-2 branch screening: Ireland all-island (EirGrid + SONI) - open transmission model  [top-6 candidate pairs]
+==========================================================================
+Base case: 1 pre-existing violation(s), reported once here and not counted against any outage: overvoltage 1.126 p.u.
+Screening N-1 first, then pairing the 6 most-stressed single outages that solve.
+Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax
+--------------------------------------------------------------------------
+L13030 6071-7197 + L3100 6076...  ISLANDED      islanded
+L13030 6071-7197 + L10404 607...  ISLANDED      islanded
+L3100 6076-8427 + L10404 6075...  ISLANDED      islanded
+L10418 6069-8427 + L13479 608...  VIOLATIONx1      46%       0%  1.020  1.324
+L13030 6071-7197 + L13479 608...  VIOLATIONx1      45%       0%  1.020  1.313
+L10418 6069-8427 + TX15944 60...  VIOLATIONx1      30%       0%  1.020  1.269
+L13479 6083-7691 + L3100 6076...  VIOLATIONx1      40%       0%  1.018  1.256
+L13479 6083-7691 + L10404 607...  VIOLATIONx1      40%       0%  1.019  1.253
+L13030 6071-7197 + TX15944 60...  VIOLATIONx1      27%       0%  1.020  1.259
+L13479 6083-7691 + TX15944 60...  base only        35%       0%  1.020  1.238
+L10418 6069-8427 + L3100 6076...  VIOLATIONx1      36%       0%  1.018  1.225
+L10418 6069-8427 + L10404 607...  VIOLATIONx1      35%       0%  1.019  1.223
+L3100 6076-8427 + TX15944 609...  VIOLATIONx1      33%       0%  1.018  1.223
+TX15944 6090-6091 (tx) + L104...  VIOLATIONx1      33%       0%  1.019  1.220
+L10418 6069-8427 + L13030 607...  VIOLATIONx1      21%       0%  0.838  1.020
+--------------------------------------------------------------------------
+15 outages screened  1 secure  11 with violations  3 islanded
+(1 of the secure outages are 'base only': they add no violation, but the base case's own violations remain in their state)
+  L13479 6083-7691 + TX15944 6090-6091 (tx): makes base-case violation(s) worse: overvoltage 1.238 p.u.
+4 single outage(s) left out of the pairing because they already fail at N-1 (islanded or no solution):
+  L3105 6062-6067                 islanded
+  L1437 6063-6077                 islanded
+  L14631 6069-6083                islanded
+  TX16082 7033-7034 (tx)          islanded
+Verdict: NOT SECURE, 1 base-case violation(s) and 18 insecure outage(s) (exit 3).
+[exit 3]

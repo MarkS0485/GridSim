@@ -1,0 +1,12 @@
+$ gridsim grade --chain iec-si:400:0.1,iec-si:400:0.1 --current 1647
+Overcurrent grading  -  2 relays (downstream first), CTI 0.4 s
+  R1: IecStandardInverse, pickup 400, time dial 0.1
+  R2: IecStandardInverse, pickup 400, time dial 0.1
+
+  fault current 1647
+  | pair | primary s | backup s | margin s | verdict |
+  |------|-----------|----------|----------|---------|
+  | R1->R2 | 0.4876 | 0.4876 | 0.0000 | NOT COORDINATED (margin below CTI) |
+
+NOT GRADED: at least one pair is not coordinated (see above).
+[exit 3]

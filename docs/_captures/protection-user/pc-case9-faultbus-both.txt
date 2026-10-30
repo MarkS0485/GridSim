@@ -1,0 +1,3 @@
+$ gridsim protection-check case9 --fault-bus 7 --cascade
+error: --cascade follows the steady solved state; it does not combine with --fault-bus.
+[exit 2]

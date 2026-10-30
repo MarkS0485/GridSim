@@ -1,0 +1,13 @@
+$ python tools/crossval/residual_check.py src/GridSim.Cli/bin/Release/net10.0/results/crossval-case300/solve-export.json
+{
+  "schema": "gridsim-residual-check/1",
+  "case": "?",
+  "buses": 300,
+  "tolerance_mva": 1e-06,
+  "max_p_mismatch_mw": 1.7928528649602968e-11,
+  "max_q_mismatch_pq_mvar": 9.025656317832819e-11,
+  "pv_qlimit_violations": 0,
+  "violations": [],
+  "within_tolerance": true
+}
+[exit 0]

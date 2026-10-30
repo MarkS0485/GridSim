@@ -1,0 +1,40 @@
+{
+  // INVALID fixture, derived from good.network.json: the v1 dynamicsClass member on a transformer (v2 uses template).
+  "schema": "gridsim-network/2",
+  "description": "Hand-written fixture for V2NetworkSchemaTests. Not a real network.",
+  "buses": [
+    { "id": 1, "name": "North 400", "baseKv": 400, "type": "slack", "vm": 1.02, "vaDeg": 0, "gs": 0, "bs": 0, "x": 0.1, "y": 0.2 },
+    { "id": 2, "name": "South 132", "baseKv": 132, "type": "pq", "vm": 1.0, "vaDeg": -3.5, "gs": 0.01, "bs": -0.02, "x": 0.5, "y": 0.9,
+      "zip": { "ap": 0.2, "bp": 0.3, "cp": 0.5, "aq": 0.1, "bq": 0.1, "cq": 0.8 } }
+  ],
+  "generators": [
+    { "name": "Big Nuclear", "bus": 1, "type": "nuclear", "template": "gridsim.machine.genrou-nuclear@1", "capacityMva": 1250,
+      "outputMw": 1100, "voltageSetpoint": 1.02, "qMinMvar": -400, "qMaxMvar": 600, "inertiaH": 4.0, "role": "slack",
+      "powerFlowOnly": false, "unitTransformerXPu": 0.14, "subtransientXdPu": 0.2, "negativeSeqXPu": 0.21, "inService": true },
+    { "name": "Battery", "bus": 2, "type": "storage", "capacityMva": 100, "capacityFactor": 0.5, "role": "pq",
+      "converter": { "interfaced": true, "faultCurrentPu": 1.2, "gridForming": true } }
+  ],
+  "demands": [
+    { "name": "South load", "bus": 2, "pMw": 900, "qMvar": 200 },
+    { "name": "South load (pf)", "bus": 2, "pMw": 100, "powerFactor": 0.98 }
+  ],
+  "lines": [
+    { "name": "L1-2", "from": 1, "to": 2, "type": "gridsim.linetype.ohl-400-quad-zebra@1", "template": "gridsim.local.cable-thermal@1",
+      "rPu": 0.002, "xPu": 0.02, "bPu": 0.3, "ratingMva": 2000, "circuits": 2, "lengthKm": 85.5, "equipment": "ohl",
+      "r0Pu": 0.006, "x0Pu": 0.06, "inService": true }
+  ],
+  "transformers": [
+    { "name": "T1", "from": 1, "to": 2, "type": "gridsim.transformertype.sgt-400-132-240@1", "dynamicsClass": "tx-oltc",
+      "rPu": 0.0017, "xPu": 0.05, "tapRatio": 1.0, "phaseShiftDeg": 0, "ratingMva": 240, "r0Pu": 0.0017, "x0Pu": 0.045,
+      "windings": { "from": "WyeGrounded", "to": "Delta" }, "neutralXPu": { "from": 0.0, "to": 0.0 }, "inService": true }
+  ],
+  "oltcs": [
+    { "transformer": "T1", "controlsBus": 2, "targetVpu": 1.0, "minTap": 0.9, "maxTap": 1.1, "stepPu": 0.0125, "deadbandPu": 0.01 }
+  ],
+  "boundaries": [
+    { "name": "North-South", "limitMw": 3000, "branches": [ { "branch": "L1-2", "direction": 1 }, { "branch": "T1", "direction": -1 } ] }
+  ],
+  "protections": [
+    { "name": "south-lfdd-1", "template": "gridsim.local.prot-lfdd-stage1@1", "monitorBus": 2, "capacityMw": 50, "targetBranch": "L1-2" }
+  ]
+}

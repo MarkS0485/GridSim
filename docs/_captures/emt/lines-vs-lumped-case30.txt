@@ -1,0 +1,9 @@
+$ gridsim emt case30 --duration 0.01 --dt-us 10 --freq 50 --probe v:2 --out emt-lumped
+emt: 6 floating node(s) pinned at 0 V in the initial-condition solve.
+emt case30: 1,000 steps @ 10us, 1 factorization(s), peak |probe| 1.061, 14 ms -> emt-lumped
+[exit 0]
+
+$ gridsim emt case30 --duration 0.01 --dt-us 10 --freq 50 --probe v:2 --lines --out emt-lines
+emt: 8 floating node(s) pinned at 0 V in the initial-condition solve.
+emt case30: 1,000 steps @ 10us, 1 factorization(s), peak |probe| 1.263, 11 ms -> emt-lines
+[exit 0]

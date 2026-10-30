@@ -1,0 +1,465 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "governor",
+  "title": "Governor (primary frequency response)",
+  "description": "Speed governor: the lumped centre-of-inertia response of the frequency model and the per-machine TGOV1, IEEEG1, hydro and GAST governor models (whose required parameters have no code default). Frequency: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired); model and droopPu stay true because they also set the Mark-gated lumped frequency model, as do the lumped-only governorTimeConstantS and responsiveFraction.",
+  "params": {
+    "model": {
+      "type": "enum",
+      "values": [
+        "lumped",
+        "TGOV1",
+        "IEEEG1",
+        "HYGOV",
+        "GAST"
+      ],
+      "required": false,
+      "markGated": true,
+      "description": "Governor model: the lumped centre-of-inertia primary response, or a per-machine TGOV1, IEEEG1, hydro or GAST (simple gas turbine with exhaust temperature load limit) governor. HYGOV names GridSim's simplified hydro governor (N312): the transient-droop governor (permanent droop droopPu, transient droop, dashpot reset, gate servo) driving an ideal, lossless water column, which is the PSS/E HYGOV structure WITHOUT the turbine gain At, the no-load flow qNL, the turbine damping Dturb and the gate velocity limit. Those four have no key here, so a full PSS/E HYGOV data set is represented only approximately.",
+      "codeDefaults": []
+    },
+    "droopPu": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": true,
+      "description": "Governor droop R (pu speed per pu power). TWO DIFFERENT code values (inconsistency register).",
+      "codeDefaults": [
+        {
+          "consumer": "Frequency model DynamicsConfig.DroopPu (GB Grid Code 5 %)",
+          "ref": "instance:GridSim.Core:GridSim.Core.Dynamics.DynamicsConfig.DroopPu",
+          "value": 0.05
+        },
+        {
+          "consumer": "Presentation energy-economics torque story (EnergyEconomicsConstants.GovernorDroopFraction)",
+          "ref": "member:GridSim.Core:GridSim.Core.Presentation.EnergyEconomicsConstants.GovernorDroopFraction",
+          "value": 0.04
+        }
+      ]
+    },
+    "governorTimeConstantS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": true,
+      "description": "Primary-response lag of the lumped governor (s). Literature-typical, unfitted.",
+      "codeDefaults": [
+        {
+          "consumer": "Frequency model DynamicsConfig.GovernorTimeConstantS",
+          "ref": "instance:GridSim.Core:GridSim.Core.Dynamics.DynamicsConfig.GovernorTimeConstantS",
+          "value": 8.0
+        }
+      ]
+    },
+    "responsiveFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": true,
+      "description": "Share of generation that responds (headroom) in the lumped model. Literature-typical, unfitted.",
+      "codeDefaults": [
+        {
+          "consumer": "Frequency model DynamicsConfig.ResponsiveFraction",
+          "ref": "instance:GridSim.Core:GridSim.Core.Dynamics.DynamicsConfig.ResponsiveFraction",
+          "value": 0.2
+        }
+      ]
+    },
+    "turbineDampingPu": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "TGOV1 turbine damping Dt, GAST DTURB (pu). Absent: 0 for both.",
+      "codeDefaults": [
+        {
+          "consumer": "Tgov1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Tgov1:.ctor:turbineDampingPu",
+          "value": 0.0
+        }
+      ]
+    },
+    "valveMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "Valve / gate lower limit (pu on the machine base). Absent: 0 (also for GAST VMIN).",
+      "codeDefaults": [
+        {
+          "consumer": "Tgov1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Tgov1:.ctor:valveMinPu",
+          "value": 0.0
+        },
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:valveMinPu",
+          "value": 0.0
+        },
+        {
+          "consumer": "HydroGovernor constructor default (gateMinPu)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.HydroGovernor:.ctor:gateMinPu",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1K1": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 high-pressure power fraction K1.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k1",
+          "value": 1.0
+        }
+      ]
+    },
+    "ieeeg1K3": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 power fraction K3.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k3",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1K5": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 power fraction K5.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k5",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1K7": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 power fraction K7.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k7",
+          "value": 0.0
+        }
+      ]
+    },
+    "valveMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "Valve / gate upper limit (pu on the machine base): TGOV1 VMAX, IEEEG1 PMAX, hydro gate maximum, GAST VMAX. Absent: unlimited (GAST included). Read by a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": [
+        {
+          "consumer": "Tgov1 constructor default (absent: unlimited)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Tgov1:.ctor:valveMaxPu",
+          "value": "+Infinity"
+        },
+        {
+          "consumer": "Ieeeg1 constructor default (absent: unlimited)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:valveMaxPu",
+          "value": "+Infinity"
+        },
+        {
+          "consumer": "HydroGovernor constructor default (gateMaxPu; absent: unlimited)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.HydroGovernor:.ctor:gateMaxPu",
+          "value": "+Infinity"
+        }
+      ]
+    },
+    "tgov1ValveTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "TGOV1 valve / steam-bowl lag T1 (s). Required for model TGOV1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "tgov1ReheatLeadS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "TGOV1 reheat lead T2 (s). Required for model TGOV1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "tgov1ReheatLagS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "TGOV1 reheat lag T3 (s, above 0). Required for model TGOV1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1LagS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 governor lag T1 (s); 0 together with a zero lead is the pure droop gain. Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1LeadS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 governor lead T2 (s). Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1ValveTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 valve servo time constant T3 (s). Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1ChestS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 steam-chest time constant T4 (s). Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1ReheatS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 reheater time constant T5 (s). Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1CrossoverS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 crossover time constant T6 (s). Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1LpS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 second crossover / LP time constant T7 (s). Required for model IEEEG1 in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "ieeeg1K2": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 LP-shaft fraction K2 (R083). The eight fractions K1..K8 are fractions of the total turbine power and must sum to 1.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k2",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1K4": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 LP-shaft fraction K4 (R083).",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k4",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1K6": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 LP-shaft fraction K6 (R083).",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k6",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1K8": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 LP-shaft fraction K8 (R083).",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:k8",
+          "value": 0.0
+        }
+      ]
+    },
+    "ieeeg1UoPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 maximum valve opening rate Uo (R083), in pu of the machine base per second (MW/s per MW of rating); above 0. Absent: unlimited.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default (valveOpeningRatePuPerS; absent: unlimited)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:valveOpeningRatePuPerS",
+          "value": "+Infinity"
+        }
+      ]
+    },
+    "ieeeg1UcPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "max": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG1 maximum valve closing rate Uc (R083), in pu of the machine base per second, below 0. Absent: unlimited.",
+      "codeDefaults": [
+        {
+          "consumer": "Ieeeg1 constructor default (valveClosingRatePuPerS; absent: unlimited)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Ieeeg1:.ctor:valveClosingRatePuPerS",
+          "value": "-Infinity"
+        }
+      ]
+    },
+    "hygovTransientDroopPu": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Hydro governor transient droop Rt (the permanent droop Rp is droopPu). Required for model HYGOV in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "hygovResetTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Hydro governor dashpot reset time Tr (s, above 0). Required for model HYGOV in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "hygovGateTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Hydro governor gate servo time constant Tg (s). Required for model HYGOV in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "hygovWaterTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Hydro water starting time Tw (s, above 0; ideal water column). Required for model HYGOV in a gridsim-dynamics/2 file (F23).",
+      "codeDefaults": []
+    },
+    "gastValveTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GAST governor mechanism (fuel valve) time constant T1 (s). Required for model GAST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "gastTurbineTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GAST turbine power time constant T2 (s). Required for model GAST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "gastExhaustTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GAST exhaust temperature time constant T3 (s). Required for model GAST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "gastAmbientLimitPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "GAST ambient temperature load limit AT (pu on the machine base): the turbine power the exhaust temperature limit settles at; the initial mechanical power must not exceed it. Required for model GAST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "gastTemperatureGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GAST temperature limiter gain KT (0 or above). Required for model GAST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    }
+  }
+}

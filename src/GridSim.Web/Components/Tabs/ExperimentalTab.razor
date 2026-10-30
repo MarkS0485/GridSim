@@ -1,0 +1,80 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="rp1-hero @(D.ReciprocityStatus == "Violated" ? "g-red" : "g-green")">
+            <div class="hero-main">
+                <span class="hero-v">EXPERIMENTAL</span>
+                <span class="hero-l">opt-in, unvalidated-at-scale models &mdash; the grid as physics</span>
+            </div>
+            <div class="hero-grade">&#9878;</div>
+        </div>
+
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">CONTINUUM WAVE &mdash; inter-area normal modes</div>
+                <div class="stat-row"><span>Dominant inter-area mode</span><b>@Hz(D.WaveDominantHz)</b></div>
+                <div class="stat-row"><span>Mode split (swings against)</span><b>@D.WaveSplit</b></div>
+                @* R099 parity: the WPF degraded-state note when the wave cannot form. (The split itself is built from the
+                   signed per-machine amplitudes, +/- PresentationLimits.ModeShapeSplitAmplitude, in FrameProjector.) *@
+                @if (D.WaveDegraded)
+                {
+                    <p class="warn-note">@ExperimentalDto.WaveDegradedNote</p>
+                }
+                <p class="note">The linearised swing is a damped wave equation; its eigenmodes are the
+                system's electromechanical oscillations. Inertia = the density, damping = the viscosity.</p>
+            </div>
+
+            <div class="card">
+                <div class="card-h">RECIPROCITY (Y = Y&#7488;)</div>
+                <div class="stat-row">
+                    <span>Passive-network reciprocity</span>
+                    <b class="@(D.ReciprocityStatus == "Violated" ? "g-red" : "g-green")">@D.ReciprocityStatus (@Res(D.ReciprocityResidual))</b>
+                </div>
+                <div class="card-h" style="margin-top:8px">CARBON &mdash; flow-traced intensity</div>
+                <div class="stat-row"><span>System blended intensity</span><b>@(D.TraceNotConverged ? "- (not converged)" : ExperimentalDto.FormatCarbon(D.CarbonGPerKwh, D.HeavyModelsSkipped))</b></div>
+            </div>
+        </div>
+
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">POWER-FLOW TRACING &mdash; where the biggest flows went</div>
+                @if (D.HeavyModelsSkipped)
+                {
+                    <p class="note">Tracing/carbon skipped on this large network (bounded per-frame cost); run
+                    <code>gridsim experimental trace</code> for the full trace.</p>
+                }
+                else if (D.TraceNotConverged)
+                {
+                    @* D-DOC-087: tracing refuses a non-converged state. *@
+                    <p class="note">@ExperimentalDto.TraceNotConvergedNote</p>
+                }
+                else if (D.TopFlows.Count == 0)
+                {
+                    @* R099 parity: a cyclic flow graph (trace not defined) is told apart from a genuinely empty result. *@
+                    <p class="note">@ExperimentalDto.TraceEmptyText(D.FlowGraphCyclic)</p>
+                }
+                else
+                {
+                    @foreach (TraceFlowDto f in D.TopFlows)
+                    {
+                        <div class="stat-row"><span>gen bus @f.GenBus &rarr; load bus @f.LoadBus</span><b>@f.Mw.ToString("N1") MW</b></div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+    private ExperimentalDto? D => Frame?.Experimental;
+
+    private static string Hz(double hz) => hz > 0 ? $"{hz:0.000} Hz" : "-";
+    private static string Res(double r) => double.IsNaN(r) ? "-" : $"{r:0.##E+0} pu";
+}

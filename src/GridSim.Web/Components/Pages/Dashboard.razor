@@ -1,0 +1,408 @@
+@page "/dashboard/{CaseId}"
+@using GridSim.Web.Projection
+@using GridSim.Web.Sessions
+@inject SessionManager Sessions
+@inject NavigationManager Nav
+@inject PresenceService Presence
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>GridSim - @(_session?.Topology.CaseLabel ?? CaseId)</PageTitle>
+
+@if (_error is not null || _session?.Error is not null)
+{
+    <div class="load-error">
+        <h1>Couldn't load @CaseId</h1>
+        <pre>@(_error ?? _session?.Error)</pre>
+        <a href="/">&lt;- back to models</a>
+    </div>
+}
+else if (_session is null || !_session.TopologyReady)
+{
+    <div class="session-init">
+        <div class="init-spinner"></div>
+        <h2>Initialising session</h2>
+        <p class="init-case">@CaseId</p>
+        <p class="init-msg">
+            @if (_session is null)
+            {
+                <span>Allocating session and loading model data&hellip;</span>
+            }
+            else
+            {
+                <span>Connected to bridge, waiting for topology&hellip;</span>
+            }
+        </p>
+        <p class="init-patience">This is normal &mdash; first load can take up to 60 seconds while the full network data is streamed to your session. Please wait.</p>
+    </div>
+}
+else
+{
+    @* GR-236: a skipped bridge message is a notice beside the dashboard, not a load failure that replaces it. *@
+    if (_session.Warning is { } warning)
+    {
+        <div class="load-warning" role="status">@warning</div>
+    }
+    <header class="dash-head">
+        <a class="home-link" href="/">GridSim</a>
+        <span class="case-name">@_session.Topology.CaseLabel</span>
+        <span class="case-meta">@_session.Topology.BusCount buses | @_session.Topology.Edges.Count branches@(_session.IsReplay ? $" | replay {_session.Topology.FrameCount} frames" : "")</span>
+        @* Active solver / source readout. N063: a LIVE session also offers the solver switch (the WPF SOLVER picker's
+           choices); picking one navigates to ?solver=<name>, which recreates the session on that engine. Replay and
+           bridge feeds run no solver here, so they keep the plain readout. *@
+        @if (_session.IsRaw)
+        {
+            <span class="case-solver" title="Pure raw public-data replay - no solve, no inference">REPLAY | raw public data</span>
+        }
+        else if (_session.Source == FeedSource.Live)
+        {
+            <span class="case-solver" title="Power-flow solver: changing it restarts this live session on the chosen engine">
+                SOLVER |
+                <select class="solver-pick" aria-label="Power-flow solver" @onchange="OnSolverPicked">
+                    @foreach (var o in SolverChoice.Options)
+                    {
+                        <option value="@o.Name" selected="@(o.Kind == _session.RequestedSolver)">@o.Label</option>
+                    }
+                </select>
+                | @_session.ActiveSolver
+            </span>
+        }
+        else
+        {
+            <span class="case-solver" title="Feed source (this session runs no solver of its own)">SOLVER | @_session.ActiveSolver</span>
+        }
+        <span class="online-pill" title="Anonymous viewers connected now - open the LIVE tab"
+              style="display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:999px;border:1px solid var(--edge);font-size:0.68em;font-weight:700;letter-spacing:0.8px;color:var(--accent);white-space:nowrap;">* @Presence.Count ONLINE</span>
+        @* The estimated bridge stream's quality pill (the desktop status pill's text, EstimateBlock.QualitySummary):
+           green on a chi-square PASS, red on a FAIL, and red with the IRLS warning when a robust fit stopped on its
+           re-weighting cap (N151: EstimateBlock.QualityOk / IrlsCapWarning, shared with the desktop). Shown only once
+           a frame carrying an estimate block arrives. *@
+        @if (_session.LatestEstimate is { } est)
+        {
+            <span class="estimate-pill" title="WLS estimation quality of the latest estimated frame (chi-square test of the fit)"
+                  style="display:inline-flex;align-items:center;padding:3px 11px;border-radius:999px;border:1px solid var(--edge);font-size:0.68em;font-weight:700;letter-spacing:0.8px;white-space:nowrap;color:@(est.QualityOk ? "var(--ok, #2e9e5b)" : "var(--bad, #d64545)");">ESTIMATED: @est.QualitySummary()</span>
+        }
+        <span class="status-lamp @Lamp.Cls" title="System status">* @Lamp.Text</span>
+    </header>
+
+    <section class="headline">
+        <div class="tile">
+            <span class="tv">@F(H?.FrequencyHz, "0.000")</span><span class="tl">Hz</span>
+            @if (_frame?.Traces is { FrequencyHz.Count: > 1 })
+            {
+                <Sparkline Values="_frame.Traces.FrequencyHz" Stroke="var(--accent)" Min="@SparkMinHz" Max="@SparkMaxHz" Width="150" Height="24" />
+            }
+        </div>
+        <div class="tile"><span class="tv">@F(H?.RocofHzPerS, "0.000")</span><span class="tl">RoCoF Hz/s</span></div>
+        <div class="tile"><span class="tv">@F(H?.GenerationMw, "0")</span><span class="tl">Generation MW</span></div>
+        <div class="tile">
+            <span class="tv">@F(H?.DemandMw, "0")</span><span class="tl">Demand MW</span>
+            @if (_frame?.Traces is { DemandMw.Count: > 1 })
+            {
+                <Sparkline Values="_frame.Traces.DemandMw" Stroke="var(--replay)" Width="150" Height="24" />
+            }
+        </div>
+        <div class="tile"><span class="tv">@F(H?.LossMw, "0.0")</span><span class="tl">Losses MW</span></div>
+        <div class="tile">
+            <span class="tv">@F(H?.InertiaGvaS, "0.0")</span><span class="tl">Inertia GVA.s</span>
+            @if (_frame?.Traces is { InertiaGvaS.Count: > 1 })
+            {
+                <Sparkline Values="_frame.Traces.InertiaGvaS" Stroke="var(--series-volt)" Width="150" Height="24" />
+            }
+        </div>
+        <div class="tile"><span class="tv">@F(H?.AvgVoltagePu, "0.000")</span><span class="tl">Avg V pu</span></div>
+        <div class="tile"><span class="tv clock">@(_frame?.Clock ?? "--:--")</span><span class="tl">Clock</span></div>
+    </section>
+
+    <TransportBar Session="_session" OnChanged="StateHasChanged" />
+
+    <nav class="tabstrip">
+        @foreach (string t in Tabs)
+        {
+            <button class="@(t == _tab ? "tab on" : "tab")" @onclick="() => SelectTab(t)">@t</button>
+        }
+    </nav>
+
+    <section class="tabbody">
+        @switch (_tab)
+        {
+            case "NETWORK":
+                <NetworkMap Topology="_session.Topology" Frame="_frame"
+                            IsBridge="_session.IsBridge" Playing="_session.Playing"
+                            Backdrop="_session.IsRaw"
+                            CanTrip="_session.CanTrip" TripLargest="_session.TripLargestInfeed"
+                            NominalHz="_session.NominalHz"
+                            OnDrillBus="HandleMapDrill" />
+                break;
+            case "CHARTS":
+                <ChartsTab Frame="_frame" NominalHz="_session.NominalHz" />
+                break;
+            case "GENERATION & INERTIA":
+                <GenInertiaTab Frame="_frame" Raw="_session.IsRaw" NominalHz="_session.NominalHz" />
+                break;
+            case "OPERATOR":
+                <OperatorTab Frame="_frame" />
+                break;
+            case "MARKET":
+                <MarketTab Frame="_frame" />
+                break;
+            case "NESO RP1":
+                <Rp1Tab Frame="_frame" NominalHz="_session.NominalHz" />
+                break;
+            case "MECHANICAL":
+                <MechanicalTab Frame="_frame" />
+                break;
+            case "HUMAN SCALE":
+                <HumanScaleTab Frame="_frame" Raw="_session.IsRaw" />
+                break;
+            case "SPEED DOMAINS":
+                <DomainsTab Frame="_frame" />
+                break;
+            case "TRIP / DEVICE":
+                <TripTab Frame="_frame" NominalHz="_session.NominalHz" />
+                break;
+            case "SCADA":
+                <ScadaTab Frame="_frame" OnOpenAsset="HandleScadaOpen" />
+                break;
+            case "THE MACHINE":
+                <MachineTab Frame="_frame" Raw="_session.IsRaw" NominalHz="_session.NominalHz" />
+                break;
+            case "INVERTER FLEET":
+                <InverterFleetTab Frame="_frame" />
+                break;
+            case "CONFORMANCE":
+                <ConformanceTab Frame="_frame" />
+                break;
+            case "CYCLE":
+                <CycleTab Frame="_frame" />
+                break;
+            case "EXPERIMENTAL":
+                <ExperimentalTab Frame="_frame" />
+                break;
+            case "HARMONICS":
+                <HarmonicsTab Frame="_frame" RunStudy="_session.RunHarmonicsStudy" RunStudyWith="_session.RunHarmonicsStudyWith" />
+                break;
+            case "ASSETS":
+                <AssetsTab Topology="_session.Topology" Frame="_frame" FocusBus="_drillBus" FocusRoute="_drillRoute" IsBridge="_session.IsBridge" QueryAsset="QueryAsset" />
+                break;
+            case "LIVE":
+                <LiveTab />
+                break;
+            case "AUDIT LOG":
+                @* N151: verified audit-log display (Core AuditLogDisplay; tampered shows only the verdict). *@
+                <AuditLogTab />
+                break;
+            case "ABOUT":
+                <AboutTab />
+                break;
+            default:
+                <div class="stub">@_tab - wired in a later build step.</div>
+                break;
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public string CaseId { get; set; } = "";
+
+    /// <summary>N063: the solver a live session runs on (<c>?solver=auto|dense|sparse|sweep</c>; absent = auto).</summary>
+    [SupplyParameterFromQuery(Name = "solver")] public string? Solver { get; set; }
+
+    private static readonly string[] AllTabs =
+    {
+        "NETWORK", "GENERATION & INERTIA", "THE MACHINE", "SCADA",
+        "OPERATOR", "MARKET", "NESO RP1", "MECHANICAL", "HUMAN SCALE", "SPEED DOMAINS", "TRIP / DEVICE", "INVERTER FLEET",
+        "CONFORMANCE", "EXPERIMENTAL", "HARMONICS", "CYCLE", "ASSETS", "AUDIT LOG",
+    };
+
+    // The pure RAW replay has no solve, so only the raw-fed panels are shown (the solver/physics tabs are hidden).
+    // Filtering the strip is sufficient: the render switch keeps a default stub arm, so a hidden tab can never
+    // become _tab. NETWORK stays as the static topology backdrop.
+    private static readonly string[] RawTabs =
+    {
+        "NETWORK", "CHARTS", "GENERATION & INERTIA", "THE MACHINE", "NESO RP1", "HUMAN SCALE", "OPERATOR", "MARKET", "LIVE", "ABOUT",
+    };
+
+    private string[] Tabs => (_session?.IsRaw ?? false) ? RawTabs : AllTabs;
+
+    private SimSession? _session;
+    private FrameEnvelope? _frame;
+    private string _tab = "NETWORK";
+    private string? _error;
+    private string? _loadedCaseId;
+
+    private HeadlineDto? H => _frame?.Headline;
+
+    // Fixed vertical scale of the header frequency sparkline (Hz): nominal +/-0.3 Hz, a little wider than the
+    // +/-0.2 Hz operational band so an excursion is visibly off-centre but still on the chart (R203: named,
+    // values unchanged).
+    private const double SparkFreqMinHz = 49.7;
+    private const double SparkFreqMaxHz = 50.3;
+
+    // N273 (October 2026, stream B2; Ruling R1: Mark delegated EE calls 2026-10-04): the sparkline scale and the lamp follow
+    // the case's own nominal (the same +/-0.3 Hz about it); at 50 Hz these are the two constants above, bit for bit.
+    private double NominalHz => _session?.NominalHz ?? GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
+    private double SparkMinHz => GridSim.Core.Dynamics.FrequencyBands.GbEdgeAbout(SparkFreqMinHz, NominalHz);
+    private double SparkMaxHz => GridSim.Core.Dynamics.FrequencyBands.GbEdgeAbout(SparkFreqMaxHz, NominalHz);
+
+    // Control-room status lamp, derived from the live frame (mirrors the WPF header lamp). The priority order
+    // (solve fault > NOT CONVERGED > frequency event > voltage alert > corridor overload > normal) lives in the
+    // pure StatusLamp projection so it is unit-tested; R051 added the NOT CONVERGED step.
+    private (string Cls, string Text) Lamp =>
+        StatusLamp.Evaluate(H, _frame?.Operator?.Boundaries?.Any(b => b.Overloaded) == true,
+            _session?.Bands ?? GridSim.Core.Dynamics.FrequencyBands.Gb);
+
+    protected override void OnParametersSet()
+    {
+        // Route change to a different case: tear down and rebuild. Compare against the requested id, not the
+        // topology's id (a bridge session's topology id only arrives later, and differs from the route).
+        // N063: a different ?solver= is a different session too (the engine is fixed when a live session is made).
+        bool caseChanged = !string.Equals(_loadedCaseId, CaseId, StringComparison.OrdinalIgnoreCase);
+        bool solverChanged = !string.Equals(_loadedSolver ?? "", Solver ?? "", StringComparison.OrdinalIgnoreCase);
+        if ((_session is not null || _error is not null) && (caseChanged || solverChanged) && _loadedCaseId is not null)
+        {
+            if (_session is not null) _ = DisposeSessionLoggedAsync();   // GR-729: a teardown failure is logged, not lost
+            _error = null;
+        }
+        if (_session is null && _error is null) StartSession();
+    }
+
+    private string? _loadedSolver;
+
+    /// <summary>N063: the bridge per-asset query for the ASSETS substation page, against whichever session is current.</summary>
+    private Task<GridSim.Core.IO.QueryResult> QueryAsset(int busId, CancellationToken ct) =>
+        _session is SimSession s
+            ? s.QueryAssetAsync(busId, ct)
+            : throw new InvalidOperationException("No session is running.");
+
+    /// <summary>N063: the header picker. Navigating (rather than recreating in place) keeps the address bar honest,
+    /// so a reload or a shared link opens the same engine.</summary>
+    private void OnSolverPicked(ChangeEventArgs e)
+    {
+        string name = e.Value?.ToString() ?? "auto";
+        string url = $"/dashboard/{Uri.EscapeDataString(CaseId)}" + (name == "auto" ? "" : $"?solver={Uri.EscapeDataString(name)}");
+        Nav.NavigateTo(url);
+    }
+
+    private string? _presenceHandle;
+    private CancellationTokenSource? _presenceCts;
+
+    private void StartSession()
+    {
+        try
+        {
+            _loadedCaseId = CaseId;
+            _loadedSolver = Solver;
+            // An unknown ?solver= name, or a solver asked of a replay / bridge feed, is refused here and shown on the
+            // load-error panel (fail loud), never quietly replaced by Auto.
+            _session = Sessions.Create(CaseId, SolverChoice.Parse(Solver));
+            _frame = _session.Current;
+            _session.FrameProduced += OnFrame;
+            _session.StateChanged += OnStateChanged;
+            _presenceHandle = Presence.Register(CaseId, _session.IsRaw);
+            StartPresenceHeartbeat();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void OnFrame(FrameEnvelope f)
+    {
+        _frame = f;
+        TouchPresence();
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    // Presence: heartbeat every 4 s so a viewer stays "online" even while paused (no frames) and the header count
+    // refreshes; TouchPresence also runs per-frame to keep the shown replay time live.
+    private void StartPresenceHeartbeat()
+    {
+        _presenceCts = new CancellationTokenSource();
+        CancellationToken ct = _presenceCts.Token;
+        _ = Task.Run(async () =>
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(4));   // GR-729: disposed when the heartbeat ends
+            try
+            {
+                while (await timer.WaitForNextTickAsync(ct))
+                {
+                    TouchPresence();
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
+            catch (OperationCanceledException) { }
+        });
+    }
+
+    private void TouchPresence()
+    {
+        if (_presenceHandle is null || _session is null) return;
+        string label = (_session.TopologyReady ? _session.Topology?.CaseLabel : null) ?? CaseId;
+        Presence.Touch(_presenceHandle, label, _session.IsRaw, _session.RawAt, _session.Playing);
+    }
+
+    private void OnStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    // Right-click / T-key TRIP from the network map goes straight to SimSession.TripLargestInfeed (wired in the
+    // markup above): the session picks the unit from live output via the shared Core rule and the map shows the
+    // outcome, so the dashboard holds no trip logic of its own.
+
+    // Double-click / "OPEN IN ASSETS" drill from the map -> open the ASSETS tab ON THAT SUBSTATION. The bus id
+    // used to be dropped, so the explorer always opened on its landing page (R098). AssetsTab applies FocusBus
+    // when it is created, so the drill target is held here until the user picks a tab from the strip.
+    private int? _drillBus;
+
+    private void HandleMapDrill(int busId)
+    {
+        _drillRoute = null;
+        _drillBus = busId;
+        _tab = "ASSETS";
+    }
+
+    // Click on a SCADA register row -> open the ASSETS tab on that point's substation, circuit or transformer
+    // (R099 parity with the WPF OpenPointCmd). Held like _drillBus until the user picks a tab from the strip.
+    private AssetRoute? _drillRoute;
+
+    private void HandleScadaOpen(AssetRoute route)
+    {
+        _drillBus = null;
+        _drillRoute = route;
+        _tab = "ASSETS";
+    }
+
+    // A tab chosen from the strip opens normally: clear any pending drill so ASSETS lands on its home page
+    // instead of re-opening the last drilled substation.
+    private void SelectTab(string tab)
+    {
+        _drillBus = null;
+        _drillRoute = null;
+        _tab = tab;
+    }
+
+    private static string F(double? v, string fmt) => v.HasValue ? v.Value.ToString(fmt) : "-";
+
+    private async Task DisposeSessionAsync()
+    {
+        _presenceCts?.Cancel();
+        Presence.Unregister(_presenceHandle);
+        _presenceHandle = null;
+        if (_session is null) return;
+        _session.FrameProduced -= OnFrame;
+        _session.StateChanged -= OnStateChanged;
+        SimSession s = _session;
+        _session = null;
+        _frame = null;
+        await s.DisposeAsync();
+    }
+
+    public async ValueTask DisposeAsync() => await DisposeSessionAsync();
+
+    // GR-729: a fire-and-forget session teardown (on a case or solver change) reports its failure on stderr.
+    private async Task DisposeSessionLoggedAsync()
+    {
+        try { await DisposeSessionAsync(); }
+        catch (Exception ex) { Console.Error.WriteLine($"GridSim.Web: error: session teardown failed ({ex.GetType().Name}: {ex.Message})."); }
+    }
+}

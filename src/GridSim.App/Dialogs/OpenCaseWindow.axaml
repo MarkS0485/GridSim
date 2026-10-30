@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:GridSim.Ui.Models"
+        xmlns:dialogs="using:GridSim.App.Dialogs"
+        x:Class="GridSim.App.Dialogs.OpenCaseWindow"
+        Title="Open case"
+        Width="560" Height="480" MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg}">
+  <!-- UI programme Phase 1.1: File > Open case... The cases GridSim.Ui.Models.ModelCatalog finds (the bundled GB
+       cases, local gda-out/ models, the MATPOWER library, pre-solved runs, the live bridge when configured), in the
+       catalogue's order, opening on the last-used one as the WPF NETWORK picker does. Folders the scan could not read
+       are listed under the cases, so a missing model has a visible reason. -->
+  <DockPanel Margin="12">
+    <TextBlock DockPanel.Dock="Top" Text="NETWORK" Classes="Label" Margin="0,0,0,6" />
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+      <Button x:Name="OpenButton" Classes="FlatBtn" Content="Open" IsDefault="True" Click="Open_Click" />
+      <Button x:Name="CancelButton" Classes="FlatBtn" Content="Cancel" IsCancel="True" Click="Cancel_Click" />
+    </StackPanel>
+    <TextBlock x:Name="SkippedText" DockPanel.Dock="Bottom" Classes="Label" TextWrapping="Wrap" Margin="0,8,0,0"
+               IsVisible="False" />
+    <TextBlock x:Name="EmptyText" DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="{StaticResource Amber}"
+               IsVisible="False"
+               Text="No cases were found beside the app. The bundled cases ship in its data folder; GDA models are read from a gda-out folder and pre-solved runs from a results folder above it." />
+    <Border Classes="Card" Padding="0">
+      <ListBox x:Name="Sources" Background="Transparent" DoubleTapped="Sources_DoubleTapped">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="models:ModelSource">
+            <!-- A pre-solved run says so, with its frame count (CaseListLabel): a short replay stops at its last frame. -->
+            <TextBlock Text="{Binding Converter={x:Static dialogs:CaseListLabel.Converter}}" TextTrimming="CharacterEllipsis" />
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+  </DockPanel>
+</Window>

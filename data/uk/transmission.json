@@ -1,0 +1,16 @@
+[
+  { "name": "L1-2 N-S Scotland",     "from": 1,  "to": 2,  "rPu": 0.020, "xPu": 0.20, "bPu": 0.030, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L2-3 B6 boundary",      "from": 2,  "to": 3,  "rPu": 0.030, "xPu": 0.30, "bPu": 0.040, "ratingMva": 2200, "circuits": 2 },
+  { "name": "L3-4 N England-Yorks",  "from": 3,  "to": 4,  "rPu": 0.012, "xPu": 0.12, "bPu": 0.020, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L3-5 N England-N Wales","from": 3,  "to": 5,  "rPu": 0.015, "xPu": 0.15, "bPu": 0.025, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L4-6 Yorks-Midlands",   "from": 4,  "to": 6,  "rPu": 0.012, "xPu": 0.12, "bPu": 0.020, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L5-6 N Wales-Midlands", "from": 5,  "to": 6,  "rPu": 0.014, "xPu": 0.14, "bPu": 0.0225, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L4-7 Yorks-E Anglia",   "from": 4,  "to": 7,  "rPu": 0.018, "xPu": 0.18, "bPu": 0.025, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L6-7 Midlands-E Anglia","from": 6,  "to": 7,  "rPu": 0.013, "xPu": 0.13, "bPu": 0.020, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L6-8 Midlands-London",  "from": 6,  "to": 8,  "rPu": 0.012, "xPu": 0.12, "bPu": 0.020, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L7-8 E Anglia-London",  "from": 7,  "to": 8,  "rPu": 0.010, "xPu": 0.10, "bPu": 0.0175, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L6-9 Midlands-South",   "from": 6,  "to": 9,  "rPu": 0.014, "xPu": 0.14, "bPu": 0.0225, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L8-9 London-South",     "from": 8,  "to": 9,  "rPu": 0.010, "xPu": 0.10, "bPu": 0.015, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L9-10 South-SW",        "from": 9,  "to": 10, "rPu": 0.016, "xPu": 0.16, "bPu": 0.025, "ratingMva": 2000, "circuits": 2 },
+  { "name": "L5-10 N Wales-SW",      "from": 5,  "to": 10, "rPu": 0.020, "xPu": 0.20, "bPu": 0.030, "ratingMva": 2000, "circuits": 2 }
+]

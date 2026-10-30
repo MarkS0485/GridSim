@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "transmission.schema.json",
+  "title": "GridSim v1 transmission.json",
+  "description": "The lines and cables of the case, one record each. Optional file. Boundaries and tap changers refer to branches by name. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/line"
+  },
+  "$defs": {
+    "line": {
+      "title": "Line",
+      "description": "A line or cable (v1 LineDto). r/x/b are per unit on the case base for ONE circuit; 'circuits' identical circuits run in parallel (the loader divides r and x by it and multiplies b and the rating by it). Absent: r/x/b 0, ratingMva 0 (unrated), circuits 1, no dynamics class, lengthKm 0, no equipment, rPu0/xPu0 0.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Branch name; boundaries and tap changers find branches by it. Absent: none.",
+          "type": "string"
+        },
+        "from": {
+          "title": "From bus",
+          "description": "Sending-end bus (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "to": {
+          "title": "To bus",
+          "description": "Receiving-end bus (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "rPu": {
+          "title": "Resistance (pu, one circuit)",
+          "description": "Series resistance of one circuit, per unit on the case base. Absent: 0.",
+          "type": "number"
+        },
+        "xPu": {
+          "title": "Reactance (pu, one circuit)",
+          "description": "Series reactance of one circuit, per unit on the case base. Absent: 0.",
+          "type": "number"
+        },
+        "bPu": {
+          "title": "Charging susceptance (pu, one circuit)",
+          "description": "Total shunt charging susceptance of one circuit. Absent: 0.",
+          "type": "number"
+        },
+        "ratingMva": {
+          "title": "Rating (MVA, one circuit)",
+          "description": "Thermal rating of one circuit. Absent: 0 = unrated (never reported overloaded).",
+          "type": "number",
+          "minimum": 0
+        },
+        "circuits": {
+          "title": "Circuits",
+          "description": "Number of identical parallel circuits. Absent: 1.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "dynamicsClass": {
+          "title": "Dynamics class",
+          "description": "Name of a passive-plant asset class in asset-classes.json bound to this line. Absent: none.",
+          "type": "string"
+        },
+        "lengthKm": {
+          "title": "Length (km)",
+          "description": "Circuit length, for frequency-dependent line modelling. Absent: 0 (unknown).",
+          "type": "number",
+          "minimum": 0
+        },
+        "equipment": {
+          "title": "Equipment",
+          "description": "Conductor type for the skin-effect model: ohl (overhead line) or cable. Absent: none.",
+          "enum": [
+            "ohl",
+            "cable"
+          ]
+        },
+        "rPu0": {
+          "title": "Zero-sequence resistance (pu)",
+          "description": "Zero-sequence series resistance of one circuit, per unit on the case base. Absent: 0 (not supplied).",
+          "type": "number"
+        },
+        "xPu0": {
+          "title": "Zero-sequence reactance (pu)",
+          "description": "Zero-sequence series reactance of one circuit, per unit on the case base. Absent: 0 (not supplied).",
+          "type": "number"
+        },
+        "tapRatio": {
+          "title": "Off-nominal turns ratio",
+          "description": "Off-nominal turns ratio of a converted MATPOWER transformer kept in branch order (F24). Absent: 1.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "phaseShiftDeg": {
+          "title": "Phase shift (degrees)",
+          "description": "Phase shift of the branch (F24). Absent: 0.",
+          "type": "number"
+        },
+        "isTransformer": {
+          "title": "Is a transformer",
+          "description": "The branch is a transformer (labels, fault studies) rather than a line (F24). Absent: false.",
+          "type": "boolean"
+        },
+        "ratingBMva": {
+          "title": "Short-term rating B (MVA, one circuit)",
+          "description": "Short-term rating of one circuit (MATPOWER RATE_B, F20); multiplied by circuits like ratingMva. Used only when a contingency screen is asked to judge post-fault loading against rating B. Absent: 0 (not given; such a check then uses ratingMva).",
+          "type": "number",
+          "minimum": 0
+        },
+        "ratingCMva": {
+          "title": "Emergency rating C (MVA, one circuit)",
+          "description": "Emergency rating of one circuit (MATPOWER RATE_C, F20); multiplied by circuits like ratingMva. Used only when a contingency screen is asked to judge post-fault loading against rating C. Absent: 0 (not given; such a check then uses ratingMva).",
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

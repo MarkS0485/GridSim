@@ -1,0 +1,13 @@
+$ head -11 results/gda-stalybridge/transformer.json
+[
+  {
+    "name": "TX EYAM3/EYAM5 33/11",
+    "from": 2,
+    "to": 6,
+    "rPu": 0.06661501377410467,
+    "xPu": 0.6344582185491277,
+    "tapRatio": 1,
+    "phaseShiftDeg": 0,
+    "ratingMva": 6
+  },
+[exit 0]

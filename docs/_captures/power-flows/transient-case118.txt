@@ -1,0 +1,4 @@
+$ gridsim transient case118 --minutes 1 --dt-ms 100 --trip 1000 --trip-at 20
+[transient] case118: done in 7.0s  nadir 45.152Hz  maxRoCoF -1.153Hz/s  exports 42  -> results\transient-case118-20261019-183811
+[transient] case118: 600 slices @ 100ms (1 min) on Newton-Raphson (dense)...
+[exit 0]

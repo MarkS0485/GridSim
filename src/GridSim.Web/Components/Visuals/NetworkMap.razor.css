@@ -1,0 +1,84 @@
+/* NetworkMap chrome (FastSchematic port). Base .netmap-wrap/.netmap-toolbar/.mode live in app.css; this adds
+   the overlay toggles, canvas stage, legend, hover fly-out, bridge HUD and banner. Control-room cyan accent. */
+
+.netmap-toggles { display: flex; gap: 4px; flex-wrap: wrap; }
+.netmap-toggles .mtoggle {
+    font: 600 0.66em/1 var(--font-ui, "Bahnschrift", "Segoe UI", sans-serif);
+    letter-spacing: 0.5px; color: var(--muted); background: var(--panel-hi); border: 1px solid var(--edge);
+    border-radius: 4px; padding: 5px 7px; cursor: pointer; text-transform: uppercase;
+}
+.netmap-toggles .mtoggle:hover:not(:disabled) { color: var(--ink); }
+.netmap-toggles .mtoggle.on { color: var(--ink); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel-hi)); }
+.netmap-toggles .mtoggle:disabled { opacity: 0.35; cursor: default; }
+
+.netmap-stage { position: relative; flex: 1 1 auto; min-height: 400px; overflow: hidden; }
+.netmap-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; outline: none; }
+.netmap-stage canvas:active { cursor: grabbing; }
+
+/* National frequency "wash" (pure RAW replay backdrop): a translucent radial tint over the static topology that
+   shifts blue (under) -> green (nominal) -> red (over) with the replayed system frequency. Painted above the
+   canvas (DOM order) but below the banner/HUD/hint; never intercepts pointer events. */
+.netmap-freqwash { position: absolute; inset: 0; pointer-events: none; z-index: 1; transition: background .4s linear; }
+
+.netmap-banner {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    background: var(--accent); color: var(--bg); font: 700 0.68em/1 var(--font-ui); letter-spacing: 1.5px;
+    padding: 5px 12px; border-radius: 4px; pointer-events: none;
+}
+
+.netmap-hint {
+    position: absolute; left: 12px; bottom: 8px; max-width: 60%; color: var(--muted); opacity: 0.7;
+    font: 0.64em/1.3 var(--font-ui); pointer-events: none;
+}
+
+.netmap-legend {
+    position: absolute; left: 12px; bottom: 32px; background: var(--panel-hi); border: 1px solid var(--edge);
+    border-radius: 4px; padding: 7px 10px; pointer-events: none; width: 160px;
+}
+.netmap-legend .ll-title { display: block; color: var(--muted); font: 0.62em/1 var(--font-ui); letter-spacing: 0.8px; margin-bottom: 4px; }
+.netmap-legend .ll-swatch { height: 10px; border-radius: 2px; border: 1px solid var(--edge); }
+.netmap-legend .ll-scale { display: flex; justify-content: space-between; margin-top: 3px; color: var(--muted); font-size: 0.58em; }
+
+.netmap-flyout {
+    position: absolute; top: 12px; right: 12px; width: 250px; background: var(--panel-hi);
+    border: 1px solid var(--edge); border-radius: var(--r-card, 8px); padding: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.netmap-flyout .fo-head { display: flex; align-items: center; justify-content: space-between; }
+.netmap-flyout .fo-kind { color: var(--accent); font: 700 0.62em/1 var(--font-ui); letter-spacing: 1.5px; }
+.netmap-flyout .fo-close { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 0.9em; padding: 0 2px; }
+.netmap-flyout .fo-close:hover { color: var(--ink); }
+.netmap-flyout .fo-name { font: 700 1.05em/1.2 var(--font-ui); color: var(--ink); margin-top: 2px; word-break: break-word; }
+.netmap-flyout .fo-sub { color: var(--muted); font-size: 0.72em; margin-bottom: 8px; }
+.netmap-flyout .fo-rows { display: flex; flex-direction: column; gap: 2px; }
+.netmap-flyout .fo-row { display: flex; justify-content: space-between; font-size: 0.78em; }
+.netmap-flyout .fo-k { color: var(--muted); }
+.netmap-flyout .fo-v { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.netmap-flyout .fo-conn { color: var(--muted); font-size: 0.72em; margin-top: 8px; }
+.netmap-flyout .fo-lines { color: var(--muted); font: 0.66em/1.4 var(--font-mono); word-break: break-word; }
+.netmap-flyout .fo-drill {
+    margin-top: 10px; background: transparent; border: 1px solid var(--edge); color: var(--accent);
+    border-radius: 4px; padding: 5px 10px; font: 600 0.66em/1 var(--font-ui); letter-spacing: 0.8px; cursor: pointer;
+}
+.netmap-flyout .fo-drill:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+
+.netmap-hud {
+    position: absolute; right: 12px; bottom: 12px; background: var(--panel-hi); border: 1px solid var(--edge);
+    border-radius: var(--r-card, 8px); padding: 10px 14px; pointer-events: none;
+}
+.netmap-hud .hud-title { display: block; color: var(--accent); font: 700 0.6em/1 var(--font-ui); letter-spacing: 1.5px; margin-bottom: 8px; }
+.netmap-hud .hud-cols { display: flex; gap: 20px; }
+.netmap-hud .hud-cell { display: flex; flex-direction: column; }
+.netmap-hud .hud-l { color: var(--muted); font: 0.58em/1 var(--font-ui); letter-spacing: 0.6px; }
+.netmap-hud .hud-v { color: var(--ink); font: 700 1.35em/1.1 var(--font-ui); font-variant-numeric: tabular-nums; }
+.netmap-hud .hud-v small { color: var(--muted); font-size: 0.5em; font-weight: 400; margin-left: 3px; }
+
+/* Outcome of the last map TRIP request (tripped unit, "no generation to trip", or "not available on this feed").
+   Sits under the banner so the operator always gets feedback for a right-click / T key. */
+.netmap-tripnotice {
+    position: absolute; top: 36px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel-hi); border: 1px solid var(--edge); color: var(--text, inherit);
+    font: 600 0.7em/1.2 var(--font-ui); padding: 6px 10px; border-radius: 4px;
+}
+/* R051: badge for a frame whose power flow did not converge (red, like the header lamp). */
+.netmap-banner.netmap-unconverged { background: var(--bad); }

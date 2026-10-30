@@ -1,0 +1,73 @@
+@* On-load tap changers and the buses they hold to setpoint - live deviation per unit, IN BAND/HIGH/LOW.
+   All live-solved. Rows click through to the parent transformer. Mirrors GridSim.Wpf TapChangerFleetVm. *@
+
+<div class="card" style="margin-bottom:0">
+    <div class="card-eyebrow">ASSET CLASS</div>
+    <div class="card-h" style="margin-bottom:2px">TAP CHANGERS</div>
+    <div class="muted-note" style="margin-top:0">OLTCs and the buses they regulate - live deviation | <span class="txt-ok">LIVE-SOLVED</span></div>
+</div>
+
+<div class="panel-grid">
+    <div class="mini"><span class="mv">@Graph.Oltcs.Count</span><span class="ml">Tap changers</span></div>
+    <div class="mini"><span class="mv">@_inBand / @Graph.Oltcs.Count</span><span class="ml">On-target (in deadband)</span></div>
+    <div class="mini"><span class="mv">@(Graph.Oltcs.Count > 0 ? $"{_meanTarget:F3} pu" : "-")</span><span class="ml">Mean target</span></div>
+</div>
+
+<div class="card grow" style="margin-bottom:0">
+    <div class="card-h">REGISTER</div>
+    <div class="tablescroll">
+        <table class="grid">
+            <thead><tr><th>Transformer</th><th>Regulates</th><th class="r">Target</th><th class="r">Live</th><th class="r">Deviation</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach (OltcAssetDto o in Graph.Oltcs)
+                {
+                    BusAssetDto? bus = _byId.GetValueOrDefault(o.ControlsBus);
+                    var (live, dev, state, cls) = Eval(o, bus);
+                    <tr @onclick="() => Open(o)">
+                        <td>@o.Transformer</td>
+                        <td>@(bus?.Name ?? $"bus {o.ControlsBus}")</td>
+                        <td class="r mono">@o.TargetVpu.ToString("F3")</td>
+                        <td class="r mono">@live</td>
+                        <td class="r mono">@dev</td>
+                        <td><b class="@cls">@state</b></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssetGraphDto Graph { get; set; } = default!;
+    [Parameter, EditorRequired] public AssetNavContext Nav { get; set; } = default!;
+
+    private Dictionary<int, BusAssetDto> _byId = new();
+    private Dictionary<string, int> _txIndex = new();
+    private int _inBand;
+    private double _meanTarget;
+
+    protected override void OnParametersSet()
+    {
+        _byId = Graph.Buses.ToDictionary(b => b.Id);
+        _txIndex = new();
+        foreach (BranchAssetDto b in Graph.Branches)
+            if (b.IsTransformer) _txIndex.TryAdd(b.Name, b.Index);
+
+        _inBand = Graph.Oltcs.Count(o => _byId.TryGetValue(o.ControlsBus, out var b) && b.Solved
+                                         && Math.Abs(b.Vm - o.TargetVpu) <= o.DeadbandPu);
+        _meanTarget = Graph.Oltcs.Count > 0 ? Graph.Oltcs.Average(o => o.TargetVpu) : 0;
+    }
+
+    private static (string live, string dev, string state, string cls) Eval(OltcAssetDto o, BusAssetDto? bus)
+    {
+        if (bus is not { Solved: true }) return ("-", "-", "-", "");
+        double d = bus.Vm - o.TargetVpu;
+        bool ok = Math.Abs(d) <= o.DeadbandPu;
+        return ($"{bus.Vm:F3}", $"{d * 1000:+0;-0;0} mpu", ok ? "IN BAND" : d > 0 ? "HIGH" : "LOW", ok ? "txt-ok" : "txt-warn");
+    }
+
+    private void Open(OltcAssetDto o)
+    {
+        if (_txIndex.TryGetValue(o.Transformer, out int idx)) Nav.OpenTransformer(idx, o.Transformer);
+    }
+}

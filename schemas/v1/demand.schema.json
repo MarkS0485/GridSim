@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "demand.schema.json",
+  "title": "GridSim v1 demand.json",
+  "description": "The demands of the case, one record each. Optional file. Several demands on one bus are added together by the loader. Member names are case-sensitive here (canonical camelCase spelling), although the v1 loader matches them ignoring case: the case editor refuses to save a non-canonical spelling until it is normalised (Q1, strict). Unknown members are refused, as the loader refuses them (R268). JSON null is refused everywhere: the loader reads null as absent, and the editor removes a member rather than writing null. Numeric ranges mirror the v2 network schema, so a v1 case the editor saves always projects to a valid v2 network. Rules a schema cannot express (bus references resolving, ZIP triples summing to 1, the [VERIFY] honesty rule) are the loader's.",
+  "type": "array",
+  "items": {
+    "$ref": "#/$defs/demand"
+  },
+  "$defs": {
+    "demand": {
+      "title": "Demand",
+      "description": "A demand (v1 DemandDto). Absent: pMw 0, qMvar from pMw and powerFactor, powerFactor 0.97 lagging.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bus"
+      ],
+      "properties": {
+        "name": {
+          "title": "Name",
+          "description": "Display name. Absent: none.",
+          "type": "string"
+        },
+        "bus": {
+          "title": "Bus",
+          "description": "The bus the demand is connected to (must exist in buses.json).",
+          "$ref": "v1-common.schema.json#/$defs/busId"
+        },
+        "pMw": {
+          "title": "Real power (MW)",
+          "description": "Real power drawn. Absent: 0.",
+          "type": "number"
+        },
+        "qMvar": {
+          "title": "Reactive power (Mvar)",
+          "description": "Reactive power drawn. Absent: pMw x tan(acos(powerFactor)).",
+          "type": "number"
+        },
+        "powerFactor": {
+          "title": "Power factor",
+          "description": "Lagging power factor used when qMvar is absent. Absent: 0.97. The loader clamps it to [0.01, 1]; this schema refuses anything outside (0, 1], as v2 does.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

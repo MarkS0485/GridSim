@@ -1,0 +1,19 @@
+$ gridsim trip --forming vsm --forming-inertia 20 --forming-damping 100
+GridSim  -  contingency on GB reduced (10-zone)
+================================================================
+Tripped:        Hinkley Point Nuclear  (2880 MW lost, nuclear)
+System inertia: 171.7 -> 158.9 GVAs after the trip
+Peak RoCoF:     -0.402 Hz/s  (largest |df/dt| over the run)
+Nadir:          48.480 Hz  (t+7.2 s)
+Settling:       49.215 Hz
+
+50.05 Hz |***+==-:,,..             ....,,,:::::-----------------------::::| 48.48 Hz (nadir)
+
+...at HALF the inertia (79.5 GVAs): RoCoF -0.724 Hz/s, nadir 48.147 Hz
+
+Frequency protection on this trajectory (G99 Issue 2 Table 10.1 settings; system-wide, not per site):
+  81U  Underfrequency       holds: run minimum frequency 48.480 Hz (>47.5 Hz)
+  81O  Overfrequency        holds: run maximum frequency 50.000 Hz (<52.0 Hz)
+  81R  RoCoF                holds: peak |df/dt| 0.402 Hz/s (<1.00 Hz/s)
+  78   Vector shift / LoM   not evaluated: vector shift / loss-of-mains needs a voltage-angle transient; this run is a frequency (centre-of-inertia) trajectory with no bus voltage angle
+[exit 0]

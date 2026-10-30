@@ -1,0 +1,6 @@
+$ gridsim dcopf case14
+DC-OPF - IEEE 14-bus (14 buses)  [cheapest secure dispatch]
+  demand 259 MW  generation 259 MW  total cost 12,950 GBP/h  (unconstrained merit order)
+  dispatch (by output):
+      gen bus 1         259.0 MW  @    50 GBP/MWh
+[exit 0]

@@ -1,0 +1,36 @@
+$ gridsim losses case14 --json results/exports-docs/losses.json --csv results/exports-docs/losses.csv
+Loss allocation - IEEE 14-bus (14 buses, 20 branches)
+  Total losses: 13.39 MW  (reactive: 30.12 MVAr)
+  Reconciliation residual: 2.36E-013 MW
+
+  Zone losses:
+  | Zone | P Loss MW | Q Loss MVAr | Branches |
+  |------|----------:|------------:|---------:|
+  | Other | 13.39 | 30.12 | 20 |
+
+  Top 20 branch losses:
+  | Branch | From | To | P Loss MW | Q Loss MVAr | Loading % | Type |
+  |--------|-----:|---:|----------:|------------:|----------:|------|
+  |  | 1 | 2 | 4.298 | 7.272 | 0.0 | line |
+  |  | 1 | 5 | 2.763 | 6.084 | 0.0 | line |
+  |  | 2 | 3 | 2.323 | 5.162 | 0.0 | line |
+  |  | 2 | 4 | 1.677 | 1.470 | 0.0 | line |
+  |  | 2 | 5 | 0.904 | -0.928 | 0.0 | line |
+  |  | 4 | 5 | 0.514 | 1.623 | 0.0 | line |
+  |  | 3 | 4 | 0.373 | -0.363 | 0.0 | line |
+  |  | 6 | 13 | 0.212 | 0.418 | 0.0 | line |
+  |  | 9 | 14 | 0.116 | 0.247 | 0.0 | line |
+  |  | 6 | 12 | 0.072 | 0.149 | 0.0 | line |
+  |  | 6 | 11 | 0.055 | 0.116 | 0.0 | line |
+  |  | 13 | 14 | 0.054 | 0.110 | 0.0 | line |
+  |  | 9 | 10 | 0.013 | 0.034 | 0.0 | line |
+  |  | 10 | 11 | 0.013 | 0.029 | 0.0 | line |
+  |  | 12 | 13 | 0.006 | 0.006 | 0.0 | line |
+  |  | 4 | 7 | 0.000 | 1.703 | 0.0 | tx |
+  |  | 4 | 9 | 0.000 | 1.305 | 0.0 | tx |
+  |  | 7 | 8 | 0.000 | 0.460 | 0.0 | line |
+  |  | 7 | 9 | -0.000 | 0.802 | 0.0 | line |
+  |  | 5 | 6 | -0.000 | 4.421 | 0.0 | tx |
+[losses] wrote results\exports-docs\losses.json
+[losses] wrote results\exports-docs\losses.csv, results\exports-docs\losses-zones.csv, results\exports-docs\losses-summary.csv
+[exit 0]

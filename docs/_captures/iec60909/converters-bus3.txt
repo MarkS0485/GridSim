@@ -1,0 +1,8 @@
+$ gridsim iec60909 uk --bus 3
+IEC 60909 - GB reduced (10-zone), bus 3, three-phase, Maximum (50 Hz, tb 0.1 s, Tk 1 s)
+  Ik''  = 230.24585058250418 kA  (15.951900457632377 pu), of which converters 33.26107795539915 kA
+  ip    = 604.195341604139 kA  (kappa 2, R/X 0.029872767022212653, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 206.14092477227376 kA    Ik = 230.24585058250418 kA  (near a generator, fed from several sources: IEC 60909-0 Ik = Ik''M, the initial current without motors; no motors are modelled)
+  Ith   = 239.6568418856552 kA  (m 0.11396670562621664)    idc(tb) = 108.98599257963483 kA
+  Zth   = 0.002406695638187732 + j0.0805648715566982 pu
+[exit 0]

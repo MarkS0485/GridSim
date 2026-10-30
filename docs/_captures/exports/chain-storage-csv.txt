@@ -1,0 +1,6 @@
+$ head -n 4 results/exports-docs/chain-storage.csv
+step,hour,load_factor,demand_mw,price,s0_request_mw,s0_delivered_mw,s0_aux_mw,s0_soc,s0_temp_c,s0_fade,s0_limited,slack_mw,vmin,vmax,loss_mw,converged
+0,0,1,315,,5,5,0.01,0.265934,26.9214,0.000145671,0,66.6067,0.995624,1.04,4.59671,1
+1,0.5,1,315,,5,4.48479,0.01,0.0499972,28.9905,0.000206137,1,67.1262,0.995625,1.04,4.60094,1
+2,1,1,315,,5,0,0.01,0.0499764,28.9346,0.000249144,1,71.6511,0.995631,1.04,4.64112,1
+[exit 0]

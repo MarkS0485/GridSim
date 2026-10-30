@@ -1,0 +1,3 @@
+$ gridsim serve case9 --measurements-dir results/realtime/windows --method pf
+error: --method 'pf' must be 'wls' (static), or 'ekf', 'ukf' or 'enkf' (recursive tracking).
+[exit 2]

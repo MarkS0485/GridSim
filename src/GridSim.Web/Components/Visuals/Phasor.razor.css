@@ -1,0 +1,46 @@
+.phasor {
+    display: block;
+    font-family: 'Bahnschrift', 'Segoe UI', system-ui, sans-serif;
+}
+
+.disc {
+    stroke: var(--edge);
+    stroke-width: 1.4;
+}
+
+.axis {
+    stroke: var(--muted);
+    stroke-width: 1.4;
+    opacity: 0.55;
+}
+
+.vref {
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.lag {
+    stroke: var(--warn);
+    stroke-width: 3;
+    stroke-linecap: round;
+}
+
+.lead {
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    opacity: 0.95;
+}
+
+.phi-arc {
+    stroke: var(--muted);
+    stroke-width: 1.6;
+}
+
+/* text tones */
+.vref-t { fill: var(--accent); font-size: 11px; font-weight: 600; }
+.lag-t { fill: var(--warn); font-size: 11px; font-weight: 600; }
+.lead-t { fill: var(--accent); font-size: 11px; font-weight: 600; }
+.muted-t { fill: var(--muted); font-size: 11px; font-weight: 600; }
+.pf-t { fill: var(--ink); font-size: 15px; font-weight: 700; }

@@ -1,0 +1,25 @@
+{
+  "schema": "gridsim-library/2",
+  "description": "Test fixture: an active machine whose exciter slot points at an active exciter. Must pass (the positive control for placeholder-controller-target). Uses the fixture kinds in fixtures/v2/kinds.",
+  "templates": [
+    {
+      "id": "gridsim.fixture.machine",
+      "rev": 1,
+      "kind": "synchronousMachine",
+      "status": "active",
+      "title": "Machine",
+      "params": { "h": 4.0 },
+      "controllers": { "exciter": "gridsim.fixture.exciter.real@1" },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "fixture" } }
+    },
+    {
+      "id": "gridsim.fixture.exciter.real",
+      "rev": 1,
+      "kind": "exciter",
+      "status": "active",
+      "title": "Real exciter",
+      "params": { "ka": { "v": 200, "unit": "1", "prov": { "tag": "Synthetic", "note": "fixture" } } },
+      "provenance": { "_default": { "tag": "Synthetic", "note": "fixture" } }
+    }
+  ]
+}

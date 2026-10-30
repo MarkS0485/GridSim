@@ -1,0 +1,18 @@
+$ gridsim replay-event gb-2019-08-09 --trace data/neso/gb-2019-08-09-frequency.csv --out results/replay-gb-2019-08-09-trace
+
+=== Replay: GB 9 Aug 2019 disturbance (Hornsea + Little Barford) ===
+  when (UTC):        2019-08-09T15:52:33.0000000Z   provenance: DerivedFromRecorded (event tagged Recorded; the weakest of its parts)
+  pre-event inertia: 215.0 GVA.s   demand: 21.1 GW   total loss: 2768 MW
+  inferred inertia from recorded RoCoF: 223.7 GVA.s (cross-check vs 215.0)
+
+  RoCoF:  sim  -0.171   recorded  -0.170 Hz/s   (1 % error)
+  Nadir:  sim   48.84   recorded   48.80 Hz   (0.04 Hz error)
+  Nadir envelope (declared-uncertainty corners): [48.20, 49.17] Hz - recorded INSIDE (consistent within the model's own error bars)
+  RMSE vs trace: 0.099 Hz over 5996 sample(s)
+  back-test vs trace (gate 0.05 Hz / 0.05 Hz/s / 2.0 s): FAIL  nadir 0.054 Hz, RoCoF sim -0.154 vs rec -0.151 Hz/s, nadir time sim 76.0 s vs rec 76.1 s (0.1 s)
+  assessment: BELOW STATUTORY (49.5 Hz)
+
+  VERDICT: MARGINAL  - NOT reproduced; do not run counterfactuals until the baseline matches (check [VERIFY] figures / tolerances).
+
+  -> results\replay-gb-2019-08-09-trace
+[exit 3]

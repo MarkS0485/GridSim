@@ -1,0 +1,219 @@
+<UserControl x:Class="GridSim.Wpf.Views.ScadaView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="10" DataContext="{Binding Scada}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ============ title strip ============ -->
+        <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14,8" Margin="0,0,0,10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="SCADA  SUPERVISORY CONTROL AND DATA ACQUISITION  -  SIMULATED"
+                               Style="{StaticResource PanelHeader}" FontSize="13" />
+                    <TextBlock Text="synthetic telemetry  prediction target for future ML"
+                               Style="{StaticResource Label}" FontSize="10" Margin="0,2,0,0" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Text="RTU LINK  SIMULATED" Style="{StaticResource Label}"
+                           FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <!-- ============ console body: register (left) + event log (right) ============ -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ============ POINT REGISTER ============ -->
+            <Border Grid.Column="0" Style="{StaticResource Card}" Padding="0">
+                <DockPanel>
+                    <!-- header: title + filter + counts -->
+                    <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                            BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Text="TELEMETRY REGISTER" Style="{StaticResource PanelHeader}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding GoodCount}" Style="{StaticResource Label}"
+                                       FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Center"
+                                       Margin="10,0,0,0" />
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding PointCount}" Style="{StaticResource Label}"
+                                       FontFamily="{StaticResource MonoFont}" FontSize="10" VerticalAlignment="Center"
+                                       Margin="10,0,0,0" />
+                            <TextBlock DockPanel.Dock="Right" Text="filter" Style="{StaticResource Label}" FontSize="10"
+                                       VerticalAlignment="Center" Margin="10,0,6,0" />
+                            <Border DockPanel.Dock="Right" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}"
+                                    BorderThickness="1" CornerRadius="4" Width="220" Margin="0">
+                                <TextBox Text="{Binding Filter, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                         Background="Transparent" Foreground="{StaticResource Text}" BorderThickness="0"
+                                         FontFamily="{StaticResource MonoFont}" FontSize="11" Padding="8,4"
+                                         VerticalContentAlignment="Center" CaretBrush="{StaticResource Accent}"
+                                         ToolTip="Filter the register by tag or description" />
+                            </Border>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- column heads -->
+                    <Border DockPanel.Dock="Top" Padding="12,5" BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2.4*" />
+                                <ColumnDefinition Width="3*" />
+                                <ColumnDefinition Width="1.1*" />
+                                <ColumnDefinition Width="0.7*" />
+                                <ColumnDefinition Width="0.7*" />
+                                <ColumnDefinition Width="0.8*" />
+                                <ColumnDefinition Width="0.8*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="TAG" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" />
+                            <TextBlock Grid.Column="1" Text="DESCRIPTION" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" />
+                            <TextBlock Grid.Column="2" Text="VALUE" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="3" Text="UNITS" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" Margin="6,0,0,0" />
+                            <TextBlock Grid.Column="4" Text="LOAD" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" HorizontalAlignment="Right" />
+                            <TextBlock Grid.Column="5" Text="QUAL" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" Margin="6,0,0,0" />
+                            <TextBlock Grid.Column="6" Text="STAMP" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" HorizontalAlignment="Right" />
+                        </Grid>
+                    </Border>
+
+                    <!-- rows -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Points}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Visibility="{Binding Vis}" Cursor="Hand" HorizontalContentAlignment="Stretch"
+                                            ToolTip="Open this asset in the explorer"
+                                            Command="{Binding DataContext.OpenPointCmd, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                            CommandParameter="{Binding}">
+                                        <Button.Template>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border x:Name="bd" Padding="12,3" Background="Transparent"
+                                                        BorderBrush="#16202B" BorderThickness="0,0,0,1">
+                                                    <ContentPresenter />
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="bd" Property="Background" Value="#16202B" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Button.Template>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="2.4*" />
+                                                <ColumnDefinition Width="3*" />
+                                                <ColumnDefinition Width="1.1*" />
+                                                <ColumnDefinition Width="0.7*" />
+                                                <ColumnDefinition Width="0.7*" />
+                                                <ColumnDefinition Width="0.8*" />
+                                                <ColumnDefinition Width="0.8*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Tag}" FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11" Foreground="{StaticResource Accent}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Description}" FontSize="11"
+                                                       Foreground="{StaticResource Muted}" TextTrimming="CharacterEllipsis" Margin="6,0,6,0" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Value}" FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="12" FontWeight="Bold" HorizontalAlignment="Right" />
+                                            <TextBlock Grid.Column="3" Text="{Binding Units}" Style="{StaticResource Label}"
+                                                       FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="4" Text="{Binding Load}" FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="11" FontWeight="Bold" HorizontalAlignment="Right"
+                                                       Foreground="{Binding LoadBrush}" VerticalAlignment="Center" />
+                                            <Border Grid.Column="5" Background="{StaticResource Track}" CornerRadius="7" Padding="6,1"
+                                                    HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Quality}" FontFamily="{StaticResource MonoFont}"
+                                                           FontSize="8.5" FontWeight="Bold" Foreground="{Binding QualityBrush}" />
+                                            </Border>
+                                            <TextBlock Grid.Column="6" Text="{Binding Stamp}" FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="10" Foreground="{StaticResource Muted}" HorizontalAlignment="Right" />
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <!-- ============ EVENT / ALARM LOG ============ -->
+            <Border Grid.Column="2" Style="{StaticResource Card}" Padding="0">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="{StaticResource PanelHi}" Padding="12,8"
+                            BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1" CornerRadius="6,6,0,0">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Left" Text="EVENT / ALARM LOG" Style="{StaticResource PanelHeader}"
+                                       VerticalAlignment="Center" />
+                            <Button DockPanel.Dock="Right" Content="ACK ALL" Style="{StaticResource FlatBtn}"
+                                    Command="{Binding AckAllCmd}" Padding="10,3" FontSize="10" />
+                            <Border DockPanel.Dock="Right" Background="{StaticResource Panel}" BorderBrush="{StaticResource Border}"
+                                    BorderThickness="1" CornerRadius="7" Padding="8,2" Margin="0,0,8,0" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Unacked}" FontFamily="{StaticResource MonoFont}" FontSize="11"
+                                               FontWeight="Bold" Foreground="{StaticResource Red}" />
+                                    <TextBlock Text=" UNACKED" Style="{StaticResource Label}" FontSize="{StaticResource MicroFontSize}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Border>
+                        </DockPanel>
+                    </Border>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Events}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10,5" Opacity="{Binding RowOpacity}" BorderBrush="#16202B" BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- priority chip -->
+                                            <Border Grid.Column="0" Background="{StaticResource Track}" CornerRadius="6" Padding="6,1"
+                                                    VerticalAlignment="Top" Margin="0,1,8,0">
+                                                <TextBlock Text="{Binding Priority}" FontFamily="{StaticResource MonoFont}"
+                                                           FontSize="9" FontWeight="Bold" Foreground="{Binding PriorityBrush}" />
+                                            </Border>
+
+                                            <TextBlock Grid.Column="1" Text="{Binding Stamp}" FontFamily="{StaticResource MonoFont}"
+                                                       FontSize="10" Foreground="{StaticResource Muted}" VerticalAlignment="Top"
+                                                       Margin="0,2,8,0" />
+
+                                            <StackPanel Grid.Column="2">
+                                                <TextBlock Text="{Binding Source}" FontFamily="{StaticResource MonoFont}"
+                                                           FontSize="10" Foreground="{StaticResource Accent}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Message}" FontSize="11" FontWeight="SemiBold"
+                                                           TextWrapping="Wrap" Margin="0,1,0,0" />
+                                            </StackPanel>
+
+                                            <Button Grid.Column="3" Content="{Binding AckLabel}"
+                                                    Command="{Binding DataContext.AckCmd, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" Padding="8,2" FontSize="{StaticResource MicroFontSize}"
+                                                    VerticalAlignment="Top" Margin="8,0,0,0">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource FlatBtn}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Acked}" Value="True">
+                                                                <Setter Property="IsEnabled" Value="False" />
+                                                                <Setter Property="Foreground" Value="{StaticResource Muted}" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

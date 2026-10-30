@@ -1,0 +1,7 @@
+$ gridsim serve case9 --measurements-dir results/realtime/windows --utc-now 2024-03-08T13:01:00Z
+serving wls estimator over 4 window(s) from results/realtime/windows
+horizon guard: now=2024-03-08T13:01:00.0000000Z, newest processable=2024-03-01T12:01:00.0000000Z
+  #0 2024-03-01T12:00:00.0000000Z OK J=47.35 chi2=PASS
+  #1 2024-03-01T12:01:00.0000000Z OK J=61.17 chi2=PASS
+done: processed 2, converged 2, rejected-fresh 2, failed 0
+[exit 0]

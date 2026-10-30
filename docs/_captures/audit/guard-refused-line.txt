@@ -1,0 +1,3 @@
+$ head -n 1 results/ch31-future.log
+{"format":"gridsim-audit/1","seq":0,"runUtc":"2026-10-04T11:16:34.0620693Z","stateUtc":null,"provenance":"DerivedFromRecorded","summary":"actor=analyst@workstation action=estimate inputs=case-id:D784A646F9FED50DEE41E22A244DBAC3BF6B790D2476876CCB2B3A737613CBEB,measurements:7B6797C69054B59D7E3D8A232C68A43C1C7C686EF486892F378C16FD661A25EA outcome=exit=2","prevHash":"GENESIS","hash":"FB0C45EDA313ADBC307CE54F6FD886E1B7B628AB82046E312549FD19EC0906B6"}
+[exit 0]

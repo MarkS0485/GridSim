@@ -1,0 +1,14 @@
+$ head -n 12 results/exports-docs/gda-replay/storage-counterfactual.csv
+# COUNTERFACTUAL: hypothetical storage on recorded history (ProvenanceTag.Counterfactual)
+index,site,request_mw,delivered_mw,aux_mw,soc,temp_c,limited
+0,LFP 5MW/10MWh @5,0.000,0.000,0.0100,0.49998,25.00,0
+1,LFP 5MW/10MWh @5,-5.000,-5.000,0.0100,0.71318,27.58,0
+2,LFP 5MW/10MWh @5,-5.000,-5.000,0.0117,0.92458,30.00,0
+3,LFP 5MW/10MWh @5,-5.000,-0.606,0.0144,0.95000,29.93,1
+4,LFP 5MW/10MWh @5,-5.000,-0.000,0.0100,0.95000,29.81,1
+5,LFP 5MW/10MWh @5,-5.000,-0.000,0.0100,0.95000,29.70,1
+6,LFP 5MW/10MWh @5,-5.000,-0.000,0.0100,0.95000,29.58,1
+7,LFP 5MW/10MWh @5,-5.000,-0.000,0.0100,0.95000,29.47,1
+8,LFP 5MW/10MWh @5,-5.000,-0.000,0.0100,0.95000,29.37,1
+9,LFP 5MW/10MWh @5,-5.000,-0.000,0.0100,0.95000,29.26,1
+[exit 0]

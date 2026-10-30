@@ -1,0 +1,5 @@
+$ gridsim harmonics case9 --spectra docs/_captures/harmonics/spectra-case9-bad.json
+error: failed to load --spectra 'docs/_captures/harmonics/spectra-case9-bad.json': Harmonic source set 'IEEE 9-bus (WSCC)' failed validation:
+  set baseMva 50 does not match model BaseMva 100
+  source #0 (6-pulse @ bus 99): bus 99 does not exist in the model
+[exit 2]

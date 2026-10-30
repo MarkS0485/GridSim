@@ -1,0 +1,3 @@
+$ gridsim stability case9 --rms --pss
+error: --pss needs an AVR (--avr sexs or --avr ieeet1).
+[exit 2]

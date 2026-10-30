@@ -1,0 +1,222 @@
+@using GridSim.Web.Projection
+
+@if (D is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="machine-hero">
+            <div class="rpm-dial">
+                <span class="rpm-v">@D.Rpm.ToString("0")</span>
+                <span class="rpm-l">@D.FrequencyHz.ToString("0.000") Hz | @D.FreqTrendHzPerS.ToString("+0.000;-0.000; 0.000") Hz/s</span>
+            </div>
+            <div class="machine-story">
+                The GB grid as one machine: every synchronous rotor turns in lock-step at <b>@D.Rpm.ToString("0") rpm</b>,
+                holding <b>@D.SpinEnergyMwh.ToString("N0") MWh</b> of spinning energy (@D.SyncGw.ToString("0.0") GW iron |
+                @D.ConverterGw.ToString("0.0") GW electronic). Torque command @D.TorqueCmdMnm.ToString("N0") MN.m vs actual
+                @D.TorqueActMnm.ToString("N0") MN.m - the <b>@D.SurplusMw.ToString("+#,0;-#,0;0") MW</b> gap is @D.DivNote.
+            </div>
+            @if (D.FreqTrace.Count > 1)
+            {
+                <div class="hero-spark"><Sparkline Values="D.FreqTrace" Stroke="var(--accent)" Min="@SparkMinHz" Max="@SparkMaxHz" Width="240" Height="64" /><span>frequency</span></div>
+            }
+        </div>
+
+        <div class="panel-grid four">
+            <div class="mini"><span class="mv">@D.SpinEnergyMwh.ToString("N0")</span><span class="ml">Spinning energy MWh</span></div>
+            <div class="mini @(Math.Abs(D.SurplusMw) > 200 ? "warnv" : "")"><span class="mv">@D.SurplusMw.ToString("+#,0;-#,0;0")</span><span class="ml">Torque gap MW</span></div>
+            <div class="mini"><span class="mv">@D.StressPercent.ToString("0")%</span><span class="ml">Shaft stress</span></div>
+            <div class="mini @(Math.Abs(D.TimeErrorSeconds) > 10 ? "alarm" : "")"><span class="mv">@D.TimeErrorSeconds.ToString("0.00")</span><span class="ml">Grid time error s @(D.Fast ? "fast" : "slow")</span></div>
+        </div>
+
+        @* ===== MECHANICAL INSTRUMENT BANK - the four dials + the commanded-vs-delivered torque gap ===== *@
+        <div class="card">
+            <div class="card-h">MECHANICAL INSTRUMENTS - speed, torque in &amp; out, and how hard it's shoved</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+                @* GRID SPEED: 2970-3030 rpm at 50 Hz (the 49.5-50.5 Hz statutory band; N273: the band about the case's own
+                   nominal, so 3570-3630 rpm for a 60 Hz case). Amber outside the operational band, red at the extremes. *@
+                <Gauge Value="D.Rpm" Minimum="@RpmMin" Maximum="@RpmMax"
+                       AmberFrom="0.70" RedFrom="0.95" AmberTo="0.30" RedTo="0.05"
+                       Caption="GRID SPEED" Unit="RPM" ValueText="@RpmText" Width="152" Height="140" />
+                <Gauge Value="D.TorqueCmdMnm" Minimum="0" Maximum="200"
+                       AmberFrom="0.80" RedFrom="0.92"
+                       Caption="TORQUE COMMANDED" Unit="MN.m" ValueText="@CmdMnmText" Width="152" Height="140" />
+                <Gauge Value="D.TorqueActMnm" Minimum="0" Maximum="200"
+                       AmberFrom="0.80" RedFrom="0.92"
+                       Caption="TORQUE DELIVERED" Unit="MN.m" ValueText="@ActMnmText" Width="152" Height="140" />
+                <Gauge Value="D.StressPercent" Minimum="0" Maximum="100"
+                       AmberFrom="0.40" RedFrom="0.70"
+                       Caption="STRESS - how hard it's shoved" Unit="% of safe shove" ValueText="@StressHubText" Width="152" Height="140" />
+            </div>
+            <div style="display:flex;align-items:baseline;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+                <span class="card-eyebrow" style="margin:0">TORQUE GAP</span>
+                <b class="@DivClass()" style="font-size:1.35em;font-variant-numeric:tabular-nums">@D.TorqueDivMnm.ToString("+0.00;-0.00;0.00")</b>
+                <span class="muted-note" style="margin:0">MN.m | = @D.SurplusMw.ToString("+#,0;-#,0;0") MW | @D.DivNote</span>
+            </div>
+            <div class="muted-note">Commanded torque holds exactly 50.00 Hz (demand + losses); delivered adds the governor-droop surplus. The gap is why the speed rides off 50 - P = T x omega.</div>
+        </div>
+
+        @* ===== RECENT HISTORY - speed &amp; voltage sparklines (120-sample; buffers cleared on replay discontinuity) ===== *@
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">SPEED - recent (120 samples)</div>
+                @if (D.FreqTrace.Count > 1)
+                {
+                    <Sparkline Values="D.FreqTrace" Stroke="var(--accent)" Width="300" Height="44" />
+                }
+                <div class="muted-note">grid speed tracks frequency - @D.Rpm.ToString("0") rpm | @D.FrequencyHz.ToString("0.000") Hz</div>
+            </div>
+            @if (!Raw)
+            {
+                <div class="card">
+                    <div class="card-h">VOLTAGE - recent (120 samples)</div>
+                    @if (D.VoltTrace.Count > 1)
+                    {
+                        <Sparkline Values="D.VoltTrace" Stroke="var(--series-volt)" Width="300" Height="44" />
+                    }
+                    <div class="muted-note">demand-weighted average - @D.AvgVoltagePu.ToString("0.000") pu | @D.VoltDevPercent.ToString("+0.0;-0.0;0.0")%</div>
+                </div>
+            }
+        </div>
+
+        @if (!Raw)
+        {
+            <div class="panel-grid">
+                <div class="card">
+                    <div class="card-h">BANKED DIVERGENCE &amp; REGEN</div>
+                    <div class="stat-row"><span>Accumulated error</span><b>@D.AccumHzS.ToString("+0.0;-0.0;0.0") Hz.s</b></div>
+                    <div class="stat-row"><span>Grid time error</span><b>@D.TimeErrorSeconds.ToString("0.00") s @(D.Fast ? "fast" : "slow")</b></div>
+                    <div class="stat-row"><span>Harvestable over-spin</span><b>@D.RegenMwh.ToString("N0") MWh</b></div>
+                    <div class="stat-row"><span>Value @@ GBP 80/MWh (assumed)</span><b>GBP @D.RegenMoneyGbp.ToString("N0")</b></div>
+                </div>
+                <div class="card">
+                    <div class="card-h">GRID BATTERY (500 MW / 1 GWh)</div>
+                    <div class="stat-row"><span>Power</span><b class="@BessClass()">@BessPower()</b></div>
+                    <div class="stat-row"><span>Mode</span><b class="@BessClass()">@D.BessMode</b></div>
+                    <div class="stat-row"><span>State of charge</span><b>@D.BessSocPercent.ToString("0")%</b></div>
+                    <div class="marginbar"><span style="width:@Pct(D.BessSocPercent/100)"></span></div>
+                    <div class="stat-row"><span>Cycled today</span><b>@D.BessMovedMwh.ToString("N0") MWh</b></div>
+                </div>
+            </div>
+        }
+
+        @* ===== ELECTRICAL INSTRUMENT BANK - solve-only (per-bus voltage/reactive/taps); hidden in raw ===== *@
+        @if (!Raw)
+        {
+        <div class="card">
+            <div class="card-h">ELECTRICAL INSTRUMENTS - voltage, reactive balance, tap position, regulation strain</div>
+            <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+                @* SYSTEM VOLTAGE: 0.94-1.06 pu (statutory band). Amber outside ~+/-0.04 pu, red at the extremes. *@
+                <Gauge Value="D.AvgVoltagePu" Minimum="0.94" Maximum="1.06"
+                       AmberFrom="0.70" RedFrom="0.90" AmberTo="0.30" RedTo="0.10"
+                       Caption="SYSTEM VOLTAGE" Unit="pu" ValueText="@VoltPuText" Width="152" Height="140" />
+                <Gauge Value="D.QProducedMvar" Minimum="0" Maximum="QScaleMax"
+                       AmberFrom="0.80" RedFrom="0.92"
+                       Caption="REACTIVE GENERATED" Unit="MVAr" ValueText="@QGenHubText" Width="152" Height="140" />
+                <Gauge Value="D.TapAvgOffNomPercent" Minimum="-10" Maximum="10"
+                       AmberFrom="0.75" RedFrom="0.90" AmberTo="0.25" RedTo="0.10"
+                       Caption="AVG TAP POSITION" Unit="% off nominal" ValueText="@TapPosText" Width="152" Height="140" />
+                <Gauge Value="RegStress" Minimum="0" Maximum="100"
+                       AmberFrom="0.40" RedFrom="0.70"
+                       Caption="REGULATION STRESS" Unit="% of safe travel" ValueText="@RegStressHubText" Width="152" Height="140" />
+            </div>
+        </div>
+
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">SYSTEM VOLTAGE</div>
+                <div class="stat-row"><span>Average</span><b>@D.AvgVoltagePu.ToString("0.000") pu | @D.VoltDevPercent.ToString("+0.0;-0.0;0.0")%</b></div>
+                <div class="stat-row"><span>Spread</span><b>@D.MinVoltagePu.ToString("0.000") - @D.MaxVoltagePu.ToString("0.000") pu</b></div>
+                @if (D.VoltTrace.Count > 1)
+                {
+                    <div style="margin-top:8px"><Sparkline Values="D.VoltTrace" Stroke="var(--series-volt)" Width="260" Height="34" /></div>
+                }
+            </div>
+            <div class="card">
+                <div class="card-h">REACTIVE BALANCE</div>
+                <div class="stat-row"><span>Produced</span><b>@D.QProducedMvar.ToString("N0") MVAr</b></div>
+                <div class="stat-row"><span>Absorbed</span><b>@D.QAbsorbedMvar.ToString("N0") MVAr</b></div>
+                <div class="stat-row"><span>Net</span><b>@D.QNetMvar.ToString("+#,0;-#,0;0") MVAr @(Math.Abs(D.QNetMvar) < 1 ? "balanced" : D.QNetMvar > 0 ? "surplus" : "deficit")</b></div>
+                <div class="stat-row"><span>OLTC fleet</span><b>@D.TapCount taps | @D.TapAvgOffNomPercent.ToString("+0.0;-0.0;0.0")% off nominal | @D.TapsAtLimit at limit@(D.TapsSettled ? "" : D.TapsAtLimitOutOfBand > 0 ? $"; NOT SETTLED ({D.TapsAtLimitOutOfBand} out of range, bus out of band)" : "; NOT SETTLED (taps still moving)")</b></div>
+            </div>
+        </div>
+        }
+
+        <div class="panel-grid">
+            <div class="card">
+                <div class="card-h">FUEL IN (torque source)</div>
+                <table class="grid">
+                    <tbody>
+                        @foreach (MachineStreamDto s in D.FuelIn)
+                        {
+                            <tr>
+                                <td><span class="swatch" style="--c:@s.Color"></span>@s.Name</td>
+                                <td class="r">@s.Gw.ToString("0.00") GW</td>
+                                <td class="r"><div class="minibar"><span style="width:@Pct(s.SharePercent/100);--c:@s.Color"></span></div>@s.SharePercent.ToString("0")%</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (!Raw)
+            {
+            <div class="card">
+                <div class="card-h">THE SHAFT - voltage layers</div>
+                <table class="grid">
+                    <thead><tr><th>Tier</th><th class="r">Gen GW</th><th class="r">Buses</th><th class="r">Live kV</th><th class="r">Dev</th></tr></thead>
+                    <tbody>
+                        @foreach (MachineLayerDto l in D.Layers)
+                        {
+                            <tr>
+                                <td>@l.Label</td>
+                                <td class="r">@l.Gw.ToString("0.0")</td>
+                                <td class="r">@l.BusCount</td>
+                                <td class="r">@l.KvActual.ToString("0")</td>
+                                <td class="r">@l.KvDevPercent.ToString("+0.0;-0.0;0.0")%</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+
+    // N273 (October 2026, stream B2; Ruling R1: Mark delegated EE calls 2026-10-04): the sparkline (+/-0.3 Hz) and the speed
+    // gauge (the statutory band as a two-pole speed) about the case's own nominal; 49.7 - 50.3 Hz and 2970 - 3030 rpm at
+    // 50 Hz, exactly as before (60 x 49.5 is exactly 2970, 60 x 50.5 exactly 3030).
+    [Parameter] public double NominalHz { get; set; } = GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
+    private double SparkMinHz => GridSim.Core.Dynamics.FrequencyBands.GbEdgeAbout(49.7, NominalHz);
+    private double SparkMaxHz => GridSim.Core.Dynamics.FrequencyBands.GbEdgeAbout(50.3, NominalHz);
+    private double RpmMin => 60.0 * GridSim.Core.Dynamics.FrequencyBands.ForNominal(NominalHz).StatutoryLowHz;
+    private double RpmMax => 60.0 * GridSim.Core.Dynamics.FrequencyBands.ForNominal(NominalHz).StatutoryHighHz;
+    // RAW replay: no solve, so the electrical half (voltage / reactive / taps / shaft layers) and the stateful
+    // banked-divergence / regen / BESS economics are hidden. The mechanical half - speed, torque, spin, fuel-in -
+    // is all frequency/demand/mix-derived and stays.
+    [Parameter] public bool Raw { get; set; }
+    private MachineDto? D => Frame?.Machine;
+    // Additive instrument-dial fields (regulation strain) the shared MachineDto can't carry.
+    private MachineViewDto? V => Frame?.MachineView;
+    private double RegStress => V?.RegStressPercent ?? 0;
+    // Adaptive reactive-dial scale (parity with WPF MachineVm.QScaleMax): headroom above produced Mvar, 500-stepped.
+    private double QScaleMax => D is null ? 2000 : Math.Max(2000, Math.Ceiling(D.QProducedMvar * 1.2 / 500) * 500);
+    private string DivClass() => D is null ? "" : D.SurplusMw > 200 ? "txt-warn" : D.SurplusMw < -200 ? "txt-bad" : "";
+    // Dial hub texts (no-arg to sidestep nested quotes in Razor attributes); only rendered when D is non-null.
+    private string RpmText => D!.Rpm.ToString("0");
+    private string CmdMnmText => D!.TorqueCmdMnm.ToString("0");
+    private string ActMnmText => D!.TorqueActMnm.ToString("0");
+    private string StressHubText => $"{D!.StressPercent:0}%";
+    private string VoltPuText => D!.AvgVoltagePu.ToString("0.000");
+    private string QGenHubText => D!.QProducedMvar.ToString("#,0");
+    private string TapPosText => D!.TapAvgOffNomPercent.ToString("+0.0;-0.0;0.0");
+    private string RegStressHubText => $"{RegStress:0}%";
+    private static string Pct(double f) => $"{Math.Clamp(f, 0, 1) * 100:0.##}%";
+    private string BessPower() => D is null ? "" : D.BessMw > 10 ? $"{D.BessMw:0} MW in" : D.BessMw < -10 ? $"{-D.BessMw:0} MW out" : "holding";
+    private string BessClass() => D is null ? "" : D.BessMode == "CHARGING" ? "imp" : D.BessMode == "DISCHARGING" ? "exp" : "";
+}

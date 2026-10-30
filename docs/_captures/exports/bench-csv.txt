@@ -1,0 +1,7 @@
+$ head -n 5 results/exports-docs/bench.csv
+engine,case,buses,gens,branches,conv,iters,mismatch,mean_ms,runs,commit
+cpu-dense,case14,14,5,20,True,2,1.316E-010,32.72,1,98048023
+cpu-dense,case18,18,1,17,True,4,5.969E-014,7.37,1,98048023
+cpu-dense,pglib_opf_case3_lmbd,3,3,3,False,100,6.763E+000,18.39,1,98048023
+cpu-dense,case9 (WSCC),9,3,9,True,4,1.646E-014,32.16,1,98048023
+[exit 0]

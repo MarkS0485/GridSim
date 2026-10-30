@@ -1,0 +1,17 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "earthWire",
+  "title": "Earth wire (asset overlay)",
+  "description": "Phase 5a asset overlay kind. The overhead earth wire (shield wire) of a line route. Carried beside the model, never used by the solver: the line's zero-sequence values r0Pu and x0Pu stay the authored ones.",
+  "params": {
+    "count": { "type": "integer", "unit": "1", "min": 1, "required": true, "description": "Number of earth wires strung on the route.", "codeDefaults": [] },
+    "bondedAtBothEnds": { "type": "boolean", "required": false, "description": "True when the earth wire is bonded to the station earth at both ends.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "conductor": { "target": "record", "required": false, "recordKinds": ["conductorType"], "description": "The earth wire conductor." }
+    },
+    "parentKinds": ["lineRoute"],
+    "parentRequired": true
+  }
+}

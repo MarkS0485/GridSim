@@ -1,0 +1,6 @@
+$ python -c "import json;m=json.load(open('results/exports/case14-solve.json'))['model'];print(m['baseMva']);[print(json.dumps(b)) for b in m['branches'] if (b['from'],b['to']) in {(1,2),(4,7)}];print(json.dumps(m['buses'][8]))"
+100
+{"from": 1, "to": 2, "r": 0.01938, "x": 0.05917, "b": 0.0528, "tap": 1, "phaseShiftDeg": 0, "rateAMva": 0, "isTransformer": false, "inService": true, "r0": 0, "x0": 0, "fromNeutralXPu": 0, "toNeutralXPu": 0}
+{"from": 4, "to": 7, "r": 0, "x": 0.20912, "b": 0, "tap": 0.978, "phaseShiftDeg": 0, "rateAMva": 0, "isTransformer": true, "inService": true, "r0": 0, "x0": 0, "fromNeutralXPu": 0, "toNeutralXPu": 0}
+{"id": 9, "type": "Pq", "baseKv": 0, "pd": 29.5, "qd": 16.6, "gs": 0, "bs": 19, "vm": 1.056}
+[exit 0]

@@ -1,0 +1,10 @@
+$ gridsim estimate case9 --measurements docs/_captures/estimation/case9-telemetry-thin.json --out results/formats/estimate-thin
+
+=== WLS state estimate: case9 ===
+  status: Unobservable   iterations: 0   max |dx|: Infinity
+  measurements: 13   states: 17   redundancy (dof): -4
+  observability: UNOBSERVABLE
+    free state directions: Vm@bus 5, Vm@bus 7, Vm@bus 8, Vm@bus 9
+
+  -> results\formats\estimate-thin
+[exit 3]

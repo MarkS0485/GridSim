@@ -1,0 +1,19 @@
+$ sed -n '646,662p' results/formats/uk-solve.json
+    "branches": [
+      {
+        "from": 1,
+        "to": 2,
+        "r": 0.01,
+        "x": 0.1,
+        "b": 0.06,
+        "tap": 1,
+        "phaseShiftDeg": 0,
+        "rateAMva": 4000,
+        "name": "L1-2 N-S Scotland",
+        "isTransformer": false,
+        "inService": true,
+        "r0": 0,
+        "x0": 0,
+        "fromNeutralXPu": 0,
+        "toNeutralXPu": 0
+[exit 0]

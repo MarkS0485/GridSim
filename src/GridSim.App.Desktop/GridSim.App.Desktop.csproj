@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GridSim.App.Desktop (UI programme, Phase 0.4): the desktop head of the cross-platform app. It only starts
+       GridSim.App's App on Windows, Linux or macOS through Avalonia.Desktop's platform detection. Plain net10.0 with no
+       RuntimeIdentifier here, so it builds on every CI leg; the per-RID publish (win-x64/arm64, osx-arm64/x64,
+       linux-x64/arm64) comes with the desktop release work (Phase 2).
+       It must never reference GridSim.Wpf, GridSim.Web, GridSim.Gda or GridSim.Gpu (AppProjectReferenceTests).
+       Version: set once for every project in Directory.Build.props (F02); do not add one here. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.App.Desktop</RootNamespace>
+    <AssemblyName>GridSim.App.Desktop</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <!-- Avalonia's desktop backends do not use the built-in COM interop; leaving it off keeps the app trimmable. -->
+    <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
+  </PropertyGroup>
+
+  <!-- Pinned exactly, the same version as GridSim.App's Avalonia packages; listed in THIRD-PARTY-NOTICES.md with every
+       transitive dependency (the platform backends, SkiaSharp and HarfBuzzSharp native assets). -->
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.22" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.App\GridSim.App.csproj" />
+  </ItemGroup>
+
+  <!-- F07: the licence and the third-party notices ship with every build and publish. -->
+  <ItemGroup>
+    <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+</Project>

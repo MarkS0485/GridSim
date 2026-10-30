@@ -1,0 +1,23 @@
+$ gridsim chain case118 --mode daily --steps 12 --bess nmc:10:10:20:0.8 --policy price --prices synthetic
+GridSim - storage time series  *  case118  *  12 x 2 h  *  mode=daily  *  policy=price
+prices: Synthetic GB-shaped price day (not a market record).  Chemistry presets are CuratedPlaceholder [VERIFY] (representative cells).
+
+| Step | Hour | Load x | Demand MW | Price | NMC 10MW/20MWh @10: MW / SoC / T deg C | Slack MW | Vmin | Conv |
+|---:|---:|---:|---:|---:|---|---:|---:|:-:|
+| 0 | 0.0 | 0.700 | 2969 | 45 |     0.0 / 0.800 / 25.0 | 333 | 0.952 | y |
+| 1 | 2.0 | 0.627 | 2659 | 45 |     0.0 / 0.800 / 25.0 | 293 | 0.952 | y |
+| 2 | 4.0 | 0.600 | 2545 | 46 |     0.0 / 0.800 / 25.0 | 279 | 0.952 | y |
+| 3 | 6.0 | 0.627 | 2659 | 59 |     0.0 / 0.800 / 25.0 | 293 | 0.952 | y |
+| 4 | 8.0 | 0.700 | 2969 | 79 |     0.0 / 0.800 / 25.0 | 333 | 0.952 | y |
+| 5 | 10.0 | 0.800 | 3394 | 53 |     0.0 / 0.800 / 25.0 | 391 | 0.950 | y |
+| 6 | 12.0 | 0.900 | 3818 | 28 |    -1.8 / 0.950 / 27.7 (SoC ceiling) | 453 | 0.943 | y |
+| 7 | 14.0 | 0.973 | 4128 | 30 |    -0.0 / 0.950 / 27.3 (SoC ceiling) | 496 | 0.943 | y |
+| 8 | 16.0 | 1.000 | 4242 | 73 |     0.0 / 0.950 / 26.9 | 514 | 0.943 | y |
+| 9 | 18.0 | 0.973 | 4128 | 129 |     9.6 / 0.050 / 28.0 (SoC floor) | 487 | 0.943 | y |
+| 10 | 20.0 | 0.900 | 3818 | 80 |     0.0 / 0.050 / 27.6 | 451 | 0.943 | y |
+| 11 | 22.0 | 0.800 | 3394 | 47 |     0.0 / 0.050 / 27.2 | 391 | 0.950 | y |
+
+NMC 10MW/20MWh @10: out 19.3 MWh, in 3.7 MWh, aux 0.52 MWh, stored change -16.5 MWh, round trip 95.4 %, 0.58 equivalent full cycles, revenue GBP 2352
+    ageing over the run: calendar 0.1975 %, cycle 0.0033 % (rainflow, depth-aware: 0.0027 %), deepest cycle 90 % SoC
+[chain] done -> results\chain-storage-case118.md
+[exit 0]

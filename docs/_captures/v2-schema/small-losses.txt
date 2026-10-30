@@ -1,0 +1,18 @@
+$ gridsim losses docs/_captures/v2-schema/inputs/small/small.case.json
+Loss allocation - Small v2 example (3 buses, 3 branches)
+  Total losses: 1.73 MW  (reactive: -12.28 MVAr)
+  Reconciliation residual: -1.07E-013 MW
+
+  Zone losses:
+  | Zone | P Loss MW | Q Loss MVAr | Branches |
+  |------|----------:|------------:|---------:|
+  | Other | 1.73 | -12.28 | 3 |
+
+  Top 20 branch losses:
+  | Branch | From | To | P Loss MW | Q Loss MVAr | Loading % | Type |
+  |--------|-----:|---:|----------:|------------:|----------:|------|
+  | L2-3 | 2 | 3 | 0.853 | -1.283 | 33.4 | line |
+  | L1-3 | 1 | 3 | 0.848 | -1.338 | 28.9 | line |
+  | L1-2 | 1 | 2 | 0.034 | -9.662 | 8.4 | line |
+note: small.case.json: import 'gridsim.placeholder.site.SMR' from 'library/placeholders/unmodelled-sites.json' resolved to gridsim.placeholder.site.SMR@1 (the highest revision there).
+[exit 0]

@@ -1,0 +1,18 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "conductorType",
+  "title": "Conductor type (asset overlay)",
+  "description": "Phase 5a asset overlay kind. A conductor (phase conductor or earth wire) as a catalogue item, pointed at by spans and earth wires. Carried beside the model, never used by the solver: a line's r, x and b stay the authored per-unit values.",
+  "params": {
+    "code": { "type": "string", "required": false, "description": "The catalogue or code name (for example Zebra).", "codeDefaults": [] },
+    "material": { "type": "enum", "values": ["aac", "aaac", "acsr", "accc", "copper", "steel", "other"], "required": false, "description": "Conductor construction.", "codeDefaults": [] },
+    "crossSectionMm2": { "type": "number", "unit": "mm2", "min": 0, "required": true, "description": "Total conducting cross-section, square millimetres.", "codeDefaults": [] },
+    "diameterMm": { "type": "number", "unit": "mm", "min": 0, "required": false, "description": "Overall diameter, millimetres.", "codeDefaults": [] },
+    "dcResistanceOhmPerKm": { "type": "number", "unit": "ohm/km", "min": 0, "required": false, "description": "DC resistance at 20 degC, ohms per kilometre.", "codeDefaults": [] },
+    "ratedCurrentA": { "type": "number", "unit": "A", "min": 0, "required": false, "description": "Continuous current rating, amperes.", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {},
+    "parentKinds": []
+  }
+}

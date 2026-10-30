@@ -1,0 +1,15 @@
+$ gridsim estimate case14 --measurements docs/_captures/estimation/case14-planted.json --prior solve --backfill-removals --out results/case14-planted-bf
+  prior: measured-injection solve converged (3 iters); the set has no voltage-schedule rows, so nothing was replaced; used as the warm start
+
+=== WLS state estimate: case14 ===
+  status: Converged   iterations: 15   max |dx|: 2.89E-009
+  measurements: 122   states: 27   redundancy (dof): 94
+  observability: observable (rank 27/27)
+  consistency: J = 149.88 vs chi2(95%) = 117.63 -> FAIL
+  removed bad data (pass 0): VmPu @ bus 9  rN = 18.3
+  removed bad data (pass 1): PInjMw @ bus 4  rN = 14.2
+  removed bad data (pass 2): PFlowMw @ branch 2->3 (from)  rN = 14.2
+
+  -> results\case14-planted-bf
+warning: the measured-injection prior solve puts Vm at 1.0190 to 1.1022 pu, outside the 0.90 to 1.10 pu band. Its voltages enter as prior-solved rows, so a chi-square PASS cannot vouch for the voltage level: check the injection rows (missing interconnector or unallocated generation), or run with --prior flat.
+[exit 0]

@@ -1,0 +1,14 @@
+$ gridsim chain case9 --steps 3 --bess lfp:5:5:10 --policy idle
+GridSim - storage time series  *  case9  *  3 x 0.5 h  *  mode=fixed  *  policy=idle
+prices: none.  Chemistry presets are CuratedPlaceholder [VERIFY] (representative cells).
+
+| Step | Hour | Load x | Demand MW | Price | LFP 5MW/10MWh @5: MW / SoC / T deg C | Slack MW | Vmin | Conv |
+|---:|---:|---:|---:|---:|---|---:|---:|:-:|
+| 0 | 0.0 | 1.000 | 315 | - |     0.0 / 0.500 / 25.0 | 72 | 0.996 | y |
+| 1 | 0.5 | 1.000 | 315 | - |     0.0 / 0.500 / 25.0 | 72 | 0.996 | y |
+| 2 | 1.0 | 1.000 | 315 | - |     0.0 / 0.500 / 25.0 | 72 | 0.996 | y |
+
+LFP 5MW/10MWh @5: out 0.0 MWh, in 0.0 MWh, aux 0.02 MWh, stored change +0.0 MWh, round trip -, 0.00 equivalent full cycles
+    ageing over the run: calendar 0.0250 %, cycle 0.0000 % (rainflow, depth-aware: 0.0000 %), deepest cycle 0 % SoC
+[chain] done -> results\chain-storage-case9.md
+[exit 0]

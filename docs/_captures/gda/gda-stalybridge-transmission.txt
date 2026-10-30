@@ -1,0 +1,14 @@
+$ head -12 results/gda-stalybridge/transmission.json
+[
+  {
+    "name": "BUXT3-HINL3 33kV",
+    "from": 0,
+    "to": 1,
+    "rPu": 0.03679005968778696,
+    "xPu": 0.12069960973370063,
+    "bPu": 5.4728784E-05,
+    "ratingMva": 484,
+    "circuits": 1
+  },
+  {
+[exit 0]

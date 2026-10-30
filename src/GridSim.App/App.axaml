@@ -1,0 +1,20 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="GridSim.App.App"
+             RequestedThemeVariant="Dark">
+  <!-- UI programme Phase 1.1: the Fluent theme in its dark variant (GridSim is dark only, as the WPF app is), with the
+       control-room palette (Theme/Palette.axaml) and styles (Theme/ControlRoom.axaml) ported from the WPF Theme.xaml
+       on top. The palette is an application resource, so every window and every later page finds the WPF brush names
+       ({StaticResource Accent}, {StaticResource Panel} and the rest). -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://GridSim.App/Theme/Palette.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://GridSim.App/Theme/ControlRoom.axaml" />
+  </Application.Styles>
+</Application>

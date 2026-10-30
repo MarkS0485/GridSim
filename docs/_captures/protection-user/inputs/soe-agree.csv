@@ -1,0 +1,4 @@
+at_s,device,from,to,description
+0.10,50,6,8,instantaneous trip, line 6-8
+0.35,50,28,8,instantaneous trip, line 8-28
+0.60,27,0,0,undervoltage at bus 8

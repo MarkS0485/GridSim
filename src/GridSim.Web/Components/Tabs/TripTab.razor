@@ -1,0 +1,224 @@
+@using GridSim.Core.Dynamics
+@using GridSim.Core.Frequency
+@using GridSim.Web.Projection
+@using TripWhatIf = GridSim.Core.Presentation.TripWhatIf
+@using ExactInputMemo = GridSim.Core.Presentation.ExactInputMemo
+
+@if (Frame is null)
+{
+    <div class="stub">Waiting for first frame...</div>
+}
+else
+{
+    <div class="tabpage">
+        <div class="trip-controls">
+            <label>Credible loss
+                <select @onchange="OnLoss">
+                    @foreach (double mw in Losses)
+                    {
+                        <option value="@mw" selected="@(Math.Abs(_lossMw - mw) < 1)">@mw.ToString("N0") MW</option>
+                    }
+                </select>
+            </label>
+            <label>TSGB device
+                <select @onchange="OnMode">
+                    <option value="none" selected="@(_mode == "none")">None (baseline only)</option>
+                    <option value="auto" selected="@(_mode == "auto")">Auto-size to limits</option>
+                    <option value="manual" selected="@(_mode == "manual")">Manual</option>
+                </select>
+            </label>
+            @if (_mode == "manual")
+            {
+                <label>Synthetic inertia
+                    <input type="number" min="0" step="500" value="@_manualInertiaMwS" @onchange="OnManualInertia" /> MW.s
+                </label>
+                <label>Fast response
+                    <input type="number" min="0" step="100" value="@_manualFfrMw" @onchange="OnManualFfr" /> MW
+                </label>
+            }
+            <span class="trip-ctx">system @( (InertiaMwS/1000).ToString("0.0") ) GVA.s | demand @Frame.Headline.DemandMw.ToString("N0") MW</span>
+        </div>
+
+        <div class="panel-grid four">
+            <div class="mini @Grade(_base, false)"><span class="mv">@_base.InitialRocofHzPerS.ToString("0.000")</span><span class="ml">Baseline RoCoF Hz/s</span></div>
+            <div class="mini @Grade(_base, true)"><span class="mv">@_base.NadirHz.ToString("0.00")</span><span class="ml">Baseline nadir Hz</span></div>
+            @if (_device is not null)
+            {
+                <div class="mini @Grade(_device, false)"><span class="mv">@_device.InitialRocofHzPerS.ToString("0.000")</span><span class="ml">With TSGB RoCoF Hz/s</span></div>
+                <div class="mini @Grade(_device, true)"><span class="mv">@_device.NadirHz.ToString("0.00")</span><span class="ml">With TSGB nadir Hz</span></div>
+            }
+            else
+            {
+                <div class="mini"><span class="mv">@BaseAssess.Summary</span><span class="ml">Assessment</span></div>
+                <div class="mini @(BaseAssess.LfddAtRisk ? "alarm" : "")"><span class="mv">@(BaseAssess.LfddAtRisk ? "AT RISK" : "SECURE")</span><span class="ml">LFDD (@FrequencyBands.Label(Bands.LfddFirstStageHz) Hz)</span></div>
+            }
+        </div>
+
+        <div class="card grow">
+            <div class="card-h">FREQUENCY RESPONSE - @_lossMw.ToString("N0") MW loss at t=1s</div>
+            @RenderChart()
+            <div class="chart-legend">
+                <span class="lg base">* Baseline</span>
+                @if (_device is not null) { <span class="lg dev">* With TSGB device</span> }
+                <span class="lg ref">- @FrequencyBands.Label(Bands.StatutoryLowHz) Hz statutory | @FrequencyBands.Label(Bands.LfddFirstStageHz) Hz LFDD</span>
+            </div>
+        </div>
+
+        @if (_sizing is not null)
+        {
+            <div class="card device-card">
+                @* R148 (B4, 2026-10): the one pair of sizing targets (TripWhatIf); it said "0.5 Hz/s & 49.5 Hz" (literals). *@
+                <div class="card-h">TSGB DEVICE SIZING - to hold @TripWhatIf.SizingTargetsText(Bands)</div>
+                <div class="panel-grid four">
+                    <div class="stat-row"><span>Synthetic inertia</span><b>@_sizing.SyntheticInertiaMwS.ToString("N0") MW.s</b></div>
+                    <div class="stat-row"><span>Fast response</span><b>@_sizing.FastResponseMw.ToString("N0") MW</b></div>
+                    <div class="stat-row"><span>Achieved RoCoF</span><b>@_sizing.AchievedRocofHzPerS.ToString("0.000") Hz/s</b></div>
+                    <div class="stat-row"><span>Achieved nadir</span><b>@_sizing.AchievedNadirHz.ToString("0.00") Hz</b></div>
+                </div>
+                @* R254: the sizer's search is bounded; when even its largest size cannot hold the nadir target, say so. *@
+                @if (!_sizing.Feasible)
+                {
+                    <p class="muted-note">Not achieved: the nadir target is not met even at the largest size searched.</p>
+                }
+                <p class="muted-note">@Verdict()</p>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public FrameEnvelope? Frame { get; set; }
+
+    /// <summary>N297 (B4, October 2026; Ruling R1: Mark delegated EE calls 2026-10-04): the session case's nominal
+    /// frequency (SimSession.NominalHz). The what-if swing runs at it and grades against the GB bands about it
+    /// (FrequencyBands), so case9 (60 Hz) agrees with CLI `trip`. Default 50 Hz: every GB case exactly as before.</summary>
+    [Parameter] public double NominalHz { get; set; } = FrequencyLimits.NominalHz;
+
+    private FrequencyBands Bands => FrequencyBands.ForNominal(NominalHz);
+
+    private static readonly double[] Losses = { 1000, 1320, 1800, 3000, 3600 };
+    private double _lossMw = 1800;
+    private string _mode = "auto";
+    private double _manualInertiaMwS = 3000;
+    private double _manualFfrMw = 800;
+
+    private FrequencyResponse _base = default!;
+    private FrequencyResponse? _device;
+    private TsgbSizing? _sizing;
+
+    private double InertiaMwS => (Frame?.Headline.InertiaGvaS ?? 0) * 1000.0;
+    private double Demand => Frame?.Headline.DemandMw ?? 0;
+    private FrequencyAssessment BaseAssess => FrequencyLimits.Assess(_base, FrequencyLimits.ActiveRocofLimitHzPerS, Bands);
+
+    protected override void OnParametersSet() => Recompute();
+
+    private void OnLoss(ChangeEventArgs e) { _lossMw = ParseD(e, _lossMw); Recompute(); }
+    private void OnMode(ChangeEventArgs e) { _mode = e.Value?.ToString() ?? "none"; Recompute(); }
+    private void OnManualInertia(ChangeEventArgs e) { _manualInertiaMwS = ParseD(e, _manualInertiaMwS); Recompute(); }
+    private void OnManualFfr(ChangeEventArgs e) { _manualFfrMw = ParseD(e, _manualFfrMw); Recompute(); }
+
+    /// <summary>R131 (stream P, October 2026): the exact inputs of the last completed run (see ExactInputMemo).</summary>
+    private readonly ExactInputMemo _memo = new();
+
+    private void Recompute()
+    {
+        if (Frame is null) return;
+
+        // R131 (stream P, October 2026): OnParametersSet runs on every Dashboard render (each live frame and each 4 s
+        // presence heartbeat), and auto mode sizes the device with TsgbSizer (up to 52 swing simulations) plus two more
+        // swings. Everything below is a pure function of these seven inputs, so when every one is the same to the bit as at
+        // the last completed run, the results already held are exactly what a new run would give, and the run is skipped.
+        // (Not rounded to display precision, as the finding suggested: that could show results of other inputs.)
+        double inertiaIn = InertiaMwS, demandIn = Demand;
+        if (_memo.IsUnchanged(_mode, inertiaIn, demandIn, _lossMw, _manualInertiaMwS, _manualFfrMw, NominalHz)) return;
+        RecomputeNow();
+        _memo.Remember(_mode, inertiaIn, demandIn, _lossMw, _manualInertiaMwS, _manualFfrMw, NominalHz);
+    }
+
+    /// <summary>The computation itself, unchanged (it was the body of Recompute before R131).</summary>
+    private void RecomputeNow()
+    {
+        double inertia = Math.Max(1, InertiaMwS);
+        var evt = new[] { new FrequencyEvent(1.0, -_lossMw) };
+        // N297: the swing runs at the case's nominal (a default config at 50 Hz, the config it always used).
+        DynamicsConfig cfg = TripWhatIf.StudyConfig(NominalHz);
+        _base = FrequencyDynamics.Simulate(inertia, Demand, evt, cfg);
+
+        _device = null; _sizing = null;
+        if (_mode == "auto")
+        {
+            // R148 (B4, October 2026; Ruling R1): the one pair of sizing targets every what-if surface uses
+            // (TripWhatIf: 0.125 Hz/s and the statutory low edge). Before: 0.5 Hz/s and 49.5 Hz, literals, while the TSGB
+            // card and the desktop sized the same loss to 0.125 Hz/s.
+            _sizing = TsgbSizer.SizeForTargets(inertia, Demand, _lossMw,
+                TripWhatIf.SizingMaxRocofHzPerS, TripWhatIf.SizingMinNadirHz(Bands), cfg);
+            _device = FrequencyDynamics.Simulate(inertia, Demand, evt,
+                cfg with { DeviceRotationalInertiaMwS = _sizing.SyntheticInertiaMwS, FastResponseMw = _sizing.FastResponseMw });
+        }
+        else if (_mode == "manual")
+        {
+            _device = FrequencyDynamics.Simulate(inertia, Demand, evt,
+                cfg with { DeviceRotationalInertiaMwS = _manualInertiaMwS, FastResponseMw = _manualFfrMw });
+        }
+    }
+
+    private static double ParseD(ChangeEventArgs e, double fallback) =>
+        double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out double v) ? v : fallback;
+
+    // R148 / N297: the shared grade cuts (TripWhatIf), against the bands about the case's nominal. Before: the literals
+    // 48.8 / 49.5 Hz and 1.0 / 0.5 Hz/s.
+    private string Grade(FrequencyResponse r, bool nadir) => TripWhatIf.CssClass(
+        nadir ? TripWhatIf.GradeNadir(r.NadirHz, Bands) : TripWhatIf.GradeRocof(r.InitialRocofHzPerS));
+
+    private string Verdict()
+    {
+        if (_device is null) return "";
+        bool baseRisk = BaseAssess.LfddAtRisk;
+        var da = FrequencyLimits.Assess(_device, FrequencyLimits.ActiveRocofLimitHzPerS, Bands);
+        return baseRisk && !da.LfddAtRisk
+            ? $"Baseline breaches LFDD ({_base.NadirHz:0.00} Hz); a TSGB device of {_sizing?.SyntheticInertiaMwS:N0} MW.s synthetic inertia + {_sizing?.FastResponseMw:N0} MW fast response holds the nadir at {_device.NadirHz:0.00} Hz - LFDD avoided."
+            : $"Baseline nadir {_base.NadirHz:0.00} Hz; with the device {_device.NadirHz:0.00} Hz.";
+    }
+
+    // ---- inline SVG frequency chart -----------------------------------------
+    private RenderFragment RenderChart() => builder =>
+    {
+        if (_base?.Points is null || _base.Points.Count == 0) return;
+        const double W = 1000, H = 300, padL = 44, padB = 22, padT = 8, padR = 8;
+        double dur = _base.Points[^1].Time.Subtract(_base.Points[0].Time).TotalSeconds;
+        if (dur <= 0) dur = 30;
+        // N297: the scale and the reference lines about the case's nominal (48.5 - 50.3 Hz and the 49.5 / 48.8 / 50.0
+        // lines at 50 Hz, exactly as before).
+        FrequencyBands bands = Bands;
+        double fMin = FrequencyBands.GbEdgeAbout(48.5, NominalHz), fMax = FrequencyBands.GbEdgeAbout(50.3, NominalHz);
+        double fStat = bands.StatutoryLowHz, fLfdd = bands.LfddFirstStageHz, fNom = bands.NominalHz;
+        string lStat = FrequencyBands.Label(fStat), lLfdd = FrequencyBands.Label(fLfdd), lNom = fNom.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        double X(double t) => padL + t / dur * (W - padL - padR);
+        double Y(double f) => padT + (fMax - f) / (fMax - fMin) * (H - padT - padB);
+
+        string Path(IReadOnlyList<FrequencyPoint> pts)
+        {
+            var sb = new System.Text.StringBuilder();
+            int step = Math.Max(1, pts.Count / 300);
+            for (int i = 0; i < pts.Count; i += step)
+            {
+                double t = pts[i].Time.Subtract(pts[0].Time).TotalSeconds;
+                sb.Append(i == 0 ? 'M' : 'L').Append(X(t).ToString("0.#")).Append(' ').Append(Y(pts[i].Hz).ToString("0.#")).Append(' ');
+            }
+            return sb.ToString();
+        }
+
+        builder.AddMarkupContent(0, $@"
+        <svg viewBox='0 0 {W} {H}' class='freqchart' preserveAspectRatio='none'>
+          <line x1='{X(0):0.#}' y1='{Y(fStat):0.#}' x2='{W - padR}' y2='{Y(fStat):0.#}' class='ref stat'/>
+          <line x1='{X(0):0.#}' y1='{Y(fLfdd):0.#}' x2='{W - padR}' y2='{Y(fLfdd):0.#}' class='ref lfdd'/>
+          <line x1='{X(0):0.#}' y1='{Y(fNom):0.#}' x2='{W - padR}' y2='{Y(fNom):0.#}' class='ref nom'/>
+          <text x='2' y='{Y(fNom) + 3:0.#}' class='axl'>{lNom}</text>
+          <text x='2' y='{Y(fStat) + 3:0.#}' class='axl'>{lStat}</text>
+          <text x='2' y='{Y(fLfdd) + 3:0.#}' class='axl'>{lLfdd}</text>
+          <path d='{Path(_base.Points)}' class='series base'/>
+          {(_device is not null ? $"<path d='{Path(_device.Points)}' class='series dev'/>" : "")}
+        </svg>");
+    };
+}

@@ -1,0 +1,14 @@
+$ gridsim stability gb-full --rms --fault-bus 35 --clear 150
+GridSim  -  RMS TRANSIENT STABILITY (salient/subtransient GENROU)  *  GB full (3539-bus, 5918-branch)
+==================================================================
+952 machines  *  6-state machines  *  field: held (no AVR)  *  GENROU params synthesised from X'd
+3293 converter-interfaced units  *  REGC_A/REEC-style current sources (K=2, reactive priority, LVACM)
+1072 power-flow-only + 1 zero-inertia units held as constant injections
+
+fault bus 35  *  cleared after 150 ms  *  STABLE (fleet stays in synchronism)  *  3.7 s
+law 9 (synchronism, scored from this run): HOLDS: largest rotor angle from the centre of inertia 49.1 deg (limit 180 deg, the out-of-step criterion); peak speed deviation 0.675 Hz, reported, not scored (no frequency band in a fault study)
+converters: 628 nodes, 369 in fault ride-through mid-fault, 628 recovered by 3 s; active power 23941 MW before, 23944 MW at 3 s
+
+Self-clearing 3-phase fault; the subtransient engine is validated (reduces to the classical CCT),
+but these GENROU parameters are synthesised from X'd - the result is INDICATIVE, not validated.
+[exit 0]

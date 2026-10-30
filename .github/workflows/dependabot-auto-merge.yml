@@ -1,0 +1,38 @@
+name: Dependabot auto-merge
+
+# As first written (no longer in force; see the next paragraph): once CI was green, patch and minor Dependabot
+# PRs merged themselves. Major bumps are left for a human to look at  -  flip the
+# `if` below to also include 'version-update:semver-major' to auto-merge those.
+#
+# `gh pr merge --auto` waits for the required "Build & test" check (configured in
+# branch protection), so nothing ever lands red.
+
+# Disabled as an automatic trigger (2026-10-04, N176): CI no longer runs on pull requests, so auto-merging a Dependabot
+# bump would land an untested dependency on main. Dependabot PRs are now reviewed and merged by hand after a local
+# batch run. This workflow can still be started by hand, but a hand start carries no pull_request event and the actor
+# is not dependabot[bot], so the job is skipped and merges nothing.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v3
+
+      - name: Enable auto-merge (patch & minor)
+        if: >
+          steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+          steps.meta.outputs.update-type == 'version-update:semver-minor'
+        # GR-434: the URL reaches the script as an environment variable, not interpolated into the script text.
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

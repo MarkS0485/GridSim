@@ -1,0 +1,2 @@
+Boundary attribution - IEEE 9-bus (WSCC) (9 buses)  [which generators supply each boundary transfer]
+  no boundaries defined for this case.

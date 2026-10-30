@@ -1,0 +1,11 @@
+$ sed -n '1056,1064p' results/formats/uk-solve.json
+    "oltcs": [
+      {
+        "transformer": "T1 GSP N Scotland",
+        "controlsBus": 101,
+        "targetVpu": 1,
+        "minTap": 0.9,
+        "maxTap": 1.1,
+        "stepPu": 0.0125,
+        "deadbandPu": 0.01
+[exit 0]

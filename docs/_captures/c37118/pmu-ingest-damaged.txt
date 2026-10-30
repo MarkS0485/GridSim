@@ -1,0 +1,13 @@
+$ gridsim pmu-ingest docs/_captures/c37118/two-pmu-damaged.bin
+PMU INGEST - docs/_captures/c37118/two-pmu-damaged.bin  [IEEE C37.118.2 capture, 648 bytes]   [EXPERIMENTAL]
+  5 frame(s): 1 CONFIG (0 bad CRC), 4 DATA (2 decoded, 1 bad CRC, 0 malformed, 1 before any CONFIG), 0 other
+  configuration: 2 PMU(s), TIME_BASE 1000000, DATA_RATE 50
+  | PMU | IDCODE | phasors | samples | first (UTC) | last (UTC) | freq min Hz | freq max Hz | STAT non-zero | dropped |
+  |-----|--------|---------|---------|-------------|------------|-------------|-------------|---------------|---------|
+  | STN_A | 101 | 2 | 2 | 2023-11-14T22:13:21.000000Z | 2023-11-14T22:13:21.020000Z | 50.0100 | 50.0100 | 0 | 0 |
+  | STN_B | 102 | 1 | 2 | 2023-11-14T22:13:21.000000Z | 2023-11-14T22:13:21.020000Z | 50.0150 | 50.0150 | 2 | 2 |
+  aligned instants: 2 (2 with a PMU missing)
+  quality: 2 sample(s) dropped and not used (2 invalid data (STAT bits 15-14), 0 unsynchronised (STAT bit 13, time quality or unlocked time), 0 with an unreliable frame time (FRACSEC time quality))
+pmu-ingest: 2 DATA frame(s) could not be decoded (1 bad CRC, 0 malformed, 1 before any CONFIG); they are counted, not used.
+pmu-ingest: 2 PMU sample(s) dropped by the STAT / time-quality rule (2 invalid data, 0 unsynchronised, 0 unreliable frame time); they are counted, not used.
+[exit 3]

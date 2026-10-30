@@ -1,0 +1,49 @@
+/* RP1-specific layout: gauge rows, the struck-through fiction, and the clickable drill-down rows.
+   Colour tokens only - no inline hex (WebPalette owns value-driven colour elsewhere). */
+
+.gauge-wrap { display: flex; justify-content: center; padding: 4px 0 2px; }
+
+.gauge-row {
+    display: flex;
+    gap: var(--sp-3);
+    justify-content: space-around;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    padding: 2px 0;
+}
+
+/* the 1,800 MW convention the design basis supersedes */
+.fiction { text-decoration: line-through; color: var(--muted); font-weight: 600; }
+
+.muted-v { color: var(--muted); }
+
+/* the binding side of the credible loss (unit vs group) reads bright; the other reads muted */
+b.bind { color: var(--ink); }
+
+/* credible-loss group row rendered as a full-width drill button */
+.loss-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: var(--sp-3);
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--edge);
+    padding: 7px 0;
+    margin: 0;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.loss-line span { color: var(--muted); }
+.loss-line b { color: var(--bad); font-variant-numeric: tabular-nums; }
+.loss-line b.muted-v { color: var(--muted); }
+.loss-line:hover { background: var(--panel-hi); }
+
+/* clickable table rows (inertia-by-source, interconnector fleet) */
+tr.clickable { cursor: pointer; }
+tr.clickable:hover { background: var(--panel-hi); }
+tr.corr td:first-child { border-left: 2px solid var(--bad); }
+.chev { color: var(--muted); width: 1em; }

@@ -1,0 +1,11 @@
+$ gridsim stability case9 --rms --clear 400
+GridSim  -  RMS TRANSIENT STABILITY (salient/subtransient GENROU)  *  WSCC-9
+==================================================================
+3 machines  *  6-state machines  *  field: held (no AVR)  *  GENROU params synthesised from X'd
+
+fault bus 7  *  cleared after 400 ms  *  STABLE (fleet stays in synchronism)  *  0.1 s
+law 9 (synchronism, scored from this run): HOLDS: largest rotor angle from the centre of inertia 79.3 deg (limit 180 deg, the out-of-step criterion); peak speed deviation 1.241 Hz, reported, not scored (no frequency band in a fault study)
+
+Self-clearing 3-phase fault; the subtransient engine is validated (reduces to the classical CCT),
+but these GENROU parameters are synthesised from X'd - the result is INDICATIVE, not validated.
+[exit 0]

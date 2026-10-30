@@ -1,0 +1,17 @@
+$ gridsim emt case14 --duration 0.1 --freq 50 --probe v:5 --out emt-settle
+emt: 2 floating node(s) pinned at 0 V in the initial-condition solve.
+emt case14: 5,000 steps @ 20us, 1 factorization(s), peak |probe| 0.9098, 35 ms -> emt-settle
+[exit 0]
+
+$ awk -F, '!/^#/ && $1+0>0 {w=int($1/0.01); a=$2<0?-$2:$2; if(a>m[w])m[w]=a} END{for(i=0;i<10;i++)printf "%d-%d ms  %.4f\n", i*10,i*10+10,m[i]}' emt-settle/timeseries.csv
+0-10 ms  0.8988
+10-20 ms  0.9096
+20-30 ms  0.9098
+30-40 ms  0.9095
+40-50 ms  0.9098
+50-60 ms  0.9095
+60-70 ms  0.9098
+70-80 ms  0.9095
+80-90 ms  0.9098
+90-100 ms  0.9095
+[exit 0]

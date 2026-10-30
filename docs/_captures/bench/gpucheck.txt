@@ -1,0 +1,29 @@
+﻿$ gridsim gpucheck
+GridSim GPU preflight
+=====================
+CPU cores: 8   OS: Microsoft Windows 10.0.26200
+commit: 3f9d9be3
+
+[CPU] cpu   (vendor=Cpu)
+  CPU dense: build solver... solve case9... PASS  (4 it, 109.4 ms, |mis|=1.6E-014)
+  CPU sparse: build solver... solve case9... PASS  (4 it, 8.8 ms, |mis|=1.6E-014)
+
+[gpu] no usable rocm device found - falling back to the CPU backend.
+[ROCm] cpu (rocm requested but unavailable)   (vendor=Cpu)
+[ROCm] raw probe: ROCm unavailable: HIP runtime library (amdhip64) not found
+[ROCm]   not present - skipped.
+
+[gpu] no usable opencl device found - falling back to the CPU backend.
+[OpenCL] cpu (opencl requested but unavailable)   (vendor=Cpu)
+[OpenCL] raw probe: Intel(R) UHD Graphics [OpenCL] rejected: no usable FP64 (cl_khr_fp64) - GridSim needs double precision
+[OpenCL]   not present - skipped.
+
+[gpu] no usable cuda device found - falling back to the CPU backend.
+[CUDA] cpu (cuda requested but unavailable)   (vendor=Cpu)
+[CUDA] raw probe: no CUDA device available (ILGPU saw: [CPU, OpenCL]; driver probe: libcuda not found by .NET)
+[CUDA]   not present - skipped.
+
+Preflight done. A FAIL line names the failing call; if the process died mid-line, that call
+segfaulted (a P/Invoke signature mismatch) - send that last line and I'll fix the binding.
+
+[exit 0]

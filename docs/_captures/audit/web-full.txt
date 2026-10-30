@@ -1,0 +1,10 @@
+$ cd src/GridSim.Web/bin/Release/net10.0 && ASPNETCORE_ENVIRONMENT=Production ASPNETCORE_URLS=http://127.0.0.1:5540 GridSim__ReplayOnly=false dotnet GridSim.Web.dll
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/"
+200 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/api/cases"
+200 
+$ curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" "http://127.0.0.1:5540/api/openapi.json"
+200 
+$ curl -s http://127.0.0.1:5540/api/cases | head -c 120
+[{"id":"case9","label":"IEEE 9-bus (WSCC) - ground truth","kind":"BuiltIn","replay":false},{"id":"case14","label":"IEEE 
+[exit 0]

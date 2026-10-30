@@ -1,0 +1,15 @@
+$ gridsim chain case9 --steps 3 --bess lfp:5:20000:40000:0.95 --shave-high -30000 --shave-low -40000
+GridSim - storage time series  *  case9  *  3 x 0.5 h  *  mode=fixed  *  policy=peak-shave
+prices: none.  Chemistry presets are CuratedPlaceholder [VERIFY] (representative cells).
+
+| Step | Hour | Load x | Demand MW | Price | LFP 20000MW/40000MWh @5: MW / SoC / T deg C | Slack MW | Vmin | Conv |
+|---:|---:|---:|---:|---:|---|---:|---:|:-:|
+| 0 | 0.0 | 1.000 | 315 | - | 20000.0 / 0.720 / 26.9 | - | - | N |
+| 1 | 0.5 | 1.000 | 315 | - | 20000.0 / 0.488 / 28.8 | - | - | N |
+| 2 | 1.0 | 1.000 | 315 | - | 20000.0 / 0.253 / 30.0 | - | - | N |
+
+LFP 20000MW/40000MWh @5: out 30000.0 MWh, in 0.0 MWh, aux 73.54 MWh, stored change -31136.6 MWh, round trip -, 0.38 equivalent full cycles
+    ageing over the run: calendar 0.0316 %, cycle 0.0013 % (rainflow, depth-aware: 0.0010 %), deepest cycle 70 % SoC
+WARNING: 3 step(s) did not converge.
+[chain] done -> results\chain-storage-case9.md
+[exit 3]

@@ -1,0 +1,14 @@
+$ head -n 12 results/exports-docs/emt/timeseries.csv
+# GridSim  -  2026-10-04 14:30:31 UTC
+# code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     emt case14 dt=20us dur=0.05s src=bus1 amp=1 freq=50Hz rule=Trapezoidal
+t_seconds,v:1,i:1->2
+0,0,0
+2E-05,0.999980261,0.105867021
+4E-05,0.999921044,0.210673229
+[exit 0]

@@ -1,0 +1,179 @@
+@using System.Globalization
+@using GridSim.Web.Sessions
+
+<div class="transport">
+    <button class="tbtn" @onclick="TogglePlay">@(_session.Playing ? "|| Pause" : "> Play")</button>
+    @if (!_session.IsRaw)
+    {
+        <button class="tbtn" @onclick="Step">>| Step</button>
+    }
+
+    <label class="tspeed">
+        Speed
+        <select @onchange="OnSpeed">
+            @foreach (double s in Speeds)
+            {
+                <option value="@s" selected="@(Math.Abs(_session.Fps - s) < 0.001)">@(s)x</option>
+            }
+        </select>
+    </label>
+
+    @if (!_session.IsReplay && !_session.IsBridge)
+    {
+        <label class="tspeed tstep" title="Integration timestep the live sim advances each step - a fine dt watches RoCoF/nadir in slow motion">
+            Step
+            <select @onchange="OnStepMinutes">
+                @foreach ((string Label, double Minutes) opt in StepSizes)
+                {
+                    <option value="@opt.Minutes.ToString("R", System.Globalization.CultureInfo.InvariantCulture)"
+                            selected="@(Math.Abs(_session.StepMinutes - opt.Minutes) < 1e-9)">@opt.Label</option>
+                }
+            </select>
+        </label>
+    }
+
+    @if (_session.IsReplay)
+    {
+        <div class="tscrub">
+            <input type="range" min="0" max="1000" value="@ScrubValue" @oninput="OnScrub" />
+            <span class="tframe">@_session.ReplayIndex / @Math.Max(0, _session.ReplayCount - 1)</span>
+        </div>
+    }
+    else if (_session.IsRaw)
+    {
+        @* Time selection: pick any instant in the available range (2014-2026), and scrub across it. Both seek the
+           raw replay to that wall-clock instant (the bridge re-starts the 1-second stream from there). The date
+           input binds a STABLE field (_rawPick) so the per-second stream can't reset it mid-interaction. *@
+        <label class="tdatelbl" title="Jump the replay to any date/time in the available data">
+            <input type="datetime-local" class="tdate"
+                   min="@RawBound(_session.RawMin)" max="@RawBound(_session.RawMax)"
+                   value="@_rawPick" @onchange="OnRawDate" />
+        </label>
+        <div class="tscrub traw">
+            <input type="range" min="0" max="1000" value="@RawScrubValue" @onchange="OnRawScrub"
+                   title="Scrub across the available data" />
+        </div>
+        @* Live system time of the frame on screen (updates every tick, to the second). *@
+        <span class="tsystime" title="System time of the frame on screen (UTC)">@RawAtLabel</span>
+    }
+    else if (_session.CanTrip)
+    {
+        @* Only a live in-process feed can be tripped. A bridge presolved/estimated/live stream used to reach this
+           branch too, where the button silently did nothing (SimSession.Trip only acts on a LiveSim) - R303. *@
+        <button class="tbtn trip" @onclick="() => Trip(1000)">Trip 1 GW</button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public SimSession Session { get; set; } = default!;
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private SimSession _session => Session;
+    // Raw replay mixes cadences (1 s frequency vs 30 min settlement data), so higher speeds are offered to make
+    // the half-hourly channels step often instead of feeling frozen. Capped at 60 (SimSession.SetSpeed clamp).
+    private static readonly double[] Speeds = { 0.5, 1, 2, 4, 8, 15, 30, 60 };
+
+    // Integration timestep options (label, minutes), 1 ms -> 20 min, mirroring the WPF transport picker.
+    private static readonly (string Label, double Minutes)[] StepSizes =
+    {
+        ("1 ms",   1.0 / 60000.0),
+        ("100 ms", 100.0 / 60000.0),
+        ("1 s",    1.0 / 60.0),
+        ("10 s",   10.0 / 60.0),
+        ("1 min",  1.0),
+        ("5 min",  5.0),
+        ("20 min", 20.0),
+    };
+
+    private int ScrubValue => _session.ReplayCount > 1
+        ? (int)Math.Round(1000.0 * _session.ReplayIndex / (_session.ReplayCount - 1))
+        : 0;
+
+    private async Task TogglePlay()
+    {
+        if (_session.Playing) _session.Pause(); else _session.Play();
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task Step()
+    {
+        _session.StepOnce();
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnSpeed(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out double fps))
+            _session.SetSpeed(fps);
+        await OnChanged.InvokeAsync();
+    }
+
+    private async Task OnStepMinutes(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out double minutes))
+            _session.SetStepMinutes(minutes);
+        await OnChanged.InvokeAsync();
+    }
+
+    private void OnScrub(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int v))
+            _session.SeekFraction(v / 1000.0);
+    }
+
+    // ---- raw replay transport: time selection + scrub across the /meta range (2014-2026) ----
+
+    /// <summary>Format a UTC instant for a datetime-local input (min/max/value), or empty if unknown.</summary>
+    private static string RawBound(DateTime? dt) =>
+        dt is DateTime d ? d.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture) : "";
+
+    // The date-picker's value is a STABLE field, seeded once from the first raw frame and thereafter changed ONLY by
+    // a user pick or scrub - never by the per-second stream (which, bound directly, reset the input every tick and
+    // made the picker impossible to use). The live position is shown by the system-time readout + the scrubber thumb.
+    private string? _rawPick;
+
+    protected override void OnParametersSet()
+    {
+        if (_rawPick is null && _session.IsRaw && _session.RawAt is DateTime at)
+            _rawPick = RawBound(at);
+    }
+
+    // Full instant of the frame on screen, to the SECOND, updated every tick - "exactly what am I looking at".
+    private string RawAtLabel =>
+        _session.RawAt is DateTime d ? d.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture) : "-";
+
+    /// <summary>Scrubber thumb position (0..1000) = where RawAt sits in the RawMin..RawMax range.</summary>
+    private int RawScrubValue
+    {
+        get
+        {
+            if (_session.RawMin is not DateTime lo || _session.RawMax is not DateTime hi ||
+                _session.RawAt is not DateTime at || hi <= lo) return 0;
+            double frac = (at - lo).TotalSeconds / (hi - lo).TotalSeconds;
+            return (int)Math.Clamp(Math.Round(frac * 1000.0), 0, 1000);
+        }
+    }
+
+    private void OnRawScrub(ChangeEventArgs e)
+    {
+        if (_session.RawMin is not DateTime lo || _session.RawMax is not DateTime hi || hi <= lo) return;
+        if (!int.TryParse(e.Value?.ToString(), out int v)) return;
+        DateTime target = lo.AddSeconds(v / 1000.0 * (hi - lo).TotalSeconds);
+        _rawPick = RawBound(target);        // reflect the scrub in the date-picker
+        _session.SeekTo(target);
+    }
+
+    private void OnRawDate(ChangeEventArgs e)
+    {
+        if (!DateTime.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTime dt)) return;
+        if (_session.RawMin is DateTime lo && dt < lo) dt = lo;   // clamp into the available range
+        if (_session.RawMax is DateTime hi && dt > hi) dt = hi;
+        _rawPick = RawBound(dt);
+        _session.SeekTo(dt);
+    }
+
+    private void Trip(double mw) => _session.Trip(mw);
+}

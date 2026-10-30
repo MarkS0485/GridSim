@@ -1,0 +1,3 @@
+$ gridsim case9 --once --enableExport=results/exports-docs/solve-export.json
+[export] dense-newton: converged=True iters=4 maxMis=1.65E-014  ->  results\exports-docs\solve-export.json
+[exit 0]

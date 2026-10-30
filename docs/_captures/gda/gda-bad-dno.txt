@@ -1,0 +1,3 @@
+$ gridsim gda --root $GDA_ROOT --dno foo
+error: --dno expected 'nged', 'ukpn' or 'npg' but got 'foo'
+[exit 2]

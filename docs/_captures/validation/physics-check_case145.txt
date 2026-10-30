@@ -1,0 +1,17 @@
+$ gridsim physics-check case145
+Physics-law audit  -  case145  (145 buses, converged=True, tol 1.0E-006 MVA = BaseMva 100 x 1e-8)
+| # | law | status | residual | unit | detail |
+|---|-----|--------|----------|------|--------|
+| 1 | Conservation of energy | Holds | 0.00E+000 | MW | independent dissipation 74802.589870 MW (branch -1829.8883 + shunt 76632.4782) vs reported loss 74802.589870 MW |
+| 2 | Ohm's law | Holds | 6.27E-012 | MVA | independent per-branch flow vs solver-reported line flow |
+| 3 | Joule heating | Holds | 1.46E-011 | MW | total network loss 74802.589870 MW vs reported 74802.589870 MW |
+| 4 | Faraday induction | Constitutive | - | - | embodied in transformer tap ratio and generator EMF E' = V + jX'I; no field model to check |
+| 5 | Ampere's law (passivity) | Violated | 2.80E+002 | MW | NON-PASSIVE branch in the model: most-negative branch loss -2.80E+002 MW (R < 0 in the data) |
+| 6 | Kirchhoff's current law | Holds | 1.35E-007 | MW | network real injection vs specified, at constrained buses |
+| 7 | Kirchhoff's voltage law | Holds | 0.00E+000 | V | structural: nodal voltages are single-valued potentials, so every loop sum vanishes identically |
+| 8 | Complex power S = V I* | Holds | 1.35E-007 | MVA | same residual as law 6, reactive component included at 96 PQ bus(es), by the bus types the solve ended with; 1 of them declared PV and solved as PQ (1 held at a reactive limit and checked against that limit, 0 with no generator) |
+| 9 | AC phase & frequency synchronism | NotApplicable | - | Hz | NOT SCORED: steady-state snapshot at 50 Hz with no trajectory; law 9 is scored only when a dynamics caller supplies a SynchronismSample: stability --clear (classical or --rms) scores it from its own run, no steady-state verb or export does |
+| 10 | Gauss's law / Coulomb | NotModeled | - | - | field/geometry law outside a positive-sequence phasor model; not represented |
+
+GATE: PASS  -  state is physically admissible (all hard laws hold).
+[exit 0]

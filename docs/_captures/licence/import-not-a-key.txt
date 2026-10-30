@@ -1,0 +1,3 @@
+$ gridsim --importLicence docs/_captures/licence/inputs/not-a-key.gridsim
+error: Licence key rejected: licence key is not valid base64
+[exit 2]

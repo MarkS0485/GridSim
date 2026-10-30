@@ -1,0 +1,21 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "span",
+  "title": "Span (asset overlay)",
+  "description": "Phase 5a asset overlay kind. One span of a line route, from one tower to the next, placed by chainage along the route or by the geographic position of its far tower (or both). Carried beside the model, never used by the solver.",
+  "params": {
+    "lengthM": { "type": "number", "unit": "m", "min": 0, "required": true, "description": "Span length, metres.", "codeDefaults": [] },
+    "chainageM": { "type": "number", "unit": "m", "min": 0, "required": false, "description": "Chainage of the span's start along the route, metres.", "codeDefaults": [] },
+    "sagM": { "type": "number", "unit": "m", "min": 0, "required": false, "description": "Conductor sag at the design temperature, metres.", "codeDefaults": [] },
+    "latitudeDeg": { "type": "number", "unit": "deg", "min": -90, "max": 90, "required": false, "description": "Latitude of the tower at the span's far end, degrees north (WGS84).", "codeDefaults": [] },
+    "longitudeDeg": { "type": "number", "unit": "deg", "min": -180, "max": 180, "required": false, "description": "Longitude of the tower at the span's far end, degrees east (WGS84).", "codeDefaults": [] }
+  },
+  "overlay": {
+    "refs": {
+      "conductor": { "target": "record", "required": false, "recordKinds": ["conductorType"], "description": "The phase conductor strung in this span." },
+      "tower": { "target": "record", "required": false, "recordKinds": ["towerType"], "description": "The design of the tower at the span's far end." }
+    },
+    "parentKinds": ["lineRoute"],
+    "parentRequired": true
+  }
+}

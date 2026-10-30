@@ -1,0 +1,4 @@
+$ gridsim emt case14 --dt-us 20 --duration 0.05 --source 1 --amp 1 --freq 50 --event fault:5@0.02:0.01 --out results/exports-docs/emt
+emt case14: 2,500 steps @ 20us, 3 factorization(s), peak |probe| 6.903, 15 ms -> results/exports-docs/emt
+emt: 2 floating node(s) pinned at 0 V in the initial-condition solve.
+[exit 0]

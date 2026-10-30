@@ -1,0 +1,3 @@
+$ gridsim estimate case9 --synth --phaseangle 7:10.7275:2024-03-01T12:00:00Z:50.0 --out results/err
+error: --phaseangle-ref auto: no observation at the slack bus 1, so the datum bus 7 needs its present-state angle as an anchor. Add --prior solve (or --warm-start), or include the slack bus among the observations.
+[exit 2]

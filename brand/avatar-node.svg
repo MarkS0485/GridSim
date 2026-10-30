@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="tileGlow" cx="38%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#15304a"/><stop offset="55%" stop-color="#0c1620"/><stop offset="100%" stop-color="#080B10"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="r"><rect width="400" height="400" rx="88"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="400" height="400" fill="url(#tileGlow)"/>
+    <g stroke="#16202B" stroke-width="1">
+      <line x1="0" y1="100" x2="400" y2="100"/><line x1="0" y1="200" x2="400" y2="200"/><line x1="0" y1="300" x2="400" y2="300"/>
+      <line x1="100" y1="0" x2="100" y2="400"/><line x1="200" y1="0" x2="200" y2="400"/><line x1="300" y1="0" x2="300" y2="400"/>
+    </g>
+    <g fill="none" stroke-width="13" stroke-linecap="round">
+      <path d="M92 300 L92 176 L200 116" stroke="#3FA9F5"/>
+      <path d="M200 116 L308 176 L308 300" stroke="#00B8D4"/>
+      <path d="M92 176 L200 200 L308 176" stroke="#9B0056"/>
+      <path d="M200 200 L200 284" stroke="#EE7C0E"/>
+    </g>
+    <g>
+      <circle cx="92" cy="300" r="15" fill="#0A0E13" stroke="#3FA9F5" stroke-width="7"/>
+      <circle cx="308" cy="300" r="15" fill="#0A0E13" stroke="#00B8D4" stroke-width="7"/>
+      <circle cx="92" cy="176" r="13" fill="#0A0E13" stroke="#9B0056" stroke-width="7"/>
+      <circle cx="308" cy="176" r="13" fill="#0A0E13" stroke="#9B0056" stroke-width="7"/>
+      <circle cx="200" cy="284" r="14" fill="#0A0E13" stroke="#EE7C0E" stroke-width="7"/>
+      <circle cx="200" cy="200" r="13" fill="#0A0E13" stroke="#F3C13A" stroke-width="7"/>
+      <circle cx="200" cy="116" r="24" fill="#2FD27F" opacity=".16" filter="url(#soft)"/>
+      <circle cx="200" cy="116" r="17" fill="#2FD27F"/><circle cx="200" cy="116" r="7" fill="#0A0E13"/>
+    </g>
+  </g>
+</svg>

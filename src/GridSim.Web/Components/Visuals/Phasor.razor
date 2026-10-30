@@ -1,0 +1,99 @@
+@* A machine's operating point as a phasor disc: a unit voltage reference at 0 deg and the current
+   phasor swung off it by the power-factor angle phi = atan2(Q, P). Lagging (Q>0, exporting VArs)
+   drops below the axis in amber; leading (Q<0, absorbing) rides above in cyan. Faithful inline-SVG
+   port of GridSim.Wpf.Visuals.Phasor. Screen y grows down, so the current angle is drawn as -phi. *@
+
+<svg viewBox="0 0 @F(_w) @F(_h)" width="@F(Width)" height="@F(Height)"
+     class="phasor" preserveAspectRatio="xMidYMid meet">
+    <circle cx="@F(_cx)" cy="@F(_cy)" r="@F(_r)" class="disc" fill="none" />
+    <line x1="@F(_cx - _r)" y1="@F(_cy)" x2="@F(_cx + _r)" y2="@F(_cy)" class="axis" />
+    <line x1="@F(_cx)" y1="@F(_cy - _r)" x2="@F(_cx)" y2="@F(_cy + _r)" class="axis" />
+
+    @* voltage reference vector along +x *@
+    @{ var v = Vector(0, _r * 0.92); }
+    <line x1="@F(_cx)" y1="@F(_cy)" x2="@F(v.Tx)" y2="@F(v.Ty)" class="vref" />
+    <line x1="@F(v.Tx)" y1="@F(v.Ty)" x2="@F(v.B1x)" y2="@F(v.B1y)" class="vref" />
+    <line x1="@F(v.Tx)" y1="@F(v.Ty)" x2="@F(v.B2x)" y2="@F(v.B2y)" class="vref" />
+    <text x="@F(_cx + _r * 0.92 + 2)" y="@F(_cy - 8)" class="vref-t" text-anchor="start" dominant-baseline="hanging">V</text>
+
+    @* current vector at -phi *@
+    @{ var iv = Vector(-_phi, _iLen); }
+    <line x1="@F(_cx)" y1="@F(_cy)" x2="@F(iv.Tx)" y2="@F(iv.Ty)" class="@_iClass" />
+    <line x1="@F(iv.Tx)" y1="@F(iv.Ty)" x2="@F(iv.B1x)" y2="@F(iv.B1y)" class="@_iClass" />
+    <line x1="@F(iv.Tx)" y1="@F(iv.Ty)" x2="@F(iv.B2x)" y2="@F(iv.B2y)" class="@_iClass" />
+    <text x="@F(iv.Tx + (Math.Cos(-_phi) >= 0 ? 4 : -14))" y="@F(iv.Ty - 8)" class="@(_iClass + "-t")"
+          text-anchor="start" dominant-baseline="hanging">I</text>
+
+    @if (Math.Abs(_phi) > 0.02)
+    {
+        <path d="@PhiArc()" class="phi-arc" fill="none" />
+    }
+
+    <text x="@F(_cx)" y="@F(_cy - _r - 13)" class="muted-t" text-anchor="middle" dominant-baseline="hanging">@_degLabel</text>
+    <text x="@F(_cx)" y="@F(_cy + _r + 2)" class="@(_stateClass + "-t")" text-anchor="middle" dominant-baseline="hanging">@_stateLabel</text>
+    <text x="@F(_cx)" y="@F(_cy + _r + 16)" class="pf-t" text-anchor="middle" dominant-baseline="hanging">PF @_pf.ToString("F3", CultureInfo.InvariantCulture)</text>
+</svg>
+
+@code {
+    /// <summary>Real power, MW (active component along the reference axis).</summary>
+    [Parameter] public double P { get; set; }
+    /// <summary>Reactive power, MVAr - signed: positive exports VArs (lagging), negative absorbs (leading).</summary>
+    [Parameter] public double Q { get; set; }
+    /// <summary>Apparent-power scale for the current vector; leave 0 to auto-scale to |S|.</summary>
+    [Parameter] public double SMax { get; set; }
+    [Parameter] public double Width { get; set; } = 200;
+    [Parameter] public double Height { get; set; } = 200;
+
+    private double _w, _h, _r, _cx, _cy;
+    private double _phi, _iLen, _pf;
+    private bool _lagging, _leading;
+    private string _iClass = "vref", _stateClass = "muted", _stateLabel = "", _degLabel = "";
+
+    protected override void OnParametersSet()
+    {
+        _w = Width;
+        _h = Height;
+        _r = Math.Min(_w, _h) / 2 - 14;
+        _cx = _w / 2;
+        _cy = _h / 2;
+
+        double p = P, q = Q;
+        double s = Math.Sqrt(p * p + q * q);
+        _phi = Math.Atan2(q, p);                 // +ve = lagging
+        _lagging = q > 1e-6;
+        _leading = q < -1e-6;
+        _pf = s > 1e-6 ? Math.Abs(p) / s : 1.0;
+
+        double scale = SMax > 1e-6 ? SMax : Math.Max(s, 1e-6);
+        _iLen = Math.Clamp(s / scale, 0.12, 1.0) * _r;
+
+        _iClass = _leading ? "lead" : _lagging ? "lag" : "vref";
+        _stateClass = _leading ? "lead" : _lagging ? "lag" : "muted";
+        _stateLabel = _leading ? "LEADING (absorbing VArs)"
+                    : _lagging ? "LAGGING (exporting VArs)"
+                    : "UNITY (no VArs)";
+        _degLabel = $"phi {(Math.Abs(_phi) * 180 / Math.PI).ToString("F1", CultureInfo.InvariantCulture)} deg";
+    }
+
+    private (double Tx, double Ty, double B1x, double B1y, double B2x, double B2y) Vector(double ang, double len)
+    {
+        double tx = _cx + Math.Cos(ang) * len, ty = _cy + Math.Sin(ang) * len;
+        const double head = 8, spread = 0.42;
+        return (tx, ty,
+            tx - Math.Cos(ang - spread) * head, ty - Math.Sin(ang - spread) * head,
+            tx - Math.Cos(ang + spread) * head, ty - Math.Sin(ang + spread) * head);
+    }
+
+    private string PhiArc()
+    {
+        double r = _r * 0.34;
+        double a0 = 0, a1 = -_phi;
+        double x0 = _cx + Math.Cos(a0) * r, y0 = _cy + Math.Sin(a0) * r;
+        double x1 = _cx + Math.Cos(a1) * r, y1 = _cy + Math.Sin(a1) * r;
+        // lagging (a1<a0) sweeps counter-clockwise on screen -> sweep-flag 0
+        int sweep = a1 < a0 ? 0 : 1;
+        return $"M {F(x0)} {F(y0)} A {F(r)} {F(r)} 0 0 {sweep} {F(x1)} {F(y1)}";
+    }
+
+    private static string F(double d) => d.ToString("0.###", CultureInfo.InvariantCulture);
+}

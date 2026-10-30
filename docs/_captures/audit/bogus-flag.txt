@@ -1,0 +1,3 @@
+$ gridsim estimate case14 --synth --bogusflag --audit-log results/ch26-bogus.log
+error: unknown flag '--bogusflag' (misspelled?). Run 'gridsim estimate --help' for the flags estimate takes, or see docs/manual/0019 CLI reference.md.
+[exit 2]

@@ -1,0 +1,10 @@
+$ gridsim pf docs/_captures/v2-schema/inputs/small/small.case.json
+Power flow - Small v2 example (3 buses)
+  converged in 3 iteration(s), mismatch 6.90E-010 pu   losses 1.734 MW / -12.283 MVAr
+  voltage range 0.9811 - 1.0000 pu
+  lowest voltages:
+      bus 3      0.9811 pu     -3.205 deg
+      bus 1      1.0000 pu      0.000 deg
+      bus 2      1.0000 pu     -0.473 deg
+note: small.case.json: import 'gridsim.placeholder.site.SMR' from 'library/placeholders/unmodelled-sites.json' resolved to gridsim.placeholder.site.SMR@1 (the highest revision there).
+[exit 0]

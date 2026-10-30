@@ -1,0 +1,8 @@
+$ gridsim acopf uk --top 4
+ACOPF (DC dispatch + AC loss loop) - GB reduced (10-zone) (20 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+  converged in 4 iteration(s)  losses 86.735 MW  cost 710,366 GBP/h
+      gen bus 7       8,000.0 MW  @     1 GBP/MWh
+      gen bus 2       4,000.0 MW  @     1 GBP/MWh
+      gen bus 9       4,000.0 MW  @     1 GBP/MWh
+      gen bus 10      3,200.0 MW  @    10 GBP/MWh
+[exit 0]

@@ -1,0 +1,15 @@
+$ head -n 14 results/exports-docs/estimate-planted/hti-removals.csv
+# GridSim  -  2026-10-04 14:30:30 UTC
+# code:    git 98048023  |  GridSim.Core v1.95.154.0  |  build Release
+# runtime: .NET 10.0.12  X64  GC=Server
+# machine: LAPTOP  Microsoft Windows 10.0.26200
+# cpu:     X64  -  8 logical cores  -  8 GB RAM
+# simd:    Avx256  (4 doubles/step)  FMA=True
+# backend: cpu
+# run:     estimate  case=case14  measurements=122  source=docs/_captures/estimation/case14-planted.json
+# passes=2 total_iterations=10 stop_reason=ChiSquarePassed
+pass,kind,location,value,sigma,estimated_error,estimated_error_unit,estimated_error_measured,measured_unit,test_statistic
+1,VmPu,bus 9,0.97914697852390253,0.004,-0.076494769013954036,pu,-0.076494769013954036,pu,17.926056699398472
+1,PFlowMw,branch 2->3 (from),96.567423708461746,1.6,0.23807965107852658,pu_base_mva,23.80796510785266,MW,13.597861020478788
+1,PInjMw,bus 4,-17.94245975275534,1,0.2729273492373866,pu_base_mva,27.29273492373866,MW,7.2052784005971278
+[exit 0]

@@ -1,0 +1,9 @@
+$ cat results/exports-docs/inputs/costs.json
+{
+  "format": "gridsim-costs/1",
+  "generators": [
+    { "index": 1, "model": "polynomial", "coefficients": [0.11, 5, 150] },
+    { "index": 2, "model": "piecewiseLinear", "points": [[0, 0], [100, 2500], [163, 6000]] }
+  ]
+}
+[exit 0]

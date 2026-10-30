@@ -1,0 +1,28 @@
+$ gridsim h0-study --event gb-2019-08-09 --out results/exports-docs/h0-2019
+
+=== H=0 counterfactual: GB 9 Aug 2019 disturbance (Hornsea + Little Barford) ===
+  baseline gate: Reproduced   dP=1521 MW (first 5 s; 2768 MW over the whole event)   LFDD stage: 48.8 Hz
+  GFM class: gfm-vsm-study-2024   GFL class: gfl-wind-2024   (Ev is virtual control inertia, NEVER in real E)
+  GFM fraction realised by whole units: 0.25 -> 0.392, 0.50 -> 0.588, 0.75 -> 0.833
+
+  corner Best: cell = nadir Hz / verdict  (HELD=formed & clear of LFDD, LFDD=below stage, CASC=Loss-of-Mains cascade, NaN=un-formable)
+   scale\gfm |       0.00       0.25       0.50       0.75       1.00
+  -------------------------------------------------------------------
+        1.00 | 49.59 HELD 49.10 HELD 48.80 CASC 48.80 CASC 49.06 HELD
+        0.50 | 49.57 HELD 49.10 HELD 48.80 CASC 48.80 CASC 49.06 HELD
+        0.25 | 38.46 CASC 49.10 HELD 48.80 CASC 48.80 CASC 49.06 HELD
+        0.00 |   -    NaN 42.62 CASC 44.65 CASC 47.07 CASC 49.06 HELD
+
+  corner Worst: cell = nadir Hz / verdict  (HELD=formed & clear of LFDD, LFDD=below stage, CASC=Loss-of-Mains cascade, NaN=un-formable)
+   scale\gfm |       0.00       0.25       0.50       0.75       1.00
+  -------------------------------------------------------------------
+        1.00 | 49.49 HELD 48.80 CASC 48.54 CASC 47.91 CASC 48.80 CASC
+        0.50 | 49.45 HELD 48.80 CASC 48.51 CASC 47.85 CASC 48.80 CASC
+        0.25 | 21.27 CASC 48.80 CASC 48.50 CASC 47.85 CASC 48.80 CASC
+        0.00 |   -    NaN 32.50 CASC 37.90 CASC 43.88 CASC 48.80 CASC
+
+  11/40 cells HELD (formed, clear of LFDD); 2 forming-dependent (H=0, no grid-forming source).
+  Note: forming-dependent cells are expected DATA, not an error - the run still exits 0.
+
+  -> results\exports-docs\h0-2019
+[exit 0]

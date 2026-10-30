@@ -1,0 +1,3 @@
+$ gridsim stability case9 --pss
+error: --avr and --pss apply to the RMS engine only (add --rms).
+[exit 2]

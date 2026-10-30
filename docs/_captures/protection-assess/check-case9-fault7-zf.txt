@@ -1,0 +1,12 @@
+$ gridsim protection-check case9 --fault-bus 7 --zf 0.5
+Protection assessment  -  case9  (9 buses)  three-phase fault at bus 7, Zf=j0.500 pu  [passive; prefault solve unchanged]
+  fault current: 1.67 pu (0.28 kA)   Thevenin Z: 0.1098 pu
+  (generator subtransient reactance synthesised at 0.20 pu; positive-sequence, so three-phase only)
+  operating elements: 1
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 87 | Differential | bus 7 | 1.671 pu | 0.100 | inst | busbar differential 1.67E+000 pu at bus 7 exceeds the 0.10 pu bias pickup (internal fault) |
+  not evaluated without a trajectory or the needed sequence data: 81U (Underfrequency); 81O (Overfrequency); 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence)
+
+PROTECTION SIMULATION suggests 1 protection event(s) would occur. e.g. on bus 7, relay 87 (Differential) would likely operate: busbar differential 1.67E+000 pu at bus 7 exceeds the 0.10 pu bias pickup (internal fault).
+[exit 0]

@@ -1,0 +1,44 @@
+$ scratch numdemo (calls the library directly; source in numdemo-source.txt)
+case9 pass 1 iteration 1: Jacobian order 14, structural nnz 82 of 196 (41.8 %), numerically non-zero 78
+equation rows: P of buses [1,2,3,4,5,6,7,8], Q of buses [3,4,5,6,7,8] (0-based bus index)
+max |J_ij| = 40.17033317056342  pivot floor = 4.0170333170563415E-11
+RCM ordering q (pivot step k -> original column): 9 3 1 8 2 10 4 13 11 7 5 12 6 0
+pivot row p (pivot step k -> original row):   9 3 4 8 2 10 1 13 11 7 5 12 6 0
+nnz(L) incl. unit diagonal = 58, nnz(U) incl. pivots = 63, nnz(A) = 82, fill = 25
+k  col q[k]  pivot row  U(k,k)
+ 0      9          9  1.558293E+001
+ 1      3          3  1.676603E+001
+ 2      1          4  -1.749147E+001
+ 3      8          8  3.136122E+001
+ 4      2          2  3.345696E+001
+ 5     10         10  2.899530E+001
+ 6      4          1  1.315340E+001
+ 7     13         13  1.275242E+001
+ 8     11         11  1.982959E+001
+ 9      7          7  1.368418E+001
+10      5          5  1.627056E+001
+11     12         12  2.228041E+001
+12      6          6  2.104733E+001
+13      0          0  3.621179E+000
+sparse solve vs the iteration's recorded correction: max |diff| = 0.000E+000
+sparse solve vs dense LU solve: max |dx| = 1.726317E-001, max |diff| = 2.776E-017, bit-identical components = 0 of 14
+max |J dx - f| (sparse solution) = 4.267E-016
+converged: True, iterations: 4
+
+case14 pass 1 iteration 1: Jacobian order 22, structural nnz 146, numerically non-zero 146
+RCM ordering q: 19 10 20 11 18 9 4 21 17 12 8 14 3 0 1 16 13 7 2 15 5 6
+half-bandwidth natural = 16, RCM = 10
+nnz(L)+nnz(U)-n natural = 348, RCM = 194
+
+seed 1: row 0 with 20 stamps over 5 columns; real CsrMatrix.Builder differs from insertion-order sum
+col  insertion-order sum (bits)    ComplexCsr.Builder (bits)     CsrMatrix.Builder (bits)
+  0  40E7F1555DFE539C  40E7F1555DFE539C  40E7F1555DFE539C
+  1  C17DCB3FFC3AAF80  C17DCB3FFC3AAF80  C17DCB3FFC3AAF81
+  2  C175AA3536EE463C  C175AA3536EE463C  C175AA3536EE463C
+  3  4173369A0B676FF3  4173369A0B676FF3  4173369A0B676FF3
+  4  BFDBFFF20DF7FFE4  BFDBFFF20DF7FFE4  BFDBFFF20DF7FFE4
+
+SIMD: Avx256 (4 doubles/step)  FMA=yes  [Avx512F=False Avx2=True Fma=True Sse2=True AdvSimd=False]
+Dot      (1000 terms, seed 12345) = -0.7310824929902175  bits BFE765071CC246BA
+DotExact (1000 terms, seed 12345) = -0.7310824929902172  bits BFE765071CC246B7
+[exit 0]

@@ -1,0 +1,20 @@
+NESO frequency  -  frequency-sample.csv
+================================================================
+Samples      300  (1 s cadence)
+Frequency    min 49.921 Hz  mean 49.991 Hz  max 50.106 Hz
+Max |RoCoF|  0.0080 Hz/s  at 2024-08-01 00:00:02
+
+vs GB limits:
+  RoCoF 0.125 Hz/s: within  (worst 0.0080 Hz/s)
+  operational 49.8 Hz: held    statutory 49.5 Hz: held    LFDD 48.8 Hz: clear
+
+Upsample demo  -  1 s frames expanded to 20 ms by RoCoF interpolation:
+  time            Hz         RoCoF (Hz/s)
+  00:00:00.000   50.10500     0.0010
+  00:00:00.020   50.10502     0.0010
+  00:00:00.040   50.10504     0.0010
+  00:00:00.060   50.10506     0.0010
+  00:00:00.080   50.10508     0.0010
+  00:00:00.100   50.10510     0.0010
+  00:00:00.120   50.10512     0.0010
+  00:00:00.140   50.10514     0.0010

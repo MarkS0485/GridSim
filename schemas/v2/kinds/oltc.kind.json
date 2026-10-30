@@ -1,0 +1,290 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "oltc",
+  "title": "On-load tap changer and transformer thermal state",
+  "description": "The v1 'transformer' asset class (TransformerDynamics: OLTC plus thermal derating on the steady-state tick) and the network OLTC element (Model Oltc, oltcs.json). thermalTauMin was a unit gap until Q24 (2026-10) added min to the vocabulary; it is declared below.",
+  "params": {
+    "targetVpu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "description": "Voltage the tap changer holds the controlled bus at (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 1.0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultTargetVpu",
+          "value": 1.0
+        },
+        {
+          "consumer": "Model Oltc record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Oltc:.ctor:TargetVpu",
+          "value": 1.0
+        },
+        {
+          "consumer": "JSON oltcs.json OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.Json.OltcDto.TargetVpu",
+          "value": 1.0
+        },
+        {
+          "consumer": "Bridge protocol OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.BridgeProtocol+OltcDto.TargetVpu",
+          "value": 1.0
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtOltcTargetVpu",
+          "value": 1.0
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryOltcTargetVpu",
+          "value": 1.0
+        }
+      ]
+    },
+    "tapStepPu": {
+      "type": "number",
+      "unit": "pu@transformer",
+      "min": 0,
+      "max": 0.5,
+      "required": false,
+      "description": "Tap step, pu ratio per tap position. TWO DIFFERENT values in code (inconsistency register).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 0.0125",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultTapStepPu",
+          "value": 0.0125
+        },
+        {
+          "consumer": "Model Oltc.DefaultStepPu (record default and the tap optimiser snap fallback)",
+          "ref": "member:GridSim.Core:GridSim.Core.Model.Oltc.DefaultStepPu",
+          "value": 0.0125
+        },
+        {
+          "consumer": "JSON oltcs.json OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.Json.OltcDto.StepPu",
+          "value": 0.0125
+        },
+        {
+          "consumer": "Bridge protocol OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.BridgeProtocol+OltcDto.StepPu",
+          "value": 0.0125
+        },
+        {
+          "consumer": "GDA build GdaBuildDefaults.OltcStepPu",
+          "ref": "member:GridSim.Gda:GridSim.Gda.GdaBuildDefaults.OltcStepPu",
+          "value": 0.0125
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer OLTC (half step)",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtOltcStepPu",
+          "value": 0.00625
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryOltcStepPu",
+          "value": 0.0125
+        }
+      ]
+    },
+    "tapDeadbandPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 0.5,
+      "required": false,
+      "description": "Voltage deadband either side of the target before a tap moves (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 0.01",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultTapDeadbandPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "Model Oltc record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Oltc:.ctor:DeadbandPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "JSON oltcs.json OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.Json.OltcDto.DeadbandPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "Bridge protocol OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.BridgeProtocol+OltcDto.DeadbandPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "GDA build GdaBuildDefaults.OltcDeadbandPu",
+          "ref": "member:GridSim.Gda:GridSim.Gda.GdaBuildDefaults.OltcDeadbandPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtOltcDeadbandPu",
+          "value": 0.01
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryOltcDeadbandPu",
+          "value": 0.015
+        }
+      ]
+    },
+    "minTap": {
+      "type": "number",
+      "unit": "pu@transformer",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "description": "Lowest tap ratio (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 0.9",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultMinTap",
+          "value": 0.9
+        },
+        {
+          "consumer": "Model Oltc record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Oltc:.ctor:MinTap",
+          "value": 0.9
+        },
+        {
+          "consumer": "JSON oltcs.json OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.Json.OltcDto.MinTap",
+          "value": 0.9
+        },
+        {
+          "consumer": "Bridge protocol OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.BridgeProtocol+OltcDto.MinTap",
+          "value": 0.9
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtOltcMinTap",
+          "value": 0.9
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryOltcMinTap",
+          "value": 0.9
+        }
+      ]
+    },
+    "maxTap": {
+      "type": "number",
+      "unit": "pu@transformer",
+      "min": 0,
+      "max": 2,
+      "required": false,
+      "description": "Highest tap ratio (pu).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 1.1",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultMaxTap",
+          "value": 1.1
+        },
+        {
+          "consumer": "Model Oltc record default",
+          "ref": "param:GridSim.Core:GridSim.Core.Model.Oltc:.ctor:MaxTap",
+          "value": 1.1
+        },
+        {
+          "consumer": "JSON oltcs.json OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.Json.OltcDto.MaxTap",
+          "value": 1.1
+        },
+        {
+          "consumer": "Bridge protocol OltcDto default",
+          "ref": "instance:GridSim.Core:GridSim.Core.IO.BridgeProtocol+OltcDto.MaxTap",
+          "value": 1.1
+        },
+        {
+          "consumer": "SyntheticGb GSP supergrid transformer OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.GspSgtOltcMaxTap",
+          "value": 1.1
+        },
+        {
+          "consumer": "SyntheticGb 132/33 kV primary OLTC",
+          "ref": "member:GridSim.Core:GridSim.Core.Synthetic.SyntheticGb.PrimaryOltcMaxTap",
+          "value": 1.1
+        }
+      ]
+    },
+    "interTapDelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Delay between successive tap moves (s).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 5 s",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultInterTapDelayS",
+          "value": 5.0
+        }
+      ]
+    },
+    "initialTapDelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Delay before the first tap move (s).",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 10 s",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultInitialTapDelayS",
+          "value": 10.0
+        }
+      ]
+    },
+    "ambientLoadingFraction": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "description": "Ambient (pre-existing) thermal loading as a fraction of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 0",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultAmbientLoadingFraction",
+          "value": 0.0
+        }
+      ]
+    },
+    "thermalTauMin": {
+      "type": "number",
+      "unit": "min",
+      "min": 0,
+      "max": 1440,
+      "required": false,
+      "description": "Thermal time constant of the transformer (minutes) for the first-order thermal state that derates the rating. The integrator never uses less than one step (tau = max(dt, 60 * thermalTauMin) s). The 1440 min (one day) ceiling is far above any published conductor or transformer winding/oil time constant.",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 20 min (the line fallback is 15)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultThermalTauMin",
+          "value": 20.0
+        }
+      ]
+    },
+    "derateAtFullThermal": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "Rating derate at full thermal state, as a fraction of rating.",
+      "codeDefaults": [
+        {
+          "consumer": "TransformerDynamics (asset class): absent => 0 (the line fallback is 0.1)",
+          "ref": "member:GridSim.Core:GridSim.Core.Assets.TransformerDynamics.DefaultDerateAtFullThermal",
+          "value": 0.0
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,4 @@
+$ gridsim grade --chain iec-si:400:0.1,iec-si:400:0.3
+usage: gridsim grade --chain CURVE:PICKUP:TD,... --current I[,I...] [--cti 0.4]
+       curves: iec-si iec-vi iec-ei iec-lti ieee-mi ieee-vi ieee-ei, or dt:PICKUP:DELAY_S; chain downstream first
+[exit 2]
