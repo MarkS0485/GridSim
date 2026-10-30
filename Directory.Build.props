@@ -57,7 +57,7 @@
        the web OpenAPI document and the desktop app's About box all show it.
        =================================================================================================== -->
   <PropertyGroup Label="Version">
-    <Version>2.0.195</Version>
+    <Version>2.0.196</Version>
     <!-- Keep the "+<commit>" suffix on InformationalVersion (this is the SDK default; stated here so
          nobody turns it off by accident, because the CLI version flag relies on it to name the exact commit). -->
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>

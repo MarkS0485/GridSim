@@ -8240,3 +8240,10 @@ Release candidate 1.0.
 - `RC1.md`: the release notes of release candidate 1.0: the builds (Windows x64 and Linux x64), their SHA-256 hashes,
   system requirements for running and for building from source, how to build for macOS, and where to report bugs.
 - README: bugs are reported to gdatooling@proton.me.
+
+## [2.0.196]
+
+### Changed
+- README: a Downloads section links every Release Candidate 1.0 build (Windows and Linux command line tool and
+  desktop apps, the GridSim.Core package, the SBOM and SHA256SUMS.txt) in place of the old "What ships in 1.0" table,
+  which named a macOS build and signing that RC 1.0 does not have. No code change.

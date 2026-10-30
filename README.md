@@ -23,6 +23,8 @@ every step validated, into a full grid stack:
 - interfaces: MATPOWER, JSON v1/v2, CIM/CGMES, PyPSA, C37.118 synchrophasors, IEC 60870-5-104 and Modbus;
 - a web app, a desktop control room, a case editor, and a swappable CPU/GPU solve backend.
 
+**Downloads:** ready-built Windows and Linux binaries are on the [Release Candidate 1.0 page](https://github.com/MarkS0485/GridSim/releases/tag/v2.0.195-rc1); see [Downloads](#downloads-release-candidate-10).
+
 Every numerical result is double precision end to end, deterministic to the bit, and cross-checked against independent
 tools (pandapower, `pandapower.estimation`, SciPy, published MATPOWER solutions). The power-flow, harmonic, impedance
 and small-signal cross-checks gate at 4096 machine epsilons; the state-estimation, swing-equation, classical-swing and
@@ -54,7 +56,7 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
 ## Contents
 
 - [What makes GridSim different](#what-makes-gridsim-different)
-- [What ships in 1.0](#what-ships-in-10)
+- [Downloads](#downloads-release-candidate-10)
 - [Quick start](#quick-start)
 - [Feature tour](#feature-tour)
 - [The maths](#the-maths)
@@ -109,24 +111,29 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
 
 ---
 
-## What ships in 1.0
+## Downloads (Release Candidate 1.0)
 
-A release (the pushed tag `v<version>`, built by [`.github/workflows/release.yml`](.github/workflows/release.yml))
-carries exactly these artefacts:
+GridSim ships ready built for anyone who does not want to compile it. The current build is
+[Release Candidate 1.0, version 2.0.195](https://github.com/MarkS0485/GridSim/releases/tag/v2.0.195-rc1).
+All builds are self-contained: no .NET install is needed to run them.
 
-| Artefact | Form | Where |
+| What | Platform | Download |
 |---|---|---|
-| The `gridsim` command line tool | Self-contained single-file binaries for win-x64, linux-x64 and osx-arm64 (no .NET install needed), with the bundled `data/` cases, `schemas/`, `LICENSE.md` and `THIRD-PARTY-NOTICES.md` | The GitHub Release page, with `SHA256SUMS.txt` and two CycloneDX SBOMs (the CLI and the web app) |
-| `GridSim.Core` | NuGet package (the engine library) | This repository's GitHub Packages NuGet feed |
-| The web app | Replay-only container image (the solve API and the simulation socket are not served) | `ghcr.io/<owner>/gridsim-web:<version>` |
+| Command line tool (`gridsim`) | Windows x64 | [gridsim-cli-2.0.195-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/gridsim-cli-2.0.195-win-x64.zip) |
+| Command line tool (`gridsim`) | Linux x64 | [gridsim-cli-2.0.195-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/gridsim-cli-2.0.195-linux-x64.tar.gz) |
+| Desktop app (Avalonia) | Windows x64 | [gridsim-app-2.0.195-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/gridsim-app-2.0.195-win-x64.zip) |
+| Desktop app (Avalonia) | Linux x64 | [gridsim-app-2.0.195-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/gridsim-app-2.0.195-linux-x64.tar.gz) |
+| Desktop app (WPF) | Windows x64 | [gridsim-wpf-2.0.195-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/gridsim-wpf-2.0.195-win-x64.zip) |
+| `GridSim.Core` engine library (NuGet) | Any | [GridSim.Core.2.0.195.nupkg](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/GridSim.Core.2.0.195.nupkg) |
+| CycloneDX SBOM (CLI) | Any | [gridsim-2.0.195.sbom.json](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/gridsim-2.0.195.sbom.json) |
+| SHA-256 checksums of every file | Any | [SHA256SUMS.txt](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1/SHA256SUMS.txt) |
 
-The Windows binary and the NuGet package are signed when the release is built with the signing certificate, which is
-self-signed (import `signing/gridsim-signing.cer` to validate the signature; manual ch. 1, "Installing a release").
-Without the certificate secret a release is built unsigned. Every file on the Release page carries a signed
-build-provenance attestation: check a download with `gh attestation verify <file> -R <owner>/GridSim`. The Linux and
-macOS archives, `SHA256SUMS.txt` and the container image are not signed.
+RC 1.0 is built for Windows and Linux only. There is no macOS build: the author has no Mac to compile and test one on,
+so Mac users build from source with Xcode and the .NET SDK (exact commands in [RC1.md](RC1.md)). The Avalonia desktop
+app does not yet carry the bundled `data/` cases; copy the `data/` folder across from the command line archive. The RC
+binaries are not code signed; check each download against `SHA256SUMS.txt`. Full system requirements, the hashes and
+the build notes are in [RC1.md](RC1.md).
 
-Not in 1.0: the desktop app (`GridSim.Wpf`) and the Unity viewer come after 1.0 (build them from source meanwhile).
 `GridSim.Gda` and the GDA data are not release artefacts: there is no `GridSim.Gda` package and no GDA data in any
 download. The `gda` verbs stay in the CLI, but they read a GDA data lake (`GDA_DATA_ROOT`), which a release does not
 include.
