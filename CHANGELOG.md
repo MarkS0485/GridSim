@@ -8258,3 +8258,10 @@ Release candidate 1.0.
 
 ### Changed
 - README: the download links point at the Release Candidate 1.0 release tag `v2.0.195-rc1.0`.
+
+## [2.0.199]
+
+### Added
+- Docs: MATH.md and technical chapter 38, deterministic mathematics: why platform maths is not bit-reproducible,
+  the FDLIBM port, the fixed-order vector kernels, the fused multiply-add policy and how bit-identity across
+  operating systems and CPUs is enforced and tested.

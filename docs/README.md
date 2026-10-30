@@ -12,4 +12,7 @@
 | [`screenshots/`](screenshots/) | Screenshots used by the manuals. |
 | [`Public/`](Public/README.md) | An optional submodule of public GB grid documents (not downloaded by a normal clone). |
 
+The deterministic maths library is summarised in [`MATH.md`](../MATH.md) and specified in
+[technical ch. 38](<technical/0038 Deterministic mathematics.md>).
+
 The release notes for this build are in [`RC1.md`](../RC1.md); the change history is in [`CHANGELOG.md`](../CHANGELOG.md).

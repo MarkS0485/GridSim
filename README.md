@@ -574,7 +574,8 @@ a scheduling LP.
 
 ## Determinism and machine epsilon
 
-GridSim treats bit-identical results as a requirement, not an aspiration:
+GridSim treats bit-identical results as a requirement, not an aspiration. The overview is [`MATH.md`](MATH.md) and the
+specification is [technical ch. 38, Deterministic mathematics](<docs/technical/0038 Deterministic mathematics.md>):
 
 - **Deterministic maths.** Transcendental functions (`sin`, `cos`, `atan2`, `exp`, `log`, `pow` and the rest) come from
   `DetMath`, a C# port of FDLIBM 5.3 checked bit for bit against Java's `StrictMath`, so they round the same way on
@@ -816,6 +817,8 @@ capability; Web and Wpf are presentation only. Full walkthrough: [technical 1](<
   reference ([`docs/manual/0019 CLI reference.md`](<docs/manual/0019 CLI reference.md>)), troubleshooting.
 - [Technical manual](<docs/technical/0000 Contents.md>): the architecture, the data model, every solver with its
   equations, invariants and tests, the file and wire formats, the glossary.
+- [`MATH.md`](MATH.md): the deterministic maths library that keeps results bit-identical across operating systems
+  and CPUs.
 - [`UnderstandingRestrictions.md`](UnderstandingRestrictions.md): the no-forward-inference rule and its five testable
   invariants.
 - [`docs/validation/distributed-inertia.md`](docs/validation/distributed-inertia.md): the multi-domain inertia model in depth.

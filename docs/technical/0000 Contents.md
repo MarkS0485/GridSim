@@ -73,6 +73,7 @@ are being written.
 | 35 | [Deployment and security](<0035 Deployment and security.md>) | Docker, compose, nginx, the web host, SSO, sessions, CI and release workflows, assurance claims against the code. |
 | 36 | [Known limitations and design decisions](<0036 Known limitations and design decisions.md>) | Behaviour kept on purpose after the October 2026 review, why it stays, and where it lives. |
 | 37 | [Quasi-static time series and hosting capacity](<0037 Quasi-static time series and hosting capacity.md>) | The QSTS engine, its time model and controllers (OLTC, banks, IEEE 1547 inverters, storage), the OpenDSS cross-check, and the hosting-capacity bisection. |
+| 38 | [Deterministic mathematics](<0038 Deterministic mathematics.md>) | Why platform maths is not bit-reproducible, the FDLIBM port (`DetMath`), the canonical NaN, the fixed-order SIMD kernels, the FMA policy, parallel loops, the frozen sort, the tolerances register, and how the IL analyser and the CI tier matrix enforce bit-identity across CPUs and operating systems. |
 
 ## Design records
 
