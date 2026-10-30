@@ -8247,3 +8247,9 @@ Release candidate 1.0.
 - README: a Downloads section links every Release Candidate 1.0 build (Windows and Linux command line tool and
   desktop apps, the GridSim.Core package, the SBOM and SHA256SUMS.txt) in place of the old "What ships in 1.0" table,
   which named a macOS build and signing that RC 1.0 does not have. No code change.
+
+## [2.0.197]
+
+### Changed
+- Tests: the release scope test reads the README heading "Downloads (Release Candidate 1.0)", which replaced
+  "What ships in 1.0" in 2.0.196; the check that GridSim.Gda and the GDA data are not release artefacts is unchanged.
