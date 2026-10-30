@@ -8253,3 +8253,8 @@ Release candidate 1.0.
 ### Changed
 - Tests: the release scope test reads the README heading "Downloads (Release Candidate 1.0)", which replaced
   "What ships in 1.0" in 2.0.196; the check that GridSim.Gda and the GDA data are not release artefacts is unchanged.
+
+## [2.0.198]
+
+### Changed
+- README: the download links point at the Release Candidate 1.0 release tag `v2.0.195-rc1.0`.
