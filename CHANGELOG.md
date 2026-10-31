@@ -8310,3 +8310,9 @@ Release candidate 1.0.
   impedance-table expectation (an angle table read at the winding's 0 degree angle, F 1.0, not at its ratio, F 1.0035);
   the `--criterion` refusal text; and five gb-full pins that follow the charging correction (study-solver generation,
   loss and boundary flows, the OLTC base-solve minimum voltage, and three untapped EMT trajectory digests).
+
+## [2.1.000]
+
+### Changed
+- Version 2.1.000, release candidate RC-1: the 2.0.200 code, rebuilt and released. The Windows executables and the
+  GridSim.Core package are signed with the GridSim code-signing certificate (`signing/gridsim-signing.cer`).
