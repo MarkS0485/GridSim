@@ -116,7 +116,8 @@ public class WorkflowContractTests
         string readme = Read("README.md");
         // 2.0.196: the README section that states the scope is now "Downloads (Release Candidate 1.0)"; it replaced
         // "What ships in 1.0" when RC 1.0 shipped, because the old table named a macOS build and signing RC 1.0 lacks.
-        Assert.Contains("## Downloads (Release Candidate 1.0)", readme, StringComparison.Ordinal);
+        // 2.1.000 (2026-10-31): the heading follows the release, "Downloads (2.1.000 RC-1)", as it did in 2.0.196.
+        Assert.Contains("## Downloads (2.1.000 RC-1)", readme, StringComparison.Ordinal);
         Assert.Contains("`GridSim.Gda` and the GDA data are not release artefacts", readme, StringComparison.Ordinal);
     }
 

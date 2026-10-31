@@ -23,7 +23,7 @@ every step validated, into a full grid stack:
 - interfaces: MATPOWER, JSON v1/v2, CIM/CGMES, PyPSA, C37.118 synchrophasors, IEC 60870-5-104 and Modbus;
 - a web app, a desktop control room, a case editor, and a swappable CPU/GPU solve backend.
 
-**Downloads:** ready-built Windows and Linux binaries are on the [Release Candidate 1.0 page](https://github.com/MarkS0485/GridSim/releases/tag/v2.0.195-rc1.0); see [Downloads](#downloads-release-candidate-10).
+**Downloads:** ready-built Windows and Linux binaries are on the [2.1.000 RC-1 page](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.000-RC-1); see [Downloads](#downloads-21000-rc-1).
 
 Every numerical result is double precision end to end, deterministic to the bit, and cross-checked against independent
 tools (pandapower, `pandapower.estimation`, SciPy, published MATPOWER solutions). The power-flow, harmonic, impedance
@@ -56,7 +56,7 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
 ## Contents
 
 - [What makes GridSim different](#what-makes-gridsim-different)
-- [Downloads](#downloads-release-candidate-10)
+- [Downloads](#downloads-21000-rc-1)
 - [Quick start](#quick-start)
 - [Feature tour](#feature-tour)
 - [The maths](#the-maths)
@@ -111,28 +111,29 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
 
 ---
 
-## Downloads (Release Candidate 1.0)
+## Downloads (2.1.000 RC-1)
 
 GridSim ships ready built for anyone who does not want to compile it. The current build is
-[Release Candidate 1.0, version 2.0.195](https://github.com/MarkS0485/GridSim/releases/tag/v2.0.195-rc1.0).
+[2.1.000 RC-1](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.000-RC-1).
 All builds are self-contained: no .NET install is needed to run them.
 
 | What | Platform | Download |
 |---|---|---|
-| Command line tool (`gridsim`) | Windows x64 | [gridsim-cli-2.0.195-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/gridsim-cli-2.0.195-win-x64.zip) |
-| Command line tool (`gridsim`) | Linux x64 | [gridsim-cli-2.0.195-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/gridsim-cli-2.0.195-linux-x64.tar.gz) |
-| Desktop app (Avalonia) | Windows x64 | [gridsim-app-2.0.195-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/gridsim-app-2.0.195-win-x64.zip) |
-| Desktop app (Avalonia) | Linux x64 | [gridsim-app-2.0.195-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/gridsim-app-2.0.195-linux-x64.tar.gz) |
-| Desktop app (WPF) | Windows x64 | [gridsim-wpf-2.0.195-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/gridsim-wpf-2.0.195-win-x64.zip) |
-| `GridSim.Core` engine library (NuGet) | Any | [GridSim.Core.2.0.195.nupkg](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/GridSim.Core.2.0.195.nupkg) |
-| CycloneDX SBOM (CLI) | Any | [gridsim-2.0.195.sbom.json](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/gridsim-2.0.195.sbom.json) |
-| SHA-256 checksums of every file | Any | [SHA256SUMS.txt](https://github.com/MarkS0485/GridSim/releases/download/v2.0.195-rc1.0/SHA256SUMS.txt) |
+| Command line tool (`gridsim`) | Windows x64 | [gridsim-cli-2.1.000-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-cli-2.1.000-win-x64.zip) |
+| Command line tool (`gridsim`) | Linux x64 | [gridsim-cli-2.1.000-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-cli-2.1.000-linux-x64.tar.gz) |
+| Desktop app (Avalonia) | Windows x64 | [gridsim-app-2.1.000-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-app-2.1.000-win-x64.zip) |
+| Desktop app (Avalonia) | Linux x64 | [gridsim-app-2.1.000-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-app-2.1.000-linux-x64.tar.gz) |
+| Desktop app (WPF) | Windows x64 | [gridsim-wpf-2.1.000-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-wpf-2.1.000-win-x64.zip) |
+| `GridSim.Core` engine library (NuGet) | Any | [GridSim.Core.2.1.0.nupkg](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/GridSim.Core.2.1.0.nupkg) |
+| CycloneDX SBOM (CLI) | Any | [gridsim-2.1.000.sbom.json](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-2.1.000.sbom.json) |
+| SHA-256 checksums of every file | Any | [SHA256SUMS.txt](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/SHA256SUMS.txt) |
 
-RC 1.0 is built for Windows and Linux only. There is no macOS build: the author has no Mac to compile and test one on,
-so Mac users build from source with Xcode and the .NET SDK (exact commands in [RC1.md](RC1.md)). The Avalonia desktop
-app does not yet carry the bundled `data/` cases; copy the `data/` folder across from the command line archive. The RC
-binaries are not code signed; check each download against `SHA256SUMS.txt`. Full system requirements, the hashes and
-the build notes are in [RC1.md](RC1.md).
+RC-1 is built for Windows and Linux only. There is no macOS build: the author has no Mac to compile and test one on,
+so Mac users build from source with Xcode and the .NET SDK (exact commands in [RC1.md](RC1.md)). The Windows
+executables and the NuGet package are signed with the GridSim certificate (self-signed, thumbprint
+`86DD43B7...EB721`, `signing/gridsim-signing.cer`); check every download against `SHA256SUMS.txt`. Full system
+requirements, the hashes and the build notes are in [RC1.md](RC1.md). The earlier
+[Release Candidate 1.0 (2.0.195)](https://github.com/MarkS0485/GridSim/releases/tag/v2.0.195-rc1.0) stays available.
 
 `GridSim.Gda` and the GDA data are not release artefacts: there is no `GridSim.Gda` package and no GDA data in any
 download. The `gda` verbs stay in the CLI, but they read a GDA data lake (`GDA_DATA_ROOT`), which a release does not
