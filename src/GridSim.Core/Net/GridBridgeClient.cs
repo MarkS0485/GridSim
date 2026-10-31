@@ -154,7 +154,12 @@ public sealed class GridBridgeClient : IAsyncDisposable
                 $"{nameof(AllowUnencryptedEndpoint)}=true only for a trusted loopback or test transport.");
         await _ws.ConnectAsync(endpoint, ct).ConfigureAwait(false);
         _loopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        _loop = Task.Run(() => ReceiveLoopAsync(_loopCts.Token), _loopCts.Token);
+        // 2.1.002 (found by the GitHub Windows CI run): the token is NOT passed to Task.Run. With it, a cancel that
+        // landed before the thread pool started the loop (a busy machine) cancelled the task without running it, so
+        // the pending queries were never failed and each waited out its whole QueryTimeout. The loop observes the
+        // token itself, inside its try, so every cancellation reaches the cleanup below.
+        CancellationToken loopToken = _loopCts.Token;
+        _loop = Task.Run(() => ReceiveLoopAsync(loopToken), CancellationToken.None);
     }
 
     // ---- Stream control (mirrors the RoCoF server's start/stop/set_speed/seek actions) ----
@@ -274,8 +279,13 @@ public sealed class GridBridgeClient : IAsyncDisposable
         var buffer = new byte[64 * 1024];
         try
         {
-            while (!ct.IsCancellationRequested && _ws.State == WebSocketState.Open)
+            // 2.1.002: cancellation is thrown here rather than tested in the loop condition. A loop that started with the
+            // token already cancelled used to fall out of the while silently, skipping the OperationCanceledException
+            // handler that fails the pending queries.
+            ct.ThrowIfCancellationRequested();
+            while (_ws.State == WebSocketState.Open)
             {
+                ct.ThrowIfCancellationRequested();
                 using var ms = new MemoryStream();
                 WebSocketReceiveResult res;
                 do

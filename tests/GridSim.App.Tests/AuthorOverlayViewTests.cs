@@ -355,6 +355,10 @@ public sealed class AuthorOverlayViewTests
             Await(w.AuthorMode.PendingReload!);
             Assert.True(nav.IsRunMode);
             Assert.False(vm.Run.HasError, vm.Run.ErrorText);
+            // 2.1.002 (a GitHub CI run hit a NullReferenceException here): the navigator builds the reloaded case's index
+            // on that case's first solved frame (AssetNavigatorModel.SetSource / Update), which can land after the
+            // reload task completes. Wait for it, then make the same checks as before.
+            PumpUntil(() => nav.Index?.Overlay?.Find("ov.bb1") is not null, "the reloaded case's index (built on its first frame)");
             Assert.Equal(4200, nav.Index!.Overlay!.Find("ov.bb1")!.Record.Params.GetProperty("ratedCurrentA").GetDouble());
             Assert.Equal(101, nav.Index.Overlay.Find("ov.bb9")!.Record.Refs.Single().Bus);
             Assert.Empty(prompts.Asked.Skip(2));   // nothing unsaved when leaving, so nothing asked

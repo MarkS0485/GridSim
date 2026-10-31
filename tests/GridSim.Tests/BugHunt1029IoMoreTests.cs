@@ -102,6 +102,38 @@ public sealed partial class BugHunt1029Tests
         Assert.True(sw.Elapsed < TimeSpan.FromSeconds(20), $"the pending query waited {sw.Elapsed} after the cancel");
     }
 
+    // 2.1.002 (the GitHub Windows CI run: BH57 waited its full 60 s QueryTimeout once): the receive loop used to be started
+    // with Task.Run(..., token), so a cancel that landed before the thread pool ran the loop cancelled the task without
+    // running it, and nothing failed the pending query. The cancel now always reaches the loop's cleanup. Here the cancel
+    // comes straight after the query, with no delay, twenty times, which is the window the CI runner hit.
+    [Fact]
+    public async Task BH57_a_cancel_straight_after_connecting_still_fails_the_pending_query_promptly()
+    {
+        for (int round = 0; round < 20; round++)
+        {
+            int port;
+            using (var probe = new TcpListener(IPAddress.Loopback, 0)) { probe.Start(); port = ((IPEndPoint)probe.LocalEndpoint).Port; probe.Stop(); }
+            using var listener = new HttpListener();
+            listener.Prefixes.Add($"http://localhost:{port}/");
+            listener.Start();
+            Task<WebSocketHolder> server = Task.Run(async () =>
+            {
+                HttpListenerContext ctx = await listener.GetContextAsync();
+                HttpListenerWebSocketContext ws = await ctx.AcceptWebSocketAsync(null);
+                return new WebSocketHolder(ws);
+            });
+            await using var client = new GridBridgeClient { AllowUnencryptedEndpoint = true, QueryTimeout = TimeSpan.FromSeconds(60) };
+            using var cts = new CancellationTokenSource();
+            await client.ConnectAsync(new Uri($"ws://localhost:{port}/"), cts.Token);
+            using WebSocketHolder held = await server;
+            Task<QueryResult> pending = client.Query("bus_voltages", DateTime.UtcNow.AddDays(-30), new { });
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            cts.Cancel();
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => pending);
+            Assert.True(sw.Elapsed < TimeSpan.FromSeconds(20), $"round {round}: the pending query waited {sw.Elapsed} after the cancel");
+        }
+    }
+
     private sealed class WebSocketHolder(HttpListenerWebSocketContext ctx) : IDisposable
     {
         public void Dispose() => ctx.WebSocket.Dispose();

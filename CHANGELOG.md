@@ -8341,3 +8341,14 @@ Release candidate 1.0.
   of failing; on a CPU with AVX-512 they still fail if the 512-bit tier is not taken.
 - Tests: the theme parity test checks that each font key names its bundled font (it compared the WPF font lists);
   the interpose zero-frames test prints the whole run when it fails; new tests pin the schema matcher.
+
+## [2.1.002]
+
+### Fixed
+- GDA bridge client: cancelling the connection now always fails the queries still waiting for an answer at once. On a
+  busy machine the receive loop could be cancelled before it started, and each pending query then waited out its full
+  timeout (60 s by default).
+
+### Changed
+- Tests: the author overlay test waits for the reloaded case's asset index, which is built on that case's first solved
+  frame, before checking it; a new test cancels the bridge connection straight after a query, twenty times.
