@@ -8316,3 +8316,28 @@ Release candidate 1.0.
 ### Changed
 - Version 2.1.000, release candidate RC-1: the 2.0.200 code, rebuilt and released. The Windows executables and the
   GridSim.Core package are signed with the GridSim code-signing certificate (`signing/gridsim-signing.cer`).
+
+## [2.1.001]
+
+### Fixed
+- Desktop app (Avalonia): the text and number fonts are now bundled with the app (Barlow and Cascadia Mono, SIL Open
+  Font License 1.1), so the app looks and lays out the same on Windows, Linux and macOS. Before, it named Windows-only
+  fonts (Bahnschrift, Consolas); on Linux and macOS wider fallback fonts were drawn and the header overflowed (the
+  LOAD RUN button squeezed at the default size, the search box over the clock in a smaller window).
+- Storage: a battery pack whose cell count (series cells x parallel strings) is above 2147483647 is refused with a
+  message naming both counts. The count was multiplied in 32-bit integers, so a pack that large would have wrapped
+  silently and given wrong per-cell currents (found by CodeQL, cs/loss-of-precision). No real pack is affected.
+- Case validation: schema patterns run on the linear-time matcher with no time limit. Before, a 1 s wall-clock limit
+  per match let a busy machine report ordinary names as "could not be checked against the pattern", so whether a
+  case validated depended on load.
+
+### Changed
+- CI: CodeQL runs the security-extended rules instead of security-and-quality. The quality rules (about 160 style
+  rules the compiler and analysers do not apply) filled the 5000-result upload limit with notes and found no security
+  issue.
+- Synthetic GB generator: removed a list of GSP plans that was filled and never read (CodeQL cs/unused-collection);
+  the random draws and the generated case are unchanged.
+- CI: the forced AVX-512 legs report "not checked" and skip their tests when the runner's CPU has no AVX-512, instead
+  of failing; on a CPU with AVX-512 they still fail if the 512-bit tier is not taken.
+- Tests: the theme parity test checks that each font key names its bundled font (it compared the WPF font lists);
+  the interpose zero-frames test prints the whole run when it fails; new tests pin the schema matcher.

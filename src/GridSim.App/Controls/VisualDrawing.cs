@@ -24,8 +24,8 @@ internal static class VisualDrawing
     private static readonly Dictionary<VisualPen, ImmutablePen> Pens = new();
     private static readonly object Gate = new();
 
-    /// <summary>The font list the WPF controls used, when the theme's UiFont resource is not reachable.</summary>
-    private static readonly FontFamily FallbackFont = new("Bahnschrift, Segoe UI, Arial");
+    /// <summary>The bundled UI font (the theme's UiFont), used when that resource is not reachable.</summary>
+    private static readonly FontFamily FallbackFont = new("avares://GridSim.App/Fonts#Barlow");
 
     /// <summary>The Avalonia colour for a neutral colour token: the same alpha, red, green and blue bytes.</summary>
     public static Color ToColor(UiColour c) => Color.FromArgb(c.A, c.R, c.G, c.B);
@@ -74,7 +74,7 @@ internal static class VisualDrawing
         }
     }
 
-    /// <summary>The control-room font (the theme's UiFont resource, as the WPF controls used Bahnschrift).</summary>
+    /// <summary>The control-room font (the theme's UiFont resource: the bundled Barlow, in place of WPF's Bahnschrift).</summary>
     public static FontFamily UiFont(Control owner)
         => owner.TryFindResource("UiFont", out object? f) && f is FontFamily family ? family : FallbackFont;
 

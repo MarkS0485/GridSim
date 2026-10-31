@@ -115,8 +115,10 @@ public sealed class SchemaValidator
         if (inst.ValueKind == JsonValueKind.String && s.TryGetProperty("pattern", out JsonElement pat))
         {
             string text = pat.GetString()!;
-            // GR-659: a pattern that runs past its 1 s match timeout is reported as an error at this pointer; the
-            // RegexMatchTimeoutException used to escape a validator that never throws for a bad document.
+            // GR-659: a pattern that runs past a match timeout is reported as an error at this pointer; the
+            // RegexMatchTimeoutException used to escape a validator that never throws for a bad document. Since 2.1.000
+            // the patterns run on the linear-time engine with no timeout (JsonSchemaSubset.CompilePattern), so this
+            // branch is a guard for a caller-built Regex only.
             bool matched;
             try { matched = _set.PatternFor(text).IsMatch(inst.GetString()!); }
             catch (System.Text.RegularExpressions.RegexMatchTimeoutException)

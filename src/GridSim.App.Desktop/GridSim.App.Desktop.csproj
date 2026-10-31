@@ -54,6 +54,13 @@
     <Content Include="..\..\schemas\**\*.json" Link="schemas\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The licences of the two fonts compiled into GridSim.App (SIL Open Font License 1.1 requires the licence to travel
+       with the fonts). -->
+  <ItemGroup>
+    <Content Include="..\GridSim.App\Fonts\OFL-*.txt" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
   <!-- F07: the licence and the third-party notices ship with every build and publish. -->
   <ItemGroup>
     <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />

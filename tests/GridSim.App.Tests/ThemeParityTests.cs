@@ -77,8 +77,22 @@ public sealed class ThemeParityTests
     {
         XNamespace sys = "clr-namespace:System;assembly=mscorlib";
         XElement root = WpfTheme().Root!;
-        foreach (XElement f in root.Elements(Wpf + "FontFamily"))
-            Assert.Equal(f.Value.Trim(), string.Join(", ", Assert.IsType<FontFamily>(Resource((string)f.Attribute(X + "Key")!)).FamilyNames));
+        // Changed 2.1.001 (Mark's decision 2026-10-31, after the first GitHub CI run on Linux and macOS): the Avalonia app
+        // no longer copies WPF's Windows-only font lists ("Bahnschrift, Segoe UI, Arial" and "Consolas, Cascadia Mono,
+        // Courier New"), which fell back to wider fonts off Windows and overflowed the header there. It bundles one font
+        // per key so every OS lays out the same: UiFont = Barlow (narrow, DIN-style, close to Bahnschrift), MonoFont =
+        // Cascadia Mono (already second in WPF's list). Every WPF font key must still exist in the palette (parity of
+        // keys), and each must name exactly its bundled family. Before: each key's family list equalled WPF's.
+        var bundled = new Dictionary<string, string> { ["UiFont"] = "Barlow", ["MonoFont"] = "Cascadia Mono" };
+        List<XElement> fonts = root.Elements(Wpf + "FontFamily").ToList();
+        Assert.Equal(bundled.Keys.OrderBy(k => k, StringComparer.Ordinal), fonts.Select(f => (string)f.Attribute(X + "Key")!).OrderBy(k => k, StringComparer.Ordinal));
+        foreach (XElement f in fonts)
+        {
+            string key = (string)f.Attribute(X + "Key")!;
+            FontFamily family = Assert.IsType<FontFamily>(Resource(key));
+            Assert.Equal(bundled[key], Assert.Single(family.FamilyNames));
+            Assert.Equal("avares://GridSim.App/Fonts", family.Key?.Source.ToString().TrimEnd('/'));
+        }
         List<XElement> sizes = root.Elements(sys + "Double").ToList();
         Assert.True(sizes.Count >= 7, $"only {sizes.Count} sizes read from the WPF theme");
         foreach (XElement d in sizes)

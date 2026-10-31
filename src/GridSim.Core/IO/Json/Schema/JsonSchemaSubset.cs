@@ -402,7 +402,18 @@ public sealed class JsonSchemaSubset
         if (_patterns.ContainsKey(pattern)) return;
         try
         {
-            _patterns[pattern] = new Regex(ToDotNetAnchors(pattern), RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+            // Linear-time engine, no match timeout (2.1.000, found by the first GitHub macOS CI run): the backtracking
+            // engine with a 1 s wall-clock timeout reported six plain gb-full names as "could not be checked against
+            // the pattern \S" on a loaded runner, so whether a document validated depended on machine load. The
+            // non-backtracking engine runs in time linear in the input and cannot run away, so no timeout is needed and
+            // the verdict is the same on every machine. It refuses lookarounds, backreferences and atomic groups (no
+            // GridSim schema uses them); such a pattern is reported here as a schema error, never guessed.
+            _patterns[pattern] = new Regex(ToDotNetAnchors(pattern), RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
+                Regex.InfiniteMatchTimeout);
+        }
+        catch (NotSupportedException ex)
+        {
+            errors.Add($"{at}: 'pattern' uses a construct the linear-time matcher does not support (lookaround, backreference or atomic group): {ex.Message}");
         }
         catch (ArgumentException ex)
         {

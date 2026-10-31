@@ -39,7 +39,10 @@ jobs:
         with:
           languages: csharp
           build-mode: manual
-          queries: security-and-quality
+          # Security rules only (Mark, 2026-10-31). The security-and-quality suite added about 160 code-style rules
+          # (Path.Combine, == on doubles, boolean simplification, catch-all ...) that the compiler and the Recommended
+          # analysers do not apply; its first run filled the 5000-result upload limit with notes and no security result.
+          queries: security-extended
       - name: Build
         run: dotnet build GridSim.slnx -c Release --nologo
       - name: Analyse

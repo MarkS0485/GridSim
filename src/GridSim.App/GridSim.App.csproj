@@ -39,4 +39,11 @@
     <ProjectReference Include="..\GridSim.Ui\GridSim.Ui.csproj" />
   </ItemGroup>
 
+  <!-- The bundled fonts (2.1.001): Barlow (UI) and Cascadia Mono (numbers), SIL Open Font License 1.1. Compiled in as
+       Avalonia resources (avares://GridSim.App/Fonts#...), so every OS draws the same glyphs; the licence texts
+       ship beside the desktop app (GridSim.App.Desktop.csproj). -->
+  <ItemGroup>
+    <AvaloniaResource Include="Fonts\*.ttf" />
+  </ItemGroup>
+
 </Project>

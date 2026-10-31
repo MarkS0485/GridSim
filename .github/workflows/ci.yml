@@ -13,8 +13,11 @@ name: CI
 #                                      non-FMA axis of the bit-identity rule; its preflight requires Fma=False)
 #                     hwintrinsic-off  DOTNET_EnableHWIntrinsic=0 (the scalar fallback paths)
 # plus, from the include list:
-#                     avx512           DOTNET_PreferredVectorBitWidth=512 and `simdcheck --expect Avx512`, so the
-#                                      leg FAILS on a runner without AVX-512 rather than silently testing a narrower tier
+#                     avx512           DOTNET_PreferredVectorBitWidth=512 and `simdcheck --expect Avx512` on a runner
+#                                      whose CPU has AVX-512. GitHub's standard runners often have none (2.1.001: both
+#                                      legs of the first public run had Avx512F=False); then the leg is NOT CHECKED: it
+#                                      warns, says so on the run summary and skips its tests, rather than failing for
+#                                      want of hardware or silently testing a narrower tier as if it were AVX-512
 #                     avx256           DOTNET_PreferredVectorBitWidth=256 and simdcheck must report the Avx256
 #                                      tier (GR-399: on an AVX-512 runner the normal leg may run the 512-bit tier,
 #                                      so the 256-bit production tier is held to the pins by a leg of its own)
@@ -95,6 +98,7 @@ jobs:
         run: dotnet build GridSim.slnx -c Release --nologo
 
       - name: Report the CPU vector tier
+        id: tier
         shell: bash
         env:
           SIMD: ${{ matrix.simd }}
@@ -105,7 +109,17 @@ jobs:
           [[ "$SIMD" == "avx512" ]] && export DOTNET_PreferredVectorBitWidth=512
           [[ "$SIMD" == "avx256" ]] && export DOTNET_PreferredVectorBitWidth=256
           if [[ "$SIMD" == "avx512" ]]; then
-            # A runner without AVX-512 fails this leg here (exit 3) instead of quietly testing a narrower tier.
+            # 2.1.001: first ask whether the CPU has AVX-512 at all (simdcheck prints the hardware flags). Without it the
+            # leg cannot test the 512-bit tier: it is reported NOT CHECKED (a warning and a run-summary line) and its
+            # tests are skipped, never run on a narrower tier under the AVX-512 name. With it, --expect Avx512 still
+            # fails the leg (exit 3) if the runtime does not actually take the 512-bit tier.
+            dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll simdcheck | tee simdcheck.txt
+            if ! grep -q -F "Avx512F=True" simdcheck.txt; then
+              echo "::warning::AVX-512 leg NOT CHECKED: this runner's CPU has no AVX-512 (Avx512F=False); its tests are skipped."
+              echo "AVX-512 leg on ${{ matrix.os }}: NOT CHECKED, the runner's CPU has no AVX-512." >> "$GITHUB_STEP_SUMMARY"
+              echo "not_checked=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll simdcheck --expect Avx512
           else
             dotnet src/GridSim.Cli/bin/Release/net10.0/gridsim.dll simdcheck | tee simdcheck.txt
@@ -125,6 +139,7 @@ jobs:
           fi
 
       - name: Test
+        if: steps.tier.outputs.not_checked != 'true'
         shell: bash
         env:
           SIMD: ${{ matrix.simd }}

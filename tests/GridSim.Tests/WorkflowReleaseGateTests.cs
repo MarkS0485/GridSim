@@ -56,6 +56,12 @@ public class WorkflowReleaseGateTests
         Assert.DoesNotContain("DOTNET_EnableFMA", ci, StringComparison.Ordinal);
         Assert.DoesNotContain("simd: fma-off", ci, StringComparison.Ordinal);
         Assert.Contains("simdcheck --expect Avx512", ci, StringComparison.Ordinal);
+        // 2.1.001 (Mark's decision 2026-10-31): a runner without AVX-512 reports the leg NOT CHECKED and skips its tests
+        // instead of failing for want of hardware; with AVX-512 present, --expect Avx512 above still fails a leg that
+        // does not take the 512-bit tier. Pinned so the skip can only happen on the hardware test, never silently.
+        Assert.Contains("if ! grep -q -F \"Avx512F=True\" simdcheck.txt; then", ci, StringComparison.Ordinal);
+        Assert.Contains("::warning::AVX-512 leg NOT CHECKED", ci, StringComparison.Ordinal);
+        Assert.Contains("if: steps.tier.outputs.not_checked != 'true'", ci, StringComparison.Ordinal);
         Assert.Contains("export GRIDSIM_TEST_MAX_BUSES=all", ci, StringComparison.Ordinal);
     }
 

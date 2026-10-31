@@ -66,11 +66,11 @@ public static class MapPaint
     /// <summary>Label text.</summary>
     public static readonly ImmutableSolidColorBrush LabelBrush = Frozen(FromHex("#C7D2DD"));
 
-    /// <summary>The WPF label typeface: "Bahnschrift, Segoe UI", semi-bold (the app's default font when neither is present).</summary>
-    public static readonly Typeface LabelFace = new(new FontFamily("Bahnschrift, Segoe UI"), FontStyle.Normal, FontWeight.SemiBold);
+    /// <summary>The map label typeface: the bundled UI font (Barlow, in place of WPF's Bahnschrift), semi-bold.</summary>
+    public static readonly Typeface LabelFace = new(new FontFamily("avares://GridSim.App/Fonts#Barlow"), FontStyle.Normal, FontWeight.SemiBold);
 
     /// <summary>The WPF boundary-label typeface: the same families, bold.</summary>
-    public static readonly Typeface BoundaryFace = new(new FontFamily("Bahnschrift, Segoe UI"), FontStyle.Normal, FontWeight.Bold);
+    public static readonly Typeface BoundaryFace = new(new FontFamily("avares://GridSim.App/Fonts#Barlow"), FontStyle.Normal, FontWeight.Bold);
 
     /// <summary>The ring thickness of an EHV roundel (WPF RingPenEhv) and of a lower-voltage one (WPF RingPenLv).</summary>
     public const double RingThicknessEhv = 2.6, RingThicknessLv = 1.8;

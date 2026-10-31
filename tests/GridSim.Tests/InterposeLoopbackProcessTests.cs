@@ -516,8 +516,11 @@ public sealed class InterposeLoopbackProcessTests : IDisposable
 
         Assert.True(r.ExitCode == 0, r.ToString());
         Assert.Contains("no --measurements-dir/--out-store: decoding only (add a sink to persist).", r.StdOut, StringComparison.Ordinal);
-        Assert.Contains(StopLine(accepted: 0, rejected: 0, decodeErrors: 0, points: 0, stepPositions: 0, bitstrings: 0,
-            windowsWritten: 0, clientResets: 1, unsupported: "none", heldFresh: 0, quarantined: 0), r.StdOut, StringComparison.Ordinal);
+        // 2.1.001: the same check, but on failure it prints the whole run (stdout and stderr): the first macOS CI run
+        // failed here and the runner log cut the output at its first line, so the cause could not be read.
+        string stop = StopLine(accepted: 0, rejected: 0, decodeErrors: 0, points: 0, stepPositions: 0, bitstrings: 0,
+            windowsWritten: 0, clientResets: 1, unsupported: "none", heldFresh: 0, quarantined: 0);
+        Assert.True(r.StdOut.Contains(stop, StringComparison.Ordinal), $"expected the stop line:\n{stop}\n{r}");
         Assert.Contains("warning: interpose: no frames received in 3 s (--live-seconds)", r.StdErr, StringComparison.Ordinal);
         Assert.True(Assert.Single(seen).Connected);
     }

@@ -6,13 +6,13 @@
   <!-- UI programme slice 1.7: the HARMONICS tab, a port of the WPF TabItem Header="HARMONICS" in
        src/GridSim.Wpf/MainWindow.xaml. The same layout (a scrolling column 760 wide at most, 16 margin), the same four
        texts in the same order, sizes, weights, margins, font and colour as WPF: the heading (18, bold, 8 below), the
-       summary (wrapping, 8 below), the usage line (wrapping, Consolas, 4 below) and the note (wrapping, grey). Every
+       summary (wrapping, 8 below), the usage line (wrapping, the monospaced font, 4 below) and the note (wrapping, grey). Every
        text is bound to the shared HarmonicsModel, which holds the WPF words once; the tab is fed nothing, as in WPF. -->
   <ScrollViewer VerticalScrollBarVisibility="Auto">
     <StackPanel Margin="16" MaxWidth="760">
       <TextBlock x:Name="TitleText" Text="{Binding Title}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8" />
       <TextBlock x:Name="SummaryText" Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,8" />
-      <TextBlock x:Name="CommandText" Text="{Binding Command}" TextWrapping="Wrap" Margin="0,0,0,4" FontFamily="Consolas" />
+      <TextBlock x:Name="CommandText" Text="{Binding Command}" TextWrapping="Wrap" Margin="0,0,0,4" FontFamily="{StaticResource MonoFont}" />
       <TextBlock x:Name="NoteText" Text="{Binding Note}" TextWrapping="Wrap" Foreground="Gray" />
     </StackPanel>
   </ScrollViewer>

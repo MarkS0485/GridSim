@@ -193,4 +193,22 @@ public class StorageChemistryTests
             Assert.Contains("[VERIFY]", c.ProvenanceNote);
         });
     }
+
+    /// <summary>CodeQL cs/loss-of-precision (2026-10-31): the pack's cell count (series x parallel) is an int product,
+    /// so a pack whose count passes int.MaxValue must be refused, never built with a wrapped count. Pins both sides of
+    /// the gate: the largest legal count builds and reports the exact product; one cell more throws.</summary>
+    [Fact]
+    public void Pack_cell_count_above_int_max_is_refused_not_wrapped()
+    {
+        ChemistryParameters chem = BatteryChemistryLibrary.All.First();
+        // 2^31 - 1 = 2147483647 = 7 x 306783378 + 1, so 1 x int.MaxValue is the exact edge on one side ...
+        var edge = new PackModel(chem, 1, int.MaxValue, chem.SocMax, trackAgeing: false);
+        Assert.Equal(int.MaxValue, (long)edge.SeriesCells * edge.ParallelStrings);
+        // ... and 2 x 2^30 = 2^31 is the first count that would wrap to int.MinValue.
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => new PackModel(chem, 2, 1 << 30, chem.SocMax, trackAgeing: false));
+        Assert.Equal("parallelStrings", ex.ParamName);
+        Assert.Contains("must fit in a 32-bit integer", ex.Message, StringComparison.Ordinal);
+        // A product far past the limit (where int multiplication would wrap to a small positive count) is refused too.
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PackModel(chem, 65_536, 65_537, chem.SocMax, trackAgeing: false));
+    }
 }

@@ -321,7 +321,6 @@ public static class SyntheticGb
             // N204: where this zone's branches start; every branch from here to the end of the zone is part of its
             // radial distribution ladder (the transmission rings, corridors and SGTs 400/275 were all added earlier).
             int firstZoneBranch = branches.Count;
-            var gspPlan = new List<(int gspBus, int parent)>();
             List<int> parents = z400[z].Concat(z275[z]).ToList();
 
             for (int g = 0; g < gsps; g++)
@@ -331,7 +330,6 @@ public static class SyntheticGb
                 (double gx, double gy) = Jitter(pb.X, pb.Y, 0.040);
                 int gsp = AddBus($"{zone.Tag} GSP {g + 1} 132", 132, gx, gy);
                 zGsp132[z].Add(gsp);
-                gspPlan.Add((gsp, parent));
                 string sgt = $"{zone.Tag} GSP {g + 1} SGT";
                 branches.Add(new Branch(parent, gsp, GspSgtRPu, GspSgtXPu, 0,
                     TapRatio: GspSgtTapRatio, Name: sgt, IsTransformer: true, RateAMva: GspSgtRateMva));

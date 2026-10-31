@@ -72,8 +72,14 @@ public sealed class UiHarmonicsParityTests
             // Each Avalonia text is bound to the model's property for the WPF text at the same place.
             Assert.Equal(bindings[i], (string?)ava[i].Attribute("Text"));
             foreach (string attr in layout)
-                Assert.True((string?)wpf[i].Attribute(attr) == (string?)ava[i].Attribute(attr),
+                Assert.True(Same(attr, (string?)wpf[i].Attribute(attr), (string?)ava[i].Attribute(attr)),
                     $"text {i}: {attr} is '{(string?)wpf[i].Attribute(attr)}' in WPF and '{(string?)ava[i].Attribute(attr)}' in the Avalonia view");
         }
     }
+
+    /// <summary>Attribute parity, with one mapping (2.1.001, Mark's decision 2026-10-31): WPF's Windows-only "Consolas"
+    /// is the Avalonia app's bundled monospaced font, so the Avalonia view names it as {StaticResource MonoFont}
+    /// (Cascadia Mono, the same on every OS). Every other attribute must be the same text in both.</summary>
+    private static bool Same(string attr, string? wpf, string? ava) =>
+        wpf == ava || (attr == "FontFamily" && wpf == "Consolas" && ava == "{StaticResource MonoFont}");
 }

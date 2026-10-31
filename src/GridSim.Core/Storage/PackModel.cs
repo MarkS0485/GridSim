@@ -69,6 +69,14 @@ public sealed class PackModel
     {
         Chemistry = chemistry ?? throw new ArgumentNullException(nameof(chemistry));
         if (seriesCells <= 0 || parallelStrings <= 0) throw new ArgumentOutOfRangeException(nameof(seriesCells));
+        // The cell count (series x parallel) is worked out in int arithmetic here (CellCount) and in the dispatch
+        // envelope (StorageEnvelope.FromPack); a product above int.MaxValue would wrap silently and every per-cell
+        // current would come out wrong. No real pack is anywhere near this (2^31 cells is about 100 TWh), so a pack
+        // that large is refused loudly rather than modelled with a wrapped count (CodeQL cs/loss-of-precision).
+        if ((long)seriesCells * parallelStrings > int.MaxValue)
+            throw new ArgumentOutOfRangeException(nameof(parallelStrings), parallelStrings,
+                string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"A pack of {seriesCells} series cells x {parallelStrings} parallel strings has more than {int.MaxValue} cells; the cell count must fit in a 32-bit integer."));
         SeriesCells = seriesCells; ParallelStrings = parallelStrings;
         Cell = new CellModel(chemistry, initialSoc, ambientC);
         AmbientC = ambientC;

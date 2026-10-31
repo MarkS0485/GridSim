@@ -31,11 +31,13 @@
   <SolidColorBrush x:Key="Amber"   Color="{StaticResource AmberColor}" />
   <SolidColorBrush x:Key="Red"     Color="{StaticResource RedColor}" />
 
-  <!-- The same font lists as WPF. Bahnschrift and Consolas are Windows fonts: on macOS and Linux the first family
-       present is used, and when none is, Avalonia falls back to the app's default font (Inter, bundled by the
-       desktop head), so text never disappears. -->
-  <FontFamily x:Key="UiFont">Bahnschrift, Segoe UI, Arial</FontFamily>
-  <FontFamily x:Key="MonoFont">Consolas, Cascadia Mono, Courier New</FontFamily>
+  <!-- The two fonts are bundled with the app (Fonts/, SIL Open Font License 1.1, OFL-*.txt there and beside the app),
+       so the text lays out the same on Windows, Linux and macOS (2.1.001). Before, these were the WPF lists
+       "Bahnschrift, Segoe UI, Arial" and "Consolas, Cascadia Mono, Courier New": Windows-only fonts, so on Linux and
+       macOS a wider fallback was drawn and the header overflowed (found by the first GitHub CI run on those systems).
+       Barlow is a narrow DIN-style family close to Bahnschrift; Cascadia Mono is Microsoft's monospaced family. -->
+  <FontFamily x:Key="UiFont">avares://GridSim.App/Fonts#Barlow</FontFamily>
+  <FontFamily x:Key="MonoFont">avares://GridSim.App/Fonts#Cascadia Mono</FontFamily>
 
   <!-- ============ Shared bar-track / rail background ============ -->
   <!-- The dark rail behind every progress, loading and inertia bar (WPF: named once instead of ~20 inline #1E2733). -->
