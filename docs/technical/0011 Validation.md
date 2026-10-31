@@ -261,9 +261,11 @@ as well. Exit codes: 0 within tolerance, 1 mismatch, 2 NumPy missing, 3 unreadab
 export has no `converterParams` (a grid-forming or asset-class run), since no independent derivation ran. A real-network
 export carries `converterParams`; the sidecar then checks `Y_conv` and `L` only and says so.
 Tolerances are as for the harmonic check, 4096 machine epsilons relative and absolute. The module docstring of
-`crossval_impedance.py` records the measured need over 25 grid-following scans (18,165 `Z`, `Y` and `L` comparisons): the
-smallest `k` for which `rtol = atol = k eps` passes everything is 25.55 (gb-reduced-29, `Y` at 0.1096 Hz, where the PLL
-and current-loop terms nearly cancel), and at most 3.24 on every other scan.
+`crossval_impedance.py` records the measured need over 25 grid-following scans (18,165 `Z`, `Y` and `L` comparisons),
+re-measured on 2026-10-31 after the grid and the converter were paired in the same frame and MIMO became the default for a
+grid-following converter: the smallest `k` for which `rtol = atol = k eps` passes everything is 28.06 (gb-reduced-29, `Y`
+at 0.7236 Hz, where the PLL and current-loop terms nearly cancel), and at most 3.24 on every other scan. The default is
+146 times the worst need. Before the re-measurement the figure was 25.55 (gb-reduced-29, `Y` at 0.1096 Hz).
 
 ### Quasi-static time series against OpenDSS
 
@@ -475,7 +477,7 @@ value that moves toward the gate.
 | Swing against SciPy RK45 | `crossval_freq.py` | 0.02 Hz/s; 0.05 Hz | 1.6e-4 Hz/s and 2.2e-4 Hz on `gb-largest-loss-1320` |
 | Classical swing against SciPy | `crossval_classical.py` | 1e-3 rad | 3.7e-8 rad on case9 |
 | Small-signal eigenvalues | `crossval_smallsignal.py` | 4096 machine epsilons `* cond(V)` relative | 3.1e-8 relative on case9, `cond(V)` 1.9e10; worst need `max_rel / cond(V)` 0.2165 eps (gb `--damping 2`) over the bundled `modal` cases (script docstring) |
-| Impedance-stability rebuild | `crossval_impedance.py` | 4096 machine epsilons relative and absolute | worst need 25.55 eps (gb-reduced-29, Y at 0.11 Hz), at most 3.24 eps elsewhere, over 25 grid-following scans (script docstring) |
+| Impedance-stability rebuild | `crossval_impedance.py` | 4096 machine epsilons relative and absolute | worst need 28.06 eps (gb-reduced-29, Y at 0.72 Hz), at most 3.24 eps elsewhere, over 25 grid-following scans (script docstring, re-measured 2026-10-31) |
 | QSTS against OpenDSS | `crossval_qsts_opendss.py`, `QstsOpenDssCrossCheckTests` | 1e-10 pu; every tap and bank operation at the same step | 1.8e-11 pu daily STATIC, 7.9e-12 pu 1 s TIME (one pinned semantics difference, ch. 37) |
 | Harmonic penetration | `crossval_harmonics.py` | 4096 machine epsilons relative and absolute (9.09e-13) | 9.7e-17 pu uk, 1.1e-16 pu gb-synthetic (script docstring) |
 | Dense and sparse estimation | `SparseEstimatorTests` | 1e-8 pu, 1e-7 deg | same `J`, chi-square verdict, rank and removals |

@@ -9,11 +9,10 @@ apps get their frames from the GDA bridge server, which [ch. 24](<0024 The GDA b
 ## Before you start
 
 - **A reachable bridge.** The apps are clients. A bridge server with the estimated lake behind it must be running and
-  reachable, whether the hosted one or your own ([ch. 24](<0024 The GDA bridge.md>)).
+  reachable, on your own machine or on a server you have access to ([ch. 24](<0024 The GDA bridge.md>)).
 - **An endpoint in the app settings.** The desktop app lists a **Live bridge** model source when `BridgeEndpoint` in
-  `%LOCALAPPDATA%\GridSim\settings.json` is non-empty. The default is the hosted endpoint
-  `wss://simstream.twinscrollgridbalancer.co.uk/ws/bridge`, so a fresh install already lists **Live bridge** and
-  connects to the hosted server. The web console shows its bridge cards when the `GridSim:BridgeEndpoint`
+  `%LOCALAPPDATA%\GridSim\settings.json` is non-empty. The default is empty, so a fresh install does not list
+  **Live bridge** and connects to no bridge: set the endpoint first. The web console shows its bridge cards when the `GridSim:BridgeEndpoint`
   configuration key is set. For a bridge on your own machine set the value to `ws://127.0.0.1:8770/ws/bridge` and allow the unencrypted address
   (`BridgeAllowUnencrypted`, below).
   [Ch. 3, Configuration](<0003 Configuration.md>) lists both settings.

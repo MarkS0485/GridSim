@@ -8265,3 +8265,48 @@ Release candidate 1.0.
 - Docs: MATH.md and technical chapter 38, deterministic mathematics: why platform maths is not bit-reproducible,
   the FDLIBM port, the fixed-order vector kernels, the fused multiply-add policy and how bit-identity across
   operating systems and CPUs is enforced and tested.
+
+## [2.0.200]
+
+### Fixed
+- Impedance stability: the default criterion is now `auto`, MIMO for a grid-following converter with its PLL modelled
+  and SISO for a grid-forming converter and for `--outer-loop-only`. The SISO pairing drops the PLL's cross-sequence
+  coupling and gave the wrong verdict on the documented weak-grid example (`case9 --pll-bw 80 --scr 0.3`: UNSTABLE,
+  where the closed loop has no right-half-plane root) and on the fast-PLL example (`--pll-bw 300`: STABLE at SCR 3,
+  where it has one); MIMO agrees with an independent Routh-Hurwitz count of the closed-loop roots at every point
+  checked. `--criterion mimo` with `--outer-loop-only` now exits 2: the ideal PLL makes the dq loop improper and its
+  winding misses a right-half-plane root that SISO counts. `--criterion siso` and `mimo` still force either.
+- Avalonia app: the bundled cases (`data/`), their licences and the JSON schemas are now built and published next to
+  the app, as with the command line tool, so the case list shows every bundled network.
+- PSS/E import: whether an impedance correction table holds turns ratios or phase shift angles is decided by PSS/E's
+  own rule (angles when the first T is below 0.5 or the last above 1.5), not by the winding's COD. A winding without
+  angle control on an angle table (an uncontrolled phase shifter) now reads the table at its angle instead of its
+  ratio. With tap control on, a ratio table on a COD 3 winding or an angle table on a COD 1 or 2 winding is refused;
+  a winding whose control is switched off (negative COD) reads its table at the fixed setting.
+- gb-full: 25 Northern Powergrid 132 kV cable rows carried line charging of 202 to 542 uS/km, above anything a 132 kV
+  cable can have (about 160 uS/km at most); each now carries 126 uS/km (C = 0.40 uF/km, a fluid-filled 132 kV cable)
+  times its published length: 354.6 MVAr of charging at 1 pu becomes 148.1 MVAr. The bundled manifest is updated.
+- Docs: the bridge chapters said a fresh install lists and connects to a hosted bridge; the default endpoint is
+  empty and a bridge must be configured first.
+
+### Changed
+- QSTS: the per-unit continuous settle loop switches to the accelerated iteration as soon as it stalls, that is when
+  its largest remaining change has not halved over 25 rounds and, at that rate, cannot reach the tolerance within the
+  round cap, instead of always running the full cap (200 by default). Runs that settle without stalling are unchanged
+  bit for bit; a coupled set now settles in tens of rounds, not hundreds.
+- Governor kind: GAST's three optional parameters (VMIN, VMAX, DTURB) are recorded in the code-default register; the
+  register holds 594 entries (was 591). No value changed.
+- Docs: the impedance cross-check's measured tolerance need re-measured on 25 grid-following scans: 28.06 machine
+  epsilons at worst (was 25.55), at most 3.24 elsewhere; the default 4096 is 146 times the worst need.
+- Docs: REEC_A with PFlag = 1, the order of the Pref rate limit and the speed multiplication, and the PSS/E impedance
+  correction abscissa (pu of the winding's bus base) are confirmed against the EPRI model guides and the PSS/E POM.
+- Docs: the impedance-stability examples, captures and export samples are re-captured under the new default criterion;
+  the summer-minimum study notes the gb-full charging correction.
+- Tests: regression tests for the GAST register entries, the QSTS stall switch, the Avalonia data packaging, the bridge
+  default endpoint, the PSS/E table rules, the REEC_A PFlag order, the bridge send timeout and the CIM remote-control
+  machine reactive-limit report; the SISO/MIMO choice is checked against a Routh-Hurwitz oracle.
+- Tests: pins moved with written justification in each test: the code-default register total 591 -> 594 (three GAST
+  entries); the coupled QSTS feeder digests (the accelerated iteration now starts at the stall); one PSS/E
+  impedance-table expectation (an angle table read at the winding's 0 degree angle, F 1.0, not at its ratio, F 1.0035);
+  the `--criterion` refusal text; and five gb-full pins that follow the charging correction (study-solver generation,
+  loss and boundary flows, the OLTC base-solve minimum voltage, and three untapped EMT trajectory digests).

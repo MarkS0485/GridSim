@@ -74,6 +74,24 @@ form undamped LC pockets: the N006 harmonic resonance at bus 4992 (driving-point
 them, and the engine computes exactly what the data says. A data limitation of the assembled model; the fix belongs to
 the upstream export.
 
+## 132 kV line charging above the physical ceiling (corrected in 2.0.200)
+
+25 Northern Powergrid 132 kV cable rows (West Yorkshire: Bradford West, Girlington, Leeds, Kirkstall, Skelton Grange,
+Ferrybridge, Stourton, Doncaster; Hull: Creyke Beck, Hull South, Sculcoates, Cornwall Street; Teesside: Norton,
+Bowesfield, Saltholme) carried line charging of 202 to 542 uS/km as published, which is 1.3 to 3.5 times the most a 132
+kV cable can have: about 160 uS/km (C about 0.51 uF/km) for older fluid-filled cable, 60 to 90 uS/km for XLPE, about
+2.8 uS/km for overhead line. Their reactance per km is normal for one 132 kV cable circuit, so the rows are single
+circuits of the stated length with B alone too large. The same table's overhead lines (2.7 to 4.0 uS/km) and the bulk
+of its cables (23 to 34 uS/km) are correct, so the error is in those rows, not in a unit or base.
+
+Each of the 25 rows now carries `bPu = length x 126 uS/km x 174.24 ohm` (C = 0.40 uF/km at 50 Hz, a mid fluid-filled
+132 kV cable; Zbase = 132^2 / 100), with its published length. Their charging at 1 pu falls from 354.6 MVAr to 148.1
+MVAr (4,440.0 to 4,233.5 MVAr over all 2,719 132 kV branches). Nothing else changed. Other 132 kV rows with a high
+b/x (UKPN, SSEN and ENW, 117 to 154 uS/km) are credible fluid-filled cable and are left as published.
+
+The rest of the light-load voltage rise in the Bradford West area comes from the open line ends of N147 above (the
+`<SITE> T<n>` circuit ends not joined to the `<SITE> GT<n>` transformer nodes); that fix belongs to the upstream export.
+
 ## Supergrid transformers with zero resistance (N148)
 
 All 1,207 synthesised supergrid transformers have r = 0 (22 other transformers also do). The commonest reactance

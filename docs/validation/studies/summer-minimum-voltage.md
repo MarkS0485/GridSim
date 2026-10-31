@@ -7,6 +7,13 @@ commitment are synthetic (built by the rules below from the case files); no meas
 units at grid supply points, the transformer tap settings and the generators' reactive limits), so read the numbers as
 the shape of the answer on this model, not as operating limits of the real system.
 
+**Data note (2.0.200).** This study ran on gb-full before the 2.0.200 correction of 25 Northern Powergrid 132 kV cable
+rows whose charging was above any physical 132 kV cable (data/gb-full/README.md). With the corrected rows, the worst
+snapshot (midday minimum, unity PV, taps settled; measured on the 2.0.174 tree with the same correction) has its highest
+voltage at 1.3017 pu instead of 1.4627 pu (Menston T1) and 7 buses over their limits instead of 15, all in the Bradford
+West cluster; the Leeds buses fall under 1.10 pu. The rest of the Bradford rise comes from the open line ends there
+(N147 in the same README). The numbers below are those of the original run and have not been re-run.
+
 ## The question
 
 At summer minimum demand the transmission network makes more reactive power than anything consumes: cable and line

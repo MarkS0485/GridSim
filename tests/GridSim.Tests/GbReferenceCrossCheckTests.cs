@@ -146,12 +146,20 @@ public class GbReferenceCrossCheckTests
         // 523.1288528336736 -> 523.1288528342689; boundary flows 1670.7787461364737, 3779.626723418185, 3340.5799117624283,
         // 8535.77075152331, -2534.8000886880695 -> 1670.778746136451, 3779.6267234181432, 3340.5799117624165, 8535.77075152322,
         // -2534.800088688238 (demand and the uk case unchanged).
-        Assert.Equal(53808.12642504887, SolvedGeneration(full, rf));
-        Assert.Equal(523.1288528342689, rf.TotalLossMw);
+        // Moved 2026-10-31 (GitHub issue #1, data correction): 25 Northern Powergrid 132 kV cable rows of gb-full
+        // carried line charging of 202 to 542 uS/km, above any 132 kV cable (about 160 uS/km at most); each now carries
+        // 126 uS/km (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md).
+        // The network changed, so its solved numbers do. Before -> after: generation 53808.12642504887 ->
+        // 53807.79521405717 (-0.331 MW); loss 523.1288528342689 -> 522.7976418426257 (-0.331 MW); boundary flows
+        // 1670.778746136451, 3779.6267234181432, 3340.5799117624165, 8535.77075152322, -2534.800088688238 ->
+        // 1670.7787461431967, 3779.6267222159936, 3340.579881911521, 8536.11076202345, -2534.8009995851994 (B8 FLOWSTH
+        // +0.340 MW, the others under 0.001 MW); demand and the uk case unchanged.
+        Assert.Equal(53807.79521405717, SolvedGeneration(full, rf));
+        Assert.Equal(522.7976418426257, rf.TotalLossMw);
         IReadOnlyList<BoundaryFlow> bf = BoundaryAnalysis.Evaluate(full, rf);
         Assert.Equal(new[] { "B4 SHETL-SPT (SSE-SP)", "B6 Scotland-England (SCOTEX)", "B7 Upper North England (HARSPNBLY)", "B8 North to Midlands (FLOWSTH)", "SEIMP South East import (SEIMPPR2)" },
             bf.Select(f => f.Name));
-        Assert.Equal(new[] { 1670.778746136451, 3779.6267234181432, 3340.5799117624165, 8535.77075152322, -2534.800088688238 }, bf.Select(f => f.FlowMw));
+        Assert.Equal(new[] { 1670.7787461431967, 3779.6267222159936, 3340.579881911521, 8536.11076202345, -2534.8009995851994 }, bf.Select(f => f.FlowMw));
 
         GridModel uk = JsonGridLoader.LoadDirectory(Path.Combine(Data, "uk"));
         PowerFlowResult ru = ContingencyAnalysis.CreateStudySolver(uk).Solve(uk, ContingencyAnalysis.StudyOptions);

@@ -6,7 +6,7 @@ namespace GridSim.Tests;
 
 /// <summary>
 /// N142 (October 2026, the N005 follow-up): crossval_impedance.py and crossval_smallsignal.py default to 4096 machine
-/// epsilons (about 9.09e-13) instead of 1e-6 / 1e-9, measured against the worst agreement on the bundled cases (25.55 eps
+/// epsilons (about 9.09e-13) instead of 1e-6 / 1e-9, measured against the worst agreement on the bundled cases (25.55 eps then; 28.06 eps re-measured 2026-10-31, GitHub issue #10
 /// for the impedance rebuild; 0.2165 eps of max_rel / cond(V) for the eigenvalues). The test run has no SciPy, so these
 /// are source-level contracts on the defaults, which must never go back up.
 /// </summary>

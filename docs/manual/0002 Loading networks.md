@@ -395,7 +395,10 @@ at the file's ratio, as above.
   two-winding unit as above; degrees for COD 3) and the step (RMA - RMI) / (NTP - 1). Raising the tap lowers the
   reactive power into the transformer; raising the angle lowers the active power. A control that runs out of range with
   its flow outside the band is named on the `Taps NOT SETTLED` line. An impedance correction table follows the ratio, or
-  the angle for COD 3. Fewer than 2 positions, RMA not above RMI (or RMI not above 0 for a ratio) and VMA not above VMI
+  the angle for COD 3. Whether a table holds ratios or angles is PSS/E's own rule (POM s.4.1.1.11): angles in degrees
+  when its first T is below 0.5 or its last above 1.5, otherwise ratios in pu of the winding's bus base. A winding
+  without control reads its table at that quantity; a ratio table on a COD 3 winding, or an angle table on a COD 1 or 2
+  winding, is refused with tap control on (the loop could not follow it). Fewer than 2 positions, RMA not above RMI (or RMI not above 0 for a ratio) and VMA not above VMI
   are refused, naming the line.
 - **Not applied, noted.** DC line (COD 4) and asymmetric (COD 5) control, and a COD 1 winding with CONT 0 or a
   controlled bus that was dropped as isolated.

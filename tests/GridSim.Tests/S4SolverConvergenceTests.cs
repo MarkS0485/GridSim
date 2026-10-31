@@ -365,7 +365,12 @@ public class S4SolverConvergenceTests
             // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): deterministic
             // fdlibm sin / cos in the Newton solve. Before -> after: gb-full Vmin 0.9601721125721315 -> 0.9601721125721316 (one ulp;
             // passes, held taps and uk unchanged).
-            ("gb-full", 4, 71, 0.9601721125721316),
+            // Moved 2026-10-31 (GitHub issue #1, data correction): 25 Northern Powergrid 132 kV cable rows of gb-full
+            // carried line charging of 202 to 542 uS/km, above any 132 kV cable (about 160 uS/km at most); each now
+            // carries 126 uS/km (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu
+            // (data/gb-full/README.md). The network changed, so its solved numbers do. Before -> after: gb-full Vmin
+            // 0.9601721125721316 -> 0.9601721128352261 (+2.63e-10 pu); passes 4 and held taps 71 unchanged.
+            ("gb-full", 4, 71, 0.9601721128352261),
         })
         {
             GridModel m = JsonGridLoader.LoadDirectory(Path.Combine(AppContext.BaseDirectory, "data", dir));

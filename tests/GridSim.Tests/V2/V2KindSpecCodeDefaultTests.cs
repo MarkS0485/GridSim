@@ -86,7 +86,11 @@ public sealed class V2KindSpecCodeDefaultTests
         // refused: gridFollowingInverter.pllBandwidthHz 3 x ConverterDefaults.PllBandwidthHz, pllDampingRatio 2 x
         // ConverterDefaults.PllDampingRatio, gridCodeProfile.nominalFrequencyHz 2 x FrequencyLimits.NominalHz. Each set is
         // now one entry naming every consumer (4 -> 2, 4 -> 3, 6 -> 5): 595 - 4 = 591. No value changed.
-        Assert.Equal(591, counts.Values.Sum());
+        // Moved 2026-10-31 (GitHub issue #12): 591 -> 594. GAST's three optional parameters have constructor defaults in
+        // Gast (valveMinPu 0, valveMaxPu +Infinity, turbineDampingPu 0) that the governor kind documented in its
+        // descriptions but did not register. Three entries added, one per parameter, each checked against the code by
+        // the per-entry test above and pinned row by row in B5ConverterModelsTests.N309 / Issue12. No value changed.
+        Assert.Equal(594, counts.Values.Sum());
     }
 
     // ------------------------------------------------------------------------------ the Q24 keys

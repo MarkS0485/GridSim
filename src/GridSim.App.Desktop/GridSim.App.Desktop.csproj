@@ -29,6 +29,31 @@
     <ProjectReference Include="..\GridSim.App\GridSim.App.csproj" />
   </ItemGroup>
 
+  <!-- The bundled cases ship next to the app, exactly as the CLI ships them (GitHub issue #6: the app archives had no
+       data/ folder, so the case list showed only the cases built into the engine). ModelCatalog, SimHost and
+       CaseTemplates look for <executable folder>/data. The item set is the CLI's, item for item, so the two downloads
+       carry the same bundled data and the same manifest (data/bundled.sha256: a network is bundled only when its files
+       match it); DesktopAppDataPackagingTests pins the match. -->
+  <ItemGroup>
+    <Content Include="..\..\data\**\*.json" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\**\*.csv" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\matpower\**\*.m" Link="data\matpower\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\data\bundled.sha256" Link="data\bundled.sha256" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The licences and attribution files of the bundled third-party data travel with the data (THIRD-PARTY-NOTICES.md
+       lists every source), as in the CLI. The local, uncommitted reference inbox is never shipped. -->
+  <ItemGroup>
+    <Content Include="..\..\data\**\LICENSE*.txt;..\..\data\**\ATTRIBUTION.txt;..\..\data\**\README.md;..\..\data\**\MODEL_CARD.md"
+             Exclude="..\..\data\reference-inbox\**" Link="data\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+  <!-- The JSON schemas the build understands, as in the CLI, so a user of the app download can validate a case file. -->
+  <ItemGroup>
+    <Content Include="..\..\schemas\**\*.json" Link="schemas\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- F07: the licence and the third-party notices ship with every build and publish. -->
   <ItemGroup>
     <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />

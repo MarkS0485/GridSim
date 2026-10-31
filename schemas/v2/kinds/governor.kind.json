@@ -82,6 +82,11 @@
           "consumer": "Tgov1 constructor default",
           "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Tgov1:.ctor:turbineDampingPu",
           "value": 0.0
+        },
+        {
+          "consumer": "Gast constructor default (DTURB)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Gast:.ctor:turbineDampingPu",
+          "value": 0.0
         }
       ]
     },
@@ -105,6 +110,11 @@
         {
           "consumer": "HydroGovernor constructor default (gateMinPu)",
           "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.HydroGovernor:.ctor:gateMinPu",
+          "value": 0.0
+        },
+        {
+          "consumer": "Gast constructor default (VMIN)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Gast:.ctor:valveMinPu",
           "value": 0.0
         }
       ]
@@ -193,6 +203,11 @@
         {
           "consumer": "HydroGovernor constructor default (gateMaxPu; absent: unlimited)",
           "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.HydroGovernor:.ctor:gateMaxPu",
+          "value": "+Infinity"
+        },
+        {
+          "consumer": "Gast constructor default (VMAX; absent: unlimited)",
+          "ref": "param:GridSim.Core:GridSim.Core.Dynamics.Models.Gast:.ctor:valveMaxPu",
           "value": "+Infinity"
         }
       ]

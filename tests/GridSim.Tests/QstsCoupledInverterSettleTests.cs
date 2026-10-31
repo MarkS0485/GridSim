@@ -9,9 +9,11 @@ namespace GridSim.Tests;
 /// <summary>
 /// Many strongly coupled volt-var inverters (the shape of a national case with embedded PV at every demand bus, here on
 /// a small synthetic feeder so the test is fast). The per-unit damped loop cannot settle this set: every unit's factor is
-/// halved on each round its change grows and never recovers, so the units creep. After the per-unit loop fails its cap
-/// the engine switches to the accelerated iteration over all units together; the step must then settle on the curves,
-/// with the same bits on every run, thread, Newton engine and SIMD tier.
+/// halved on each round its change grows and never recovers, so the units creep. Once the per-unit loop stalls (its
+/// progress measure has not halved over 25 rounds and, at that rate, cannot reach the tolerance within the cap; before
+/// GitHub issue #13 the engine waited for the full cap) the engine switches to the accelerated iteration over all units
+/// together; the step must then settle on the curves, with the same bits on every run, thread, Newton engine and SIMD
+/// tier.
 /// <para>
 /// Every existing QSTS test settles inside the per-unit loop's cap, so none of them reaches the switch; their pinned
 /// digests (<see cref="QstsEngineTests"/>) are the proof that the per-unit path is unchanged bit for bit.
@@ -76,22 +78,24 @@ public sealed class QstsCoupledInverterSettleTests
     [Theory]
     [InlineData(200)]
     [InlineData(1000)]
-    public void Coupled_volt_var_units_settle_on_their_curves_after_the_per_unit_loop_fails_its_cap(int cap)
+    public void Coupled_volt_var_units_settle_on_their_curves_after_the_per_unit_loop_stalls(int cap)
     {
         QstsStudy study = CoupledStudy(maxContinuous: cap);
         QstsResult q = new QstsEngine(new SparseNewtonRaphsonPowerFlow(), Opt).Run(CoupledFeeder(), study);
         Assert.True(q.Completed);
         QstsStepRecord s = q.Steps[0];
-        // More continuous rounds than the cap: the per-unit loop ran its full cap without settling (the stall), and the
-        // accelerated iteration then settled the step. With the cap at 1000 the per-unit loop still had not settled,
-        // which is the creep the switch exists for.
-        Assert.True(s.ContinuousIterations > cap, $"continuous rounds {s.ContinuousIterations}, cap {cap}");
-        Assert.True(s.ContinuousIterations <= 2 * cap, $"continuous rounds {s.ContinuousIterations}, cap {cap}");
+        // Changed 2026-10-31 (GitHub issue #13, a performance fix the issue's own plan asked for): the per-unit loop's
+        // stall is now detected (25 rounds without its progress measure halving) and the accelerated iteration takes over
+        // there instead of after the full cap. Before, this asserted ContinuousIterations > cap (the per-unit loop ran
+        // its whole cap); now the step settles well inside the cap (45 rounds in all at cap 200, 47 at cap 1000). The
+        // fixed point is unchanged (AssertOnCurves below and the cap-to-cap check), only how fast it is reached.
+        Assert.True(s.ContinuousIterations < 100, $"continuous rounds {s.ContinuousIterations}, cap {cap}");
         Assert.True(s.Settled, $"settled {s.Settled}, continuous rounds {s.ContinuousIterations}");
         Assert.True(s.VmaxPu > 1.02, $"export must push the feeder onto the absorbing slope (vmax {s.VmaxPu})");
         Assert.True(s.PvMvar < 0, $"the units absorb (Q {s.PvMvar})");
         AssertOnCurves(q, study);
         // A fixed point does not depend on how the per-unit loop wandered first: both caps land within the tolerance.
+        // (The stall test depends on the cap, by design: it asks whether the observed rate can settle within it.)
         if (cap == 1000)
         {
             QstsResult q200 = new QstsEngine(new SparseNewtonRaphsonPowerFlow(), Opt).Run(CoupledFeeder(), CoupledStudy(maxContinuous: 200));
@@ -117,8 +121,14 @@ public sealed class QstsCoupledInverterSettleTests
 
     // The coupled run digested over every number, pinned so the slices require the same bits in every SIMD mode they run
     // in (default, DOTNET_EnableHWIntrinsic=0, DOTNET_EnableAVX2=0).
-    internal const string PinnedCoupledDigestNewton = "621221dbe30460a9f2c195efe8b8dddfe3488bfe1084abcbf4b00e6957d8df53";
-    internal const string PinnedCoupledDigestSweep = "026dda68bb76cd6d28745d189325f1ba5276b9076ff469c0fd7d330d108919f4";
+    // Re-pinned 2026-10-31 (GitHub issue #13): the accelerated iteration now starts at the per-unit loop's stall (the
+    // step settles in 45 rounds in all) instead of after its 200-round cap, so it starts from a different point and
+    // reaches the same fixed point (within the 1e-7 x rating settle tolerance, checked by AssertOnCurves) by a different
+    // path; the last bits differ.
+    // Before: Newton 621221dbe30460a9f2c195efe8b8dddfe3488bfe1084abcbf4b00e6957d8df53,
+    //         sweep  026dda68bb76cd6d28745d189325f1ba5276b9076ff469c0fd7d330d108919f4.
+    internal const string PinnedCoupledDigestNewton = "d085a0b775303ccbc143c8631be2971723beca9d68d7660d831493835ab80995";
+    internal const string PinnedCoupledDigestSweep = "e1ee5527deb2abc23f9070c6627d1c6b7cba77ff18e7ff7c587d08199cf5e3a0";
 
     [Theory]
     [InlineData("dense")]
@@ -133,7 +143,8 @@ public sealed class QstsCoupledInverterSettleTests
             _ => new BackwardForwardSweep(),
         };
         QstsResult q = new QstsEngine(solver, Opt).Run(CoupledFeeder(), CoupledStudy());
-        Assert.True(q.Completed && q.Steps[0].Settled && q.Steps[0].ContinuousIterations > 200);
+        // Issue #13: settled inside the cap through the stall switch (was ContinuousIterations > 200, the full cap).
+        Assert.True(q.Completed && q.Steps[0].Settled && q.Steps[0].ContinuousIterations < 100);
         string digest = q.Digest(), pinned = engine == "sweep" ? PinnedCoupledDigestSweep : PinnedCoupledDigestNewton;
         Assert.True(digest == pinned, $"{engine}: digest {digest}, pinned {pinned}");
     }
@@ -148,7 +159,8 @@ public sealed class QstsCoupledInverterSettleTests
         QstsResult q = new QstsEngine(new SparseNewtonRaphsonPowerFlow(), Opt).Run(CoupledFeeder(), study);
         Assert.True(q.Completed);
         QstsStepRecord s = q.Steps[0];
-        Assert.True(s.Settled && s.ContinuousIterations > 200, $"settled {s.Settled}, continuous rounds {s.ContinuousIterations}");
+        // Issue #13: the stall switch settles it inside the cap (was ContinuousIterations > 200, the full cap).
+        Assert.True(s.Settled && s.ContinuousIterations < 100, $"settled {s.Settled}, continuous rounds {s.ContinuousIterations}");
         AssertOnCurves(q, study);
         // Bus 11 is PV unit index 9; the request is load minus PV, a charge here, clamped to the rating and the energy
         // room over the step (0.4 MWh to SoC max at 0.95 charge efficiency over 60 s is far above 0.5 MW).

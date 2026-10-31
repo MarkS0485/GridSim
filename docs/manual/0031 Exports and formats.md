@@ -853,7 +853,7 @@ $ head -n 30 results/exports-docs/impedance-stability.json
   "inverterBus": 2,
   "mode": "GridFollowingInverter",
   "modelDetail": "PllOuter",
-  "criterion": "Siso",
+  "criterion": "Mimo",
   "operatingPoint": {
     "vd0Pu": 1.025,
     "vq0Pu": 0,
@@ -885,10 +885,10 @@ $ sed -n '4326,4337p' results/exports-docs/impedance-stability.json
     "encirclements": 0,
     "unstableModeCount": 0,
     "stable": true,
-    "gainMarginDb": 19.106647182661302,
-    "phaseMarginDeg": -113.23481644618866,
-    "criticalFreqHz": 18.456253226988178,
-    "minDistToMinusOne": 0.8602759878103645
+    "gainMarginDb": "Infinity",
+    "phaseMarginDeg": "Infinity",
+    "criticalFreqHz": "NaN",
+    "minDistToMinusOne": 0.8740273367032224
   },
   "scrSweep": [
     {

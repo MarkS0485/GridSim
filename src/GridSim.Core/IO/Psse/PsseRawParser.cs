@@ -688,6 +688,11 @@ public static class PsseRawParser
             }
         }
 
+        /// <summary>PSS/E's own rule for what an impedance correction table's T values are (Program Operation Manual,
+        /// Vol. I, s.4.1.1.11): phase shift angles in degrees when the first T is below 0.5 or the last above 1.5, turns
+        /// ratios in pu of the winding's bus base otherwise.</summary>
+        internal static bool PsseAngleTable(ImpedanceCorrectionPoint[] points) => points[0].T < 0.5 || points[^1].T > 1.5;
+
         /// <summary>Revision 33 and earlier impedance correction table: I, then up to eleven pairs (T, F) on one line, F a real
         /// factor; trailing pairs of zeros are unused. Revision 34 and 35: triples (T, Re F, Im F) over one or more lines,
         /// the table ended by the triple 0, 0, 0. At least two points, T strictly increasing, a factor that is not zero.</summary>
@@ -1100,13 +1105,25 @@ public static class PsseRawParser
                     if (tab != 0)
                     {
                         if (!_impedanceTables.TryGetValue(tab, out var table)) throw wr.Error($"TAB{n + 1} {tab} names an impedance correction table the file does not define");
-                        // The table runs on the winding's ratio (pu of its bus base), or on its phase shift angle (degrees)
-                        // for a phase shifting winding (|COD| 3). Bug hunt 2026-10-29, finding 45 (decided, documented): a
-                        // reading of the PSS/E manual takes the abscissa as the ratio in pu of the winding's NOMINAL voltage
-                        // (WINDV for CW 3, WINDV / NOMV for CW 2), which differs from this only when NOMV != BASKV. No PSS/E
-                        // program manual is in docs/reference to settle it, so the bus-base form is kept (every pinned case
-                        // has NOMV = BASKV or no table, where the two agree) [VERIFY against the PSS/E POM].
-                        double tv = Math.Abs(cod) == 3 ? ang[n] : w[n];
+                        // The abscissa, confirmed 2026-10-31 (GitHub issue #5; bug hunt 2026-10-29 finding 45) against the
+                        // PSS/E-30.1 Program Operation Manual, Vol. I, s.4.1.1.11 "Transformer Impedance Correction Tables":
+                        // "The Ti values for tables that are a function of tap ratio (rather than phase shift angle) are in
+                        // units of the controlling winding's off-nominal turns ratio in pu of the controlling winding's bus
+                        // base voltage." That is w[n] (pu of the BUS base, NOMV folded in for CW 2 and 3), as before; the
+                        // reading on the winding's nominal voltage is not PSS/E's.
+                        // The same section decides ratio or angle from the table itself: "If the first T in a table is less
+                        // than 0.5 or the last T entered is greater than 1.5, T is assumed to be the phase shift angle".
+                        // Before, GridSim decided from |COD| = 3 instead. The two agree for a ratio-controlling winding with a
+                        // ratio table and a phase shifter (COD 3) with an angle table; they differed for a winding without
+                        // angle control whose table holds angles (an uncontrolled phase shifter, COD 0), which was read at
+                        // its ratio (about 1, outside an angle table) instead of its angle. The POM rule now decides.
+                        bool angleTable = PsseAngleTable(table.Points);
+                        if (_options.ApplyTapControl && cod is >= 1 and <= 3 && angleTable != (cod == 3))
+                            // The tap loop moves the ratio (COD 1, 2) or the angle (COD 3) and re-evaluates the table on that
+                            // quantity; a table on the other quantity cannot follow the loop. Refused, never guessed. A
+                            // negative COD (control switched off) builds no tap control, so its table is read at the fixed setting.
+                            throw wr.Error($"TAB{n + 1} {tab} is a {(angleTable ? "phase shift angle" : "turns ratio")} table (PSS/E POM s.4.1.1.11: angle when the first T < 0.5 or the last T > 1.5) but COD{n + 1} {cod} adjusts the {(Math.Abs(cod) == 3 ? "phase shift angle" : "turns ratio")}; GridSim's tap loop cannot apply it (read with tap control off to use the table at the fixed setting)");
+                        double tv = angleTable ? ang[n] : w[n];
                         if (tv < table.Points[0].T || tv > table.Points[^1].T) xfImpOutside++;
                         tables[n] = table.Points;
                         factors[n] = TapImpedanceCorrection.Factor(table.Points, tv);

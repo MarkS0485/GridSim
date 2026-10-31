@@ -52,7 +52,8 @@ At step k:
    c. else every tap changer whose accumulated time covers its delay moves one tap (with sequential coordination, only
       the first ready one by priority).
    Caps: 25 discrete iterations (the tap loop's pass cap) and 200 continuous ones; when the per-unit continuous
-   iteration reaches its cap, the accelerated iteration (below) takes over with a fresh cap of the same size. A step that
+   iteration stalls (see the stall watch below) or reaches its cap, the accelerated iteration
+   (below) takes over with a fresh cap of the same size. A step that
    hits a cap with a device still ready is reported unsettled (the verb exits 3 unless `--allow-unsettled`).
 4. **Arm the timers** from the final state; **record** the step.
 
@@ -96,7 +97,8 @@ halved whenever a unit's update stops shrinking) until no set point moves by mor
 **Accelerated continuous iteration.** With many units coupled through the network the per-unit factors cannot settle:
 the undamped map overshoots in its coupled modes, each unit's alpha is halved on the rounds its change grows, alpha
 never recovers, and the last units creep (on `gb-full` with 1,861 Category B units, 572 were still moving by under
-1 kVAr per round after 1,000 rounds). When the per-unit iteration reaches its cap without settling, the run switches,
+1 kVAr per round after 1,000 rounds). When the per-unit iteration stalls or reaches its cap without settling, the run
+switches,
 for the rest of the run, to Anderson acceleration over all continuous set points together: x holds P and Q of every
 reactive-function PV unit and P of every peak-shave or self-consumption battery, each over its rating; F(x) is "solve,
 then evaluate every target"; with g = F(x) - x and the differences dX, dG of the last 8 iterates and residuals, the step
@@ -105,9 +107,22 @@ column dropped when its new direction is under 1e-10 of its norm). Set points ar
 linear map this is GMRES on (I - J) x = b, so the coupled modes settle together. The history restarts at each step
 and after each discrete action. The settle test is the per-unit one (every target within 1e-7 of the rating of its
 set point), so "settled" means the same in both. The arithmetic is sequential in model order (no SIMD reductions, no
-threads; only Math.Sqrt, correctly rounded), so the bits are the same on every run and SIMD tier. A run the per-unit
-iteration settles never reaches the switch and is unchanged bit for bit (the pinned day digests hold). The `gb-full`
-summer-minimum volt-var run now settles at the default tolerance in 256 power flows (200 of them the per-unit cap).
+threads; only Math.Sqrt, correctly rounded), so the bits are the same on every run and SIMD tier.
+
+**Stall watch.** The per-unit iteration's progress measure in a round is the largest change any unit still has to make,
+over its rating. A converging loop shrinks it geometrically; a creeping one barely moves it, because its factors have
+been halved to almost nothing. The engine keeps the best measure of the current continuous phase (restarted at each
+step and after each discrete action) for every round, and calls the loop stalled at round k only when both hold: the
+best has not halved over the last 25 rounds, and at the rate seen over those rounds (q = best[k] / best[k - 25] per 25
+rounds) it cannot reach the settle tolerance by the cap (best[k] q^j stays above it for every j with k + 25 j within the
+cap; q of 1 or more never reaches it). A loop that fails the second test would have run into the cap at its own rate and
+switched there anyway; the watch moves the switch earlier. A slow loop that is on course to settle inside the cap keeps
+the per-unit iteration. The extrapolation is repeated multiplication (no logarithm), so it is the same on every
+platform. The watch only reads the measure, so a run whose per-unit iteration settles without stalling is unchanged bit
+for bit (the pinned day digests hold). On the 20-unit coupled test feeder the step now settles in 45 continuous rounds
+in all at the default cap (47 with a cap of 1,000) instead of over 200. The `gb-full` summer-minimum volt-var run of
+2026-10-26 settled at the default tolerance in 256 power flows, 200 of them the per-unit cap; that run has not been
+repeated with the stall watch.
 
 **Storage.** Schedule (MW profile), peak shaving (keep the power into a branch between LowMw and HighMw: the request is
 the excess of the flow the branch would carry without the unit, P_branch + P_unit), self-consumption (the bus's demand net
@@ -184,8 +199,10 @@ less conservative than the time series; one thread and four give the same answer
   with `chain`.
 - The hosting-capacity bisection assumes a constraint that, once broken, stays broken at larger sizes; the tap-operation
   criterion need not be monotone, and the result is then one valid bracket, not necessarily the smallest failing size.
-- With many coupled inverters the per-unit continuous settle spends its full cap (200 rounds by default) before the
-  accelerated iteration takes over: on `gb-full` with 1,861 volt-var units that is about 30 s of the first step on a
-  laptop (Release build). Later steps of the run start in the accelerated iteration. A step that the accelerated iteration does not
+- With many coupled inverters the per-unit continuous settle runs until its stall watch trips (no halving over 25
+  rounds and no prospect of settling by the cap) before the accelerated iteration takes over; before the watch it spent
+  its full cap (200
+  rounds by default, about 30 s of the first step on `gb-full` with 1,861 volt-var units on a laptop, Release build).
+  Later steps of the run start in the accelerated iteration. A step that the accelerated iteration does not
   settle within its own cap is still reported unsettled (exit 3 without `--allow-unsettled`), never settled. A
   tolerance far below the power flow's own convergence (1e-12 of the rating on `gb-full`) cannot be met by either.

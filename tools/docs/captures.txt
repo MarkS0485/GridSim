@@ -372,6 +372,7 @@ stability | impedance-stability-bus99 | impedance-stability case9 --bus 99
 stability | impedance-stability-case14 | impedance-stability case14
 stability | impedance-stability-case9-gfm | impedance-stability case9 --converter gfm
 stability | impedance-stability-case9-mimo | impedance-stability case9 --criterion mimo
+stability | impedance-stability-case9-siso | impedance-stability case9 --criterion siso
 stability | impedance-stability-case9-outer | impedance-stability case9 --outer-loop-only
 stability | impedance-stability-case9-pll | impedance-stability case9 --pll-bw 40 --current-bw 400
 stability | impedance-stability-case9-real | impedance-stability case9 --grid real

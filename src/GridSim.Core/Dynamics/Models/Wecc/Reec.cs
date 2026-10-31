@@ -289,11 +289,13 @@ public sealed class Reec : IReecModel
             else _s4 = WeccBlocks.Lag(_s4, o.S4Target, p.Tiq, dt);
             _pord = Math.Clamp(WeccBlocks.Lag(_pord, o.Psel, p.Tpord, dt), p.Pmin, p.Pmax);
         }
-        // Bug hunt 2026-10-29, finding 29 (decided, documented): with PFlag = 1 the rate limit acts on Pref and the speed
-        // multiplies afterwards (Psel = _prl * Wg), while one reading of the EPRI 3002006525 REEC_A diagram multiplies
-        // Pref by speed first and rate-limits the product. The two differ only while dPmax / dPmin binds AND the speed
-        // moves (type 3 wind in a fast event); with the usual +-99 pu/s limits they are the same. Kept, as the pinned
-        // WECC results depend on it [VERIFY against the EPRI report figure].
+        // Order of the rate limit and the speed multiplication with PFlag = 1 (bug hunt 2026-10-29, finding 29; confirmed
+        // 2026-10-31, GitHub issue #5): the rate limit acts on Pref (state s6) and the speed multiplies its output
+        // (Psel = _prl * Wg), before the PFlag switch and the Tpord lag (s5). That is the order drawn in the REEC_A block
+        // diagram of EPRI 3002006525 (2015, Figure 3-1, docs/reference/models/S276) and again in EPRI 3002027129 (2023,
+        // docs/reference/models/S275): Pref -> dPmax / dPmin limiter (s6) -> branch point -> x wg (PFlag 1) or straight
+        // through (PFlag 0) -> 1 / (1 + s Tpord). The text of both calls dPmax / dPmin "the maximum and minimum rate of
+        // change of power reference". Nothing to change; ReecPFlagOrderTests pins the order.
         _prl = WeccBlocks.RateLimit(_prl, u.Pref, p.DPmax, p.DPmin, dt);
         if (p.Variant == ReecVariant.C) _soc -= u.Pe / p.T * dt;
         _vf = WeccBlocks.Lag(_vf, u.Vt, p.Trv, dt);

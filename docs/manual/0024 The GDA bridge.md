@@ -147,8 +147,8 @@ plus 2 days before now; for `raw` it sends 1 January of the current year at 00:0
 
 **Desktop.** Set `BridgeEndpoint` in `%LOCALAPPDATA%\GridSim\settings.json` to `ws://127.0.0.1:8770/ws/bridge` (with
 `"BridgeAllowUnencrypted": true`, without which the client refuses a `ws://` address) for a
-local server, then pick **Live bridge** as the model source. The default is the public endpoint
-`wss://simstream.twinscrollgridbalancer.co.uk/ws/bridge`; blank hides the entry.
+local server, then pick **Live bridge** as the model source. The default is empty, which hides the entry; a fresh
+install connects to no bridge until the endpoint is set.
 
 **Web.** Set `GridSim:BridgeEndpoint` to the same address. `/dashboard/bridge:<case>[@<source>]` opens a session, and
 without that key every bridge address fails with `No GDA bridge endpoint is configured (GridSim:BridgeEndpoint).`

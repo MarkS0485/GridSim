@@ -685,6 +685,7 @@ public sealed class QstsEngine
             if (!r.Converged) return new StepOutcome(r, m, false, solves, iters, cont, disc, atLimit);
 
             int contThisRound = 0;
+            ResetStallWatch();
             while (true)
             {
                 // (a) Continuous level to a fixed point: per-unit damping (UpdateContinuous), or, once that has failed to
@@ -694,13 +695,17 @@ public sealed class QstsEngine
                 if (_accelerated ? UpdateContinuousAccelerated(k, t, sb, r) : UpdateContinuous(k, t, sb, r))
                 {
                     cont++; contThisRound++;
-                    if (contThisRound > _s.MaxContinuousIterations)
+                    // Stall: the per-unit loop has gone StallWindow rounds without halving its best progress measure
+                    // (issue #13). Waiting out the full cap there only spends rounds that cannot converge.
+                    bool stalled = !_accelerated && PerUnitLoopStalled(contThisRound);
+                    if (contThisRound > _s.MaxContinuousIterations || stalled)
                     {
                         if (_accelerated) { settled = false; break; }
-                        // The per-unit loop did not settle within its cap (strongly coupled units: each unit's damping
-                        // halves on every round its change does not shrink and never recovers, so units creep). Switch
-                        // to the accelerated iteration for the rest of the run, with a fresh round budget; it starts
-                        // from the state just reached (the update above stands, the re-solve below evaluates it).
+                        // The per-unit loop did not settle within its cap, or stalled before it (strongly coupled units:
+                        // each unit's damping halves on every round its change does not shrink and never recovers, so
+                        // units creep). Switch to the accelerated iteration for the rest of the run, with a fresh round
+                        // budget; it starts from the state just reached (the update above stands, the re-solve below
+                        // evaluates it).
                         _accelerated = true;
                         ClearAcceleration();
                         contThisRound = 0;
@@ -712,6 +717,7 @@ public sealed class QstsEngine
                     continue;
                 }
                 contThisRound = 0;
+                ResetStallWatch();
                 // A discrete action changes the map the continuous units iterate, so the accelerated history restarts.
                 ClearAcceleration();
                 // The discrete iteration cap: stop, and the step is unsettled if any device is still ready to act.
@@ -823,6 +829,9 @@ public sealed class QstsEngine
         {
             bool moved = false;
             double tol = _s.ContinuousTolerance;
+            // The round's progress measure for the stall watch: the largest change any unit still had to make, as a
+            // fraction of its rating. Read only by PerUnitLoopStalled; it moves no set point.
+            double worst = 0.0;
             for (int u = 0; u < _pvP.Length; u++)
             {
                 QstsPvUnit pv = _s.Pv[u];
@@ -832,6 +841,7 @@ public sealed class QstsEngine
                 double dP = p - _pvP[u], dQ = q - _pvQ[u];
                 double delta = Math.Max(Math.Abs(dP), Math.Abs(dQ));
                 if (delta <= tol * pv.RatedMva) continue;
+                worst = Math.Max(worst, delta / pv.RatedMva);
                 if (delta >= _pvLastDelta[u]) _pvAlpha[u] *= 0.5;
                 _pvLastDelta[u] = delta;
                 double a = _pvAlpha[u];
@@ -855,12 +865,76 @@ public sealed class QstsEngine
                 double next = ClampStorage(j, req);
                 double d = next - _stP[j];
                 if (Math.Abs(d) <= tol * u.RatedMw) continue;
+                worst = Math.Max(worst, Math.Abs(d) / u.RatedMw);
                 if (Math.Abs(d) >= _stLastDelta[j]) _stAlpha[j] *= 0.5;
                 _stLastDelta[j] = Math.Abs(d);
                 _stP[j] = _stAlpha[j] == 1.0 ? next : _stP[j] + _stAlpha[j] * d;
                 moved = true;
             }
+            _roundWorst = worst;
             return moved;
+        }
+
+        // ---- stall watch for the per-unit loop (issue #13) ----------------------------------------------------------
+        //
+        // Why: before, the accelerated iteration engaged only after the per-unit loop had run its full round cap
+        // (MaxContinuousIterations, 200 by default). A creeping set never settles inside the cap, so on a large case
+        // those rounds (each one a full network solve) were spent for nothing.
+        //
+        // What: the progress measure of a round is the largest change any unit still had to make, divided by its
+        // rating (_roundWorst); the loop has settled when it is at or below ContinuousTolerance. The watch keeps the
+        // best (smallest) measure of each round of this continuous phase. The loop is called stalled only when BOTH
+        // hold at round k (k > StallWindow):
+        //   1. the best measure has not halved over the last StallWindow rounds (best[k] > best[k - W] / 2), and
+        //   2. at the rate seen over those rounds, q = best[k] / best[k - W] per StallWindow rounds, the measure cannot
+        //      reach ContinuousTolerance by the cap: best[k] q^j > tolerance for every j with k + j W <= cap (q >= 1
+        //      can never reach it).
+        // A loop that fails (2) would, at its own observed rate, have run into the cap and switched there anyway; the
+        // watch moves that switch earlier and saves the rounds in between. A loop that is slow but on course to settle
+        // inside the cap fails neither test only if its rate is too slow for the cap, so it keeps the per-unit loop and
+        // its former numbers. (The first version tripped on (1) alone, which could divert a slow but converging loop
+        // that would have settled at, say, round 150; found in review before release.)
+        //
+        // Bits: the watch reads the measure only; it moves no set point. A run whose per-unit loop settles without
+        // tripping it keeps exactly its former numbers. Deterministic: a sequential max over units in model order,
+        // plain comparisons and repeated multiplication (no logarithm, so no platform maths).
+
+        /// <summary>The window, in rounds, over which the per-unit loop's progress rate is measured.</summary>
+        private const int StallWindow = 25;
+
+        private double _roundWorst;
+        private double[] _stallBest = Array.Empty<double>();
+
+        /// <summary>Start watching a new continuous phase (a new step or after a discrete action).</summary>
+        private void ResetStallWatch()
+        {
+            int n = _s.MaxContinuousIterations + 2;
+            if (_stallBest.Length < n) _stallBest = new double[n];
+            _stallBest[0] = double.PositiveInfinity;
+        }
+
+        /// <summary>True when the per-unit loop, at round <paramref name="round"/> of this phase (1-based), has not halved
+        /// its best progress measure over the last <see cref="StallWindow"/> rounds and, at that rate, cannot reach the
+        /// settle tolerance within the round cap.</summary>
+        private bool PerUnitLoopStalled(int round)
+        {
+            int cap = _s.MaxContinuousIterations;
+            if (round > cap) return false;   // the cap itself decides from here (SolveTimed)
+            double best = Math.Min(_stallBest[round - 1], _roundWorst);
+            _stallBest[round] = best;
+            if (round <= StallWindow) return false;
+            double then = _stallBest[round - StallWindow];
+            if (best <= 0.5 * then) return false;            // (1) still halving per window: not stalled
+            double q = best / then;
+            if (q >= 1.0) return true;                        // (2) no progress at all over the window
+            double tol = _s.ContinuousTolerance;
+            double m = best;
+            for (int k = round + StallWindow; k <= cap; k += StallWindow)
+            {
+                m *= q;
+                if (m <= tol) return false;                   // (2) on course to settle inside the cap
+            }
+            return true;
         }
 
         // ---- accelerated continuous iteration -----------------------------------------------------------------------
@@ -886,8 +960,8 @@ public sealed class QstsEngine
         // transcendental beyond Math.Sqrt (correctly rounded by IEEE 754). The same inputs give the same bits on every
         // run and SIMD tier.
         //
-        // Engaged only after the per-unit loop has failed its cap in this run (see SolveTimed), so any run the per-unit
-        // loop settles is untouched, bit for bit.
+        // Engaged only after the per-unit loop has failed its cap, or stalled (the stall watch below), in this run (see
+        // SolveTimed), so any run the per-unit loop settles without stalling is untouched, bit for bit.
 
         /// <summary>History depth of the accelerated iteration (the number of past residual differences fitted).</summary>
         private const int AndersonDepth = 8;

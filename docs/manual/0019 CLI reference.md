@@ -2200,7 +2200,7 @@ and no verdict are reported); exit 3 when the fundamental power flow does not co
 
 ### impedance-stability
 
-`gridsim impedance-stability [<case>] [--dir <path>] [--bus <id>] [--converter gfl|gfm] [--criterion siso|mimo] [--grid canonical|real] [flags]`
+`gridsim impedance-stability [<case>] [--dir <path>] [--bus <id>] [--converter gfl|gfm] [--criterion auto|siso|mimo] [--grid canonical|real] [flags]`
 
 Impedance-based (generalised Nyquist) inverter-grid stability screen: forms the loop gain of the grid impedance and the
 converter admittance over frequency (SISO: the positive- and negative-sequence loops in the converter's dq frame, with the
@@ -2222,7 +2222,7 @@ The converter model comes from the case's bound asset class when there is one, o
 | `<case>` / `--dir` | `case9` | [Case argument](#case-arguments) or JSON case directory (`-d` is a short alias of `--dir`). |
 | `--bus` | largest generator's bus | Generator bus to attach the converter model to. |
 | `--converter` | `gfl` | `gfl` (grid-following) or `gfm` (grid-forming); any other value exits 2. The grid-forming model's power loop is per unit on the unit's rating (MBase): a bound class's damping D (MW/Hz) and synthetic inertia J (MW.s/Hz) give the droop S / (D f0) and the lag J / D (R140, October 2026; they used to be scaled as 0.01 D pu and 1e-4 J s whatever the unit's size). The flag-built grid-forming model (no damping, no synthetic inertia) is unchanged; its power-loop bandwidth is `--pll-bw` when given, else the grid-forming placeholder 5 Hz. |
-| `--criterion` | `siso` | `siso` or `mimo` (the generalised criterion); any other value exits 2. |
+| `--criterion` | `auto` | `auto` (MIMO for `gfl`, SISO for `gfm` and for `--outer-loop-only`), `siso` or `mimo` (the generalised criterion); any other value exits 2, and `mimo` with `--outer-loop-only` exits 2. The grid-following admittance couples the two sequences, which SISO drops, so its SISO verdict can be wrong; the grid-forming admittance does not, so SISO is exact there and keeps the margins. With the ideal PLL of `--outer-loop-only` the dq loop is improper and its MIMO winding misses a right-half-plane root. |
 | `--fmin` / `--fmax` | 0.1 / 250 | Frequency range (Hz). |
 | `--ppd` | 50 | Points per decade. |
 | `--grid` | `canonical` | Grid impedance: `canonical` (the exact single-inverter-vs-Thevenin model, swept over SCR) or `real` (the network's own harmonic driving-point impedance at the converter bus; fails with exit 3 if that solve is singular). Any other value exits 2. |

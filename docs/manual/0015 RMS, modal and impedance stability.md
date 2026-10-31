@@ -277,9 +277,9 @@ gridsim impedance-stability case9
 
 ```
 $ gridsim impedance-stability case9
-impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Mimo
   operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
-  nyquist         : encirclements 0  unstable-modes 0  GM 19.1 dB  PM -113.2 deg  minDist 0.860  -> STABLE
+  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM inf deg  minDist 0.874  -> STABLE
   SCR boundary    : none in [1.0, 10.0]  (stable across the swept SCR range)
   cross-check (C) : RHP eigenvalues 0  agreement OK  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
   provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
@@ -288,8 +288,9 @@ impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingI
 
 The verb attaches a grid-following converter to the bus of the generator with the largest scheduled `Pg` (bus 2, 163 MW), builds its small-signal
 admittance from the solved operating point, forms the loop gain against a Thevenin grid at short-circuit ratio 3, and
-counts encirclements of the point (-1, 0). Zero encirclements, a minimum distance of 0.860 to the critical point and
-no critical short-circuit ratio anywhere in the swept range 1 to 10 give a STABLE verdict.
+counts encirclements of the critical point with the generalised (MIMO) criterion, the default for a grid-following
+converter. Zero encirclements, a minimum distance of 0.874 to the critical point and no critical short-circuit ratio
+anywhere in the swept range 1 to 10 give a STABLE verdict.
 
 ## Reading the output
 
@@ -556,13 +557,15 @@ cannot be assembled. An unstable result is still a complete analysis: the tables
 ### impedance-stability
 
 **Header line.** `impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail
-PllOuter, criterion Siso`.
+PllOuter, criterion Mimo`.
 
 - `inverter bus` is `--bus`, or the bus of the generator with the largest scheduled `Pg`.
 - `mode` is `GridFollowingInverter` for `--converter gfl` (the default) and `GridFormingInverter` for `gfm`.
 - `detail` is `PllOuter` by default, `PllCurrentOuter` when `--current-bw` is given, and `OuterLoopOnly` with
   `--outer-loop-only`. A grid-forming model always prints `PllOuter`; its admittance does not use the detail level.
-- `criterion` is `Siso` or `Mimo`.
+- `criterion` is `Siso` or `Mimo`. With `--criterion auto` (the default) it is `Mimo` for a grid-following converter
+  and `Siso` for a grid-forming one and for `--outer-loop-only`; `--criterion siso` or `mimo` forces either, except that
+  `mimo` with `--outer-loop-only` exits 2 (see the loop below).
 
 **Operating point.** `Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu`. `Vd0` is the solved voltage magnitude at the converter
 bus, with a floor of 0.05 pu; a floored value prints `(CLAMPED - weak/depressed)`. `Id0 = P / Vd0` and `Iq0 = -Q / Vd0`, in
@@ -573,10 +576,23 @@ co-located units by scheduled P and by reactive range. On `case9` bus 2, P is 16
 **The loop.** The scan forms the loop gain from the grid impedance and the converter admittance, both on the system base
 (the converter admittance is multiplied by its rating over the system base, 1.92 for bus 2 of `case9`). The converter's
 admittance is a dq-frame quantity: at dq perturbation frequency f it is the admittance at stationary frequency f + f0 in the
-positive sequence and f - f0 in the negative sequence. The SISO criterion (the default) therefore pairs each sequence with
+positive sequence and f - f0 in the negative sequence. The SISO criterion therefore pairs each sequence with
 the grid impedance at the same stationary frequency, `L_pp(f) = Z_grid(f + f0) * Y_pp(f)` and
 `L_nn(f) = Z_grid(f - f0) * Y_nn(f)`, and neglects the coupling between the two sequences. The MIMO criterion pairs the full
-2x2 dq matrices and keeps that coupling, so it is the decisive one for a converter with a PLL.
+2x2 dq matrices and keeps that coupling.
+
+Which one decides depends on the converter, and `--criterion auto` (the default) picks it:
+
+- **Grid-following, PLL modelled: MIMO.** The PLL acts on the q axis only, so the admittance couples the two sequences and
+  SISO can give the wrong verdict. Checked against an independent Routh-Hurwitz count of the closed-loop right-half-plane
+  roots on `case9` bus 2: with an 80 Hz PLL, SISO is wrong at seven of ten swept SCRs (UNSTABLE at 0.1 to 0.375, STABLE at
+  0.925 to 1.475) and MIMO agrees at all ten; with a 300 Hz PLL, SISO calls SCR 3 STABLE where the closed loop has a
+  right-half-plane root, which MIMO counts.
+- **Grid-following, `--outer-loop-only`: SISO.** The ideal PLL never rolls off, so the dq return difference grows without
+  bound along the jw axis and the MIMO winding misses the real right-half-plane root the closed loop has on `case9` at every
+  SCR from 1 to 10. SISO counts it. `--criterion mimo` with `--outer-loop-only` exits 2.
+- **Grid-forming: SISO.** Its admittance does not couple the sequences, so SISO is exact and keeps the gain and phase
+  margins.
 
 ```
 Canonical grid:   Z_grid(f) = R + j X (f/f0)          |Z| = 1 / (SCR * P_rated_pu),  X/R = 10
@@ -596,7 +612,7 @@ The flag-built grid-following model uses a 20 Hz PLL bandwidth and 0.707 damping
 above 0, else exit 2. When the case binds an asset class to the chosen generator, the class supplies the parameters, and a flag
 overrides only its own parameter. The grid-forming model reads `--pll-bw` only as its power-loop bandwidth.
 
-**Nyquist line.** `encirclements 0  unstable-modes 0  GM 19.1 dB  PM -113.2 deg  minDist 0.860  -> STABLE`.
+**Nyquist line.** `encirclements 0  unstable-modes 0  GM inf dB  PM inf deg  minDist 0.874  -> STABLE`.
 
 - `encirclements` is the net winding of `(1 + L_pp)(1 + L_nn)` (SISO) or of `det(I + Y_conv Z_grid)` (MIMO, the 2x2 dq form) around the
   origin over the full contour: the positive frequencies and their conjugate mirror. The contour runs from 1e-3 Hz to 1e5 Hz
@@ -611,7 +627,8 @@ overrides only its own parameter. The grid-forming model reads `--pll-bw` only a
 - `minDist` is the distance to the critical point: the smaller of `abs(1 + L_pp)` and `abs(1 + L_nn)` over the contour (SISO),
   or the smallest `abs(det(I + Y_conv Z_grid))` (MIMO).
 - The verdict is STABLE when `encirclements` is 0 and UNSTABLE otherwise. The margins support the verdict and do not decide it:
-  a negative `PM` on a STABLE line, as in the capture, is a result the encirclement count overrides.
+  a negative `PM` on a STABLE line (`--criterion siso` on `case9` prints `PM -113.2 deg`) is a result the encirclement count
+  overrides.
 
 The verdict is computed on the contour above, so `--fmin`, `--fmax` and `--ppd` change the frequency band written to
 `--enableExport` and nothing else, except that on `--grid real` an `--fmin` at or below 0.005 Hz (1e-4 of f0), or a MIMO
@@ -982,13 +999,14 @@ impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFormingInv
 [exit 0]
 ```
 
-The grid-forming loop has no phase crossover (`GM inf`). Its phase margin of -122.5 degrees is a read-out on a STABLE line,
-which the encirclement count overrides. `--criterion mimo` winds the 2x2 dq return difference and prints `inf` margins, with
-`minDist` of 0.874 on `case9`.
+The grid-forming loop runs under SISO (exact for it) and has no phase crossover (`GM inf`). Its phase margin of -122.5
+degrees is a read-out on a STABLE line, which the encirclement count overrides. `--criterion mimo` on the grid-following
+default is the default run itself: it winds the 2x2 dq return difference and prints `inf` margins, with `minDist` of 0.874
+on `case9`.
 
 ### A weak grid and the critical SCR
 
-The flag-built PLL has a 20 Hz bandwidth. A 300 Hz PLL is stable at the base SCR of 3 and finds a boundary inside the
+The flag-built PLL has a 20 Hz bandwidth. A 300 Hz PLL is unstable at the base SCR of 3 and finds a boundary inside the
 default sweep:
 
 ```bash
@@ -997,17 +1015,21 @@ gridsim impedance-stability case9 --pll-bw 300
 
 ```
 $ gridsim impedance-stability case9 --pll-bw 300
-impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Mimo
   operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
-  nyquist         : encirclements 0  unstable-modes 0  GM 8.2 dB  PM -107.9 deg  minDist 0.567  -> STABLE
-  SCR boundary    : critical SCR 1.12  (weak-grid instability below this)
-  cross-check (C) : RHP eigenvalues 0  agreement OK  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
+  nyquist         : encirclements -1  unstable-modes 1  GM inf dB  PM inf deg  minDist 0.927  -> UNSTABLE
+  SCR boundary    : critical SCR 5.62  (weak-grid instability below this)
+  cross-check (C) : RHP eigenvalues 0  agreement differs (structures differ; Routh oracle is decisive - see tests)  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
   provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
 [exit 0]
 ```
 
-The base scan at SCR 3 is STABLE, and the sweep is unstable below the critical SCR of 1.12: the loop is unstable at
-SCR 1.0 and stable at 1.25, and their midpoint 1.125 prints as 1.12. An 80 Hz PLL scanned at SCR 0.3, with the sweep floor lowered to 0.1:
+The base scan at SCR 3 is UNSTABLE (one encirclement: one real closed-loop root in the right half plane), and the sweep is
+unstable below the critical SCR of 5.62: the loop is unstable at SCR 5.5 and stable at 5.75, and their midpoint 5.625
+prints as 5.62. The cross-check reads `agreement differs` because the `case9` modal model holds no converter and counts 0.
+Under `--criterion siso` the same scan reads STABLE with a critical SCR of 1.12; the Routh-Hurwitz count of the closed
+loop finds a right-half-plane root at SCR 1.25, 3 and 5.5 and none at 5.75, as MIMO does. An 80 Hz PLL scanned at SCR 0.3,
+with the sweep floor lowered to 0.1:
 
 ```bash
 gridsim impedance-stability case9 --pll-bw 80 --scr 0.3 --scr-min 0.1
@@ -1015,21 +1037,21 @@ gridsim impedance-stability case9 --pll-bw 80 --scr 0.3 --scr-min 0.1
 
 ```
 $ gridsim impedance-stability case9 --pll-bw 80 --scr 0.3 --scr-min 0.1
-impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Mimo
   operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
-  nyquist         : encirclements -2  unstable-modes 2  GM -5.2 dB  PM 26.8 deg  minDist 0.426  -> UNSTABLE
-  SCR boundary    : critical SCR 0.51  (weak-grid instability below this)
-  cross-check (C) : RHP eigenvalues 0  agreement differs (structures differ; Routh oracle is decisive - see tests)  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
+  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM inf deg  minDist 2.183  -> STABLE
+  SCR boundary    : critical SCR 1.61  (weak-grid instability below this)
+  cross-check (C) : RHP eigenvalues 0  agreement OK  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
   provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
 [exit 0]
 ```
 
-The scan at SCR 0.3 reads UNSTABLE: two encirclements, one oscillatory mode counted as its complex pair, and a gain
-margin of -5.2 dB. The sweep is unstable at 0.1 and 0.375 and stable from 0.65, so the critical SCR is 0.51. The
-cross-check reads `agreement differs`: the `case9` modal model holds no converter and counts 0. The SISO criterion
-neglects the PLL's cross-sequence coupling, and here that matters: `--criterion mimo` with the same flags reads STABLE at
-SCR 0.3 and finds its unstable band between SCR 0.925 and 1.475 (critical SCR 1.61). Where the two criteria differ on a
-grid-following converter, take the MIMO verdict.
+The scan at SCR 0.3 reads STABLE. The sweep finds an unstable band between SCR 0.925 and 1.475 and is stable again from
+1.75, so the critical SCR, the last unstable-to-stable crossing, is 1.61. The Routh-Hurwitz count of the closed loop agrees
+at every swept point: no right-half-plane root at 0.1 to 0.65, one from 0.925 to 1.475, none from 1.6. `--criterion siso`
+with the same flags reads UNSTABLE at SCR 0.3 (two encirclements, gain margin -5.2 dB) with a critical SCR of 0.51: the
+SISO pairing drops the PLL's cross-sequence coupling, and here that turns both verdicts round. That is why `auto` runs
+MIMO for a grid-following converter.
 
 ### Real network impedance
 
@@ -1041,22 +1063,23 @@ gridsim impedance-stability case9 --grid real
 
 ```
 $ gridsim impedance-stability case9 --grid real
-impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Mimo
   operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
-  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM 76.9 deg  minDist 0.341  -> STABLE
+  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM inf deg  minDist 0.020  -> STABLE
   SCR boundary    : n/a (--grid real: the network's own impedance is used, no SCR sweep runs)
   cross-check (C) : RHP eigenvalues 0  agreement OK  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
   provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
-WARNING: impedance-stability: the Nyquist contour turns 177.4 deg between two grid points (trusted up to 90 deg), so the encirclement count may be wrong; rerun with a larger --ppd (or a band that resolves the resonance).
+WARNING: impedance-stability: the Nyquist contour turns 177.9 deg between two grid points (trusted up to 90 deg), so the encirclement count may be wrong; rerun with a larger --ppd (or a band that resolves the resonance).
 [exit 0]
 ```
 
 There is no SCR to vary, so `--scr`, `--scr-min`, `--scr-max` and `--scr-steps` exit 2 with this grid, and the `SCR boundary`
 line always reads `n/a`. A singular solve at some frequency exits 3. The `WARNING` line comes from the negative-sequence
 loop near f0, where `Z_grid(f - f0)` is read close to DC: the network's reactance there is small and changes sign across
-the points dropped round f0, so the contour turns almost half a circle in one step. `--criterion mimo` reads the same
-`Z_grid(f - f0)` and prints the same kind of warning, and a larger `--ppd` does not remove it; both criteria count 0
-encirclements on this case.
+the points dropped round f0, so the contour turns almost half a circle in one step. Both criteria read the same
+`Z_grid(f - f0)` and print the same kind of warning, and a larger `--ppd` does not remove it; both count 0 encirclements on
+this case. The MIMO `minDist` of 0.020 (0.341 under `--criterion siso`) says the dq return difference passes close to
+singular near f0; the verdict rests on the encirclement count.
 
 ### The inner-loop detail levels
 
@@ -1068,9 +1091,9 @@ gridsim impedance-stability case9 --pll-bw 40 --current-bw 400
 
 ```
 $ gridsim impedance-stability case9 --pll-bw 40 --current-bw 400
-impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllCurrentOuter, criterion Siso
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllCurrentOuter, criterion Mimo
   operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
-  nyquist         : encirclements 0  unstable-modes 0  GM 18.0 dB  PM inf deg  minDist 0.842  -> STABLE
+  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM inf deg  minDist 0.837  -> STABLE
   SCR boundary    : none in [1.0, 10.0]  (stable across the swept SCR range)
   cross-check (C) : RHP eigenvalues 0  agreement OK  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
   provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical

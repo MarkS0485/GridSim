@@ -90,17 +90,32 @@ public class EmtUntappedBitIdentityTests
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // AD13FBE9D232CAD9..., after 429D50FDF0B03D0F...; 340008 of 350175 recorded values differ, max |diff| 9.650646948244912E-11, max relative 1.4148059495374372E-06.
-    [InlineData("gb-full", "lumped", "429D50FDF0B03D0F300031F914A3E02E3C4AE7CF5C4BDE1C48D24E2E1224090E")]
+    // Moved 2026-10-31 (GitHub issue #1, data correction): 25 Northern Powergrid 132 kV cable rows of gb-full carried
+    // line charging of 202 to 542 uS/km, above any 132 kV cable (about 160 uS/km at most); each now carries 126 uS/km
+    // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
+    // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
+    // through both engines); only the network moved. Before 429D50FDF0B03D0F..., after 39376F24789CCCC4....
+    [InlineData("gb-full", "lumped", "39376F24789CCCC4C799416B8AECC2E044722E2507C715C3C0D987D552435596")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // 20E1B8BB9840BB3C..., after F963983E884043B4...; 323026 of 350175 differ, max |diff| 4.222655558550059E-11, max relative 5.758866834941773E-10.
-    [InlineData("gb-full", "lines", "F963983E884043B452460FB516DEDDD6752BB00FF37355BE2FD43E04ED87F2DF")]
+    // Moved 2026-10-31 (GitHub issue #1, data correction): 25 Northern Powergrid 132 kV cable rows of gb-full carried
+    // line charging of 202 to 542 uS/km, above any 132 kV cable (about 160 uS/km at most); each now carries 126 uS/km
+    // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
+    // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
+    // through both engines); only the network moved. Before F963983E884043B4..., after 618B0F32C4A8207B....
+    [InlineData("gb-full", "lines", "618B0F32C4A8207B96B932566185454AEF9B74B10605ED4D95FF7E2EB8E4244D")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // 7C90AEDD42652249..., after 5735D48C27A4BFEF...; 339540 of 350175 differ, max |diff| 6.635980653868501E-11, max relative 2.190349190378535E-06.
-    [InlineData("gb-full", "fault", "5735D48C27A4BFEF7957463DBAB20B62BF2F6E87797E35B70FDB597537274A3E")]
+    // Moved 2026-10-31 (GitHub issue #1, data correction): 25 Northern Powergrid 132 kV cable rows of gb-full carried
+    // line charging of 202 to 542 uS/km, above any 132 kV cable (about 160 uS/km at most); each now carries 126 uS/km
+    // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
+    // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
+    // through both engines); only the network moved. Before 5735D48C27A4BFEF..., after 36C2A9D05C1F60BF....
+    [InlineData("gb-full", "fault", "36C2A9D05C1F60BFC3C15FA0C17C446ABE1814DF16BB935A0E8301904C111E1F")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before

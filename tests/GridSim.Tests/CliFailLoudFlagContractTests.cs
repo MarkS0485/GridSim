@@ -63,7 +63,9 @@ public class CliFailLoudFlagContractTests
     [Theory]
     [InlineData("--rule", "trap or be")]
     [InlineData("--converter", "gfl or gfm")]
-    [InlineData("--criterion", "siso or mimo")]
+    // Moved 2026-10-31 (GitHub issue #11): --criterion gained the value auto (now its default), so the refusal names
+    // three values. Before: "siso or mimo". The flag still fails loud on any other value.
+    [InlineData("--criterion", "auto, siso or mimo")]
     public void Enum_flags_reject_unknown_values(string flag, string expected)
     {
         // R217: each enum flag is a switch whose default arm is FailFlag, like --solver and --method.

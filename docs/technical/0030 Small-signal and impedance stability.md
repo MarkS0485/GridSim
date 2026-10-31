@@ -851,8 +851,11 @@ For the second pair, `s = -0.2967 + j12.4929`: `|s| = 12.49642`, `zeta = 0.2967/
 
 ### Impedance: the operating point and one frequency of the loop gain
 
+The default criterion for this grid-following unit is MIMO (`--criterion auto`); the hand calculation below follows the
+SISO positive-sequence loop, so it quotes the SISO run of the same unit:
+
 ```
-$ gridsim impedance-stability case9
+$ gridsim impedance-stability case9 --criterion siso
 impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Siso
   operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
   nyquist         : encirclements 0  unstable-modes 0  GM 19.1 dB  PM -113.2 deg  minDist 0.860  -> STABLE
@@ -905,7 +908,8 @@ The exported sample for that frequency has `Z_grid = 0.01727495121892342 + j0.18
 `L` = `L_pp` for all 171 reporting points). The hand value `|1 + L_pp| = 0.99644` at 5 Hz is above the printed `minDist`
 of `0.860` (0.8602759878103645 in the export), the smallest of `|1 + L_pp|` and `|1 + L_nn|` over the whole winding grid.
 The loop never nears `(-1, 0)`, the winding count is 0, and the verdict is STABLE. The printed `PM` of -113.2 deg is a
-SISO read-out at the gain crossover and the encirclement count decides the verdict.
+SISO read-out at the gain crossover and the encirclement count decides the verdict. The default MIMO run of the same unit
+counts 0 encirclements of `det(I + T)` with `minDist` 0.874, and prints `inf` margins.
 
 ### The critical SCR
 
@@ -913,16 +917,35 @@ The same unit with a 300 Hz PLL finds a boundary inside the default sweep:
 
 ```
 $ gridsim impedance-stability case9 --pll-bw 300
-...
-  SCR boundary    : critical SCR 1.12  (weak-grid instability below this)
-...
+impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingInverter, detail PllOuter, criterion Mimo
+  operating point : Vd0=1.0250 pu, Id0=0.8283, Iq0=-0.0338 pu
+  nyquist         : encirclements -1  unstable-modes 1  GM inf dB  PM inf deg  minDist 0.927  -> UNSTABLE
+  SCR boundary    : critical SCR 5.62  (weak-grid instability below this)
+  cross-check (C) : RHP eigenvalues 0  agreement differs (structures differ; Routh oracle is decisive - see tests)  [swing model: X'd Anderson-Fouad, zero damping (no damping data)]
+  provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
+[exit 0]
 ```
 
 The default sweep has 37 points at steps of `(10 - 1)/36 = 0.25`. The critical SCR is the midpoint between the last
-unstable and the first stable sweep point, and the only midpoint that prints `1.12` is `(1.0 + 1.25)/2 = 1.125`, between
-the first two points: the loop is unstable at `SCR = 1.0` and stable at `SCR = 1.25`.
+unstable and the first stable sweep point, and the only midpoint that prints `5.62` is `(5.5 + 5.75)/2 = 5.625`: the loop
+is unstable at `SCR = 5.5` and stable at `SCR = 5.75`. The Routh-Hurwitz count of the closed-loop characteristic polynomial
+(the numerator of `det(I + Y_dq Z_dq)`, no Nyquist winding involved) finds one right-half-plane root at SCR 1.25, 3 and 5.5
+and none at 5.75 and 10 (`ImpedanceWeakGridExampleTests.Fast_PLL_MIMO_agrees_with_the_Routh_oracle`). Under
+`--criterion siso` the same unit reads STABLE at SCR 3 with a critical SCR of 1.12, `(1.0 + 1.25)/2 = 1.125`: the SISO
+pairing drops the PLL's cross-sequence coupling and misses that root.
 `gridsim impedance-stability case9 --pll-bw 80 --scr 0.3 --scr-min 0.1` steps by `(10 - 0.1)/36 = 0.275` and prints
-`critical SCR 0.51`, `(0.375 + 0.65)/2 = 0.5125`: unstable at 0.1 and 0.375, stable from 0.65.
+`critical SCR 1.61`, `(1.475 + 1.75)/2 = 1.6125`: stable at 0.1 to 0.65, unstable from 0.925 to 1.475, stable from 1.75.
+The Routh count agrees at every point; SISO (critical SCR 0.51) is wrong at seven of ten
+(`ImpedanceWeakGridExampleTests.MIMO_agrees_with_the_Routh_oracle_and_SISO_does_not_where_the_coupling_matters`).
+
+**Which criterion is the default.** `--criterion auto` runs MIMO for a grid-following converter with its PLL modelled,
+because its admittance couples the sequences (the PLL acts on the q axis only, so `Y_dq` is not of the form `a I + b J`),
+and SISO for a grid-forming converter, whose admittance is of that form (SISO is then exact and keeps the margins). With
+`--outer-loop-only` the PLL is frozen at `1/Vd0`, so `Y_qq = -Id0/Vd0` never rolls off and `|det(I + T)|` grows like `|w|`
+along the jw axis: the dq loop is improper, the contour has no finite closing arc, and the winding misses the real
+right-half-plane root the closed loop has on `case9` at every SCR from 1 to 10. SISO counts it, so `auto` runs SISO there
+and `--criterion mimo` with `--outer-loop-only` exits 2
+(`ImpedanceWeakGridExampleTests.Outer_loop_only_SISO_agrees_with_the_Routh_oracle_and_the_improper_MIMO_loop_does_not`).
 
 ## Determinism
 
@@ -972,14 +995,17 @@ implementations is limited by the conditioning of the eigenvector matrix, not by
 relative check, not a bit-identity check. The sidecar's own measurements over every bundled case it exports, damped and
 undamped, need at most 0.2165 machine epsilons of tolerance after the `cond(V)` scaling (`gb` with `--damping 2`), and the
 near-defective undamped cases (`case9` has `cond(V) = 1.928e10`) need at most 0.0874, so the default is 18,900 times
-the worst measured need, to three significant figures. The impedance sidecar's worst measured need over 25 flag-built grid-following scans is 25.55
-machine epsilons; the default is 160 times that, to three significant figures. It exits 77 (not checked) when the export has no `converterParams`, which is the case for a grid-forming export,
+the worst measured need, to three significant figures. The impedance sidecar's worst measured need over 25 flag-built grid-following scans is 28.06
+machine epsilons (re-measured 2026-10-31; 25.55 before the frame pairing and the MIMO default); the default is 146 times
+that, to three significant figures. It exits 77 (not checked) when the export has no `converterParams`, which is the case for a grid-forming export,
 never a silent pass. A `--grid real` export does carry `converterParams` and has `canonical: false`; the sidecar then
 compares `Y_conv` and `L = Z_grid(exported) * Y_conv` only, says so on its first line, and does not re-derive the grid
 impedance, the winding count or the boundary (`gridsim impedance-stability case9 --grid real` gives 342 comparisons and
 `RESULT: PASS`). It re-derives the grid impedance, the winding and the boundary on the canonical grid only.
 
-The captured impedance run, on the export of `gridsim impedance-stability case9 --enableExport=impedance-stability-export.json`:
+The captured impedance run, on the export of `gridsim impedance-stability case9 --criterion siso --enableExport=impedance-stability-export.json`
+(the sidecar re-derives the winding and the boundary for a SISO export on the canonical grid; for a MIMO export it compares
+the per-frequency quantities only):
 
 ```
 $ python tools/crossval/crossval_impedance.py --export impedance-stability-export.json

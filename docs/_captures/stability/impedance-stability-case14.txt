@@ -1,8 +1,8 @@
 $ gridsim impedance-stability case14
-impedance-stability: case IEEE 14-bus, inverter bus 1, mode GridFollowingInverter, detail PllOuter, criterion Siso
+impedance-stability: case IEEE 14-bus, inverter bus 1, mode GridFollowingInverter, detail PllOuter, criterion Mimo
   operating point : Vd0=1.0600 pu, Id0=2.1924, Iq0=0.1561 pu
-  nyquist         : encirclements 0  unstable-modes 0  GM 9.6 dB  PM -77.0 deg  minDist 0.611  -> STABLE
-  SCR boundary    : none in [1.0, 10.0]  (stable across the swept SCR range)
+  nyquist         : encirclements 0  unstable-modes 0  GM inf dB  PM inf deg  minDist 0.403  -> STABLE
+  SCR boundary    : critical SCR 2.12  (weak-grid instability below this)
   cross-check (C) : n/a on this case (no modal model); decisive Routh check in ImpedanceModalAgreementTests
   provenance      : CuratedPlaceholder [VERIFY] pll/current-loop params literature-typical
 impedance-stability: modal cross-check unavailable on this case: No synchronous machines with inertia: the classical stability model has no rotor to integrate.

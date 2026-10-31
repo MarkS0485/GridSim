@@ -34,18 +34,21 @@ Usage:
 
 Default tolerances (N142, October 2026): 4096 machine epsilons, both relative and absolute (about 9.09e-13; the
 absolute one in pu), the same count N005 chose for crossval_harmonics.py; a comparison passes when
-|mine - GridSim| <= atol + rtol * |GridSim|. Measured with the 1.95.129 Release build on 25 flag-built grid-following
-scans (case9, ieee9, case14, case24, case30, case57, case118, uk, gb-reduced-29 at the defaults; case9 and case118 with
---current-bw 200, --outer-loop-only, --pll-bw 20 --pll-damping 0.4, --scr 1.2, --scr 10, --criterion mimo,
---fmin 0.01 --fmax 2000 --ppd 200, and --pll-bw 1 --current-bw 50 --scr 1.5; 18,165 Z / Y / L comparisons): the
-smallest k for which rtol = atol = k eps passes everything is k = 25.55 (gb-reduced-29, Y at f = 0.1096 Hz:
-|d| 5.78e-15 pu on |Y| 0.0191 pu, at an operating current Id0 = 78 pu where the PLL and current-loop terms nearly
-cancel); on every other scan k is at most 3.24. The default is therefore about 160 times the worst measured need.
+|mine - GridSim| <= atol + rtol * |GridSim|. Re-measured on 2026-10-31 (GridSim 2.0.200 Release build, after the grid and
+the converter were paired in the same frame and MIMO became the default criterion for a grid-following converter) on 25
+flag-built grid-following scans (case9, ieee9, case14, case24, case30, case57, case118, uk, gb-reduced-29 at the defaults;
+case9 and case118 with --current-bw 200, --outer-loop-only, --pll-bw 20 --pll-damping 0.4, --scr 1.2, --scr 10,
+--criterion siso (was --criterion mimo, now the default), --fmin 0.01 --fmax 2000 --ppd 200, and --pll-bw 1
+--current-bw 50 --scr 1.5; 18,165 Z / Y / L comparisons, every scan PASS at the defaults): the smallest k for which
+rtol = atol = k eps passes everything is k = 28.06 (gb-reduced-29, Y at f = 0.7236 Hz: |d| 6.59e-15 pu on |Y| 0.0579 pu,
+at an operating current where the PLL and current-loop terms nearly cancel); on every other scan k is at most 3.24
+(case118 --outer-loop-only). The default is therefore about 146 times the worst measured need. (The 1.95.129
+measurement, before the frame pairing, was k = 25.55 at 0.1096 Hz on the same case.)
 The relative
 error alone is not a usable measure: at low frequency Y+ = 1/2 (G_ci/Vd0 - G_pll) I0 is a near-cancellation (both
 terms tend to 1/Vd0), so |Y| is small while the absolute agreement stays at a few eps (the worst pure relative
-difference measured was 1.53e-11, Y at 0.011 Hz on case118 with --fmin 0.01, a scan whose every absolute difference is
-at most 8.95e-16 pu); the absolute term carries those points. The old
+difference measured was 2.13e-11, Y at 0.011 Hz on case118 with --fmin 0.01, where the absolute difference is 7.03e-16
+pu); the absolute term carries those points. The old
 defaults (1e-6 relative, 1e-9 absolute) would have passed a 1e-7 regression. Pass --tol / --atol to loosen them
 deliberately.
 

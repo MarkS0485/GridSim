@@ -619,8 +619,8 @@ frequency_max_timestamp, horizon_cutoff_utc}`; `GET /favicon.ico` returns 204. C
 `NetworkModel/zones/zone-*` directory found at start-up.
 
 The client is `GridBridgeClient` (`src/GridSim.Core/Net/GridBridgeClient.cs`); the wire schema is
-`src/GridSim.Core/IO/BridgeProtocol.cs`. The desktop app connects to `BridgeEndpoint` in its settings (default
-`wss://simstream.twinscrollgridbalancer.co.uk/ws/bridge`; a local server is `ws://127.0.0.1:8770/ws/bridge`); the web
+`src/GridSim.Core/IO/BridgeProtocol.cs`. The desktop app connects to `BridgeEndpoint` in its settings (default empty:
+no bridge, and no **Live bridge** source, until it is set; a local server is `ws://127.0.0.1:8770/ws/bridge`); the web
 app reads `GridSim:BridgeEndpoint`. The client sends through one semaphore-guarded send path, assembles each received
 message from 64 KiB chunks until end-of-message, and decodes UTF-8. `BridgeProtocol.JsonOptions` is case-insensitive on
 read, camelCase on write, skips comments and trailing commas, omits null properties and accepts the named literals

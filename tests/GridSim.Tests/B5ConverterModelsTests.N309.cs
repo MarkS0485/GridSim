@@ -20,6 +20,8 @@ public sealed partial class B5ConverterModelsTests
         { "governor", "valveMaxPu", "Tgov1 constructor default", "+Infinity" },
         { "governor", "valveMaxPu", "Ieeeg1 constructor default", "+Infinity" },
         { "governor", "valveMaxPu", "HydroGovernor constructor default (gateMaxPu", "+Infinity" },
+        // Issue #12 (2026-10-31): GAST VMAX joins the key's entries; the coverage test below counts every entry of the key.
+        { "governor", "valveMaxPu", "Gast constructor default (VMAX", "+Infinity" },
         { "governor", "ieeeg1K2", "Ieeeg1 constructor default", "0" },
         { "governor", "ieeeg1K4", "Ieeeg1 constructor default", "0" },
         { "governor", "ieeeg1K6", "Ieeeg1 constructor default", "0" },
@@ -55,6 +57,7 @@ public sealed partial class B5ConverterModelsTests
         foreach (var g in rows.GroupBy(r => r))
             Assert.Equal(g.Count(), KindFileSet.Load(g.Key.Item1).GetProperty("params").GetProperty(g.Key.Item2)
                 .GetProperty("codeDefaults").GetArrayLength());
-        Assert.Equal(11, rows.Count);
+        // 11 -> 12 with the GAST VMAX row (issue #12).
+        Assert.Equal(12, rows.Count);
     }
 }

@@ -18,7 +18,7 @@ $ head -n 30 results/exports-docs/impedance-stability.json
   "inverterBus": 2,
   "mode": "GridFollowingInverter",
   "modelDetail": "PllOuter",
-  "criterion": "Siso",
+  "criterion": "Mimo",
   "operatingPoint": {
     "vd0Pu": 1.025,
     "vq0Pu": 0,

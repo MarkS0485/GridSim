@@ -348,13 +348,18 @@ public class PsseRawParserTests
     public void A_transformer_using_an_impedance_correction_table_has_its_impedance_corrected()
     {
         // 2026-10-25: impedance correction tables are modelled, so this file is no longer refused (the test used to pin
-        // that refusal). Winding 1 of T3W (ratio 1.05, COD 0) uses table 1 (revision 35 triples: T -30, 0, 30 with
-        // Re F 1.1, 1.0, 1.1): F = 1.0 + (1.05 - 0) / (30 - 0) x (1.1 - 1.0), applied to winding 1's star impedance
-        // Z1 = 0.01 + j0.07 (the other windings unchanged).
+        // that refusal). Winding 1 of T3W (ratio 1.05, angle 0, COD 0) uses table 1 (revision 35 triples: T -30, 0, 30
+        // with Re F 1.1, 1.0, 1.1), applied to winding 1's star impedance Z1 = 0.01 + j0.07 (the other windings unchanged).
+        // Corrected 2026-10-31 (GitHub issue #5): the table's first T is below 0.5, so by PSS/E's own rule (POM Vol. I
+        // s.4.1.1.11: "If the first T in a table is less than 0.5 or the last T entered is greater than 1.5, T is assumed
+        // to be the phase shift angle") it is an angle table and is read at the winding's angle, 0 degrees: F = 1.0
+        // exactly (the T = 0 point). The former expectation read the angle table at the ratio 1.05, as if 1.05 were
+        // degrees: F = 1.0 + (1.05 - 0) / (30 - 0) x (1.1 - 1.0) = 1.0035. Before -> after: R 0.010035 -> 0.01,
+        // X 0.070245 -> 0.07.
         string text = File.ReadAllText(Fixture("sample-v35.raw")).Replace(" 1.05000,   0.000,   0.000,   90.00, 0,0,0,0,0,0,0,0,0,0,0,  0,     0,     0, 1.10000, 0.90000, 1.10000, 0.90000,  33,    0,",
             " 1.05000,   0.000,   0.000,   90.00, 0,0,0,0,0,0,0,0,0,0,0,  0,     0,     0, 1.10000, 0.90000, 1.10000, 0.90000,  33,    1,");
         PsseParseResult r = PsseRawParser.ParseWithDiagnostics(text, "s");
-        double f = 1.0 + (1.05 - 0.0) / (30.0 - 0.0) * (1.1 - 1.0);
+        double f = 1.0;   // the T = 0 point of the angle table, read at the winding's 0 degree angle
         IReadOnlyList<Branch> br = r.Model.Branches;
         Assert.Equal(0.01 * f, br[3].R, 1e-15);
         Assert.Equal(0.07 * f, br[3].X, 1e-15);

@@ -45,7 +45,7 @@ public class ImpedanceModalAgreementTests
     }
 
     // Routh-Hurwitz RHP-root count of a real polynomial given ascending coefficients.
-    private static int RouthRhpCount(double[] ascending)
+    internal static int RouthRhpCount(double[] ascending)
     {
         // To descending, trim leading zeros.
         var c = new List<double>();
@@ -93,7 +93,7 @@ public class ImpedanceModalAgreementTests
     // Real coefficients - a genuine Routh-amenable oracle independent of the Nyquist winding. Multiplying
     // through by the Hurwitz Dc adds only LHP roots, which do not affect the RHP count.
     //   Y = [[ (Id0/Vd0) G_ci,  Iq0 G_pll ], [ (Iq0/Vd0) G_ci, -Id0 G_pll ]],  G_ci = wci/Dc, G_pll = p/Dp.
-    private static double[] CharPoly(double vd0, double id0, double iq0, double fbwHz, double zeta,
+    internal static double[] CharPoly(double vd0, double id0, double iq0, double fbwHz, double zeta,
         double scr, double xOverR, double pRatedPu, double f0Hz, double wci)
     {
         double wn = 2.0 * Math.PI * fbwHz;

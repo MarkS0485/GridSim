@@ -4939,7 +4939,7 @@ void RunHarmonics(List<string> a, string root, bool export, string? exportPath)
     }
 }
 
-// impedance-stability <case|--dir DIR> [--bus ID] [--converter gfl|gfm] [--criterion siso|mimo]
+// impedance-stability <case|--dir DIR> [--bus ID] [--converter gfl|gfm] [--criterion auto|siso|mimo]
 //   [--fmin 0.1] [--fmax 250] [--ppd 50] [--scr 3] [--scr-min 1] [--scr-max 10] [--scr-steps 37]
 //   [--pll-bw HZ] [--pll-damping Z] [--current-bw HZ] [--enableExport[=path]]
 // The impedance-based (generalised-Nyquist) inverter-grid stability screen: forms L = Z_grid * Y_conv over
@@ -5004,11 +5004,33 @@ void RunImpedanceStability(List<string> a, string root, bool export, string? exp
         "gfm" => "gfm",
         var bad => FailFlag<string>("--converter", bad, "gfl or gfm"),
     };
-    var crit = (FlagString(a, "--criterion") ?? "siso").ToLowerInvariant() switch
+    // GitHub issue #11 (2026-10-31): the default is "auto": MIMO for a grid-following converter whose PLL is modelled
+    // (the default detail), SISO for a grid-forming converter and for --outer-loop-only. Each reason was checked against an
+    // independent Routh-Hurwitz count of the closed-loop right-half-plane roots (ImpedanceWeakGridExampleTests):
+    // - The grid-following admittance couples the two sequences (its dq matrix is not of the form a I + b J: the PLL
+    //   acts on the q axis only), and the SISO pairing drops that coupling. On the documented weak-grid example (case9
+    //   --pll-bw 80) SISO read UNSTABLE at SCR 0.1 to 0.375 and STABLE at 0.925 to 1.475, the opposite of the oracle at
+    //   each; MIMO agreed with the oracle at all ten swept SCRs.
+    // - With --outer-loop-only the PLL is ideal (frozen at 1 / Vd0), the q-axis admittance never rolls off, and the dq
+    //   return difference grows without bound along the jw axis: the loop is improper and its winding misses the real
+    //   right-half-plane root the oracle finds at every SCR. SISO counts that root, so it stays the criterion there, and
+    //   an explicit --criterion mimo is refused rather than allowed to print a false STABLE.
+    // - The grid-forming admittance is of the form a I + b J, so its sequences do not couple; SISO is exact there and
+    //   keeps its gain and phase margins.
+    // Before, the default was SISO in every case. --criterion siso and mimo still force either (mimo not with
+    // --outer-loop-only).
+    string critFlag = (FlagString(a, "--criterion") ?? "auto").ToLowerInvariant();
+    if (critFlag == "mimo" && outerLoopOnly)
     {
+        Console.Error.WriteLine("error: --criterion mimo cannot be used with --outer-loop-only: the ideal PLL leaves the q-axis admittance without roll-off, so the dq loop is improper and its Nyquist winding misses a right-half-plane root. Use --criterion siso (or auto, which picks it).");
+        Environment.Exit(2);
+    }
+    var crit = critFlag switch
+    {
+        "auto" => conv == "gfl" && !outerLoopOnly ? StabilityCriterion.Mimo : StabilityCriterion.Siso,
         "siso" => StabilityCriterion.Siso,
         "mimo" => StabilityCriterion.Mimo,
-        var bad => FailFlag<StabilityCriterion>("--criterion", bad, "siso or mimo"),
+        var bad => FailFlag<StabilityCriterion>("--criterion", bad, "auto, siso or mimo"),
     };
     // R082 (October 2026): --outer-loop-only selects ImpedanceModelDetail.OuterLoopOnly, which no CLI path could reach:
     // the grid-following PLL is ideal (its gain frozen at 1/Vd0) and the current loop is the fast stand-in roll-off, a
