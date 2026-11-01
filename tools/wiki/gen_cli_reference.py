@@ -320,7 +320,9 @@ def main():
             path = PAGES_DIR / name
             if not path.is_file():
                 problems.append(f"missing: pages/{name}")
-            elif path.read_bytes() != text.encode("ascii"):
+            # Compare with line endings normalised: a Windows checkout with core.autocrlf=true holds the committed
+            # LF pages as CRLF, which is the same content. Any other byte difference still fails.
+            elif path.read_bytes().replace(b"\r\n", b"\n") != text.encode("ascii"):
                 problems.append(f"differs: pages/{name}")
         for name in sorted(existing - set(wanted)):
             problems.append(f"stale: pages/{name}")

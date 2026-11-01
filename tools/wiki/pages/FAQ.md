@@ -54,9 +54,10 @@ Email gdatooling@proton.me with the output of `gridsim --version`, your operatin
 
 Do not use a public issue or a discussion. Report it privately through the repository's Security tab
 ([Report a vulnerability](https://github.com/MarkS0485/GridSim/security/advisories/new)), or email the security contact of record,
-`gdatooling@proton.me`. The
-[security governance document](https://github.com/MarkS0485/GridSim/blob/main/docs/assurance/security-governance.md) sets out the policy and
-process.
+`gdatooling@proton.me`. The [security policy](https://github.com/MarkS0485/GridSim/blob/main/SECURITY.md) says how a report is assessed
+(CVSS base scores, recorded), the 48-hour remediation target for a base score of 7.0 or above, how fixes ship, and how
+to receive security notices (watch the repository for Releases and Discussions). The
+[security governance document](https://github.com/MarkS0485/GridSim/blob/main/docs/assurance/security-governance.md) covers ownership and review.
 
 ## How do I cite GridSim?
 
