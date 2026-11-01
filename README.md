@@ -1,5 +1,16 @@
 # GridSim
 
+[![Docs site](https://github.com/MarkS0485/GridSim/actions/workflows/pages.yml/badge.svg?branch=main)](https://marks0485.github.io/GridSim/)
+[![CI](https://github.com/MarkS0485/GridSim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/MarkS0485/GridSim/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/MarkS0485/GridSim/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/MarkS0485/GridSim/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/MarkS0485/GridSim?include_prereleases&sort=semver&label=release)](https://github.com/MarkS0485/GridSim/releases)
+[![Licence: source-available](https://img.shields.io/badge/licence-source--available-blue)](LICENSE.md)
+[![Documentation](https://img.shields.io/badge/docs-marks0485.github.io%2FGridSim-informational)](https://marks0485.github.io/GridSim/)
+
+**Documentation site:** <https://marks0485.github.io/GridSim/> (user manual, technical reference, validation and
+developer notes, searchable). **Wiki:** <https://github.com/MarkS0485/GridSim/wiki> (getting started, install, CLI
+quick reference, FAQ). **Questions:** [Discussions](https://github.com/MarkS0485/GridSim/discussions).
+
 A grounded, physics-first **power-grid simulator** in C# / .NET 10. It starts from a small, correct core (a per-unit
 network model, the complex bus admittance matrix and a Newton-Raphson load flow) and grows it, deliberately and with
 every step validated, into a full grid stack:
@@ -813,6 +824,9 @@ capability; Web and Wpf are presentation only. Full walkthrough: [technical 1](<
 ---
 
 ## Documentation
+
+Everything below is also published as a searchable site at <https://marks0485.github.io/GridSim/>, rebuilt
+from `docs/` on every push to main.
 
 - [User manual](<docs/manual/0000 Contents.md>): installing, loading networks, every study, the apps, the CLI
   reference ([`docs/manual/0019 CLI reference.md`](<docs/manual/0019 CLI reference.md>)), troubleshooting.

@@ -1,0 +1,230 @@
+# MkDocs configuration for the GridSim documentation site.
+#
+# Build locally (from the repository root):
+#   python -m venv .venv-docs
+#   .venv-docs/bin/pip install -r requirements-docs.txt     (Scripts/ on Windows)
+#   .venv-docs/bin/python -m mkdocs build --strict -d site
+#
+# The pages are the Markdown files under docs/, untouched. Anything the site
+# cannot or should not host is handled by tools/docs/mkdocs_hooks.py, which
+# turns links that leave the site into links to the GitHub repository.
+
+site_name: GridSim
+site_description: Documentation for GridSim, a power-grid simulator written in C# and .NET.
+site_url: https://marks0485.github.io/GridSim/
+repo_url: https://github.com/MarkS0485/GridSim
+repo_name: MarkS0485/GridSim
+# The "edit this page" button opens the file on GitHub.
+edit_uri: blob/main/docs/
+
+docs_dir: docs
+site_dir: site
+
+# Link checks stay at their defaults (warn), so under "mkdocs build --strict"
+# a broken link, a missing anchor or a missing image fails the build.
+# Only the "page is not in the nav" notice is downgraded: a few short
+# "Moved" stub pages and raw benchmark dumps are deliberately kept out of the
+# menu but still build, so links to them keep working.
+validation:
+  omitted_files: info
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+hooks:
+  - tools/docs/mkdocs_hooks.py
+
+theme:
+  name: material
+  # Landing block for the home page (see tools/docs/site-overrides/main.html).
+  custom_dir: tools/docs/site-overrides
+  # Use the visitor's own system fonts, so the site makes no requests to
+  # third-party font servers.
+  font: false
+  language: en
+  palette:
+    # Follow the system light/dark preference by default, with a toggle.
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+plugins:
+  - search
+
+markdown_extensions:
+  - tables
+  - admonition
+  - attr_list
+  - md_in_html
+  - toc:
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+# pymdownx.arithmatex is not enabled: the docs contain no LaTeX maths.
+
+# Files under docs/ that are NOT copied into the site (gitignore-style
+# patterns, relative to docs/).
+exclude_docs: |
+  # CAF/NIS assurance material: deliberately kept off the public site.
+  assurance/
+  # Git submodule of third-party GB grid documents (hundreds of MB).
+  Public/
+  # Third-party PDFs and their catalogue (hundreds of MB; the PDFs are not
+  # tracked in git). Links into this folder go to GitHub instead.
+  reference/
+
+# Navigation. Chapter titles are written without their NNNN file prefix; the
+# order follows the parts listed in each Contents page.
+nav:
+  - Home: README.md
+  - User manual:
+      - Contents: "manual/0000 Contents.md"
+      - Getting going:
+          - Getting started: "manual/0001 Getting started.md"
+          - Loading networks: "manual/0002 Loading networks.md"
+          - Configuration: "manual/0003 Configuration.md"
+          - Licensing and activation: "manual/0004 Licensing and activation.md"
+      - Steady state:
+          - Running power flows: "manual/0005 Running power flows.md"
+          - "OPF, CPF, taps, distribution factors and losses": "manual/0006 OPF, CPF, taps, distribution factors and losses.md"
+          - Three-phase distribution feeders: "manual/0007 Three-phase distribution feeders.md"
+          - Time series and hosting capacity: "manual/0034 Time series and hosting capacity.md"
+      - The apps:
+          - The desktop app: "manual/0008 The desktop app.md"
+          - The web app and REST and WebSocket API: "manual/0009 The web app and REST and WebSocket API.md"
+          - Analysis views: "manual/0010 Analysis views.md"
+          - The case editor: "manual/0033 The case editor.md"
+      - Security and protection:
+          - Contingency analysis: "manual/0011 Contingency analysis.md"
+          - "Faults, short circuit and protection grading": "manual/0012 Faults, short circuit and protection grading.md"
+          - Battery storage studies: "manual/0013 Battery storage studies.md"
+      - Dynamics:
+          - Frequency studies: "manual/0014 Frequency studies.md"
+          - "RMS, modal and impedance stability": "manual/0015 RMS, modal and impedance stability.md"
+          - Electromagnetic transients (EMT): "manual/0016 Electromagnetic transients (EMT).md"
+          - Harmonic studies: "manual/0017 Harmonic studies.md"
+      - Events:
+          - Replaying recorded events: "manual/0018 Replaying recorded events.md"
+          - Counterfactuals: "manual/0020 Counterfactuals.md"
+      - Estimation:
+          - State estimation: "manual/0021 State estimation.md"
+          - Estimating GB history: "manual/0022 Estimating GB history.md"
+          - Replaying estimated states: "manual/0023 Replaying estimated states.md"
+          - The GDA bridge: "manual/0024 The GDA bridge.md"
+      - Operations:
+          - Interposing live telemetry: "manual/0025 Interposing live telemetry.md"
+          - "Audit log, deployment and assurance": "manual/0026 Audit log, deployment and assurance.md"
+          - Validation tools: "manual/0027 Validation tools.md"
+          - Benchmarking and GPU: "manual/0028 Benchmarking and GPU.md"
+      - Reference:
+          - CLI reference: "manual/0019 CLI reference.md"
+          - Extending GridSim: "manual/0029 Extending GridSim.md"
+          - Troubleshooting: "manual/0030 Troubleshooting.md"
+          - Exports and formats: "manual/0031 Exports and formats.md"
+  - Technical reference:
+      - Contents: "technical/0000 Contents.md"
+      - Foundations:
+          - Architecture: "technical/0001 Architecture.md"
+          - Data model and per-unit conventions: "technical/0002 Data model and per-unit conventions.md"
+          - Sparse and GPU numerics: "technical/0004 Sparse and GPU numerics.md"
+          - Provenance and invariants: "technical/0008 Provenance and invariants.md"
+          - File and wire formats: "technical/0010 File and wire formats.md"
+          - Glossary: "technical/0012 Glossary.md"
+          - The v2 JSON schema: "technical/0028 The v2 JSON schema.md"
+          - Deterministic mathematics: "technical/0038 Deterministic mathematics.md"
+      - Steady state:
+          - Power flow: "technical/0003 Power flow.md"
+          - Contingency and security analysis (N-k): "technical/0023 Contingency and security analysis (N-k).md"
+          - "OPF, CPF, taps, distribution factors and loss allocation": "technical/0029 OPF, CPF, taps, distribution factors and loss allocation.md"
+          - Quasi-static time series and hosting capacity: "technical/0037 Quasi-static time series and hosting capacity.md"
+      - Dynamics:
+          - Frequency dynamics: "technical/0005 Frequency dynamics.md"
+          - Asset-dynamics data grounding: "technical/0013 Asset-dynamics data grounding.md"
+          - Cascade validation and blind prediction: "technical/0014 Cascade validation and blind prediction.md"
+          - Standard dynamic-model library: "technical/0024 Standard dynamic-model library.md"
+          - Small-signal and impedance stability: "technical/0030 Small-signal and impedance stability.md"
+          - Electromagnetic transient (EMT) simulation: "technical/0021 Electromagnetic transient (EMT) simulation.md"
+          - Harmonics: "technical/0019 Harmonics.md"
+          - Battery energy storage: "technical/0027 Battery energy storage.md"
+      - Protection:
+          - Protections: "technical/0015 Protections.md"
+          - Protection assessment (a passive relay overlay): "technical/0017 Protection assessment (a passive relay overlay).md"
+          - IEC 60909 short-circuit duty study: "technical/0025 IEC 60909 short-circuit duty study.md"
+          - Overcurrent coordination (IDMT grading): "technical/0026 Overcurrent coordination (IDMT grading).md"
+      - Estimation and evidence:
+          - State estimation: "technical/0006 State estimation.md"
+          - Physics conformance and the constrained estimator: "technical/0016 Physics conformance and the constrained estimator.md"
+          - "Real-time, distribution and dynamic estimation": "technical/0018 Real-time, distribution and dynamic estimation.md"
+          - The evidence engine: "technical/0007 The evidence engine.md"
+          - GDA integration: "technical/0009 GDA integration.md"
+          - Validation: "technical/0011 Validation.md"
+      - Integration and operations:
+          - The RTU and SCADA interposer: "technical/0020 The RTU and SCADA interposer.md"
+          - "Licensing: key format and trust model": "technical/0022 Licensing - key format and trust model.md"
+          - Audit log and diagnostics: "technical/0031 Audit log and diagnostics.md"
+          - CIM and CGMES import and export: "technical/0032 CIM and CGMES import and export.md"
+          - C37.118 synchrophasor ingest: "technical/0033 C37.118 synchrophasor ingest.md"
+          - "Web host, REST and WebSocket, SSO and sessions": "technical/0034 Web host, REST and WebSocket, SSO and sessions.md"
+          - Deployment and security: "technical/0035 Deployment and security.md"
+          - Known limitations and design decisions: "technical/0036 Known limitations and design decisions.md"
+      - Design records:
+          - C37.118 synchrophasor: technical/design/c37118-synchrophasor.md
+          - CIM and CGMES mapping: technical/design/cim-cgmes-mapping.md
+          - Robust GM estimation and leverage: technical/design/robust-gm-leverage.md
+          - Three-phase distribution state estimation: technical/design/three-phase-dsse.md
+          - EMT time domain: technical/design/emt-time-domain.md
+          - Case editor: technical/design/case-editor.md
+  - Validation:
+      - Distributed inertia: validation/distributed-inertia.md
+      - "GB event dossier: 9 August 2019": validation/evidence-gb-2019-08-09.md
+      - "GB event dossier: 22 December 2023": validation/evidence-gb-2023-12-22.md
+      - NESO RP1 and mechanical panels: validation/neso-rp1-and-mechanical.md
+      - Studies:
+          - GB full export loss list: validation/studies/gb-full-export-loss-list.md
+          - Inertia placement: validation/studies/inertia-placement.md
+          - Summer minimum voltage: validation/studies/summer-minimum-voltage.md
+  - Developer:
+      - Documentation style guide: developer/STYLE.md
+      - Case libraries: developer/case-libraries.md
+      - Solve export format: developer/solve-export.md
+      - Deployment examples: developer/deploy/README.md
+      - Benchmarks:
+          - Performance baseline: developer/benchmarks/perf-baseline.md
+          - Performance after tuning: developer/benchmarks/perf-after.md
+          - Server results overview: developer/benchmarks/server-results/README-section.md
+          - "GPU or CPU: A100 and H100 results": developer/benchmarks/server-results/a100-results.md
+          - A100 benchmark: developer/benchmarks/server-results/a100/bench.md
+          - A100 CUDA run: developer/benchmarks/server-results/a100/cuda-p1/bench.md
+          - H100 benchmark: developer/benchmarks/server-results/h100/h100-p1/bench.md
+          - CPU benchmark: developer/benchmarks/server-results/cpu/bench.md
+          - MI300 notes: developer/benchmarks/server-results/mi300/README.md

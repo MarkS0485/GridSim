@@ -1,0 +1,29 @@
+{#
+  Site template override for the GridSim documentation.
+
+  It extends the stock Material template and adds a short landing block above
+  the content of the home page only (docs/README.md). Every other page is
+  rendered exactly as normal. The links use the "base_url" helper so they work
+  both locally and under the /GridSim/ path on GitHub Pages.
+#}
+{% extends "base.html" %}
+
+{% block content %}
+  {% if page and page.is_homepage %}
+    <div class="gridsim-landing">
+      <p>
+        GridSim is a power-grid simulator written in C# and .NET: power flow,
+        optimal power flow, contingency and fault studies, frequency and
+        electromagnetic-transient dynamics, state estimation and replay of
+        recorded events.
+      </p>
+      <p>
+        <a class="md-button md-button--primary" href="{{ 'manual/0001%20Getting%20started/' | url }}">Get started</a>
+        <a class="md-button" href="{{ 'manual/0000%20Contents/' | url }}">User manual</a>
+        <a class="md-button" href="{{ 'technical/0000%20Contents/' | url }}">Technical reference</a>
+        <a class="md-button" href="{{ config.repo_url }}">Source on GitHub</a>
+      </p>
+    </div>
+  {% endif %}
+  {{ super() }}
+{% endblock %}

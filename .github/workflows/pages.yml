@@ -1,0 +1,101 @@
+name: Docs site
+
+# Builds the documentation site (MkDocs Material over docs/) and publishes it to GitHub Pages.
+#
+# What it does, in order:
+#   1. check  - lints the docs (tools/docs/lint.py: ASCII, EN-GB spelling, relative links, CLI anchors, chapter
+#               names, every CLI verb documented), confirms the generated wiki CLI page matches
+#               docs/manual/0019 CLI reference.md, and builds the site with `mkdocs build --strict`, so any
+#               broken link, missing page or stale generated page fails the run loudly.
+#   2. deploy - publishes the built site with actions/deploy-pages. Runs only on a push to main or by hand,
+#               never for a pull request (a pull request gets the check only).
+#
+# The site refreshes on every push to main, so it always follows docs/ on main.
+#
+# Repository guard: every job runs only on the public repository (MarkS0485/GridSim). The private development
+# repository has no Pages site and keeps its free Actions allowance, so on it this workflow is a no-op.
+#
+# Supply chain: every action is pinned to a full commit SHA (the tag it was taken from is in the comment), and the
+# Python packages come from requirements-docs.txt with exact versions. Dependabot's github-actions ecosystem
+# proposes SHA bumps. Permissions are least privilege per job.
+#
+# One-time repository setting this needs: Settings > Pages > Source = "GitHub Actions"
+# (tools/github/apply-public-settings.ps1 sets it).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Only one deployment at a time; a newer push supersedes a queued one, but an in-flight deploy is allowed to finish.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint and build the docs site (strict)
+    if: github.repository == 'MarkS0485/GridSim'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Check out (no submodules; docs/Public is left off the site)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Install the pinned docs toolchain
+        run: python -m pip install --disable-pip-version-check --no-cache-dir -r requirements-docs.txt
+
+      # docs/reference/ is left out on purpose: its README catalogues PDFs that are kept out of git (fetched
+      # locally), so in a clean checkout every catalogue link is missing by design. Everything else is linted.
+      - name: Lint the docs (links, anchors, ASCII, EN-GB, CLI coverage)
+        run: >-
+          python tools/docs/lint.py README.md docs/README.md docs/manual docs/technical docs/validation
+          docs/developer docs/assurance
+
+      - name: Generated wiki CLI page matches the CLI reference chapter
+        run: python tools/wiki/gen_cli_reference.py --check
+
+      - name: Build the site (strict - any warning fails)
+        run: python -m mkdocs build --strict --site-dir _site
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
+
+      - name: Upload the site as the Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    name: Publish to GitHub Pages
+    if: github.repository == 'MarkS0485/GridSim' && github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write      # publish the site
+      id-token: write   # deploy-pages proves the artifact came from this run (OIDC)
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1

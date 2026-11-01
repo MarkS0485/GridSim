@@ -1,0 +1,66 @@
+name: Wiki sync
+
+# Keeps the GitHub wiki in step with tools/wiki/ on main.
+#
+# On every push to main that touches the wiki sources (or the CLI reference chapter the CLI quick-reference page is
+# generated from), this regenerates tools/wiki/pages/CLI-quick-reference.md from docs/manual/0019 CLI reference.md,
+# mirrors tools/wiki/pages/ into the wiki repository (<repo>.wiki.git) and pushes, but only when something changed.
+# Pages removed from tools/wiki/pages/ are removed from the wiki too, so the wiki never drifts from the repo.
+# Hand edits made in the wiki web UI are overwritten on the next sync: edit tools/wiki/pages/ instead.
+#
+# Credentials: the built-in GITHUB_TOKEN with contents: write can push to the repository's own wiki. If GitHub ever
+# refuses it, add a fine-grained personal access token as the repository secret WIKI_PUSH_TOKEN (repository access:
+# MarkS0485/GridSim only; permission: Contents read and write) and this workflow uses that instead. No other secret
+# is read.
+#
+# Prerequisite (one time, in the web UI): the wiki must be enabled and its first page created before the .wiki.git
+# repository exists; until then the push step fails loudly with a clear message.
+#
+# Repository guard: runs only on the public repository (MarkS0485/GridSim); on the private development repository
+# it is a no-op.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/wiki/**'
+      - 'docs/manual/0019 CLI reference.md'
+      - '.github/workflows/wiki-sync.yml'
+  workflow_dispatch:
+
+# Never run two syncs at once: the second would race the first on the wiki repository.
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Push tools/wiki to the wiki
+    if: github.repository == 'MarkS0485/GridSim'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # the wiki repository is written with the repository's contents permission
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: Sync the wiki
+        env:
+          # Prefer the optional fine-grained token when it is configured; otherwise the built-in token.
+          # push_wiki.sh builds https://x-access-token:<token>@github.com/<repo>.wiki.git from these two and
+          # masks the token in its own output.
+          GITHUB_TOKEN: ${{ secrets.WIKI_PUSH_TOKEN || github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash tools/wiki/push_wiki.sh
