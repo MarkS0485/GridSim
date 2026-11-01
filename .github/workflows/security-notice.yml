@@ -1,0 +1,171 @@
+name: Security notice
+
+# Automatic notice to subscribers when a security fix ships (SECURITY.md, "Automatic notice").
+#
+# A release is a security release when its notes name a GitHub security advisory id (GHSA-xxxx-xxxx-xxxx). The
+# release notes come from the CHANGELOG, so the CHANGELOG "Security" bullet for the fix names the advisory id.
+# For each advisory id in the notes this workflow:
+#   1. checks the advisory is PUBLISHED on this repository (a draft or unknown id fails the run loudly, naming it:
+#      publish the advisory, then re-run this workflow by hand with the release tag);
+#   2. posts one announcement in the Discussions "Announcements" category, titled
+#      "Security notice: <advisory id> fixed in <tag>", linking the release, the advisory and SECURITY.md.
+#      An announcement with that exact title already present is not posted twice (re-runs are safe).
+#
+# Who is notified, by GitHub itself (no mailing service, no extra secret):
+#   * everyone watching the repository with "Releases" (or "All activity") ticked: GitHub notifies them of the
+#     release;
+#   * everyone watching with "Discussions" (or "All activity") ticked: GitHub notifies them of the announcement.
+#   GitHub delivers these by email to each subscriber whose notification settings send email.
+#
+# Triggers:
+#   * release: published   - a release published by hand in the web UI or with a personal token.
+#   * workflow_run Release - a release created by release.yml. That workflow creates the release with the built-in
+#                            token, and GitHub does not raise "release: published" for that, so this trigger
+#                            catches it once the Release workflow completes successfully.
+#   * workflow_dispatch    - by hand, for a given tag (a re-run after publishing the advisory).
+#
+# Repository guard: runs only on the public repository (MarkS0485/GridSim).
+# Untrusted text (release notes) is only ever passed through environment variables, never interpolated into the
+# script, so a crafted release body cannot inject shell commands.
+
+on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to announce (for example v2.1.014)'
+        required: true
+        type: string
+
+# One notice run per tag at a time, so two triggers for the same release cannot both post.
+concurrency:
+  group: security-notice-${{ github.event.release.tag_name || github.event.workflow_run.head_branch || inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  notice:
+    name: Announce security fixes in Discussions
+    # Public repository only; for workflow_run, only after a successful Release run that was started by a tag push.
+    if: >-
+      github.repository == 'MarkS0485/GridSim' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read        # read the release and its notes
+      discussions: write    # post the announcement
+    steps:
+      - name: Find the advisories in the release notes and announce each one
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          # Exactly one of these is set, depending on the trigger.
+          TAG_FROM_RELEASE: ${{ github.event.release.tag_name }}
+          TAG_FROM_RUN: ${{ github.event.workflow_run.head_branch }}
+          TAG_FROM_INPUT: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # ---- Which release? ----------------------------------------------------------------------------------
+          TAG="${TAG_FROM_RELEASE:-${TAG_FROM_RUN:-${TAG_FROM_INPUT:-}}}"
+          if [[ -z "$TAG" ]]; then
+            echo "::error::No release tag in the trigger; nothing to announce from."
+            exit 1
+          fi
+          echo "Release tag: $TAG"
+
+          # Fails loudly if the release does not exist (for example a Release run that failed before creating it).
+          RELEASE_JSON="$(gh release view "$TAG" --repo "$REPO" --json tagName,name,url,body,isDraft)"
+          if [[ "$(jq -r .isDraft <<<"$RELEASE_JSON")" == "true" ]]; then
+            echo "::error::Release $TAG is still a draft; publish it first."
+            exit 1
+          fi
+          RELEASE_URL="$(jq -r .url <<<"$RELEASE_JSON")"
+          RELEASE_NAME="$(jq -r .name <<<"$RELEASE_JSON")"
+
+          # ---- Which advisories? ------------------------------------------------------------------------------
+          # GitHub advisory ids are GHSA- followed by three groups of four characters from [23456789cfghjmpqrvwx].
+          mapfile -t GHSAS < <(jq -r .body <<<"$RELEASE_JSON" | grep -oE 'GHSA(-[23456789cfghjmpqrvwx]{4}){3}' | sort -u || true)
+          if [[ ${#GHSAS[@]} -eq 0 ]]; then
+            echo "Release $TAG names no security advisory, so it is not a security release. Nothing to announce."
+            exit 0
+          fi
+          echo "Advisories named in the release notes: ${GHSAS[*]}"
+
+          # ---- Where to post? ----------------------------------------------------------------------------------
+          OWNER="${REPO%%/*}"; NAME="${REPO##*/}"
+          REPO_INFO="$(gh api graphql \
+            -f query='query($o:String!,$n:String!){repository(owner:$o,name:$n){id
+              discussionCategories(first:25){nodes{id name}}
+              discussions(first:100, orderBy:{field:CREATED_AT, direction:DESC}){nodes{title}}}}' \
+            -f o="$OWNER" -f n="$NAME")"
+          REPO_ID="$(jq -r .data.repository.id <<<"$REPO_INFO")"
+          CATEGORY_ID="$(jq -r '.data.repository.discussionCategories.nodes[] | select(.name=="Announcements") | .id' <<<"$REPO_INFO")"
+          if [[ -z "$CATEGORY_ID" ]]; then
+            echo "::error::No Discussions category named Announcements on $REPO; enable Discussions (tools/github/apply-public-settings.ps1)."
+            exit 1
+          fi
+
+          # ---- Announce each published advisory ----------------------------------------------------------------
+          FAILED=0
+          for GHSA in "${GHSAS[@]}"; do
+            if ! ADV="$(gh api "repos/$REPO/security-advisories/$GHSA" 2>/dev/null)"; then
+              echo "::error::Advisory $GHSA (named in $TAG) is not readable on $REPO: it is a draft, or the id is wrong. Publish it, then re-run this workflow by hand with tag $TAG."
+              FAILED=1; continue
+            fi
+            STATE="$(jq -r .state <<<"$ADV")"
+            if [[ "$STATE" != "published" ]]; then
+              echo "::error::Advisory $GHSA is '$STATE', not published. Publish it, then re-run this workflow by hand with tag $TAG."
+              FAILED=1; continue
+            fi
+
+            TITLE="Security notice: $GHSA fixed in $TAG"
+            if jq -e --arg t "$TITLE" '.data.repository.discussions.nodes[] | select(.title==$t)' <<<"$REPO_INFO" >/dev/null; then
+              echo "Already announced: $TITLE"
+              continue
+            fi
+
+            SUMMARY="$(jq -r '.summary // "(no summary)"' <<<"$ADV")"
+            SEVERITY="$(jq -r '.severity // "unknown"' <<<"$ADV")"
+            CVE="$(jq -r '.cve_id // "not assigned"' <<<"$ADV")"
+            # Prefer the CVSS v4.0 score where present, else v3.1; print whichever are recorded.
+            V4="$(jq -r '.cvss_severities.cvss_v4.score // empty' <<<"$ADV")"
+            V3="$(jq -r '(.cvss_severities.cvss_v3.score // .cvss.score) // empty' <<<"$ADV")"
+            SCORES=""
+            [[ -n "$V4" && "$V4" != "null" ]] && SCORES="CVSS v4.0 base score $V4"
+            [[ -n "$V3" && "$V3" != "null" ]] && SCORES="${SCORES:+$SCORES; }CVSS v3.1 base score $V3"
+            [[ -z "$SCORES" ]] && SCORES="CVSS base score: see the advisory"
+            ADV_URL="https://github.com/$REPO/security/advisories/$GHSA"
+
+            BODY="$(printf '%s\n' \
+              "**$SUMMARY**" \
+              "" \
+              "- Advisory: $ADV_URL" \
+              "- CVE: $CVE" \
+              "- Severity: $SEVERITY ($SCORES)" \
+              "- Fixed in: [$RELEASE_NAME]($RELEASE_URL)" \
+              "" \
+              "Upgrade to $TAG or later. Releases before it are not patched; see the advisory for affected versions and any workaround." \
+              "" \
+              "How vulnerabilities are reported, assessed and fixed, and how to receive these notices: [SECURITY.md](https://github.com/$REPO/blob/main/SECURITY.md)." \
+              "" \
+              "This announcement was posted automatically when the fixed release was published.")"
+
+            gh api graphql \
+              -f query='mutation($r:ID!,$c:ID!,$t:String!,$b:String!){createDiscussion(input:{repositoryId:$r,categoryId:$c,title:$t,body:$b}){discussion{url}}}' \
+              -f r="$REPO_ID" -f c="$CATEGORY_ID" -f t="$TITLE" -f b="$BODY" --jq .data.createDiscussion.discussion.url
+            echo "Announced: $TITLE"
+          done
+
+          if [[ $FAILED -ne 0 ]]; then
+            echo "::error::One or more advisories were not announced (see above)."
+            exit 1
+          fi
