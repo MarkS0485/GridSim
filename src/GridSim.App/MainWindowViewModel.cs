@@ -85,7 +85,35 @@ public sealed class MainWindowViewModel : ObservableObject
     /// <see cref="TitleStem"/>): for example "GridSim  -  GB Transmission Control  -  v2.0.38  -  Personal licence".
     /// Slice 1.7: the tier line used to sit in the header instead; WPF has it only here.
     /// </summary>
-    public string Title { get; }
+    public string Title { get => _title; private set => SetProperty(ref _title, value); }
+
+    private string _title = "";
+
+    /// <summary>The header's muted words after GRIDSIM: the GB wording, or the loaded case's own (see <see cref="SetCaseIdentity"/>).</summary>
+    public string HeaderSubtitle { get => _headerSubtitle; private set => SetProperty(ref _headerSubtitle, value); }
+
+    /// <summary>The header's GB wording, as WPF writes it (four spaces, then the words).</summary>
+    public const string GbHeaderSubtitle = "    GB TRANSMISSION CONTROL";
+
+    private string _headerSubtitle = GbHeaderSubtitle;
+
+    /// <summary>
+    /// Name the loaded case in the title and the header. A case that carries its own geography (geography.json) is not
+    /// GB, so the GB wording would be false: the title becomes "GridSim  -  &lt;case name&gt;  -  &lt;tier line&gt;" and
+    /// the header "&lt;LAND&gt; TRANSMISSION CONTROL". With nulls (every case without its own geography, a replay, the
+    /// bridge) both go back to the GB wording exactly as before.
+    /// </summary>
+    /// <param name="caseName">The case's name (system.json name), or null for the GB wording.</param>
+    /// <param name="landName">The case geography's land name (for example "India"), or null for the GB wording.</param>
+    public void SetCaseIdentity(string? caseName, string? landName)
+    {
+        Title = string.IsNullOrWhiteSpace(caseName)
+            ? $"{TitleStem}  -  {Run.LicenceTierText}"
+            : $"GridSim  -  {caseName.Trim()}  -  {Run.LicenceTierText}";
+        HeaderSubtitle = string.IsNullOrWhiteSpace(landName)
+            ? GbHeaderSubtitle
+            : $"    {landName.Trim().ToUpperInvariant()} TRANSMISSION CONTROL";
+    }
 
     /// <summary>"GridSim &lt;version&gt; (commit &lt;sha&gt;)", read from the assembly at run time by Core.</summary>
     public string VersionText { get; } = GridSim.Core.BuildInfo.DisplayLine;

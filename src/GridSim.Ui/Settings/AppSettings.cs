@@ -54,6 +54,22 @@ public sealed class AppSettings
     /// </summary>
     public bool BridgeAllowUnencrypted { get; set; }
 
+    /// <summary>
+    /// NCSC CAF B5: re-establish a lost bridge stream automatically (default false: a lost stream stays lost, the pill
+    /// reads BRIDGE FAULT and right-click offers the reconnect, as before). When true the Avalonia app's bridge session
+    /// reconnects on the bounded backoff schedule of <c>ResilienceOptions</c> (1 s doubling to a 30 s ceiling), up to
+    /// <see cref="BridgeReconnectMaxAttempts"/>, and says each attempt in the event log. A horizon rejection is never
+    /// retried. For example <c>"BridgeAutoReconnect": true</c>.
+    /// </summary>
+    public bool BridgeAutoReconnect { get; set; }
+
+    /// <summary>
+    /// NCSC CAF B5: the most reconnect attempts per lost stream before the app gives up and says so (on the pill, as an
+    /// alarm and in the event log). 0, the default, means keep trying on the capped backoff. Used only with
+    /// <see cref="BridgeAutoReconnect"/>; a negative value is refused (the event log says why and nothing reconnects).
+    /// </summary>
+    public int BridgeReconnectMaxAttempts { get; set; }
+
     private static string FilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GridSim", "settings.json");
 

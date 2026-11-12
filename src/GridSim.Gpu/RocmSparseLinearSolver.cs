@@ -23,12 +23,27 @@ namespace GridSim.Gpu;
 /// defers to <see cref="CpuSparseLuSolver"/>. The native P/Invoke signatures are matched against
 /// the ROCm 6.x headers in <see cref="RocmInterop"/> and get their first end-to-end exercise via
 /// the <c>gpucheck</c> preflight on an AMD Instinct (MI-series) card.
+///
+/// <para><b>Device faults (GR-475, November 2026).</b> Running out of device memory (hipErrorOutOfMemory, or the
+/// rocSPARSE / rocBLAS memory-error status) falls back to the CPU sparse LU, and only that: the fallback is counted
+/// (<see cref="OutOfMemoryFallbacks"/>), its text kept (<see cref="LastOutOfMemoryFallback"/>) and a line written to
+/// stderr, so it is never silent. Every other device or library fault still throws and ends the solve loudly.</para>
 /// </summary>
 public sealed class RocmSparseLinearSolver : ISparseLinearSolver
 {
     public string Name => "sparse (gpu/rocm)";
 
     private readonly double _tol;
+
+    private static long _oomFallbacks;
+    private static string? _lastOomFallback;
+
+    /// <summary>GR-475: how many sparse solves in this process ran out of ROCm device memory and were solved on the CPU
+    /// instead. Process-wide; never reset.</summary>
+    public static long OutOfMemoryFallbacks => Interlocked.Read(ref _oomFallbacks);
+
+    /// <summary>GR-475: the exception text of the latest out-of-memory fallback, or null when there has been none.</summary>
+    public static string? LastOutOfMemoryFallback => Volatile.Read(ref _lastOomFallback);
 
     public RocmSparseLinearSolver(double tol = NumericTolerances.DefaultKrylovTolerance)
     {
@@ -64,6 +79,7 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
         nuint valBytes = (nuint)nnz * sizeof(double);
         nuint vecBytes = (nuint)n * sizeof(double);
 
+        RocmOutOfMemoryException? outOfMemory = null;
         lock (RocmContext.Lock)
         {
             IntPtr hSp = IntPtr.Zero, descr = IntPtr.Zero, info = IntPtr.Zero, hBlas = IntPtr.Zero;
@@ -201,6 +217,12 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
 
                 return null; // did not converge within the iteration cap
             }
+            catch (RocmOutOfMemoryException ex)
+            {
+                // GR-475: the one device fault that falls back. The CPU solve runs below, after the device buffers are
+                // freed (finally) and the context lock is released.
+                outOfMemory = ex;
+            }
             finally
             {
                 // teardown: status intentionally ignored (freeing resources on cleanup)
@@ -226,6 +248,17 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
                 if (hSp != IntPtr.Zero) _ = RocmInterop.rocsparse_destroy_handle(hSp);
             }
         }
+
+        RecordOutOfMemoryFallback(outOfMemory ?? throw new InvalidOperationException("ROCm sparse solve: left the device block with no result and no out-of-memory fault."));
+        return new CpuSparseLuSolver().Solve(a, b);
+    }
+
+    /// <summary>GR-475: count the out-of-memory fallback, keep its text and say so on stderr.</summary>
+    internal static void RecordOutOfMemoryFallback(RocmOutOfMemoryException ex, TextWriter? stderr = null)
+    {
+        Interlocked.Increment(ref _oomFallbacks);
+        Volatile.Write(ref _lastOomFallback, ex.Message);
+        (stderr ?? Console.Error).WriteLine($"GridSim: {ex.Message} Solved on the CPU (sparse LU) instead.");
     }
 
     /// <summary>Copy the device solution back to the host, returning null if it went non-finite.</summary>
@@ -239,24 +272,38 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
         return x;
     }
 
-    /// <summary>Throw if a rocSPARSE call returned a non-success status.</summary>
-    private static void Check(int status, string what)
+    /// <summary>Throw if a rocSPARSE call returned a non-success status (an allocation failure as
+    /// <see cref="RocmOutOfMemoryException"/>, GR-475).</summary>
+    internal static void Check(int status, string what)
     {
-        if (status != RocmInterop.RocSparseStatusSuccess)
-            throw new InvalidOperationException($"ROCm sparse solve: {what} failed (status={status}).");
+        if (status == RocmInterop.RocSparseStatusSuccess) return;
+        string text = $"ROCm sparse solve: {what} failed (status={status}).";
+        if (status == RocmInterop.RocSparseStatusMemoryError) throw new RocmOutOfMemoryException(text);
+        throw new InvalidOperationException(text);
     }
 
-    /// <summary>Throw if a rocBLAS call returned a non-success status.</summary>
-    private static void CheckBlas(int status, string what)
+    /// <summary>Throw if a rocBLAS call returned a non-success status (an allocation failure as
+    /// <see cref="RocmOutOfMemoryException"/>, GR-475).</summary>
+    internal static void CheckBlas(int status, string what)
     {
-        if (status != RocmInterop.RocBlasStatusSuccess)
-            throw new InvalidOperationException($"ROCm sparse solve: {what} failed (rocblas status={status}).");
+        if (status == RocmInterop.RocBlasStatusSuccess) return;
+        string text = $"ROCm sparse solve: {what} failed (rocblas status={status}).";
+        if (status == RocmInterop.RocBlasStatusMemoryError) throw new RocmOutOfMemoryException(text);
+        throw new InvalidOperationException(text);
     }
 
-    /// <summary>Throw if a HIP runtime call returned a non-success status.</summary>
-    private static void CheckHip(int status, string what)
+    /// <summary>Throw if a HIP runtime call returned a non-success status (hipErrorOutOfMemory as
+    /// <see cref="RocmOutOfMemoryException"/>, GR-475).</summary>
+    internal static void CheckHip(int status, string what)
     {
-        if (status != RocmInterop.HipSuccess)
-            throw new InvalidOperationException($"ROCm sparse solve: {what} failed (hipError={status}).");
+        if (status == RocmInterop.HipSuccess) return;
+        string text = $"ROCm sparse solve: {what} failed (hipError={status}).";
+        if (status == RocmInterop.HipErrorOutOfMemory) throw new RocmOutOfMemoryException(text);
+        throw new InvalidOperationException(text);
     }
 }
+
+/// <summary>GR-475: a ROCm device or library call ran out of device memory. Caught inside
+/// <see cref="RocmSparseLinearSolver.Solve"/> only, where it is the one device fault that falls back to the CPU; it
+/// derives from <see cref="InvalidOperationException"/> so any other catcher sees it exactly as before.</summary>
+internal sealed class RocmOutOfMemoryException(string message) : InvalidOperationException(message);

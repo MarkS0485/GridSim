@@ -173,6 +173,13 @@ public sealed class BridgeSession : ObservableModel
     private BridgeProtocol.ScalarsBlock? _heldHud;
     private (BridgeProtocol.OperatorBlock? Op, BridgeProtocol.MarketBlock? Mk, DateTime? TickUtc)? _heldMarket;
 
+    // NCSC CAF B5: the supervised reconnect (AppSettings.BridgeAutoReconnect). Null while the setting is off. Rebuilt at
+    // each connect the operator makes, so a changed setting takes effect on the next connect, as BridgeAllowUnencrypted
+    // does. _supervisedConnect is true while the supervisor's own reconnect is running, so that connect does not stop
+    // the schedule it belongs to.
+    private BridgeReconnectSupervisor? _supervisor;
+    private bool _supervisedConnect;
+
     private BridgeZoneChoice _selectedZone = BridgeChoices.Zones[0];
     private BridgeStartChoice? _selectedStart = BridgeChoices.Starts[0];
     private BridgeSourceChoice _selectedSource = BridgeChoices.Sources[0];
@@ -181,11 +188,17 @@ public sealed class BridgeSession : ObservableModel
     /// A session that reads <see cref="AppSettings.BridgeAllowUnencrypted"/> from <paramref name="settings"/> at each
     /// connect and drives <paramref name="display"/>. No socket is opened until <see cref="ConnectAsync"/>.
     /// </summary>
-    public BridgeSession(AppSettings settings, IBridgeDisplay display)
+    /// <param name="licence">Bug #198: the licence gate every bridge topology passes (null: the free tier, the safe
+    /// direction).</param>
+    public BridgeSession(AppSettings settings, IBridgeDisplay display, GridSim.Core.Licensing.LicenceGate? licence = null)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _display = display ?? throw new ArgumentNullException(nameof(display));
+        _licence = licence ?? new GridSim.Core.Licensing.LicenceGate(GridSim.Core.Licensing.Entitlement.FreeDefault);
     }
+
+    // Bug #198: the gate the topology a bridge server sends must pass before anything of it is shown.
+    private readonly GridSim.Core.Licensing.LicenceGate _licence;
 
     /// <summary>
     /// The dashboard the session writes to (set by the front end's dashboard feed when it attaches, cleared when it
@@ -237,8 +250,24 @@ public sealed class BridgeSession : ObservableModel
     public Task LeaveAsync()
     {
         _lastOverlays = null;
+        StopAutoReconnect();   // CAF B5: leaving the bridge ends any automatic reconnect
         return DisposeBridgeAsync();
     }
+
+    /// <summary>
+    /// NCSC CAF B5: stop any automatic reconnect in progress, with no further attempt and no give-up report. The front
+    /// end calls it whenever it leaves the bridge (another source, or the window closing), including when the stream is
+    /// down and no client is active, so a pending reconnect can never bring the bridge back over a local case.
+    /// </summary>
+    public void StopAutoReconnect() => _supervisor?.Stop();
+
+    /// <summary>NCSC CAF B5: the reconnect supervisor of this session, or null while
+    /// <see cref="AppSettings.BridgeAutoReconnect"/> is off. Internal, for the tests.</summary>
+    internal BridgeReconnectSupervisor? ReconnectSupervisor => _supervisor;
+
+    /// <summary>Test seam: the supervisor's backoff wait (null: the real <see cref="Task.Delay(TimeSpan, CancellationToken)"/>).
+    /// Read when the supervisor is built, at the next connect.</summary>
+    internal Func<TimeSpan, CancellationToken, Task>? ReconnectDelay { get; set; }
 
     /// <summary>The stream restart now running (null before one), so a test can wait for it.</summary>
     public Task? PendingRestart { get; private set; }
@@ -327,6 +356,11 @@ public sealed class BridgeSession : ObservableModel
         ArgumentNullException.ThrowIfNull(s);
         if (s.Bridge is null) throw new ArgumentException($"{s.Label} is not a bridge source.", nameof(s));
 
+        // NCSC CAF B5: a connect the operator asked for ends any automatic reconnect in progress (the operator is in
+        // charge now) and builds the supervisor afresh from the settings; a connect the supervisor makes is one attempt
+        // of its own schedule and leaves it running.
+        if (!_supervisedConnect) RebuildSupervisor();
+
         LastConnectLine = null;
         GridBridgeClient? prev = _bridge;               // dispose the outgoing client after swapping in the new one
         var client = new GridBridgeClient();
@@ -359,6 +393,19 @@ public sealed class BridgeSession : ObservableModel
         client.TopologyReceived += model => _display.Post(() =>
         {
             if (!ReferenceEquals(_bridge, client)) return;
+            // Bug #198: the licence gate, which the desktop bridge never called (the web gates it since #172). A topology
+            // above the tier's bus limit that is not a bundled network's topology is never shown: the feed is closed and
+            // the reason logged and shown on the pill.
+            GridSim.Core.Licensing.GateResult verdict = _licence.Check(model.BusCount,
+                GridSim.Core.Licensing.BundledNetworks.IsShippedTopology(model, _bridgeCase));
+            if (!verdict.Allowed)
+            {
+                Feed?.Log(Feed.Clock, "Bridge refused: " + verdict.Message);
+                Feed?.SetBridgeStatus("REFUSED  *  licence", BridgeChoices.WarnColour);
+                StopAutoReconnect();   // CAF B5: a refused feed is never reconnected
+                _ = DisposeBridgeAsync();
+                return;
+            }
             Feed?.ModelChanged();   // a topology is a (possibly different) model: per-model caches rebuild on its frames
             _display.ShowTopology(model);
         });
@@ -424,6 +471,9 @@ public sealed class BridgeSession : ObservableModel
             Feed?.MarkStreamLost(horizon ? "HORIZON REJECTION" : "BRIDGE FAULT");
             Feed?.Log(Feed.Clock, $"Bridge fault: {ex.Message}");
             RaiseState();
+            // NCSC CAF B5: with BridgeAutoReconnect on, the lost stream is re-established on the backoff schedule. The
+            // supervisor never retries a horizon rejection: it gives up at once and says why.
+            _supervisor?.ConnectionLost(ex);
         });
         // One unreadable bridge message: logged (with the running count) while the stream carries on (R275).
         client.MessageRejected += ex => _display.Post(() =>
@@ -468,6 +518,117 @@ public sealed class BridgeSession : ObservableModel
                 await DisposeBridgeAsync().ConfigureAwait(true);
             }
         }
+    }
+
+    // ======================================== NCSC CAF B5: supervised reconnect ========================================
+
+    // Drop the old supervisor (stopping any schedule it was running) and, when the settings ask for it, build a new one
+    // with the default backoff schedule and the configured bound. A setting the schedule refuses (a negative bound) is
+    // said in the event log and as an alarm, and nothing reconnects (fail loud: never a silent "off").
+    private void RebuildSupervisor()
+    {
+        BridgeReconnectSupervisor? old = _supervisor;
+        _supervisor = null;
+        if (old is not null)
+        {
+            old.Stop();
+            // DisposeAsync never faults (the supervisor ends every path itself); after Stop it only waits for the
+            // background task to notice, so it is left to finish on its own.
+            _ = old.DisposeAsync().AsTask();
+        }
+        if (!_settings.BridgeAutoReconnect) return;
+
+        BridgeReconnectSupervisor built;
+        try
+        {
+            ResilienceOptions schedule = ResilienceOptions.Default with { MaxReconnectAttempts = _settings.BridgeReconnectMaxAttempts };
+            built = new BridgeReconnectSupervisor(schedule, SupervisedReconnectAsync, ReconnectDelay);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            string line = $"Bridge auto-reconnect is off: the setting BridgeReconnectMaxAttempts was refused ({ex.Message})";
+            Feed?.Log("--:--", line);
+            Feed?.AddAlarm(line, BridgeChoices.BadColour);
+            return;
+        }
+        // The supervisor reports on its own thread: each report is moved onto the UI thread, and dropped if this
+        // supervisor has since been replaced.
+        built.ReconnectScheduled += r => _display.Post(() => { if (ReferenceEquals(_supervisor, built)) ShowReconnectScheduled(r); });
+        built.AttemptCompleted += a => _display.Post(() => { if (ReferenceEquals(_supervisor, built)) ShowReconnectAttempt(a); });
+        built.GaveUp += g => _display.Post(() => { if (ReferenceEquals(_supervisor, built)) ShowReconnectGaveUp(g); });
+        _supervisor = built;
+    }
+
+    private void ShowReconnectScheduled(BridgeReconnectSchedule r)
+    {
+        string of = r.MaxAttempts > 0 ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $" of {r.MaxAttempts}") : "";
+        string wait = r.Delay.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        Feed?.SetBridgeStatus($"RECONNECTING  *  attempt {r.Attempt.ToString(System.Globalization.CultureInfo.InvariantCulture)}{of} in {wait} s", BridgeChoices.WarnColour);
+        if (Feed is not null)
+            Feed.Log(Feed.Clock, $"Bridge reconnect: attempt {r.Attempt.ToString(System.Globalization.CultureInfo.InvariantCulture)}{of} in {wait} s ({r.Cause.Message})");
+    }
+
+    private void ShowReconnectAttempt(BridgeReconnectAttempt a)
+    {
+        if (Feed is null) return;
+        string n = a.Attempt.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Feed.Log(Feed.Clock, a.Succeeded ? $"Bridge reconnected on attempt {n}" : $"Bridge reconnect attempt {n} failed: {a.Failure!.Message}");
+    }
+
+    private void ShowReconnectGaveUp(BridgeReconnectGiveUp g)
+    {
+        if (g.LastFailure is ForwardInferenceException)
+        {
+            // The pill already reads HORIZON REJECTION; the event log says why no reconnect follows.
+            if (Feed is not null) Feed.Log(Feed.Clock, $"Bridge reconnect not attempted: {g.Reason}");
+            return;
+        }
+        Feed?.SetBridgeStatus(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"RECONNECT FAILED  *  gave up after {g.Attempts} attempt(s)  *  choose the bridge again to retry"), BridgeChoices.BadColour);
+        Feed?.AddAlarm($"BRIDGE RECONNECT FAILED: {g.Reason}", BridgeChoices.BadColour);
+        if (Feed is not null) Feed.Log(Feed.Clock, $"Bridge reconnect gave up: {g.Reason}");
+    }
+
+    /// <summary>
+    /// One reconnect attempt of the supervisor, made on the UI thread exactly as the reconnect menu item makes it
+    /// (<see cref="IBridgeDisplay.ReconnectAsync"/>, which is choosing the source again): a new client, the same
+    /// settings, the same horizon guard, and a fresh historical anchor (<see cref="SelectedBridgeBack"/> before now).
+    /// <see cref="ConnectAsync"/> never throws, so the outcome is read from what it left behind: a live client whose
+    /// connect line says "Connected to bridge" is a success; anything else fails this attempt with the connect's own words.
+    /// </summary>
+    private Task SupervisedReconnectAsync(int attempt, CancellationToken ct)
+    {
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _display.Post(() => _ = RunSupervisedReconnectAsync(done, ct));
+        return done.Task;
+    }
+
+    // The UI-thread half of SupervisedReconnectAsync. It never throws: every outcome goes to done.
+    private async Task RunSupervisedReconnectAsync(TaskCompletionSource done, CancellationToken ct)
+    {
+#pragma warning disable CA1031 // Not swallowed: the failure is handed to the supervisor, which reports it.
+        try
+        {
+            if (ct.IsCancellationRequested) { done.TrySetCanceled(ct); return; }
+            if (_current is not { Bridge: not null } source)
+            {
+                done.TrySetException(new InvalidOperationException("There is no bridge source to reconnect to."));
+                return;
+            }
+            _supervisedConnect = true;
+            try { await _display.ReconnectAsync(source).ConfigureAwait(true); }
+            finally { _supervisedConnect = false; }
+            if (_bridge is not null && !_bridgeFaulted && LastConnectLine is string line
+                && line.StartsWith("Connected to bridge ", StringComparison.Ordinal))
+                done.TrySetResult();
+            else
+                done.TrySetException(new BridgeStreamException(LastConnectLine ?? "The bridge reconnect did not complete."));
+        }
+        catch (Exception ex)
+        {
+            done.TrySetException(ex);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>The WPF event-log line for a stream that connected and started.</summary>

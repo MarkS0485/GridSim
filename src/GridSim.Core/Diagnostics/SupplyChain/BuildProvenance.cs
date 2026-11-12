@@ -46,12 +46,71 @@ public sealed record BuildProvenance(
     /// <summary>The toolchain value when no SDK version was stamped (a build outside the repository's props).</summary>
     public const string SdkUnknown = "unknown-sdk";
 
+    /// <summary>The assembly metadata key the build stamps the state of the source tree under (Directory.Build.targets,
+    /// only when an SBOM hash is injected): <see cref="SourceTreeClean"/>, <see cref="SourceTreeDirty"/>, or absent.</summary>
+    public const string SourceTreeMetadataKey = "GridSimSourceTree";
+
+    /// <summary>The source tree had no uncommitted change (tracked or untracked, ignored files aside) when it was built.</summary>
+    public const string SourceTreeClean = "clean";
+
+    /// <summary>The source tree had uncommitted changes when it was built: the commit does not describe the binary.</summary>
+    public const string SourceTreeDirty = "dirty";
+
+    /// <summary>Nobody recorded the state of the source tree (a local build with no SBOM hash, or a build with no git and
+    /// no state handed in). Never a release build.</summary>
+    public const string SourceTreeUnknown = "unknown";
+
     /// <summary>The provenance of the currently running build, read once from this (Core) assembly.</summary>
     public static BuildProvenance Current { get; } = ForAssembly(typeof(BuildProvenance).Assembly);
 
-    /// <summary>True when this build carries an injected SBOM hash, that is, it was produced by the release
-    /// workflow rather than a local build.</summary>
-    public bool IsReleaseBuild => !string.Equals(SbomSha256, SbomUnset, StringComparison.Ordinal);
+    /// <summary>The state of the source tree the build was made from: <see cref="SourceTreeClean"/>,
+    /// <see cref="SourceTreeDirty"/> or <see cref="SourceTreeUnknown"/> (bug #176). Not part of <see cref="BuildHash"/>,
+    /// which stays the identity label it always was; it decides <see cref="IsReleaseBuild"/>.</summary>
+    public string SourceTree { get; init; } = SourceTreeUnknown;
+
+    /// <summary>
+    /// True only when this build is a genuine release build: the release workflow injected a well-formed SBOM hash
+    /// (exactly 64 hexadecimal digits), the commit is known, and the source tree was clean when it was built. Bug #176:
+    /// this used to be true for ANY non-blank SBOM value, so <c>dotnet build -p:GridSimSbomSha256=x</c> on a modified
+    /// tree attested a release build naming a clean commit. <see cref="NotReleaseReason"/> says which condition failed.
+    /// </summary>
+    public bool IsReleaseBuild => NotReleaseReason is null;
+
+    /// <summary>Why this build is not a release build, in plain words, or null when it is one.</summary>
+    public string? NotReleaseReason => ReleaseRefusal(SbomSha256, Commit, SourceTree);
+
+    /// <summary>
+    /// The release-build rule, as a pure function so a test can drive every branch: null when <paramref name="sbomSha256"/>
+    /// is 64 hexadecimal digits, <paramref name="commit"/> is known and <paramref name="sourceTree"/> is
+    /// <see cref="SourceTreeClean"/>; otherwise the reason, checked in that order.
+    /// </summary>
+    public static string? ReleaseRefusal(string sbomSha256, string commit, string sourceTree)
+    {
+        ArgumentNullException.ThrowIfNull(sbomSha256);
+        ArgumentNullException.ThrowIfNull(commit);
+        ArgumentNullException.ThrowIfNull(sourceTree);
+        if (string.Equals(sbomSha256, SbomUnset, StringComparison.Ordinal))
+            return "local/dev build; SBOM hash not injected";
+        if (!IsSha256Hex(sbomSha256))
+            return "the injected SBOM hash is not 64 hexadecimal digits";
+        if (string.IsNullOrWhiteSpace(commit) || string.Equals(commit, "unknown", StringComparison.Ordinal))
+            return "the commit the build was made from is unknown";
+        if (string.Equals(sourceTree, SourceTreeDirty, StringComparison.Ordinal))
+            return "the source tree had uncommitted changes when it was built";
+        if (!string.Equals(sourceTree, SourceTreeClean, StringComparison.Ordinal))
+            return "the state of the source tree was not recorded at build time";
+        return null;
+    }
+
+    /// <summary>True when <paramref name="value"/> is exactly 64 hexadecimal digits (either case), the form of a SHA-256
+    /// digest written as hex.</summary>
+    public static bool IsSha256Hex(string? value)
+    {
+        if (value is null || value.Length != 64) return false;
+        foreach (char c in value)
+            if (!char.IsAsciiHexDigit(c)) return false;
+        return true;
+    }
 
     /// <summary>
     /// Build the provenance for a given assembly. The commit is the full sha from the informational version (not
@@ -68,7 +127,15 @@ public sealed record BuildProvenance(
         string toolchain = ReadMetadata(assembly, SdkMetadataKey) is string sdk ? ".NET SDK " + sdk : SdkUnknown;
         string sbom = ReadSbomSha256(assembly);
         string buildHash = ComputeBuildHash(version, commit, toolchain, sbom);
-        return new BuildProvenance(version, commit, toolchain, sbom, buildHash);
+        // The source-tree state the build stamped (Directory.Build.targets). Anything other than the two known words is
+        // recorded as unknown, so a mistyped or hand-made value can never read as clean.
+        string tree = ReadMetadata(assembly, SourceTreeMetadataKey) switch
+        {
+            SourceTreeClean => SourceTreeClean,
+            SourceTreeDirty => SourceTreeDirty,
+            _ => SourceTreeUnknown,
+        };
+        return new BuildProvenance(version, commit, toolchain, sbom, buildHash) { SourceTree = tree };
     }
 
     /// <summary>One line for a footer or an attestation display:

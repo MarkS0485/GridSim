@@ -12,13 +12,18 @@ namespace GridSim.Tests.V2;
 /// </summary>
 public class V2LibraryFilesValidateTests
 {
-    [Fact]
+    // Test correction (2026-11-02, owner decision GR-404; recorded in the commit and CHANGELOG): this test returned early,
+    // and so PASSED having checked nothing, when no library file was shipped. It is now SKIPPED with the reason in that
+    // case (decided at discovery by the attribute), so a green run never reads as "the library was validated". Nothing
+    // it checks when the library is present has changed.
+    [RepositoryDataFact("the template library is optional, so with no library file there is nothing to validate",
+        "data/library", "*.json")]
     public void Every_data_library_file_validates()
     {
-        if (!Directory.Exists(LibraryDir)) return;   // no library shipped: nothing to validate
         List<string> files = Directory.EnumerateFiles(LibraryDir, "*.json", SearchOption.AllDirectories)
                                       .OrderBy(f => f, StringComparer.Ordinal).ToList();
-        if (files.Count == 0) return;
+        // The attribute ran the test only because a library file exists; a mismatch here is a broken checkout.
+        Assert.NotEmpty(files);
 
         JsonSchemaSubset schemas = RealSchemas();
         KindSpecRegistry kinds = KindSpecRegistry.LoadDirectory(KindsDir, schemas);

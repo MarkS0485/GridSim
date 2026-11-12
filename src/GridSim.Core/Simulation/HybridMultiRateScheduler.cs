@@ -26,9 +26,10 @@ internal sealed record ScheduledUpdate(DateTime Time, bool IsScada);
 /// mapper-to-estimator adapter (the C37.118 decoder fixes R046 / R293 / N061 and the angle re-referencing to the
 /// estimator's slack R295 are done; D-DOC-219 corrected this list); (3) an end-to-end test of the
 /// interleaved run on a replayed stream, including the no-future invariant (no update reads telemetry stamped after
-/// its instant); (4) a CLI or resident-engine surface. Also unhandled today: an <c>end</c> before
-/// <c>start</c> silently gives an empty schedule, and mixed <see cref="DateTimeKind"/> values are not
-/// checked.</para>
+/// its instant); (4) a CLI or resident-engine surface. GR-848: an <c>end</c> before <c>start</c> and mixed
+/// <see cref="DateTimeKind"/> values are refused (they used to give an empty or mis-stamped schedule silently).</para>
+/// <para><b>TEST-ONLY today (GR-848).</b> Kept for its tests and for the estimator above; no production code may call
+/// it until that estimator exists. Removal is not proposed.</para>
 /// </summary>
 internal static class HybridMultiRateScheduler
 {
@@ -38,6 +39,11 @@ internal static class HybridMultiRateScheduler
     {
         if (scadaPeriod <= TimeSpan.Zero || pmuPeriod <= TimeSpan.Zero)
             throw new ArgumentException("periods must be positive.");
+        // GR-848: fail loud instead of an empty or mis-stamped schedule.
+        if (end < start)
+            throw new ArgumentException($"end {end:o} is before start {start:o}.", nameof(end));
+        if (start.Kind != end.Kind)
+            throw new ArgumentException($"start ({start.Kind}) and end ({end.Kind}) must be of the same DateTimeKind.", nameof(end));
 
         var scada = new HashSet<long>();
         for (DateTime t = start; t <= end; t += scadaPeriod) scada.Add(t.Ticks);

@@ -37,7 +37,21 @@ public sealed class SimSession : IAsyncDisposable
 
     private readonly LiveSim? _live;
     private readonly PresolvedReplay? _replay;
-    private readonly GridBridgeClient? _bridge;
+    // CAF B5 supervised reconnect: no longer readonly, because a bridge session that reconnects replaces its client (a
+    // GridBridgeClient wraps one socket and cannot be reused). It is never set back to null, so every "is this a bridge
+    // session" test below (_bridge is not null) is unchanged. Volatile: the reconnect swaps it on the supervisor's thread
+    // while the UI threads read it. The swap itself is in ReconnectBridgeAsync, under _gate.
+    private volatile GridBridgeClient? _bridge;
+    // What a reconnect needs to build the next client exactly as the first was built: the endpoint and the host's
+    // checked resilience settings (message cap, in-flight cap, transport rule, backoff schedule).
+    private readonly Uri? _bridgeEndpoint;
+    private readonly ResilienceOptions _bridgeResilience = ResilienceOptions.Default;
+    // The supervisor that drives the backoff schedule after a lost stream; null unless the host turned it on
+    // (GridSim:BridgeReconnect). Disposed in DisposeAsync before the client.
+    private readonly BridgeReconnectSupervisor? _reconnect;
+    // Set (under _gate) once DisposeAsync has begun, so a reconnect still in flight never installs a new client that
+    // nothing would dispose.
+    private bool _bridgeSwapClosed;
     private readonly string _bridgeCase = "";
     private readonly string _bridgeSource = "presolved";
     // Raw source (source="raw"): the per-tick raw blocks RawDataReceived carries, captured on the receive-loop
@@ -75,6 +89,32 @@ public sealed class SimSession : IAsyncDisposable
     private readonly Queue<double> _imbalancePriceHist = new();
     private long? _imbalancePricePeriod;   // settlement-period key of the newest sample (null before the first)
     private DateTime? _bridgeTickUtc;      // the current bridge tick's 't' instant (every source; captured in OnBridgeRaw)
+
+    // GR-224: the worker that projects bridge frames off the receive loop (a bounded FIFO, created on the first frame and
+    // stopped in DisposeAsync). See OnBridgeState.
+    private BridgeProjectionWorker<BridgeFrameWork>? _projector;
+
+    /// <summary>GR-224: how many bridge frames may wait for projection behind the one being projected. A session whose
+    /// projection falls further behind than this is stopped with a clear error (nothing is dropped).</summary>
+    internal const int BridgeProjectionQueueCapacity = 64;
+
+    /// <summary>GR-224: what a bridge frame's projection reads that the receive loop overwrites with the NEXT tick (the
+    /// per-tick raw blocks, overlays, HUD scalars and tick instant), captured under the gate when the frame arrives so the
+    /// projection, which now runs later, sees its own frame's values and not a newer frame's.</summary>
+    private sealed record BridgeSnapshot(
+        BridgeProtocol.ScalarsBlock? RawScalars,
+        BridgeProtocol.GenerationMixBlock? RawMix,
+        BridgeProtocol.RawInterconnectorsBlock? RawIcs,
+        MapOverlaysDto? Overlays,
+        MapHudDto? Hud,
+        DateTime? TickUtc);
+
+    /// <summary>GR-224: one bridge frame queued for projection, with its own <see cref="BridgeSnapshot"/>.</summary>
+    private sealed record BridgeFrameWork(
+        SimFrame Frame,
+        BridgeProtocol.OperatorBlock? Op,
+        BridgeProtocol.MarketBlock? Mk,
+        BridgeSnapshot Snapshot);
     // NESO RP1 purchased-time trace for the falling-trend escalation of the LFDD grade (Q1, 2026-10): the same Core
     // trace the WPF NesoRp1Vm keeps, one point per built envelope, cleared with the other histories on a seek.
     private readonly GridSim.Core.Presentation.FrequencyRiskPresenter.PurchasedTimeTrace _purchasedTrace = new();
@@ -113,6 +153,41 @@ public sealed class SimSession : IAsyncDisposable
     /// <summary>Selectable raw-replay range (rocof_1s bounds from the bridge /meta), null until fetched.</summary>
     public DateTime? RawMin => _rawMin;
     public DateTime? RawMax => _rawMax;
+    /// <summary>
+    /// GR-241: the newest instant a raw seek may land on: the raw range's end, or the forward-inference horizon
+    /// (<see cref="GridSim.Core.Diagnostics.ForwardInferenceGuard.Horizon"/> of the real clock), whichever is EARLIER. Null when no range is known.
+    /// </summary>
+    public DateTime? RawSeekMax => RawSeekLimit(_rawMax, DateTime.UtcNow);
+
+    /// <summary>The earlier of the range end and the horizon at <paramref name="utcNow"/>; null when the range end is unknown.</summary>
+    internal static DateTime? RawSeekLimit(DateTime? rawMax, DateTime utcNow)
+    {
+        if (rawMax is not DateTime hi) return null;
+        DateTime horizon = GridSim.Core.Diagnostics.ForwardInferenceGuard.Horizon(utcNow);
+        DateTime hiUtc = GridSim.Core.Diagnostics.UtcTime.Normalise(hi);
+        return hiUtc < horizon ? hiUtc : horizon;
+    }
+
+    /// <summary>
+    /// GR-241: clamp a requested raw-seek instant into the raw range AND the forward-inference horizon. An instant before
+    /// <paramref name="rawMin"/> becomes rawMin; one after the limit (<see cref="RawSeekLimit"/>) becomes the limit. With no
+    /// known range only the horizon applies. The clock is a parameter so a test needs no wall-clock wait.
+    /// </summary>
+    internal static DateTime ClampSeekInstant(DateTime at, DateTime? rawMin, DateTime? rawMax, DateTime utcNow)
+    {
+        DateTime t = GridSim.Core.Diagnostics.UtcTime.Normalise(at);
+        DateTime ceiling = RawSeekLimit(rawMax, utcNow) ?? GridSim.Core.Diagnostics.ForwardInferenceGuard.Horizon(utcNow);
+        if (t > ceiling) t = ceiling;
+        if (rawMin is DateTime lo)
+        {
+            DateTime loUtc = GridSim.Core.Diagnostics.UtcTime.Normalise(lo);
+            if (t < loUtc) t = loUtc;
+        }
+        return t;
+    }
+
+    /// <summary>The seek instant clamped against this session's own range and the real clock (GR-241).</summary>
+    public DateTime ClampSeek(DateTime at) => ClampSeekInstant(at, _rawMin, _rawMax, DateTime.UtcNow);
     /// <summary>The latest raw tick's UTC instant - the transport scrubber/date-picker position. Null until the
     /// first raw frame arrives.</summary>
     public DateTime? RawAt { get { lock (_gate) return _rawAt; } }   // GR-873: written on the receive loop
@@ -147,7 +222,9 @@ public sealed class SimSession : IAsyncDisposable
     private SimSession(string sessionId, FeedSource source, TopologyDto topology,
         LiveSim? live, PresolvedReplay? replay, double stepMinutes,
         GridBridgeClient? bridge = null, string bridgeCase = "", Uri? bridgeEndpoint = null,
-        string bridgeSource = "presolved", SessionCycleService? cycle = null)
+        string bridgeSource = "presolved", SessionCycleService? cycle = null,
+        ResilienceOptions? bridgeResilience = null, bool bridgeReconnect = false,
+        Func<TimeSpan, CancellationToken, Task>? reconnectDelay = null)
     {
         SessionId = sessionId;
         Source = source;
@@ -169,10 +246,26 @@ public sealed class SimSession : IAsyncDisposable
         _stepMinutes = stepMinutes;
         _cycle = cycle;
         if (_cycle is not null) _cycle.Updated += RaiseState;   // a completed cycle refreshes the CYCLE tab
-        _mechanical = new MechanicalService(stepMinutes > 0 ? stepMinutes : 1.0);
+        // F-047: a bridge session has no step of its own (it passes 0; the server paces the ticks), so its MECHANICAL
+        // ramp divides by the real gap between tick instants. It used to fall back to a 1.0 minute divisor, which
+        // overstated every ramp on a 30-minute lake 30 times. Live and replay keep their fixed step, which must be valid.
+        _mechanical = bridge is not null ? MechanicalService.ForTimestampedFeed() : new MechanicalService(stepMinutes);
 
         if (_bridge is not null)
         {
+            _bridgeEndpoint = bridgeEndpoint;
+            _bridgeResilience = bridgeResilience ?? ResilienceOptions.Default;
+            // CAF B5: the supervised reconnect, when the host turned it on. It is built BEFORE the first connect starts,
+            // so a stream lost straight after connecting is already supervised. Its schedule is the host's
+            // ResilienceOptions (BackoffDelay, MaxReconnectAttempts); every attempt rebuilds the client through
+            // ReconnectBridgeAsync, so the forward-inference guard and every limit apply to it exactly as to the first.
+            if (bridgeReconnect)
+            {
+                _reconnect = new BridgeReconnectSupervisor(_bridgeResilience, ReconnectBridgeAsync, reconnectDelay);
+                _reconnect.ReconnectScheduled += OnReconnectScheduled;
+                _reconnect.AttemptCompleted += OnReconnectAttemptCompleted;
+                _reconnect.GaveUp += OnReconnectGaveUp;
+            }
             WireBridge(_bridge);
             _ = ConnectBridgeAsync(bridgeEndpoint!, _cts.Token);
             _loop = Task.CompletedTask;   // bridge is server-driven; no local stepping loop
@@ -244,17 +337,47 @@ public sealed class SimSession : IAsyncDisposable
     /// with an empty topology and fills it on the first <c>topology</c> message (the UI shows "connecting" until
     /// then). <paramref name="bridgeCase"/> is the server-side case to request.
     /// </summary>
+    /// <param name="licence">Bug #172: the licence verdict for the topology the server sends (SessionManager passes the
+    /// catalogue's gate). REQUIRED: a bridge session that is never licence-checked cannot be built. A denied topology is
+    /// never shown: the session reports the licence message as its error and stops the feed.</param>
+    /// <param name="reconnect">CAF B5: true to supervise the stream: when it is lost, reconnect on the backoff schedule of
+    /// <paramref name="resilience"/> (<see cref="ResilienceOptions.BackoffDelay"/>, up to
+    /// <see cref="ResilienceOptions.MaxReconnectAttempts"/>, 0 meaning no bound), and report a final give-up as the
+    /// session's <see cref="Error"/>. False (the default) keeps the unsupervised behaviour: a lost stream stays lost.</param>
     public static SimSession CreateBridge(string sessionId, Uri endpoint, string bridgeCase,
-        string bridgeSource = "presolved", ResilienceOptions? resilience = null)
+        string bridgeSource, ResilienceOptions? resilience, Func<GridModel, GridSim.Core.Licensing.GateResult> licence,
+        bool reconnect = false) =>
+        CreateBridgeCore(sessionId, endpoint, bridgeCase, bridgeSource, resilience, licence, reconnect, reconnectDelay: null);
+
+    /// <summary>Test seam for <see cref="CreateBridge"/>: the same session, with the supervisor's backoff wait replaced
+    /// by <paramref name="reconnectDelay"/> (null: the real <see cref="Task.Delay(TimeSpan, CancellationToken)"/>), so a
+    /// test can drive a reconnect without sleeping. The schedule it is asked to wait is still exactly
+    /// <see cref="ResilienceOptions.BackoffDelay"/>.</summary>
+    internal static SimSession CreateBridgeCore(string sessionId, Uri endpoint, string bridgeCase,
+        string bridgeSource, ResilienceOptions? resilience, Func<GridModel, GridSim.Core.Licensing.GateResult> licence,
+        bool reconnect, Func<TimeSpan, CancellationToken, Task>? reconnectDelay)
     {
+        ArgumentNullException.ThrowIfNull(licence);
         var client = new GridBridgeClient();
         // The host's checked settings (message cap, in-flight cap, and whether ws:// is allowed); the defaults, which
         // require wss://, when none are given.
         (resilience ?? ResilienceOptions.Default).ApplyTo(client);
-        return new SimSession(sessionId, FeedSource.Bridge, new TopologyDto(), live: null, replay: null,
+        var session = new SimSession(sessionId, FeedSource.Bridge, new TopologyDto(), live: null, replay: null,
             stepMinutes: 0, bridge: client, bridgeCase: bridgeCase, bridgeEndpoint: endpoint,
-            bridgeSource: bridgeSource);
+            bridgeSource: bridgeSource, bridgeResilience: resilience, bridgeReconnect: reconnect,
+            reconnectDelay: reconnectDelay);
+        session._bridgeLicence = licence;
+        return session;
     }
+
+    /// <summary>CAF B5: this bridge session's reconnect supervisor, or null when supervision is off (or this is not a
+    /// bridge session). Internal, for the tests.</summary>
+    internal BridgeReconnectSupervisor? ReconnectSupervisor => _reconnect;
+
+    // Bug #172: the licence check a bridge session applies to the topology its server sends (null only for non-bridge
+    // sessions), and whether it refused one (no frame of a refused feed is ever shown).
+    private Func<GridModel, GridSim.Core.Licensing.GateResult>? _bridgeLicence;
+    private volatile bool _bridgeLicenceRefused;
 
     // ---- controls -----------------------------------------------------------
 
@@ -340,7 +463,7 @@ public sealed class SimSession : IAsyncDisposable
         if (_bridge is null) return;
         lock (_gate) Playing = true;
         // UtcTime.Normalise: an Unspecified picker value is UTC by contract, not machine-local time (R277).
-        _ = BridgeControl("seek", () => _bridge.SeekAsync(GridSim.Core.Diagnostics.UtcTime.Normalise(at), _bridgeSource, _cts.Token));
+        _ = BridgeControl("seek", () => _bridge.SeekAsync(ClampSeek(at), _bridgeSource, _cts.Token));
         RaiseState();
     }
 
@@ -578,25 +701,37 @@ public sealed class SimSession : IAsyncDisposable
         // and wraps the whole span). Live streams from a safely-past timestamp instead - derived from
         // the SINGLE horizon knob plus a two-day settlement-lag margin (matching the WPF 9-days-back
         // default) so the server's forward-inference guard accepts it.
-        bool stored = _bridgeSource is "presolved" or "estimated" or "solves";
         // A failed stream start (half-open/reset/closed socket) must SURFACE like every other bridge
         // failure in this class - not be swallowed by the old Safe() helper, which left the session 'Playing' forever
         // with no error and no data.
         try
         {
-            if (IsRaw)
-                await _bridge!.StartAsync(_bridgeCase, resumeAt ?? RawDefaultStart(), fps, "raw", ct: _cts.Token);
-            else if (stored)
-                await _bridge!.StartAsync(_bridgeCase, "first", fps, _bridgeSource, loop: true, ct: _cts.Token);
-            else
-            {
-                DateTime start = resumeAt ?? GridSim.Core.Diagnostics.ForwardInferenceGuard.Horizon(DateTime.UtcNow)
-                    .AddDays(-PresentationLimits.SettlementLagMarginDays);
-                await _bridge!.StartAsync(_bridgeCase, start, fps, _bridgeSource, _cts.Token);
-            }
+            await BridgeSendStartAsync(_bridge!, fps, resumeAt, _cts.Token);
         }
         catch (OperationCanceledException) { /* session tearing down */ }
         catch (Exception ex) { Error = $"Bridge start failed: {ex.Message}"; lock (_gate) Playing = false; RaiseState(); }
+    }
+
+    /// <summary>
+    /// Send the start request for this session's source on <paramref name="client"/> (split out of
+    /// <see cref="BridgeStartAsync"/> unchanged, so the supervised reconnect sends exactly the same request). Throws on a
+    /// failure; the caller reports it. Every start instant is historical: a stored lake starts from its "first" frame,
+    /// raw and live from the instant given (a tick the client already accepted through the horizon guard) or, with none,
+    /// from the same safely-past default as before.
+    /// </summary>
+    private async Task BridgeSendStartAsync(GridBridgeClient client, double fps, DateTime? resumeAt, CancellationToken ct)
+    {
+        bool stored = _bridgeSource is "presolved" or "estimated" or "solves";
+        if (IsRaw)
+            await client.StartAsync(_bridgeCase, resumeAt ?? RawDefaultStart(), fps, "raw", ct: ct);
+        else if (stored)
+            await client.StartAsync(_bridgeCase, "first", fps, _bridgeSource, loop: true, ct: ct);
+        else
+        {
+            DateTime start = resumeAt ?? GridSim.Core.Diagnostics.ForwardInferenceGuard.Horizon(DateTime.UtcNow)
+                .AddDays(-PresentationLimits.SettlementLagMarginDays);
+            await client.StartAsync(_bridgeCase, start, fps, _bridgeSource, ct);
+        }
     }
 
     private void OnBridgeTopology(GridModel model)
@@ -610,16 +745,84 @@ public sealed class SimSession : IAsyncDisposable
             RaiseState();
             return;
         }
+        // Bug #172: the licence gate, which bridge sessions never called before. A free-tier host streamed a remote
+        // model of any size. A refused topology is never shown and the feed is stopped; the message says why.
+        if (_bridgeLicence is not null)
+        {
+            GridSim.Core.Licensing.GateResult verdict = _bridgeLicence(model);
+            if (!verdict.Allowed)
+            {
+                _bridgeLicenceRefused = true;
+                _reconnect?.Stop();   // CAF B5: a refused feed is never reconnected
+                Error = verdict.Message;
+                lock (_gate) Playing = false;
+                _ = BridgeControl("pause", () => _bridge!.StopAsync(_cts.Token));
+                RaiseState();
+                return;
+            }
+        }
         Topology = FrameProjector.BuildTopology(_bridgeCase, $"Bridge * {_bridgeCase}", model, replay: false, frameCount: 0);
         RaiseState();
     }
 
+    // GR-224: this runs on the bridge client's receive-loop thread. It used to build the whole envelope here, so a slow
+    // projection held up the receive loop (and the socket behind it). It now only captures this frame's receive-time state
+    // and queues the frame; ProjectBridgeFrame builds and publishes it on the session's own worker, in arrival order.
+    // Nothing is dropped: projecting a frame also advances the histories, the imbalance-price samples, the SCADA alarm log,
+    // the mechanical ramp and the frequency-risk trace, so a skipped frame would lose a history point, an alarm transition
+    // or a ramp step. A queue that fills (BridgeProjectionQueueCapacity frames behind) stops the session with an error.
     private void OnBridgeState(SimFrame f, BridgeProtocol.OperatorBlock? op, BridgeProtocol.MarketBlock? mk)
     {
-        FrameEnvelope frame;
-        lock (_gate) frame = BuildEnvelope(f, null, op, mk);
-        Current = frame;
-        Emit(frame);
+        if (_bridgeLicenceRefused) return;   // bug #172: nothing of a refused feed is shown
+        BridgeSnapshot snapshot;
+        BridgeProjectionWorker<BridgeFrameWork> projector;
+        lock (_gate)
+        {
+            if (_bridgeSwapClosed) return;   // the session is closing: nothing more is queued
+            snapshot = new BridgeSnapshot(_rawScalars, _rawMix, _rawIcs, _bridgeOverlays, _bridgeHud, _bridgeTickUtc);
+            _projector ??= new BridgeProjectionWorker<BridgeFrameWork>(
+                ProjectBridgeFrame, OnProjectionFault, BridgeProjectionQueueCapacity);
+            projector = _projector;
+        }
+        projector.Enqueue(new BridgeFrameWork(f, op, mk, snapshot));
+    }
+
+    // GR-224: the worker's projection of one queued frame: exactly what OnBridgeState did inline, with the frame's own
+    // snapshot in place of the live per-tick fields.
+    private void ProjectBridgeFrame(BridgeFrameWork work)
+    {
+        if (_bridgeLicenceRefused) return;
+        // GR-228: a failure in this session's own frame handling is a GridSim fault, reported as such, and the stream
+        // carries on (as when the bridge client caught it on the receive loop). The worker is not stopped by it.
+        try
+        {
+            FrameEnvelope frame;
+            lock (_gate) frame = BuildEnvelope(work.Frame, null, work.Op, work.Mk, work.Snapshot);
+            Current = frame;
+            Emit(frame);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Error = ex.Message;
+            RaiseState();
+        }
+    }
+
+    // GR-224: the projection worker failed (its queue overflowed, or a projection threw). Fail loud: the session shows the
+    // reason as its error, stops playing and asks the server to stop the stream. Not reconnected: a reconnect would only
+    // restart the same flood.
+    private void OnProjectionFault(Exception ex)
+    {
+        Error = ex is InvalidOperationException
+            ? ex.Message
+            : $"Bridge frame projection failed ({ex.GetType().Name}): {ex.Message}";
+        Console.Error.WriteLine($"GridSim.Web: error: bridge session {SessionId}: {Error}");
+        lock (_gate) Playing = false;
+        GridBridgeClient? bridge;
+        lock (_gate) bridge = _bridge;
+        if (bridge is { } live && !_cts.IsCancellationRequested)
+            _ = BridgeControl("pause", () => live.StopAsync(_cts.Token));
+        RaiseState();
     }
 
     /// <summary>
@@ -628,15 +831,109 @@ public sealed class SimSession : IAsyncDisposable
     /// state frame, so the timestamp is always known when a price is; the per-sample fallback is kept only so a
     /// price can never be dropped silently if that ever changes. Runs under <see cref="_gate"/>.
     /// </summary>
-    private void AppendImbalancePriceForTick(BridgeProtocol.MarketBlock? mk)
+    private void AppendImbalancePriceForTick(BridgeProtocol.MarketBlock? mk, DateTime? tickUtc)
     {
-        if (_bridgeTickUtc is DateTime at)
+        if (tickUtc is DateTime at)
             TabProjections.AppendImbalancePrice(_imbalancePriceHist, mk?.ImbalancePriceGbpMwh, at, ref _imbalancePricePeriod);
         else
             TabProjections.AppendImbalancePrice(_imbalancePriceHist, mk?.ImbalancePriceGbpMwh);
     }
 
-    private void OnBridgeFault(Exception ex) { Error = $"Bridge error: {ex.Message}"; RaiseState(); }
+    private void OnBridgeFault(Exception ex)
+    {
+        Error = $"Bridge error: {ex.Message}"; RaiseState();
+        // CAF B5: with supervision on, the lost stream is re-established on the backoff schedule (a feed the licence
+        // refused is never reconnected). The supervisor refuses to retry a horizon rejection and says so.
+        if (_reconnect is not null && !_bridgeLicenceRefused) _reconnect.ConnectionLost(ex);
+    }
+
+    // ---- CAF B5: supervised reconnect -----------------------------------------------------------------------------
+
+    /// <summary>
+    /// One reconnect attempt, called by the supervisor after its backoff wait: retire the old client, build a fresh one
+    /// exactly as <see cref="CreateBridge"/> built the first (the same resilience settings, the same handlers, so the same
+    /// exact 169 h horizon guard with no allowance), connect it, and, if the session was playing, restart the stream
+    /// from the last tick already received (or the source's usual historical start). Throws when the attempt failed, so
+    /// the supervisor schedules the next one. Nothing here moves or relaxes a guard: the start instant is a tick the
+    /// previous client already accepted, "first" for a stored lake, or the safely-past default.
+    /// </summary>
+    private async Task ReconnectBridgeAsync(int attempt, CancellationToken ct)
+    {
+        Uri endpoint = _bridgeEndpoint
+            ?? throw new InvalidOperationException("This bridge session has no endpoint to reconnect to.");
+        GridBridgeClient fresh;
+        GridBridgeClient? old;
+        lock (_gate)
+        {
+            // The session is closing (or the supervisor stopped): build and install nothing.
+            if (_bridgeSwapClosed || ct.IsCancellationRequested)
+                throw new OperationCanceledException("The bridge session is closing; the reconnect was abandoned.", ct);
+            fresh = new GridBridgeClient();
+            _bridgeResilience.ApplyTo(fresh);   // the same message cap, in-flight cap and transport rule as the first
+            old = _bridge;
+            _bridge = fresh;
+        }
+        WireBridge(fresh);
+        if (old is not null)
+        {
+            // The old client's handlers come off first, so nothing it raises while closing reaches this session.
+            UnwireBridge(old);
+            try { await old.DisposeAsync(); } catch { /* already down */ }
+        }
+
+        await fresh.ConnectAsync(endpoint, ct);
+        bool playing;
+        double fps;
+        DateTime? resumeAt;
+        lock (_gate) { playing = Playing; fps = Fps; resumeAt = IsRaw ? _rawAt : _bridgeTickUtc; }   // GR-873
+        if (playing) await BridgeSendStartAsync(fresh, fps, resumeAt, ct);
+
+        // The fault left Error set (the whole dashboard is replaced by it); the stream is back, so it is cleared and the
+        // reconnect is said as a notice.
+        Error = null;
+        Warning = string.Create(CultureInfo.InvariantCulture, $"Bridge reconnected on attempt {attempt}.");
+        RaiseState();
+    }
+
+    // The handlers WireBridge attached that a retired client must lose (the SubscriberFailed lambda cannot be removed,
+    // and is harmless on a disposed client).
+    private void UnwireBridge(GridBridgeClient c)
+    {
+        c.TopologyReceived -= OnBridgeTopology;
+        c.StateReceived -= OnBridgeScalars;
+        c.RawDataReceived -= OnBridgeRaw;
+        c.MarketDataReceived -= OnBridgeState;
+        c.Faulted -= OnBridgeFault;
+        c.MessageRejected -= OnBridgeMessageRejected;
+        c.EstimateReceived -= OnBridgeEstimate;
+    }
+
+    // The supervisor's reports. Each is written to the host's log (standard error, as the web host's other bridge
+    // warnings are) and shown on the session: a pending attempt as a Warning, the final give-up as the Error.
+    private void OnReconnectScheduled(BridgeReconnectSchedule s)
+    {
+        string of = s.MaxAttempts > 0 ? string.Create(CultureInfo.InvariantCulture, $" of {s.MaxAttempts}") : "";
+        string line = string.Create(CultureInfo.InvariantCulture,
+            $"Bridge connection lost ({s.Cause.Message}); reconnect attempt {s.Attempt}{of} in {s.Delay.TotalSeconds:0.###} s.");
+        Console.Error.WriteLine($"GridSim.Web: warning: bridge session {SessionId}: {line}");
+        Warning = line;
+        RaiseState();
+    }
+
+    private void OnReconnectAttemptCompleted(BridgeReconnectAttempt a)
+    {
+        Console.Error.WriteLine(a.Succeeded
+            ? string.Create(CultureInfo.InvariantCulture, $"GridSim.Web: bridge session {SessionId}: reconnected on attempt {a.Attempt}.")
+            : string.Create(CultureInfo.InvariantCulture, $"GridSim.Web: warning: bridge session {SessionId}: reconnect attempt {a.Attempt} failed ({a.Failure!.GetType().Name}: {a.Failure.Message})."));
+    }
+
+    private void OnReconnectGaveUp(BridgeReconnectGiveUp g)
+    {
+        Console.Error.WriteLine($"GridSim.Web: error: bridge session {SessionId}: {g.Reason}");
+        Error = g.Reason;
+        lock (_gate) Playing = false;
+        RaiseState();
+    }
 
     // A single unreadable bridge message was skipped. Surface it (with the running count) rather than let it vanish.
     // GR-236: the stream carries on after a rejected message (R275), so this is a Warning, not an Error: setting Error
@@ -762,9 +1059,18 @@ public sealed class SimSession : IAsyncDisposable
     /// <summary>Project the base frame and enrich it with every tab's DTO (stateless projections + the
     /// per-session stateful services). Lake blocks are non-null only in bridge mode. Runs under <see cref="_gate"/>.</summary>
     private FrameEnvelope BuildEnvelope(SimFrame f, string? label,
-        BridgeProtocol.OperatorBlock? op = null, BridgeProtocol.MarketBlock? mk = null)
+        BridgeProtocol.OperatorBlock? op = null, BridgeProtocol.MarketBlock? mk = null, BridgeSnapshot? snapshot = null)
     {
         _lastFrame = f;   // snapshot for the on-demand harmonics study (RunHarmonicsStudy)
+
+        // GR-224: a bridge frame is projected from the values captured when it arrived (snapshot); any other caller (live,
+        // replay) passes none and reads the session's fields, as before.
+        BridgeProtocol.ScalarsBlock? rawScalars = snapshot is null ? _rawScalars : snapshot.RawScalars;
+        BridgeProtocol.GenerationMixBlock? rawMix = snapshot is null ? _rawMix : snapshot.RawMix;
+        BridgeProtocol.RawInterconnectorsBlock? rawIcs = snapshot is null ? _rawIcs : snapshot.RawIcs;
+        MapOverlaysDto? bridgeOverlays = snapshot is null ? _bridgeOverlays : snapshot.Overlays;
+        MapHudDto? bridgeHud = snapshot is null ? _bridgeHud : snapshot.Hud;
+        DateTime? tickUtc = snapshot is null ? _bridgeTickUtc : snapshot.TickUtc;
 
         if (IsRaw)
         {
@@ -775,11 +1081,11 @@ public sealed class SimSession : IAsyncDisposable
             // absent on the raw replay, but the lake DOES carry the published inertia on the Operator
             // block (GVA.s) - so fall back to that (Outturn, else Synchronous, else Market) instead of
             // charting a flat zero.
-            double inertiaGvaS = (_rawScalars?.InertiaMwS ?? 0.0) / 1000.0;
+            double inertiaGvaS = (rawScalars?.InertiaMwS ?? 0.0) / 1000.0;
             if (inertiaGvaS <= 0.0)
                 inertiaGvaS = op?.OutturnInertiaGvaS ?? op?.SynchronousInertiaGvaS ?? op?.MarketInertiaGvaS ?? 0.0;
-            FuelBreakdown rfb = _rawMix is not null
-                ? new FuelBreakdown(_rawMix, inertiaGvaS)
+            FuelBreakdown rfb = rawMix is not null
+                ? new FuelBreakdown(rawMix, inertiaGvaS)
                 : new FuelBreakdown(f.Model);
             Push(_freqHist, f.FrequencyHz);
             Push(_demandHist, f.DemandMw);
@@ -789,32 +1095,32 @@ public sealed class SimSession : IAsyncDisposable
             // Real raw interconnector flows (moving with the replay). Only ACTIVE links are shown - links at ~0 MW
             // (idle / unavailable / rounding to "0") are dropped so the list isn't padded with zero-flow rows.
             const double IcActiveMw = PresentationLimits.IdleInterconnectorMw;
-            var rawIcLinks = _rawIcs?.Rows().Where(ic => Math.Abs(ic.Mw) >= IcActiveMw)
+            var rawIcLinks = rawIcs?.Rows().Where(ic => Math.Abs(ic.Mw) >= IcActiveMw)
                              .Select(ic => new ImportLinkDto(ic.Name, ic.Mw, ic.Mw > 0)).ToList()
                              ?? new List<ImportLinkDto>();
-            var rawMktIcs = _rawIcs?.Rows().Where(ic => Math.Abs(ic.Mw) >= IcActiveMw)
+            var rawMktIcs = rawIcs?.Rows().Where(ic => Math.Abs(ic.Mw) >= IcActiveMw)
                             .Select(ic => new MktInterconnectorRowDto(ic.Name, ic.Mw, ic.Mw > 0)).ToList()
                             ?? new List<MktInterconnectorRowDto>();
-            double rawNet = _rawIcs?.Net ?? rawIcLinks.Sum(l => l.Mw);
+            double rawNet = rawIcs?.Net ?? rawIcLinks.Sum(l => l.Mw);
             MarketDto rawMarket = TabProjections.Market(f, rfb, mk);
             if (rawMktIcs.Count > 0) rawMarket = rawMarket with { Interconnectors = rawMktIcs };
-            AppendImbalancePriceForTick(mk);
+            AppendImbalancePriceForTick(mk, tickUtc);
             rawMarket = TabProjections.WithImbalancePriceHistory(rawMarket, _imbalancePriceHist);
             return renv with
             {
                 Traces = new TracesDto(_freqHist.ToArray(), _demandHist.ToArray(), _inertiaHist.ToArray()),
-                GenInertia = TabProjections.GenInertia(f, rfb) with { ImportLinks = rawIcLinks, NetImportMw = rawNet, EmbeddedGenMw = _rawMix?.EmbeddedMw() ?? 0.0 },
+                GenInertia = TabProjections.GenInertia(f, rfb) with { ImportLinks = rawIcLinks, NetImportMw = rawNet, EmbeddedGenMw = rawMix?.EmbeddedMw() ?? 0.0 },
                 Operator = TabProjections.Operator(f, rfb, op),
                 Market = rawMarket,
                 // Kept in the raw view - both are safe on the degenerate frame: Rp1 reads the raw FuelBreakdown +
                 // real frequency; HumanScale's twist section is guarded when the bus angles are absent.
                 // Feed RP1 the REAL raw interconnector flows (same source as GEN & INERTIA / MARKET) so its import
                 // figures match the other tabs rather than the static topology dispatch.
-                Rp1 = TabProjections.Rp1(f, rfb, _rawIcs?.Rows(), _purchasedTrace),
+                Rp1 = TabProjections.Rp1(f, rfb, rawIcs?.Rows(), _purchasedTrace),
                 HumanScale = HumanScaleProjection.Project(f, rfb.InertiaGvaS),
                 Charts = BuildRawCharts(),
-                MapOverlays = _bridgeOverlays,
-                MapHud = _bridgeHud,
+                MapOverlays = bridgeOverlays,
+                MapHud = bridgeHud,
                 // THE MACHINE (raw): grid-as-one-machine rotation/torque from real frequency+demand+mix, no solve.
                 // MachineView (regulation strain) stays null - that electrical gauge is hidden under the Raw guard.
                 Machine = TabProjections.MachineRaw(f, rfb, _freqHist.ToArray(), RawFreqTrend()),
@@ -829,7 +1135,7 @@ public sealed class SimSession : IAsyncDisposable
         Push(_freqHist, f.FrequencyHz);
         Push(_demandHist, f.DemandMw);
         Push(_inertiaHist, fb.InertiaGvaS);
-        AppendImbalancePriceForTick(mk);
+        AppendImbalancePriceForTick(mk, tickUtc);
         return env with
         {
             Traces = new TracesDto(_freqHist.ToArray(), _demandHist.ToArray(), _inertiaHist.ToArray()),
@@ -837,7 +1143,10 @@ public sealed class SimSession : IAsyncDisposable
             Operator = TabProjections.Operator(f, fb, op),
             Market = TabProjections.WithImbalancePriceHistory(TabProjections.Market(f, fb, mk), _imbalancePriceHist),
             Rp1 = TabProjections.Rp1(f, fb, trace: _purchasedTrace),
-            Mechanical = _mechanical.Project(f),
+            // F-047: a bridge frame is projected at its own tick instant (_bridgeTickUtc, set under _gate by
+            // OnBridgeRaw just before OnBridgeState for the same tick, and captured with the frame since GR-224), so the
+            // ramp uses the real tick gap.
+            Mechanical = _mechanical.IsTimestamped ? _mechanical.ProjectAtTick(f, tickUtc) : _mechanical.Project(f),
             Scada = _scada.Project(f),
             Machine = _machine.Project(f, fb),
             // Read AFTER Project(): it recomputes LastView (regulation strain) as a side effect. `with`
@@ -851,8 +1160,8 @@ public sealed class SimSession : IAsyncDisposable
             Cycle = _cycle?.Latest,
             CycleError = _cycle?.LastError,
             // Bridge only (null on a live / replay session): N063 condition / stress overlays and HUD scalars.
-            MapOverlays = _bridgeOverlays,
-            MapHud = _bridgeHud,
+            MapOverlays = bridgeOverlays,
+            MapHud = bridgeHud,
         };
     }
 
@@ -1121,6 +1430,10 @@ public sealed class SimSession : IAsyncDisposable
             await _cycle.DisposeAsync();
         }
         try { await _loop; } catch { /* loop cancelled */ }
+        // CAF B5: stop the reconnect supervisor first (no further attempt), then close the swap so an attempt that was
+        // already past its wait cannot install a new client after this point. After this lock, _bridge is final.
+        if (_reconnect is not null) await _reconnect.DisposeAsync();
+        lock (_gate) _bridgeSwapClosed = true;
         if (_bridge is not null)
         {
             _bridge.TopologyReceived -= OnBridgeTopology;
@@ -1132,6 +1445,11 @@ public sealed class SimSession : IAsyncDisposable
             _bridge.EstimateReceived -= OnBridgeEstimate;
             try { await _bridge.DisposeAsync(); } catch { /* already down */ }
         }
+        // GR-224: the bridge is closed and unwired, so nothing more is queued; stop the projection worker (an item being
+        // projected finishes, queued ones are abandoned) before the cancellation source goes.
+        BridgeProjectionWorker<BridgeFrameWork>? projector;
+        lock (_gate) projector = _projector;
+        if (projector is not null) await projector.DisposeAsync();
         _cts.Dispose();
     }
 }

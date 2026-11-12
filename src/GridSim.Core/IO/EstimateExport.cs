@@ -86,8 +86,9 @@ public static class EstimateExport
             },
             // CF6 (main's ruling on CF6-F1, Ruling R1): a LAV estimate (ChiSquareIsVerdict false) is written with the LAV
             // shape below: no chi-square verdict anywhere (chiSquarePassed and chiSquareTest null), chiSquareVerdict false
-            // and the LAV objective. Every other estimate is written with exactly the shape it always had (the first
-            // branch), so its document is byte-for-byte unchanged.
+            // and the LAV objective. GR-521 (November 2026): a Huber or Schweppe-GM estimate has no verdict either and is
+            // written with the same no-verdict shape, without lavObjective (null, so left out). WLS, QR, Constrained and
+            // Feasible are written with exactly the shape they always had (the first branch).
             estimate = result.ChiSquareIsVerdict ? (object)new WlsEstimateRow
             {
                 status = result.Status.ToString(),
@@ -257,6 +258,7 @@ public static class EstimateExport
         end = m.IsBranch ? m.End.ToString() : null,
         circuit = m.Circuit,
         source = m.Source,
+        provenance = m.Provenance,   // GR-529: left out when null, so a document without it is byte-identical
     };
 
     // ---- Phase 0.1: the document as named types ----------------------------------------------------------------------
@@ -368,6 +370,7 @@ public static class EstimateExport
         public required string? end { get; init; }
         public required string? circuit { get; init; }
         public required string source { get; init; }
+        public string? provenance { get; init; }
     }
 
     /// <summary>The estimate block of a chi-square (WLS-family) estimate.</summary>

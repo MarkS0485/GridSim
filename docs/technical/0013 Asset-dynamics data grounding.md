@@ -339,11 +339,18 @@ transformer:  err   = V_ctrl - targetVpu
                   tap = clamp(tap -/+ tapStepPu, minTap, maxTap)
                   direction: tapped (From) end controlled: high V lowers the tap
                              untapped (To) end controlled:  high V raises the tap
-              thermal += (max(loading, ambientLoadingFraction) - thermal) / max(dt, 60*thermalTauMin) * dt
+              drive    = max(loading^2, ambientLoadingFraction)
+              thermal  = drive + (thermal - drive) * exp(-dt / (60*thermalTauMin))
               derate   = derateAtFullThermal * clamp(thermal, 0, 1)
-line:         thermal += (max(loading^2, ambientLoadingFraction) - thermal) / max(dt, 60*thermalTauMin) * dt
+line:         drive    = max(loading^2, ambientLoadingFraction)
+              thermal  = drive + (thermal - drive) * exp(-dt / (60*thermalTauMin))
               derate   = derateAtFullThermal * clamp(thermal, 0, 1)
 ```
+
+Both thermal states are driven by loading squared (the I^2 R load loss) and stepped by the exact first-order
+discretisation, so the lag holds at any tick size (`thermalTauMin` 0 means no lag; a negative or non-finite value is
+refused at build). Earlier builds drove the transformer by loading itself and stepped both by explicit Euler with the
+time constant raised to one tick, which lost the lag entirely at the 1200 s and 1800 s loop ticks.
 
 The tap starts at the bound branch's own `TapRatio`; a branch tap outside `[minTap, maxTap]` throws
 `ArgumentOutOfRangeException` at build. `PassivePlantFleet.ApplyTo` sets the branch `TapRatio` to the tap and the

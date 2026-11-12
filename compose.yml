@@ -30,6 +30,13 @@
 #                             here (the host proxy reaches the container from the bridge gateway, a private address);
 #                             or a list of addresses / CIDR networks, or any alone (every caller)
 #   GRIDSIM_MAX_SESSIONS      most dashboards plus /ws/sim connections held at once (default 64; D-DOC-076)
+#   GRIDSIM_ALLOWED_HOSTS     host names the app answers, semicolon-separated (bug #170). Empty = the loopback names
+#                             only (localhost;127.0.0.1;[::1]). Behind a proxy that forwards Host (the nginx example
+#                             does), set the public name, e.g. gridsim.example.com, or every request gets a 400
+#                             naming this setting. * answers any name and removes the DNS-rebinding protection
+#   GRIDSIM_FRAME_ANCESTORS   who may frame the pages (CSP frame-ancestors, bug #179): 'none' by default; e.g.
+#                             'self' https://portal.example.com
+#   GRIDSIM_HSTS              true (default): the app sends HSTS on HTTPS requests; false leaves it to the proxy
 #   GRIDSIM_SOURCE_REVISION   git commit stamped into the build (docker compose build); e.g. $(git rev-parse HEAD)
 #
 # Site identity (N086; all empty by default, so the page loads no third-party script and names no host):
@@ -62,6 +69,9 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:8080"
       GridSim__ReplayOnly: "${GRIDSIM_REPLAY_ONLY:-true}"
+      AllowedHosts: "${GRIDSIM_ALLOWED_HOSTS:-}"
+      GridSim__FrameAncestors: "${GRIDSIM_FRAME_ANCESTORS:-}"
+      GridSim__Hsts: "${GRIDSIM_HSTS:-true}"
       GridSim__BridgeEndpoint: "${GRIDSIM_BRIDGE_ENDPOINT:-}"
       GridSim__BridgeAllowUnencrypted: "${GRIDSIM_BRIDGE_ALLOW_UNENCRYPTED:-false}"
       Sso__Enabled: "${GRIDSIM_SSO_ENABLED:-false}"
@@ -83,7 +93,9 @@ services:
     volumes:
       - "${GRIDSIM_KEYS_DIR:-gridsim-keys}:/keys:${GRIDSIM_KEYS_MODE:-rw}"
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/"]
+      # GR-423: the image has no curl; this is the Dockerfile HEALTHCHECK's probe, through bash's /dev/tcp ($$ is
+      # compose's escape for a literal $).
+      test: ["CMD", "bash", "-c", 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET / HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3 && IFS= read -r -t 5 status <&3 && case "$$status" in "HTTP/1."[01]" "[23]*) exit 0 ;; *) exit 1 ;; esac']
       interval: 30s
       timeout: 5s
       retries: 3

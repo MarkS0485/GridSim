@@ -324,6 +324,18 @@ public static class UnitCommitment
         if (options.EnforceLineLimits)
             for (int l = 0; l < model.Branches.Count; l++)
                 if (model.Branches[l].InService && model.Branches[l].RateAMva > 0) rated.Add(l);
+        // Bug hunt 2026-11-01 (#184): a contingency is secured by holding every rated branch's POST-outage flow within
+        // its rating, so with line limits off there is nothing to hold and the listed outages would be secured against
+        // nothing. They used to be validated (and their LODF columns built) and then silently ignored: the result read
+        // Optimal with no N-1 rows and no note, as if the outages had been secured. Refused instead, naming the count,
+        // before any distribution factor is built. Every call with line limits on, or with no contingencies, is
+        // unchanged.
+        if (!options.EnforceLineLimits && contingencies.Count > 0)
+            throw new ArgumentException(
+                $"Unit commitment: {contingencies.Count} contingenc{(contingencies.Count == 1 ? "y is" : "ies are")} listed but line "
+                + "limits are off (EnforceLineLimits = false); an outage is secured by holding the rated branches' post-outage "
+                + "flows within their ratings, so with no limits nothing would be secured. Turn line limits on, or list no "
+                + "contingencies.", nameof(options));
         if (rated.Count > 0 || contingencies.Count > 0)
         {
             DistributionFactors df = DistributionFactors.Build(model);

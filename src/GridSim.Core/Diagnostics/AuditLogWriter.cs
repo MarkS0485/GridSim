@@ -35,18 +35,20 @@ public sealed class AuditLogWriter : IDisposable
     private readonly IReadOnlyList<IAuditSink> _sinks;
     private int _count;
     private string _headHash;
+    private string _firstHash;   // GR-374: the hash of entry 0 (the log's identity), or GENESIS while empty
     private bool _faulted;
     private bool _disposed;
     private string? _lastSinkError;
 
     private AuditLogWriter(string filePath, FileStream lockFile, FileStream stream, int count, string headHash,
-        IReadOnlyList<IAuditSink> sinks)
+        string firstHash, IReadOnlyList<IAuditSink> sinks)
     {
         FilePath = filePath;
         _lockFile = lockFile;
         _stream = stream;
         _count = count;
         _headHash = headHash;
+        _firstHash = firstHash;
         _sinks = sinks;
     }
 
@@ -63,6 +65,13 @@ public sealed class AuditLogWriter : IDisposable
     public string HeadHash
     {
         get { lock (_gate) return _headHash; }
+    }
+
+    /// <summary>GR-374: the hash of the first entry (the log's identity, bound by a v2 signed anchor), or
+    /// <see cref="AuditLog.Genesis"/> for an empty log.</summary>
+    public string FirstHash
+    {
+        get { lock (_gate) return _firstHash; }
     }
 
     /// <summary>The message of the first <see cref="IAuditSink"/> failure since the writer was opened, or null
@@ -139,9 +148,10 @@ public sealed class AuditLogWriter : IDisposable
                     ex);
             }
 
-            // Step 3: verify what is already there before adding to it, and pick up the tail of the chain.
-            byte[] existing = AuditLogFile.ReadAll(stream);
-            AuditLogVerification verification = AuditLogFile.VerifyBytes(existing, expectedAnchor);
+            // Step 3: verify what is already there before adding to it, and pick up the tail of the chain. GR-859: one
+            // streaming pass that keeps only the count and head hash, so opening no longer holds the whole log in memory.
+            stream.Position = 0;
+            AuditLogVerification verification = AuditLogFile.VerifyStream(stream, expectedAnchor, keepEntries: false);
             verification.ThrowIfInvalid(fullPath);
 
             // Step 4: position at the end; every write from here on is an append.
@@ -152,7 +162,8 @@ public sealed class AuditLogWriter : IDisposable
                 : sinks.ToArray();   // copy so the caller cannot mutate the list behind the writer
             foreach (IAuditSink sink in sinkList)
                 ArgumentNullException.ThrowIfNull(sink, nameof(sinks));
-            var writer = new AuditLogWriter(fullPath, lockFile, stream, verification.VerifiedCount, verification.HeadHash, sinkList);
+            var writer = new AuditLogWriter(fullPath, lockFile, stream, verification.VerifiedCount, verification.HeadHash,
+                verification.FirstHash, sinkList);
             // Ownership has passed to the writer; stop the finally block from closing the handles.
             lockFile = null;
             stream = null;
@@ -218,6 +229,7 @@ public sealed class AuditLogWriter : IDisposable
             // Only advance the chain once the line is safely written.
             _count = sequence + 1;
             _headHash = hash;
+            if (sequence == 0) _firstHash = hash;   // GR-374
 
             // Notify secondary forwarders AFTER the entry is durable and the chain has advanced. A sink failure
             // is kept, not thrown: the on-disk chain is the authoritative record and must not depend on an

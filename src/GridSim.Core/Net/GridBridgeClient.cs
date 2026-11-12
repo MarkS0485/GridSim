@@ -52,6 +52,24 @@ public sealed class GridBridgeClient : IAsyncDisposable
     /// tries to start more than this gets a loud refusal rather than letting the pending table grow without bound.</summary>
     public int MaxInFlightQueries { get; set; } = 256;
 
+    /// <summary>
+    /// GR-233 (November 2026): how long the connection may be idle before the client sends a WebSocket ping (default
+    /// 30 s, the .NET default). <see cref="TimeSpan.Zero"/> turns pings off, and with them the
+    /// <see cref="KeepAliveTimeout"/>. Read by <see cref="ConnectAsync"/>; changing it afterwards has no effect.
+    /// </summary>
+    public TimeSpan KeepAliveInterval { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// GR-233 (November 2026): how long the client waits for the pong that answers a ping before it treats the
+    /// connection as dead (default 60 s). A silently dropped TCP path used to leave the receive loop waiting for ever,
+    /// so a session stayed "Playing" with no data; now the socket is aborted, the receive loop ends, every pending query
+    /// fails and <see cref="Faulted"/> is raised, so supervised reconnect (<see cref="BridgeReconnectSupervisor"/>) can
+    /// start a fresh connection. A server that is merely quiet (a stopped replay) still answers pings and is kept.
+    /// <see cref="Timeout.InfiniteTimeSpan"/> turns the check off (the behaviour before GR-233). Read by
+    /// <see cref="ConnectAsync"/>.
+    /// </summary>
+    public TimeSpan KeepAliveTimeout { get; set; } = TimeSpan.FromSeconds(60);
+
     /// <summary>NCSC CAF B3 transport security: when false (the default) <see cref="ConnectAsync"/> refuses an
     /// unencrypted <c>ws://</c> endpoint; the bridge must be <c>wss://</c>. Set true only for a trusted loopback or
     /// a test harness where the transport is protected by other means.</summary>
@@ -152,6 +170,16 @@ public sealed class GridBridgeClient : IAsyncDisposable
             throw new InvalidOperationException(
                 $"Refusing to connect to an unencrypted bridge endpoint '{endpoint}'. Use a 'wss://' endpoint, or set " +
                 $"{nameof(AllowUnencryptedEndpoint)}=true only for a trusted loopback or test transport.");
+        // GR-233: the keep-alive settings are fixed before the socket connects (the options cannot change after).
+        if (KeepAliveInterval < TimeSpan.Zero)
+            throw new InvalidOperationException(
+                $"{nameof(KeepAliveInterval)} is {KeepAliveInterval}: the keep-alive interval must be zero (no pings) or positive.");
+        if (KeepAliveTimeout != Timeout.InfiniteTimeSpan && KeepAliveTimeout <= TimeSpan.Zero)
+            throw new InvalidOperationException(
+                $"{nameof(KeepAliveTimeout)} is {KeepAliveTimeout}: the keep-alive timeout must be positive, or Timeout.InfiniteTimeSpan for no timeout.");
+        _ws.Options.KeepAliveInterval = KeepAliveInterval;
+        if (KeepAliveInterval > TimeSpan.Zero)
+            _ws.Options.KeepAliveTimeout = KeepAliveTimeout;
         await _ws.ConnectAsync(endpoint, ct).ConfigureAwait(false);
         _loopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         // 2.1.002 (found by the GitHub Windows CI run): the token is NOT passed to Task.Run. With it, a cancel that
@@ -317,8 +345,11 @@ public sealed class GridBridgeClient : IAsyncDisposable
                 DispatchGuarded(System.Text.Encoding.UTF8.GetString(ms.GetBuffer(), 0, (int)ms.Length));
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            // GR-233: only a cancellation of the loop's own token is a graceful stop. Any other cancellation (an aborted
+            // socket, for example after an unanswered keep-alive ping) is a transport failure and goes to the handler
+            // below, which fails the pending queries and raises Faulted.
             // Graceful shutdown: DisposeAsync, or the token the host passed to ConnectAsync. Bug hunt 2026-10-29,
             // finding 57: on the second path nothing failed the pending table, so every Query awaiter waited out its
             // full QueryTimeout for an answer the stopped loop could never deliver. The pending queries are failed

@@ -87,8 +87,14 @@ public static class RtuMeasurementSetMapper
             if (QualityFold.ShouldDrop(p.Quality)) continue;
             if (!crosswalk.TryResolve(p.Address, out RtuPointBinding b)) continue;
 
-            double sigma = b.Sigma * quality.SigmaMultiplier(p.Quality);
-            double raw = RawValue(p, b, points);   // register data type applied (R272)
+            // GR-815 (November 2026): a 32-bit value is built from two registers, so its quality is both registers'
+            // quality: the companion's flags are folded in (an unusable companion drops the value, a degraded one
+            // widens its sigma). For a one-register value the companion quality is Good (no flags), so the quality,
+            // and the sigma, are exactly the point's own, bit for bit, as before.
+            (double raw, RtuQuality companionQuality) = RawValue(p, b, points);   // register data type applied (R272)
+            RtuQuality q = p.Quality | companionQuality;
+            if (QualityFold.ShouldDrop(q)) continue;
+            double sigma = b.Sigma * quality.SigmaMultiplier(q);
             double v = raw * b.Scale;   // raw-to-engineering scale (identity by default)
             // A NaN or infinite value (an F32 register fault, an IEC 104 float overflow) is not a measurement: it is
             // left out and counted in the note, instead of being written into the window (and the quarantine store).
@@ -171,16 +177,19 @@ public static class RtuMeasurementSetMapper
     /// in the binding's word order. Any mismatch is a configuration error and throws
     /// <see cref="InvalidDataException"/> rather than feeding the estimator a wrong number.
     /// </summary>
-    private static double RawValue(RtuPoint p, RtuPointBinding b, IReadOnlyList<RtuPoint> window)
+    /// <para>GR-815 (November 2026): also returns the companion register's quality (Good for a one-register value), and
+    /// refuses a companion whose point type differs from the first register's (two registers of different kinds are not
+    /// one number).</para>
+    private static (double Raw, RtuQuality Companion) RawValue(RtuPoint p, RtuPointBinding b, IReadOnlyList<RtuPoint> window)
     {
-        if (b.DataType == RtuRegisterType.AsDecoded) return p.Value;
+        if (b.DataType == RtuRegisterType.AsDecoded) return (p.Value, RtuQuality.Good);
         RtuPointMap.ValidateDataType(b);
         ushort first = AsRegister(p);
 
         switch (b.DataType)
         {
-            case RtuRegisterType.U16: return first;
-            case RtuRegisterType.S16: return unchecked((short)first);
+            case RtuRegisterType.U16: return (first, RtuQuality.Good);
+            case RtuRegisterType.S16: return (unchecked((short)first), RtuQuality.Good);
         }
 
         // 32-bit: find the companion register (register number + 1) in the same frame.
@@ -197,17 +206,22 @@ public static class RtuMeasurementSetMapper
             throw new InvalidDataException(
                 $"Binding '{b.Address}' is {b.DataType} (two registers) but register '{nextAddress}' is not in the " +
                 "same response. Poll a block that includes both registers.");
+        if (next.Type != p.Type)
+            throw new InvalidDataException(
+                $"Binding '{b.Address}' is {b.DataType} (two registers) but register '{nextAddress}' is a {next.Type} point " +
+                $"and '{p.Address}' a {p.Type} point; two registers of different kinds are not one value (GR-815).");
         ushort second = AsRegister(next);
 
         (ushort hi, ushort lo) = b.WordOrder == RtuWordOrder.HighWordFirst ? (first, second) : (second, first);
         uint bits = ((uint)hi << 16) | lo;
-        return b.DataType switch
+        double raw = b.DataType switch
         {
             RtuRegisterType.U32 => bits,
             RtuRegisterType.S32 => unchecked((int)bits),
             RtuRegisterType.F32 => BitConverter.Int32BitsToSingle(unchecked((int)bits)),
             _ => throw new InvalidDataException($"Binding '{b.Address}': unknown dataType {b.DataType}."),
         };
+        return (raw, next.Quality);
     }
 
     // A raw Modbus register is an integer 0..65535; anything else means the binding's data type does not fit.

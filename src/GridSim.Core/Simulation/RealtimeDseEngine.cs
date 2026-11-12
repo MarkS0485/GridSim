@@ -44,6 +44,11 @@ public sealed class RealtimeDseEngine
         MethodName = methodName;
     }
 
+    /// <summary>GR-855: an engine over a given step, for tests of the engine's error handling (which failures count as a
+    /// failed window and which fail the run). Not used in production.</summary>
+    internal static RealtimeDseEngine ForStep(Func<MeasurementSet, double, DseEstimate> step, string methodName)
+        => new(step, methodName);
+
     /// <summary>
     /// A streaming engine driven by the <see cref="UnscentedKalmanStateEstimator"/> (R062: reachable from
     /// <c>serve --method ukf</c>). The unscented filter holds a dense s x s covariance, propagates 2s + 1 sigma points
@@ -154,12 +159,17 @@ public sealed class RealtimeDseEngine
             try
             {
                 if (dtSeconds < 0)
-                    throw new InvalidDataException(
+                    throw DomainRefusal.Mark(new InvalidDataException(
                         $"real-time DSE window at {stateTime:o} is earlier than the previous processed window " +
-                        $"({previousState:o}); windows must arrive in time order.");
+                        $"({previousState:o}); windows must arrive in time order."));
                 estimate = _step(window, dtSeconds);
             }
-            catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException)
+            // GR-855 (November 2026): only a DOMAIN refusal is counted as a failed window when the run continues on
+            // error: bad input data (InvalidDataException, from the measurement model or the time-order check) and the
+            // filters' own numerical refusals, which carry the DomainRefusal mark (a singular or non-finite covariance,
+            // a lost Cholesky factor, a changed state layout). An InvalidOperationException WITHOUT the mark is a
+            // programming fault; it used to be counted and skipped like a bad window, and now fails the run loudly.
+            catch (Exception ex) when (ex is InvalidDataException || (ex is InvalidOperationException && DomainRefusal.IsMarked(ex)))
             {
                 if (!opt.ContinueOnError) throw;
                 failed++;

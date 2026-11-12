@@ -46,7 +46,7 @@
            input binds a STABLE field (_rawPick) so the per-second stream can't reset it mid-interaction. *@
         <label class="tdatelbl" title="Jump the replay to any date/time in the available data">
             <input type="datetime-local" class="tdate"
-                   min="@RawBound(_session.RawMin)" max="@RawBound(_session.RawMax)"
+                   min="@RawBound(_session.RawMin)" max="@RawBound(_session.RawSeekMax)"
                    value="@_rawPick" @onchange="OnRawDate" />
         </label>
         <div class="tscrub traw">
@@ -161,6 +161,9 @@
         if (_session.RawMin is not DateTime lo || _session.RawMax is not DateTime hi || hi <= lo) return;
         if (!int.TryParse(e.Value?.ToString(), out int v)) return;
         DateTime target = lo.AddSeconds(v / 1000.0 * (hi - lo).TotalSeconds);
+        // GR-241: clamp into the raw range AND the forward-inference horizon (SimSession.ClampSeek), so the picker shows
+        // the instant the seek really lands on.
+        target = _session.ClampSeek(target);
         _rawPick = RawBound(target);        // reflect the scrub in the date-picker
         _session.SeekTo(target);
     }
@@ -171,6 +174,7 @@
                 DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTime dt)) return;
         if (_session.RawMin is DateTime lo && dt < lo) dt = lo;   // clamp into the available range
         if (_session.RawMax is DateTime hi && dt > hi) dt = hi;
+        dt = _session.ClampSeek(dt);   // GR-241: also the forward-inference horizon
         _rawPick = RawBound(dt);
         _session.SeekTo(dt);
     }

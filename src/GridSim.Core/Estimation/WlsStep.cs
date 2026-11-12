@@ -388,7 +388,18 @@ internal sealed class ConstrainedDenseWlsStep : IWlsStep
     /// <summary>The pseudo-weight constraint rows carry in the gate and covariance gains (see the field).</summary>
     internal double ConstraintWeight => _constraintWeight;
 
-    public ConstrainedDenseWlsStep(ILinearSolver linear) => _linear = linear;
+    // GR-507: whether Begin refuses two hard constraint rows on the same quantity (see Begin).
+    private readonly bool _refuseDuplicateConstraints;
+
+    /// <summary>The constrained backend. <paramref name="refuseDuplicateConstraints"/> (GR-507, November 2026): true
+    /// (the Constrained method) refuses by name a set in which two hard zero-injection rows constrain the same quantity,
+    /// which makes the KKT system singular and used to read as Unobservable. The Feasible method wraps this backend
+    /// with false: its singular KKT is re-gated and reported as Infeasible, a behaviour its own tests pin.</summary>
+    public ConstrainedDenseWlsStep(ILinearSolver linear, bool refuseDuplicateConstraints = true)
+    {
+        _linear = linear;
+        _refuseDuplicateConstraints = refuseDuplicateConstraints;
+    }
 
     /// <summary>
     /// The row equilibration factor of a KKT constraint block (R257 follow-up / ruling Q12 for the Feasible method,
@@ -426,6 +437,27 @@ internal sealed class ConstrainedDenseWlsStep : IWlsStep
                 _isConstraint[r] = true;
                 _c++;
             }
+
+        // GR-507: two hard constraint rows on the same quantity (same kind at the same bus, or the same branch end)
+        // are the same equality twice. The KKT constraint block is then rank-deficient, the solve fails and the
+        // Constrained method used to report the set Unobservable although the telemetry observes it. Refused here, by
+        // name, before any arithmetic; a set without duplicates is untouched, so no number moves.
+        if (_refuseDuplicateConstraints && _c > 1)
+        {
+            var firstRow = new Dictionary<(MeasurementKind, string), int>();
+            for (int r = 0; r < m; r++)
+            {
+                if (!_isConstraint[r]) continue;
+                Measurement meas = mm.Measurements[r];
+                var key = (meas.Kind, meas.Describe());
+                if (firstRow.TryGetValue(key, out int first))
+                    throw new InvalidOperationException(
+                        $"Constrained WLS: measurements {first} and {r} are both hard {ConstraintSource} constraints on " +
+                        $"{meas.Kind} at {meas.Describe()}. The same equality twice makes the constraint block singular; " +
+                        "remove the duplicate row.");
+                firstRow[key] = r;
+            }
+        }
 
         // One relative constraint pseudo-weight (R142/R143), scaled to the strongest FREE measurement.
         double maxFree = 0.0;

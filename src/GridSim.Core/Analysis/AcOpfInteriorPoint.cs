@@ -892,8 +892,9 @@ public static class AcOpfInteriorPoint
     /// Solve the KKT system K d = r through a symmetric power-of-two equilibration (Ruiz): D K D y = D r, d = D y, with
     /// each D_i a power of two chosen so every row's largest entry of D K D lies near 1. Near the optimum the barrier
     /// terms mu / z of the binding limits grow without bound (1e8 and more) while the network terms stay near 1, and the
-    /// sparse LU's singularity test is relative to the largest entry of the matrix (<see cref="NumericTolerances.RelativePivotFloor"/>),
-    /// so the raw system was refused as singular on the PEGASE cases. Scaling by powers of two is exact (no rounding), so
+    /// sparse LU's singularity test was relative to the largest entry of the matrix (<see cref="NumericTolerances.RelativePivotFloor"/>;
+    /// relative to the pivot's own row since GR-044, which does not remove the column-scale part), so the raw system was
+    /// refused as singular on the PEGASE cases. Scaling by powers of two is exact (no rounding), so
     /// it changes only the pivoting the LU sees, never the system solved. Returns null when the LU finds it singular.
     /// </summary>
     private static double[]? SolveScaled(CsrMatrix k, double[] r)

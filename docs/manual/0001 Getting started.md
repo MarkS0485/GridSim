@@ -32,7 +32,7 @@ page. Each release is built by `.github/workflows/release.yml` from the tagged c
 `ubuntu-latest` and checks the tag against the version, builds, runs `dotnet test GridSim.slnx -c Release --no-build`
 (normal CPU mode, no `continue-on-error`) and runs the vulnerable-package check; every later job needs `verify`. Each
 command line archive is then smoke-tested and given the published-output tests on a runner of its own operating
-system. The ship scope is the command line tool, the `GridSim.Core`
+system. The ship scope is the command line tool, the WPF and Avalonia desktop apps, the `GridSim.Core`
 NuGet package and the replay-only web container image. The release page carries:
 
 | Archive | Contents |
@@ -40,8 +40,11 @@ NuGet package and the replay-only web container image. The release page carries:
 | `gridsim-<version>-win-x64.zip` | the `gridsim.exe` command line tool for Windows x64 |
 | `gridsim-<version>-linux-x64.tar.gz` | the `gridsim` command line tool for Linux x64 |
 | `gridsim-<version>-osx-arm64.tar.gz` | the `gridsim` command line tool for macOS on Apple silicon |
+| `gridsim-wpf-<version>-win-x64.zip` | the WPF desktop app (`GridSim.Wpf.exe`) for Windows x64 |
+| `gridsim-app-<version>-win-x64.zip` | the Avalonia desktop app (`GridSim.App.Desktop.exe`) for Windows x64 |
+| `gridsim-app-<version>-linux-x64.tar.gz` | the Avalonia desktop app (`GridSim.App.Desktop`) for Linux x64 |
 | `SHA256SUMS.txt` | the SHA-256 checksum of every other file on the page |
-| `gridsim-<version>.sbom.json`, `gridsim-web-<version>.sbom.json` | CycloneDX software bills of materials for the command line tool and the web image |
+| `gridsim-<version>.sbom.json`, `gridsim-web-<version>.sbom.json`, `gridsim-core-<version>.sbom.json`, `gridsim-app-<version>.sbom.json`, `gridsim-wpf-<version>.sbom.json` | CycloneDX software bills of materials for the command line tool, the web image, the `GridSim.Core` package, the Avalonia app and the WPF app |
 
 The other two artefacts are not on the release page:
 
@@ -50,7 +53,7 @@ The other two artefacts are not on the release page:
 | `GridSim.Core` NuGet package | the repository's GitHub Packages NuGet feed | `dotnet add package GridSim.Core --version <version>` with that feed configured as a package source |
 | Web app container image | `ghcr.io/<owner>/gridsim-web:<version>` | `docker run --rm -p 127.0.0.1:5540:8080 ghcr.io/<owner>/gridsim-web:<version>`; replay-only (the solve API and the simulation socket are not served); deployment settings are in `docs/developer/deploy/README.md` |
 
-The desktop app (`GridSim.Wpf`, Windows) and the Unity viewer are not in a release: build them from source (below).
+The Unity viewer and a macOS desktop app are not in a release: build them from source (below).
 `GridSim.Gda` and the GDA data are not release artefacts either: the `gda` verbs are in the command line tool, but
 they need a GDA data lake (`GDA_DATA_ROOT`, see [ch. 3](<0003 Configuration.md>)), which no download includes.
 

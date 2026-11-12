@@ -23,17 +23,30 @@ number it serves comes from GridSim.Core.
 4. Non-finite doubles serialise as `null` on every HTTP JSON path (`NonFiniteDoubleConverter`).
 5. `Site:*` settings are read and checked once (`SiteSettings.FromConfiguration`); a malformed value stops start-up
    naming the setting.
-6. Data protection, cookie authentication and single sign-on are configured ([ch. 35](<0035 Deployment and security.md>)).
+6. `GridSim:AnonymousRole` is read and checked once (`AccessControl.FromConfiguration`): the role band an anonymous
+   caller holds (below). A value that is not `Viewer`, `Analyst`, `Operator` or `Administrator` stops start-up naming
+   the setting.
+7. Data protection, cookie authentication and single sign-on are configured ([ch. 35](<0035 Deployment and security.md>)).
    `Sso:IsAuthority=true` with `Sso:Enabled` stops start-up: GridSim has no login page, so it cannot mint tickets.
    `Sso:PublicOrigin`, when set, must be a bare http(s) origin.
-7. The audit settings are checked: `Audit:AnchorPath` without `Audit:LogPath`, or `Audit:LogPath` on a host that runs
+8. The audit settings are checked: `Audit:AnchorPath` without `Audit:LogPath`, or `Audit:LogPath` on a host that runs
    no resident estimator, stops start-up naming the setting.
-8. When the host is not replay-only and `Realtime:Enabled=true`, the resident estimator's case (`Realtime:Case`, default
+9. When the host is not replay-only and `Realtime:Enabled=true`, the resident estimator's case (`Realtime:Case`, default
    `case9`) is loaded once, its audit log (when set) is opened and verified, and the estimator is registered as a
    hosted service over `Realtime:WindowsDir`. A case the licence does not cover, or a name the catalogue does not know,
-   stops start-up naming `Realtime:Case`.
-9. The `SessionManager` is built before the first request, so a malformed `GridSim:MaxSessions` or
-   `GridSim:ReplayCases` stops start-up.
+   stops start-up naming `Realtime:Case`. `Realtime:DistrustedSources` (comma-separated source tags) is read and
+   validated once by `DistrustedSourceSetting.Parse` before this step; a malformed value, a configuration array, or the
+   setting on a host with no resident estimator stops start-up naming it. When set, the estimator's
+   `EstimationOptions.DistrustedSources` carries it (demotion and the redundancy rule are the estimator's), and the
+   hosted service records one `DistrustedSource` security event per source before the first window when the audit log
+   is set.
+10. The access control (`AccessControl`) is registered with its denial recorder: the resident estimator's audit log when
+    `Audit:LogPath` is set, otherwise none. Start-up logs one line saying what anonymous callers hold and whether
+    denials are audited.
+11. The `SessionManager` is built before the first request, so a malformed `GridSim:MaxSessions`,
+   `GridSim:ReplayCases`, `GridSim:BridgeReconnect` or `GridSim:BridgeReconnectMaxAttempts` stops start-up. `WebLimits` is
+   read earlier still, so a malformed `GridSim:MaxConcurrentSolves`, `GridSim:SolveTimeoutSeconds`,
+   `GridSim:WsControlRatePerSecond` or `GridSim:WsControlBurst` stops start-up naming the setting.
 
 The request pipeline then runs: the exception handler outside Development first (the `/Error` page, which shows the
 request id and no exception detail), so it covers every later middleware; `/.well-known/security.txt` (the configured
@@ -50,21 +63,48 @@ Development environment on `http://localhost:5180`. `ASPNETCORE_URLS`, when set,
 | Route | Method | Mapped when | Purpose |
 |---|---|---|---|
 | `/` and `/dashboard/<id>` | GET | always | The Blazor dashboard; on a replay-only instance `/` opens the first configured raw replay |
-| `/api/cases` | GET | not replay-only | The loadable models |
-| `/api/topology?case=<id>` | GET | not replay-only | One case's map topology |
+| `/api/cases` | GET | not replay-only | The loadable models; the ones found under `results/` and `gda-out/` are listed only to a caller in the `Operator` band or above (GR-715) |
+| `/api/topology?case=<id>` | GET | not replay-only | One case's map topology; a model found under `results/` or `gda-out/` needs the `Operator` band (403 below it, GR-715) |
 | `/api/solve` | POST | not replay-only | One-shot solve of a non-replay case |
 | `/api/realtime` | GET | not replay-only | The resident estimator's latest output |
 | `/api/openapi.json` | GET | not replay-only | The OpenAPI 3.0.3 description of the surface |
 | `/ws/sim` | WebSocket | not replay-only | Streamed simulation for external consumers |
-| `/.well-known/security.txt` | GET | always | RFC 9116 file from `Site:SecurityTxt:*`, or 404 |
+| `/.well-known/security.txt` | GET | always | RFC 9116 file from `Site:SecurityTxt:*`, or 404 (also 404 once its `Expires` has passed, checked on every request) |
 | `/Error` | GET | always | The error page the exception handler re-executes |
 | `/compliance` | GET | always, anonymous | The build's compliance attestation as JSON (version, commit, build hash, SBOM hash, manifest hash, release build, controls) |
-| `/health` | GET | always, anonymous | Liveness: `{status: "ok"}` when no resident estimator is configured; `{status: "starting"}` (200) while it is configured but has no summary yet; then `healthy` (200) or `degraded` (503) with the objective fractions and breaches |
+| `/health` | GET | always, anonymous | Liveness: `{status: "ok"}` when no resident estimator is configured; `{status: "starting"}` (200) while it is configured but has no summary yet; then `healthy` (200) or `degraded` (503) with the objective fractions and breaches. Every answer also carries `estimator` (`not-configured`, `starting`, `healthy` or `degraded`) and `bridgeSessions` (`{active, faulted}`: the bridge sessions alive now and those whose stream has faulted). The bridge counts are information only and never change the status code (GR-709) |
 | `/geo/*` | GET | when the `gda-out/geo` folder exists | Map overlay GeoJSON |
 | `/sso/bridge`, `/sso/land`, `/sso/logout` | GET | always; each answers 404 when sign-on is off | Estate single sign-on ([ch. 35](<0035 Deployment and security.md>)) |
 
-None of the REST or WebSocket routes requires authorisation. A cookie challenge answers 401 and a forbid 403, with no
-redirect: the app serves no login or access-denied page.
+### Role-based access control
+
+`POST /api/solve`, `GET /api/topology` and every `/ws/sim` control frame pass the role gate (`AccessControl`, through
+Core's `RoleGuard`; CAF B2) before they act. The bands are `OperationRole`'s:
+
+| Surface | Operation name | Band needed |
+|---|---|---|
+| `POST /api/solve` | `api.solve` | `Analyst` |
+| `GET /api/topology` | `api.topology` | `Viewer` (every caller) |
+| `GET /api/topology` of a model found under `results/` or `gda-out/` | `api.topology.private` | `Operator` (GR-715; a denial is audited like any other) |
+| Opening a model found under `results/` or `gda-out/` on the dashboard (`/dashboard/<id>`) | `dashboard.private` | `Operator` (decided on the interactive pass; a denial is audited once, the load-error panel shows the refusal and no session is built; the prerender of such an id builds nothing) |
+| `/ws/sim` `start`, `play`, `pause`, `step`, `seek`, `speed`, `trip` | `ws.sim.<action>` | `Operator` |
+
+A signed-in caller (the estate cookie or the SSO consumer) holds the highest band among its role claims whose value is
+`GridSim.Viewer`, `GridSim.Analyst`, `GridSim.Operator` or `GridSim.Administrator` (case-insensitive); any other role
+claim is ignored. Any other caller is anonymous and holds `GridSim:AnonymousRole`; a signed-in caller never holds less.
+Unset, `GridSim:AnonymousRole` is `Operator` when every name in `AllowedHosts` is a loopback name (the default list: a
+local `dotnet run` keeps working) and `Viewer` otherwise (an instance reachable under any other name lets an unknown
+caller read but not solve or drive sessions). Start-up warns when the setting gives anonymous callers more than
+`Viewer` on an instance that answers other names.
+
+A refused REST call answers 403 with `{error: "Access denied: 'api.solve' requires role Analyst or higher, but the
+caller has Viewer."}` before the body or the case is looked at. A refused control frame gets an error frame with the
+same text and changes nothing: a refused `start` neither disposes the connection's session nor creates one. Each
+denial writes one `AccessDenied` security entry (operation, required and actual band, subject, request id) to the
+audit log when the host has one; a host without one still refuses. The read-only routes (`/api/cases`,
+`/api/realtime`, `/api/openapi.json`), the pages, `/compliance` and `/health` are not gated, and neither are the
+dashboard's own sessions (the Blazor UI creates them in-process). A cookie challenge answers 401 and a forbid 403, with
+no redirect: the app serves no login or access-denied page.
 
 ### REST contract
 
@@ -74,7 +114,7 @@ redirect: the app serves no login or access-denied page.
 |---|---|---|---|---|---|
 | `GET /api/cases` | `[{id, label, kind, replay}]` | - | - | - | - |
 | `GET /api/topology?case=` | the topology (a replay run's is built once and rebuilt only when the run's files change, `ReplayTopologyCache`) | no case named (missing or blank) | the licence does not cover the model | unknown case | - |
-| `POST /api/solve` with `{"case": ...}` | converged: `{converged: true, status, iterations, maxMismatch, topology, state}` | no case named, or a replay run (use `/ws/sim`) | the licence does not cover the model | unknown case | not converged: `{error, converged: false, status, iterations, maxMismatch, topology, state}` |
+| `POST /api/solve` with `{"case": ...}` | converged: `{converged: true, status, iterations, maxMismatch, topology, state}` | no case named, or a replay run (use `/ws/sim`) | the caller's band is below `Analyst` (checked first), or the licence does not cover the model | unknown case | not converged: `{error, converged: false, status, iterations, maxMismatch, topology, state}` |
 | `GET /api/realtime` | `{ok, summary, latest, skippedFiles}` | - | - | the resident estimator is not enabled | - |
 | `GET /api/openapi.json` | the document | - | - | - | - |
 
@@ -105,7 +145,9 @@ The connection then holds at most one session at a time.
 
 **Control frames (client to server)** are UTF-8 JSON objects with the properties `action`, `case`, `source`, `fps`,
 `value`, `solver`, `assetGraph` and `waveField` (names case-insensitive). `action` is one of `start`, `play`, `pause`,
-`step`, `seek`, `speed`, `trip`.
+`step`, `seek`, `speed`, `trip`. Every action needs the `Operator` band (role-based access control, above); the caller's
+identity is fixed when the socket is opened, and the gate runs after the action is known to be one of these and before
+it acts.
 
 | Action | Effect |
 |---|---|
@@ -124,7 +166,8 @@ decides. `solver` is `auto` (default), `dense`, `sparse` or `sweep`, for a live 
 frame, text that is not a JSON object (or JSON `null`), an unknown property (named, with the list of the eight), no or an
 unknown `action`, `start` with no case, an unknown or mismatched `source`, an unknown solver or a solver for a replay or
 bridge case, any action other than `start` before a successful `start`, `seek`, `speed` or `trip` without a finite
-numeric `value`, a `speed` or `fps` outside 0.1 to 60, a `trip` on a replay or bridge session, and every refusal of
+numeric `value`, a `speed` or `fps` outside 0.1 to 60, a `trip` on a replay or bridge session, a control below the
+caller's band (`Access denied: ...`), and every refusal of
 `SessionManager.Create`. A failed `start` leaves the connection with no session. The error text is the exception's
 message with every absolute server path replaced by `<path>` (GR-721, `ClientErrorText`); the full message is logged on
 the server (event 1721, `SimWebSocketDispatchFailed`).
@@ -148,9 +191,35 @@ tab) and for a `/ws/sim` connection alike, and keeps only the count of those ali
   (GridSim:BridgeEndpoint).`). An unknown id throws `Unknown case '<id>'.`. On a bridge session a pause, speed change
   or seek the bridge does not take (a closed socket, a refused command) is shown as the session's warning (`Bridge
   <command> failed (...)`); the dashboard stays up.
+- **Bridge projection worker (GR-224).** A bridge frame is not projected on the bridge client's receive-loop thread.
+  `SimSession.OnBridgeState` captures what the frame's projection reads that the next tick overwrites (the raw blocks,
+  overlays, HUD scalars and tick instant) and queues the frame on a `BridgeProjectionWorker`, a bounded first-in
+  first-out queue (`SimSession.BridgeProjectionQueueCapacity` = 64) with one consumer. The consumer builds each envelope
+  in arrival order, so the history queues, imbalance-price samples, SCADA alarm log, mechanical ramp and frequency-risk
+  trace see every frame, and `FrameProduced` never publishes an older frame after a newer one. Nothing is dropped. When
+  the queue is full, or a projection throws, the worker stops, the session shows the reason as its error, stops playing
+  and asks the server to stop the stream (no reconnect). A single frame that fails to project is reported as the session's
+  error and the stream carries on. Disposing the session stops the worker.
+- **Supervised bridge reconnect.** Off by default. With `GridSim:BridgeReconnect=true` (`true` or `false`; unset or
+  blank is off; anything else stops start-up) a bridge session owns a `BridgeReconnectSupervisor`
+  (`src/GridSim.Core/Net/BridgeReconnectSupervisor.cs`). When the bridge stream is lost it waits
+  `ResilienceOptions.BackoffDelay(n)` and reconnects through the session's own connect path, up to
+  `GridSim:BridgeReconnectMaxAttempts` attempts per outage (a whole number of 0 or more; 0, the default, means no
+  bound), then reports one give-up. A horizon rejection (`ForwardInferenceException`) is never retried and a successful
+  connection resets the count. Each attempt and the give-up are written to standard error; a pending attempt shows as
+  the session's Warning and the give-up as its Error and stops play. They are not security-audit events. The bridge
+  client has no keep-alive, so a silent stall is not seen as a loss (`SimSession`, `SessionManager`;
+  `BridgeReconnectSupervisorTests`, `BridgeReconnectHostWiringTests`).
 - **Cap.** At most `GridSim:MaxSessions` (default `SessionManager.DefaultMaxSessions` = 64; a whole number of 1 or more)
   sessions are alive at once. A slot is taken before the session is built and given back exactly once when it is
   disposed, or at once when building it fails; one more session throws `SessionLimitException`.
+- **Per-client quota (GR-235).** One client holds at most `GridSim:MaxSessionsPerClient` sessions (default
+  `SessionManager.DefaultMaxSessionsPerClient` = 16; a whole number of 1 or more), on top of the global cap. The client is
+  `AccessControl.ClientKeyFor`: `user:<subject>` for a signed-in caller (the subject `IdentityFor` names), else
+  `ip:<remote address>` (an IPv4-mapped IPv6 address is folded to IPv4). `/ws/sim` passes it from the upgrade request and
+  the dashboard from the circuit's request; a caller with no key (an anonymous circuit whose address is not visible) is
+  held to the global cap only. A client at its quota throws `ClientSessionLimitException`, whose message names the
+  setting; other clients are unaffected, and disposing a session gives its client slot back with its global slot.
 - **Replay-only.** On a replay-only instance only `bridge:<case>@raw` for a case named in `GridSim:ReplayCases` (a comma
   list of remote case names; default `gb-full`) may be opened. The `/dashboard` gate answers 404 with `Not available: this
   is a replay-only instance (GridSim:ReplayOnly=true), which offers only the raw public-data replay.` before any page code
@@ -168,7 +237,12 @@ CPU and RAM use and the process's RAM and thread count. It holds no names or IP 
 
 GridSim is an SSO consumer only. It recognises a visitor already signed in on the estate (a cookie that decrypts with
 the shared key ring and application name) and, as an SSO client, redirects a challenge to the authority's `/sso/bridge`
-and signs in once on `/sso/land` with a one-time ticket. Every page stays reachable anonymously. The settings, the
+and signs in once on `/sso/land` with a one-time ticket. Every page stays reachable anonymously. The sign-in cookie slides
+over `Auth:SlidingHours` (default 8) and is capped at `Auth:AbsoluteDays` (default 14) from sign-in: `/sso/land` stores
+the sign-in time inside the cookie and `OnValidatePrincipal` rejects and signs out a cookie older than the cap, however
+often it was renewed. A cookie with no sign-in time (the shared estate cookie) is stamped from its `IssuedUtc` on first
+use, so the cap counts from that first issue; one with no `IssuedUtc` is rejected. Both settings are whole numbers
+checked at start-up (hours 1 to 8760, days 1 to 365, the cap not shorter than the window). The settings, the
 ticket rules and the threat statements are in [ch. 35](<0035 Deployment and security.md>).
 
 ## Parameters and defaults
@@ -176,15 +250,29 @@ ticket rules and the threat statements are in [ch. 35](<0035 Deployment and secu
 | Name | Value | Unit | Meaning | Source symbol |
 |---|---|---|---|---|
 | Session cap | 64 | sessions | Most sessions alive at once | `SessionManager.DefaultMaxSessions`, `GridSim:MaxSessions` |
+| Per-client session quota | 16 | sessions | Most sessions one client (signed-in subject, else remote address) holds at once, inside the session cap. Whole number of 1 or more | `SessionManager.DefaultMaxSessionsPerClient`, `GridSim:MaxSessionsPerClient` |
+| Cookie idle window | 8 | hours | A sign-in cookie unused for longer than this must sign in again. Whole number 1 to 8760 | `SessionCookieSettings.DefaultSlidingHours`, `Auth:SlidingHours` |
+| Cookie absolute cap | 14 | days | Longest a sign-in lasts however often it is renewed. Whole number 1 to 365, not shorter than the idle window | `SessionCookieSettings.DefaultAbsoluteDays`, `Auth:AbsoluteDays` |
+| Concurrent solves | 8 | requests | Most `/api/solve` plus `/api/topology` requests worked at once; one more is refused with 503 and `Retry-After`. Whole number 1 to 256 | `WebLimits.DefaultMaxConcurrentSolves`, `GridSim:MaxConcurrentSolves` |
+| Solve timeout | 120 | seconds | How long a REST request waits for its solve before 504. The solve itself cannot be interrupted and keeps its slot until it ends. Whole number 1 to 3600 | `WebLimits.DefaultSolveTimeoutSeconds`, `GridSim:SolveTimeoutSeconds` |
+| `/ws/sim` control rate | 5 | frames per second | Sustained `step` plus `start` frames per socket (token bucket refill). Whole number 1 to 10000 | `WebLimits.DefaultWsControlRatePerSecond`, `GridSim:WsControlRatePerSecond` |
+| `/ws/sim` control burst | 20 | frames | `step` plus `start` frames a socket may send at once (bucket size, full on connect); a frame over it gets an error frame and is not run. Whole number 1 to 10000 | `WebLimits.DefaultWsControlBurst`, `GridSim:WsControlBurst` |
 | Replay cases | `gb-full` | - | Raw replays a replay-only host serves | `SessionManager.DefaultReplayCases`, `GridSim:ReplayCases` |
+| Case roots | unset | folders | The folders searched for `results/` and `gda-out/`; unset keeps the search of the install folder and up to seven ancestors. Each must exist or start-up stops (GR-715) | `CaseCatalog.ParseCaseRoots`, `GridSim:CaseRoots` |
 | Replay-only landing | `bridge:gb-full@raw` | - | Default landing session | `SessionManager.RawLandingCaseId` |
 | Bridge sources | `presolved`, `estimated`, `live`, `solves`, `raw` | - | Accepted `@source` values | `SessionManager.BridgeSources` |
+| Bridge reconnect | off (`false`) | - | Supervised reconnect of a lost bridge stream | `SessionManager.BridgeReconnectSetting` (`GridSim:BridgeReconnect`) |
+| Bridge reconnect attempts | 0 (no bound) | attempts per outage | Most reconnect attempts before the give-up | `ResilienceOptions.MaxReconnectAttempts`, `SessionManager.BridgeReconnectMaxAttemptsSetting` (`GridSim:BridgeReconnectMaxAttempts`) |
 | REST OLTC pass cap | 25 | passes | One-shot solve | `RestApi.RestOltcPassCap` = `SteadyStateSolver.DefaultMaxOltcPasses` |
 | Control frame limit | 16,384 | bytes | Larger closes with `MessageTooBig` | `SimWebSocket.HandleAsync` |
 | State frame channel | 256 | frames | Drop-oldest buffer per connection | `SimOutbound` |
 | Development address | `http://localhost:5180` | - | `dotnet run` profile | `Properties/launchSettings.json` |
 | Resident estimator case | `case9` | - | `Realtime:Case` default | `Program.cs` |
 | Solver names | `auto`, `dense`, `sparse`, `sweep` | - | `solver` / `?solver=` values | `SolverChoice.Options` |
+| Anonymous role | `Operator` (loopback-only `AllowedHosts`), else `Viewer` | - | Band of a caller who is not signed in | `AccessControl.FromConfiguration`, `GridSim:AnonymousRole` |
+| Solve band | `Analyst` | - | `POST /api/solve` | `AccessControl.SolveRole` |
+| Control band | `Operator` | - | Every `/ws/sim` control frame | `AccessControl.SimControlRole` |
+| Role claim prefix | `GridSim.` | - | A role claim counts only as `GridSim.<band>` | `AccessControl.RoleClaimPrefix` |
 
 ## Invariants
 
@@ -199,6 +287,7 @@ ticket rules and the threat statements are in [ch. 35](<0035 Deployment and secu
 | `security.txt` is served first, exactly as configured, or 404 | `WebHostTests.Security_txt_is_served_before_anything_else`, `Security_txt_answers_404_when_no_contact_is_configured`, `Security_txt_is_exactly_the_configured_file` |
 | `dotnet run` starts the host in Development; the `/Error` page is served; an unloadable resident-estimator case stops start-up naming the setting | `WebHostDoc2Tests.Dotnet_run_starts_the_web_app_in_development`, `The_error_page_named_by_the_exception_handler_is_served`, `An_unloadable_realtime_case_stops_start_up_naming_the_setting` |
 | A replay run's topology is built once and rebuilt when the run changes | `WebHostDoc2Tests.Replay_topology_is_built_once_and_rebuilt_when_the_run_changes` |
+| Each surface needs its band; a refused solve is 403 before anything is looked up, a refused control frame is an error frame with no session created or replaced; each denial writes exactly one `AccessDenied` audit entry, and a host with no audit log still refuses; the default anonymous role and the setting's parsing; role claims map to bands | `CafB2RoleGateWebTests` |
 | A cookie challenge answers 401 and a forbid 403 without a redirect; SSO authority mode stops start-up | `WebSecurityDoc2Tests.A_cookie_challenge_answers_401_and_a_forbid_403_without_a_redirect`, `Sso_authority_mode_stops_start_up_with_the_reason` |
 
 ## Worked example
@@ -227,14 +316,18 @@ case's topology and projected state. The captured requests and responses of thes
 | `src/GridSim.Web/Sessions/SimSession.cs` | `SimSession` | One connection's simulation and its frames |
 | `src/GridSim.Web/Sessions/SolverChoice.cs` | `SolverChoice` | Solver names to engines |
 | `src/GridSim.Web/Realtime/RealtimeEstimatorHostedService.cs`, `ReplayDirectoryWindowFeed.cs` | resident estimator | The `/api/realtime` source and its window feed |
-| `src/GridSim.Web/Site/` | `SiteSettings`, `TrustedProxies`, `KeyRingProtection` | Site identity, forwarded-header trust, key ring protection |
+| `src/GridSim.Web/Site/` | `SiteSettings`, `TrustedProxies`, `KeyRingProtection`, `AccessControl` | Site identity, forwarded-header trust, key ring protection, the role gate and its denial audit |
 | `src/GridSim.Web/Sso/EstateSso.cs` | `EstateSso` | The SSO routes |
 | `src/GridSim.Web/Properties/launchSettings.json` | launch profile | `dotnet run` environment and address |
 
 ## Limits
 
-- The REST and WebSocket routes carry no authorisation of their own; a deployment that must restrict them does so at
-  the proxy, or runs replay-only.
+- The role gate covers `POST /api/solve`, `GET /api/topology` and `/ws/sim`, not the dashboard's own sessions: an
+  instance that must keep anonymous visitors from running live sessions still runs replay-only or restricts the pages
+  at the proxy. Roles come from the sign-in cookie, which is not re-checked against the authority during its lifetime: a role removed
+  at the authority takes effect at the next sign-in, at most `Auth:SlidingHours` idle or `Auth:AbsoluteDays` in all.
+- A denial is audited only on a host with an audit log, which needs the resident estimator (`Audit:LogPath` is refused
+  without it); elsewhere it is refused and not recorded.
 - The resident estimator runs the static engine once over a directory at start-up; it does not watch the directory.
 - The state frame channel drops the oldest frames for a slow consumer, so a client that cannot keep up sees gaps in the
   tick sequence.

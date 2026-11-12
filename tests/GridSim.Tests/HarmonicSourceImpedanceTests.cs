@@ -121,9 +121,14 @@ public class HarmonicSourceImpedanceTests
         var g3 = new Generator(1, Pg: 15, MBase: 100);
         Assert.Equal(Bits(0.2), Bits(FrequencyDependentYBus.GeneratorSourceReactanceSystemPu(g3, 100, 0.2)));
 
-        // No MBase: rated at the system base.
-        var g4 = new Generator(1, Pg: 15, MBase: 0, SubtransientXdPu: 0.3);
-        Assert.Equal(Bits(0.3), Bits(FrequencyDependentYBus.GeneratorSourceReactanceSystemPu(g4, 100, 0.2)));
+        // Moved 2026-11-01 (bug hunt 2026-11-01 #166, delegated agreement for justified corrections): a machine with no
+        // MBase is refused, naming it, as the fault studies (IEC 60909 GR-603, FaultAnalysis) and the active-front-end
+        // conversion refuse it; X''d is per unit on the unit's own rating, so a missing rating makes the reactance
+        // meaningless (a 1000 MVA unit stored with MBase 0 read ten times too large on a 100 MVA base). Before: g4
+        // (MBase 0, X''d 0.3) gave exactly 0.3 pu, the system-base fallback. After: InvalidOperationException naming it.
+        var g4 = new Generator(1, Pg: 15, MBase: 0, SubtransientXdPu: 0.3, Name: "NoRating");
+        var ex = Assert.Throws<InvalidOperationException>(() => FrequencyDependentYBus.GeneratorSourceReactanceSystemPu(g4, 100, 0.2));
+        Assert.Contains("NoRating", ex.Message);
     }
 
     [Fact]

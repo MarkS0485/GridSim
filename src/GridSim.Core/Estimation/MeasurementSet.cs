@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GridSim.Core.Diagnostics;
@@ -212,39 +213,70 @@ public sealed record MeasurementSet
     /// stored orientation only (From->To as authored); parallel circuits between the same endpoints
     /// need the <see cref="Measurement.Circuit"/> to be unambiguous - either the branch's name, or
     /// the ordinal form <c>"#k"</c> (model branch index) for unnamed parallels (IEEE imports carry
-    /// no circuit names; the synthetic sampler emits this form).
+    /// no circuit names; the synthetic sampler emits this form). The WLS form: an out-of-service branch
+    /// resolves (the measurement model stamps it with zero admittance, and the synthetic sampler meters it).
     /// </summary>
     internal static bool TryResolveBranch(GridModel model, Measurement m, out int branchIndex, out string? error)
+        => TryResolveBranch(model, m.From, m.To, m.Circuit, inServiceOnly: false, out branchIndex, out error);
+
+    /// <summary>
+    /// GR-536 (November 2026): the one branch resolver of the WLS family and the linear PMU estimator, which used to
+    /// resolve by rules of their own. The rule, in order:
+    /// <list type="number">
+    /// <item>Only branches with the authored endpoints (From->To as stored) are candidates; with
+    /// <paramref name="inServiceOnly"/> (the linear PMU estimator, which cannot carry an open branch's current) an
+    /// out-of-service branch is never a candidate.</item>
+    /// <item>A circuit equal to a candidate's name, exactly (ordinal comparison), picks that candidate; two such
+    /// candidates are ambiguous and refused.</item>
+    /// <item>Otherwise a circuit "#k" with k a plain decimal number (no sign, no spaces: <see cref="NumberStyles.None"/>)
+    /// is the model branch index k, and must be one of the candidates; a "#k" that is not is refused, never re-read
+    /// as a name.</item>
+    /// <item>Any other circuit names no candidate and is refused. With no circuit the single candidate is taken, and
+    /// none or several are refused.</item>
+    /// </list>
+    /// The WLS family keeps <paramref name="inServiceOnly"/> false (see the overload above).
+    /// </summary>
+    internal static bool TryResolveBranch(
+        GridModel model, int from, int to, string? circuit, bool inServiceOnly, out int branchIndex, out string? error)
     {
         branchIndex = -1;
         error = null;
+        string scope = inServiceOnly ? "in-service " : "";
 
-        if (m.Circuit is not null && m.Circuit.StartsWith('#')
-            && int.TryParse(m.Circuit.AsSpan(1), System.Globalization.CultureInfo.InvariantCulture, out int ordinal))
-        {
-            if (ordinal >= 0 && ordinal < model.Branches.Count
-                && model.Branches[ordinal].From == m.From && model.Branches[ordinal].To == m.To)
-            {
-                branchIndex = ordinal;
-                return true;
-            }
-            error = $"circuit '{m.Circuit}' does not name branch {m.From}->{m.To} (ordinal out of range or endpoints differ)";
-            return false;
-        }
         int found = -1, count = 0;
         for (int k = 0; k < model.Branches.Count; k++)
         {
             Branch br = model.Branches[k];
-            if (br.From != m.From || br.To != m.To) continue;
-            if (m.Circuit is not null && !string.Equals(br.Name, m.Circuit, StringComparison.Ordinal)) continue;
+            if (br.From != from || br.To != to) continue;
+            if (inServiceOnly && !br.InService) continue;
+            if (circuit is not null && !string.Equals(br.Name, circuit, StringComparison.Ordinal)) continue;
             found = k;
             count++;
         }
-
         if (count == 1) { branchIndex = found; return true; }
-        error = count == 0
-            ? $"no branch {m.From}->{m.To}{(m.Circuit is null ? "" : $" named '{m.Circuit}'")} in the model"
-            : $"{count} parallel branches {m.From}->{m.To} match; set circuit to the branch name to disambiguate";
+        if (count > 1)
+        {
+            error = circuit is null
+                ? $"{count} parallel {scope}branches {from}->{to} match; set circuit to the branch name to disambiguate"
+                : $"{count} parallel {scope}branches {from}->{to} are named '{circuit}'; use the ordinal circuit form '#k' to disambiguate";
+            return false;
+        }
+
+        if (circuit is not null && circuit.StartsWith('#')
+            && int.TryParse(circuit.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out int ordinal))
+        {
+            if (ordinal < model.Branches.Count && model.Branches[ordinal] is { } byOrdinal
+                && byOrdinal.From == from && byOrdinal.To == to && (!inServiceOnly || byOrdinal.InService))
+            {
+                branchIndex = ordinal;
+                return true;
+            }
+            error = $"circuit '{circuit}' does not name {scope}branch {from}->{to} (ordinal out of range, endpoints differ" +
+                    (inServiceOnly ? " or the branch is out of service)" : ")");
+            return false;
+        }
+
+        error = $"no {scope}branch {from}->{to}{(circuit is null ? "" : $" named '{circuit}'")} in the model";
         return false;
     }
 }

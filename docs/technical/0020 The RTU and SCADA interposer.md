@@ -150,8 +150,17 @@ and must drive the session (`Iec104ControllingStation`):
 - GR-823: an I-frame whose N(S) is not V(R) (an I-frame lost or repeated) closes the connection the same way; that frame is
   still handed up, is not counted in V(R) and is not acknowledged (`SequenceErrors` counts it).
 
-It does not send I-frames or `STOPDT`, and applies no k. The parameter values are the commonly cited clause 5 defaults and
-are marked `[VERIFY]` in the code.
+- N366, the k window (`K` = 12): the station sends no I-frames, so V(S) (`SendSequence`) is always 0 and every N(R) the
+  outstation sends, in an S-frame or an I-frame, must be 0. Any other N(R) acknowledges I-frames that were never sent and
+  closes the connection (`AcknowledgementErrors` counts it; an I-frame carrying one is not counted in V(R)). Acknowledging
+  after w = 8 keeps the outstation inside its own k window (w is no more than two thirds of k).
+- N366, STOPDT: `StopDataTransfer` acknowledges any unacknowledged I-frames, then sends `STOPDT act`, supervised by t1.
+  `STOPDT con` stops transfer (`DataTransferStopped`); I-frames between the act and its con are still counted, and an
+  I-frame after the con closes the connection. An unsolicited `STOPDT con` is ignored. `StartDataTransfer` restarts transfer.
+  The `interpose` verb does not call `StopDataTransfer`; it closes the connection directly when it stops.
+
+It does not send I-frames. The parameter values are the commonly cited clause 5 defaults and are marked `[VERIFY]` in
+the code.
 
 **`TcpDelimitedFrameTransport(host, port, startByte)`** serves IEC 104 with `startByte` `0x68`. It scans the buffer for the first
 start octet and discards everything before it (resync). A buffer with no start octet is cleared. With the start octet at
@@ -201,8 +210,8 @@ octets 4-5 common address (little-endian)
 
 `Parse` throws `ArgumentException` for an ASDU shorter than 6 octets and for a truncated object list. The pipeline counts
 that as a decode error. The cause, the P/N bit, the originator and the common address are decoded into the record and are not
-used by the pipeline, with one exception: a set T bit marks every point of the ASDU `Invalid` (`Iec104Protocol.Decode`), so a
-test ASDU is dropped.
+used by the pipeline, with two exceptions: a set T bit marks every point of the ASDU `Invalid` (`Iec104Protocol.Decode`), so a
+test ASDU is dropped, and the common address names or checks each point (GR-306, below).
 
 The information objects, with SQ=0 each preceded by a 3-octet little-endian IOA, with SQ=1 sharing one base IOA
 (`IOA(i) = base + i`):
@@ -688,7 +697,7 @@ With the crosswalk `modbus-case14.json`: `@100` is `1030 * 0.001` = 1.03 pu; `@1
 
 - The verb listens for the outstation to connect. For IEC 104 it then acts as a minimal controlling station (STARTDT act, TESTFR con, S-frame acknowledgements, TESTFR act after t3) applies t1 and the N(S) check by closing the connection (GR-803, GR-823), and sends no commands or `STOPDT`; for Modbus it never writes, so a device that waits for a Modbus request never sends.
 - Only `iec104` and `modbus` have an `IRtuProtocol`. The DNP3 and GOOSE codecs, quality folds and time decoders exist and nothing selects them (R089).
-- An IEC 104 address is `IOA:<n>` alone. The common address and the originator address are decoded and unused, so two stations with one IOA collide.
+- An IEC 104 address is `IOA:<n>` alone by default. GR-306: an IOA that arrives with a second common address on one link is a collision; its points are marked `Invalid` from then on, counted (`Iec104Protocol.CommonAddressCollisions`, the `iec104:` line after the stop line) and the first is named on stderr. The crosswalk's optional `"iec104Key": "casdu-ioa"` names points `CA:<casdu>/IOA:<n>` instead. The originator address is decoded and unused.
 - A window with a point that does not fit its binding is discarded whole (counted in `map-errors`), not just that point.
 - IEC 104 resync scans to the next `0x68` octet, so a `0x68` inside damaged data starts a frame.
 - The transports (one shared `TcpFrameTransportBase`) serve one client at a time and do not time out an idle client. A

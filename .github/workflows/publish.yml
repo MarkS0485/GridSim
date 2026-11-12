@@ -75,7 +75,9 @@ jobs:
   # caller's (the tag push), so this job is skipped there: release.yml has already run ci.yml and its own gates.
   gate:
     name: CI matrix (package gate)
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    # Bug #195: a GitHub Release marked pre-release (a release candidate, tag v<version>-<label>) pushes no package, so
+    # nothing is gated for it either.
+    if: (github.event_name == 'release' && github.event.release.prerelease != true) || github.event_name == 'workflow_dispatch'
     uses: ./.github/workflows/ci.yml
 
   publish:
@@ -84,14 +86,21 @@ jobs:
     # Run after a passed gate, or when the gate was skipped because release.yml called this workflow (its gates passed
     # first). A failed or cancelled gate stops the package. always() is needed so a skipped gate does not skip this job.
     if: always() && (needs.gate.result == 'success' || (needs.gate.result == 'skipped' && github.event_name != 'release' && github.event_name != 'workflow_dispatch'))
+    # (Bug #195) A pre-release Release skips the gate above, and a skipped gate on a release event does not satisfy this
+    # condition, so a release candidate never packs: its package version would be the final release's.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write       # push to GitHub Packages
+      id-token: write       # SLSA-4: the Sigstore identity for the package's provenance attestation
+      attestations: write   # SLSA-4: store the attestation with the repository
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68  # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       # Release tag, called-workflow input or typed-in input -> steps.version, checked
       # against the source version.
@@ -116,7 +125,11 @@ jobs:
           } else {
             $v = $source
           }
-          if ($v -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { Write-Error "Invalid version '$v'"; exit 1 }
+          if ($v -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') {
+            # Bug #195: say what to do with a release-candidate tag instead of only calling it invalid.
+            if ($v -match '^[0-9]+\.[0-9]+\.[0-9]+-') { Write-Error "Version '$v' is a release-candidate tag: mark the GitHub Release as a pre-release (no package is pushed for a candidate)"; exit 1 }
+            Write-Error "Invalid version '$v'"; exit 1
+          }
           if ($v -ne $source) { Write-Error "Requested version $v does not match Directory.Build.props $source"; exit 1 }
           "value=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Publishing GridSim version $v"
@@ -168,9 +181,23 @@ jobs:
             echo "::error::SIGNING_CERT_PFX_BASE64 is set but SIGNING_CERT_PASSWORD is not: set both secrets, or neither for an unsigned package."
             exit 1
           fi
-          pfx="$RUNNER_TEMP/gridsim-signing.pfx"
-          trap 'rm -f "$pfx"' EXIT          # the decoded certificate never outlives this step
-          printf '%s' "$SIGNING_CERT_PFX_BASE64" | base64 -d > "$pfx"
+          # GR-907: the certificate password is never put on a command line (a command line is visible to every
+          # process on the runner and can be logged). This runner is Linux, where there is no Windows-style
+          # certificate store to sign from, so the PFX is decrypted with the password read from the environment
+          # (openssl -passin env:...) into a private, owner-only temporary directory, re-exported with an empty
+          # password, and `dotnet nuget sign` then signs with that passwordless file and no password option at all.
+          # The whole directory is removed when this step ends, whether it succeeds or fails.
+          work="$(mktemp -d "$RUNNER_TEMP/gridsim-sign.XXXXXX")"
+          chmod 700 "$work"
+          trap 'rm -rf "$work"' EXIT        # neither the decoded nor the decrypted certificate outlives this step
+          printf '%s' "$SIGNING_CERT_PFX_BASE64" | base64 -d > "$work/encrypted.pfx"
+          pem="$work/key-and-cert.pem"
+          openssl pkcs12 -in "$work/encrypted.pfx" -passin env:SIGNING_CERT_PASSWORD -nodes -out "$pem" 2>/dev/null \
+             || openssl pkcs12 -legacy -in "$work/encrypted.pfx" -passin env:SIGNING_CERT_PASSWORD -nodes -out "$pem" \
+             || { echo "::error::the signing PFX could not be opened with SIGNING_CERT_PASSWORD (wrong password or a damaged PFX)"; exit 1; }
+          pfx="$work/plain.pfx"
+          openssl pkcs12 -export -in "$pem" -passout pass: -out "$pfx"
+          rm -f "$pem" "$work/encrypted.pfx"
           # The certificate is self-signed (signing/README.md). Trust exactly the committed public certificate for the
           # check: append it to this throwaway runner's NuGet code-signing root bundle (the SDK's trustedroots file on
           # Linux), then verify with the signer pinned by its SHA-256 fingerprint, so no other certificate can pass.
@@ -189,11 +216,20 @@ jobs:
           [[ -f "$bundle" ]] || { echo "::error::NuGet code-signing root bundle not found at $bundle"; exit 1; }
           cat "$cer_pem" >> "$bundle"
           for p in artifacts/*.nupkg; do
-            dotnet nuget sign "$p" --certificate-path "$pfx" --certificate-password "$SIGNING_CERT_PASSWORD" \
+            dotnet nuget sign "$p" --certificate-path "$pfx" \
               --timestamper "$TIMESTAMP_URL" --overwrite
             dotnet nuget verify --all "$p" --certificate-fingerprint "$fp"
             echo "signed and verified (signer SHA-256 $fp): $p"
           done
+
+      # SLSA-4: a signed SLSA build-provenance attestation for the package, made over the exact bytes that are pushed
+      # next (after signing, so the attested digest is the published file's). It records this workflow run, commit and
+      # repository through the run's OIDC identity (Sigstore) and is stored with the repository. A consumer checks it
+      # with `gh attestation verify GridSim.Core.<version>.nupkg -R <owner>/GridSim`. Pinned by WorkflowReleaseGateTests.
+      - name: Attest the package's build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        with:
+          subject-path: 'artifacts/*.nupkg'
 
       # dotnet nuget push doesn't expand wildcards, so enumerate and push each.
       # --skip-duplicate makes re-running for an already-published version a no-op.

@@ -124,6 +124,15 @@ internal static class RocmInterop
     /// <summary>rocblas_status success sentinel (rocblas_status_success == 0). (rocblas-types.h)</summary>
     public const int RocBlasStatusSuccess = 0;
 
+    /// <summary>GR-475: hipErrorOutOfMemory (== 2, alias hipErrorMemoryAllocation). (hip_runtime_api.h)</summary>
+    public const int HipErrorOutOfMemory = 2;
+
+    /// <summary>GR-475: rocsparse_status_memory_error (== 5), rocSPARSE's allocation failure. (rocsparse-types.h)</summary>
+    public const int RocSparseStatusMemoryError = 5;
+
+    /// <summary>GR-475: rocblas_status_memory_error (== 5), rocBLAS's allocation failure. (rocblas-types.h)</summary>
+    public const int RocBlasStatusMemoryError = 5;
+
     /// <summary>
     /// hipsolverOperation_t - matrix operation (no-transpose / transpose / conjugate). hipSOLVER
     /// follows the netlib/rocBLAS char codes: 'N'=111, 'T'=112, 'C'=113 (unlike cuSOLVER's 0/1/2).

@@ -87,7 +87,11 @@ public sealed record HeadlineDto(
     // Q10 (2026-10): the VOLTAGE ALERT lamp is judged on the lowest and highest bus voltage (the WPF rule,
     // StatusLampRules.IsVoltageAlert), not the average, which hides a single bus out of band.
     double MinVoltagePu,
-    double MaxVoltagePu);
+    double MaxVoltagePu,
+    // GR-240: true when NO power flow was run for this frame (a raw replay tick). Its Converged is then false and its
+    // voltages are placeholders, and the status lamp reads NO SOLVE rather than NOT CONVERGED. Defaults to false so every
+    // solved frame (and every existing construction) is unchanged.
+    bool NotSolved = false);
 
 /// <summary>
 /// One solved instant, projected for the browser (type <c>"state"</c>). Carries the shared headline plus the

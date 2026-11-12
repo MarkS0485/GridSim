@@ -28,7 +28,25 @@ public sealed class PowerFlowResult
 {
     public required bool Converged { get; init; }
     public required int Iterations { get; init; }
+
+    /// <summary>The largest bus power mismatch of the last iteration (pu). For a state estimate projected into this shape
+    /// (<see cref="Estimation.EstimationResult.ToPowerFlowResult"/>) there was no power-flow solve and so no mismatch:
+    /// the slot then holds the estimator's last state-update norm, the same number as <see cref="StateUpdateNorm"/>
+    /// (GR-081). A caller that needs to tell the two apart reads <see cref="EstimatorStatus"/>: non-null means the slot
+    /// is a state update.</summary>
     public required double MaxMismatch { get; init; }
+
+    /// <summary>GR-081 (November 2026): the estimator's own terminal status when this result is a projected state
+    /// estimate, so an unobservable or infeasible estimate is not read through <see cref="Status"/> alone (which, having
+    /// only the power-flow values, shows them as NonFinite and MaxIterations). Null for every power-flow solve and for a
+    /// state read from disk or the bridge. Set only by <see cref="Estimation.EstimationResult.ToPowerFlowResult"/>;
+    /// informational, it changes no solved number and no existing status.</summary>
+    public Estimation.EstimationStatus? EstimatorStatus { get; internal set; }
+
+    /// <summary>GR-081: the estimator's last state-update norm (the quantity its convergence test compares with the
+    /// tolerance) when this result is a projected state estimate; null for every power-flow solve. It equals
+    /// <see cref="MaxMismatch"/> for a projection, carried here under its own name.</summary>
+    public double? StateUpdateNorm { get; internal set; }
 
     /// <summary>Richer outcome than the <see cref="Converged"/> bool: distinguishes a clean convergence from
     /// hitting the iteration cap versus a non-finite (NaN/Inf) blow-up. When a producer does not set it (a presolved

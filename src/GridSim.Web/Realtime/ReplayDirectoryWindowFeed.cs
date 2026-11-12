@@ -33,6 +33,39 @@ public sealed class ReplayDirectoryWindowFeed : IRealtimeWindowFeed
         get { lock (_skippedGate) return _skipped.ToArray(); }
     }
 
+    // Bug #175: every window file handed to the estimator, by name and the SHA-256 of the bytes it was loaded from, in
+    // the order consumed. The audit entry used to carry a hash of the whole folder taken once at start-up, over every
+    // file at any depth, while this feed reads only the top-level *.json files, lazily: a window added or changed after
+    // start-up was estimated but not covered, and a nested or non-JSON file changed the hash without being read.
+    private readonly List<(string Name, string Sha256)> _consumed = new();
+
+    /// <summary>Bug #175: the windows consumed so far, by file name and content hash (a snapshot, under the lock).</summary>
+    public IReadOnlyList<(string Name, string Sha256)> Consumed
+    {
+        get { lock (_skippedGate) return _consumed.ToArray(); }
+    }
+
+    /// <summary>Bug #175: one audit input, <c>windows-consumed</c>, hashing the consumed list (one line per window:
+    /// file name, a tab, its SHA-256, a line feed). Null before any window was consumed.</summary>
+    public GridSim.Core.Diagnostics.AuditInput? ConsumedInput
+    {
+        get
+        {
+            (string Name, string Sha256)[] list = Consumed.ToArray();
+            if (list.Length == 0) return null;
+            var sb = new System.Text.StringBuilder();
+            foreach ((string name, string sha) in list) sb.Append(name).Append('\t').Append(sha).Append('\n');
+            return GridSim.Core.Diagnostics.AuditInput.OfText("windows-consumed", sb.ToString());
+        }
+    }
+
+    // SHA-256 of a file's bytes as 64 upper-case hex digits (the audit log's form).
+    private static string FileSha256(string path)
+    {
+        using FileStream s = File.OpenRead(path);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(s));
+    }
+
     /// <summary>Lazily yield each measurement set in the directory, in filename order.</summary>
     public IEnumerable<MeasurementSet> Windows()
     {
@@ -49,12 +82,26 @@ public sealed class ReplayDirectoryWindowFeed : IRealtimeWindowFeed
             // engine alone. A window newer than the horizon, or an undated one (D-DOC-061), is now refused at load: it
             // is skipped and listed with the reason (surfaced by GET /api/realtime), never estimated. Before, an undated
             // window reached the engine, which threw and faulted the hosted service.
-            try { set = MeasurementSet.Load(file, utcNow: null); }
+            // Bug #175: the file is hashed just before and just after it is loaded; a file that changed while it was
+            // read is skipped (named, like a malformed one), so the recorded hash is the content that was estimated.
+            string before, after;
+            try
+            {
+                before = FileSha256(file);
+                set = MeasurementSet.Load(file, utcNow: null);
+                after = FileSha256(file);
+            }
             catch (Exception ex)
             {
                 lock (_skippedGate) _skipped.Add($"{Path.GetFileName(file)}: {ex.Message}");
                 continue;
             }
+            if (!string.Equals(before, after, StringComparison.Ordinal))
+            {
+                lock (_skippedGate) _skipped.Add($"{Path.GetFileName(file)}: the file changed while it was being read; skipped");
+                continue;
+            }
+            lock (_skippedGate) _consumed.Add((Path.GetFileName(file), after));
             yield return set;
         }
     }

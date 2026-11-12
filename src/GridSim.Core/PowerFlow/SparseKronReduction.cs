@@ -81,6 +81,7 @@ public static class SparseKronReduction
         // A cell outside the matrix is a caller error (the dense array could not have held it): fail loud.
         bool allFinite = true;
         double aNorm = 0.0;
+        var rowFloor = new double[n];   // GR-044: each row's largest magnitude, then its pivot floor (the dense code's values)
         foreach (KeyValuePair<(int Row, int Col), Complex> cell in cells)
         {
             (int r, int c) = cell.Key;
@@ -91,12 +92,13 @@ public static class SparseKronReduction
             // The dense code takes the largest magnitude over every entry; the entries without a cell are zeros.
             double mag = v.Magnitude;
             if (mag > aNorm) aNorm = mag;
+            if (mag > rowFloor[r]) rowFloor[r] = mag;
         }
         // Any NaN or infinity in the input: the proof does not cover it, so the dense code answers.
         if (!allFinite) return DenseReduce(n, cells, keepIndices);
-        double pivotFloor = GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm);   // the dense code's floor, same double
+        GridSim.Core.Numerics.NumericTolerances.ToRowPivotFloors(rowFloor, aNorm);   // the dense code's floors, same doubles
 
-        Complex[,]? reduced = TryReduceFinite(n, cells, keepIndices, keepSet, pivotFloor, aNorm);
+        Complex[,]? reduced = TryReduceFinite(n, cells, keepIndices, keepSet, rowFloor, aNorm);
         return reduced ?? DenseReduce(n, cells, keepIndices);
     }
 
@@ -115,7 +117,7 @@ public static class SparseKronReduction
     /// the dense code). Throws the dense code's exception for a near-singular pivot.
     /// </summary>
     private static Complex[,]? TryReduceFinite(int n, IReadOnlyDictionary<(int Row, int Col), Complex> cells,
-        IReadOnlyList<int> keepIndices, HashSet<int> keepSet, double pivotFloor, double aNorm)
+        IReadOnlyList<int> keepIndices, HashSet<int> keepSet, double[] rowFloor, double aNorm)
     {
         // ---- The symmetric pattern: every cell, its mirror and every diagonal, each position once per row. ----
         var neighbours = new List<int>[n];
@@ -177,8 +179,8 @@ public static class SparseKronReduction
 
             // A non-finite pivot is outside the proof: let the dense code answer (it does not stop on it either).
             if (!IsFinite(pivot)) return null;
-            if (pivot.Magnitude <= pivotFloor)
-                throw new InvalidOperationException(KronReduction.NearSingularPivotMessage(k, pivot.Magnitude, pivotFloor, aNorm));
+            if (pivot.Magnitude <= rowFloor[k])
+                throw new InvalidOperationException(KronReduction.NearSingularPivotMessage(k, pivot.Magnitude, rowFloor[k], aNorm));
 
             // Every row i with a stored (i,k) (the columns of row k, by symmetry). Rows outside are skipped by the dense
             // code too: their w[i,k] is (+0, +0).

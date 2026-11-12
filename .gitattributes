@@ -1,3 +1,7 @@
 # Font files are binary: never convert line endings in them (the app bundles TrueType fonts, 2.1.001).
 *.ttf binary
 *.otf binary
+# The container build files are shell-adjacent and read by Linux tooling: keep them LF on every checkout (GR-420).
+# They are not in the bundled-data manifest (data/bundled.sha256), so this does not change any recorded hash.
+Dockerfile text eol=lf
+.dockerignore text eol=lf

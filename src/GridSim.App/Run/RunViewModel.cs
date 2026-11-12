@@ -111,7 +111,7 @@ public sealed class RunViewModel : ObservableObject, IRunActions
         TripDashboard = tripDashboard;
         if (bridgeSettings is not null)
         {
-            Bridge = new BridgeSession(bridgeSettings, new BridgeDisplay(this));
+            Bridge = new BridgeSession(bridgeSettings, new BridgeDisplay(this), _licence);   // bug #198: gated
             // The play/pause state shown follows the bridge client: while one is connected PAUSE holds its display; once it
             // is gone (a failed connect) the button is the local toggle again, as in WPF.
             Bridge.PropertyChanged += (_, e) =>
@@ -563,6 +563,9 @@ public sealed class RunViewModel : ObservableObject, IRunActions
             // Slice 1.8, WPF SwitchTo: "_ = DisposeBridgeAsync()", leaving any live bridge behind for a local model or a
             // run, before the load and whether or not it then succeeds. The client is detached at once (no late frame
             // reaches the views) and its socket closes in the background.
+            // NCSC CAF B5: an automatic reconnect in progress ends too, even while the stream is down and no client is
+            // active (IsActive false), so it can never bring the bridge back over the local case.
+            Bridge?.StopAutoReconnect();
             if (Bridge is { IsActive: true } leaving) _ = leaving.LeaveAsync();
             FeedLoading?.Invoke(this, EventArgs.Empty);   // Phase 1.4: WPF SwitchTo's HideHud / ClearBridgeStatus point
             return source.ReplayDir is not null ? LoadReplay(source) : LoadLive(source);
@@ -615,7 +618,7 @@ public sealed class RunViewModel : ObservableObject, IRunActions
     // WPF LoadReplay.
     private string? LoadReplay(ModelSource s)
     {
-        ReplayLoadResult replay = Host.LoadReplay(s.ReplayDir!);
+        ReplayLoadResult replay = Host.LoadReplay(s.ReplayDir!, _licence);   // bug #198: through the licence gate
         if (!replay.Loaded)
         {
             LoadError = replay.Refusal;

@@ -335,16 +335,20 @@ public sealed class BackwardForwardSweep : IPowerFlowSolver
                 int parent = br[k].F == bus ? br[k].T : br[k].F;
                 zPath[bus] = zPath[parent] + Complex.One / br[k].Y;
             }
+            // GR-501 (November 2026): the units at each bus are indexed once (model order kept within each bus), instead
+            // of scanning the whole fleet for every PV bus (O(PV buses x units)). The sums below add the same units in the
+            // same order starting from 0, so qn / qmin / qmax are bit-for-bit what the per-bus scan gave.
+            List<Generator>?[] unitsAt = GeneratorsByBus(model, index, n);
             for (int i = 0; i < n; i++)
             {
                 if (i == slack || model.Buses[i].Type != BusType.Pv) continue;
                 double qn = 0, qmin = 0, qmax = 0; bool hasGen = false;
-                foreach (Generator g in model.Generators)
-                {
-                    if (!index.TryGetValue(g.Bus, out int gi) || gi != i) continue;
-                    hasGen = true;
-                    qn += g.Qg; qmin += g.Qmin; qmax += g.Qmax;
-                }
+                if (unitsAt[i] is { } units)
+                    foreach (Generator g in units)
+                    {
+                        hasGen = true;
+                        qn += g.Qg; qmin += g.Qmin; qmax += g.Qmax;
+                    }
                 if (!hasGen) continue;                     // no reactive source => can't regulate; leave as PQ
                 // The setpoint by the one shared rule (R037): the last generator listed at the bus, as Newton. This
                 // used to take the HIGHEST Vg, so the engines disagreed whenever co-located units differed.
@@ -522,6 +526,7 @@ public sealed class BackwardForwardSweep : IPowerFlowSolver
         int n = model.BusCount;
         var index = new Dictionary<int, int>(n);
         for (int i = 0; i < n; i++) index[model.Buses[i].Id] = i;
+        List<Generator>?[] gensAt = GeneratorsByBus(model, index, n);   // GR-501
 
         var vm = new double[n];
         var vaDeg = new double[n];
@@ -589,14 +594,13 @@ public sealed class BackwardForwardSweep : IPowerFlowSolver
                 // Power mismatch vs the specified injection (gen - load), p.u. A voltage-regulating PV
                 // bus solves for its own reactive output (like the slack), so its Q isn't a spec to
                 // check against - only the real-power balance is.
-                bool pvRegulated = b.Type == BusType.Pv &&
-                    model.Generators.Any(g => index.TryGetValue(g.Bus, out int gi) && gi == i);
+                bool pvRegulated = b.Type == BusType.Pv && gensAt[i] is { Count: > 0 };
                 // The load drawn at the solved voltage (exactly Pd/Qd for a constant-power bus; R065).
                 (double pLoad, double qLoad) = LoadAtVoltage.Mw(b, vm[i]);
-                double dp = Math.Abs(s.Real - (SpecGenP(model, index, i) - pLoad));
+                double dp = Math.Abs(s.Real - (SpecGenP(gensAt[i]) - pLoad));
                 double mis = dp;
                 if (!pvRegulated)
-                    mis = Math.Max(dp, Math.Abs(s.Imaginary - (SpecGenQ(model, index, i) - qLoad)));
+                    mis = Math.Max(dp, Math.Abs(s.Imaginary - (SpecGenQ(gensAt[i]) - qLoad)));
                 maxMis = Math.Max(maxMis, mis / model.BaseMva);
             }
         }
@@ -630,10 +634,34 @@ public sealed class BackwardForwardSweep : IPowerFlowSolver
         };
     }
 
-    private static double SpecGenP(GridModel m, Dictionary<int, int> index, int busIdx)
-        => m.Generators.Where(g => index.TryGetValue(g.Bus, out int gi) && gi == busIdx).Sum(g => g.Pg);
-    private static double SpecGenQ(GridModel m, Dictionary<int, int> index, int busIdx)
-        => m.Generators.Where(g => index.TryGetValue(g.Bus, out int gi) && gi == busIdx).Sum(g => g.Qg);
+    /// <summary>
+    /// GR-501: the in-service generators at each bus index, each list in model order, built once per result instead of
+    /// scanning the whole fleet for every bus (O(buses x units)). A unit on a bus the model does not have is left out, as
+    /// the old per-bus filter left it out.
+    /// </summary>
+    private static List<Generator>?[] GeneratorsByBus(GridModel m, Dictionary<int, int> index, int n)
+    {
+        var at = new List<Generator>?[n];
+        foreach (Generator g in m.Generators)
+            if (index.TryGetValue(g.Bus, out int gi)) (at[gi] ??= new List<Generator>()).Add(g);
+        return at;
+    }
+
+    // GR-501: the same sums as before (Enumerable.Sum over the bus's units in model order, starting from 0.0), written as
+    // the loop it is, so every specified injection, and every mismatch, is bit-for-bit unchanged.
+    private static double SpecGenP(List<Generator>? units)
+    {
+        double sum = 0.0;
+        if (units is not null) foreach (Generator g in units) sum += g.Pg;
+        return sum;
+    }
+
+    private static double SpecGenQ(List<Generator>? units)
+    {
+        double sum = 0.0;
+        if (units is not null) foreach (Generator g in units) sum += g.Qg;
+        return sum;
+    }
 
     private static PowerFlowResult NonRadial(GridModel model, string why)
     {

@@ -26,6 +26,19 @@ public sealed class HealthProbe
 {
     private readonly ServiceLevelObjective _slo;
 
+    // Bug #193 (2026-11-01): every breach message is formatted with this provider, the invariant culture with the percent
+    // written "99.0%" (no space, the form the messages always had on an English machine). They used to be formatted in
+    // the current culture, so a de-DE host wrote "99,0 %" and the same run gave different bytes per machine.
+    private static readonly System.Globalization.NumberFormatInfo Format = MakeFormat();
+
+    private static System.Globalization.NumberFormatInfo MakeFormat()
+    {
+        var f = (System.Globalization.NumberFormatInfo)System.Globalization.NumberFormatInfo.InvariantInfo.Clone();
+        f.PercentPositivePattern = 1;   // n%
+        f.PercentNegativePattern = 1;   // -n%
+        return System.Globalization.NumberFormatInfo.ReadOnly(f);
+    }
+
     /// <summary>Create a probe for a given objective (validated up front).</summary>
     public HealthProbe(ServiceLevelObjective? slo = null)
     {
@@ -53,24 +66,24 @@ public sealed class HealthProbe
 
         var breaches = new List<string>();
         if (processed > 0 && convergedFraction < _slo.MinConvergedFraction)
-            breaches.Add($"converged fraction {convergedFraction:P1} is below the objective {_slo.MinConvergedFraction:P1}");
+            breaches.Add(string.Create(Format, $"converged fraction {convergedFraction:P1} is below the objective {_slo.MinConvergedFraction:P1}"));
         if (processed > 0 && rejectedFreshFraction > _slo.MaxRejectedFreshFraction)
-            breaches.Add($"rejected-too-fresh fraction {rejectedFreshFraction:P1} exceeds the objective {_slo.MaxRejectedFreshFraction:P1}");
+            breaches.Add(string.Create(Format, $"rejected-too-fresh fraction {rejectedFreshFraction:P1} exceeds the objective {_slo.MaxRejectedFreshFraction:P1}"));
         // Windows that never reached the estimator are evidence too. A run in which NOTHING was processed because every
         // window was rejected as too fresh or failed (malformed) used to report healthy with neutral fractions; and
         // failed windows were never read at all. Failed windows count against the converged objective: the usable
         // fraction is converged / (processed + failed).
         int failed = summary.WindowsFailed, fresh = summary.WindowsRejectedFresh;
         if (processed == 0 && (fresh > 0 || failed > 0))
-            breaches.Add($"no window was processed ({fresh} rejected as too fresh, {failed} failed)");
+            breaches.Add(string.Create(Format, $"no window was processed ({fresh} rejected as too fresh, {failed} failed)"));
         else if (processed > 0 && failed > 0)
         {
             double usable = (double)summary.WindowsConverged / (processed + failed);
             if (usable < _slo.MinConvergedFraction)
-                breaches.Add($"{failed} window(s) failed; converged / (processed + failed) {usable:P1} is below the objective {_slo.MinConvergedFraction:P1}");
+                breaches.Add(string.Create(Format, $"{failed} window(s) failed; converged / (processed + failed) {usable:P1} is below the objective {_slo.MinConvergedFraction:P1}"));
         }
         if (worstWindowLatency is TimeSpan latency && latency > _slo.MaxWindowLatency)
-            breaches.Add($"worst window latency {latency.TotalMilliseconds:0} ms exceeds the objective {_slo.MaxWindowLatency.TotalMilliseconds:0} ms");
+            breaches.Add(string.Create(Format, $"worst window latency {latency.TotalMilliseconds:0} ms exceeds the objective {_slo.MaxWindowLatency.TotalMilliseconds:0} ms"));
 
         return new HealthReport(breaches.Count == 0, breaches, convergedFraction, rejectedFreshFraction, worstWindowLatency);
     }

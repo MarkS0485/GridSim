@@ -284,6 +284,14 @@ public class HumanScaleModel : ObservableModel
         double refDeg = southDegs.Count > 0 ? southDegs.Average()
                       : angleByBus.Count > 0 ? angleByBus.Values.Average() : 0.0;
 
+        // Bug #181 (2026-11-01): every angle read-out is written with the invariant culture, like every other read-out
+        // (cf. #22); "+12,3 deg" used to appear on a de-DE machine. And nothing is computed back from the display text:
+        // the machine order and the corridor gap used to parse "+12.3 deg" back (culture-sensitive, and rounded to
+        // 0.1 deg), so the corridor carried up to 0.1 deg of rounding and machines with leads within 0.05 deg reordered.
+        // Both now use the exact angles below.
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        var regionMeans = new List<double>();   // the exact mean of each band, parallel to Regions
+
         // ---- regional gauge: mean rotor lead per band, vs the south ----
         Regions.Clear();
         for (int band = 0; band < labels.Length; band++)
@@ -295,11 +303,12 @@ public class HumanScaleModel : ObservableModel
             // the same order, on the row the front end makes (CreateRegionRow), before it is added.
             TwistRegionRowModel region = CreateRegionRow();
             region.Label = labels[band];
-            region.DegText = $"{mean:+0.0;-0.0;0.0} deg";
-            region.Detail = $"{degs.Count} buses  *  spans {degs.Min():+0;-0;0} to {degs.Max():+0;-0;0} deg";
+            region.DegText = string.Create(inv, $"{mean:+0.0;-0.0;0.0} deg");
+            region.Detail = string.Create(inv, $"{degs.Count} buses  *  spans {degs.Min():+0;-0;0} to {degs.Max():+0;-0;0} deg");
             region.BarWidth = Math.Min(1.0, Math.Abs(mean) / PoleSlipDeg) * RegionTrack;
             region.BarColour = ColourRamps.Loading(Math.Abs(mean) / 60.0);
             Regions.Add(region);
+            regionMeans.Add(mean);
         }
 
         // ---- individual synchronous machines, ranked by lead. For 2-pole sets, this is real rotor twist. ----
@@ -313,7 +322,13 @@ public class HumanScaleModel : ObservableModel
             if (!angleByBus.TryGetValue(g.Bus, out double a)) continue;
             mach.Add(($"{gi}:{g.Bus}:{g.Name}", g.Name ?? $"{UiFuels.Classify(g.Type).Name}@{g.Bus}", a - refDeg, g.Pg));
         }
-        mach.Sort((a, b) => b.Deg.CompareTo(a.Deg));   // most-advanced first (List.Sort is not stable; ties are equal leads)
+        // Most-advanced first. Bug #181: equal leads are ordered by the row key (ordinal), so the order is the same on
+        // every run (List.Sort is not stable, so ties used to land in any order).
+        mach.Sort((a, b) =>
+        {
+            int byDeg = b.Deg.CompareTo(a.Deg);
+            return byDeg != 0 ? byDeg : string.CompareOrdinal(a.Key, b.Key);
+        });
         double machMax = Math.Max(30.0, mach.Count > 0 ? mach.Max(m => Math.Abs(m.Deg)) : 30.0);
 
         var seen = new HashSet<string>();
@@ -326,22 +341,24 @@ public class HumanScaleModel : ObservableModel
                 _machineByKey[key] = row;
                 Machines.Add(row);
             }
-            row.DegText = $"{deg:+0.0;-0.0;0.0} deg";
-            row.Detail = $"{mw:N0} MW";
+            row.DegText = string.Create(inv, $"{deg:+0.0;-0.0;0.0} deg");
+            row.Detail = string.Create(inv, $"{mw:N0} MW");
             row.BarWidth = Math.Min(1.0, Math.Abs(deg) / machMax) * 150.0;
             row.BarColour = ColourRamps.Loading(Math.Abs(deg) / 60.0);
         }
         for (int i = Machines.Count - 1; i >= 0; i--)
             if (!seen.Contains(Machines[i].Key)) { _machineByKey.Remove(Machines[i].Key); Machines.RemoveAt(i); }
-        // keep most-advanced first
-        var ordered = Machines.OrderByDescending(m => ParseDeg(m.DegText)).ToList();
+        // keep most-advanced first: the exact order of 'mach' (bug #181: not the parsed, rounded display text)
+        var rank = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < mach.Count; i++) rank[mach[i].Key] = i;
+        var ordered = Machines.OrderBy(m => rank[m.Key]).ToList();
         for (int i = 0; i < ordered.Count; i++)
             if (!ReferenceEquals(Machines[i], ordered[i])) Machines.Move(Machines.IndexOf(ordered[i]), i);
 
         // ---- headline: total end-to-end wind-up, and the widest angle across ONE branch against the 90-degree peak ----
         double lo2 = angleByBus.Values.Min() - refDeg, hi2 = angleByBus.Values.Max() - refDeg;
         double endToEnd = hi2 - lo2;
-        TwistTotal = $"{endToEnd:F1} deg";
+        TwistTotal = string.Create(inv, $"{endToEnd:F1} deg");
         // The sin(delta) transfer peak at 90 degrees applies to the angle across ONE series reactance, not to a bus's
         // angle against the southern mean through many branches: a meshed case with 60 degrees end to end can have every
         // branch far from its limit. So the read-out takes the largest angle across a single in-service branch (from-end
@@ -359,13 +376,13 @@ public class HumanScaleModel : ObservableModel
         double pct = worst / PoleSlipDeg;
         TwistPct = Math.Min(1.0, pct) * 100.0;
         TwistBarPx = Math.Min(1.0, pct) * RegionTrack;   // fills toward the 90 deg redline on a 230px track
-        TwistToSlip = $"widest angle across one branch {worst:F1} deg ({worstBranch}): {pct * 100:F0}% of the 90 deg sin(delta) peak  *  {PoleSlipDeg - worst:F0} deg of headroom";
+        TwistToSlip = string.Create(inv, $"widest angle across one branch {worst:F1} deg ({worstBranch}): {pct * 100:F0}% of the 90 deg sin(delta) peak  *  {PoleSlipDeg - worst:F0} deg of headroom");
         TwistColour = ColourRamps.Loading(worst / 60.0);
 
         if (mach.Count > 0)
         {
             (string Key, string Name, double Deg, double Mw) top = mach[0];
-            TwistLead = $"{top.Name} is furthest ahead, its rotor held {top.Deg:+0.0;-0.0} deg in front of the south while it pushes {top.Mw:N0} MW down the shaft.";
+            TwistLead = string.Create(inv, $"{top.Name} is furthest ahead, its rotor held {top.Deg:+0.0;-0.0} deg in front of the south while it pushes {top.Mw:N0} MW down the shaft.");
         }
         else TwistLead = "No synchronous machines online to twist the shaft.";
 
@@ -375,16 +392,13 @@ public class HumanScaleModel : ObservableModel
             double best = 0; string a = "", b = "";
             for (int i = 0; i < Regions.Count - 1; i++)
             {
-                double gap = ParseDeg(Regions[i].DegText) - ParseDeg(Regions[i + 1].DegText);
+                double gap = regionMeans[i] - regionMeans[i + 1];   // bug #181: exact, not parsed from the 0.1 deg text
                 if (Math.Abs(gap) > Math.Abs(best)) { best = gap; a = Regions[i].Label; b = Regions[i + 1].Label; }
             }
-            TwistCorridor = $"The working twist sits between {a} and {b}: {Math.Abs(best):F1} deg of wind-up, and every megawatt crossing it is carried by that angle.";
+            TwistCorridor = string.Create(inv, $"The working twist sits between {a} and {b}: {Math.Abs(best):F1} deg of wind-up, and every megawatt crossing it is carried by that angle.");
         }
         else TwistCorridor = "-";
     }
-
-    private static double ParseDeg(string s) =>
-        double.TryParse(s.EndsWith(" deg", StringComparison.Ordinal) ? s[..^4] : s, out double d) ? d : 0.0;   // N310: the text is "+12.3 deg" (it was "+12.3" and a degree sign)
 
     // GB latitude bands, north -> south, matched on the bus name keywords the GB models actually use.
     private static readonly (string Label, string[] Keys)[] GbBands =

@@ -148,7 +148,15 @@ public static class EstateSso
 
             var identity = new ClaimsIdentity(check.Claims, IdentityConstants.ApplicationScheme, ClaimTypes.Name, ClaimTypes.Role);
             await ctx.SignInAsync(IdentityConstants.ApplicationScheme, new ClaimsPrincipal(identity),
-                new AuthenticationProperties { IsPersistent = true });
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    // GR-732: the sign-in time, kept inside the cookie so the absolute cap (Auth:AbsoluteDays) counts
+                    // from here however often the sliding window renews the cookie. The roles in the principal are the
+                    // ones the authority put in the ticket just now, so they are re-read at every sign-in.
+                    Items = { [GridSim.Web.Site.SessionCookieSettings.SignedInItem] =
+                        GridSim.Web.Site.SessionCookieSettings.FormatStamp(DateTimeOffset.UtcNow) },
+                });
             return Results.LocalRedirect(SafeLocal(r));
         }).AllowAnonymous();   // the visitor is not yet authenticated ON THIS domain - must be reachable
 

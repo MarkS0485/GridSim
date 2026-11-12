@@ -48,6 +48,10 @@ public sealed class DistrustedSources
     /// <summary>The distrusted source names, as given.</summary>
     public IReadOnlyCollection<string> Sources => _sources;
 
+    /// <summary>The factor a distrusted row's sigma is multiplied by (greater than 1; read by the audit reason text,
+    /// CAF-9 / gap B2).</summary>
+    public double SigmaInflation => _inflation;
+
     /// <summary>True when no source is distrusted (so <see cref="Apply(MeasurementSet)"/> is a no-op).</summary>
     public bool IsEmpty => _sources.Count == 0;
 

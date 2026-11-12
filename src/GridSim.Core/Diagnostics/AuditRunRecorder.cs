@@ -65,6 +65,11 @@ public sealed class AuditRunRecorder
     /// signing key). Unused when neither key is configured.</summary>
     public string SignaturePath { get; }
 
+    /// <summary>GR-374 (November 2026): set when the anchor's signature verified but is the older v1 form, which binds the
+    /// entry count and head hash only (no log identity, no signing time); null otherwise. The run's next anchor signature
+    /// (with a signing key) is written in the v2 form, so the warning is shown once per log.</summary>
+    public string? AnchorSignatureWarning { get; private init; }
+
     /// <summary>True when the anchor is signed after every append (a signing key was configured).</summary>
     public bool SignsAnchor => _options.AnchorSigningKey is not null;
 
@@ -174,6 +179,22 @@ public sealed class AuditRunRecorder
                 throw new AuditLogTamperException(Path.GetFullPath(path), expected.Count, why);
         }
         AuditLogWriter log = AuditLogWriter.Open(path, expected, options.Sinks);
+        // GR-374: a v2 signature also binds the log's first entry and its signing time. The first entry is known only once
+        // the log is open, so the strict check runs here, on the signature already checked above for count and head.
+        string? signatureWarning = null;
+        if (options.AnchorVerificationKey is System.Security.Cryptography.ECDsa strictVerifier && expected is not null)
+        {
+            string sigText = SignedAuditAnchor.ReadIfExists(signaturePath) ?? "";
+            if (!SignedAuditAnchor.VerifyStrict(expected, log.FirstHash, sigText, strictVerifier, out string whyStrict,
+                    out bool legacyV1, out _))
+            {
+                log.Dispose();
+                throw new AuditLogTamperException(Path.GetFullPath(path), expected.Count, whyStrict);
+            }
+            if (legacyV1)
+                signatureWarning = $"the anchor signature '{signaturePath}' is the older v1 form, which binds no log identity or " +
+                    "signing time; it verified, and this run's signature replaces it with the v2 form when a signing key is set";
+        }
         bool missing = expected is null && log.Count > 0;
         if (missing && options.AnchorVerificationKey is not null)
         {
@@ -182,7 +203,10 @@ public sealed class AuditRunRecorder
             throw new AuditLogTamperException(Path.GetFullPath(path), entries,
                 $"the log has entries but no anchor file '{anchorFile}', so its signature cannot be checked");
         }
-        return new AuditRunRecorder(log, actor, action, provenance, anchorFile, missing, options, signaturePath);
+        return new AuditRunRecorder(log, actor, action, provenance, anchorFile, missing, options, signaturePath)
+        {
+            AnchorSignatureWarning = signatureWarning,
+        };
     }
 
     // Rewrite the anchor after an append (caller holds _gate). A failure is kept, not thrown: the entry is already
@@ -195,7 +219,7 @@ public sealed class AuditRunRecorder
             AuditAnchorFile.Write(AnchorPath, anchor);
             // Sign the anchor just written, so the signature always names the current anchor.
             if (_options.AnchorSigningKey is System.Security.Cryptography.ECDsa signer)
-                SignedAuditAnchor.Write(SignaturePath, anchor, signer);
+                SignedAuditAnchor.WriteV2(SignaturePath, anchor, _log.FirstHash, DateTimeOffset.UtcNow, signer);   // GR-374
             AnchorWriteError = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
@@ -220,6 +244,40 @@ public sealed class AuditRunRecorder
                     throw new ArgumentException($"Two inputs are both named '{input.Name}'.", nameof(input));
             _inputs.Add(input);
         }
+    }
+
+    /// <summary>
+    /// GR-851 (November 2026): check that a recorded input still has the hash it was recorded with, after the run has
+    /// loaded it. An input is hashed on one read and loaded on another, so a file replaced in between used to be recorded
+    /// with the OLD hash, naming data the run never used. A host calls this once the input is loaded: if the content (a
+    /// file, or every file of a folder, as <see cref="InputForArgument"/> hashes it) differs from the recorded hash, the
+    /// returned text says so and the host refuses the run; a replacement in the window between the two reads is then
+    /// always caught. Null when unchanged. <paramref name="name"/> is the name the input was recorded under (a bundled
+    /// case name recorded as <c>&lt;name&gt;-id</c> is found too, and never changes). Throws when no such input was
+    /// recorded, a programming error.
+    /// </summary>
+    public string? InputChangedSinceRecorded(string name, string argument)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentException.ThrowIfNullOrWhiteSpace(argument);
+        AuditInput? recorded;
+        lock (_gate)
+            recorded = _inputs.FirstOrDefault(i => i.Name == name) ?? _inputs.FirstOrDefault(i => i.Name == name + "-id");
+        if (recorded is null)
+            throw new InvalidOperationException($"No input named '{name}' has been recorded in this run, so it cannot be checked.");
+        AuditInput now;
+        try
+        {
+            now = InputForArgument(name, argument);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"input '{name}' ({argument}) could not be read again after it was loaded ({ex.Message}), so the audit " +
+                   "log cannot show that the recorded hash names the data this run used (GR-851).";
+        }
+        if (now.Name == recorded.Name && now.Sha256Hex == recorded.Sha256Hex) return null;
+        return $"input '{name}' ({argument}) changed while the run was reading it: recorded SHA-256 {recorded.Sha256Hex}, " +
+               $"now {now.Sha256Hex}. The run is refused because the audit log would name data it did not use (GR-851).";
     }
 
     /// <summary>
@@ -274,6 +332,68 @@ public sealed class AuditRunRecorder
             _securityEvents++;
             WriteAnchor();
             return entry;
+        }
+    }
+
+    /// <summary>
+    /// True once <see cref="Finish"/> has run (or <see cref="AppendSecurityEvent"/> has closed its short-lived
+    /// recorder): the log is closed, and <see cref="RecordSecurityEvent"/> would throw. A host whose run recorder
+    /// finishes before the host stops (the web host's resident estimator runs once at start-up) reads this to decide
+    /// whether a later security event can still go through the run's open log or needs
+    /// <see cref="AppendSecurityEvent"/>.
+    /// </summary>
+    public bool IsFinished
+    {
+        get { lock (_gate) return _finished; }
+    }
+
+    /// <summary>
+    /// B2 (November 2026): record ONE security event in the log at <paramref name="path"/> when no run holds it open,
+    /// for example an access denial the web host refuses after its resident estimator's run has finished and closed
+    /// the log. The log is opened exactly as <see cref="Start(string, string, string, ProvenanceTag, string?, AuditRecorderOptions)"/>
+    /// opens it (verified against its anchor, and against the anchor's signature when a verification key is
+    /// configured), the event is written through <see cref="RecordSecurityEvent"/> (so the attached sinks, the
+    /// forwarder and the incident router, see it as soon as it is durable, and the anchor is rewritten and re-signed),
+    /// and the log is closed again WITHOUT a run entry: a security event recorded on its own is not a run.
+    ///
+    /// <para>Fail loud: every refusal <see cref="Start(string, string, string, ProvenanceTag, string?, AuditRecorderOptions)"/>
+    /// makes (a tampered or truncated log, a log another writer holds, a missing directory) is thrown to the caller,
+    /// who must report it; nothing is written in that case.</para>
+    /// </summary>
+    /// <param name="path">The audit log.</param>
+    /// <param name="actor">Who records the event (the same actor the host's run entries carry).</param>
+    /// <param name="provenance">The trust class recorded with the entry.</param>
+    /// <param name="anchorPath">The anchor file, or null for <c>&lt;log&gt;.anchor</c>.</param>
+    /// <param name="options">The same sinks and anchor keys the host's run recorder was started with.</param>
+    /// <param name="kind">What was detected.</param>
+    /// <param name="reason">One line, secret-free.</param>
+    /// <param name="severity">An explicit severity, or null for the kind's baseline.</param>
+    /// <returns>The entry as written.</returns>
+    public static AuditLogEntry AppendSecurityEvent(string path, string actor, ProvenanceTag provenance, string? anchorPath,
+        AuditRecorderOptions options, SecurityEventKind kind, string reason, SecuritySeverity? severity = null)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        AuditRunRecorder recorder = Start(path, actor, SecurityAudit.SecurityAction, provenance, anchorPath, options);
+        try
+        {
+            return recorder.RecordSecurityEvent(kind, reason, severity);
+        }
+        finally
+        {
+            recorder.CloseWithoutEntry();
+        }
+    }
+
+    // Close the log without writing a run entry (AppendSecurityEvent's short-lived recorder only). Marks the recorder
+    // finished so nothing can be appended to the closed log afterwards.
+    private void CloseWithoutEntry()
+    {
+        lock (_gate)
+        {
+            if (_finished)
+                return;
+            _finished = true;
+            _log.Dispose();
         }
     }
 

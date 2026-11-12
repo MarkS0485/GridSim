@@ -118,6 +118,10 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
             bool changed = NewtonShell.ApplyQLimits(
                 n, type0, effType, Q, Qd, qMinBus, qMaxBus, Qspec, @base,
                 Vm, Vg, pinned, revertCount, opt.RevertQLimits, spec.Zip);
+            // #159: with the opt-in revert off, a final state whose pinned buses break PV/PQ complementarity is put
+            // right once nothing more is pinned (NewtonShell.RevertBrokenPins; unchanged bits when none breaks it).
+            if (!changed && !opt.RevertQLimits)
+                changed = NewtonShell.RevertBrokenPins(n, type0, effType, Vm, Vg, pinned, revertCount);
             if (trace is not null && before is not null)
                 for (int i = 0; i < n; i++)
                     if (before[i] != effType[i])

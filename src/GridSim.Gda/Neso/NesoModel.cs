@@ -9,7 +9,8 @@ namespace GridSim.Gda.Neso;
 public sealed record TecEntry(
     string ProjectName, string Customer, string ConnectionSite, string Stage,
     double MwConnected, double CumulativeMw, string Status,
-    string HostTo, string PlantType, string ProjectId)
+    string HostTo, string PlantType, string ProjectId,
+    string MwEffectiveFrom = "")   // bug #209: the date this row's increase takes effect (blank = already in effect)
 {
     /// <summary>
     /// Best available capacity figure. Prefer <see cref="MwConnected"/> (what is physically
@@ -17,7 +18,21 @@ public sealed record TecEntry(
     /// ("MW Effective From" beyond now) and so overstates the connected fleet. Falls back to the
     /// cumulative planned figure only for projects with nothing connected yet (future/scoping).
     /// </summary>
+    /// <remarks>F-038: this is the WHOLE-REGISTER (planning) figure. The connected fleet must use
+    /// <see cref="ConnectedCapacityMw"/>, which never falls back to the cumulative figure.</remarks>
     public double CapacityMw => MwConnected > 0 ? MwConnected : CumulativeMw;
+
+    /// <summary>
+    /// F-038: the capacity physically connected today, for the CONNECTED fleet. It is the register's "MW Connected"
+    /// column and nothing else (0 when that is 0 or less). In the NESO TEC register "Cumulative Total Capacity (MW)" is
+    /// the project's running total after the row's increase takes effect on "MW Effective From", so it is
+    /// future-inclusive by definition and is never a connected figure. A row that is Built (or says connected) with
+    /// 0 MW connected is a closed station whose agreement is still listed (Dungeness B, Hinkley Point B, Hunterston
+    /// on the 28 September 2026 register) or a later stage of a project whose earlier stage holds the connected MW
+    /// (West Burton B stage 2, 48 MW effective 2034, cumulative 1,881 MW, beside stage 1 at 1,333 MW connected). Counting
+    /// such a row at its cumulative figure adds capacity that does not exist today, or counts a project twice.
+    /// </summary>
+    public double ConnectedCapacityMw => MwConnected > 0 ? MwConnected : 0.0;
 
     /// <summary>True for live/connected projects (exclude withdrawn/scoping where desired).</summary>
     public bool IsConnected =>
@@ -52,7 +67,9 @@ public sealed record InterconnectorEntry(
 /// <summary>An embedded (distribution-connected, transmission-visible) project.</summary>
 public sealed record EmbeddedEntry(
     string ProjectName, string ConnectionSite,
-    double MwConnected, double CumulativeMw, string Status, string HostTo, string PlantType)
+    double MwConnected, double CumulativeMw, string Status, string HostTo, string PlantType,
+    // Bug #209: the stage identity, so whole-register mode can count a multi-stage project once.
+    string Stage = "", string ProjectId = "", string MwEffectiveFrom = "")
 {
     /// <summary>
     /// Best available capacity figure, with the same rule as <see cref="TecEntry.CapacityMw"/>
@@ -60,8 +77,15 @@ public sealed record EmbeddedEntry(
     /// connected today) over <see cref="CumulativeMw"/>, which folds in future-dated increases
     /// and so overstates the connected fleet. Falls back to the cumulative planned figure only
     /// for projects with nothing connected yet. This used to prefer the cumulative figure.
+    /// F-038: this is the WHOLE-REGISTER (planning) figure; the connected fleet uses <see cref="ConnectedCapacityMw"/>.
     /// </summary>
     public double CapacityMw => MwConnected > 0 ? MwConnected : CumulativeMw;
+
+    /// <summary>F-038: the capacity physically connected today ("MW Connected" only, 0 when that is 0 or less), with
+    /// the same rule as <see cref="TecEntry.ConnectedCapacityMw"/>. A Built row with 0 MW connected (Camilla Farm, a
+    /// 49.95 MW storage project at Glenniston GSP on the 28 September 2026 register) adds nothing to the connected
+    /// fleet; it used to enter at its cumulative figure.</summary>
+    public double ConnectedCapacityMw => MwConnected > 0 ? MwConnected : 0.0;
 
     /// <summary>
     /// True for a project that is actually connected: a Built or Connected status, or any

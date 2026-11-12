@@ -92,6 +92,15 @@ public sealed class EstimationResult
     /// </summary>
     public bool IrlsCapReached { get; internal set; }
 
+    /// <summary>GR-518: how many times the Feasible method's interior guard set a voltage magnitude up to its floor
+    /// (<see cref="FeasibilityConstraints.VmFloor"/>) over the whole estimate. 0 for every other method and whenever the
+    /// guard never had to act. A non-zero count means the state leaned on the backstop, not on the measurements.</summary>
+    public int VmFloorClamps { get; internal set; }
+
+    /// <summary>GR-518: the bus ids whose voltage was clamped to the floor at least once, ascending by state index.
+    /// Empty when <see cref="VmFloorClamps"/> is 0.</summary>
+    public IReadOnlyList<int> VmFloorClampedBusIds { get; internal set; } = Array.Empty<int>();
+
     /// <summary>
     /// N356 (CF6, Ruling R1): the least-absolute-values objective sum_i |z_i - h_i(x^)| / sigma_i at the estimate, over
     /// every row the fit used, for a converged LAV estimate (<see cref="EstimationMethod.Lav"/>, its alias
@@ -103,10 +112,11 @@ public sealed class EstimationResult
     /// <summary>
     /// N356 (CF6, Ruling R1): whether <see cref="ChiSquarePassed"/> / <see cref="ChiSquareTest"/> are a consistency
     /// VERDICT. True for every method whose J at the estimate is (asymptotically) chi-square distributed under the
-    /// declared sigmas (WLS and its variants, and the M-estimators as before). False for the LAV methods: the LAV state
-    /// minimises sum |r| / sigma, not J, and neither that objective nor J at the LAV state is chi-square distributed, so
-    /// the chi-square figures are filled for comparability only and must not be shown as PASS / FAIL. The CLI prints
-    /// <see cref="LavObjective"/> and a NOTE instead. Default true, so every non-LAV result is unchanged.
+    /// declared sigmas (WLS, QR, Constrained, Feasible). False for the LAV methods: the LAV state minimises sum |r| / sigma,
+    /// not J, and neither that objective nor J at the LAV state is chi-square distributed. False since GR-521 (November
+    /// 2026) for the M-estimators (Huber, Schweppe-GM) too: J at an M-estimate is not the WLS minimum, so it is not
+    /// chi-square(m - n) distributed under H0. For all of them the chi-square figures are filled for comparability only
+    /// and must not be shown as PASS / FAIL; the CLI prints a NOTE instead (and, for LAV, <see cref="LavObjective"/>).
     /// </summary>
     public bool ChiSquareIsVerdict { get; internal set; } = true;
 
@@ -199,9 +209,18 @@ public sealed class EstimationResult
         var p = new double[n];
         var q = new double[n];
         SparseNewtonRaphsonPowerFlow.ComputeInjections(y, vm, va, p, q);
-        return NewtonShell.AssembleResult(
+        PowerFlowResult projected = NewtonShell.AssembleResult(
             model, n, vm, va, p, q, model.BaseMva,
             converged: Status == EstimationStatus.Converged,
             totalIters: Iterations, maxMis: MaxStateUpdate, id => index[id]);
+
+        // GR-081 (November 2026): the power-flow shape has no Unobservable or Infeasible status and no state-update
+        // field, so an unobservable estimate read as NonFinite / MaxIterations and the state update sat in MaxMismatch
+        // with nothing saying so. The estimator's own status and its update norm now travel with the projection under
+        // their own names. Status, Converged and MaxMismatch are left exactly as they were, so no pinned status, exit
+        // code or number moves.
+        projected.EstimatorStatus = Status;
+        projected.StateUpdateNorm = MaxStateUpdate;
+        return projected;
     }
 }

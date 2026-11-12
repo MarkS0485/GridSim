@@ -89,44 +89,38 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
 
 ## What makes GridSim different
 
-1. **Physics first, and checked against physics.** Every converged state can be audited against the conservation
-   laws it must satisfy (energy, Ohm's law, Joule heating, KCL, complex-power balance) by an independent
-   physics-conformance layer. A state that passes the solver's own tolerance but breaks a law is reported, not
-   hidden. Non-converged or invalid results are never reported as success.
+1. **Physics checks.** Every converged state can be audited against the conservation laws it must satisfy (energy,
+   Ohm's law, Joule heating, KCL, complex-power balance). A state that passes the solver's tolerance but breaks a law is
+   reported. Non-converged or invalid results are never reported as success.
 
-2. **Inertia is measured frame by frame, not assumed as one scalar.** The inertia model is a runtime seam
-   (`IInertiaModel`: lumped centre-of-inertia or distributed multi-domain). Every machine is classified by technology
-   into a synchronous swing mass, a synthetic-inertia (grid-following storage) domain or a pure inverter, so system
-   inertia and its spatial spread track the live mix. The distributed model couples per-domain masses by
-   Kron-reduced synchronising power with propagation delay, reports a dominance read-out that catches "inertia too
-   evenly spread, no domain holds waveform authority", and collapses exactly to the lumped model in the single-domain
-   limit.
+2. **Inertia is modelled per machine, not as one scalar.** The inertia model is a runtime seam (`IInertiaModel`): a
+   lumped centre-of-inertia model or a distributed multi-domain model. Each machine is classified by technology as a
+   synchronous swing mass, a synthetic-inertia domain or a pure inverter. The distributed model reports a dominance
+   read-out and collapses exactly to the lumped model in the single-domain limit.
 
-3. **The steady state needs no swing equation, so a 100% renewable grid still solves.** The power flow has no inertia
-   term: it solves voltages, angles and flows from the admittance matrix and the injections alone. A
-   zero-rotational-inertia grid solves for a valid state exactly like any conventional mix; the swing equation is a
-   separate, opt-in layer for transients.
+3. **The steady state needs no swing equation.** The power flow solves voltages, angles and flows from the admittance
+   matrix and the injections alone, so a grid with zero rotational inertia solves like any other. The swing equation is
+   a separate, opt-in layer for transients.
 
-4. **A grounded evidence engine, not a crystal ball.** On top of the validated solvers sits a historical state
-   estimator and counterfactual engine: reconstruct what the grid actually did from public data, then ask what a
-   device would have done, gated behind a baseline that must first reproduce the recorded event. The 169-hour
-   no-forward-inference horizon is wired into every dated ingester in code.
+4. **A historical evidence engine.** A state estimator and counterfactual engine reconstruct what the grid did from public
+   data. A counterfactual runs only after the baseline reproduces the recorded event. The 169-hour no-forward-inference
+   horizon is enforced in code at every dated ingester.
 
-5. **Machine epsilon is the point.** Results are bit-identical across runs, across parallel paths, across CPU vector
-   tiers and between the dense and sparse power-flow engines. GridSim carries its own deterministic maths library so
-   transcendental functions round the same way everywhere, and its tests are constitutional: a change that breaks one
-   is wrong (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+5. **Bit-identical results.** Results are identical across runs, parallel paths, CPU vector tiers and the dense and sparse
+   power-flow engines, using GridSim's own deterministic maths library ([`MATH.md`](MATH.md)). The tests are
+   constitutional: a change that breaks one is wrong ([`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
-6. **Built for the hardware that suits the maths.** Power flow is `double` end to end; the GPU stack is AMD-first,
-   because FP64 is where AMD Instinct wins outright.
+6. **Double precision throughout.** Power flow is `double` end to end. The GPU backend is AMD-first (ROCm), because the
+   solves are FP64.
 
 ---
 
 ## Downloads (2.1.000 RC-1)
 
-GridSim ships ready built for anyone who does not want to compile it. The current build is
-[2.1.000 RC-1](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.000-RC-1).
-All builds are self-contained: no .NET install is needed to run them.
+GridSim ships ready built for anyone who does not want to compile it. The latest release is
+[2.1.000 RC-1](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.000-RC-1), released 2026-10-31. The source on
+`main` is 2.1.005 and is not part of any release yet. All builds are self-contained: no .NET install is needed to run
+them.
 
 | What | Platform | Download |
 |---|---|---|
@@ -318,7 +312,8 @@ done: processed 4, converged 4, rejected-fresh 0, failed 0
 ```
 docker compose up -d --build                  # replay-only web app on http://127.0.0.1:5540/
 dotnet run --project src/GridSim.Web          # from source, on http://localhost:5180
-dotnet run --project src/GridSim.Wpf          # the desktop control room (Windows)
+dotnet run --project src/GridSim.Wpf          # the WPF desktop control room (Windows)
+dotnet run --project src/GridSim.App.Desktop   # the Avalonia desktop app (Windows, Linux)
 ```
 
 ---
@@ -589,18 +584,17 @@ a scheduling LP.
 GridSim treats bit-identical results as a requirement, not an aspiration. The overview is [`MATH.md`](MATH.md) and the
 specification is [technical ch. 38, Deterministic mathematics](<docs/technical/0038 Deterministic mathematics.md>):
 
-- **Deterministic maths.** Transcendental functions (`sin`, `cos`, `atan2`, `exp`, `log`, `pow` and the rest) come from
-  `DetMath`, a C# port of FDLIBM 5.3 checked bit for bit against Java's `StrictMath`, so they round the same way on
-  every operating system. An IL-level analyser test (`DeterministicMathGuardTests`) fails the test run if numerical code
-  calls the platform maths library directly, a fused multiply-add or a horizontal vector reduction; the one allowed
-  exception is the fused arm of `SimdKernels.AddScaledRow`, which no numerical path selects.
-- **No fused multiply-add** in numerical paths, so results do not depend on whether the CPU has FMA.
+- **Deterministic maths.** Transcendental functions come from `DetMath`, a C# port of FDLIBM 5.3 checked bit for bit
+  against Java's `StrictMath`, so they round the same way on every operating system. No numerical path uses fused
+  multiply-add. An IL-level analyser test (`DeterministicMathGuardTests`) fails the test run if numerical code calls the
+  platform maths library, a fused multiply-add or a horizontal vector reduction. The one allowed exception is the fused
+  arm of `SimdKernels.AddScaledRow`, which no numerical path selects. The full rules are in [`MATH.md`](MATH.md).
 - **SIMD tiers.** Dense kernels dispatch to AVX-512, AVX2, SSE or scalar at run time and give the same bits at every
-  width; `gridsim simdcheck` reports the active tier. CI runs the suite on Linux and Windows in normal, AVX2-off,
-  hardware-intrinsics-off, forced AVX-512 and FMA-off modes, and on macOS (Apple silicon) in normal and
-  hardware-intrinsics-off modes. CI does not run on every push: the release workflow calls it on a release tag and
-  publishes nothing unless every leg passed (it can also be started by hand); day-to-day verification is a local
-  batch run.
+  width; `gridsim simdcheck` reports the active tier. CI (`.github/workflows/ci.yml`) runs the suite on Linux and Windows
+  x64 (normal, AVX2 off with FMA off, hardware intrinsics off, forced AVX-512 and forced 256-bit), on macOS (Apple
+  silicon; normal and hardware intrinsics off) and on Linux and Windows ARM64 (normal and hardware intrinsics off). CI
+  does not run on every push: the release workflow calls it on a release tag and publishes nothing unless every leg
+  passed (it can also be started by hand); day-to-day verification is a local batch run.
 - **Dense and sparse power flow agree to the bit** (`DenseSparseParityTests`: every bit, iteration count and status
   equal), as do routed and explicit engine choices.
 - **Estimates and replays are bit-reproducible** run to run on each backend, and no estimation arithmetic reads the
@@ -623,8 +617,8 @@ CI leg, Linux and macOS included, is a hard gate on the same pins.
 
 Every claim below is a measured number with its source.
 
-**Power flow against pandapower** (pandapower 3.5.5, measured 2026-10-05; worst |V| pu / angle rad; gate 4096
-machine epsilons, 9.09e-13; [technical 11](<docs/technical/0011 Validation.md>)):
+**Power flow against pandapower** (pandapower 3.5.5, measured 2026-10-05; gb-full re-measured 2026-10-31 after the
+2.0.200 charging correction; worst |V| pu / angle rad; gate 4096 machine epsilons, 9.09e-13; [technical 11](<docs/technical/0011 Validation.md>)):
 
 | Case | Vm (pu) | Va (rad) |
 |---|---|---|
@@ -635,7 +629,7 @@ machine epsilons, 9.09e-13; [technical 11](<docs/technical/0011 Validation.md>))
 | case118 | 8.9e-16 | 2.7e-15 |
 | case300 | 5.2e-14 | 8.7e-14 |
 | gb-synthetic | 1.9e-14 | 3.9e-14 |
-| gb-full | 2.6e-13 | 3.9e-13 |
+| gb-full | 3.3e-13 | 3.0e-13 |
 
 **State estimation against `pandapower.estimation`** (technical 11): case14 5.56e-12 pu and 7.74e-11 deg; case30
 4.44e-16 pu; case118 2.36e-13 pu. An independent NumPy check confirms each estimate's residuals (3.877e-13 on case14),
@@ -697,9 +691,9 @@ sources confirm and where you set each value yourself.
   [Manual 9](<docs/manual/0009 The web app and REST and WebSocket API.md>),
   [technical 34](<docs/technical/0034 Web host, REST and WebSocket, SSO and sessions.md>),
   [technical 35](<docs/technical/0035 Deployment and security.md>).
-- **Desktop app** (`GridSim.Wpf`, Windows): the live control-room dashboard, with the inertia story front and centre,
-  the network map, analysis views and the audit log. [Manual 8](<docs/manual/0008 The desktop app.md>),
-  [manual 10](<docs/manual/0010 Analysis views.md>).
+- **Desktop apps**: the live control-room dashboard, the network map, analysis views and the audit log, in two builds.
+  The Avalonia app (`GridSim.App.Desktop`) runs on Windows and Linux; the WPF app (`GridSim.Wpf`) runs on Windows only.
+  [Manual 8](<docs/manual/0008 The desktop app.md>), [manual 10](<docs/manual/0010 Analysis views.md>).
 - **Case editor** (`GridSim.SchemaEditor`): builds and edits v2 JSON cases. [Manual 33](<docs/manual/0033 The case editor.md>).
 - **Unity viewer** (`unity/GridSimViz`): a viewer for exported scenes.
 
@@ -728,15 +722,19 @@ GridSim.Gpu           ROCm (hipSOLVER, rocSPARSE), OpenCL and CUDA backends behi
 GridSim.Gda           the GDA data-lake bridge (reads the lake at run time; no data in the repo)
 GridSim.Cli           the gridsim command line tool (every verb)
 GridSim.Web           the Blazor web app, REST and WebSocket API, SSO, sessions
-GridSim.Wpf           the Windows desktop control room
+GridSim.Wpf           the Windows desktop control room (WPF)
+GridSim.App           the shared Avalonia desktop UI
+GridSim.App.Desktop   the Avalonia desktop app (Windows and Linux)
+GridSim.Ui            the UI layer shared by the desktop front ends
 GridSim.SchemaEditor  the case editor
 tests/GridSim.Tests   the constitutional test suite
+tests/GridSim.App.Tests  tests for the Avalonia desktop app
 tools/                the cross-validation sidecars (pandapower, SciPy, NumPy), docs tooling, benchmark scripts
 ```
 
 The expensive kernel of a load flow is the linear solve inside each Newton step, so that is the seam the backends sit
 behind, the same "clean abstraction, swappable backend" pattern the inertia model follows. Core and Cli hold all
-capability; Web and Wpf are presentation only. Full walkthrough: [technical 1](<docs/technical/0001 Architecture.md>).
+capability; the web, WPF and Avalonia front ends are presentation only. Full walkthrough: [technical 1](<docs/technical/0001 Architecture.md>).
 
 ---
 
@@ -856,9 +854,9 @@ and nothing else.
 |---|---|
 | Personal, non-commercial | 1,500 |
 | Academic research and teaching (attribution required in publications) | 1,500, larger on request |
-| Commercial: Code Licence | None |
-| Commercial: Deployment Licence | None |
-| TSO / ESO / DNO (site-wide) | None |
+| Commercial Code Licence | None |
+| Commercial Deployment Licence | None |
+| Network Operator (TSO / ESO / DNO, site-wide, subject to regulatory approval) | None |
 
 Bundled networks never count toward a limit. Commercial and network-operator terms are available on application.
 Contact us: **gdatooling@proton.me**

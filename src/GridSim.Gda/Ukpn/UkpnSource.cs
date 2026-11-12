@@ -77,11 +77,21 @@ public static class UkpnSource
 
         var nodeInfo = new Dictionary<string, (string sub, string gsp, double kv)>(StringComparer.OrdinalIgnoreCase);
         var subToNode = new Dictionary<string, (string node, double kv)>(StringComparer.OrdinalIgnoreCase);
-        void See(string node, string sub, string gsp, double kv)
+        // GR-316 (November 2026): the same lowest-voltage node per substation name WITHIN one licence area (key
+        // "<area tag>|<name>"), and the licence area each node was first seen in. Used only for a demand substation name
+        // that Table 3a publishes in more than one licence area (see the demand section); every other row is placed
+        // exactly as before.
+        var subToNodeByArea = new Dictionary<string, (string node, double kv)>(StringComparer.OrdinalIgnoreCase);
+        var nodeArea = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        void See(string node, string sub, string gsp, double kv, string licence)
         {
             if (node.Length == 0) return;
             if (!nodeInfo.ContainsKey(node)) nodeInfo[node] = (sub, gsp, kv);
             if (sub.Length > 0 && (!subToNode.TryGetValue(sub, out var e) || kv < e.kv)) subToNode[sub] = (node, kv); // lowest-V node = where load connects
+            string tag = LicenceTag(licence);
+            nodeArea.TryAdd(node, tag);
+            string areaSub = tag + "|" + sub;
+            if (sub.Length > 0 && (!subToNodeByArea.TryGetValue(areaSub, out var ea) || kv < ea.kv)) subToNodeByArea[areaSub] = (node, kv);
         }
 
         // N194: for every substation, the LV-winding nodes of the transformers that feed it, each with the winter MVA
@@ -122,8 +132,8 @@ public static class UkpnSource
                 if (n1.Length == 0 || n2.Length == 0) continue;
                 double kv = r.Double("OperatingVoltage (kV)");
                 string gsp = r["GridSupplyPoint"];
-                See(n1, r["FromSubstation"], gsp, kv);
-                See(n2, r["ToSubstation"], gsp, kv);
+                See(n1, r["FromSubstation"], gsp, kv, lic);
+                See(n2, r["ToSubstation"], gsp, kv, lic);
                 double winterA = r.Double("Rating_Amps_Winter");
                 double summerA = r.Double("Rating_Amps_Summer");
                 circuits.Add(new LtdsCircuit(
@@ -146,8 +156,8 @@ public static class UkpnSource
                 if (hv.Length == 0 || lv.Length == 0) continue;
                 double kvH = r.Double("Voltage_HV (kV)"), kvL = r.Double("Voltage_LV (kV)");
                 string gsp = r["GridSupplyPoint"];
-                See(hv, r["HV_Substation"], gsp, kvH);
-                See(lv, r["LV_Substation"], gsp, kvL);
+                See(hv, r["HV_Substation"], gsp, kvH, lic);
+                See(lv, r["LV_Substation"], gsp, kvL, lic);
                 tx2.Add(new LtdsTransformer2(
                     r["LicenceArea"], gsp, hv, kvH, lv, kvL, "Energised", r["Vector_Group"],
                     r.Double("Positive_Sequence_Impedance_R_Percent"),
@@ -174,9 +184,9 @@ public static class UkpnSource
                     if (hv.Length == 0 || lv1.Length == 0) continue;   // same rule as Table 2a: both main ends needed
                     double kvH = r.Double("Voltage_HV (kV)"), kv1 = r.Double("Voltage_LV_1 (kV)"), kv2 = r.Double("Voltage_LV_2 (kV)");
                     string gsp = r["GridSupplyPoint"];
-                    See(hv, r["HV_Substation"], gsp, kvH);
-                    See(lv1, r["LV_Substation_1"], gsp, kv1);
-                    See(lv2, r["LV_Substation_2"], gsp, kv2);   // an empty LV2 node is ignored by See
+                    See(hv, r["HV_Substation"], gsp, kvH, lic);
+                    See(lv1, r["LV_Substation_1"], gsp, kv1, lic);
+                    See(lv2, r["LV_Substation_2"], gsp, kv2, lic);   // an empty LV2 node is ignored by See
                     // Mapping onto the shared record (the builder turns it into a star equivalent):
                     //   Node1 = HV, Node2 = LV1, Node3 = LV2 ("tertiary" in NGED's wording);
                     //   X HV-LV = X_HV_LV1, X LV-Tert = X_LV1_LV2, X HV-Tert = X_HV_LV2; R = R_HV_LV1 (the builder
@@ -197,8 +207,17 @@ public static class UkpnSource
                     AddFeeder(r["LV_Substation_2"], lv2, r.Double("Transformer_Rating_MVA_Winter_LV2"), hv);
                 }
 
-        // ---- demand (one row per substation: the worst season) ----
+        // ---- demand (one row per substation and licence area: the worst season) ----
+        // GR-316 (November 2026): Table 3a rows were keyed by substation name alone, so a name published in two licence
+        // areas (two different substations) collapsed to the larger row and the other area's load was silently dropped.
+        // Rows are now collected per (licence area, name). A name used in one area only keeps its plain name as its key,
+        // its node and its place in the order, so such a build is unchanged; a name used in more than one area becomes one
+        // row per area, keyed "<name>@<area tag>", each placed on that area's own node and shared over that area's feeders.
+        // A row with a substation name but no licence area cannot be told apart and is refused, naming it. A table with
+        // no LicenceArea column at all (an older extract) is read as one area, as before.
         var demandBySub = new Dictionary<string, LtdsDemand>(StringComparer.OrdinalIgnoreCase);
+        var demandKeyTag = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);   // split keys only: key -> area tag
+        var demandKeysByName = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         string demandFile = demandSrc.Path;
         using (UkpnTable t = UkpnTable.Open(demandSrc, longDoubles))
         {
@@ -217,6 +236,8 @@ public static class UkpnSource
             var unplacedBySub = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
             int blankSubRows = 0;
             double blankSubMw = 0.0;
+            bool demandHasLicence = t.Headers.Any(h => string.Equals(h.Trim(), "LicenceArea", StringComparison.OrdinalIgnoreCase));
+            var byAreaSub = new Dictionary<string, (string Tag, LtdsDemand Row)>(StringComparer.OrdinalIgnoreCase);
             foreach (IRow r in t.Rows())
             {
                 demandRows++;
@@ -227,6 +248,16 @@ public static class UkpnSource
                     if (bmw > 0) { blankSubRows++; blankSubMw += bmw; }
                     continue;
                 }
+                string tag = "";
+                if (demandHasLicence)
+                {
+                    string lic = r["LicenceArea"];
+                    if (lic.Trim().Length == 0)
+                        throw new InvalidDataException(
+                            $"UKPN {Path.GetFileName(demandFile)}: demand row {demandRows} (substation '{sub}') has no LicenceArea, so it " +
+                            "cannot be told apart from a substation of the same name in another licence area; refusing to guess (GR-316).");
+                    tag = LicenceTag(lic);
+                }
                 if (!subToNode.TryGetValue(sub, out var nd))
                 {
                     double umw = r.Double(demandCol.Header);
@@ -235,11 +266,42 @@ public static class UkpnSource
                 }
                 double mw = r.Double(demandCol.Header);
                 if (mw <= 0) continue;
-                if (demandBySub.TryGetValue(sub, out LtdsDemand? cur) && cur.MaxDemandMw >= mw) continue;
-                demandBySub[sub] = new LtdsDemand(
+                string areaKey = tag + "|" + sub;
+                if (byAreaSub.TryGetValue(areaKey, out var cur) && cur.Row.MaxDemandMw >= mw) continue;
+                byAreaSub[areaKey] = (tag, new LtdsDemand(
                     r["GridSupplyPoint"], "", sub, nd.node, nd.kv, mw,
-                    r.Double(pfCol, 1.0), r.Double("Firm_Capacity_MW"));
+                    r.Double(pfCol, 1.0), r.Double("Firm_Capacity_MW")));
             }
+
+            // GR-316: the names published in more than one licence area, then the rows in first-seen order.
+            var areasByName = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach ((string tg, LtdsDemand row) in byAreaSub.Values)
+            {
+                if (!areasByName.TryGetValue(row.PrimarySubstation, out HashSet<string>? areas))
+                    areasByName[row.PrimarySubstation] = areas = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                areas.Add(tg);
+            }
+            var splitNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach ((string tg, LtdsDemand row) in byAreaSub.Values)
+            {
+                string name = row.PrimarySubstation;
+                string key = name;
+                LtdsDemand placed = row;
+                if (areasByName[name].Count > 1)
+                {
+                    key = $"{name}@{tg}";
+                    demandKeyTag[key] = tg;
+                    splitNames.Add(name);
+                    if (subToNodeByArea.TryGetValue(tg + "|" + name, out var own)) placed = row with { Node = own.node, Kv = own.kv };
+                }
+                demandBySub[key] = placed;
+                if (!demandKeysByName.TryGetValue(name, out List<string>? keys)) demandKeysByName[name] = keys = new List<string>();
+                keys.Add(key);
+            }
+            if (splitNames.Count > 0)
+                buildNotes.Add($"UKPN: {splitNames.Count} demand substation name(s) are published in more than one licence area (for " +
+                    $"example {string.Join(", ", splitNames.Take(NoteExampleLimit).Select(s => $"'{s}'"))}); each area's row is kept " +
+                    "as its own load, keyed <name>@<area> (GR-316).");
 
             if (unplacedBySub.Count > 0)
             {
@@ -315,7 +377,19 @@ public static class UkpnSource
 
         // N194: leave out the rows that are the sum of other rows (see AggregateRows), then share each remaining
         // substation's demand over the transformer LV nodes that feed it (see ShareDemand).
-        HashSet<string> aggregates = AggregateRows(demandBySub, feedersBySub, lvSubsByHvNode, circuits,
+        // GR-316: the transformer LV feeders of a demand row. A row keyed by name alone takes every feeder of that name, as
+        // before; a row of a name split over licence areas takes only the feeders first seen in its own area (none: the row
+        // stays on its own node).
+        SortedDictionary<string, double>? FeedersOf(string key, LtdsDemand d)
+        {
+            if (!feedersBySub.TryGetValue(d.PrimarySubstation, out SortedDictionary<string, double>? all)) return null;
+            if (!demandKeyTag.TryGetValue(key, out string? tag)) return all;
+            var own = new SortedDictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+            foreach ((string node, double w) in all)
+                if (nodeArea.TryGetValue(node, out string? a) && string.Equals(a, tag, StringComparison.OrdinalIgnoreCase)) own[node] = w;
+            return own.Count > 0 ? own : null;
+        }
+        HashSet<string> aggregates = AggregateRows(demandBySub, FeedersOf, demandKeysByName, demandKeyTag, nodeArea, lvSubsByHvNode, circuits,
             out Dictionary<string, HashSet<string>> fedByAggregate);
         if (aggregates.Count > 0)
         {
@@ -348,19 +422,18 @@ public static class UkpnSource
         }
         var demand = new List<LtdsDemand>(demandBySub.Count);
         int sharedRows = 0, sharedParts = 0, movedRows = 0;
-        foreach (LtdsDemand d in demandBySub.Values)
+        foreach ((string demandKey, LtdsDemand d) in demandBySub)
         {
-            if (aggregates.Contains(d.PrimarySubstation))
+            if (aggregates.Contains(demandKey))
             {
                 // Kept as a join-only row: no load, but generation that names this grid board still finds it. It is
                 // placed on the board's last transformer LV node in node-code order (the node the builder's
                 // last-listed rule would pick if the row were shared), or on its own node if no transformer feeds it.
-                string joinNode = feedersBySub.TryGetValue(d.PrimarySubstation, out SortedDictionary<string, double>? fb) && fb.Count > 0
-                    ? fb.Keys.Last() : d.Node;
+                string joinNode = FeedersOf(demandKey, d) is { Count: > 0 } fb ? fb.Keys.Last() : d.Node;
                 demand.Add(d with { Node = joinNode, Kv = nodeInfo[joinNode].kv, JoinOnly = true });
                 continue;
             }
-            IReadOnlyList<LtdsDemand> parts = ShareDemand(d, feedersBySub.GetValueOrDefault(d.PrimarySubstation),
+            IReadOnlyList<LtdsDemand> parts = ShareDemand(d, FeedersOf(demandKey, d),
                 node => nodeInfo[node].kv);
             if (parts.Count > 1) { sharedRows++; sharedParts += parts.Count; }
             else if (!ReferenceEquals(parts[0], d)) movedRows++;
@@ -414,9 +487,16 @@ public static class UkpnSource
     /// 72.0 / 73.6, Bankside D 20kV 56.7 / 35.5). The name is never used, only the network.
     /// </para>
     /// </summary>
+    /// <para>GR-316: rows are keyed as in <c>demandBySub</c> (the plain name, or "&lt;name&gt;@&lt;area&gt;" for a name
+    /// published in more than one licence area); a transformer that feeds a split name reaches only the row of the area
+    /// its HV node was first seen in (every row of that name when the area is not one of them). For data with no split
+    /// name the walk and its result are exactly as before.</para>
     private static HashSet<string> AggregateRows(
         Dictionary<string, LtdsDemand> demandBySub,
-        Dictionary<string, SortedDictionary<string, double>> feedersBySub,
+        Func<string, LtdsDemand, SortedDictionary<string, double>?> feedersOf,
+        Dictionary<string, List<string>> demandKeysByName,
+        Dictionary<string, string> demandKeyTag,
+        Dictionary<string, string> nodeArea,
         Dictionary<string, HashSet<string>> lvSubsByHvNode,
         List<LtdsCircuit> circuits,
         out Dictionary<string, HashSet<string>> fedByAggregate)
@@ -434,7 +514,7 @@ public static class UkpnSource
         fedByAggregate = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         foreach ((string sub, LtdsDemand d) in demandBySub)
         {
-            IEnumerable<string> start = feedersBySub.TryGetValue(sub, out SortedDictionary<string, double>? f) && f.Count > 0
+            IEnumerable<string> start = feedersOf(sub, d) is { Count: > 0 } f
                 ? f.Keys : new[] { d.Node };
             var seen = new HashSet<string>(start, StringComparer.OrdinalIgnoreCase);
             var stack = new Stack<string>(seen);
@@ -447,8 +527,15 @@ public static class UkpnSource
                 string x = stack.Pop();
                 if (lvSubsByHvNode.TryGetValue(x, out HashSet<string>? fed))
                     foreach (string other in fed)
-                        if (!string.Equals(other, sub, StringComparison.OrdinalIgnoreCase) && demandBySub.ContainsKey(other))
-                            fedRows.Add(other);
+                        if (!string.Equals(other, d.PrimarySubstation, StringComparison.OrdinalIgnoreCase)
+                            && demandKeysByName.TryGetValue(other, out List<string>? otherKeys))
+                        {
+                            // An unsplit name has one key, itself (the old rule). A split name: the row of the HV node's area.
+                            string? area = nodeArea.GetValueOrDefault(x);
+                            List<string> same = otherKeys.Where(k => demandKeyTag.TryGetValue(k, out string? tg)
+                                && string.Equals(tg, area, StringComparison.OrdinalIgnoreCase)).ToList();
+                            foreach (string k in same.Count > 0 ? same : otherKeys) fedRows.Add(k);
+                        }
                 if (adj.TryGetValue(x, out List<string>? next))
                     foreach (string y in next)
                         if (seen.Add(y)) stack.Push(y);

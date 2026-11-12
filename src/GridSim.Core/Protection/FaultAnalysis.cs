@@ -169,12 +169,57 @@ public static class FaultAnalysis
             if (!touched[i]) shunts.Add((i, Complex.One));
     }
 
+    /// <summary>
+    /// The prefault voltages (complex, pu) in model bus order, and which buses are DE-ENERGISED (GR-622, November 2026):
+    /// a bus of the model that the prefault result does not carry (a dead island the live solve dropped, or a result of
+    /// a reduced model) is taken as de-energised, at 0 V with no load and no machine contribution. It used to take its
+    /// stored case-file voltage, so a dead bus became a source in the fault study. A fault ON such a bus has no
+    /// prefault voltage to collapse and is refused by name. A result that carries every bus (every normal study) gives
+    /// exactly the voltages it gave before, bit for bit, and no de-energised bus.
+    /// </summary>
+    private static bool[] PrefaultVoltages(GridModel model, PowerFlowResult prefault, Complex[] v0, int faultIndex, int faultBusId)
+    {
+        int n = model.BusCount;
+        var vmById = new Dictionary<int, (double Vm, double VaDeg)>(n);
+        for (int i = 0; i < prefault.BusIds.Count; i++)
+            vmById[prefault.BusIds[i]] = (prefault.Vm[i], prefault.VaDeg[i]);
+        var dead = new bool[n];
+        for (int i = 0; i < n; i++)
+        {
+            if (vmById.TryGetValue(model.Buses[i].Id, out (double Vm, double VaDeg) v))
+                v0[i] = DetMath.FromPolar(v.Vm, v.VaDeg * Math.PI / 180.0);
+            else
+            {
+                v0[i] = Complex.Zero;
+                dead[i] = true;
+            }
+        }
+        if (dead[faultIndex])
+            throw new InvalidOperationException(
+                $"Fault bus {faultBusId} is not in the prefault result (a de-energised bus), so there is no prefault voltage to fault.");
+        return dead;
+    }
+
     /// <summary>Apply a balanced three-phase fault at <paramref name="faultBusId"/> with fault impedance
     /// <paramref name="faultReactancePu"/> (0 = bolted) on top of the prefault state.</summary>
     public static FaultResult ThreePhase(
         GridModel model, PowerFlowResult prefault, int faultBusId,
         double faultReactancePu = 0.0, double subtransientXdPu = DefaultSubtransientXdPu,
         double converterReactiveGain = DefaultConverterReactiveGain)
+        => ThreePhaseCapped(model, prefault, faultBusId, faultReactancePu, subtransientXdPu, converterReactiveGain,
+            ConverterFixedPointMaxIterations);
+
+    /// <summary>The pass cap of the converter current fixed point in <see cref="ThreePhase"/> (unchanged at 1,000).</summary>
+    internal const int ConverterFixedPointMaxIterations = 1000;
+
+    /// <summary>GR-629 (November 2026): <see cref="ThreePhase"/> with the converter fixed point's pass cap as a parameter,
+    /// so a test can make the fixed point stop unsettled on purpose and pin that the result is then not converged
+    /// (<see cref="FaultResult.ConvertersConverged"/> false, the state <see cref="PowerFlowStatus.MaxIterations"/>) and
+    /// that every study guarded by the convergence contract refuses it. <see cref="ThreePhase"/> passes the cap it always
+    /// had, so its arithmetic is unchanged.</summary>
+    internal static FaultResult ThreePhaseCapped(
+        GridModel model, PowerFlowResult prefault, int faultBusId,
+        double faultReactancePu, double subtransientXdPu, double converterReactiveGain, int converterMaxIterations)
     {
         prefault.RequireConverged("Fault analysis");   // the convergence contract (October 2026, WS4)
         int n = model.BusCount;
@@ -186,16 +231,9 @@ public static class FaultAnalysis
 
         double baseMva = model.BaseMva;
 
-        // Prefault voltages (complex, pu), keyed to the model bus order.
+        // Prefault voltages (complex, pu), keyed to the model bus order; a bus the result lacks is de-energised (GR-622).
         var v0 = new Complex[n];
-        var vmById = new Dictionary<int, (double Vm, double VaDeg)>(n);
-        for (int i = 0; i < prefault.BusIds.Count; i++)
-            vmById[prefault.BusIds[i]] = (prefault.Vm[i], prefault.VaDeg[i]);
-        for (int i = 0; i < n; i++)
-        {
-            (double vm, double vaDeg) = vmById.GetValueOrDefault(model.Buses[i].Id, (model.Buses[i].Vm, model.Buses[i].VaDeg));
-            v0[i] = DetMath.FromPolar(vm, vaDeg * Math.PI / 180.0);
-        }
+        bool[] dead = PrefaultVoltages(model, prefault, v0, k, faultBusId);
 
         // Fault-study admittance: network Ybus (branches + bus shunts) plus the diagonal stamps below, in
         // order, factored once by FaultNetworkSystem (the sparse engine at every size, N233). The pristine
@@ -206,6 +244,7 @@ public static class FaultAnalysis
         {
             if (b.Pd == 0 && b.Qd == 0) continue;
             int i = index[b.Id];
+            if (dead[i]) continue;   // GR-622: a de-energised bus carries no load
             double vm2 = Math.Max(v0[i].Magnitude * v0[i].Magnitude, 1e-6);
             var sLoadPu = new Complex(b.Pd, b.Qd) / baseMva;
             shunts.Add((i, Complex.Conjugate(sLoadPu) / vm2));
@@ -213,13 +252,20 @@ public static class FaultAnalysis
         // ... plus each synchronous generator as its subtransient reactance to ground (the source, shorted for
         // the superposition, leaves its internal admittance behind). A converter-interfaced unit has no EMF
         // behind a reactance: it is left open here and enters below as a current-limited injection.
-        var converters = new List<(Generator G, int I)>();
-        foreach (Generator g in model.Generators)
+        var converters = new List<(Generator G, int I, double PMw, double QMvar)>();
+        for (int gi = 0; gi < model.Generators.Count; gi++)
         {
+            Generator g = model.Generators[gi];
             if (!index.TryGetValue(g.Bus, out int i)) continue;
+            if (dead[i]) continue;                  // GR-622: a machine on a de-energised bus contributes nothing
             if (g.PowerFlowOnly) continue;          // a power-flow device: its prefault injection simply persists
-            if (g.IsConverterInterfaced) { converters.Add((g, i)); continue; }
-            double xdSys = g.FaultSourceReactancePu(subtransientXdPu) * baseMva / (g.MBase <= 0 ? baseMva : g.MBase);
+            if (g.IsConverterInterfaced)
+            {
+                (double pMw, double qMvar) = PrefaultConverterOutput(model, prefault, gi);   // #164
+                converters.Add((g, i, pMw, qMvar));
+                continue;
+            }
+            double xdSys = g.FaultSourceReactancePu(subtransientXdPu) * baseMva / RatedMva(g);   // #166
             if (xdSys <= 0) continue;
             shunts.Add((i, Complex.One / new Complex(0, xdSys)));
         }
@@ -245,7 +291,7 @@ public static class FaultAnalysis
         else
         {
             (ifault, infeeds, convConverged) = SolveWithConverters(
-                converters, lu, zColumn, k, zf, v0, vf, baseMva, converterReactiveGain);
+                converters, lu, zColumn, k, zf, v0, vf, baseMva, converterReactiveGain, converterMaxIterations);
         }
         Complex zth = zColumn[k];
 
@@ -374,6 +420,10 @@ public static class FaultAnalysis
         ArgumentNullException.ThrowIfNull(prefault);
         if (type == FaultType.ThreePhase)
             throw new ArgumentException("Unbalanced: a three-phase fault is solved by FaultAnalysis.ThreePhase.", nameof(type));
+        // GR-144 (b): an earth fault (single or double line to ground) on a model whose zero-sequence network cannot be
+        // represented (a three-winding unit, an unknown or one-sided winding connection) is refused by name. A line-to-line
+        // fault carries no zero-sequence current and is never refused; a representable model passes untouched.
+        if (type != FaultType.LineToLine) ShortCircuit.Iec60909.RequireRepresentableZeroSequence(model);
         prefault.RequireConverged("Fault analysis");
         int n = model.BusCount;
         var index = new Dictionary<int, int>(n);
@@ -382,15 +432,9 @@ public static class FaultAnalysis
             throw new ArgumentException($"fault bus {faultBusId} is not in the model", nameof(faultBusId));
         double baseMva = model.BaseMva;
 
-        // Prefault voltages (as the balanced study reads them).
+        // Prefault voltages (as the balanced study reads them; a bus the result lacks is de-energised, GR-622).
         var v0 = new Complex[n];
-        var vmById = new Dictionary<int, (double Vm, double VaDeg)>(n);
-        for (int i = 0; i < prefault.BusIds.Count; i++) vmById[prefault.BusIds[i]] = (prefault.Vm[i], prefault.VaDeg[i]);
-        for (int i = 0; i < n; i++)
-        {
-            (double vm, double vaDeg) = vmById.GetValueOrDefault(model.Buses[i].Id, (model.Buses[i].Vm, model.Buses[i].VaDeg));
-            v0[i] = DetMath.FromPolar(vm, vaDeg * Math.PI / 180.0);
-        }
+        bool[] dead = PrefaultVoltages(model, prefault, v0, k, faultBusId);
 
         // Positive and negative networks: loads as constant-impedance shunts, synchronous units as reactances.
         List<(int Index, Complex Y)> Shunts(Func<Generator, double> reactancePu)
@@ -400,6 +444,7 @@ public static class FaultAnalysis
             {
                 if (b.Pd == 0 && b.Qd == 0) continue;
                 int i = index[b.Id];
+                if (dead[i]) continue;   // GR-622: a de-energised bus carries no load
                 double vm2 = Math.Max(v0[i].Magnitude * v0[i].Magnitude, 1e-6);
                 var sLoadPu = new Complex(b.Pd, b.Qd) / baseMva;
                 shunts.Add((i, Complex.Conjugate(sLoadPu) / vm2));
@@ -407,8 +452,9 @@ public static class FaultAnalysis
             foreach (Generator g in model.Generators)
             {
                 if (!index.TryGetValue(g.Bus, out int i)) continue;
+                if (dead[i]) continue;   // GR-622: a machine on a de-energised bus contributes nothing
                 if (g.PowerFlowOnly || g.IsConverterInterfaced) continue;
-                double xSys = reactancePu(g) * baseMva / (g.MBase <= 0 ? baseMva : g.MBase);
+                double xSys = reactancePu(g) * baseMva / RatedMva(g);   // #166: no silent system-base rating
                 if (xSys <= 0) continue;
                 shunts.Add((i, Complex.One / new Complex(0, xSys)));
             }
@@ -594,9 +640,10 @@ public static class FaultAnalysis
     /// infeeds and whether the fixed point converged.
     /// </summary>
     private static (Complex IFault, List<ConverterFaultInfeed> Infeeds, bool Converged) SolveWithConverters(
-        List<(Generator G, int I)> converters, FaultNetworkSystem lu, Complex[] zColumn,
-        int k, Complex zf, Complex[] v0, Complex[] vf, double baseMva, double reactiveGain)
+        List<(Generator G, int I, double PMw, double QMvar)> converters, FaultNetworkSystem lu, Complex[] zColumn,
+        int k, Complex zf, Complex[] v0, Complex[] vf, double baseMva, double reactiveGain, int maxIter)
     {
+        if (maxIter < 1) throw new ArgumentOutOfRangeException(nameof(maxIter), maxIter, "The converter fixed point needs at least one pass.");
         int n = v0.Length;
         int m = converters.Count;
         var ir = new double[m];           // rated current, system pu
@@ -606,13 +653,15 @@ public static class FaultAnalysis
         var i0 = new Complex[m];          // prefault current phasor
         for (int c = 0; c < m; c++)
         {
-            (Generator g, int bi) = converters[c];
-            double mBase = g.MBase <= 0 ? baseMva : g.MBase;
+            (Generator g, int bi, double pMw, double qMvar) = converters[c];
+            double mBase = RatedMva(g);              // #166: refused when not given, never the system base
             ir[c] = mBase / baseMva;
             imax[c] = g.EffectiveConverterFaultCurrentPu * ir[c];
             double vm0 = Math.Max(v0[bi].Magnitude, 1e-6);
-            ip0[c] = g.Pg / baseMva / vm0;
-            iq0[c] = g.Qg / baseMva / vm0;
+            // #164: the prefault current is built from the unit's PREFAULT output (PrefaultConverterOutput), the output
+            // that produced V0, so the superposition V = V0 + Z (iNow - i0) carries no schedule error.
+            ip0[c] = pMw / baseMva / vm0;
+            iq0[c] = qMvar / baseMva / vm0;
             // S = V conj(I) with I = (Ip - j Iq) e^{j theta}  =>  S = |V| (Ip + j Iq).
             i0[c] = new Complex(ip0[c], -iq0[c]) * DetMath.FromPolar(1.0, DetMath.Phase(v0[bi]));
         }
@@ -623,7 +672,6 @@ public static class FaultAnalysis
         var limited = new bool[m];
         Complex ifault = Complex.Zero;
         bool converged = false;
-        const int maxIter = 1000;
         const double tol = 1e-9;
         double damping = 0.5, prevChange = double.PositiveInfinity;
 
@@ -667,12 +715,53 @@ public static class FaultAnalysis
         var infeeds = new List<ConverterFaultInfeed>(m);
         for (int c = 0; c < m; c++)
         {
-            (Generator g, int bi) = converters[c];
+            (Generator g, int bi, _, _) = converters[c];
             double mag = iNow[c].Magnitude;
             infeeds.Add(new ConverterFaultInfeed(g.Bus, g.Name ?? $"gen@bus {g.Bus}", vf[bi].Magnitude, mag,
                 ir[c] > 0 ? mag / ir[c] : 0.0, ip[c], iq[c], limited[c]));
         }
         return (ifault, infeeds, converged);
+    }
+
+    /// <summary>
+    /// Bug hunt 2026-11-01 (#164): a converter's output at the PREFAULT operating point, (P MW, Q MVAr), for its prefault
+    /// current. The superposition <c>V = V0 + Z (iNow - i0)</c> needs i0 to be the current that produced V0, and the
+    /// scheduled <see cref="Generator.Pg"/> / <see cref="Generator.Qg"/> is that output only where the power flow
+    /// honours the schedule. Where the power flow SETS a quantity it is read from the solve
+    /// (<see cref="SolvedGeneration.UnitOutput"/>, as N150 does for the converter harmonic sources): the active and
+    /// reactive power of a unit at a slack bus, and the reactive power of a unit at a PV bus (whatever held its voltage
+    /// set point, or its limit when it was held at one). Before, a converter at a PV bus scheduled Qg = 0 that solved
+    /// 50 MVAr (100 MVA base, 1 pu) was given iq0 = 0 instead of 0.5 pu, so the reported infeed and its k x Ir limit
+    /// check were off by 0.5 pu. A unit at a PQ bus keeps its schedule, which the solve meets (to its tolerance), so
+    /// its numbers are bit for bit as before; so is any slack or PV unit whose solved output equals its schedule.
+    /// </summary>
+    private static (double PMw, double QMvar) PrefaultConverterOutput(GridModel model, PowerFlowResult prefault, int generatorIndex)
+    {
+        Generator g = model.Generators[generatorIndex];
+        BusType type = BusType.Pq;
+        foreach (Bus b in model.Buses) if (b.Id == g.Bus) { type = b.Type; break; }
+        if (type != BusType.Slack && type != BusType.Pv) return (g.Pg, g.Qg);
+        // Fail loud: UnitOutput throws if the prefault result is not a converged solve of this model.
+        (double pSolved, double qSolved) = SolvedGeneration.UnitOutput(model, prefault, generatorIndex);
+        return type == BusType.Slack ? (pSolved, qSolved) : (g.Pg, qSolved);
+    }
+
+    /// <summary>
+    /// Bug hunt 2026-11-01 (#166): a fault source's rating (MVA) for the operating-point fault studies. A unit with
+    /// <c>MBase &lt;= 0</c> (the MATPOWER "not given") was rated at the system base without a word, so a 1000 MVA unit
+    /// stored with MBase 0, X''d 0.2, on a 100 MVA base fed 5 pu at its terminals instead of 50 pu, while
+    /// <see cref="ShortCircuit.Iec60909"/> refuses the same unit (GR-603). It is now refused here too, naming the unit;
+    /// so is a NaN or infinite MBase. Every unit with a finite MBase above 0 returns that MBase, bit for bit as before.
+    /// (The loaders fill MBase; only hand-built and bridge-built models can reach the refusal.)
+    /// </summary>
+    internal static double RatedMva(Generator g)
+    {
+        if (!(g.MBase > 0.0) || !double.IsFinite(g.MBase))
+            throw new InvalidOperationException(
+                $"Fault study: generator {g.Name ?? "(unnamed)"} at bus {g.Bus} has MBase = {g.MBase.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}: "
+                + "its X''d (and a converter's k x rated current) are per unit on its own rating, so the study needs that rating. "
+                + "Give the unit its MBase in MVA (or mark it power-flow only).");
+        return g.MBase;
     }
 
     /// <summary>Branch flows from a given complex voltage vector, using the same pi-model as YBus.</summary>

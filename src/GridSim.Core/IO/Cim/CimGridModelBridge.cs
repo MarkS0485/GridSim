@@ -78,10 +78,13 @@ public static partial class CimGridModelBridge
     /// <param name="notes">Receives one plain-English line per choice the bridge made that the caller should know:
     /// the slack bus and the rule that chose it, a base voltage taken from the other end, a voltage-controlling bus
     /// with no set-point (held at 1.0 pu). Null = not collected.</param>
+    /// <param name="frequencyHz">GR-635 (November 2026): the nominal frequency of the source system (Hz). Null (the default)
+    /// keeps the model's default of 50 Hz, exactly as before; the CGMES profiles the importer reads carry no system
+    /// frequency, so a 60 Hz source must say so here. A value that is not finite and above 0 is refused by name.</param>
     public static GridModel ToGridModel(
         CimNetwork net, double baseMva = 100.0, string name = "cim-import",
-        bool unbasedImpedancesArePerUnit = false, ICollection<string>? notes = null) =>
-        Bridge(net, baseMva, name, unbasedImpedancesArePerUnit, notes).Model;
+        bool unbasedImpedancesArePerUnit = false, ICollection<string>? notes = null, double? frequencyHz = null) =>
+        Bridge(net, baseMva, name, unbasedImpedancesArePerUnit, notes, frequencyHz).Model;
 
     /// <summary>
     /// N287 (CIM2, 2026-10): convert a CIM network to a GridModel, as <see cref="ToGridModel"/> does, and keep what the
@@ -92,14 +95,19 @@ public static partial class CimGridModelBridge
     /// </summary>
     public static CimBridgeResult Bridge(
         CimNetwork net, double baseMva = 100.0, string name = "cim-import",
-        bool unbasedImpedancesArePerUnit = false, ICollection<string>? notes = null)
+        bool unbasedImpedancesArePerUnit = false, ICollection<string>? notes = null, double? frequencyHz = null)
     {
         ArgumentNullException.ThrowIfNull(net);
+        // GR-635 (November 2026): the system frequency is the caller's, not a silent 50 Hz. Null leaves the model's own
+        // default untouched (bit-identical to before); anything else must be a usable frequency.
+        if (frequencyHz is double hz && !(double.IsFinite(hz) && hz > 0))
+            throw new ArgumentOutOfRangeException(nameof(frequencyHz), frequencyHz,
+                "The CIM bridge's system frequency must be a finite number of hertz above 0 (or null for the default 50 Hz).");
         ICollection<string> log = notes ?? new List<string>();
         (CimNetwork live, IReadOnlyList<string> dropped, IReadOnlyList<string> islandSlacks) = DropDeadIslands(net, log);
         var branchNodes = new List<(string From, string? To)>();
         GridModel model = Build(live, baseMva, name, unbasedImpedancesArePerUnit, log, branchNodes, islandSlacks,
-            out Dictionary<string, int> busIdOfNode, out CimControls controls);
+            out Dictionary<string, int> busIdOfNode, out CimControls controls, frequencyHz);
         return new CimBridgeResult(model, net, live, busIdOfNode, dropped, branchNodes, controls);
     }
 
@@ -109,7 +117,8 @@ public static partial class CimGridModelBridge
     /// bus id.</summary>
     private static GridModel Build(
         CimNetwork net, double baseMva, string name, bool unbasedImpedancesArePerUnit, ICollection<string> log,
-        List<(string From, string? To)> branchNodes, IReadOnlyList<string> islandSlacks, out Dictionary<string, int> busIdOfNode, out CimControls cimControls)
+        List<(string From, string? To)> branchNodes, IReadOnlyList<string> islandSlacks, out Dictionary<string, int> busIdOfNode, out CimControls cimControls,
+        double? frequencyHz = null)
     {
         // ---- N253 (CIM1, 2026-10): buses joined by closed (retained) switches -------------------------------
         // A closed switch has zero impedance, so the two buses it joins are one electrical node. GridSim has no
@@ -678,6 +687,8 @@ public static partial class CimGridModelBridge
             Generators = generators,
             Branches = branches,
             Name = name,
+            // GR-635: the caller's frequency, or the model's own default (50 Hz) exactly as before.
+            FrequencyHz = frequencyHz ?? global::GridSim.Core.Dynamics.FrequencyLimits.NominalHz,
         };
         // GR-150: the same post-build check every other loader applies (JSON, MATPOWER): a hard structural fault, such
         // as a line whose two terminals are on one node (a self-loop) or a zero-impedance line, is refused here, at the

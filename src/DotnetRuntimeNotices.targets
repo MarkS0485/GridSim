@@ -1,0 +1,33 @@
+<Project>
+  <!-- GR-892: the .NET runtime's own third-party notices ship beside every self-contained binary.
+
+       A self-contained publish carries the .NET runtime itself, whose licence terms require its third-party notices to
+       travel with it. The runtime pack the publish copies the runtime from (Microsoft.NETCore.App.Runtime.<rid> in the
+       NuGet cache) holds them as THIRD-PARTY-NOTICES.TXT. After the publish this target copies that file into the
+       publish folder as dotnet-THIRD-PARTY-NOTICES.txt, a readable loose file beside the executable (never inside the
+       single-file bundle). It reads the pack's folder from the SDK's own ResolvedRuntimePack items, so it always
+       copies the notices of the runtime version actually published, and local publishes get it exactly as the release
+       does. It fails the publish, naming the path, if the runtime pack or the file is not found: a release must never
+       ship the runtime without them. It does nothing for a build, or for a publish that is not self-contained.
+
+       Imported by GridSim.Cli, GridSim.App.Desktop and GridSim.Wpf (the three self-contained apps).
+       Pinned by GA7E3Batch7Tests. -->
+  <Target Name="ShipDotnetRuntimeNotices" AfterTargets="Publish" DependsOnTargets="ResolveFrameworkReferences"
+          Condition="'$(SelfContained)' == 'true' And '$(RuntimeIdentifier)' != ''">
+    <ItemGroup>
+      <_GridSimNetCoreRuntimePack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.FrameworkName)' == 'Microsoft.NETCore.App'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_GridSimNetCorePackCount>@(_GridSimNetCoreRuntimePack->Count())</_GridSimNetCorePackCount>
+      <_GridSimNetCorePackDir>@(_GridSimNetCoreRuntimePack->'%(PackageDirectory)')</_GridSimNetCorePackDir>
+    </PropertyGroup>
+    <Error Condition="'$(_GridSimNetCorePackCount)' != '1'"
+           Text="GR-892: expected exactly one resolved Microsoft.NETCore.App runtime pack for this self-contained publish, found $(_GridSimNetCorePackCount); cannot locate the .NET runtime's THIRD-PARTY-NOTICES.TXT to ship it." />
+    <PropertyGroup>
+      <_GridSimNetCoreNotices>$([MSBuild]::EnsureTrailingSlash('$(_GridSimNetCorePackDir)'))THIRD-PARTY-NOTICES.TXT</_GridSimNetCoreNotices>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_GridSimNetCoreNotices)')"
+           Text="GR-892: the .NET runtime pack has no THIRD-PARTY-NOTICES.TXT at $(_GridSimNetCoreNotices); a self-contained publish must not ship the runtime without its notices." />
+    <Copy SourceFiles="$(_GridSimNetCoreNotices)" DestinationFiles="$(PublishDir)dotnet-THIRD-PARTY-NOTICES.txt" />
+  </Target>
+</Project>

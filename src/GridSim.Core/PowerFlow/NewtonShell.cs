@@ -356,20 +356,54 @@ internal static class NewtonShell
                     changed = true;
                 }
             }
-            else if (revert && pinned[i] != QPin.None && revertCount[i] < 1)
+            else if (revert)
             {
                 // Pinned-PQ bus: revert to PV if its solved voltage shows the limit isn't binding.
-                bool revertMax = pinned[i] == QPin.Max && vm[i] > vg[i] + RevertVoltTolPu;
-                bool revertMin = pinned[i] == QPin.Min && vm[i] < vg[i] - RevertVoltTolPu;
-                if (revertMax || revertMin)
-                {
-                    effType[i] = BusType.Pv;
-                    vm[i] = vg[i];      // re-impose the voltage setpoint as the start point
-                    pinned[i] = QPin.None;
-                    revertCount[i]++;
-                    changed = true;
-                }
+                if (TryRevertPin(i, effType, vm, vg, pinned, revertCount)) changed = true;
             }
+        }
+        return changed;
+    }
+
+    /// <summary>The revert rule of <see cref="ApplyQLimits"/> for one bus, shared with <see cref="RevertBrokenPins"/>:
+    /// a bus pinned at Qmax whose solved voltage is above its set point (or at Qmin and below it), by more than
+    /// <see cref="RevertVoltTolPu"/>, goes back to PV at its set point, at most once per solve.</summary>
+    private static bool TryRevertPin(int i, BusType[] effType, double[] vm, double[] vg, QPin[] pinned, int[] revertCount)
+    {
+        if (pinned[i] == QPin.None || revertCount[i] >= 1) return false;
+        bool revertMax = pinned[i] == QPin.Max && vm[i] > vg[i] + RevertVoltTolPu;
+        bool revertMin = pinned[i] == QPin.Min && vm[i] < vg[i] - RevertVoltTolPu;
+        if (!(revertMax || revertMin)) return false;
+        effType[i] = BusType.Pv;
+        vm[i] = vg[i];      // re-impose the voltage setpoint as the start point
+        pinned[i] = QPin.None;
+        revertCount[i]++;
+        return true;
+    }
+
+    /// <summary>
+    /// Bug store #159 (found on GDA japan-east-spine-500-154-r1 with the 2.1.000 binary): the PV/PQ complementarity
+    /// check that runs even with <see cref="PowerFlowOptions.RevertQLimits"/> off, once the forward rule of
+    /// <see cref="ApplyQLimits"/> has nothing left to pin. A PV bus pinned at a reactive limit must have its voltage on
+    /// the side of the set point that limit implies: pinned at Qmin (absorbing all it can) the voltage is at or ABOVE the
+    /// set point, pinned at Qmax at or BELOW it. A pinned bus on the wrong side is absorbing (or producing) more than its
+    /// set point needs, so the limit is not binding and the state is not a solution of the PV/PQ problem: the AVR would
+    /// back off and hold the set point. A flat start could end there with no way back, because the one-way switching
+    /// never reconsidered a pinned bus (on that case: 28 unit buses held at Qmin with V 0.93 to 0.96 pu against a 1.02 pu
+    /// set point, losses 2579.184 MW, where the consistent solution has no violation and losses 2507.282 MW). Each such
+    /// bus is put back to PV at its set point (the same rule and the same once-per-solve guard as the opt-in revert, so
+    /// the outer loop still terminates within <see cref="PowerFlowOptions.MaxQLimitPasses"/>), and the caller solves
+    /// again. A solve whose final state already respects complementarity never reaches a revert, so its numbers are
+    /// bit for bit as before; only states that broke it change, towards the consistent solution.
+    /// </summary>
+    public static bool RevertBrokenPins(int n, BusType[] type0, BusType[] effType, double[] vm, double[] vg,
+        QPin[] pinned, int[] revertCount)
+    {
+        bool changed = false;
+        for (int i = 0; i < n; i++)
+        {
+            if (type0[i] != BusType.Pv || effType[i] != BusType.Pq) continue;
+            if (TryRevertPin(i, effType, vm, vg, pinned, revertCount)) changed = true;
         }
         return changed;
     }

@@ -144,14 +144,27 @@ public sealed class SecurityIncidentSink : IAuditSink
 /// <paramref name="sink"/>, a <see cref="SecurityIncidentSink"/> for single significant events, and a
 /// <see cref="SecurityEventMonitor"/> for bursts. The CLI's <c>--incident-log</c> and the web host's
 /// <c>Audit:IncidentLogPath</c> both use it, so the two raise identical incidents for identical trails.
+/// <para>GR-363 (November 2026): the burst monitor is wired with a sliding window of
+/// <see cref="DefaultBurstWindow"/> (one hour), so a burst of one kind that clears re-arms the latch and a later burst
+/// raises its own incident, instead of the first burst of a long-running host silencing that kind for good. The
+/// window is read only from the entries' own timestamps, so the same trail always gives the same incidents.</para>
 /// </summary>
 public static class IncidentWiring
 {
-    /// <summary>The two audit sinks (single events, then bursts) that feed <paramref name="sink"/>.</summary>
-    public static IReadOnlyList<IAuditSink> AuditSinksFor(IIncidentSink sink, IncidentPolicy? policy = null)
+    /// <summary>GR-363: the burst window every product path uses: one hour.</summary>
+    public static readonly TimeSpan DefaultBurstWindow = TimeSpan.FromHours(1);
+
+    /// <summary>The two audit sinks (single events, then bursts) that feed <paramref name="sink"/>. The burst
+    /// monitor counts inside <paramref name="burstWindow"/> (default <see cref="DefaultBurstWindow"/>); it must be a
+    /// positive length of time.</summary>
+    public static IReadOnlyList<IAuditSink> AuditSinksFor(IIncidentSink sink, IncidentPolicy? policy = null, TimeSpan? burstWindow = null)
     {
         ArgumentNullException.ThrowIfNull(sink);
         var router = new IncidentRouter(sink, policy);
-        return new IAuditSink[] { new SecurityIncidentSink(router), new SecurityEventMonitor(router) };
+        return new IAuditSink[]
+        {
+            new SecurityIncidentSink(router),
+            new SecurityEventMonitor(router, burstWindow: burstWindow ?? DefaultBurstWindow),
+        };
     }
 }

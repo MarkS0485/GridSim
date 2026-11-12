@@ -53,8 +53,14 @@ public sealed partial class LF4LeftoversTests
         // WPF, the parse is checked by behaviour too (UiTabsThirdBatchParityTests orders the machine rows of real frames
         // exactly as the old view-model did).
         string src = File.ReadAllText(Path.Combine(PresentationConstantsAntiDriftTests.RepoRoot(), "src", "GridSim.Ui", "Tabs", "HumanScale", "HumanScaleModel.cs"));
-        Assert.Contains("DegText = $\"{mean:+0.0;-0.0;0.0} deg\"", src, StringComparison.Ordinal);
-        Assert.Contains("s.EndsWith(\" deg\", StringComparison.Ordinal) ? s[..^4] : s", src, StringComparison.Ordinal);
+        // Corrected 2026-11-01: since 2.1.010 the text is built with the invariant culture
+        // (string.Create(inv, ...)), so it reads "+12.3 deg" on every machine; the format is unchanged, so the pin follows
+        // the invariant form. Bug #181 also removed the parse-back entirely: the machine order and the corridor gap now
+        // use the exact angles, so there is no parser left to keep in step with the " deg" suffix. The old pin on the
+        // parser's suffix strip is replaced by the stronger rule that the display text is never parsed back at all.
+        // Nothing is loosened.
+        Assert.Contains("DegText = string.Create(inv, $\"{mean:+0.0;-0.0;0.0} deg\")", src, StringComparison.Ordinal);
+        Assert.DoesNotContain("ParseDeg(", src, StringComparison.Ordinal);
         string adapter = File.ReadAllText(Path.Combine(PresentationConstantsAntiDriftTests.RepoRoot(), "src", "GridSim.Wpf", "Views", "HumanScaleVm.cs"));
         Assert.Contains("public sealed class HumanScaleVm : HumanScaleModel", adapter, StringComparison.Ordinal);
         Assert.DoesNotContain("DegText", adapter, StringComparison.Ordinal);

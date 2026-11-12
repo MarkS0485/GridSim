@@ -50,4 +50,8 @@
     <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
+  <!-- GR-892: ship the .NET runtime's own third-party notices (dotnet-THIRD-PARTY-NOTICES.txt) beside a self-contained
+       publish. The target is in ..\DotnetRuntimeNotices.targets and fails the publish if the notices cannot be found. -->
+  <Import Project="..\DotnetRuntimeNotices.targets" />
+
 </Project>

@@ -84,8 +84,10 @@ public class WorkflowContractTests
 
     /// <summary>
     /// F25 (Ruling R1, 2026-10-04): the 1.0 ship scope is the CLI as self-contained binaries for three platforms,
-    /// GridSim.Core as a NuGet package and the web app as the replay-only container image. The desktop app and Unity
-    /// come after 1.0; GridSim.Gda and the GDA data are not release artefacts. The workflows must match exactly.
+    /// GridSim.Core as a NuGet package and the web app as the replay-only container image. GA-5 (owner decision,
+    /// 2026-11-01) adds the two desktop apps as RC-1 shipped them: the WPF app for Windows x64 and the Avalonia app for
+    /// Windows x64 and Linux x64. Unity is not shipped; GridSim.Gda and the GDA data are not release artefacts. The
+    /// workflows must match exactly.
     /// </summary>
     [Fact]
     public void Release_ships_exactly_the_1_0_scope()
@@ -99,9 +101,19 @@ public class WorkflowContractTests
         // Only release-* artefacts reach the Release page, and the page is checked against the exact file list.
         Assert.Contains("pattern: release-*", rel, StringComparison.Ordinal);
         Assert.Contains("the release files differ from the 1.0 ship scope (F25)", rel, StringComparison.Ordinal);
-        // Not shipped: no desktop publish, no web zip, nothing from GridSim.Gda.
-        Assert.DoesNotContain("dotnet publish src/GridSim.Wpf", rel, StringComparison.Ordinal);
+        // Test correction (2026-11-01, owner decision GA-5, recorded in the commit and CHANGELOG): this asserted "no
+        // desktop publish" (DoesNotContain "dotnet publish src/GridSim.Wpf"). The desktop apps now ship, so the
+        // assertion is replaced by positive pins on exactly the desktop builds RC-1 shipped, and the exact-files gate
+        // must list their archives and SBOMs.
+        Assert.Contains("- { app: wpf, rid: win-x64,   os: windows-latest, project: src/GridSim.Wpf,", rel, StringComparison.Ordinal);
+        Assert.Contains("- { app: app, rid: win-x64,   os: windows-latest, project: src/GridSim.App.Desktop,", rel, StringComparison.Ordinal);
+        Assert.Contains("- { app: app, rid: linux-x64, os: ubuntu-latest,  project: src/GridSim.App.Desktop,", rel, StringComparison.Ordinal);
+        Assert.Contains("\"gridsim-wpf-$VERSION-win-x64.zip\" \"gridsim-app-$VERSION-win-x64.zip\" \"gridsim-app-$VERSION-linux-x64.tar.gz\"", rel, StringComparison.Ordinal);
+        Assert.Contains("\"gridsim-app-$VERSION.sbom.json\" \"gridsim-wpf-$VERSION.sbom.json\"", rel, StringComparison.Ordinal);
+        // Not shipped: no web zip, nothing from GridSim.Gda, and no macOS desktop build (as for RC-1). The old desktop
+        // archive name is still not used.
         Assert.DoesNotContain("gridsim-desktop-", rel, StringComparison.Ordinal);
+        Assert.DoesNotContain("app: app, rid: osx", rel, StringComparison.Ordinal);
         Assert.DoesNotContain("gridsim-web-$VERSION.zip", rel, StringComparison.Ordinal);
         Assert.DoesNotContain("src/GridSim.Gda", rel, StringComparison.Ordinal);
 
@@ -158,7 +170,10 @@ public class WorkflowContractTests
         Assert.Contains("vars.GRIDSIM_ALLOW_UNSIGNED_RELEASE", pub, StringComparison.Ordinal);
         Assert.True(rel.IndexOf("Signing certificate present (or an unsigned release chosen)", StringComparison.Ordinal)
                     < rel.IndexOf("      - name: Build\n", StringComparison.Ordinal), "the signing decision must come before the build");
-        Assert.Equal(2, rel.Split("vars.GRIDSIM_ALLOW_UNSIGNED_RELEASE").Length - 1);
+        // Corrected 2026-11-01 for the owner's ship-scope decision GA-5 (the desktop apps are signed in the release
+        // workflow again): one read in the first job plus one in EACH signing step, the CLI's and the desktop job's,
+        // so 3 (was 2 while only the CLI was signed). Nothing is loosened: every signing step must still read it.
+        Assert.Equal(3, rel.Split("vars.GRIDSIM_ALLOW_UNSIGNED_RELEASE").Length - 1);
         // GR-907: signtool signs from the certificate store; the password is never on its command line.
         Assert.DoesNotContain("/p $env:SIGNING_CERT_PASSWORD", rel, StringComparison.Ordinal);
         Assert.Contains("/s My /sha1 $pinned", rel, StringComparison.Ordinal);

@@ -31,6 +31,7 @@ public sealed class EnsembleKalmanStateEstimator
     private readonly GridModel _model;
     private readonly int _n;
     private readonly double _slackRefRad;
+    private readonly double[] _fixedVaRad;   // #185: each bus's angle when it is not a state (each slack its OWN VaDeg)
     private readonly int _ensembleSize;
     private readonly double _initialStateStd;
     private readonly int _seed;
@@ -69,6 +70,7 @@ public sealed class EnsembleKalmanStateEstimator
         foreach (Bus b in model.Buses)
             if (b.Type == BusType.Slack) { refRad = b.VaDeg * Math.PI / 180.0; break; }
         _slackRefRad = refRad;
+        _fixedVaRad = KalmanStateEstimator.FixedAnglesRad(model, refRad);   // #185
 
         // D-DOC-229 (October 2026): the filter's own state-size check, as the EKF has had since R107. Each member is an
         // s-vector, the gain is s x m and (with a correlated Q, D-DOC-113) Q is factorised s x s; only the streaming
@@ -113,7 +115,7 @@ public sealed class EnsembleKalmanStateEstimator
         double Gaussian() => GaussianFrom(rng);
         double[][] prior;
         if (!_initialized) prior = InitialMembers(mm, rng);
-        else if (s != _stateSize) throw new InvalidOperationException($"state layout changed ({_stateSize}->{s}).");
+        else if (s != _stateSize) throw DomainRefusal.Mark(new InvalidOperationException($"state layout changed ({_stateSize}->{s})."));
         else prior = _members;
         IProcessModel process = _process ?? new RandomWalkProcessModel(s - _n);
 
@@ -280,7 +282,7 @@ public sealed class EnsembleKalmanStateEstimator
     {
         vm = new double[_n];
         va = new double[_n];
-        for (int i = 0; i < _n; i++) va[i] = _slackRefRad;
+        for (int i = 0; i < _n; i++) va[i] = _fixedVaRad[i];   // #185: each slack's own angle
         for (int c = 0; c < x.Length; c++)
         {
             int bus = mm.StateBusIndex(c, out bool angle);
@@ -359,10 +361,10 @@ internal sealed class ProcessNoiseSampler
             // silently read a negative variance as 0, and a NaN or an infinity went straight into the ensemble.
             for (int i = 0; i < s; i++)
                 if (!(q[i, i] >= 0.0) || double.IsPositiveInfinity(q[i, i]))
-                    throw new InvalidOperationException(
+                    throw DomainRefusal.Mark(new InvalidOperationException(
                         $"the process-noise covariance Q of process model '{_processName}' has Q[{i},{i}] = " +
                         $"{q[i, i].ToString("R", System.Globalization.CultureInfo.InvariantCulture)}, which is not a variance " +
-                        "(a variance must be a finite number >= 0).");
+                        "(a variance must be a finite number >= 0)."));
             // The pre-D-DOC-113 statement, verbatim (bit-identical for every valid diagonal Q; Math.Max keeps a -0.0 entry
             // exactly as before).
             for (int i = 0; i < s; i++) x[i] += Math.Sqrt(Math.Max(q[i, i], 0)) * gaussian();
@@ -374,14 +376,14 @@ internal sealed class ProcessNoiseSampler
             for (int i = 0; i < s; i++)
                 for (int j = 0; j < i; j++)
                     if (!(q[i, j] == q[j, i]))
-                        throw new InvalidOperationException(
+                        throw DomainRefusal.Mark(new InvalidOperationException(
                             $"the process-noise covariance Q of process model '{_processName}' is not symmetric: " +
                             $"Q[{i},{j}] = {q[i, j].ToString("R", System.Globalization.CultureInfo.InvariantCulture)} but " +
-                            $"Q[{j},{i}] = {q[j, i].ToString("R", System.Globalization.CultureInfo.InvariantCulture)}.");
+                            $"Q[{j},{i}] = {q[j, i].ToString("R", System.Globalization.CultureInfo.InvariantCulture)}."));
             try { _l = DseLinAlg.CholeskySemiDefinite(q, s); }
             catch (InvalidOperationException ex)
             {
-                throw new InvalidOperationException($"the process-noise covariance Q of process model '{_processName}': {ex.Message}", ex);
+                throw DomainRefusal.Mark(new InvalidOperationException($"the process-noise covariance Q of process model '{_processName}': {ex.Message}", ex));
             }
             _factoredQ = (double[,])q.Clone();
         }

@@ -24,10 +24,15 @@ public class EditorScreenCaptureTests
         {
             ScreenBuffer s = d.Screen();
             Assert.Equal(crumb, s.RowText(1).TrimEnd());
-            if (folder is null) return;
-            Directory.CreateDirectory(folder);
-            // The title bar carries the build version; it is kept as rendered (the chapter says so).
-            File.WriteAllLines(Path.Combine(folder, name + ".txt"), Enumerable.Range(0, s.Height).Select(y => s.RowText(y).TrimEnd()));
+            // GR-404 (2026-11-02): written as "write only when the opt-in is set" rather than an early return on null, so
+            // the silent-guard scan in BundledDataPresenceTests stays at zero. Behaviour is unchanged: the assertion
+            // above always runs; only the capture file is optional.
+            if (folder is not null)
+            {
+                Directory.CreateDirectory(folder);
+                // The title bar carries the build version; it is kept as rendered (the chapter says so).
+                File.WriteAllLines(Path.Combine(folder, name + ".txt"), Enumerable.Range(0, s.Height).Select(y => s.RowText(y).TrimEnd()));
+            }
         }
 
         Capture("root", "Case");

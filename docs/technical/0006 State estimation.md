@@ -577,7 +577,8 @@ pass), not an estimate. On the sparse backend above
 
 ### Chi-square consistency test
 
-With redundancy, `dof = mChi - s > 0` (`mChi` counts the rows other than prior-solved ones), the converged `J(x^)` is compared with the chi-square quantile at
+With redundancy, `dof = mChi - s > 0` (`mChi` counts the rows other than prior-solved ones and, when distrusted sources
+are named, other than their rows: see [Distrusted sources](#distrusted-sources)), the converged `J(x^)` is compared with the chi-square quantile at
 `ChiSquareConfidence` (0.95): `ChiSquarePassed = (J <= threshold)`. `ChiSquare.Quantile` (`ChiSquare.cs`) is dependency
 free. It uses the Wilson-Hilferty cube approximation and Acklam's rational approximation for the standard-normal quantile:
 
@@ -605,6 +606,36 @@ non-converged or non-finite estimate, for `DetectBadData = false`, and for `dof 
 `ChiSquarePassed` is true whenever the test did not run, and `ChiSquareThreshold` is then NaN. Read `ChiSquareTest`, not
 `ChiSquarePassed`, to learn whether a verdict exists. When the test passes and `LeanResiduals` is set, the m
 residual-covariance forms are skipped, and the residual table carries NaN normalised residuals.
+
+### Distrusted sources
+
+`EstimationOptions.DistrustedSources` (a `DistrustedSources` control; CAF D1 containment) names measurement sources the
+operator no longer trusts. It is set by `gridsim estimate --distrust`, `gridsim serve --distrust` and the web host's
+`Realtime:DistrustedSources`, all read through `DistrustedSourceSetting.Parse` (one validation, fail loud naming the flag
+or setting). When it names at least one source, `Estimate` does two things and nothing else:
+
+1. On entry, after the set is validated, every row whose `Source` matches (trimmed, without regard to case) is replaced
+   by a copy with `sigma x SigmaInflation` (`DistrustedSources.DefaultSigmaInflation` = 1e4, so the weight falls by
+   1e8); the value never changes. The set is validated again (an overflowing sigma is refused) and a row with no
+   source tag is refused (`InvalidDataException`). The demoted row stays in the fit, the residual list, the
+   observability gate and the bad-data identification.
+2. `CountsAsRedundancy(m, distrusted)` leaves the row out of the chi-square statistic: its residual is not added to
+   `J` and it is not counted in `mChi`, at every site that leaves out the prior-solved rows (the plain test, the robust
+   methods' `J` against the declared sigmas, and the reported `ObjectiveJ` and `DegreesOfFreedom`). So
+   `DegreesOfFreedom = (rows - prior-solved rows - distrusted rows) - s`, and with `k` distrusted rows the threshold is
+   the quantile at `k` fewer degrees of freedom.
+3. A list that leaves no redundancy is refused before any estimate (`InvalidDataException`): when the evidence rows
+   left on the first pass are no more than the states (`mChi <= s`), the message names the distrusted sources, how
+   many rows they demote, the evidence rows left and the states, and the degrees of freedom that would result. A
+   zero or negative `DegreesOfFreedom` is never reported for a distrusted run. Distrusting `scada`, the default source
+   of a `Measurement`, does this on any set whose rows carry no explicit tag, since every such row carries `scada`.
+
+With the option null or empty, `ActiveDistrust` returns null, no row is copied and `CountsAsRedundancy(m, null)` is
+`CountsAsRedundancy(m)` for every row, so the sums run over the same rows in the same order: every number is
+bit-identical to a run without the option (`DistrustedSourceRedundancyTests`). HTI refuses the option
+(`NotSupportedException`): it removes rows by reference against its own set, which the demoted copies would not
+match. The `DistrustedSource` security event is written by the host (`DistrustedSourceSetting.RecordApplied`, one per
+source per run), never by the estimator.
 
 ### Bad data: largest normalised residual with critical protection
 
@@ -932,6 +963,7 @@ Constrained method promotes to hard equalities. The sets are horizon-guarded on 
 | Backfill | false | flag | replace removed real-power rows by prior pseudo-rows | `EstimationOptions.BackfillRemovedFromPrior` |
 | State covariance | false | flag | per-bus 1-sigma bounds from `diag(G^-1)` | `EstimationOptions.ComputeStateCovariance` |
 | Huber k | 1.345 | sigma | Huber and Schweppe-GM transition | `EstimationOptions.HuberK` |
+| Distrusted sources | none | control | demote the named sources' rows (sigma x 1e4) and leave them out of `J` and the degrees of freedom | `EstimationOptions.DistrustedSources` |
 
 Loop and numerical constants:
 
@@ -1229,6 +1261,8 @@ All files are under `src/GridSim.Core/Estimation/` unless stated.
 | `EstimationAuditTrail.cs` | `EstimationAuditTrail` | tamper-evident record of an estimate |
 | `DenseEstimationLimits.cs` | `DenseEstimationLimits` | the size caps |
 | `MeasuredInjectionPrior.cs` | `MeasuredInjectionPrior` | measured-injection power flow and voltage prior |
+| `DistrustedSources.cs` | `DistrustedSources` | the distrusted-source control: sigma inflation of a source's rows |
+| `DistrustedSourceSetting.cs` | `DistrustedSourceSetting` | reading `--distrust` / `Realtime:DistrustedSources`, and the `DistrustedSource` events |
 | `PhaseAngleFeed.cs` | `PhaseAngleFeed`, `PhaseAngleOptions`, `PhaseAngleObs` | phase-angle rows |
 | `SyntheticMeasurements.cs` | `SyntheticMeasurements`, `SyntheticMeasurementOptions` | deterministic sampler |
 | `ProjectionStatistics.cs` | `ProjectionStatistics` | projection statistics (internal, not used by an estimator) |
@@ -1257,6 +1291,9 @@ All files are under `src/GridSim.Core/Estimation/` unless stated.
 - The exact LAV uses a dense basis inverse and is refused above `DenseEstimationLimits.StateCovarianceMaxState` states; `lav-irls` is an approximation of the LAV optimum.
 - Prior backfill replaces real-power rows only, so a removed reactive row leaves its region less observed.
 - The estimator does not solve a per-feed phase-angle offset; an absolute feed must be re-referenced before it is authored.
+- Distrusted sources match by exact tag (trimmed, without regard to case): a compound tag such as
+  `pseudo-demand+comp-range` is not matched by `pseudo-demand`. HTI refuses them, and the recursive filters
+  (`serve --method ekf|ukf|enkf`) do not take them.
 
 ## See also
 

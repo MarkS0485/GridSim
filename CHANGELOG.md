@@ -8352,3 +8352,622 @@ Release candidate 1.0.
 ### Changed
 - Tests: the author overlay test waits for the reloaded case's asset index, which is built on that case's first solved
   frame, before checking it; a new test cancels the bridge connection straight after a query, twenty times.
+
+## [2.1.003]
+
+### Added
+- Desktop map: a case folder can carry its own geography in a `geography.json` beside `buses.json` (format
+  `gda-geography/1`: the case's lon/lat projection, its land outline and optional regions). The map then draws that
+  land in place of the GB coastline, in the map and the minimap, and its regions on the DNO toggle. It does not draw
+  the GB coastline, DNO and GSP outlines or geocoded GB assets over that case. Cases without the file are drawn
+  exactly as before.
+- Desktop window: for a case with its own geography, the title names the case and the header and map panel name its
+  land (for example "INDIA TRANSMISSION CONTROL") in place of the GB wording.
+- Desktop map: a `geography.json` that cannot be used is refused whole and never drawn in part. Refusal reasons are a
+  wrong format or projection kind, a point layout other than lon, lat, x, y, a ring of fewer than three points, or
+  written x/y that disagree with the declared projection by more than 1e-4. The map falls back to the GB drawing and
+  the status bar gives the file and the reason.
+
+### Changed
+- Tests: new tests for the geography reader (valid files, every refusal, files missing or malformed in a case folder)
+  and for the window with a case that has its own geography, a malformed one, and none.
+
+## [2.1.004]
+
+### Fixed
+- Desktop map: a `geography.json` with a region or land area whose rings were all left out by simplification (a small
+  island territory written with an empty ring list) was refused whole, so the map fell back to the GB coastline. Such
+  an area is now kept with nothing to draw; a file with no land ring in any area is still refused.
+
+### Changed
+- Tests: a new test reads a region and a land area with empty ring lists.
+
+## [2.1.005]
+
+### Changed
+- Docs: SUBMODULES.md describes the planned network models submodule: what each model folder holds (case files,
+  per-case map geography, model card, attribution, provenance and build notes), the grids covered, its ODbL licence,
+  that release is subject to licensing checks, and that bundled signed models are planned to be exempt from
+  licence-tier bus limits.
+
+## [2.1.006]
+
+### Changed
+- Docs: the top-level documents checked against the code and trimmed. README.md names 2.1.000 RC-1 as the latest
+  release, lists the Avalonia desktop app, gives the full CI platform list and uses the LICENSE.md tier names.
+  LICENSE.md section 5 gives the current major version (2) and release (2.1.000 RC-1); no licence term changed.
+  MATH.md lists the DetMath functions as `DetMath.cs` has them. CONTRIBUTING.md gives the 2.1.N version scheme.
+  signing/README.md says the certificate signs the Windows CLI binary and the NuGet package. WhyDotNet.md is a short
+  statement of reasons without unsourced performance claims. THIRD-PARTY-NOTICES.md names the desktop apps shipped in
+  RC-1. PerformanceOpts.md uses British spelling.
+
+## [2.1.007]
+
+### Changed
+- Docs: every claim in `docs/assurance/` checked against the code and the release record for 2.1. The 2.1.000 RC-1
+  release was built, signed and uploaded by hand because `release.yml` refuses the RC tag form, so it carries no
+  provenance attestation, no web image or web SBOM, and no CI witness; CAF A3, A4 and A4.b are now Partially achieved
+  and SLSA is L1 Partially achieved, L2 Not achieved for RC-1. New CAF gaps 10 to 18 (release path bypassing the
+  gates, SBOM covering the CLI only, no green CI on main since the history reset, build environment and unlocked
+  restore, no stated support period or advisory process, missing browser security headers and host filtering, FDIA
+  sigma asymmetry, incident tabletop never held, threat model not covering the desktop app) and a new risk R7
+  (tampered or substituted release). Stale references corrected: `gridsim audit sign`, web host stderr reporting,
+  the `/ws/sim` origin check, the CI matrix, CodeQL `security-extended`, the NASA credibility figures and the version
+  scheme.
+
+## [2.1.008]
+
+### Security
+- A build counts as a release build only when its injected SBOM hash is 64 hexadecimal digits, its commit is known
+  and its source tree had no uncommitted changes; `gridsim compliance verify` and `/compliance` show the source-tree
+  state and say why a build is not a release build.
+- The web app answers only the host names in `AllowedHosts` (default: the loopback names); any other `Host` gets a
+  400 naming the setting, before any page, API call or WebSocket runs, which stops DNS-rebinding pages. A deployment
+  behind a reverse proxy must set its public name (Compose: `GRIDSIM_ALLOWED_HOSTS`). `AllowedHosts=*` restores the old
+  behaviour with a start-up warning, and `/ws/sim` then accepts a page's origin only when it is loopback or in
+  `GridSim:AllowedOrigins`.
+- Every web answer carries `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, and outside Development the
+  app sends HSTS on HTTPS requests. `GridSim:FrameAncestors` allows named sites to frame the pages;
+  `GridSim:Hsts=false` leaves HSTS to the reverse proxy.
+- `pmu-ingest --live udp://:port` listens on 127.0.0.1 (it listened on every interface). Listening on another
+  interface (`udp://0.0.0.0:port`) needs `--live-udp-source <pmu-ip>`, or `--live-udp-any-sender` on purpose; without
+  either the run stops before listening (exit 2).
+- `interpose` listens on 127.0.0.1 when no address is given (it listened on every interface). A listener reachable
+  from other machines needs `--allow-client <ip>[,<ip>...]`, or `--allow-any-client` on purpose (exit 2 otherwise). A
+  client silent for `--idle-seconds` (default 120; 0 never) is dropped so the real RTU can connect.
+- A replay run counts as a bundled network (free of the bus limit) only when its model has the shipped network's
+  topology, not because of the name written in its own files.
+- Web bridge sessions (`bridge:<case>@<source>`, `live-bridge`) pass the licence gate when the server's topology
+  arrives; a model above the tier's bus limit that is not a bundled network's topology is refused and not shown.
+- The bundled-network check hashes the shipped files on every load (a process-long cache keyed on size and write time
+  is gone) and must pass both before and after the model is read.
+
+### Fixed
+- A release CLI publish no longer rewrites `packages.lock.json` (and no longer stamps the binary "-dirty"): the CLI's
+  lock file now covers the three release runtimes.
+- The release workflow accepts release-candidate tags (`v2.1.000-RC-1`, `v2.0.195-rc1.0`): the numeric part must
+  still equal the source version, the GitHub Release is marked a pre-release, and no NuGet package or container image
+  is pushed for a candidate.
+- `pmu-ingest --live tcp://` gives the connection, the device's first frame and the receive each their own
+  `--live-seconds`, so a slow connect no longer uses up the time for collecting DATA frames.
+- A live C37.118 receive stops (exit 1) when a device sends more than 1024 frames that are not DATA frames, instead
+  of buffering them until the timeout.
+- The web resident estimator's audit entry names exactly the window files it estimated (input `windows-consumed`:
+  each file's name and content hash, as read), instead of a hash of the whole folder taken at start-up.
+
+### Changed
+- The .NET SDK is pinned to 10.0.401 by a new `global.json` (no roll-forward), and every workflow and the container
+  image build with exactly that SDK; CI restores NuGet packages in locked mode, so a restore that would change a lock
+  file fails instead of silently drifting.
+- The compliance manifest records the supply-chain and secure-SDLC-attestation controls as partially achieved, naming
+  the gap: no published release has yet been made through the release workflow, which is what gates on the full test
+  matrix and attaches the provenance attestation.
+- Tests: a regression test for each of the fixes above; the C37.118 live test runs its simulated device on a
+  dedicated thread (harness only, no assertion changed).
+
+## [2.1.009]
+
+### Fixed
+- IEC 60909 double-line-to-earth at a bus with no earth path now returns the line-to-line duty of the two shorted
+  phases instead of an all-zero duty, so the breaker check no longer reads every breaker adequate there
+  (Z1 = Z2 = j0.1 pu, 100 MVA, 33 kV, c 1.1: 16.67 kA, was 0 kA). The single-line-to-earth duty on such a bus is
+  still zero.
+- IEC 60909 three-phase breaking current Ib of a machine with a unit transformer weights the machine's decay by the
+  voltage drop across its subtransient reactance alone, as the standard defines it, not by its HV bus voltage
+  (X''d 0.2, XT 0.15, mu 0.7: deduction 0.171 x Ik''G, was 0.300 x Ik''G, so Ib rises by 0.129 x Ik''G). Machines
+  without a unit transformer are unchanged bit for bit. Bundled gb-full carries unit transformers (952 units at
+  0.15 pu), so its near-to-generator Ib values rise.
+- `Iec60909.FromSequenceImpedances` refuses a fault duration Tk of 0 or less, a negative breaker time, a nominal
+  frequency that is not a finite number above 0, and a sequence loop with no positive reactance, as
+  `FromThevenin` does; Tk 0 used to return a NaN thermal current as a valid duty.
+- The IEC 60909 thermal DC factor m keeps machine precision near kappa = 2 (R/X below about 0.0017 at 50 Hz and
+  Tk 1 s): it uses expm1 where 4 f Tk |ln(kappa - 1)| < 1 and no longer cuts to exactly 2 below |ln(kappa - 1)| of
+  1e-9 (relative error up to 1e-7 before, now within 4 ulp). Values outside that region are unchanged bit for bit.
+- The operating-point fault study builds a converter's prefault current from its solved output where the power
+  flow sets it (active and reactive power at a slack bus, reactive power at a PV bus), not from its schedule, so
+  the converter infeed and its current-limit check no longer carry the schedule error (a PV-bus converter
+  scheduled at 0 MVAr that solved 50 MVAr on a 100 MVA base: prefault reactive current 0.5 pu, was 0). Converters
+  at PQ buses are unchanged bit for bit.
+- The operating-point fault studies (balanced, unbalanced, converter current limit) and the harmonic machine source
+  reactance refuse a unit with no rating (MBase 0 or less, NaN or infinite), naming it, as IEC 60909 already does; it
+  was rated at the system base without a word (a 1000 MVA unit with X''d 0.2 on a 100 MVA base fed 5 pu instead of
+  50 pu). Only hand-built and bridge-built models can reach this; the loaders fill MBase.
+- A harmonic source whose spectrum repeats an order is refused, naming the bus and the order; the second component
+  was silently dropped from the injection and THD.
+- The state estimator's measured-injection prior combines several injection meters at one bus by their
+  inverse-variance weighted mean, as the estimator weighs them, instead of adding them (two redundant 300 MW meters
+  built a 600 MW bus). A bus with one meter is unchanged bit for bit.
+- Unit commitment refuses contingencies when line limits are off (`scuc --no-line-limits` with contingencies in the
+  data file), instead of reporting an optimum that secured none of them.
+- The DC SCOPF bindings list no longer repeats a binding branch once per contingency that does not affect it (line
+  outage distribution factor 0); it is listed once, before any outage.
+- The Kalman, unscented and ensemble state estimators hold each slack bus at its own angle, as the WLS estimator
+  does; every slack was held at the first slack's angle. Single-slack results are unchanged bit for bit.
+- Transformer and line thermal states use the exact first-order step, so the thermal lag holds at the 1200 s live
+  and 1800 s replay ticks: a 15 min line overloaded at 1 pu for one 1200 s tick is derated to 926.4 MVA of 1000, was
+  900 MVA (state 0.736, was 1.000); a 20 min transformer from cold reaches 0.632 after 1200 s, was 1.000. Every
+  thermal value moves at every tick size (the old explicit Euler was only first-order accurate). A negative or
+  non-finite thermalTauMin is refused; 0 means no lag.
+- The transformer thermal state is driven by loading squared (the I^2 R load loss), as the line's is: at loading 0.5
+  it settles at 0.25, was 0.50, so the rating derate is no longer twice too large.
+- The asset fleet summary names protection classes (for example the gb-synthetic LFDD stages) "protection" and
+  synchronous classes "synchronous", instead of "grid-following", and marks a class with no state-of-charge asset as
+  not applicable (its SoC stays 0.0 in the data, flagged, because frame JSON cannot carry NaN).
+- In the live loop a bus missing from the solve (a de-energised island after a recloser opens) reads as "not known"
+  to voltage protections and ride-through stages instead of a healthy 1.0 pu. Not 0 pu: the island's load and
+  generation are already taken out as the blackout's frequency step, and a trip there would count them twice.
+- A bridge state frame with no converged flag is read as converged only when it carries a full, finite state (at
+  least one bus, every voltage finite and above 0); an empty "no solve" frame or one with NaN values now reads as not
+  converged. Frames the shipped GDA bridge streams with a full state are unchanged.
+- The power flow puts a generator bus pinned at a reactive limit back on voltage control when its solved voltage is
+  on the wrong side of its set point (at Qmin and below it, or at Qmax and above it), even with the optional revert
+  off, so a flat start no longer ends in a state that breaks PV/PQ complementarity (found on a 500/154 kV Japanese
+  model: 28 units held at Qmin at 0.93 to 0.96 pu against a 1.02 pu set point, losses 2579.184 MW, where the
+  consistent solution has losses 2507.282 MW). Solves that already end consistent are unchanged bit for bit.
+- Tests: regression tests for each fix above (`Hunt20261101NumericsTests` and additions to `Iec60909Tests` and
+  `HarmonicSourceImpedanceTests`); each changed assertion carries its old value, new value and reason.
+
+## [2.1.010]
+
+### Security
+- The desktop apps put a replay run and a GDA bridge topology through the licence gate, as the web app does: a model
+  above the tier's bus limit that does not have a bundled network's topology is refused with the licence message.
+
+### Fixed
+- The web app's usage log is rotated once it passes `Analytics:MaxLogBytes` (default 16 MiB): the old file is kept as
+  `usage-<UTC stamp>.jsonl` and the visit count is carried in `usage.jsonl.visits`, so start-up no longer reads an
+  ever-growing log.
+- A QSTS CSV profile read by column index no longer drops its first sample when the file has no header and its first
+  column is a timestamp: the header is decided by the chosen column's first cell, or stated with the new `"header":
+  true|false`. An unreadable cell is reported by its file line.
+- The FDIA screen bounds a branch-flow breach by the tightest meter on that line, as it already did for bus meters,
+  so a loose second meter (a pseudo-measurement) no longer widens the margin enough to hide a rating breach; parallel
+  circuits keep the widest bound.
+- Replay frame labels, health-probe breach messages, the back-test validation note, the frozen-parameter refusal and
+  the QSTS / hosting-capacity refusal messages are written with invariant number formatting, so the same run gives the
+  same text on every machine (a comma-decimal locale wrote "t=1,50s" or "99,0 %").
+- HUMAN SCALE writes its angles with a decimal point on every machine, orders the machines and measures the working
+  corridor from the exact angles (not the 0.1 deg display text), and orders machines with equal leads the same way on
+  every run.
+
+### Changed
+- The desktop app chapter lists the libraries the Linux build needs (libICE, libSM, fontconfig, ICU) and says it runs
+  through XWayland under Wayland.
+- Tests: a regression test for each fix above, and the usage-log test and manual row for the log rotation
+  that landed in 2.1.008.
+
+## [2.1.011]
+
+### Changed
+- Docs: the assurance documents follow the 2.1.008 to 2.1.010 fixes. CAF gaps 15 (web host hardening) and 16 (FDIA
+  branch bound) are closed; gaps 10 (release path) and 13 (build environment) are narrowed but open, because no
+  release has yet been made through the workflow and a local clean-tree build with any 64-hex hash still reports a
+  release build. The compliance manifest now records 13 of 18 in-scope controls achieved. `signing/README.md` says
+  the private key is held by the owner outside the repository and the workflow's signing secrets are not set.
+  Technical chapter 11 and the README give the 2026-10-31 gb-full cross-validation (3.333e-13 pu, 3.046e-13 rad;
+  measured after the 2.0.200 charging correction). The `ci.yml` and `release.yml` header comments describe the
+  current repository and CI matrix.
+
+## [2.1.012]
+
+### Fixed
+- Web bridge sessions: the MECHANICAL ramp (MW/min) now divides by the real gap between the bridge's own tick
+  instants, not a silent 1.0 minute default, which overstated every ramp on a 30-minute lake 30 times. The first tick,
+  a seek back or a loop restart drops the ramp history; a bridge frame without its tick instant fails loud. A
+  fixed-step session given a step that is not a finite, positive number of minutes is now refused instead of being
+  run at 1.0 minute. Live and replay ramps are unchanged bit for bit. (F-047)
+- WPF schematic: a hidden or undrawn minimap no longer leaves a clickable panel behind, so a click in that corner
+  cannot recentre the view, and a zero minimap scale can no longer reach the recentre. (F-055)
+- CLI: list flags (`--inertia`, `--sync-inertia-scale`, `--budgets`, `--rocof-limits`, `--units`, `--corners`)
+  refuse empty entries such as "260,,120", "260," or ",", which used to be dropped or turn into an empty sweep;
+  `--corners` refuses numeric enum values. `--device` files are read by one loader that names each fault (missing
+  file, directory, non-object root, unknown or repeated key, wrong type, missing or empty name, missing inertia or
+  fast-response value, negative or non-finite values, a time constant of 0 or less, malformed JSON); a missing or
+  misspelt inertia or FFR key used to default silently to 0. Keys starting with "_" are annotations. (F-064)
+
+### Changed
+- Tests: a regression test class for each fix above (F047BridgeMechanicalStepTests, F055MinimapHitTestSourceTests,
+  CliF064InertiaScaleDeviceFlagTests), including the bundled tsgb-fleet device file under the strict key rules.
+
+## [2.1.013]
+
+### Added
+- Documentation site: MkDocs Material over docs/ (`mkdocs.yml`, exact-pinned `requirements-docs.txt`, build hook and
+  landing page under `tools/docs/`), published to GitHub Pages by `.github/workflows/pages.yml`. Every run lints the
+  docs, checks the generated wiki CLI page against manual chapter 19 and builds with `--strict`, so a broken link or a
+  stale page fails loudly; the deploy runs on each push to main. Actions are pinned to commit SHAs. The assurance
+  documents, the reference catalogue and the public-data submodule are not part of the site.
+- Wiki: page sources and a CLI quick reference generated from manual chapter 19 (`tools/wiki/`), kept in step by
+  `.github/workflows/wiki-sync.yml` on each push to main.
+- `tools/github/apply-public-settings.ps1`: applies and reads back the public repository's settings (description,
+  homepage, topics, wiki, Discussions, Pages source, main-branch ruleset, secret scanning, Dependabot alerts,
+  private vulnerability reporting); dry run by default.
+
+### Changed
+- README: status badges and links to the documentation site, wiki and Discussions.
+
+## [2.1.014]
+
+### Fixed
+- CLI: `--device-inertia` and `--device-ffr` (scenario, evidence) refuse a negative value by name (exit 2); a
+  negative value used to run as a negative device. Defaults are unchanged. (#208)
+
+### Changed
+- Tests: CliBug208DeviceInertiaFfrFlagTests.
+
+## [2.1.015]
+
+### Fixed
+- NESO national fleet (connected mode): TEC and embedded entries count "MW Connected" only and never fall back to the
+  register's "Cumulative Total Capacity", which is future-inclusive by definition (a closed station still listed, or
+  a later stage of a project whose earlier stage carries the connected MW, used to be counted at its planned total).
+  On the 28 September 2026 registers: TEC unchanged (370 rows, 82155.71 MW); embedded 217 rows / 2989.56 MW ->
+  216 rows / 2939.61 MW (Camilla Farm storage, 0 MW connected, no longer counted at 49.95 MW); fleet total
+  599 units / 96742.27 MW -> 598 units / 96692.32 MW (-49.95 MW); inertia and synchronous capacity unchanged.
+  Whole-register (planning) mode keeps the planning figure. (F-038)
+
+### Changed
+- Tests: F038ConnectedCapacityTests.
+
+## [2.1.016]
+
+### Fixed
+- NESO national fleet (whole-register / planning mode): a multi-stage project (rows sharing a Project ID) counts once,
+  at its latest stage's cumulative capacity (latest by "MW Effective From", then the highest stage number; a blank
+  date is already in effect). It used to count every stage at its cumulative figure, so Springwell's stages
+  400/800/1600 summed to 2800 MW against an ultimate of 1600. Two rows of one project with the same date and stage,
+  or a malformed date or stage, fail loud naming the register and project. Single-row projects and the connected
+  fleet are unchanged. On the 28 September 2026 registers: TEC 2173 units / 727070.42 MW -> 2037 / 677663.53 MW;
+  embedded 560 / 13787.68 MW -> 543 / 13142.53 MW; interconnectors unchanged; whole-register total
+  2768 units / 784994.10 MW -> 2615 / 734942.06 MW (-50052.04 MW). Largest corrections: Hornsea 3 5250 -> 3000,
+  Hinkley Point C and Sizewell C 5010 -> 3340 MW; one increase, Thurrock 375 -> 750 MW (its ultimate). (#209)
+
+### Changed
+- Tests: Bug209WholeRegisterStageTests.
+
+## [2.1.017]
+
+### Added
+- `SECURITY.md`: supported versions (latest release only), how to report (GitHub private vulnerability reporting or
+  e-mail), objective CVSS v4.0 and v3.1 base-score assessment recorded in the advisory, and the remediation target: a
+  fixed release and published advisory within 48 hours of the assessment being recorded where the base score is 7.0
+  or above. Subscribers are notified automatically through GitHub (Watch: Releases and Discussions) and the releases
+  feed.
+- `.github/workflows/security-notice.yml`: on a release whose notes name a published GitHub security advisory, posts
+  one Announcements discussion per advisory (idempotent; fails loud if an advisory named is not yet published).
+- `docs/assurance/tabletop-cve-exercise.md`: a timed tabletop script for a CVSS 7.5 vulnerability (CAF D1 exercise).
+
+### Changed
+- Assurance documents: the incident-response plan gains a supplier-role section that runs the SECURITY.md policy;
+  CAF gap 14 (support and update policy) closed; gap 13 narrowed (public ruleset, secret scanning with push
+  protection, Dependabot alerts and private vulnerability reporting are on); the self-signed signing certificate is
+  an accepted residual (owner decision); gap 17 stays open until the exercise is held. NIS, SSDF, Cyber Essentials,
+  governance and risk-register entries follow.
+
+## [2.1.018]
+
+### Security
+- Web host role gate (CAF B2): `POST /api/solve` needs Analyst, `/ws/sim` actions that start or drive a session
+  (start, play, pause, step, seek, speed, trip) need Operator, `GET /api/topology` is stated as Viewer. A refused
+  request gets 403 (REST) or an error frame (WebSocket) before any effect, and writes one AccessDenied security event
+  to the audit log when the host keeps one. A signed-in caller takes the highest of its GridSim.Viewer / Analyst /
+  Operator / Administrator role claims. New setting `GridSim:AnonymousRole`, validated at start-up: when unset it is
+  Operator on a loopback-only host (single-user `dotnet run` is unchanged) and Viewer otherwise.
+  **Behaviour change:** a deployment with a public AllowedHosts name now lets anonymous callers read but not solve or
+  drive sessions until roles or `GridSim:AnonymousRole` are set. Blazor dashboard sessions are not yet gated, so the
+  control stays Partially achieved.
+- Every GitHub Actions `uses:` is pinned to a full commit SHA with its version in a comment (SLSA residual 6 closed);
+  the release workflow pins the CycloneDX tool version and records it as a job output (GR-436, #210).
+
+### Changed
+- Assurance, deployment and audit documents follow both changes (CAF gaps 1, 2 and 13; NIS B2 and A4 rows; SSDF;
+  risk register; technical chapters 34 and 35; manual chapter 26; deployment README).
+- Tests: CafB2RoleGateWebTests.
+
+## [2.1.019]
+
+### Fixed
+- IEC 104 controlling station: the k window is enforced from the peer side (an N(R) acknowledging I-frames never sent
+  closes the connection by name, as an N(S) gap does), and STOPDT / STARTDT are supported with t1 supervision; misuse
+  fails loud. The interpose verb itself sends no STOPDT. (N366, #211)
+- Eigen decomposition: every eigenpair's residual ||Av - lambda v|| is checked before the vectors are used; an
+  unconverged inverse iteration now fails loud instead of returning its start vector. Each pair reports its residual.
+  (GR-033, #212)
+- Protection: an optional shot counter and lockout for auto-reclose stages (default unlimited, as before; code-set
+  only). (GR-123, #215)
+- ROCm dense solver refuses a non-finite right-hand side with the same wording as the CPU and ILGPU solvers.
+  (GR-457, #218)
+- GPU context: the CUDA driver probe runs before the initialisation lock with a 10 s bound; a wedged driver is
+  reported in the device description instead of hanging. (GR-471, #220)
+- Physics feasibility refuses a non-converged result by name. (GR-495, #223)
+- Backward/forward sweep: generators are indexed by bus once per result (bit-identical sums). (GR-501, #224)
+- State estimation: clamps of Vm to the floor by the interior backstop are reported (count and bus ids).
+  (GR-518, #227)
+- FDIA screen: a rated branch with one metered end takes that end's bound instead of no margin (a NaN from the
+  unmetered end used to remove the margin). Fewer "suspected" verdicts on partly metered branches. (GR-532, #232)
+- IEC 60909 zero-sequence network: a grounded machine without a finite, positive MBase is refused by name instead of
+  taking the system base (or giving NaN / infinity). (GR-603, #236)
+- Protection: a branch whose two end voltages have both collapsed (<= 1e-9 pu) has an unknown current, and the
+  undercurrent element gives no verdict there (it used to operate). (GR-623, #238)
+- Hybrid multi-rate scheduler (test-only today) refuses an end before its start and mixed DateTime kinds. (GR-848, #239)
+
+### Changed
+- Island report: LostGenMw is documented as zero by construction. (GR-491, #222)
+- Technical chapter 36 follows each item above (entries removed or rewritten); its pinning bullet also follows the
+  2.1.018 workflow change. Chapters 19 and 20 describe the IEC 104 k window and STOPDT.
+- Tests (to be run on the large machine; some are new exactness checks that may expose real findings):
+  F086StressCasePerturbationPropertyTests, F025RealNetworkImpedanceScanTests (gb-full on the large machine),
+  N366Iec104KWindowAndStopDtTests, Gr033, Gr123, Gr407 (branch plus shunt losses reconcile to the nodal total),
+  Gr457, Gr471, Gr491, Gr495, Gr501, Gr505, Gr518, Gr532, Gr534 (constrained estimator dense = sparse bit for bit),
+  Gr535, Gr603, Gr623, Gr848, Gr889 (dense = sparse on device fields).
+
+## [2.1.020]
+
+### Changed
+- Docs: technical chapter 35 gains a threat model for the desktop app, case geography files and the release path
+  (surface, threat, control, residual), and three stale statements are corrected (the release workflow does attest
+  build provenance; the host sends security headers and HSTS; the first limits bullet now names the missing rate
+  limit, not authorisation). CAF gap 18 closed. Named residual: case and geography files are read whole with no size
+  cap (#241).
+
+## [2.1.021]
+
+### Security
+- Distrusted-source containment: `estimate --distrust a,b`, `serve --distrust` and the web setting
+  `Realtime:DistrustedSources` demote every row of a named source (sigma x 1e4) and exclude it from the redundancy count
+  of the chi-square test; one DistrustedSource security event per source per run. Malformed lists, untagged rows and
+  lists naming internal tags are refused by name. A distrust list that leaves no redundancy (for example distrusting the
+  default `scada` source) is refused before the estimate, naming the sources and counts.
+- Release workflow: the desktop apps ship through the workflow again (WPF for Windows x64, Avalonia for Windows x64 and
+  Linux x64), each with its own SBOM hash stamped and checked, Authenticode-signed on Windows and attested; SBOMs for
+  GridSim.Core and both desktop apps go on the release page; the NuGet package is stamped with its own GridSim.Core
+  SBOM hash and gets a provenance attestation before it is pushed; a release waits for an independent byte-for-byte
+  rebuild of the Linux CLI.
+- Licence keys and signed audit anchors are written in the low-S ECDSA form; keys issued earlier remain valid.
+- The audit anchor and its signature flush their folder after the rename on Linux and macOS.
+- A supplied "now" later than the real clock is clamped to the real clock wherever the forward-inference horizon is
+  checked.
+
+### Added
+- Bridge sessions (web and desktop) can reconnect themselves on the bounded backoff schedule (`GridSim:BridgeReconnect`,
+  `GridSim:BridgeReconnectMaxAttempts`; desktop `BridgeAutoReconnect`, `BridgeReconnectMaxAttempts`); off by default.
+- State estimates seen as a power flow carry the estimator status and state-update norm in their own fields.
+- N-1 results carry the tick of the frame they were screened on; the web CYCLE tab shows each job's frame range.
+- Measurements carry an optional provenance field; phase-angle rows share one source class and keep their frequency
+  and instant there. Existing measurement and export files are unchanged.
+- ROCm sparse solves fall back to the CPU on a device out-of-memory error only, counted and reported on stderr; every
+  other device fault still stops the solve. ROCm device tests run on an AMD device and are skipped with a reason
+  elsewhere.
+
+### Changed
+- **Behaviour change:** `--method huber` and `--method schweppe-gm` give no chi-square verdict (J at an M-estimate is
+  not chi-square distributed); with `--fdia-screen` they have no verdict and exit 3.
+- An estimate whose prior-solved rows leave no redundancy for the chi-square test is refused, naming the counts (it
+  reported zero or negative degrees of freedom).
+- `--method constrained` refuses a measurement set with two identical hard zero-injection constraint rows, naming them.
+- One strict branch resolver serves both estimators: an exact circuit name is preferred over an ordinal "#k", a "#k"
+  with a sign or spaces is refused, a name shared by two parallel circuits is refused (the PMU estimator used to take
+  the first), and the PMU estimator skips out-of-service branches.
+- Fault studies treat a bus missing from the pre-fault result as de-energised (0 V, no load, no machine); a fault on
+  such a bus is refused by name.
+- Protection: the overcurrent (50, 51) and thermal (49) elements give no verdict on a branch whose current is unknown
+  (both ends collapsed).
+- Passive-plant GDA replays whose plant moved a tap or derated a rating are tagged Interpolated.
+- The real-time DSE engine counts only domain refusals as failed windows; a programming fault stops the run.
+- Asset envelopes refuse a NaN parameter end before any corner is simulated.
+- CIM export writes any non-zero phase shift; the CIM importer refuses a load, machine or injection with more than one
+  connected terminal; CIM bridge frequency defaults to the nominal frequency.
+- GDA builds refuse a Parquet folder whose parts carry different publication dates; LTDS readers refuse a missing or
+  renamed column; the GDA case writer refuses a model it cannot write without losing transformer shunt or zero-sequence
+  data; NPg reads fall back to CSV only for a damaged Parquet file.
+- V2 schema documents refuse a field set twice; an optional sliding window for the security-event monitor.
+- Docs: assurance documents (CAF gaps 3, 4, 9, 10, 11; NIS, SSDF, SLSA, risk register), technical chapters 6, 34, 35
+  and 36, manual chapters 1, 3, 9, 19, 21 and 26, deployment README and wiki FAQ follow these changes. The wiki CLI
+  check ignores CRLF line endings.
+- Tests: a regression test class for each change above. Test corrections, each with its reason in the test:
+  Cf6LavExactTests (Huber and Schweppe-GM rows removed: J at an M-estimate is not chi-square distributed);
+  WorkflowContractTests and WorkflowReleaseGateTests (desktop apps in the release scope, the package's own SBOM hash,
+  the reproducible-build gate); LF4LeftoversTests N310 (the angle text is invariant-culture and no longer parsed back);
+  F038ConnectedCapacityTests (one unit per multi-stage project since 2.1.016).
+
+## [2.1.022]
+
+### Security
+- Web: a concurrency cap and timeout on `/api/solve` and `/api/topology` (`GridSim:MaxConcurrentSolves`, default 8;
+  `GridSim:SolveTimeoutSeconds`, default 120; 503 when full, 504 on timeout) and a per-socket rate limit on `/ws/sim`
+  start and step frames (`GridSim:WsControlRatePerSecond` 5, `GridSim:WsControlBurst` 20).
+- Web image: both base images are pinned by digest as well as version, and the runtime stage installs no package (the
+  health check uses bash's /dev/tcp instead of curl). The runtime image is Ubuntu 24.04.
+- The CLI and web incident monitor counts security-event bursts in a one-hour sliding window.
+- New setting `GridSim:CaseRoots` restricts where the web host looks for result and GDA cases; result and GDA models
+  are listed only to Operator and above.
+
+### Fixed
+- UKPN demand rows that share a substation name across licence areas are each kept (keyed by licence area); a demand
+  row with no licence area is refused. **Behaviour change:** the UKPN replica's demand can rise.
+- The phasor data concentrator groups samples within one tick into one superframe.
+- A 32-bit RTU value takes the quality of both of its registers; registers of different kinds are refused.
+- The JSON loaders report System.Text.Json's other refusals as invalid data naming the file; the case editor shows
+  only loader refusals as case problems.
+- Web JSON reads numeric strings only where allowed and NaN or infinity only as named literals.
+
+### Changed
+- Web: a raw replay frame reads NO SOLVE instead of grading placeholder voltages; non-converged frames carry no
+  conformance, human-scale, harmonics or wave-field data; seeks are clamped to the forward-inference horizon as well
+  as the raw range; `/health` reports the resident estimator and live bridge sessions; a MATPOWER case above the
+  licence tier is refused before it is parsed.
+- CLI: a verb accepts only the flags its reference section declares in its usage line or flag table (a flag named
+  only in passing is refused, exit 2); a global switch given to a verb that does not read it prints a warning; `gda`
+  refuses flags its chosen mode does not use.
+- GDA builds give embedded generators of one fuel at one primary unique names (" #2", " #3").
+- CI also runs on every push to main and weekly, on the public repository only.
+- Added opt-in checks: `interpose --max-stamp-spread-ms`, `CimImportOptions.RequireSshSetPoints`.
+- Docs: technical chapters 10, 34, 35 and 36, manual chapters 3, 9 and 19, and the CAF mapping follow these changes.
+- Tests: a regression test class for each change above. Test correction, with its reason in the test:
+  BugHunt1101BuildTests requires the base-image digests.
+
+## [2.1.023]
+
+### Security
+- A secret set under both environment spellings is refused at start-up, naming both variables and never their values.
+- Web: models under results/ and gda-out/ are listed and opened through the REST API only by Operator and above
+  (403 with an audit entry otherwise); bundled cases stay open to Viewer.
+- An audited estimate, interpose or crossval run hashes its case, measurement set or crosswalk again after loading it
+  and refuses the run (exit 1) if the file changed in between, so the audit log never names data the run did not use.
+
+### Changed
+- Web: `/health` reports the resident estimator and live bridge sessions; `GridSim:CaseRoots` limits case discovery;
+  a MATPOWER case over the licence limit is refused before it is parsed; numeric strings are read as the web defaults
+  read them.
+- Docs: the UKPN file-choice limitation is recorded as a decision (equally good matches are refused; keep one
+  vintage); technical chapters 34 and 36, manual chapters 3, 9 and 26 and the CAF mapping follow these changes.
+- Tests: the template-library and crash-log default-folder tests are reported as skipped, with the reason, instead of
+  passing silently when their condition does not hold; the silent-guard scan allows none and also finds a null check on
+  an environment opt-in. Test correction, with its reason in the test: SecretStoreTests (both spellings set is refused).
+
+## [2.1.024]
+
+### Security
+- Web: the dashboard refuses a results/ or gda-out/ case below Operator (one audit entry per refused open). The
+  decision is made once the page is interactive: the prerender shows a loading state and writes nothing.
+- security.txt stops being served at its Expires date without a restart.
+
+### Added
+- `GRIDSIM_LICENCE_FILE` names the licence file to read and install to, in place of the per-user one.
+
+### Fixed
+- Opening or verifying an audit log reads it in one streaming pass; memory no longer grows with the log, and a log
+  over 2 GiB can be opened.
+- The bridge client pings an idle connection (every 30 s) and treats a ping unanswered for 60 s as a lost connection:
+  pending queries fail, the stream is reported faulted and supervised reconnect takes over.
+- The web replay topology cache waits asynchronously and re-checks file details at most every 5 s.
+
+### Changed
+- Docs: technical chapters 34 and 36, manual chapters 3, 4 and 9 and the CAF mapping follow these changes; the
+  dashboard's prerender-per-request session is recorded as a known limit.
+- Tests: command-line runs in the test suite no longer see the machine's licence (key variable removed, licence file
+  redirected to the run's temporary folder); new regression tests for each change above.
+
+## [2.1.025]
+
+### Added
+- Release: an SBOM of the built web image (Ubuntu base packages and the ASP.NET runtime) on the Release page, and the
+  bundled .NET runtime listed in the CLI and desktop SBOMs.
+- A PMU channel map current channel takes an optional `end` ("from" or "to") naming the branch end it is metered at;
+  without it the From end is used as before.
+
+### Fixed
+- WLS state estimation refuses a model with two slack buses in one island, naming both (a second slack held the
+  estimate to its case-file angle whatever the telemetry said).
+
+### Changed
+- Docs: technical chapter 36 records the web JSON conventions, the cycle scheduler's work budget, the storage
+  formulation and the NESO and phase-angle readers' bit parity with the reference reader as design decisions; chapter
+  35, manual chapter 19 and the assurance documents follow the changes above.
+- Tests: Gr076SlacksSharingAnIslandTests, Gr808PmuCurrentMeteredEndTests and a new supply-chain pin.
+
+## [2.1.026]
+
+### Security
+- Web sign-in: an 8-hour sliding window with a 14-day absolute cap from sign-in (`Auth:SlidingHours`,
+  `Auth:AbsoluteDays`, validated at start-up); a role removed at the authority takes effect at the next sign-in. A
+  cookie with no sign-in stamp is stamped from its issue time on first use; one with no issue time is refused.
+- Web: a per-client session quota (`GridSim:MaxSessionsPerClient`, default 16) beside the global cap, keyed by the
+  signed-in subject or, for anonymous callers, the client address.
+
+### Changed
+- Web: bridge frames are projected on a bounded per-session worker, in order with nothing dropped; a session that
+  falls 64 frames behind stops with an error instead of stalling the bridge receive loop.
+- Docs: technical chapters 34, 35 and 36, manual chapter 3, the deployment README and the CAF mapping follow these
+  changes; chapter 36 records the generation tile's definition and the map projection as decisions.
+- Tests: a determinism guard over the presentation assemblies (GridSim.Ui, GridSim.Web) that allows the host's
+  trigonometry only in five display-geometry types; regression tests for each change above.
+
+## [2.1.027]
+
+### Changed
+- The real linear solvers (dense, batched, sparse, multi-case, Kron reduction, ILGPU and ROCm) judge a near-singular
+  pivot against the largest entry of its own row, not of the whole matrix. Systems whose equations are in very
+  different units, such as diag(1e6, 1e-9), now solve; every system that solved before gives the same result to the
+  bit. A matrix whose columns differ in scale by more than about 1e12 can still be refused, and a matrix with an
+  infinite entry is refused as before.
+- With the opt-in sparse diagonal preference, a diagonal pivot is held to its own row's floor, so it can now be taken
+  where it was passed over before (results move by rounding only; on the documented example each component moves by
+  one unit in the last place, both within one unit of the exact solution).
+- Desktop app: the operator tab shows response, net interconnector and voltage band, and the market tab system sell
+  price, day-ahead and NIV.
+- A CLI publish refuses untracked or ignored data files unless `-p:GridSimAllowStrayData=true`.
+- Docs: technical chapter 36 follows these changes and records the graph-layout timing test and the trusted-proxy
+  default as decisions.
+- Tests: four tests corrected because a whole-matrix pivot floor is not invariant under row scaling; each keeps its
+  intent on a matrix that is singular relative to its own row (NumericsTests near-singular pivot, KronReductionTests
+  near-isolated bus, the D210 boundary, and D210's ROCm check, which now uses the getrf pivots). New:
+  Gr044RowRelativePivotFloorTests and view and publish tests for the changes above.
+
+## [2.1.028]
+
+### Security
+- Package signing no longer passes the certificate password on a command line.
+
+### Added
+- Self-contained builds ship the .NET runtime's third-party notices beside the binary (`dotnet-THIRD-PARTY-NOTICES.txt`);
+  the publish fails if the runtime pack or its notices file cannot be found.
+- IEC 104 crosswalks may set `"iec104Key": "casdu-ioa"` to name points `CA:<casdu>/IOA:<n>`, so stations sharing one
+  link stay apart.
+- `pmu-ingest` prints one line when DATA frames carry the C37.118 configuration-change flag (STAT bit 10), asking for
+  the CONFIG frame to be re-sent; the data is still used.
+
+### Changed
+- With the default IOA-only naming, an IOA that arrives with two common addresses on one link has its points marked
+  invalid; the interposer names the first collision on stderr and counts them after the stop line.
+- Docs: technical chapters 20, 35 and 36, manual chapters 19 and 25 and THIRD-PARTY-NOTICES.md follow these changes;
+  chapter 36 records the InternalsVisibleTo friend list as a decision.
+- Tests: every tracked shipped data file is either a bundled network or in a reviewed non-network folder; the exact
+  InternalsVisibleTo friend list is pinned; new tests for each change above and for documented CLI exit codes.
+
+## [2.1.029]
+
+### Changed
+- A batch verb running several cases (transient, bench, bench --estimate, nminus1-sweep, stress, conformance) records a
+  case refused by the licence's bus limit or an ambiguous MATPOWER name as that case's load failure and runs the rest;
+  it used to end the whole run with exit 2. A single-case run still ends with the refusal and exit 2.
+- Docs: technical chapter 36 describes the catch-all handlers.
+- Tests: Gr190GateRefusalTests.
+
+### Fixed
+- Build: the Core, Gda and Gpu lock files no longer carry a stray `win-x64` runtime section that a local
+  self-contained publish wrote into 2.1.028 (locked restores read the committed lock files).
+
+## [2.1.030]
+
+### Security
+- Audit anchor signatures are written in a v2 form that also binds the log's first entry and the signing time;
+  `audit verify --pubkey` prints the signing time. A v1 signature still verifies, with a warning, and is replaced at the
+  next signing.
+
+### Changed
+- Docs: manual chapter 26, technical chapter 36 and the CAF mapping describe the v2 signature line.
+- Tests: Gr374SignedAnchorV2Tests. Test correction: Gr851InputChangedSinceRecordedTests allows comment lines between
+  a case load's handler and its re-check (its source-shape pattern broke on a comment added in 2.1.029; the order it
+  pins is unchanged).

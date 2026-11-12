@@ -20,8 +20,11 @@ public sealed record PmuVoltageChannel(int PhasorIndex, int BusId, double BaseVo
 /// <param name="BaseAmps">Current base for per-unit conversion.</param>
 /// <param name="IMagSigmaPu">Sigma of the derived current-magnitude measurement (pu).</param>
 /// <param name="IAngSigmaDeg">Sigma of the derived current-angle measurement (degrees).</param>
+/// <param name="End">GR-808: the branch end the current is metered at; <see cref="BranchEnd.From"/> (the default, and the
+/// only end before GR-808) or <see cref="BranchEnd.To"/>. The channel map's optional <c>end</c> field.</param>
 public sealed record PmuCurrentChannel(
-    int PhasorIndex, int FromBusId, int ToBusId, string? Circuit, double BaseAmps, double IMagSigmaPu, double IAngSigmaDeg);
+    int PhasorIndex, int FromBusId, int ToBusId, string? Circuit, double BaseAmps, double IMagSigmaPu, double IAngSigmaDeg,
+    BranchEnd End = BranchEnd.From);
 
 /// <summary>The crosswalk for one PMU: which of its phasors are voltages (at buses) and currents (in branches).</summary>
 /// <param name="PmuId">The PMU's id (matches <see cref="PmuSample.PmuId"/>).</param>
@@ -208,11 +211,11 @@ public static class PmuMeasurementSetMapper
                 Phasor ph = sample.Phasors[c.PhasorIndex];   // in range: checked above (D-DOC-008)
                 if (!double.IsFinite(ph.Real) || !double.IsFinite(ph.Imag)) { missingChannels++; continue; }
                 measurements.Add(new Measurement(MeasurementKind.IMagPu, ph.Magnitude / c.BaseAmps, c.IMagSigmaPu,
-                    From: c.FromBusId, To: c.ToBusId, Circuit: c.Circuit, Source: "pmu"));
+                    From: c.FromBusId, To: c.ToBusId, Circuit: c.Circuit, End: c.End, Source: "pmu"));
                 // The current angle is re-referenced against the same VOLTAGE reference: the estimator's IAngDeg
                 // model is Va[a] - atan2(Q, P), which lives in the slack frame like VaDeg.
                 measurements.Add(new Measurement(MeasurementKind.IAngDeg, SlackFrameDeg(ph), c.IAngSigmaDeg,
-                    From: c.FromBusId, To: c.ToBusId, Circuit: c.Circuit, Source: "pmu"));
+                    From: c.FromBusId, To: c.ToBusId, Circuit: c.Circuit, End: c.End, Source: "pmu"));
             }
         }
 

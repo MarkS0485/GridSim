@@ -186,6 +186,12 @@ public static class HtiBadDataEstimation
         if (options.BackfillRemovedFromPrior)
             throw new NotSupportedException(
                 "prior backfill (BackfillRemovedFromPrior) belongs to the sequential LNR removal loop and is not defined for HTI.");
+        // CAF-9 / gap B2: the estimator demotes distrusted rows to new (inflated-sigma) instances inside each pass, while
+        // HTI identifies and removes rows by reference against its own set, so the two would not line up. Refused rather
+        // than run wrong; the default LNR bad-data method supports distrusted sources.
+        if (options.DistrustedSources is { IsEmpty: false })
+            throw new NotSupportedException(
+                "distrusted sources (--distrust) are not supported with HTI; use the default sequential LNR bad-data removal.");
         if (!(testThreshold > 0) || !double.IsFinite(testThreshold))
             throw new ArgumentOutOfRangeException(nameof(testThreshold), testThreshold, "the HTI test threshold must be a finite positive number.");
         if (options.MaxBadDataRemovals < 0)

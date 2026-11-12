@@ -69,8 +69,8 @@ public static class ComplianceManifest
             "Trust-class labelling of every emitted data series",
             "AssetProvenanceTests", ComplianceStatus.Achieved),
         new ComplianceControl("distrusted-source", "D1",
-            "A measurement source can be marked distrusted and forced to pseudo-measurement treatment (primitive only: no product path applies it yet, and distrusted rows still count as chi-square redundancy)",
-            "DistrustedSourceTests", ComplianceStatus.PartiallyAchieved),
+            "A measurement source can be marked distrusted (estimate and serve --distrust, web Realtime:DistrustedSources): its rows are forced to pseudo-measurement treatment and left out of the chi-square redundancy, with one DistrustedSource security event per source per run (held at Partially achieved until the release test matrix has run the wiring tests)",
+            "DistrustedSourceTests, DistrustedSourceRedundancyTests, DistrustedSourceSettingTests", ComplianceStatus.PartiallyAchieved),
         new ComplianceControl("audit-chain", "C1",
             "Hash-chained, tamper-evident audit trail, persisted and anchored",
             "AuditLogTests, AuditLogFileTests, Doc3AuditAnchorTests", ComplianceStatus.Achieved),
@@ -90,26 +90,31 @@ public static class ComplianceManifest
             "Residual-cloaked FDIA detection, including PMU-anchored feasible-point checks",
             "FdiaScreenTests, FdiaCloakedAttackTests, FdiaProtectedAnchorTests", ComplianceStatus.Achieved),
         new ComplianceControl("rbac", "B2",
-            "Role-based access-control gate (RoleGuard) with audited denials (primitive only: no hosting surface enforces it yet; replay-only remains the production control)",
-            "RoleGuardTests", ComplianceStatus.PartiallyAchieved),
+            "Role-based access-control gate (RoleGuard) enforced by the web host on POST /api/solve and every /ws/sim control, with denials audited through the host's audit log (partial: the Blazor dashboard's own sessions are not role-gated, and a host without the resident estimator has no audit log, so its denials are refused but not audited; replay-only remains the production control)",
+            "RoleGuardTests, CafB2RoleGateWebTests", ComplianceStatus.PartiallyAchieved),
         new ComplianceControl("secrets", "B3",
             "Secret-store seam with a one-file-per-secret directory backend (Secrets:Directory) for the key-ring certificate password; no secret in the audit log",
             "SecretStoreTests, NoSecretInAuditTests, DirectorySecretStoreTests", ComplianceStatus.Achieved),
         new ComplianceControl("resilience", "B4/B5",
-            "Resource limits and transport policy on every bridge client, and an availability probe whose SLO breach is a security event (the reconnect schedule is not yet driven by any host)",
-            "ResilienceOptionsTests, HealthProbeTests, BridgeEndpointSettingTests", ComplianceStatus.PartiallyAchieved),
+            "Resource limits and transport policy on every bridge client, an availability probe whose SLO breach is a security event, and a supervised bridge reconnect on the bounded backoff schedule (off by default)",
+            "ResilienceOptionsTests, HealthProbeTests, BridgeEndpointSettingTests, BridgeReconnectSupervisorTests, BridgeReconnectHostWiringTests", ComplianceStatus.PartiallyAchieved),
         new ComplianceControl("build-hardening", "B4",
             "Zero-warning build gate: warnings-as-errors, analysers, nullable",
             "build gate (Directory.Build.props)", ComplianceStatus.Achieved),
         new ComplianceControl("determinism", "D1",
             "Bit-reproducible estimate and replay for forensic re-derivation",
             "EstimatorDeterminismTests, GdaReplayDeterminismTests, EstimationClockIndependenceTests", ComplianceStatus.Achieved),
+        // Bug #196: these two were recorded Achieved, but their descriptions claimed things that were not true of the
+        // release actually published (2.1.000 RC-1 was built, signed and published by hand, outside release.yml, so it
+        // passed neither the CI-matrix gate nor the in-workflow SBOM injection nor the provenance attestation). The
+        // manifest is an inventory maintained in source; it must say what holds, so both are PartiallyAchieved, with the
+        // gap named in brackets as for every other partial control, until a release is made through release.yml.
         new ComplianceControl("supply-chain", "A3/A4",
-            "Per-project lock files, per-release SBOMs injected into the shipped builds, vulnerable-package gate, signing pinned to the (self-signed) release certificate, signed build-provenance attestation of every release file",
-            "WorkflowContractTests, ThirdPartyNoticesTests, SupplyChainManifestTests", ComplianceStatus.Achieved),
+            "Per-project lock files restored in locked mode on CI with the SDK pinned by global.json, per-release SBOMs injected into the shipped builds, vulnerable-package gate, signing pinned to the (self-signed) release certificate, signed build-provenance attestation of every release file (release.yml only: no published release has yet been made through it, so no published file carries the attestation or an in-workflow SBOM hash)",
+            "WorkflowContractTests, ThirdPartyNoticesTests, SupplyChainManifestTests, WorkflowReleaseGateTests", ComplianceStatus.PartiallyAchieved),
         new ComplianceControl("secure-sdlc-attestation", "A4.b",
-            "Compliance attestation bound to the build identity (version, commit, SDK, SBOM); only a release build, made after the full test matrix passed, can attest compliance; download integrity via the provenance attestation",
-            "ComplianceAttestationTests", ComplianceStatus.Achieved),
+            "Compliance attestation bound to the build identity (version, commit, SDK, SBOM); only a release build (a 64-hex SBOM hash, a known commit and a clean source tree) can attest compliance; download integrity via the provenance attestation (a release build does not by itself prove the full test matrix passed: only a release made through release.yml, which gates on the matrix, does, and none has been published yet)",
+            "ComplianceAttestationTests", ComplianceStatus.PartiallyAchieved),
     };
 
     /// <summary>The controls GridSim owns and must therefore have Achieved for a build to be called compliant

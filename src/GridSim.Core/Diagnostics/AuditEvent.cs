@@ -43,7 +43,10 @@ public sealed record AuditInput
     public static AuditInput OfBytes(string name, ReadOnlySpan<byte> bytes) =>
         new(name, Convert.ToHexString(SHA256.HashData(bytes)));
 
-    /// <summary>Hash a string as UTF-8 bytes.</summary>
+    /// <summary>Hash a string as UTF-8 bytes. GR-357 (November 2026, decided): for NON-SECRET identifiers only (a bundled
+    /// case name, a list of consumed windows). The hash is a plain, unsalted SHA-256 so a reviewer can recompute it from
+    /// the identifier; for a short secret that also makes it guessable by trying candidates, so never pass a secret
+    /// (password, key, token, connection string) here. Its callers pass identifiers only.</summary>
     public static AuditInput OfText(string name, string text)
     {
         ArgumentNullException.ThrowIfNull(text);

@@ -1,6 +1,6 @@
 # Model and simulation credibility assessment (NASA-STD-7009 framing)
 
-**Assurance statement. Status as at GridSim 1.95.296.** This document assesses the credibility of GridSim as a
+**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This document assesses the credibility of GridSim as a
 computational model, using the credibility factors of NASA-STD-7009 (Standard for Models and Simulations) as the
 scoring frame, and noting the ASME V&V 20 verification-and-validation framing where it applies to the solver
 cross-checks. It is a companion to the security-facing assurance set (`caf-mapping.md`, `ssdf-mapping.md`,
@@ -42,7 +42,8 @@ constitutional-tests doctrine were design goals from the start.
   platform-dependent mathematics: the `System.Math` and `System.Numerics.Complex` transcendentals, a fused multiply-add,
   or a horizontal vector reduction. The one allowed exception is the fused arm of `SimdKernels.AddScaledRow`, which a
   second check in the same test proves no numerical path selects. The property is checked over every method of those
-  assemblies, not sampled by test cases.
+  assemblies, not sampled by test cases. The presentation assemblies (the shared UI layer, the WPF and Avalonia apps
+  and the web host) are not scanned.
 - The bit-identity suite (around thirty files, including `DenseSparseParityTests`, `Doc16NumericsDeterminismTests`,
   and the `*BitIdentity*` and `*Pin*` families) asserts that the dense and sparse backends, and the SIMD tiers,
   produce identical IEEE-754 bits for voltages, angles, injections, flows, losses, mismatch and iteration counts.
@@ -58,8 +59,13 @@ expects.
 - The Python cross-validation harnesses under `tools/crossval/` re-solve GridSim's problems in independent tools and
   compare every bus: power flow against pandapower, cases against the MATPOWER library, dynamics against SciPy
   `solve_ivp`, eigenvalues against `scipy.linalg.eig`. The default agreement tolerance is 4096 machine epsilons
-  (about 9.1e-13), and the measured power-flow agreement reported in `docs/technical/0011 Validation.md` is 5.6e-12
-  per unit.
+  (about 9.1e-13). The power-flow agreement recorded in `docs/technical/0011 Validation.md` (pandapower 3.5.5, NumPy
+  2.4.6 and SciPy 1.18.1) is at worst, among the cases held to 4096 epsilons, 3.333e-13 pu in |V| and 3.046e-13 rad in
+  angle on gb-full (1501 machine epsilons, a 2.7x margin), measured by the Crossval workflow on 2026-10-31 (2.1.000,
+  after the 2.0.200 gb-full line-charging correction; before it, on 2026-10-05, 2.6e-13 pu and 3.9e-13 rad, 1774
+  epsilons), and 1.715e-12 pu and 2.643e-12 rad on gb-network-2224 under that case's own allowance (2e-12 pu, 4e-12
+  rad) in the same run; all 15 cases agreed. The state-estimation agreement is at most 5.6e-12 pu and 7.7e-11 degrees
+  on case14, 30 and 118.
 - `N243CrossvalMachineEpsilonTests` pins the tolerance contract in-suite, so the validation bar cannot silently
   loosen.
 - Published benchmark results are reproduced: IEEE 14/30/57/118/300 bus cases, the IEEE 123-node and 4-node
@@ -101,25 +107,35 @@ inputs, that is a layer above the engine.
 ## 6. Results robustness (do the results hold across conditions)
 
 **Evidence: moderate to strong.** Robustness across the dimensions GridSim controls is tested to the bit:
-dense versus sparse solver, SIMD tier, CPU and operating system all produce identical results. Every release is gated
-on the CI matrix that runs the suite against the same pins on Linux and Windows (normal, AVX2 off, hardware
-intrinsics off, forced AVX-512 and FMA off) and on macOS on Apple silicon (normal and hardware intrinsics off), with
-no advisory leg; between releases the matrix runs by hand and the local batch run is the day-to-day check. These
-tests compare numerical results; they are not a reproducible-build check of the binaries. Robustness across
+dense versus sparse solver, SIMD tier, CPU and operating system all produce identical results. The CI matrix runs the
+suite against the same pins on Linux and Windows (normal, AVX2 off, which also holds the non-FMA axis, hardware
+intrinsics off, forced 256-bit, and forced AVX-512 where the runner has it, otherwise reported NOT CHECKED), on macOS
+on Apple silicon and on Linux and Windows ARM64 (normal and hardware intrinsics off), with no advisory leg. It runs by
+hand, and the release workflow that would gate on it did not build RC-1. For RC-1 the evidence is the local suite on
+the 2.0.200 code (GridSim.Tests 10,291 passed and 31 skipped by the RAM gate on an 8 GB machine, GridSim.App.Tests 310
+passed, the QSTS, impedance-stability and PSS/E slices also with hardware intrinsics off and with AVX2 off; `RC1.md`);
+the full suite in every SIMD tier and the large cases the RAM gate skips were not run for RC-1, and no CI run on `main`
+has passed since the history reset (the last, on 2.1.002, failed one desktop-app layout test on one macOS leg). These
+tests compare numerical results; they are not a reproducible-build check of the binaries (the release workflow's
+`reproducible` job, written 2026-11-01 and not yet run, is that check for the linux-x64 CLI). Robustness across
 input regimes is exercised by the benchmark corpus (transmission, distribution, GB models) and the hardware runs in
 `docs/developer/benchmarks/server-results/` (A100, H100, MI300, CPU).
 
 ## 7. Use history (has the model been used and checked over time)
 
 **Evidence: moderate.** The benchmark corpus, the per-release CHANGELOG discipline, and the recorded validation
-figures tied to specific tool versions (pandapower 3.5.5, NumPy 2.4.6, SciPy 1.18.1) give a traceable use and check
-history. The engine is young, so use history is recorded as moderate rather than strong.
+figures tied to specific tool versions (pandapower 3.5.5, NumPy 2.4.6, SciPy 1.18.1, pinned in the cross-validation
+workflow, whose hand-started run on 2026-10-31 passed) give a traceable use and check history. The first public
+release candidate (RC-1, 2.1.000) was released on 2026-10-31. The engine is young and RC-1 has no recorded field use,
+so use history is recorded as moderate rather than strong.
 
 ## 8. Management (is the model under configuration control)
 
-**Evidence: strong.** A single `<Version>` (`1.95.NNN`) governs every assembly, enforced by `VersionContractTests`;
+**Evidence: strong, with one qualifier.** A single `<Version>` (`2.1.NNN` on the current line; the release-candidate
+label is carried only in the tag and the release title) governs every assembly, enforced by `VersionContractTests`;
 every commit bumps the version and adds a CHANGELOG heading; the tests are constitutional and cannot be loosened to
-pass a change. This is configuration management at a standard most simulation codebases do not reach.
+pass a change. The qualifier: the git history was reset at RC 1.0 (2026-10-30), so commit-level history before then is
+not in the repository, and the CHANGELOG is the only in-repository record of earlier changes.
 
 ## 9. People qualifications
 
@@ -136,9 +152,9 @@ effort, which is not a property of the engine and is not assessed here.
 | Validation | `tools/crossval/*` vs pandapower/MATPOWER/SciPy; benchmark reproduction; 2019 GB event | Strong |
 | Input pedigree | `ProvenanceTag`; benchmark SHA-256 provenance; forward-inference guard | Strong |
 | Results uncertainty | `mc_estimate_sweep.py` only; no formal UQ | Thin (bounded, accepted) |
-| Results robustness | cross-solver/tier/CPU/OS bit identity; benchmark and hardware runs | Moderate to strong |
+| Results robustness | cross-solver/tier/CPU/OS bit identity; benchmark and hardware runs; RC-1 local suite (CI matrix by hand, not green since the reset) | Moderate to strong |
 | Use history | benchmark corpus; versioned validation figures | Moderate |
-| Management | single-version contract; CHANGELOG; constitutional tests | Strong |
+| Management | single-version contract; CHANGELOG; constitutional tests (commit history before RC 1.0 not in the repository) | Strong |
 | People | not a property of the engine | Out of scope |
 
 ---

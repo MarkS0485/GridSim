@@ -39,8 +39,12 @@ namespace GridSim.Core.Licensing;
 /// shipped folder or a shipped file edited makes the folder a user network. A root with no manifest (or a manifest that
 /// cannot be read) has nothing bundled under it: the licence check then runs, which is the safe direction. Line ends are
 /// normalised (CR LF read as LF) before hashing because a git checkout on Windows writes text files with CR LF and one on
-/// Linux with LF; the shipped bytes are otherwise compared exactly. Hashes are cached per file by its size and last
-/// write time, so a case loaded again costs a dictionary lookup. The explicit-roots overload
+/// Linux with LF; the shipped bytes are otherwise compared exactly. Bug #178 (2026-11-01): every check hashes the files
+/// afresh. Hashes used to be cached for the life of the process by (path, size, last write time), so on a long-running
+/// web host a same-length swap with the write time put back reused the old "bundled" verdict; the shipped data is a few
+/// megabytes, so hashing it each time costs milliseconds. The callers also check BEFORE and AFTER they load a case and
+/// treat it as bundled only when both checks pass (see <see cref="BundledAcrossLoad{T}"/>), so a file swapped while it
+/// was being parsed is not exempt either. The explicit-roots overload
 /// <see cref="IsBundledPath(string?, IReadOnlyList{string})"/> keeps the location rule alone (its contract and tests are
 /// about the anchoring).</para>
 /// </summary>
@@ -205,8 +209,6 @@ public static class BundledNetworks
     // The manifest of each data root, read once (null: absent or not trusted, so nothing under that root is bundled).
     private static readonly ConcurrentDictionary<string, IReadOnlyDictionary<string, string>?> Manifests = new(StringComparer.Ordinal);
 
-    // Content hashes by file, keyed by its full path, size and last write time (a changed file is hashed again).
-    private static readonly ConcurrentDictionary<(string Path, long Length, long Ticks), string> HashCache = new();
 
     // The manifest compiled into this assembly (null if the build carries none). It, not the file beside the data, is the
     // authority for the install's own data roots: the file sits in the very folder it protects and is unsigned, so anyone
@@ -233,11 +235,6 @@ public static class BundledNetworks
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { return null; }
     });
 
-    private static string CachedHash(string fullPath)
-    {
-        var info = new FileInfo(fullPath);
-        return HashCache.GetOrAdd((fullPath, info.Length, info.LastWriteTimeUtc.Ticks), k => ContentHash(k.Path));
-    }
 
     // N229: true when 'full' (inside root 'rootFull') is a file the manifest lists with a matching hash, or a folder that
     // holds at least one file and only listed files with matching hashes. Any read failure: not shipped (licence applies).
@@ -262,8 +259,89 @@ public static class BundledNetworks
         bool Listed(string file)
         {
             string rel = Canonical(Path.GetRelativePath(rootFull, Path.GetFullPath(file)));
-            return manifest.TryGetValue(rel, out string? want) && string.Equals(want, CachedHash(Path.GetFullPath(file)), StringComparison.Ordinal);
+            // Bug #178: hashed now, every time (no cache keyed on size and write time that a swap could satisfy).
+            return manifest.TryGetValue(rel, out string? want) && string.Equals(want, ContentHash(Path.GetFullPath(file)), StringComparison.Ordinal);
         }
+    }
+
+    /// <summary>
+    /// Bug #178: load a case and decide whether it is bundled from checks made both BEFORE and AFTER the load: it is
+    /// bundled only when <paramref name="path"/> is bundled (<see cref="IsBundledPath(string?)"/>, content hashed afresh)
+    /// at both moments. The check used to run once, after the load, in a separate read of the files, so a file could be
+    /// a large user network while it was parsed and the shipped file again when it was hashed.
+    /// </summary>
+    public static T BundledAcrossLoad<T>(string path, Func<T> load, out bool bundled)
+    {
+        ArgumentNullException.ThrowIfNull(load);
+        bool before = IsBundledPath(path);
+        T loaded = load();
+        bundled = before && IsBundledPath(path);
+        return loaded;
+    }
+
+    /// <summary>
+    /// Bug #171 / #172 (2026-11-01): true when <paramref name="candidate"/> has the topology of <paramref name="shipped"/>,
+    /// a Bundled Network loaded from its verified shipped files: the same buses (ids, in order) and the same branches
+    /// (from and to bus, in order). This is how a model that arrives WITHOUT shipped files (a replay run's exported
+    /// snapshot, a bridge server's topology) is judged bundled: by its content against the shipped network, never by the
+    /// name it carries, which anyone can set. Electrical values are not compared, because a solved snapshot or a remote
+    /// model may round them differently; a network with the shipped topology is the shipped network's size, which is all
+    /// the bus limit is about. Anything that differs is not bundled (the licence check then runs: the safe direction).
+    /// </summary>
+    public static bool SameTopology(GridSim.Core.Model.GridModel candidate, GridSim.Core.Model.GridModel shipped)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(shipped);
+        if (candidate.Buses.Count != shipped.Buses.Count || candidate.Branches.Count != shipped.Branches.Count) return false;
+        for (int i = 0; i < shipped.Buses.Count; i++)
+            if (candidate.Buses[i].Id != shipped.Buses[i].Id) return false;
+        for (int i = 0; i < shipped.Branches.Count; i++)
+            if (candidate.Branches[i].From != shipped.Branches[i].From || candidate.Branches[i].To != shipped.Branches[i].To) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Bug #198 (2026-11-01): the content rule for a model that arrives without shipped files (a replay run's snapshot, a
+    /// bridge server's topology) in a front end that has no case catalogue (the desktop apps): bundled only when
+    /// <paramref name="name"/> names a built-in benchmark or a shipped JSON case AND the model has that network's topology
+    /// (<see cref="SameTopology"/>). The shipped JSON case is read from a data root and accepted as the reference only when
+    /// its files pass the content check before and after the read (<see cref="BundledAcrossLoad{T}"/>). Any other name,
+    /// or a different topology, is not bundled (the licence check then runs).
+    /// </summary>
+    public static bool IsShippedTopology(GridSim.Core.Model.GridModel model, string? name)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        GridSim.Core.Model.GridModel? shipped = ShippedReference(name);
+        return shipped is not null && SameTopology(model, shipped);
+    }
+
+    // The shipped network a name stands for (built-in ids, matched ignoring case as the web catalogue does; the shipped
+    // JSON case ids exactly), or null.
+    private static GridSim.Core.Model.GridModel? ShippedReference(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        switch (name.ToLowerInvariant())
+        {
+            case "case9": return GridSim.Core.IO.IeeeCases.Case9();
+            case "case14": return GridSim.Core.IO.IeeeCases.Case14();
+            case "case30": return GridSim.Core.IO.IeeeCases.Case30();
+            case "case57": return GridSim.Core.IO.IeeeCases.Case57();
+            case "case118": return GridSim.Core.IO.IeeeCases.Case118();
+            case "case300": return GridSim.Core.IO.IeeeCases.Case300();
+            case "case145": return GridSim.Core.IO.IeeeCases.Case145();
+            case "case24": return GridSim.Core.IO.IeeeCases.Case24Rts();
+            case "cigre": return GridSim.Core.IO.IeeeCases.CigreMv();
+        }
+        if (!IsBundledJsonCase(name)) return null;
+        string folder = name == "gb-reduced" ? "uk" : name;   // the gb-reduced case id loads data/uk (N216)
+        foreach (string root in DataRoots)
+        {
+            string dir = Path.Combine(root, folder);
+            if (!Directory.Exists(dir)) continue;
+            GridSim.Core.Model.GridModel loaded = BundledAcrossLoad(dir, () => GridSim.Core.IO.Json.JsonGridLoader.LoadDirectory(dir), out bool verified);
+            if (verified) return loaded;
+        }
+        return null;
     }
 
     private static StringComparer PathComparer =>

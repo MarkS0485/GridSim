@@ -8,6 +8,8 @@ tabs, the asset explorer, run replay, bridge mode and `settings.json`. The brows
 
 The app is a WPF program (`net10.0-windows`), so it runs only on Windows. It builds on other systems.
 
+On Linux and macOS the cross-platform Avalonia app (`GridSim.App.Desktop`, the `gridsim-app-<version>-linux-x64` download) runs instead. On Linux it uses Avalonia's X11 backend; under a Wayland session it runs through XWayland. It needs these libraries from the distribution: libICE, libSM, fontconfig and ICU (on Debian or Ubuntu, `libice6 libsm6 libfontconfig1` and the release's `libicu` package). Without them the app stops at start-up with a missing-library error. The Linux build has not yet been run on a desktop Linux machine (X11 or Wayland); its pages are checked on Windows by the headless UI smoke run.
+
 ## Starting it
 
 ```bash
@@ -239,6 +241,19 @@ coloured by technology. They are dimmed and disabled unless that geography has b
 read leaves its layer empty and the event log says `Geography layer not loaded: <file>: <reason>`. The app reads
 `gda-out/geo` next to the executable, or, when run from a repository clone, in a parent folder up to the repository
 root (the folder holding `GridSim.slnx`), never above it. Imported test cases have none.
+
+A case folder can carry its own map geography in a `geography.json` beside its `buses.json` (format
+`gda-geography/1`). The file gives the case's projection (a lon/lat box and margin, the same one that placed the
+case's bus x/y), its land outline and, optionally, its first-level regions such as states or provinces. When it is
+present the map draws that land in place of the GB coastline (on the `C` toggle, and in the minimap), draws the
+regions on the DNO button and `D` key, and draws none of the GB layers (the GB coastline, DNO and GSP outlines and
+geocoded assets are placed in the GB box and would be wrong anywhere else); the GSP button is disabled. The window
+title then names the case (its `system.json` name) and the header and map panel name the land, for example
+`INDIA TRANSMISSION CONTROL`. A `geography.json` that cannot be used (a different format or projection kind, a point
+layout other than `lon, lat, x, y`, a ring of fewer than three points, or a point whose written x/y differs from its
+lon/lat by the projection by more than 1e-4) is refused whole: the map draws the GB layers as before and the status
+bar says `Case geography not used, the GB map is drawn instead: geography.json: <reason>`. A case without the file,
+a MATPOWER file, a replay and the GDA bridge are drawn exactly as before. The web map does not read the file yet.
 
 ## The live view
 

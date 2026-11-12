@@ -441,13 +441,11 @@ internal static class Gated
         RequireFile(path, "three-phase feeder file");
         // N339: a gridsim-dist3ph/2 file goes to the v2 reader; every other file to the v1 reader exactly as before
         // (LoadAny hands it the same text, so its results and messages are unchanged).
-        GridSim.Core.Distribution.MultiPhaseFeeder feeder = GridSim.Core.Distribution.MultiPhaseJsonLoader.LoadAny(path);
-        GateResult r = _gate.Check(feeder.Model.Buses.Count, IsBundledPath(path));
-        if (!r.Allowed)
-        {
-            Console.Error.WriteLine("error: " + r.Message);
-            Environment.Exit(2);
-        }
+        // Bug #178: bundled only when the content checks before and after the load both pass.
+        GridSim.Core.Distribution.MultiPhaseFeeder feeder = BundledNetworks.BundledAcrossLoad(path,
+            () => GridSim.Core.Distribution.MultiPhaseJsonLoader.LoadAny(path), out bool feederBundled);
+        GateResult r = _gate.Check(feeder.Model.Buses.Count, feederBundled);
+        if (!r.Allowed) throw new GateRefusedException(r.Message);   // GR-190: was Environment.Exit(2)
         return feeder;
     }
 
@@ -461,12 +459,23 @@ internal static class Gated
     /// </summary>
     private static GridModel Unloadable(string path, string what, Func<GridModel> load)
     {
-        try { return load(); }
+        // Bug #178: the bundled check is made BEFORE the load too, and Enforce makes it again after; the model counts as
+        // bundled only when both pass, so a file swapped while it was parsed is not exempt from the bus limit.
+        bool bundledBefore = IsBundledPath(path);
+        GridModel model;
+        try { model = load(); }
         catch (Exception ex) when (ex is InvalidDataException or System.Text.Json.JsonException)
         {
             throw new CaseLoadException($"cannot load {what} '{path}': {ex.Message}", ex);
         }
+        BundledBeforeLoad.AddOrUpdate(model, new System.Runtime.CompilerServices.StrongBox<bool>(bundledBefore));
+        return model;
     }
+
+    // Bug #178: each loaded model's bundled verdict from BEFORE its load, read by Enforce (weak keys: a model that is
+    // dropped takes its entry with it). A model with no entry was not loaded through Unloadable: Enforce then has only
+    // its after-load check.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<GridModel, System.Runtime.CompilerServices.StrongBox<bool>> BundledBeforeLoad = new();
 
     /// <summary>
     /// Turn a MATPOWER argument into the file to load. In order:
@@ -501,10 +510,10 @@ internal static class Gated
         if (matches.Count == 1) return matches[0];
         if (matches.Count > 1)
         {
-            Console.Error.WriteLine($"error: MATPOWER case name '{path}' is ambiguous: it matches {matches.Count} files under data/matpower: " +
+            // GR-190: a typed refusal (it was Environment.Exit(2)); uncaught it ends the run exactly as before.
+            throw new GateRefusedException($"MATPOWER case name '{path}' is ambiguous: it matches {matches.Count} files under data/matpower: " +
                 string.Join(", ", matches.Select(f => Path.GetRelativePath(library, f).Replace('\\', '/'))) +
                 ". Give the relative path (for example dist/case33bw.m).");
-            Environment.Exit(2);
         }
         return path;
     }
@@ -533,10 +542,11 @@ internal static class Gated
 
     private static void Enforce(string path, GridModel model)
     {
-        GateResult r = _gate.Check(model.BusCount, IsBundledPath(path));
+        // Bug #178: bundled only when the check before the load (Unloadable) and this one after it both pass.
+        bool before = !BundledBeforeLoad.TryGetValue(model, out System.Runtime.CompilerServices.StrongBox<bool>? box) || box.Value;
+        GateResult r = _gate.Check(model.BusCount, before && IsBundledPath(path));
         if (r.Allowed) return;
-        Console.Error.WriteLine("error: " + r.Message);
-        Environment.Exit(2);
+        throw new GateRefusedException(r.Message);   // GR-190: was Environment.Exit(2)
     }
 
     /// <summary>
@@ -572,4 +582,17 @@ internal static class BuiltInCases
 internal sealed class CaseLoadException : IOException
 {
     public CaseLoadException(string message, Exception inner) : base(message, inner) { }
+}
+
+/// <summary>
+/// GR-190 (November 2026): the loader gate refused a case: the licence's bus limit, or an ambiguous MATPOWER case name.
+/// It used to call <c>Environment.Exit(2)</c> from inside the loader, so a batch verb could not record the case as a
+/// LOAD FAIL row and carry on: the whole batch ended. It is now thrown. Deliberately NOT an <see cref="IOException"/>, so
+/// the input-error handlers do not take it for a bad file. A single-case verb lets it through (its catch-alls exclude
+/// it) to the process-wide handler in Program.cs, which prints <c>error: &lt;message&gt;</c> and exits 2, exactly as the
+/// old exit did; a batch verb catches it per case as a LOAD FAIL row.
+/// </summary>
+internal sealed class GateRefusedException : Exception
+{
+    public GateRefusedException(string message) : base(message) { }
 }

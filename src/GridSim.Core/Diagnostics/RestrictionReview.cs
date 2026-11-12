@@ -129,7 +129,7 @@ public static class RestrictionReview
     /// </summary>
     public static void AssertOutputHistorical(DateTime outputStampUtc, DateTime? utcNow = null, string? what = null)
     {
-        DateTime now = utcNow ?? DateTime.UtcNow;
+        DateTime now = ForwardInferenceGuard.EffectiveNow(utcNow);   // GR-365: a later "now" cannot move the horizon forward
         DateTime stamp = UtcTime.Normalise(outputStampUtc);   // Unspecified is UTC by contract (same rule as before)
         DateTime horizon = ForwardInferenceGuard.Horizon(now);
         if (stamp > horizon)

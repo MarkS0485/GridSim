@@ -12,7 +12,7 @@ public enum PhaseAngleReference
     /// <summary>The angles are already in the slack frame; only time-project them to the common instant.</summary>
     AlreadyReferenced,
     /// <summary>Inject the angles exactly as given (already slack-referenced AND at the target instant);
-    /// frequency is kept only as provenance in the row's <c>Source</c>.</summary>
+    /// frequency is kept only as provenance in the row's <c>Provenance</c>.</summary>
     Raw,
 }
 
@@ -58,8 +58,10 @@ public sealed record PhaseAngleOptions
     /// </summary>
     public double CommonModeDeg { get; init; } = 0.0;
 
-    /// <summary>Provenance tag written to each measurement's <see cref="Measurement.Source"/> (frequency and
-    /// instant are appended).</summary>
+    /// <summary>The source class written to each measurement's <see cref="Measurement.Source"/>, the same for every
+    /// row (GR-529), so the rows form one noise-floor class and a distrust of this tag matches all of them. Each row's
+    /// frequency and instant go in <see cref="Measurement.Provenance"/>; they used to be appended to the source, which
+    /// made every row a class of its own.</summary>
     public string Source { get; init; } = "phaseangle";
 }
 
@@ -215,7 +217,8 @@ public static class PhaseAngleFeed
 
             rows.Add(new Measurement(
                 MeasurementKind.VaDeg, z, opt.SigmaDeg, Bus: o.Bus,
-                Source: $"{opt.Source} f={o.FreqHz.ToString("0.###", CultureInfo.InvariantCulture)}Hz@{o.Utc:o}"));
+                Source: opt.Source,
+                Provenance: $"f={o.FreqHz.ToString("0.###", CultureInfo.InvariantCulture)}Hz@{o.Utc:o}"));   // GR-529
         }
 
         return (rows, target);

@@ -23,6 +23,7 @@ public sealed class UnscentedKalmanStateEstimator
     private readonly GridModel _model;
     private readonly int _n;
     private readonly double _slackRefRad;
+    private readonly double[] _fixedVaRad;   // #185: each bus's angle when it is not a state (each slack its OWN VaDeg)
     private readonly double _initialStateVariance;
     private readonly double _alpha, _beta, _kappa;
 
@@ -49,6 +50,7 @@ public sealed class UnscentedKalmanStateEstimator
         foreach (Bus b in model.Buses)
             if (b.Type == BusType.Slack) { refRad = b.VaDeg * Math.PI / 180.0; break; }
         _slackRefRad = refRad;
+        _fixedVaRad = KalmanStateEstimator.FixedAnglesRad(model, refRad);   // #185
 
         // D-DOC-229 (October 2026): the filter's own state-size check, as the EKF has had since R107. The unscented filter
         // holds a dense s x s covariance, factorises it and propagates 2s + 1 sigma points every window; only the
@@ -122,7 +124,7 @@ public sealed class UnscentedKalmanStateEstimator
         double[,] pPrior;
         if (!_initialized) (xPrior, pPrior) = InitialState(mm);
         else if (s != _stateSize)
-            throw new InvalidOperationException($"state layout changed between windows ({_stateSize} -> {s}).");
+            throw DomainRefusal.Mark(new InvalidOperationException($"state layout changed between windows ({_stateSize} -> {s})."));
         else { xPrior = _x; pPrior = _p; }
 
         IProcessModel process = _process ?? new RandomWalkProcessModel(s - _n);
@@ -143,10 +145,10 @@ public sealed class UnscentedKalmanStateEstimator
         // (alpha = 1e-10 with s = 100 gives lambda = -100 exactly). Refuse before anything is committed (the step is
         // transactional, D-DOC-117), rather than divide by zero. For every c that was above 0 this is a no-op.
         if (!(c > 0.0) || !double.IsFinite(c))
-            throw new InvalidOperationException(
+            throw DomainRefusal.Mark(new InvalidOperationException(
                 $"The unscented Kalman filter's sigma-point spread s + lambda is {c.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} " +
                 $"with {s} states (alpha {_alpha.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}, kappa " +
-                $"{_kappa.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}); it must be a finite number above 0. Use a larger alpha.");
+                $"{_kappa.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}); it must be a finite number above 0. Use a larger alpha."));
         var wm = new double[sp];
         var wc = new double[sp];
         wm[0] = lambda / c;
@@ -253,8 +255,8 @@ public sealed class UnscentedKalmanStateEstimator
         // keeps its previous state.
         for (int i = 0; i < s; i++)
             if (!(p2[i, i] > 0) || !double.IsFinite(p2[i, i]))
-                throw new InvalidOperationException(string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"UKF: the posterior variance of state {i} is {p2[i, i]:R}; the covariance update lost positive definiteness (try a larger alpha)."));
+                throw DomainRefusal.Mark(new InvalidOperationException(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"UKF: the posterior variance of state {i} is {p2[i, i]:R}; the covariance update lost positive definiteness (try a larger alpha).")));
 
         // D-DOC-117: commit (nothing below can throw).
         _x = xPost;
@@ -286,7 +288,7 @@ public sealed class UnscentedKalmanStateEstimator
     {
         vm = new double[_n];
         va = new double[_n];
-        for (int i = 0; i < _n; i++) va[i] = _slackRefRad;
+        for (int i = 0; i < _n; i++) va[i] = _fixedVaRad[i];   // #185: each slack's own angle
         for (int col = 0; col < x.Length; col++)
         {
             int bus = mm.StateBusIndex(col, out bool angle);

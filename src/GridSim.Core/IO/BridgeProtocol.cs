@@ -434,9 +434,18 @@ public static class BridgeProtocol
             // point is therefore on the server: any server path that could stream a state that did not converge must
             // write "converged": false into the result block, and this reader will show it as such. Bug hunt
             // 2026-10-29 finding 38; the server-side gap is recorded with the GDA bridge.
+            // Bug hunt FB38 S2 (bug store #100): the vouch is now limited to what the reader can check. An absent flag
+            // reads as converged only when the block actually carries a state: at least one bus, and every bus
+            // voltage magnitude finite and above 0 with a finite angle and finite injections. A block with no buses
+            // (the GDA bridge streams one, "DEGENERATE - no solve", when it has nothing to send) or with a NaN or
+            // infinite value is not a solved state, and it used to be published as converged; it now reads as not
+            // converged, as an explicit "converged": false does. A full, finite block with no flag reads exactly as
+            // before, so every live frame the shipped server streams is unchanged.
+            bool vouchable = rb.Count > 0 && rb.All(x => x.Vm > 0.0 && double.IsFinite(x.Vm) && double.IsFinite(x.VaDeg)
+                && double.IsFinite(x.PInjMw) && double.IsFinite(x.QInjMvar));
             return new PowerFlowResult
             {
-                Converged = r.Converged ?? true,
+                Converged = r.Converged ?? vouchable,
                 Iterations = r.Iterations ?? 0,
                 MaxMismatch = r.MaxMismatch ?? 0,
                 BusIds = rb.Select(x => x.Id).ToArray(),

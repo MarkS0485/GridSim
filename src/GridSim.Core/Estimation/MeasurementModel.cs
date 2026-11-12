@@ -19,6 +19,47 @@ namespace GridSim.Core.Estimation;
 /// </summary>
 internal sealed class MeasurementModel
 {
+    /// <summary>
+    /// GR-076 (November 2026): refuse a model in which two Slack buses lie in one island (buses joined by in-service
+    /// branches), naming both. Every Slack bus is an angle reference held at its case-file angle (its angle column is -1
+    /// below), so a second slack in an island is a hard angle constraint, not a measured quantity, and the estimate would
+    /// be forced to it whatever the telemetry says. One slack per island is what estimation needs. Throws
+    /// <see cref="InvalidDataException"/>; <paramref name="who"/> names the estimator in the message.
+    /// </summary>
+    internal static void RefuseSlacksSharingAnIsland(GridModel model, string who)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        int n = model.Buses.Count;
+        var index = new Dictionary<int, int>(n);
+        for (int i = 0; i < n; i++) index[model.Buses[i].Id] = i;
+        var parent = new int[n];
+        for (int i = 0; i < n; i++) parent[i] = i;
+        int Find(int x) { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+        foreach (Branch br in model.Branches)
+        {
+            if (!br.InService || !index.TryGetValue(br.From, out int f) || !index.TryGetValue(br.To, out int t)) continue;
+            int rf = Find(f), rt = Find(t);
+            if (rf != rt) parent[rf] = rt;
+        }
+        // The first slack seen in each island, by root; a second one in the same island is refused with both named.
+        var firstSlack = new Dictionary<int, int>();
+        for (int i = 0; i < n; i++)
+        {
+            if (model.Buses[i].Type != BusType.Slack) continue;
+            int root = Find(i);
+            if (firstSlack.TryGetValue(root, out int first))
+                throw new InvalidDataException(
+                    $"{who}: Slack buses {Describe(model.Buses[first])} and {Describe(model.Buses[i])} are in the same island. Every " +
+                    "Slack bus is held at its case-file angle, so a second one would be a hard angle constraint the measurements " +
+                    "cannot test. Give each island one slack for estimation (make the other a PV bus).");
+            firstSlack[root] = i;
+        }
+
+        static string Describe(Bus b) => b.Name is { Length: > 0 } name
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{b.Id} ('{name}')")
+            : b.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     /// <summary>A branch whose apparent flow |S| (pu) is at or below this carries no flow: its current-magnitude
     /// Jacobian row is a structural near-zero and is left empty (R174).</summary>
     internal const double ZeroFlowMagnitudePu = 1e-12;

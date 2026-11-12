@@ -20,6 +20,17 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <TieredPGO>true</TieredPGO>
+    <!-- Bug #161: the restore graph of a normal build must equal the graph of the release publish, so that ONE committed
+         packages.lock.json serves both and CI can restore in locked mode (Directory.Build.props). The release
+         publishes self-contained single-file binaries for exactly these three runtimes (Properties/PublishProfiles);
+         a publish profile sets one RuntimeIdentifier and PublishSingleFile, which used to add a runtime section and
+         an implicit Microsoft.NET.ILLink.Tasks reference to the lock file at publish time, so a locked restore
+         refused the release build and an unlocked one rewrote the lock and stamped the binary "-dirty".
+         Listing the runtimes here and switching the single-file analyzer on for every build (it already runs in
+         every release publish, where it reports nothing) makes the normal restore produce the same lock. A build
+         is still portable (no RuntimeIdentifier is set); adding a fourth release runtime means adding it here too. -->
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-arm64</RuntimeIdentifiers>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
   </PropertyGroup>
 
   <ItemGroup>
@@ -67,6 +78,27 @@
     <Content Include="..\..\data\bundled.sha256" Link="data\bundled.sha256" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- GR-896, the clean-checkout rule in code: the Content globs above copy every data/**/*.json and *.csv they find,
+       so a publish from a working tree that holds untracked or git-ignored data files would ship them. Before any
+       publish, ask git for such files and fail loudly, naming them, instead of publishing them silently. Only publish
+       is guarded (a build or test run is not). Skipped when git or a repository is absent (a container build from an
+       exported source tree has no stray files by construction), and bypassed by -p:GridSimAllowStrayData=true. The
+       local reference inbox is never shipped, so it is not counted. -->
+  <Target Name="GuardStrayDataFiles" BeforeTargets="PrepareForPublish" Condition="'$(GridSimAllowStrayData)' != 'true'">
+    <Exec Command="git ls-files --others --exclude-standard -- &quot;data/*.json&quot; &quot;data/*.csv&quot; &quot;:(exclude)data/reference-inbox&quot;"
+          WorkingDirectory="$(MSBuildThisFileDirectory)..\..\" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="StrayDataUntracked" />
+      <Output TaskParameter="ExitCode" PropertyName="StrayDataUntrackedExit" />
+    </Exec>
+    <Exec Command="git ls-files --others --ignored --exclude-standard -- &quot;data/*.json&quot; &quot;data/*.csv&quot; &quot;:(exclude)data/reference-inbox&quot;"
+          WorkingDirectory="$(MSBuildThisFileDirectory)..\..\" ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low">
+      <Output TaskParameter="ConsoleOutput" ItemName="StrayDataIgnored" />
+      <Output TaskParameter="ExitCode" PropertyName="StrayDataIgnoredExit" />
+    </Exec>
+    <Error Condition="'$(StrayDataUntrackedExit)' == '0' And '$(StrayDataIgnoredExit)' == '0' And '@(StrayDataUntracked)@(StrayDataIgnored)' != ''"
+           Text="Publish refused: these data files are untracked or git-ignored, so a publish from this working tree would ship them: @(StrayDataUntracked, ', ') @(StrayDataIgnored, ', '). Publish from a clean checkout, or pass -p:GridSimAllowStrayData=true to override." />
+  </Target>
+
   <!-- The licences and attribution files of the bundled third-party data travel with the data, beside the binary
        (THIRD-PARTY-NOTICES.md lists every source): the MATPOWER and PyPSA-GB licences, each starter map's ATTRIBUTION.txt
        and MODEL_CARD.md, and each data folder's README (its provenance and terms). ExcludeFromSingleFile keeps them
@@ -97,5 +129,9 @@
     <Content Include="..\..\tools\crossval\crossval.py;..\..\tools\crossval\sidecar_common.py" Link="tools\crossval\%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
+
+  <!-- GR-892: ship the .NET runtime's own third-party notices (dotnet-THIRD-PARTY-NOTICES.txt) beside a self-contained
+       publish. The target is in ..\DotnetRuntimeNotices.targets and fails the publish if the notices cannot be found. -->
+  <Import Project="..\DotnetRuntimeNotices.targets" />
 
 </Project>

@@ -186,12 +186,23 @@ public sealed class LiveSim
     /// (trips net of held protection sheds); 0 when the asset fleet is off or nothing has tripped or been shed.</summary>
     public double AssetRestoredMw => _freqSim is AssetAwareFrequencyIntegrator a ? a.RestoredMw : 0.0;
 
-    /// <summary>Per-bus solved voltage (p.u.), for U/O-voltage protections; buses absent from the result default to 1.0.</summary>
-    private static Func<int, double> BuildVoltageOf(PowerFlowResult r)
+    /// <summary>
+    /// Per-bus solved voltage (p.u.), for U/O-voltage protections and LVRT stages.
+    /// <para>Bug hunt 2026-11-01 (#194): a bus absent from the solve result (or past the end of its voltages) used to
+    /// read 1.0 pu, the made-up value D-DOC-038 / GR-625 replaced with "not known" everywhere else. Absent buses are
+    /// real: when a recloser opens and an island has no source, IslandPartition drops its buses from the solve
+    /// (IslandReport.BlackedOutBuses), so an under-voltage or LVRT stage there read a healthy 1.0 pu. Such a bus now
+    /// reads <see cref="Assets.AssetStepContext.NoNetworkVoltagePu"/> (NaN, "not known"), on which no voltage stage
+    /// operates, exactly as on a path that solves no network. It is deliberately not 0 pu: the dead island's load and
+    /// generation are already taken out once, as the blackout's frequency step (IslandReport.LostLoadMw /
+    /// LostGenMw), and a stage tripping on 0 pu there would take the same infeed out a second time. Every bus in the
+    /// result reads its solved voltage, bit for bit as before.</para>
+    /// </summary>
+    internal static Func<int, double> BuildVoltageOf(PowerFlowResult r)
     {
         var vm = new Dictionary<int, double>(r.BusIds.Count);
-        for (int i = 0; i < r.BusIds.Count; i++) vm[r.BusIds[i]] = i < r.Vm.Length ? r.Vm[i] : 1.0;
-        return id => vm.TryGetValue(id, out double v) ? v : 1.0;
+        for (int i = 0; i < r.BusIds.Count; i++) vm[r.BusIds[i]] = i < r.Vm.Length ? r.Vm[i] : Assets.AssetStepContext.NoNetworkVoltagePu;
+        return id => vm.TryGetValue(id, out double v) ? v : Assets.AssetStepContext.NoNetworkVoltagePu;
     }
 
     /// <summary>Per-bus max incident-branch loading fraction, for thermal-overload protections (0 if no incident branch).</summary>

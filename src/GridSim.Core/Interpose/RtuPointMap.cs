@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GridSim.Core.Estimation;
+using GridSim.Core.Interpose.Protocols;
 
 namespace GridSim.Core.Interpose;
 
@@ -126,6 +127,22 @@ public sealed record RtuPointMap
 
     public IReadOnlyList<RtuPointBinding> Bindings { get; init; } = Array.Empty<RtuPointBinding>();
 
+    /// <summary>GR-306 (November 2026), optional: how IEC 104 points are named, <c>"ioa"</c> (<c>IOA:&lt;n&gt;</c>, also when
+    /// the member is absent) or <c>"casdu-ioa"</c> (<c>CA:&lt;casdu&gt;/IOA:&lt;n&gt;</c>, so stations sharing a link never
+    /// collide). Any other value is refused at <see cref="Load"/>. Not written when null, so an existing file round-trips
+    /// unchanged.</summary>
+    public string? Iec104Key { get; init; }
+
+    /// <summary>GR-306: the IEC 104 naming <see cref="Iec104Key"/> asks for (absent = <see cref="Iec104PointKey.Ioa"/>).
+    /// Throws <see cref="InvalidDataException"/> for any other value. A method, not a property, so it is never written
+    /// to the file.</summary>
+    public Iec104PointKey ResolveIec104Key() => Iec104Key switch
+    {
+        null or "ioa" => Iec104PointKey.Ioa,
+        "casdu-ioa" => Iec104PointKey.CasduIoa,
+        _ => throw new InvalidDataException($"iec104Key '{Iec104Key}' is not one of \"ioa\" (the default) or \"casdu-ioa\"."),
+    };
+
     private Dictionary<string, RtuPointBinding>? _byAddress;
 
     /// <summary>Resolve a native address to its binding; false if the map has no entry for it (the point
@@ -172,6 +189,8 @@ public sealed record RtuPointMap
         }
         ValidateUniqueAddresses(m.Bindings, path);
         ValidateRegisterLayout(m.Bindings);
+        try { _ = m.ResolveIec104Key(); }   // GR-306: an unknown naming fails at load, not at the first frame
+        catch (InvalidDataException ex) { throw new InvalidDataException($"'{path}': {ex.Message}", ex); }
         return m;
     }
 

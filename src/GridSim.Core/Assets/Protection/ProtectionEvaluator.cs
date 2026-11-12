@@ -24,6 +24,7 @@ public sealed class ProtectionEvaluator
     private double _dwellCarryS;   // over-threshold time already banked at an earlier, different substep length
     private bool _operated;
     private double _restoreAtS = double.PositiveInfinity;
+    private int _recloses;   // GR-123: automatic reclosures performed since the last Reset
 
     /// <summary>
     /// Wrap one stage. Throws for <see cref="ProtectionAction.RestoreBranch"/> (R073, October 2026): no consumer acts
@@ -37,13 +38,24 @@ public sealed class ProtectionEvaluator
             throw new NotSupportedException(
                 "ProtectionAction.RestoreBranch is reserved and not implemented: nothing acts on it, so the stage would " +
                 "operate and change nothing. Use an OpenBranch stage with a finite AutoRestoreDelayS to reclose a branch.");
+        if (stage.MaxRecloseShots < 0)
+            throw new ArgumentOutOfRangeException(nameof(stage), stage.MaxRecloseShots,
+                "MaxRecloseShots must be 0 or more (0 = trip and lock out, never reclose).");
         _stage = stage;
     }
 
     public ProtectionStage Stage => _stage;
     public bool Operated => _operated;
 
-    public void Reset() { ClearDwell(); _operated = false; _restoreAtS = double.PositiveInfinity; }
+    /// <summary>GR-123: automatic reclosures performed since the last <see cref="Reset"/>.</summary>
+    public int Recloses => _recloses;
+
+    /// <summary>GR-123: true when the stage has operated with its reclose shots used up, so it stays open (latched)
+    /// until <see cref="Reset"/>.</summary>
+    public bool LockedOut => _operated && double.IsPositiveInfinity(_restoreAtS)
+        && !double.IsPositiveInfinity(_stage.AutoRestoreDelayS);
+
+    public void Reset() { ClearDwell(); _operated = false; _restoreAtS = double.PositiveInfinity; _recloses = 0; }
 
     private void ClearDwell() { _dwellSteps = 0; _dwellStepS = 0.0; _dwellCarryS = 0.0; }
 
@@ -77,6 +89,7 @@ public sealed class ProtectionEvaluator
                 _operated = false;
                 ClearDwell();
                 _restoreAtS = double.PositiveInfinity;
+                _recloses++;   // GR-123
                 return ProtectionEdge.Restored;
             }
             return ProtectionEdge.None;   // latched / operated
@@ -101,7 +114,9 @@ public sealed class ProtectionEvaluator
         if (over && DwellReached(elapsedS, _stage.DwellSeconds))
         {
             _operated = true;
-            _restoreAtS = double.IsPositiveInfinity(_stage.AutoRestoreDelayS)
+            // GR-123: with its reclose shots used up the stage locks out (latches) instead of scheduling another
+            // reclose. The default MaxRecloseShots (int.MaxValue) never runs out in practice, as before.
+            _restoreAtS = double.IsPositiveInfinity(_stage.AutoRestoreDelayS) || _recloses >= _stage.MaxRecloseShots
                 ? double.PositiveInfinity
                 : ctx.ClockSeconds + _stage.AutoRestoreDelayS;
             return ProtectionEdge.Fired;

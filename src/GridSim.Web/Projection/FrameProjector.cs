@@ -128,13 +128,17 @@ public static class FrameProjector
 
         return new FrameEnvelope("state", f.Tick, f.Hour, FormatClock(f.Hour), label,
             headline, nodes, edges, boundaries, InverterFleet: inverterFleet,
-            Conformance: BuildConformance(f.Model, r),
+            // GR-245: the tabs that audit or analyse the solved state are gated on convergence, as the boundaries above
+            // are. A non-converged frame carries NO conformance, human-scale or harmonics figures computed from the
+            // unconverged iterate (the tab reads null as "no result"). EXPERIMENTAL stays present, because its not-converged
+            // note (TraceNotConverged) is pinned by an existing test, but BuildExperimental drops its wave field then.
+            Conformance: r.Converged ? BuildConformance(f.Model, r) : null,
             Experimental: BuildExperimental(f.Model, r),
             // HUMAN SCALE is a cheap re-framing of the solved frame - wire it every frame. HARMONICS is a
             // heavy per-order study, so the per-frame path carries only the guarded skipped rollup (the tab
             // runs the real study on demand via HarmonicsProjection.FromCore). See HarmonicsDto.
-            HumanScale: HumanScaleProjection.Project(f),
-            Harmonics: HarmonicsProjection.Project(f.Model, r));
+            HumanScale: r.Converged ? HumanScaleProjection.Project(f) : null,
+            Harmonics: r.Converged ? HarmonicsProjection.Project(f.Model, r) : null);
     }
 
     /// <summary>
@@ -157,10 +161,13 @@ public static class FrameProjector
             LossMw: 0.0,
             InertiaGvaS: inertiaGvaS,
             AvgVoltagePu: 1.0,
-            Converged: true,
-            // A raw replay tick has no solved bus voltages: the same 1.0 pu placeholder as the average.
+            // GR-240: no power flow ran for a raw replay tick, so it is NOT reported as converged. Converged is false and
+            // NotSolved is true; the status lamp reads NO SOLVE (StatusLamp.NoSolve). The 1.0 pu voltages below are
+            // placeholders only and are never graded.
+            Converged: false,
             MinVoltagePu: 1.0,
-            MaxVoltagePu: 1.0);
+            MaxVoltagePu: 1.0,
+            NotSolved: true);
 
         return new FrameEnvelope("state", f.Tick, f.Hour, FormatClock(f.Hour), label,
             headline,
@@ -253,11 +260,17 @@ public static class FrameProjector
         // then bit-for-bit WaveField.Compute. When it was not called (the guard said it cannot form), Compute runs as
         // before; it now skips the wave model itself whenever Core's ContinuumWaveModel.CanForm says the call would
         // only throw, so a no-inertia case (gb-full) no longer pays the dense build there either.
-        GridSim.Core.Physics.Experimental.WaveField.WaveFieldResult wf = waveAttempted
-            ? GridSim.Core.Physics.Experimental.WaveField.ComputeFromModes(model, r, waveModes)
-            : GridSim.Core.Physics.Experimental.WaveField.Compute(model, r);
-        var waveField = new WaveFieldDto(wf.FrequencyHz, wf.SourceBus,
-            wf.Nodes.Select(nw => new WaveNodeDto(nw.Bus, nw.Amplitude, nw.PhaseRad)).ToList());
+        // GR-245: a non-converged frame gets NO wave field (it would be computed from the unconverged iterate); null is
+        // already a legal value (the field is opt-in per socket, N154).
+        WaveFieldDto? waveField = null;
+        if (r.Converged)
+        {
+            GridSim.Core.Physics.Experimental.WaveField.WaveFieldResult wf = waveAttempted
+                ? GridSim.Core.Physics.Experimental.WaveField.ComputeFromModes(model, r, waveModes)
+                : GridSim.Core.Physics.Experimental.WaveField.Compute(model, r);
+            waveField = new WaveFieldDto(wf.FrequencyHz, wf.SourceBus,
+                wf.Nodes.Select(nw => new WaveNodeDto(nw.Bus, nw.Amplitude, nw.PhaseRad)).ToList());
+        }
 
         return new ExperimentalDto(recip.Status.ToString(), recip.Residual, waveHz, split, topFlows, carbon, skipped, waveField,
             WaveDegraded: waveDegraded, FlowGraphCyclic: flowGraphCyclic, TraceNotConverged: notConverged && !skipped);

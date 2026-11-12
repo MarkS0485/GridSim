@@ -6,7 +6,7 @@ Every verb and flag the `gridsim` command line tool accepts, checked against the
 `dotnet run --project src/GridSim.Cli -c Release --` ([ch. 1](<0001 Getting started.md>)).
 
 This chapter is compiled into the binary. `gridsim <verb> --help` prints the verb's section, and the flags a section
-names are the flags the verb accepts (see [Parsing rules](#parsing-rules-and-exit-codes)), so a flag the code reads
+declares (in its usage line or the first column of its flag table) are the flags the verb accepts (see [Parsing rules](#parsing-rules-and-exit-codes)), so a flag the code reads
 always has a row here.
 
 ## Verb index
@@ -38,9 +38,11 @@ has a section below.
 - **Unknown flag names fail loud.** Every `--flag` is checked against the set of flags the CLI knows. A misspelling
   prints `error: unknown flag '<flag>' (misspelled?)` and exits 2. The message names `gridsim <verb> --help` when the
   first word is a verb (`gridsim --help` otherwise) and this chapter, `docs/manual/0019 CLI reference.md`.
-- **A flag of another verb fails loud too.** Each verb takes the flags its own section below names (the text
-  `gridsim <verb> --help` prints), its group's shared notes, the [global switches](#global-switches) and, on the
-  [result-file](#result-files) verbs, `--json`, `--csv` and `--out`. Any other flag prints `error: <verb> does not
+- **A flag of another verb fails loud too.** Each verb takes the flags its own section below declares in its usage
+  line or in the first column of its flag table (the text `gridsim <verb> --help` prints), those of its group's shared
+  notes, the [global switches](#global-switches) and, on the [result-file](#result-files) verbs, `--json`, `--csv` and
+  `--out`. A flag named only in passing in a section's prose (another verb's, for example) is not one of that verb's
+  flags (GR-194; it used to be accepted and ignored). Any other flag prints `error: <verb> does not
   take <flag> (it is not one of <verb>'s flags, so it would be silently ignored)` and exits 2, so `trip --top 5`
   stops instead of running without `--top`. The no-verb run (`gridsim case14 --once`) takes its one case and the global
   switches only: any other flag, a second case or an extra word prints `error: the case run (no verb) takes one case and
@@ -625,6 +627,7 @@ N-1`). Results are printed worst first. Default model `data/uk`. Exit codes as f
 | `--top` | 20 | Rows to print (all pairs are still screened and counted). |
 | `--post-fault-rating` | A | Judge the outage states against rating A, B or C (see [nminus1](#nminus1)). |
 | `--global-vlimits` | off | Judge every bus against the operational band 0.94-1.06 pu, ignoring the case's per-bus limits (see [nminus1](#nminus1)). `--bus-vlimits` is accepted as a no-op alias of the default. |
+| `--bus-vlimits` | on | The default (each bus against its own limits), accepted as a no-op so existing scripts keep working; with `--global-vlimits` it exits 2. |
 
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)).
@@ -650,6 +653,7 @@ and the failing single outages are as for [nminus2](#nminus2). Default model `da
 | `--top` | 20 | Rows to print (all pairs are still screened and counted). |
 | `--post-fault-rating` | A | Judge the outage states against rating A, B or C (see [nminus1](#nminus1)). |
 | `--global-vlimits` | off | Judge every bus against the operational band 0.94-1.06 pu, ignoring the case's per-bus limits (see [nminus1](#nminus1)). `--bus-vlimits` is accepted as a no-op alias of the default. |
+| `--bus-vlimits` | on | The default (each bus against its own limits), accepted as a no-op so existing scripts keep working; with `--global-vlimits` it exits 2. |
 
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)).
@@ -680,6 +684,7 @@ base-case violation, an outage that violates, islands or does not solve, or a `B
 | `--sample` | 0 (full) | Screen an evenly spaced sample of N branches (logged, flagged `(sampled)`). |
 | `--losses` | off | Also run the loss-contingency sweep and append the 20 outages that raise network losses most. |
 | `--global-vlimits` | off | Judge every bus against the operational band 0.94-1.06 pu, ignoring the case's per-bus limits (see [nminus1](#nminus1)). `--bus-vlimits` is accepted as a no-op alias of the default. |
+| `--bus-vlimits` | on | The default (each bus against its own limits), accepted as a no-op so existing scripts keep working; with `--global-vlimits` it exits 2. |
 | `--out` | `results/nminus1-sweep.md` | Report path (CSV alongside). |
 
 ### stress
@@ -1246,7 +1251,7 @@ The study file (`gridsim-qsts/1`; every key checked, unknown keys refused):
 
 Required: `format`, `stepSeconds` (whole seconds, at least 1), `steps`. A profile gives one sample per its own
 `stepSeconds` from t = 0, inline (`values`) or from a CSV column (`csv`, a path relative to the study file, and `column`,
-a header name or an index from 0; a header row is recognised when the first cell is not a number); `"interpolation"`
+a header name or an index from 0; `"header": true` or `false` says whether the first row names the columns, and when it is left out a column chosen by name needs a header row and one chosen by index has a header when the first row's cell in that column is not a number (bug #162: it used to look at the first cell only, so a headerless file starting with a timestamp column lost its first sample); an unreadable cell is reported by its file line); `"interpolation"`
 `hold` (default) or `linear`; `"scale"` multiplies every value; a study longer than a profile is refused unless the
 profile has `"wrap": true`. Load profiles multiply the bus demand (`scaleP` / `scaleQ`, default both; `"buses": "all"`
 means every bus with demand, and a bus takes one load profile); generator profiles multiply Pg (or give it in MW with
@@ -2305,8 +2310,9 @@ caps `Reproduced` at `Marginal`. A trace file that does not exist exits 2, a tra
 catalogue does not hold exits 1.
 
 Each of the five accepts only the flags in its own section: a flag that belongs to another verb (for example
-`fleet --device-ffr`, `evidence --corners`, `replay-event --device-ffr`) exits 2 with `error: <verb> does not use
-<flag> ... <verb> accepts: ...`. `--asset-dynamics` is refused by all five, and `--forming`, `--forming-inertia` and
+`fleet --device-ffr`, `evidence --corners`, `replay-event --device-ffr`) exits 2 with `error: <verb> does not take
+<flag> ...` (the per-verb flag gate, [Parsing rules](#parsing-rules-and-exit-codes)), or, for a flag the gate passes
+but the verb does not read, `error: <verb> does not use <flag> ... <verb> accepts: ...`. `--asset-dynamics` is refused by all five, and `--forming`, `--forming-inertia` and
 `--forming-damping` by all but `scenario` and `fleet`. `scenario` and `evidence` refuse `--device` together with `--device-inertia`
 or `--device-ffr` (exit 2).
 
@@ -2465,6 +2471,7 @@ refused with `GDA root error: the environment variable <name> is set but does no
 | `--as-of <date>` | now - 169 h | Register as-of date (the no-forward-inference horizon; override for a specific replay date). ISO `yyyy-MM-dd[THH:mm[:ss]]`. |
 | `--out` | - | Materialise the replica as a JSON case directory (lossless for every generator field a JSON v1 case carries; see [synth](#synth) for the rule). |
 | `--solve` | off | Solve the built model (60 iterations, reactive limits off): the engine of the shared rule ([Solver selection](#solver-selection)); `--sparse` / `--dense` force the backend. |
+| `--dense` / `--sparse` | the shared rule | With `--solve`: force the dense or the sparse Newton engine. |
 | `--fleet` | off | National NESO fleet report instead (inertia, largest loss, RoCoF screen, ETYS boundary limits). |
 | `--schema <path>` | - | Print a CSV/Parquet dataset's columns and row count, then exit. |
 
@@ -2478,7 +2485,12 @@ than 15 significant digits are counted in a `note:` line, because the conversion
 their last binary place. With neither rows in the CSV nor a Parquet copy with rows, the build is refused (exit 1)
 naming the tables and both places searched.
 
-`--fleet` is checked before `--schema`, and `--all-gsps` replaces the single build. An unknown `--dno` or an
+`--fleet` is checked before `--schema`, and `--all-gsps` replaces the single build. A flag the chosen mode does not
+use exits 2 naming it, before the lake is read (GR-696): `--fleet` takes only `--root` and `--as-of`; `--schema` only
+`--root`; `--all-gsps` takes `--root`, `--dno`, `--as-of`, `--minkv`, `--base`, `--neg-gen`, `--all-gen`, `--no-oltc`,
+`--no-geo` and `--solve` (each area is always solved) but not `--licence`, `--gsp`, `--out`, `--dense` or `--sparse`;
+`--dense` and `--sparse` need `--solve`; and `--as-of` (the NGED register vintage) is refused with `--dno ukpn` or
+`npg`, whose readers take no register date. An unknown `--dno` or an
 unparseable `--as-of` exits 2; a root, load or build failure exits 1; a carve that keeps no live element (0 buses)
 exits 3 and writes nothing; `--solve` exits 3 when the solve does not converge.
 
@@ -2706,7 +2718,7 @@ boundary capacities to a file ([Result files](#result-files)).
 
 `gridsim pmu-ingest <capture.bin> [--channels <map.json> --measurements-dir <dir>]`
 
-`gridsim pmu-ingest --live tcp://host:port|udp://[bind]:port --live-frames N [--live-seconds S] [--live-idcode ID] [--live-udp-source IP] [--live-quarantine <dir>] [--channels <map.json> --measurements-dir <dir>]`
+`gridsim pmu-ingest --live tcp://host:port|udp://[bind]:port --live-frames N [--live-seconds S] [--live-idcode ID] [--live-udp-source IP | --live-udp-any-sender] [--live-quarantine <dir>] [--channels <map.json> --measurements-dir <dir>]`
 
 EXPERIMENTAL. Decode a recorded IEEE C37.118.2 synchrophasor stream: the frames as sent, back to back, a CONFIG-1 or
 CONFIG-2 frame followed by DATA frames ([technical ch. 33](<../technical/0033 C37.118 synchrophasor ingest.md>)).
@@ -2739,16 +2751,19 @@ or 0xF clock failure: every block of that frame); when its STAT data-error bits 
 mode, absent data); or when it is unsynchronised (STAT bit 13 set, a STAT time quality, bits 8-6, of 100 us or worse,
 or an unlocked time, bits 5-4, of 10 s or more). 10 us is the line because a 100 us time error turns a 50 Hz phasor by
 1.8 degrees, three times the angle share of the 1 % total vector error budget. The other STAT bits (sorting, trigger,
-configuration change, data modified) and the leap-second bits do not decide.
+configuration change, data modified) and the leap-second bits do not decide. STAT bit 10 (configuration change)
+warns that the PMU will change its configuration; when any DATA frame carries it, one stderr line gives the count and
+asks for the CONFIG frame (CFG-2) to be re-sent after the change (the data itself is used).
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--channels` | - | A PMU channel map (`gridsim-pmu-channels/1`): `schema`, `case`, `baseMva`, the angle `reference` (`pmu`, `phasor`, `anchorDeg`, a mapped voltage channel) and per PMU (`pmu`) its `voltages` (`phasor`, `bus`, `baseVolts`, `vmSigmaPu`, `vaSigmaDeg`) and `currents` (`phasor`, `from`, `to`, optional `circuit`, `baseAmps`, `iMagSigmaPu`, `iAngSigmaDeg`). Bases and sigmas must be finite and above 0. Checked against every configuration in force for a decoded DATA frame (each CONFIG frame of the capture that decoded at least one DATA frame; the last one when none did): every PMU present, every phasor index inside its PMU's count, a voltage channel on a voltage phasor and a current channel on a current phasor (PHUNIT). When the configuration changed during the capture, each one the map does not fit is named by the frame it arrived in (`against the configuration from CONFIG frame N (in force for K decoded DATA frame(s)): ...`). Needs `--measurements-dir`. |
-| `--live` | off | N340: read a LIVE IEEE C37.118.2 stream instead of a capture file (give no file with it). `tcp://host:port` connects to the PMU or PDC, sends COMMAND frames "send CONFIG-2" and "turn on transmission" to `--live-idcode`, frames the stream (a byte where SYNC 0xAA must start a frame, or a frame size below 16, stops the run: exit 1, no resynchronising) and sends "turn off transmission" when it stops. `udp://[bind]:port` listens (bind address default 0.0.0.0) for the device's stream, one frame per datagram; a datagram that is not exactly one frame is dropped and counted (exit 3). The received frames then go through exactly the recorded path above (CRC, CONFIG, decoding, quality, alignment, the channel map and the horizon: a device streaming the present is refused, `REJECTED (forward inference)`, exit 2, like a fresh capture; a PDC replaying history is read). Prints a `live:` line with the frames received. |
+| `--channels` | - | A PMU channel map (`gridsim-pmu-channels/1`): `schema`, `case`, `baseMva`, the angle `reference` (`pmu`, `phasor`, `anchorDeg`, a mapped voltage channel) and per PMU (`pmu`) its `voltages` (`phasor`, `bus`, `baseVolts`, `vmSigmaPu`, `vaSigmaDeg`) and `currents` (`phasor`, `from`, `to`, optional `circuit`, `baseAmps`, `iMagSigmaPu`, `iAngSigmaDeg`, and optional `end`, `from` (the default) or `to`, the branch end the current is metered at). Bases and sigmas must be finite and above 0. Checked against every configuration in force for a decoded DATA frame (each CONFIG frame of the capture that decoded at least one DATA frame; the last one when none did): every PMU present, every phasor index inside its PMU's count, a voltage channel on a voltage phasor and a current channel on a current phasor (PHUNIT). When the configuration changed during the capture, each one the map does not fit is named by the frame it arrived in (`against the configuration from CONFIG frame N (in force for K decoded DATA frame(s)): ...`). Needs `--measurements-dir`. |
+| `--live` | off | N340: read a LIVE IEEE C37.118.2 stream instead of a capture file (give no file with it). `tcp://host:port` connects to the PMU or PDC, sends COMMAND frames "send CONFIG-2" and "turn on transmission" to `--live-idcode`, frames the stream (a byte where SYNC 0xAA must start a frame, or a frame size below 16, stops the run: exit 1, no resynchronising) and sends "turn off transmission" when it stops. `udp://[bind]:port` listens (bind address default 127.0.0.1, this machine only; it was 0.0.0.0 before bug #173) for the device's stream, one frame per datagram. A bind address that is not loopback (for example `udp://0.0.0.0:4712` for a PMU on another machine) needs `--live-udp-source <pmu-ip>` or, on purpose, `--live-udp-any-sender`; without either the run stops before listening, exit 2; a datagram that is not exactly one frame is dropped and counted (exit 3). The received frames then go through exactly the recorded path above (CRC, CONFIG, decoding, quality, alignment, the channel map and the horizon: a device streaming the present is refused, `REJECTED (forward inference)`, exit 2, like a fresh capture; a PDC replaying history is read). Prints a `live:` line with the frames received. |
 | `--live-frames` | - | With `--live` (required): stop after this many DATA frames (1 or more). |
-| `--live-seconds` | 30 | With `--live`: the longest the receive runs (above 0, at most 86400). Stopping on it before `--live-frames` DATA frames arrived exits 3 after the summary; no frame at all exits 3. |
+| `--live-seconds` | 30 | With `--live`: the longest the receive runs (above 0, at most 86400). With `tcp://` the budget applies to each phase in turn (bug #160): the connection gets S seconds, the device's first frame gets S seconds from the connection, and the S seconds of receiving start at that first frame, so a slow connect no longer eats the receive. Stopping on it before `--live-frames` DATA frames arrived exits 3 after the summary; no frame at all exits 3. A device that sends more than 1024 frames that are not DATA frames (CONFIG, HEADER, COMMAND) stops the run, exit 1, instead of filling memory until the timeout (bug #177). |
 | `--live-idcode` | 1 | With a `tcp://` `--live`: the device IDCODE (0 to 65535) the COMMAND frames address. Refused with `udp://`. |
-| `--live-udp-source` | any sender | GR-818: with a `udp://` `--live`, read only datagrams whose source address is this IP address; datagrams from any other sender are dropped and counted on the `live:` line, never captured. Refused with `tcp://`. |
+| `--live-udp-source` | any sender on loopback; required off loopback | GR-818: with a `udp://` `--live`, read only datagrams whose source address is this IP address; datagrams from any other sender are dropped and counted on the `live:` line, never captured. Refused with `tcp://`. Required (or `--live-udp-any-sender`) when the bind address is not loopback (bug #173). |
+| `--live-udp-any-sender` | off | Bug #173 (explicit opt-out, no value): with a `udp://` `--live` on a bind address that is not loopback, read datagrams from any sender. A CRC is not authentication, so any host that can reach the port can then inject frames; the run warns. Refused with `tcp://` or together with `--live-udp-source`. |
 | `--live-quarantine` | off | N358: with `--live` only (refused alone, exit 2). A live device streams the present, which the forward-inference horizon (169 h) refuses: without this flag such a run is REJECTED whole, exit 2. With it, every decoded DATA frame newer than the horizon is held back and NOT ingested (no quality judgement, no alignment, no channel map, no measurement set, no report row): the received frames, except the decoded DATA frames already older than the horizon, are written byte for byte to `<dir>/pmu-live-<received UTC>.quarantine.c37` with a sidecar `<capture>.quarantine.json` (schema `gridsim-pmu-quarantine/1`: SHA-256, frame counts, source, received time, horizon, oldest and newest frame time, `sourceClass` telemetry, `evidential` false, `recorded` false, provenance tag `CuratedPlaceholder`, never `Recorded`). A line `quarantine: ...` names the file; the JSON report gains `quarantined_data_frames`. Frames older than the horizon continue through the recorded pipeline as before. Never overwrites (a clash gets `-dupN`). A folder inside the GDA public lake (a `DataSchema.json` at or above it) is refused, exit 1. `pmu-ingest <file>` refuses a quarantine capture (named `*.quarantine.c37` or with the sidecar beside it), exit 1, whatever its age: it becomes recorded data only by re-sourcing the same instants from an archive. |
 | `--measurements-dir` | - | With `--channels`: write one `gridsim-measurements/1` set per aligned instant here (`pmu-<yyyyMMddTHHmmssfffffff>Z.json`, never overwriting: a clash gets `-dupN`), each VmPu / VaDeg per voltage channel and IMagPu / IAngDeg per current channel, angles re-referenced to the reference channel, dated with the instant and passed through the horizon guard. An instant whose reference channel did not report usably gives no set (its angles cannot be referenced); an instant with no mapped PMU gives none either. Prints `measurement sets: N written to <dir> (...)`. Needs `--channels`. |
 
@@ -2824,6 +2839,7 @@ case directory (anything with a `system.json`, so gb-spine and gb-full materiali
 | `--hti` | off | Use Hypothesis-Testing Identification as the bad-data method instead of sequential largest-normalised-residual (LNR) removal: when chi-square fails, every suspect (normalised residual above 3) has its gross error estimated jointly and is removed only if its test statistic exceeds 3; repeat until chi-square passes, nothing is identified, or 20 removals. Separates interacting errors that LNR can mis-attribute. Dense: refused above 2,000 states. Applies to `wls`, `qr`, `constrained` and `feasible`; refused (exit 2) with the robust methods (`huber`, `lav`, `lav-lp`, `lav-irls`, `schweppe-gm`, which down-weight or fit instead of removing), with `--backfill-removals` and with `--no-bad-data`. Removals are printed and written to `hti-removals.csv` (pass, measurement, estimated error, test statistic); the pass counts from 0 (pass 0 is the first estimate), as the LNR loop, the estimate trace and `hti-corrections.csv` count (N256; it used to count from 1). The estimated error is labelled with its unit per row: columns `estimated_error` (internal units) and `estimated_error_unit` (`pu` for voltage and current magnitudes, `rad` for angles, `pu_base_mva` for powers and flows), then `estimated_error_measured` and `measured_unit` (the same error in `pu`, `deg`, `MW` or `Mvar`); the console prints the internal unit and, for angles and powers, the measurement-unit value in brackets; the export's `removed` list (LNR removals) is empty under `--hti`. Under `constrained` and `feasible` a `virtual-zero-injection` row is a hard constraint and is never removed. |
 | `--hti-correct` | off | With `--hti`: correct each identified measurement in place instead of removing it, z <- z - e^ (its jointly estimated gross error, converted to the measurement's own units), keeping the row so observability is preserved; then re-estimate and re-run chi-square. A row identified again after its correction (the correction did not clear it) is removed. Corrections and removals together are capped at 20. Corrections are printed and written to `hti-corrections.csv` (pass, measurement, original and corrected value, estimated error with the same four unit-labelled columns as `hti-removals.csv`, test statistic). Without `--hti` it is a usage error (exit 2). The design is robust-gm-leverage.md section 6.2; there the default action is to correct, here removal stays the default. |
 | `--fdia-screen` | off | Screen the final estimate for a residual-cloaked false-data injection: chi-square PASSED yet the state is physically impossible or outside the operational envelope (voltage band, thermal rating, generator Q capability). A limit breach counts only when it exceeds three times the estimate's uncertainty for that quantity (the sigma of the meter that measures it); smaller breaches are listed as not counted. Prints the verdict (`suspected`, `clear`, `chi-square-failed` or `no-verdict`) and writes `fdia-screen.json`. A `suspected` or `no-verdict` result exits 3 (see below). Refused (exit 2) with `--no-bad-data`. |
+| `--distrust` | - | `<source>[,<source>...]`: measurement source tags (the rows' `source`, matched trimmed and without regard to case) the operator no longer trusts, for incident containment. Every row of a named source is demoted to a pseudo-measurement (its sigma multiplied by 10000, so its weight falls by 1e8; its value is unchanged) and left out of the chi-square redundancy: its residual is not added to J and it is not counted in the degrees of freedom, so the printed `redundancy (dof)` falls by one per demoted row. The rows stay in the fit and in `residuals.csv`. One line per source says how many rows were demoted, and with `--audit-log` one `DistrustedSource` security event is recorded per source (raised as an incident with `--incident-log`). Exits 2 on an empty item, a tag with a space, a repeated tag, the tags GridSim writes itself (`prior-solved`, `removal-backfill-prior`), a tag no row of the set carries (the message lists the tags it does carry), and with `--hti`. Without the flag nothing changes. |
 | `--backfill-removals` | off | Replace each removed measurement with a loose prior-evaluated pseudo (observability restoration). Needs a prior: refused (exit 2) without `--prior solve` or `--warm-start`, whose absence would make the flat start the prior. |
 | `--lean` | off | Skip residual-covariance solves when chi-square already passed (backfill throughput switch; normalised residuals become NaN). |
 | `--trace` | off | Capture the per-iteration convergence path into the export. |
@@ -2914,7 +2930,7 @@ estimated. See [ch. 25, Interposing live telemetry](<0025 Interposing live telem
 
 ### serve
 
-`gridsim serve <case> --measurements-dir <dir> [--method wls|ekf|ukf|enkf] [--utc-now <iso8601>] [--max-windows N]`
+`gridsim serve <case> --measurements-dir <dir> [--method wls|ekf|ukf|enkf] [--utc-now <iso8601>] [--max-windows N] [--distrust <source>[,<source>...]]`
 
 Run the real-time estimator as a resident stream over a directory of `gridsim-measurements/1` files, taken in
 file-name order. Each window is loaded against the horizon (the clock, or `--utc-now`): a window inside the horizon is
@@ -2934,9 +2950,10 @@ the window folder's hash, the summary and the state time of the newest estimated
 | `--method` | `wls` | `wls` (static WLS per window), or a recursive tracking estimator: `ekf` (extended Kalman, information form), `ukf` (unscented Kalman, derivative-free sigma points) or `enkf` (ensemble Kalman, 80 members, fixed seed so runs repeat). Any other value exits 2. The recursive filters are dense: all three refuse a case above 2,500 states, and `ukf` and `enkf` also refuse a window with more than 2,500 measurements (they invert an m x m innovation covariance every window); each refusal exits 2 with the reason. |
 | `--utc-now` | the clock | The `now` the horizon is measured from, for a reproducible run. It may only be EARLIER than the real clock (a stricter horizon): a later one would let recent data through and is refused with `REJECTED (forward inference): --utc-now ... is later than the real clock ...`, exit 2, before any window is read. ISO 8601 only, as for `estimate --phaseangle-at` (`01/02/2100` and other shapes exit 2). |
 | `--max-windows` | all | Process at most N windows (the first N by file name). N must be at least 1: `0` or a negative count exits 2 naming the flag. |
+| `--distrust` | - | `<source>[,<source>...]`: as for `estimate --distrust`, applied to every window: each named source's rows are demoted to pseudo-measurements (sigma x 10000) and left out of the chi-square redundancy. A line per source is printed before the first window, and with `--audit-log` one `DistrustedSource` security event is recorded per source for the run (not per window). A tag that no loaded window carried gives a `warning:` line on stderr after the summary. `--method wls` only: with `ekf`, `ukf` or `enkf` it exits 2; a malformed list exits 2 as for `estimate`. |
 
 Exit 2 on missing arguments, a bad `--method`, `--utc-now` (malformed, or later than the real clock) or `--max-windows`
-(below 1), a filter size refusal, or a forward-inference rejection (an undated window);
+(below 1), a malformed `--distrust` or one given with a recursive filter, a filter size refusal, or a forward-inference rejection (an undated window);
 exit 1 if the case does not load or the directory holds no `*.json` windows; exit 3 if any window failed, or if no
 window produced a usable estimate (none converged: every window unobservable or not converged, or every window inside
 the horizon), with the reason on stderr. A window file that cannot be loaded (not JSON, not a measurement set) is named
@@ -2946,7 +2963,7 @@ and exit 2.
 
 ### interpose
 
-`gridsim interpose [<case>] --protocol <name> (--listen host:port | --port N) --crosswalk <map.json> [flags]`
+`gridsim interpose [<case>] --protocol <name> (--listen host:port | --port N) --crosswalk <map.json> [--allow-client IP[,IP...] | --allow-any-client] [--idle-seconds S] [flags]`
 `gridsim interpose --list-protocols`
 
 The RTU/SCADA interposer: receive live protocol frames, validate and correct each frame, decode it to typed points,
@@ -2963,6 +2980,15 @@ types received but not decoded (`unsupported-type-ids`), the `held-fresh` and `q
 frame left when a client went away; N230). A client that closes or resets its connection is dropped and the next one
 accepted. A window file never overwrites another: a clash is kept as `<name>-dupN.json`.
 
+Who may connect (bug #174). With `--port N` or a bare port, interpose listens on 127.0.0.1 only (it used to listen on
+every interface). A listener reachable from other machines (`--listen 0.0.0.0:N`, or any address that is not loopback)
+needs `--allow-client <ip>[,<ip>...]`, the only RTU addresses that may connect (any other connection is closed at once
+and counted), or, on purpose, `--allow-any-client`; with neither the run stops before listening, exit 2. A client that
+sends nothing for `--idle-seconds` (default 120; 0 never drops one) is dropped so the next can connect: a peer that
+connects and stays silent can no longer hold the single slot and lock the real RTU out. A healthy IEC 104 link is never
+idle (TESTFR every t3 = 20 s). When any client was refused or dropped idle, a line `clients: refused N ..., idle-dropped
+N ...` follows the stop line.
+
 A malformed frame (rejected by frame correction, or framed but undecodable) is named once on stderr when the first one
 arrives (`WARNING: interpose: malformed ...`); later ones are counted (`rejected`, `decode-errors`). Any malformed frame
 makes the run exit 1 at its end, unless `--tolerate-malformed` is given (N230).
@@ -2972,7 +2998,9 @@ act (and records STARTDT con), answers TESTFR act with TESTFR con, acknowledges 
 latest after w = 8 of them or t2 = 10 s after the first unacknowledged one, and sends TESTFR act after t3 = 20 s with no
 frame received (IEC 60870-5-104 clause 5 defaults [VERIFY]). A STARTDT act or TESTFR act not confirmed within t1 = 15 s,
 or an I-frame out of sequence (its N(S) is not V(R)), closes the connection; the next outstation connection starts afresh
-(GR-803, GR-823). k and STOPDT are not implemented.
+(GR-803, GR-823). The interposer sends no I-frames, so an S- or I-frame from the outstation whose N(R) is not 0
+(acknowledging frames that were never sent) also closes the connection (the k window, k = 12). The verb does not send
+STOPDT; it closes the connection when it stops.
 Modbus TCP is received passively, as before.
 
 IEC 104 decodes the monitor types 1, 3, 5, 7, 9, 11, 13, 15, 30 to 37 (N337: step position 5 / 32 and bitstring 7 / 33
@@ -2983,14 +3011,18 @@ that binds one of their addresses is refused as a map error.
 | Flag | Default | Meaning |
 |---|---|---|
 | `--protocol` | required | `iec104` (default port 2404) or `modbus` (default port 502). `--list-protocols` prints the registry and exits. DNP3 and IEC 61850 GOOSE are not selectable: they exist only as link-framing scaffolding with no application layer, and the registry listing says so. |
-| `--listen` | `0.0.0.0:<default port>` | Endpoint `host:port`, `[IPv6]:port` or a bare port; the port is 0 to 65535 (exit 2 otherwise). |
-| `--port` | protocol default | Port on all interfaces, when `--listen` is absent. |
+| `--listen` | `127.0.0.1:<default port>` | Endpoint `host:port`, `[IPv6]:port` or a bare port (a bare port listens on 127.0.0.1); the port is 0 to 65535 (exit 2 otherwise). A host that is not loopback needs `--allow-client` or `--allow-any-client` (bug #174). |
+| `--port` | protocol default | Port on 127.0.0.1 (this machine only; it was every interface before bug #174), when `--listen` is absent. |
+| `--allow-client` | any client on loopback; required off loopback | Bug #174: the only remote IP addresses (comma-separated) that may connect; any other connection is closed at once and counted. |
+| `--allow-any-client` | off | Bug #174 (explicit opt-out, no value): on a listener that is not loopback, accept a client from any address. The run warns. Refused together with `--allow-client`. |
+| `--idle-seconds` | 120 | Bug #174: drop a client that sends nothing for this long, so the next one can connect (0 to 86400; 0 never drops one). |
 | `--crosswalk` | required | Point map (`.json`) from protocol addresses to measurements. |
 | `<case>` | the crosswalk's case, else `rtu` | Case label for the windows (the case is not loaded). |
 | `--measurements-dir` | - | Write each window older than the horizon as a JSON file here. A window newer than the horizon is not written (held); a run that held any exits 2 (see below). |
 | `--out-store` | - | Also write windows to the quarantine Parquet store (refuses to open inside the GDA public lake). Windows newer than the horizon go here only, as quarantine captures. |
 | `--source-id` | `rtu_live` | Source id for the quarantine store. |
 | `--window-ms` | 1000 | Window length (ms); at least 1. |
+| `--max-stamp-spread-ms` | off | Opt-in (GR-305): refuse a window whose device time tags span more than N ms (a whole number, 0 or more), so a point stamped long before the others is not merged into one snapshot. The window is discarded with a `window discarded (time-tag spread ...)` line, counted on a `spread-refused:` line after the stop summary, and the run exits 3. Points with no time tag take no part. |
 | `--monitor` | off | Decode to the console only; no windows written. Refused (exit 2) with `--measurements-dir` or `--out-store`. |
 | `--no-parquet` | off | Accepted; reserved, no effect. |
 | `--tolerate-malformed` | off | Exit 0 even when frames were rejected or undecodable (N230); the warning and the counts still report them. |

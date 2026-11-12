@@ -41,6 +41,15 @@ public static class PhysicsFeasibility
     /// </summary>
     public static IReadOnlyList<LimitViolation> Check(GridModel model, PowerFlowResult result, FeasibilityConstraints feas)
     {
+        // GR-495: equipment limits are judged on a solved state only. A non-converged result is not an operating point,
+        // so its voltages and reactive outputs are refused by name instead of being read (a NaN state used to come back
+        // as a list of "violations" and an unconverged one as if it were feasible). Both production callers (the
+        // estimator's Feasible gate and the FDIA screen) already check convergence first, so their verdicts are unchanged.
+        ArgumentNullException.ThrowIfNull(result);
+        if (!result.Converged)
+            throw new ArgumentException(
+                $"PhysicsFeasibility: the result did not converge ({result.Status}); equipment limits are checked on a solved state only.",
+                nameof(result));
         var violations = new List<LimitViolation>();
 
         var idx = new Dictionary<int, int>(result.BusIds.Count);

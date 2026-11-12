@@ -283,21 +283,28 @@ public static class QstsFile
             if (arr.ValueKind != JsonValueKind.Array) throw p.Bad("values", "an array of numbers");
             values = arr.EnumerateArray().Select((e, i) => NumOf(e, p.Path("values") + $"[{i}]")).ToArray();
             if (p.Raw("column") is not null) throw p.Bad("column", "only with \"csv\"");
+            if (p.Raw("header") is not null) throw p.Bad("header", "only with \"csv\"");
         }
         else
         {
             string path = Path.IsPathRooted(csv!) ? csv! : Path.Combine(baseDir, csv!);
-            values = ReadCsvColumn(path, p.Raw("column"), p.Path("column"));
+            // Bug #162: "header": true | false says outright whether the file's first row names the columns.
+            values = ReadCsvColumn(path, p.Raw("column"), p.Path("column"), p.Bool("header"));
         }
         if (scale != 1.0) for (int i = 0; i < values.Length; i++) values[i] *= scale;
         p.Done();
         return new QstsProfile(name, step, values, interp, wrap);
     }
 
-    /// <summary>One column of a CSV file: a header row naming the columns when the first row is not numeric; the column
-    /// is chosen by its header (string) or index from 0 (number); default the first column when the file has one,
-    /// else refused. Every data cell must be a finite number (invariant culture).</summary>
-    public static double[] ReadCsvColumn(string path, JsonElement? column, string where)
+    /// <summary>One column of a CSV file. The column is chosen by its header (string) or index from 0 (number); default
+    /// the first column when the file has one, else refused. Every data cell must be a finite number (invariant culture).
+    /// <para>Bug #162 (2026-11-01): whether the first row is a header. <paramref name="header"/> (the profile's
+    /// <c>"header"</c>) decides when given. Otherwise a column chosen by name needs a header row, and a column chosen by
+    /// index (or the only column) has one when the first row's cell IN THAT COLUMN is not a number. The guess used to look
+    /// at the first cell of the row only, so a headerless file whose first column is a timestamp
+    /// (<c>2026-01-01 00:00,0.83</c>) read by index lost its first data row without a word and every later sample moved
+    /// one step earlier. Errors now name the file line, not the count of rows left after comments.</para></summary>
+    public static double[] ReadCsvColumn(string path, JsonElement? column, string where, bool? header = null)
     {
         string[] lines;
         try { lines = File.ReadAllLines(path); }
@@ -306,15 +313,20 @@ public static class QstsFile
         // Fields are split by SplitCsvLine, which honours double-quoted fields (a spreadsheet exports a header such as
         // "load, kW" with quotes); a plain Split(',') cut such a field in two and shifted every later column by one.
         var rows = new List<string[]>();
+        var fileLines = new List<int>();   // bug #162: the 1-based file line of each kept row, for messages
         for (int li = 0; li < lines.Length; li++)
         {
             string l = lines[li].Trim();
             if (l.Length == 0 || l.StartsWith('#')) continue;
             rows.Add(SplitCsvLine(l, $"{where}: CSV file {path}, line {li + 1}"));
+            fileLines.Add(li + 1);
         }
         if (rows.Count == 0) throw new InvalidDataException($"{where}: CSV file {path} has no rows.");
-        bool header = !double.TryParse(rows[0][0], NumberStyles.Float, CultureInfo.InvariantCulture, out _);
-        string[]? names = header ? rows[0] : null;
+        bool? declared = header;
+        if (declared == false && column is { ValueKind: JsonValueKind.String })
+            throw new InvalidDataException($"{where}: CSV file {path}: a column chosen by name ('{column.Value.GetString()}') needs a header row, but \"header\" is false.");
+        bool hasHeader = declared ?? true;   // provisional; settled below once the column index is known
+        string[]? names = null;
         int col;
         if (column is null)
         {
@@ -323,7 +335,8 @@ public static class QstsFile
         }
         else if (column.Value.ValueKind == JsonValueKind.String)
         {
-            if (names is null) throw new InvalidDataException($"{where}: CSV file {path} has no header row to find column '{column.Value.GetString()}' in.");
+            names = rows[0];   // a column chosen by name: the first row is the header by definition
+            hasHeader = true;
             col = Array.IndexOf(names, column.Value.GetString());
             if (col < 0) throw new InvalidDataException($"{where}: CSV file {path} has no column '{column.Value.GetString()}' (has: {string.Join(", ", names)}).");
         }
@@ -335,11 +348,15 @@ public static class QstsFile
             if (col < 0)
                 throw new InvalidDataException($"{where}: CSV column index {col} is negative; columns are numbered from 0.");
         }
+        // Bug #162: with no declaration and a column chosen by index (or the only column), the header is decided by the
+        // first row's cell in THAT column.
+        if (declared is null && column is not { ValueKind: JsonValueKind.String })
+            hasHeader = col >= rows[0].Length || !double.TryParse(rows[0][col], NumberStyles.Float, CultureInfo.InvariantCulture, out _);
         var values = new List<double>();
-        for (int r = header ? 1 : 0; r < rows.Count; r++)
+        for (int r = hasHeader ? 1 : 0; r < rows.Count; r++)
         {
             if (col >= rows[r].Length || !double.TryParse(rows[r][col], NumberStyles.Float, CultureInfo.InvariantCulture, out double v) || !double.IsFinite(v))
-                throw new InvalidDataException($"{where}: CSV file {path}, data row {r + 1}: column {col} is not a finite number.");
+                throw new InvalidDataException($"{where}: CSV file {path}, line {fileLines[r]}: column {col} is not a finite number.");
             values.Add(v);
         }
         if (values.Count == 0) throw new InvalidDataException($"{where}: CSV file {path} has no data rows.");

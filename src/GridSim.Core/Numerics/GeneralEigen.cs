@@ -83,7 +83,13 @@ public static class GeneralEigen
     /// <summary>One eigenpair: the eigenvalue s = sigma + j*omega, the right eigenvector phi
     /// (<c>A phi = s phi</c>) and the left eigenvector psi (<c>psi^H A = s psi^H</c>), scaled so the pair is
     /// biorthonormal (<c>psi^H phi = 1</c>) - the normalisation participation factors require.</summary>
-    public readonly record struct Eigenpair(Complex Value, Complex[] Right, Complex[] Left);
+    public readonly record struct Eigenpair(Complex Value, Complex[] Right, Complex[] Left)
+    {
+        /// <summary>GR-033: the eigen-equation residual ||A v - lambda v|| of this mode's right eigenvector (unit 2-norm),
+        /// as checked before the pair was returned. Every returned pair has it at or below
+        /// <see cref="NumericTolerances.EigenResidualRelativeTolerance"/> times the matrix scale.</summary>
+        public double Residual { get; init; }
+    }
 
     /// <summary>Thrown when the right-eigenvector matrix is (numerically) singular, so biorthonormal
     /// left/right vectors do not exist - the matrix is defective / near-defective. Fail loud, never
@@ -228,6 +234,22 @@ public static class GeneralEigen
                     throw new DefectiveEigenproblemException($"the eigenvector of eigenvalue {values[k]} is not finite; no eigen-decomposition.");
         }
 
+        // GR-033: biorthonormality (checked below) holds for ANY invertible V, so it says nothing about whether inverse
+        // iteration converged. Every right vector must also satisfy the eigen-equation, at the same relative bound the
+        // repeated-eigenvalue clusters above are held to, BEFORE V is inverted. An iterate left unconverged at the sweep
+        // cap fails loud here instead of being returned as an eigenvector (with its participation factors as fact).
+        // The residual is reported on each pair. Read-only: every returned vector and value is unchanged.
+        var residuals = new double[n];
+        double residualBound = NumericTolerances.EigenResidualRelativeTolerance * scale;
+        for (int k = 0; k < n; k++)
+        {
+            residuals[k] = EigenResidual(a, n, values[k], cols[k]);
+            if (!(residuals[k] <= residualBound))   // written so a NaN fails
+                throw new DefectiveEigenproblemException(
+                    $"eigenvalue {values[k]}: inverse iteration did not converge to an eigenvector: |A v - lambda v| = " +
+                    $"{residuals[k]:E3} exceeds {residualBound:E3} after {inverseIterations} iterations.");
+        }
+
         // W = V^-1 (rows are the left eigenvectors, biorthonormal to V's columns). Singular V => defective.
         Complex[,]? w = InvertComplex(v, n);
         if (w is null)
@@ -255,7 +277,7 @@ public static class GeneralEigen
                 throw new DefectiveEigenproblemException(
                     $"eigenvalue {values[k]} failed biorthonormality: |psi^H phi - 1| = {(c - Complex.One).Magnitude:E3} " +
                     $"exceeds {biorthoBound:E3} (|psi^H phi| = {c.Magnitude:E3}).");
-            pairs[k] = new Eigenpair(values[k], right, left);
+            pairs[k] = new Eigenpair(values[k], right, left) { Residual = residuals[k] };   // GR-033
         }
         return pairs;
     }

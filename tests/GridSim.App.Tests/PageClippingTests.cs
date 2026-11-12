@@ -392,7 +392,17 @@ public sealed class PageClippingTests
         try
         {
             ItemsControl list = w.GetVisualDescendants().OfType<ItemsControl>().Single(i => i.Name == "MachinesList");
-            var rows = list.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("RowLinkBtn") && b.IsEffectivelyVisible).ToList();
+            // Bug #197 (test harness timing, no assertion changed). Old: the rows were read straight after Open, which
+            // waits only for the case to LOAD. New: wait (up to the file's 120 s pump bound) until the machine rows are
+            // realised, then assert exactly as before. Why: MachineEngineerModel fills Machines from the first frame
+            // that reaches the tab, after the load; on the slowest CI leg (macos-latest, hwintrinsic-off, run
+            // 41220968009) that frame had not arrived yet, so the list was empty and Assert.NotEmpty failed although
+            // the page was correct. A page that never shows a row still fails here (the pump times out, then NotEmpty).
+            List<Button> VisibleRows() =>
+                list.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("RowLinkBtn") && b.IsEffectivelyVisible).ToList();
+            try { PumpUntil(() => { w.UpdateLayout(); return VisibleRows().Count > 0; }, "the machine rows to be shown"); }
+            catch (TimeoutException) { /* fall through: Assert.NotEmpty below reports the empty list */ }
+            var rows = VisibleRows();
             Assert.NotEmpty(rows);
             foreach (Button row in rows)
             {

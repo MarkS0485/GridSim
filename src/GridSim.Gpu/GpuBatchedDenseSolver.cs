@@ -66,7 +66,7 @@ public sealed class GpuBatchedDenseSolver : IBatchedLinearSolver
         // Flatten each system into a row-major augmented matrix [A_s | b_s], and record each system's scale
         // for its own relative near-singular floor (mirrors DenseLuSolver, but per system).
         var aug = new double[augLen];
-        var floors = new double[count];
+        var floors = new double[(long)count * n];   // GR-044: per system, per row (system s, row i at s*n + i)
         for (int s = 0; s < count; s++)
         {
             int aBase = s * n * n;
@@ -82,10 +82,12 @@ public sealed class GpuBatchedDenseSolver : IBatchedLinearSolver
                     aug[augRow + j] = v;
                     double av = Math.Abs(v);
                     if (av > aNorm) aNorm = av;
+                    if (av > floors[s * n + i]) floors[s * n + i] = av;
                 }
                 aug[augRow + rhs] = bFlat[s * n + i];
             }
-            floors[s] = GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm);   // the shared relative floor (WS5)
+            // GR-044: this system's row scales -> row floors (the shared relative floor, per row; mirrors DenseLuSolver).
+            GridSim.Core.Numerics.NumericTolerances.ToRowPivotFloors(floors.AsSpan(s * n, n), aNorm);
         }
 
         var info = new int[count];   // 0 = ok; else (firstSingularCol + 1)
@@ -96,14 +98,14 @@ public sealed class GpuBatchedDenseSolver : IBatchedLinearSolver
             using var dAug = acc.Allocate1D<double>(aug.Length);
             using var dPiv = acc.Allocate1D<int>(count);       // pivot row for the current column, per system
             using var dInfo = acc.Allocate1D<int>(count);      // per-system singularity flag
-            using var dFloor = acc.Allocate1D<double>(count);
+            using var dFloor = acc.Allocate1D<double>(floors.Length);
             using var dX = acc.Allocate1D<double>(count * n);
             dAug.CopyFromCPU(aug);
             dInfo.CopyFromCPU(new int[count]);
             dFloor.CopyFromCPU(floors);
 
             var pivot = acc.LoadStreamKernel<ArrayView<double>, ArrayView<int>, ArrayView<int>, ArrayView<double>, int, int, int>(PivotBatchKernel);
-            var swap = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<int>, int, int, int>(SwapBatchKernel);
+            var swap = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<int>, int, int, int, ArrayView<double>>(SwapBatchKernel);
             var eliminate = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, int, int, int>(EliminateBatchKernel);
             var divide = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<double>, int, int, int, int>(BackDivideBatchKernel);
             var backUpd = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<double>, int, int, int, int>(BackUpdateBatchKernel);
@@ -115,7 +117,7 @@ public sealed class GpuBatchedDenseSolver : IBatchedLinearSolver
             for (int k = 0; k < n; k++)
             {
                 pivot(pivotConfig, dAug.View, dPiv.View, dInfo.View, dFloor.View, k, n, ncol);
-                swap(count * ncol, dAug.View, dPiv.View, k, n, ncol);
+                swap(count * ncol, dAug.View, dPiv.View, k, n, ncol, dFloor.View);
                 eliminate(count * n, dAug.View, k, n, ncol);
             }
 
@@ -195,18 +197,26 @@ public sealed class GpuBatchedDenseSolver : IBatchedLinearSolver
         if (tid == 0)
         {
             piv[s] = sIdx[0];
-            if (info[s] == 0 && sVal[0] <= floors[s]) info[s] = k + 1;   // first singular column only
+            // GR-044: the floor of the original row now at the winning position (floors travel with their rows).
+            if (info[s] == 0 && sVal[0] <= floors[s * n + sIdx[0]]) info[s] = k + 1;   // first singular column only
         }
     }
 
     /// <summary>Swap rows k and piv[s] across all ncol columns of each system (no-op when equal). Grid over (system × col).</summary>
-    private static void SwapBatchKernel(Index1D index, ArrayView<double> aug, ArrayView<int> piv, int k, int n, int ncol)
+    private static void SwapBatchKernel(Index1D index, ArrayView<double> aug, ArrayView<int> piv, int k, int n, int ncol, ArrayView<double> floors)
     {
         int idx = index.X;
         int s = idx / ncol;
         int j = idx % ncol;
         int p = piv[s];
         if (p == k) return;
+        if (j == 0)
+        {
+            // GR-044: one thread per system carries the row's floor with it.
+            double f = floors[s * n + k];
+            floors[s * n + k] = floors[s * n + p];
+            floors[s * n + p] = f;
+        }
         int sBase = s * n * ncol;
         int a = sBase + k * ncol + j;
         int b = sBase + p * ncol + j;

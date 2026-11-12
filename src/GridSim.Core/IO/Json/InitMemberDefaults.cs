@@ -76,7 +76,9 @@ internal sealed class InitMemberDefaults : IJsonTypeInfoResolver
         Member<RtuPointMap, string>("Schema", static x => x.Schema, Rm.Schema, nonNullableReference: true),
         Member<RtuPointMap, string>("Case", static x => x.Case, Rm.Case, nonNullableReference: true),
         Member<RtuPointMap, double>("BaseMva", static x => x.BaseMva, Rm.BaseMva, nonNullableReference: false),
-        Member<RtuPointMap, IReadOnlyList<RtuPointBinding>>("Bindings", static x => x.Bindings, Rm.Bindings, nonNullableReference: true));
+        Member<RtuPointMap, IReadOnlyList<RtuPointBinding>>("Bindings", static x => x.Bindings, Rm.Bindings, nonNullableReference: true),
+        // GR-306: the optional IEC 104 naming key. Every member of the type must be listed here, or the reader ignores it.
+        Member<RtuPointMap, string?>("Iec104Key", static x => x.Iec104Key, Rm.Iec104Key, nonNullableReference: false));
 
     private static JsonTypeInfo<RtuPointBinding> RtuPointBindingInfo(JsonSerializerOptions o) => Object(o, static () => new RtuPointBinding(),
         Member<RtuPointBinding, string>("Address", static x => x.Address, Rb.Address, nonNullableReference: true),
@@ -124,6 +126,7 @@ internal sealed class InitMemberDefaults : IJsonTypeInfoResolver
         [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "set_Case")] internal static extern void Case(RtuPointMap o, string v);
         [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "set_BaseMva")] internal static extern void BaseMva(RtuPointMap o, double v);
         [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "set_Bindings")] internal static extern void Bindings(RtuPointMap o, IReadOnlyList<RtuPointBinding> v);
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "set_Iec104Key")] internal static extern void Iec104Key(RtuPointMap o, string? v);
     }
 
     private static class Rb

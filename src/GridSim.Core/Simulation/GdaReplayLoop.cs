@@ -15,7 +15,11 @@ public sealed record GdaReplayStep(
 /// <summary>The full offline state-estimation pass over a historical demand series. <see cref="Provenance"/> is
 /// <see cref="ProvenanceTag.DerivedFromRecorded"/> for a plain reconstruction and
 /// <see cref="ProvenanceTag.Counterfactual"/> when hypothetical storage was added - a "what if a battery had been
-/// there" run on real history is a conclusion, never an input to another replay.</summary>
+/// there" run on real history is a conclusion, never an input to another replay. GR-854 (November 2026): a
+/// passive-plant replay whose modelled plant actually changed a tap ratio or derated a rating in some step is
+/// <see cref="ProvenanceTag.Interpolated"/> (recorded inputs augmented by modelled plant behaviour: usable to improve
+/// fidelity, never an event source); one whose plant changed nothing stays DerivedFromRecorded, and storage keeps
+/// Counterfactual, which wins.</summary>
 public sealed record GdaReplayResult(
     string SeriesName, int Steps, int NonConverged, IReadOnlyList<GdaReplayStep> StepResults,
     ProvenanceTag Provenance = ProvenanceTag.DerivedFromRecorded,
@@ -52,6 +56,7 @@ public static class GdaReplayLoop
             plant = built.IsEmpty ? null : built;
         }
         IReadOnlyList<Assets.BranchPlantState>? plantState = null;   // updates from the previous converged solve
+        bool plantChangedModel = false;   // GR-854: did the modelled plant move a tap or derate a rating in any step?
         var storageSteps = storage is null ? null : new List<IReadOnlyList<Storage.SiteStepRecord>>(series.Steps.Count);
         // The load-bearing invariant, re-asserted at the ingestion boundary.
         ForwardInferenceGuard.AssertHistorical(series.Steps.Select(s => s.TimeUtc), utcNow, "GDA time-series");
@@ -93,7 +98,12 @@ public static class GdaReplayLoop
                 // Hand the governed transformers' tap regulation to the delayed passive OLTCs, then apply the taps and
                 // derated ratings from the previous converged solve BEFORE this step's solve.
                 m = plant.WithoutSupersededOltcs(m);
-                if (plantState is not null) m = Assets.PassivePlantFleet.ApplyTo(m, plantState);
+                if (plantState is not null)
+                {
+                    GridModel before = m;
+                    m = Assets.PassivePlantFleet.ApplyTo(m, plantState);
+                    plantChangedModel |= PlantChanged(before, m);
+                }
             }
             if (warmStart && last is not null) m = GridScenario.WithSolvedVoltages(m, last);
 
@@ -130,8 +140,19 @@ public static class GdaReplayLoop
         }
 
         return storage is null
-            ? new GdaReplayResult(series.Name, series.Steps.Count, nonConv, steps)
+            ? new GdaReplayResult(series.Name, series.Steps.Count, nonConv, steps,
+                plantChangedModel ? ProvenanceTag.Interpolated : ProvenanceTag.DerivedFromRecorded)   // GR-854
             : new GdaReplayResult(series.Name, series.Steps.Count, nonConv, steps, ProvenanceTag.Counterfactual,
                 storageSteps, storage.Summaries());
+    }
+
+    /// <summary>GR-854: true when applying the passive-plant updates changed any branch's tap ratio or rating (exact
+    /// compare; ApplyTo keeps the branch order and count).</summary>
+    private static bool PlantChanged(GridModel before, GridModel after)
+    {
+        for (int b = 0; b < before.Branches.Count; b++)
+            if (before.Branches[b].TapRatio != after.Branches[b].TapRatio || before.Branches[b].RateAMva != after.Branches[b].RateAMva)
+                return true;
+        return false;
     }
 }

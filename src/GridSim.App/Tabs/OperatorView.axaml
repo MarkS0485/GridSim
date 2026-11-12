@@ -8,7 +8,7 @@
        layout order (title and warning banner; then headline tiles and boundaries | generation stack | balancing
        mechanism over active constraints), the same theme brushes, and every colour from the shared OperatorModel's
        tokens through TokenBrush (the bytes WPF shows). The DataContext is the shared OperatorModel. -->
-  <Grid Margin="10" RowDefinitions="Auto,*">
+  <Grid Margin="10" RowDefinitions="Auto,Auto,*">
 
     <!-- ============ title + warning banner ============ -->
     <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
@@ -26,8 +26,26 @@
       </DockPanel>
     </Border>
 
+    <!-- ============ system strip (GR-765): the values the model computes that had no tile ============ -->
+    <Border Grid.Row="1" Classes="Card" Padding="12,6" Margin="0,0,0,10">
+      <UniformGrid Columns="3">
+        <StackPanel Margin="4">
+          <TextBlock Text="RESPONSE" Classes="Label" />
+          <TextBlock x:Name="ResponseText" Text="{Binding ResponseMw}" Classes="Value" FontSize="18" />
+        </StackPanel>
+        <StackPanel Margin="4">
+          <TextBlock Text="NET INTERCONNECTOR" Classes="Label" />
+          <TextBlock x:Name="NetInterconnectorText" Text="{Binding NetInterconnector}" Classes="Value" FontSize="18" />
+        </StackPanel>
+        <StackPanel Margin="4">
+          <TextBlock Text="VOLTAGE BAND" Classes="Label" />
+          <TextBlock x:Name="VoltageBandText" Text="{Binding VoltageBand}" Classes="Value" FontSize="18" />
+        </StackPanel>
+      </UniformGrid>
+    </Border>
+
     <!-- ============ console body ============ -->
-    <Grid Grid.Row="1" ColumnDefinitions="1.4*,10,1.1*,10,1.5*">
+    <Grid Grid.Row="2" ColumnDefinitions="1.4*,10,1.1*,10,1.5*">
 
       <!-- ===== LEFT: headline + boundary transfers ===== -->
       <DockPanel Grid.Column="0">

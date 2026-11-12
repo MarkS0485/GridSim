@@ -43,6 +43,11 @@ public sealed record AuditLogVerification(
     /// tail truncation or a whole-log rewrite.</summary>
     public AuditAnchor Anchor => new(VerifiedCount, HeadHash);
 
+    /// <summary>GR-374 (November 2026): the hash of the log's first verified entry, its identity (no two logs share one
+    /// unless one is a copy of the other), or <see cref="AuditLog.Genesis"/> when no entry verified. A v2 signed anchor
+    /// binds it.</summary>
+    public string FirstHash { get; init; } = AuditLog.Genesis;
+
     /// <summary>Fail loud: throw <see cref="AuditLogTamperException"/> naming the first broken entry when
     /// this result is not valid. Does nothing when it is valid.</summary>
     public void ThrowIfInvalid(string filePath)
@@ -135,9 +140,9 @@ public static class AuditLogFile
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         // FileShare.ReadWrite so a log can be checked while a writer still has it open. A check taken during a
         // write may see a half-written last line and report it as torn; verify a closed log for a final answer.
+        // GR-859: verified in one streaming pass (one line held at a time); the file is no longer read whole first.
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        byte[] bytes = ReadAll(stream);
-        return VerifyBytes(bytes, anchor);
+        return VerifyStream(stream, anchor, keepEntries: true);
     }
 
     /// <summary>
@@ -223,72 +228,119 @@ public static class AuditLogFile
         return line;
     }
 
-    /// <summary>Read a whole file from the start. Shared by <see cref="Verify"/> and the writer's open-time check.</summary>
-    internal static byte[] ReadAll(FileStream stream)
-    {
-        long length = stream.Length;
-        if (length > Array.MaxLength)
-            throw new InvalidDataException(string.Create(CultureInfo.InvariantCulture,
-                $"Audit log '{stream.Name}' is {length} bytes, too large to verify in one pass."));
-        var bytes = new byte[length];
-        stream.Position = 0;
-        stream.ReadExactly(bytes);
-        return bytes;
-    }
+    /// <summary>The size of each read when a log is verified from a stream (GR-859).</summary>
+    private const int StreamChunkBytes = 64 * 1024;
 
     /// <summary>
     /// Verify raw file bytes: the whole format and chain check. Stops at the first broken entry, because once
-    /// the chain is broken nothing after that point can be trusted.
+    /// the chain is broken nothing after that point can be trusted. GR-859: the same streaming pass as
+    /// <see cref="VerifyStream"/>, over the bytes, so a file and a byte array always get the same verdict.
     /// </summary>
     internal static AuditLogVerification VerifyBytes(ReadOnlySpan<byte> bytes, AuditAnchor? anchor)
     {
+        using var stream = new MemoryStream(bytes.ToArray(), writable: false);
+        return VerifyStream(stream, anchor, keepEntries: true);
+    }
+
+    /// <summary>
+    /// GR-859 (November 2026): verify a log read from <paramref name="stream"/>, from its current position to its end,
+    /// one line at a time. Before, the whole file was read into one byte array first, so opening a writer held the
+    /// entire log in memory twice over (bytes and entries) and a log of 2 GiB or more could not be opened at all. Now
+    /// only one line is held at a time; with <paramref name="keepEntries"/> false (the writer's open-time check, which
+    /// needs only the count and the head hash) memory no longer grows with the log, and the result's
+    /// <see cref="AuditLogVerification.Entries"/> is empty while its count and head hash are those of the full check.
+    /// Every check, its order and every message are exactly those of the whole-file pass this replaces. Time still
+    /// grows with the log: every entry's hash is recomputed on every open.
+    /// </summary>
+    internal static AuditLogVerification VerifyStream(Stream stream, AuditAnchor? anchor, bool keepEntries)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
         if (anchor is not null)
         {
             ArgumentOutOfRangeException.ThrowIfNegative(anchor.Count, nameof(anchor));
             ArgumentNullException.ThrowIfNull(anchor.HeadHash, nameof(anchor));
         }
 
-        var entries = new List<AuditLogEntry>();
-        string previousHash = AuditLog.Genesis;
+        var chain = new ChainVerifier(anchor, keepEntries);
+        byte[] chunk = new byte[StreamChunkBytes];
+        // The bytes of the line being assembled across reads (a line may span any number of chunks).
+        byte[] line = new byte[256];
+        int lineLength = 0;
 
-        // A byte-order mark means the file was re-saved by something other than the writer.
-        if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
-            return Broken(entries, 0,
+        // A byte-order mark means the file was re-saved by something other than the writer. At least the first three
+        // bytes (or the whole stream, if shorter) are read before anything else, so the check sees what the old one did.
+        int read = stream.ReadAtLeast(chunk, 3, throwOnEndOfStream: false);
+        if (read >= 3 && chunk[0] == 0xEF && chunk[1] == 0xBB && chunk[2] == 0xBF)
+            return chain.Fail(0,
                 "the file starts with a UTF-8 byte-order mark, which the writer never produces (the file was " +
                 "re-saved by another program)");
 
-        int start = 0;
-        while (start < bytes.Length)
+        while (read > 0)
         {
-            int index = entries.Count;
-            ReadOnlySpan<byte> rest = bytes[start..];
-            int newline = rest.IndexOf((byte)'\n');
-            if (newline < 0)
-                return Broken(entries, index,
-                    "the last line has no terminating newline: the file was cut off part-way through this entry, " +
-                    "or a write was interrupted");
+            int at = 0;
+            while (at < read)
+            {
+                int newline = Array.IndexOf(chunk, (byte)'\n', at, read - at);
+                int take = (newline < 0 ? read : newline) - at;
+                if (lineLength + take > line.Length)
+                    Array.Resize(ref line, Math.Max(line.Length * 2, lineLength + take));
+                Buffer.BlockCopy(chunk, at, line, lineLength, take);
+                lineLength += take;
+                if (newline < 0)
+                    break;   // the line goes on in the next chunk
+                if (chain.Accept(line.AsSpan(0, lineLength)) is AuditLogVerification broken)
+                    return broken;
+                lineLength = 0;
+                at = newline + 1;
+            }
+            read = stream.Read(chunk, 0, chunk.Length);
+        }
 
-            ReadOnlySpan<byte> line = rest[..newline];
-            start += newline + 1;
+        if (lineLength > 0)
+            return chain.Fail(chain.Count,
+                "the last line has no terminating newline: the file was cut off part-way through this entry, " +
+                "or a write was interrupted");
+        return chain.Finish();
+    }
 
+    /// <summary>
+    /// GR-859: the chain state of one verification pass, fed one complete line (without its '\n') at a time. It keeps
+    /// every entry only when asked to; otherwise just the count, the head hash and the two hashes an anchor check can
+    /// need (the anchored entry's and the one before it), which are all a result ever reports.
+    /// </summary>
+    private sealed class ChainVerifier(AuditAnchor? anchor, bool keepEntries)
+    {
+        private readonly List<AuditLogEntry> _entries = new();
+        private string _previousHash = AuditLog.Genesis;
+        private string? _hashAtAnchor;        // the hash of entry anchor.Count - 1, once verified
+        private string? _hashBeforeAnchor;    // the hash of entry anchor.Count - 2, once verified
+        private string? _firstHash;           // GR-374: the hash of entry 0, once verified
+
+        /// <summary>How many entries have verified so far.</summary>
+        public int Count { get; private set; }
+
+        /// <summary>Check one line. Null when it verified and was added; the invalid result when it did not.</summary>
+        public AuditLogVerification? Accept(ReadOnlySpan<byte> line)
+        {
+            int index = Count;
             if (line.IsEmpty)
-                return Broken(entries, index, "a blank line stands where an entry was expected");
+                return Fail(index, "a blank line stands where an entry was expected");
             if (line[^1] == (byte)'\r')
-                return Broken(entries, index,
+                return Fail(index,
                     "the line ends with CR LF; the writer only ever writes LF (the file was re-saved by another program)");
 
             if (!TryParseLine(line, out AuditLogEntry? entry, out string? parseError))
-                return Broken(entries, index, parseError);
+                return Fail(index, parseError);
 
             // Order of checks: position first (catches deletion, insertion and reordering at the exact place),
             // then the link to the previous entry, then the entry's own hash (catches an edited field).
             if (entry.Sequence != index)
-                return Broken(entries, index, string.Create(CultureInfo.InvariantCulture,
+                return Fail(index, string.Create(CultureInfo.InvariantCulture,
                     $"the entry's sequence number is {entry.Sequence} but it is at position {index}: an entry was " +
                     $"deleted, inserted or moved here"));
 
-            if (!string.Equals(entry.PrevHash, previousHash, StringComparison.Ordinal))
-                return Broken(entries, index, index == 0
+            if (!string.Equals(entry.PrevHash, _previousHash, StringComparison.Ordinal))
+                return Fail(index, index == 0
                     ? "the first entry's prevHash is not GENESIS: the start of the log was removed or replaced"
                     : string.Create(CultureInfo.InvariantCulture,
                         $"prevHash does not equal the hash of entry {index - 1}: an earlier entry was edited " +
@@ -297,41 +349,71 @@ public static class AuditLogFile
             string recomputed = AuditLog.ComputeHash(
                 entry.Sequence, entry.RunTimestampUtc, entry.StateTimeUtc, entry.Provenance, entry.Summary, entry.PrevHash);
             if (!string.Equals(recomputed, entry.Hash, StringComparison.Ordinal))
-                return Broken(entries, index,
+                return Fail(index,
                     "the stored hash does not match the hash recomputed from the entry's fields: this entry's " +
                     "content was edited");
 
-            entries.Add(entry);
-            previousHash = entry.Hash;
-        }
-
-        if (anchor is not null)
-        {
-            if (entries.Count < anchor.Count)
-                return Broken(entries, entries.Count, string.Create(CultureInfo.InvariantCulture,
-                    $"the file holds {entries.Count} entries but the anchor records {anchor.Count}: the entries " +
-                    $"from index {entries.Count} onward were removed (tail truncation)"));
-
-            string anchoredHead = anchor.Count == 0 ? AuditLog.Genesis : entries[anchor.Count - 1].Hash;
-            if (!string.Equals(anchoredHead, anchor.HeadHash, StringComparison.Ordinal))
+            if (keepEntries)
+                _entries.Add(entry);
+            if (anchor is not null)
             {
-                int at = Math.Max(anchor.Count - 1, 0);
-                return Broken(entries, at, string.Create(CultureInfo.InvariantCulture,
-                    $"the hash of entry {at} does not match the externally anchored head hash: the log was " +
-                    $"rewritten with recomputed hashes (or the anchor belongs to a different log)"));
+                if (index == anchor.Count - 1) _hashAtAnchor = entry.Hash;
+                if (index == anchor.Count - 2) _hashBeforeAnchor = entry.Hash;
             }
+            if (index == 0) _firstHash = entry.Hash;
+            _previousHash = entry.Hash;
+            Count = index + 1;
+            return null;
         }
 
-        return new AuditLogVerification(true, entries.Count, null, null, previousHash, entries);
-    }
+        /// <summary>The end of the stream: the anchor checks, then the valid result.</summary>
+        public AuditLogVerification Finish()
+        {
+            if (anchor is not null)
+            {
+                if (Count < anchor.Count)
+                    return Fail(Count, string.Create(CultureInfo.InvariantCulture,
+                        $"the file holds {Count} entries but the anchor records {anchor.Count}: the entries " +
+                        $"from index {Count} onward were removed (tail truncation)"));
 
-    /// <summary>Build an invalid result: the clean prefix before <paramref name="index"/>, the index and why.</summary>
-    private static AuditLogVerification Broken(List<AuditLogEntry> entries, int index, string reason)
-    {
-        int clean = Math.Min(index, entries.Count);
-        List<AuditLogEntry> prefix = entries.GetRange(0, clean);
-        string head = clean == 0 ? AuditLog.Genesis : prefix[clean - 1].Hash;
-        return new AuditLogVerification(false, clean, index, reason, head, prefix);
+                string anchoredHead = anchor.Count == 0 ? AuditLog.Genesis : HashAt(anchor.Count - 1);
+                if (!string.Equals(anchoredHead, anchor.HeadHash, StringComparison.Ordinal))
+                {
+                    int at = Math.Max(anchor.Count - 1, 0);
+                    return Fail(at, string.Create(CultureInfo.InvariantCulture,
+                        $"the hash of entry {at} does not match the externally anchored head hash: the log was " +
+                        $"rewritten with recomputed hashes (or the anchor belongs to a different log)"));
+                }
+            }
+
+            return new AuditLogVerification(true, Count, null, null, _previousHash,
+                keepEntries ? _entries : Array.Empty<AuditLogEntry>()) { FirstHash = _firstHash ?? AuditLog.Genesis };
+        }
+
+        /// <summary>Build an invalid result: the clean prefix before <paramref name="index"/>, the index and why.</summary>
+        public AuditLogVerification Fail(int index, string reason)
+        {
+            int clean = Math.Min(index, Count);
+            IReadOnlyList<AuditLogEntry> prefix = keepEntries ? _entries.GetRange(0, clean) : Array.Empty<AuditLogEntry>();
+            string head = clean == 0 ? AuditLog.Genesis : HashAt(clean - 1);
+            return new AuditLogVerification(false, clean, index, reason, head, prefix)
+            {
+                FirstHash = clean > 0 && _firstHash is not null ? _firstHash : AuditLog.Genesis,
+            };
+        }
+
+        // The hash of verified entry i. Without the entries kept, only the last entry's and the two anchor-adjacent
+        // ones are known, and those are the only ones Finish and Fail ever ask for (Fail asks for clean - 1, where
+        // clean is either Count or anchor.Count - 1).
+        private string HashAt(int i)
+        {
+            if (keepEntries) return _entries[i].Hash;
+            if (i == Count - 1) return _previousHash;
+            if (anchor is not null && i == anchor.Count - 1 && _hashAtAnchor is not null) return _hashAtAnchor;
+            if (anchor is not null && i == anchor.Count - 2 && _hashBeforeAnchor is not null) return _hashBeforeAnchor;
+            throw new InvalidOperationException(string.Create(CultureInfo.InvariantCulture,
+                $"Audit verification asked for the hash of entry {i}, which a streaming pass does not keep."));
+        }
     }
 
     /// <summary>

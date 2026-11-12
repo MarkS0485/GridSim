@@ -11,9 +11,11 @@ namespace GridSim.Core.Diagnostics.SupplyChain;
 /// released one is checked outside it: the signed build-provenance attestation and SHA256SUMS of the Release.
 ///
 /// <para><b>The verdict.</b> <see cref="IsCompliant"/> needs BOTH (1) a release build (<see cref="IsReleaseBuild"/>:
-/// the release workflow injected the SBOM hash, which it does only after the full test matrix passed on every OS and
-/// SIMD mode, so a release binary implies its evidencing tests were green) and (2) every in-scope control recorded as
-/// Achieved. The manifest's statuses are maintained by hand in source, so (2) is an inventory, not a measurement: a
+/// a well-formed SBOM hash was injected, the commit is known and the source tree was clean at build time) and (2) every
+/// in-scope control recorded as Achieved. Bug #196: a release build does NOT by itself prove that the full test matrix
+/// passed. release.yml injects the SBOM hash only after the matrix, but anyone can build with an SBOM hash outside it,
+/// as the 2.1.000 RC-1 release was; that is why supply-chain and secure-sdlc-attestation are recorded
+/// PartiallyAchieved until a release is published through release.yml. The manifest's statuses are maintained by hand in source, so (2) is an inventory, not a measurement: a
 /// control whose product wiring is missing is recorded PartiallyAchieved, and the verdict then reads NOT COMPLIANT.
 /// A local or development build never attests compliance, whatever the manifest says.</para>
 /// </summary>
@@ -35,6 +37,13 @@ public sealed record ComplianceAttestation(
     int AchievedControlCount,
     bool IsReleaseBuild)
 {
+    /// <summary>Why the build is not a release build (from <see cref="BuildProvenance.NotReleaseReason"/>), or null to
+    /// use the plain "SBOM hash not injected" wording. Shown on the report's release-build line (bug #176).</summary>
+    public string? NotReleaseReason { get; init; }
+
+    /// <summary>The state of the source tree the build was made from (<see cref="BuildProvenance.SourceTree"/>).</summary>
+    public string SourceTree { get; init; } = BuildProvenance.SourceTreeUnknown;
+
     /// <summary>The attestation of the currently running build.</summary>
     public static ComplianceAttestation Current { get; } = FromCurrent();
 
@@ -49,7 +58,11 @@ public sealed record ComplianceAttestation(
         int achieved = ComplianceManifest.InScope.Count(c => c.Status == ComplianceStatus.Achieved);
         return new ComplianceAttestation(
             p.Version, p.Commit, p.BuildHash, p.SbomSha256, ComplianceManifest.Hash,
-            inScope, achieved, p.IsReleaseBuild);
+            inScope, achieved, p.IsReleaseBuild)
+        {
+            NotReleaseReason = p.NotReleaseReason,
+            SourceTree = p.SourceTree,
+        };
     }
 
     /// <summary>A human-readable report of the attestation, one field per line. Used by the CLI verb and the web
@@ -60,13 +73,14 @@ public sealed record ComplianceAttestation(
         string verdict = IsCompliant ? "COMPLIANT"
                        : !IsReleaseBuild ? "NOT ATTESTED (not a release build: only a release build can attest compliance)"
                        : "NOT COMPLIANT (in-scope controls not all Achieved)";
-        string release = IsReleaseBuild ? "yes" : "no (local/dev build; SBOM hash not injected)";
+        string release = IsReleaseBuild ? "yes" : "no (" + (NotReleaseReason ?? "local/dev build; SBOM hash not injected") + ")";
         return string.Join('\n',
             $"GridSim compliance attestation",
             $"  version        {Version}",
             $"  commit         {Commit}",
             $"  build hash     {BuildHash}",
             $"  sbom sha256    {SbomSha256}",
+            $"  source tree    {SourceTree}",
             $"  manifest hash  {ManifestHash}",
             $"  release build  {release}",
             string.Create(ci, $"  controls       {AchievedControlCount}/{InScopeControlCount} in-scope controls Achieved"),

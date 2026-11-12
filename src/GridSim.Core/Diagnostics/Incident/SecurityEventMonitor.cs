@@ -20,12 +20,27 @@ public sealed class SecurityEventMonitor : IAuditSink
     private readonly Dictionary<SecurityEventKind, int> _counts = new();
     private readonly HashSet<SecurityEventKind> _latched = new();
 
+    // GR-363 (November 2026): the optional sliding window. Null (the default) is the original behaviour: cumulative counts
+    // for the life of the monitor and a latch that never re-arms. When set, each kind keeps the audit timestamps of its
+    // recent events and a burst is that many events inside the window.
+    private readonly TimeSpan? _window;
+    private readonly Dictionary<SecurityEventKind, List<DateTime>> _recent = new();
+
     /// <summary>Create a monitor that escalates bursts through <paramref name="router"/>. The policy is the
-    /// router's own policy unless <paramref name="policy"/> overrides it.</summary>
-    public SecurityEventMonitor(IncidentRouter router, IncidentPolicy? policy = null)
+    /// router's own policy unless <paramref name="policy"/> overrides it.
+    /// <para>GR-363: with <paramref name="burstWindow"/> null (the default) the counts are cumulative and each kind latches
+    /// after its first burst, as before. With a window, a burst is the policy's threshold of events of one kind whose
+    /// <see cref="AuditLogEntry.RunTimestampUtc"/> lie within the window, and the latch is re-armed once the events of
+    /// that kind inside the window fall below the threshold, so bursts spread over a long run each raise their own
+    /// incident. The window is read only from the entries' own timestamps, never the clock, so the same entries
+    /// always give the same incidents. <see cref="CountOf"/> stays cumulative either way.</para></summary>
+    public SecurityEventMonitor(IncidentRouter router, IncidentPolicy? policy = null, TimeSpan? burstWindow = null)
     {
         _router = router ?? throw new ArgumentNullException(nameof(router));
         _policy = policy ?? router.Policy;
+        if (burstWindow is { } w && w <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(burstWindow), burstWindow, "A burst window must be a positive length of time (or null for cumulative counts).");
+        _window = burstWindow;
     }
 
     /// <summary>The cumulative count of a security-event kind seen so far.</summary>
@@ -50,6 +65,17 @@ public sealed class SecurityEventMonitor : IAuditSink
             _counts[kind] = count;
 
             int threshold = _policy.BurstThreshold(kind);
+            if (_window is { } window && threshold > 0)
+            {
+                // GR-363: drop the events of this kind older than the window (measured back from this entry's own
+                // timestamp); if the rest are below the threshold the burst has cleared, so re-arm the latch.
+                if (!_recent.TryGetValue(kind, out List<DateTime>? recent)) _recent[kind] = recent = new List<DateTime>();
+                DateTime cutoff = raisedUtc - window;
+                recent.RemoveAll(t => t < cutoff);
+                if (recent.Count < threshold) _latched.Remove(kind);
+                recent.Add(raisedUtc);
+                count = recent.Count;   // the burst size reported is the count inside the window
+            }
             if (threshold > 0 && count >= threshold && _latched.Add(kind))
                 escalate = kind;
         }

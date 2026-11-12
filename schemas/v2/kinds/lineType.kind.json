@@ -220,7 +220,7 @@
       "min": 0,
       "max": 1440,
       "required": false,
-      "description": "Thermal time constant of the line or cable (minutes) for the first-order thermal state that derates the rating. The integrator never uses less than one step (tau = max(dt, 60 * thermalTauMin) s). The 1440 min (one day) ceiling is far above any published conductor or transformer winding/oil time constant.",
+      "description": "Thermal time constant of the line or cable (minutes) for the first-order thermal state that derates the rating. The state is stepped by the exact first-order discretisation, x <- drive + (x - drive) exp(-dt / (60 * thermalTauMin)), so the lag holds at any tick size; 0 means no lag, a negative or non-finite value is refused. The 1440 min (one day) ceiling is far above any published conductor or transformer winding/oil time constant.",
       "codeDefaults": [
         {
           "consumer": "LineThermalDynamics (asset class): absent => 15 min (the transformer fallback is 20)",

@@ -2,8 +2,10 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GridSim.Core.Security;
 using GridSim.Web.Projection;
 using GridSim.Web.Sessions;
+using GridSim.Web.Site;
 
 namespace GridSim.Web.Api;
 
@@ -32,15 +34,22 @@ public static class SimWebSocket
     /// host and port as the request's <c>Host</c>) or one of <c>GridSim:AllowedOrigins</c> (comma-separated origins,
     /// for example <c>https://ops.example.com</c>). A request with no <c>Origin</c> is not from a browser page (a script
     /// or a native client, which the hijacking attack cannot use) and is allowed. Public for the tests.
+    ///
+    /// <para>Bug #170: "Origin equals Host" alone is not proof of a same-site page, because a DNS-rebinding page has a
+    /// matching Origin and Host (both its own name). It is accepted only because the Host has already passed the
+    /// host allow-list (<see cref="Site.HostAllowList"/>, the AllowedHosts setting), which a rebound name does not.
+    /// When an operator has opted out of that list (<paramref name="hostListAllowsAny"/>, AllowedHosts=*), an Origin
+    /// equal to the Host is accepted only for a loopback name; any other page needs GridSim:AllowedOrigins.</para>
     /// </summary>
-    public static bool OriginAllowed(string? origin, string? requestHost, string? allowedOriginsSetting)
+    public static bool OriginAllowed(string? origin, string? requestHost, string? allowedOriginsSetting, bool hostListAllowsAny)
     {
         if (string.IsNullOrEmpty(origin)) return true;
         if (!Uri.TryCreate(origin, UriKind.Absolute, out Uri? o)) return false;
         string originHostPort = o.IsDefaultPort ? o.Host : $"{o.Host}:{o.Port}";
         if (!string.IsNullOrEmpty(requestHost)
             && (string.Equals(originHostPort, requestHost, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(o.Authority, requestHost, StringComparison.OrdinalIgnoreCase)))
+                || string.Equals(o.Authority, requestHost, StringComparison.OrdinalIgnoreCase))
+            && (!hostListAllowsAny || Site.HostAllowList.IsLoopbackName(requestHost)))
             return true;
         if (string.IsNullOrWhiteSpace(allowedOriginsSetting)) return false;
         foreach (string allowed in allowedOriginsSetting.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
@@ -60,12 +69,24 @@ public static class SimWebSocket
         if (!ctx.WebSockets.IsWebSocketRequest) { ctx.Response.StatusCode = 400; return; }
 
         string? allowedOrigins = ctx.RequestServices.GetService<IConfiguration>()?["GridSim:AllowedOrigins"];
-        if (!OriginAllowed(ctx.Request.Headers.Origin.ToString(), ctx.Request.Host.Value, allowedOrigins))
+        // Bug #170: the host list in force decides whether "Origin equals Host" can be believed (see OriginAllowed).
+        bool hostListAllowsAny = ctx.RequestServices.GetService<Site.HostAllowList>()?.AllowsAny ?? false;
+        if (!OriginAllowed(ctx.Request.Headers.Origin.ToString(), ctx.Request.Host.Value, allowedOrigins, hostListAllowsAny))
         {
             ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
             await ctx.Response.WriteAsync("WebSocket upgrade refused: the page's Origin is not this host or one of GridSim:AllowedOrigins.");
             return;
         }
+
+        // B2 (November 2026): who this connection acts as, fixed at the upgrade from the signed-in cookie (or the
+        // anonymous role), and the gate every control frame passes before it runs (AccessControl). Resolved as a
+        // required service: a host that forgot to register the gate must fail loud, never run ungated.
+        AccessControl access = ctx.RequestServices.GetRequiredService<AccessControl>();
+        IdentityContext identity = access.IdentityFor(ctx.User, ctx.TraceIdentifier);
+        // GR-235: who this connection's sessions are counted against for GridSim:MaxSessionsPerClient (the signed-in
+        // subject, or the remote address of an anonymous caller; after UseForwardedHeaders, so a trusted proxy's
+        // forwarded client address is the one seen here).
+        string? clientKey = access.ClientKeyFor(ctx.User, ctx.Connection.RemoteIpAddress);
 
         using WebSocket ws = await ctx.WebSockets.AcceptWebSocketAsync();
         ILogger log = ctx.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("GridSim.Web.Api.SimWebSocket");
@@ -77,6 +98,11 @@ public static class SimWebSocket
         // never drops - preserving the topology-before-state contract even for a stalled client, and again
         // for every later 'start' on the same socket.
         var outbound = new SimOutbound();
+
+        // GR-221: this socket's token bucket for the frames that run a solve (step and start). Resolved as a required
+        // service so a host that forgot to register the limits fails loud rather than running unlimited.
+        WebLimits limits = ctx.RequestServices.GetRequiredService<WebLimits>();
+        TokenBucket controlBucket = limits.NewControlBucket();
 
         // The connection's current session, held in a slot Dispatch can clear: when a 'start' disposes the old session
         // and then fails (unknown case, refused source), the slot is emptied before the error is raised, so the next
@@ -128,11 +154,20 @@ public static class SimWebSocket
                     continue;
                 }
 
+                // GR-221: a step or start frame is the one that runs a solve, so each takes a token from this socket's bucket.
+                // Over the bucket the frame is refused with an error frame and NOT acted on (the session is untouched, the
+                // socket stays open). Other frames are not counted. Checked before the role gate so a flood is cheap to refuse.
+                if (IsSolveFrame(cmd.Action) && !controlBucket.TryTake())
+                {
+                    outbound.TryWriteError(new ErrorFrame("error", RateLimitMessage(limits)));
+                    continue;
+                }
+
                 // A dispatch failure (unknown case, bridge unconfigured, corrupt run dir, unknown action, a control
                 // before 'start') must surface as a structured error frame, not abort the socket (GS-H6).
                 // GR-721: the client gets the message with any server path replaced (ClientErrorText); the full message
                 // and exception go to the server log.
-                try { await Dispatch(cmd, slot, manager, OnFrame, outbound, shape); }
+                try { await Dispatch(cmd, slot, manager, OnFrame, outbound, shape, access, identity, clientKey); }
                 catch (Exception ex)
                 {
                     LogDispatchFailure(log, cmd.Action ?? "", ex);
@@ -237,11 +272,23 @@ public static class SimWebSocket
     /// <summary>The control actions /ws/sim understands, in the order the unknown-action error lists them.</summary>
     internal static readonly IReadOnlyList<string> Actions = new[] { "start", "play", "pause", "step", "seek", "speed", "trip" };
 
+    /// <summary>GR-221: whether a control frame runs a solve (<c>step</c> or <c>start</c>) and so counts against the socket's rate limit.</summary>
+    internal static bool IsSolveFrame(string? action)
+    {
+        string a = (action ?? "").Trim().ToLowerInvariant();
+        return a == "step" || a == "start";
+    }
+
+    /// <summary>GR-221: the error text for a step or start frame over the socket's rate limit.</summary>
+    internal static string RateLimitMessage(WebLimits limits) => string.Create(System.Globalization.CultureInfo.InvariantCulture,
+        $"rate limit: at most {limits.WsControlBurst} step or start frames at once and {limits.WsControlRatePerSecond} a second after that ({WebLimits.WsControlBurstSetting}, {WebLimits.WsControlRateSetting}); this frame was not run, try again shortly.");
+
     /// <summary>The feed names a 'start' frame's optional <c>source</c> may carry (D-DOC-172).</summary>
     internal static readonly IReadOnlyList<string> Sources = new[] { "live", "replay", "bridge" };
 
     private static async Task Dispatch(Control cmd, SessionSlot slot, SessionManager manager,
-        Action<FrameEnvelope> onFrame, SimOutbound outbound, FrameShape shape)
+        Action<FrameEnvelope> onFrame, SimOutbound outbound, FrameShape shape, AccessControl access, IdentityContext identity,
+        string? clientKey)
     {
         string action = (cmd.Action ?? "").Trim().ToLowerInvariant();
         // D-DOC-178: no action, or one the server does not know, is refused by name (it used to fall to a silent default).
@@ -249,6 +296,13 @@ public static class SimWebSocket
             throw new ArgumentException($"control frame has no action; use one of: {string.Join(", ", Actions)}.");
         if (!Actions.Contains(action))
             throw new ArgumentException($"unknown action '{cmd.Action}'; use one of: {string.Join(", ", Actions)}.");
+
+        // B2 (November 2026): the role gate, after the frame is known to name a real action and BEFORE anything acts on
+        // it. A 'start' below the Operator band therefore never disposes the connection's current session, never opens a
+        // new generation and never creates a session; any other control never touches the session. A denial throws
+        // AccessDeniedException (recorded first as one AccessDenied audit entry when the host has an audit log), which
+        // the caller turns into an error frame like every other refusal; the connection stays open.
+        access.Require(identity, AccessControl.SimControlRole, AccessControl.SimOperationPrefix + action);
 
         if (action == "start")
         {
@@ -274,7 +328,7 @@ public static class SimWebSocket
             double? startFps = cmd.Fps is { } askedFps ? CheckFps(askedFps, "start") : null;
             // N063: an optional "solver" (auto | dense | sparse | sweep) picks a live session's engine; an
             // unknown name or a solver for a replay / bridge feed fails loud as an error frame.
-            SimSession session = manager.Create(cmd.Case, SolverChoice.Parse(cmd.Solver));
+            SimSession session = manager.Create(cmd.Case, SolverChoice.Parse(cmd.Solver), clientKey);
             slot.Current = session;   // held at once, so even a failure below leaves it to be disposed with the socket
             session.FrameProduced += onFrame;
             if (startFps is { } startFpsValue) session.SetSpeed(startFpsValue);

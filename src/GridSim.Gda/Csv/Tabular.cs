@@ -15,6 +15,31 @@ public interface IRow
     double Double(string column, double fallback = 0.0);
 }
 
+/// <summary>
+/// GR-287 / GR-313 (November 2026): a dataset folder that cannot be read as one table because it holds more than one
+/// vintage of the data (Parquet parts with different publication dates) is refused with an
+/// <see cref="InvalidDataException"/> (so existing handlers still catch it) that carries a marker in
+/// <see cref="Exception.Data"/>. InvalidDataException is sealed, so the marker (not a subtype) lets a caller that falls
+/// back from Parquet to CSV on a Parquet read error (<c>NpgSource</c>) tell an ambiguity, which must surface, from a
+/// damaged file, which may be worked around.
+/// </summary>
+public static class AmbiguousDataset
+{
+    /// <summary>The <see cref="Exception.Data"/> key that marks an ambiguous-dataset refusal.</summary>
+    public const string DataKey = "GridSim.AmbiguousDataset";
+
+    /// <summary>A marked refusal with this message.</summary>
+    public static InvalidDataException Create(string message)
+    {
+        var ex = new InvalidDataException(message);
+        ex.Data[DataKey] = true;
+        return ex;
+    }
+
+    /// <summary>True when <paramref name="ex"/> is a marked ambiguous-dataset refusal.</summary>
+    public static bool Is(Exception? ex) => ex is InvalidDataException && ex.Data[DataKey] is true;
+}
+
 /// <summary>A tabular data source  -  CSV or Parquet  -  exposing a uniform row stream.</summary>
 public abstract class DataSourceTable : IDisposable
 {
@@ -32,7 +57,11 @@ public abstract class DataSourceTable : IDisposable
         {
             var parts = Directory.EnumerateFiles(pathOrDir, "*.parquet", SearchOption.AllDirectories)
                 .OrderBy(p => p, StringComparer.Ordinal).ToList();
-            if (parts.Count > 0) return new ParquetDataTable(parts);
+            if (parts.Count > 0)
+            {
+                RefuseMixedVintages(pathOrDir, parts);
+                return new ParquetDataTable(parts);
+            }
             string? csv = PickCsv(pathOrDir);
             if (csv is not null) return new CsvDataTable(csv);
             throw new FileNotFoundException($"No .parquet or .csv under {pathOrDir}");
@@ -40,6 +69,26 @@ public abstract class DataSourceTable : IDisposable
         if (pathOrDir.EndsWith(".parquet", StringComparison.OrdinalIgnoreCase))
             return new ParquetDataTable(new[] { pathOrDir });
         return new CsvDataTable(pathOrDir);
+    }
+
+    /// <summary>
+    /// GR-287 (November 2026): a directory of Parquet parts is read as ONE table (every part concatenated). Parts of one
+    /// publication carry no date (<c>part-0000.parquet</c>) or all the same date. Parts whose FILE NAMES carry two or more
+    /// different publication dates (<see cref="GdaPaths.TryParseDateFromName"/>) are different vintages of the dataset;
+    /// concatenating them would count every record twice under two vintages, so it is refused, naming the files and
+    /// dates, as the CSV picker (<see cref="PickCsv"/>) refuses an ambiguous folder. Undated parts are not vintages and
+    /// are never refused; only a date written in a name is trusted (modification times never are).
+    /// </summary>
+    internal static void RefuseMixedVintages(string dir, IReadOnlyList<string> parts)
+    {
+        var dated = parts.Select(p => (Path: p, Date: GdaPaths.TryParseDateFromName(p)))
+            .Where(d => d.Date is not null).ToList();
+        if (dated.Select(d => d.Date!.Value).Distinct().Count() <= 1) return;
+        throw AmbiguousDataset.Create(
+            $"{dir} holds Parquet parts from {dated.Select(d => d.Date!.Value).Distinct().Count()} different publication " +
+            "dates, so reading them together would mix vintages of the same dataset. Point at one vintage (a single " +
+            ".parquet file or a folder holding one publication). Dated parts: " +
+            string.Join(", ", dated.Select(d => $"{System.IO.Path.GetRelativePath(dir, d.Path)} ({d.Date!.Value:yyyy-MM-dd})")));
     }
 
     /// <summary>

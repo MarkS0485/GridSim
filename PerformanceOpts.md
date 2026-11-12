@@ -1,13 +1,13 @@
-# PerformanceOpts.md - Catalogue of Existing Performance Optimizations
+# PerformanceOpts.md - Catalogue of Existing Performance Optimisations
 
-Purpose: an audit inventory of every **deliberate** performance optimization currently in `src/`.
-Optimizations are where errors hide - a cached value that should have been invalidated, a "bit-identical"
+Purpose: an audit inventory of every **deliberate** performance optimisation currently in `src/`.
+Optimisations are where errors hide - a cached value that should have been invalidated, a "bit-identical"
 claim that quietly stopped being true, a fast path that diverges from the reference. Each entry therefore
 records three things:
 
-1. **Mechanism** - what the optimization actually does.
+1. **Mechanism** - what the optimisation actually does.
 2. **What it speeds up** - the workload that justifies it.
-3. **Correctness claim & guard** - what the code *promises* about equivalence with the unoptimized path,
+3. **Correctness claim & guard** - what the code *promises* about equivalence with the unoptimised path,
    and how (or whether) that promise is enforced. Entries whose claim is enforced only by a comment are
    the audit hot spots.
 
@@ -26,7 +26,7 @@ form, columns sorted within each row, plus a `DiagPtr[]` cache locating each row
 - **Speeds up:** Jacobian storage and mat-vec for the large-network power flow - per-row work is O(neighbours)
   instead of O(n); `DiagPtr` gives ILU(0) O(1) pivot access.
 - **Claim/guard:** duplicates are summed at `Build()`; a zero diagonal can be injected (`ensureDiagonal`)
-  so factorizations never chase a missing pivot. No independent check; relied on by every consumer.
+  so factorisations never chase a missing pivot. No independent check; relied on by every consumer.
 
 ### 1.2 Builder sort without per-row comparer allocation (real and complex builders)
 [Sparse.cs:75-85](src/GridSim.Core/Numerics/Sparse.cs) - `CsrMatrix.Builder.Build` sorts each row via a parallel
@@ -41,7 +41,7 @@ key array (`Array.Sort(keys, idx, ...)`) instead of `Comparer<int>.Create` with 
 [SparseLuFactorization.cs](src/GridSim.Core/Numerics/SparseLuFactorization.cs) - each column of the factor is
 produced by one sparse triangular solve whose nonzero pattern is found first by an iterative DFS "reach"
 over the graph of L (lines 161-229); numeric work is proportional to true post-fill nonzeros. Workspaces
-(`x`, `xi`, `pstack`, `marked`) are allocated once per factorization (lines 60-64); L/U storage grows by
+(`x`, `xi`, `pstack`, `marked`) are allocated once per factorisation (lines 60-64); L/U storage grows by
 doubling (lines 231-243). The `marked[]` array is restored to all-false after every reach (line 192) so no
 per-column clearing pass is needed.
 - **Speeds up:** the exact direct solve for stiff Jacobians (GDA full-replica scale). The class comment
@@ -55,14 +55,14 @@ per-column clearing pass is needed.
 ### 1.4 Reverse Cuthill-McKee fill-reducing ordering, and its reuse seams
 [SparseLu.cs:89-165](src/GridSim.Core/Numerics/SparseLu.cs) - RCM over the structurally-symmetrised graph;
 adjacency built in flat CSR-like arrays with "no per-node LINQ", reusable neighbour buffer.
-The public seams are the important optimization:
-- `Factor(a)` - ordering + factorization per call.
+The public seams are the important optimisation:
+- `Factor(a)` - ordering + factorisation per call.
 - `Ordering(a)` + `FactorWithOrdering(a, q)` ([SparseLu.cs:36-80](src/GridSim.Core/Numerics/SparseLu.cs)) -
   compute RCM **once** per sparsity pattern, refactor values each iteration.
 - `FactorPrepared(n, ap, ai, ax, q)` ([SparseLu.cs:85-86](src/GridSim.Core/Numerics/SparseLu.cs)) - additionally
   skip the CSR->CSC conversion when the caller keeps its own CSC arrays.
 - **Speeds up:** any loop that re-solves the same structure - the NR iteration, the estimator's per-pass
-  refactorization, the residual-covariance multi-RHS path.
+  refactorisation, the residual-covariance multi-RHS path.
 - **Claim/guard:** "bit-identical to `Factor` because RCM is a pure function of the structure" - a comment-level
   claim, true only while callers correctly detect structure changes (see section 3.4). CSR->CSC drops explicit zeros
   ([SparseLu.cs:50-57](src/GridSim.Core/Numerics/SparseLu.cs)), documented as matching the old solver's semantics.
@@ -75,7 +75,7 @@ pattern (no fill), built in-place over a clone of `Val` with an `iw[]` scatter i
 guard RELATIVE to its row's scale in the original matrix (`NumericTolerances.Ilu0PivotGuard`). `BiCgStab`:
 preconditioned Krylov solver using only sparse mat-vecs; 8 work vectors allocated per call.
 - **Speeds up:** the fallback linear solve when the direct LU reports singular; scales to networks where dense
-  factorization can't fit.
+  factorisation can't fit.
 - **Claim/guard:** iterative - answers are correct only to `tol`; breakdown (`rho`~0, `omega`=0) returns `false`
   so the caller can stop rather than apply garbage. The pivot guard only shapes the preconditioner: BiCGSTAB's own
   residual test against the true matrix decides success.
@@ -98,7 +98,7 @@ implementations of the new `IComplexLinearSolver` seam (harmonic engine `Y(h) V 
   (a) through the interface (`Solve`) `DenseComplexLuSolver` returns `null` on a pivot at or below the shared
   relative floor, as the other two do, so the seam has one failure contract; only the fault study's own
   `SolveDense` keeps the historical clamp (now at the relative floor, not an absolute 1e-14) and never returns
-  `null` (`ComplexSolverSingularContractTests`). (b) `RealExpandedComplexSolver.Factor` returns a factorization
+  `null` (`ComplexSolverSingularContractTests`). (b) `RealExpandedComplexSolver.Factor` returns a factorisation
   that solves many right-hand sides, and its RCM ordering is cached across same-pattern matrices (successive
   harmonic orders).
 
@@ -268,7 +268,7 @@ measurement Jacobian machinery and avoids forming a dense mxm innovation inverse
 
 ## 5. Distribution factors & contingency analysis (`src/GridSim.Core/Analysis/`)
 
-### 5.1 One B' factorization, unlimited back-substitutions
+### 5.1 One B' factorisation, unlimited back-substitutions
 [DistributionFactors.cs](src/GridSim.Core/Analysis/DistributionFactors.cs) - factors the reduced DC
 susceptance matrix **once** (`SparseLu.Factor`, lines 87-88, stored on the instance); every PTDF column,
 LODF column, and DC flow is then a single triangular solve. `PtdfColumn`/`LodfColumn` exist specifically so
@@ -320,7 +320,7 @@ deterministically resolved (SCADA supersedes PMU).
 - `NoGc(budget = 256 MB)` - a true no-GC region for **bounded** bursts; documented "never an open-ended
   loop"; a runtime refusal degrades to a no-op instead of throwing; `Dispose` checks the region is still
   active before ending it (the region can end itself on budget exhaustion).
-- **Audit note:** `NoGc` is the classic optimization-that-hides-errors shape - if a "bounded" burst grows
+- **Audit note:** `NoGc` is the classic optimisation-that-hides-errors shape - if a "bounded" burst grows
   past the budget, behaviour silently reverts to normal GC and the perf guarantee evaporates with no signal.
 
 ### 7.2 Point allocations avoided in hot/startup paths
@@ -354,7 +354,7 @@ preserved.
 [GpuSparseLinearSolver.cs](src/GridSim.Gpu/GpuSparseLinearSolver.cs) - all Krylov vectors live on the device;
 dot products use a single-block reduction kernel returning one scalar (lines 218-237) instead of copying the
 whole vector back and summing on the CPU. Falls back to `CpuSparseLuSolver` when no device or a zero/NaN
-diagonal; returns `null` on breakdown so the caller falls back. A deliberately deferred optimization is
+diagonal; returns `null` on breakdown so the caller falls back. A deliberately deferred optimisation is
 recorded at lines 286-288: no cuBLAS trailing-update, to keep the build free of the cuBLAS native dependency.
 
 ### 8.4 ROCm/HIP backend: load-only-if-used natives, analysis-once SpMV
@@ -425,18 +425,18 @@ the topology payload is sent once and cached client-side; per-tick messages carr
 [FrameProjector.cs:113-147](src/GridSim.Web/Projection/FrameProjector.cs) - cheap experimental models run
 every frame, but the O(generators x solve) tracing/carbon models are skipped above 1,500 buses so per-frame
 cost stays bounded. Per-fuel breakdown computed once and shared across panels; SCADA register cached against
-the model shape; the case catalog's filesystem discovery runs once per process.
+the model shape; the case catalogue's filesystem discovery runs once per process.
 
 ---
 
 ## 11. Prioritised parallel analysis cycle (`src/GridSim.Core/Scheduling/`)
 
-The single largest structural optimization in the live path, and the one this catalogue exists to guard:
+The single largest structural optimisation in the live path, and the one this catalogue exists to guard:
 the Newton-Raphson base solve is inherently single-core, but **everything a control room needs *after* the
 base case converges** - N-1 contingency sweeps, harmonics, RoCoF screening, physics conformance, the watch
 list - reads the *same* solved state and is embarrassingly parallel. The **cycle engine** does one single-core
 base solve per cycle, shares the immutable solved frame to every downstream analysis, and fans them out across
-a worker pool. It is a scheduling optimization, so its correctness rests on two claims - *no job mutates the
+a worker pool. It is a scheduling optimisation, so its correctness rests on two claims - *no job mutates the
 shared frame*, and *deferral never becomes starvation* - both of which are the kind of promise this document
 flags as an audit surface.
 
@@ -522,7 +522,7 @@ flags as an audit surface.
 
 ## 12. Index of explicit "bit-for-bit / deterministic" claims
 
-These are the places where an optimization's safety rests on an equivalence claim. They deserve regression
+These are the places where an optimisation's safety rests on an equivalence claim. They deserve regression
 pinning, because a violation is silent by construction:
 
 | Claim | Where | Enforced by |

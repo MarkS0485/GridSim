@@ -11,6 +11,13 @@ namespace GridSim.Tests;
 /// tree) and its own GRIDSIM_CRASH_DIR (so a crash in a test leaves its log in the temp folder, not the user's). The
 /// child inherits every other environment variable, deliberately including DOTNET_EnableAVX2 and
 /// DOTNET_EnableHWIntrinsic, so the CI SIMD matrix runs the CLI in the same reduced vector tier as the tests.
+///
+/// GR-883 (November 2026): by default the child does NOT see the machine's licence. GRIDSIM_LICENCE is removed and
+/// GRIDSIM_LICENCE_FILE points at a file in the run's own temporary folder (absent unless the run installs one), so every
+/// run starts at the free tier whatever is installed on the machine running the tests, and a run that installs a key
+/// writes it there, never over the user's real licence. A test that does need the machine's licence opts in with
+/// <see cref="RunBuiltWithMachineLicence"/> (or <c>machineLicence: true</c> on <see cref="Run"/>), and says why. An
+/// environment override passed by the caller is applied after this, so a test can still set GRIDSIM_LICENCE itself.
 /// </summary>
 internal static class CliProcess
 {
@@ -63,8 +70,24 @@ internal static class CliProcess
     internal static Result RunBuiltWithEnvironment(IReadOnlyDictionary<string, string?> environment, params string[] args)
         => Run(DotnetHost(), new[] { BuiltCliDll() }.Concat(args).ToArray(), environment: environment);
 
-    /// <summary>Run an executable with arguments, in a fresh temp folder, with a timeout. Never hangs a test run.</summary>
-    internal static Result Run(string exe, string[] args, int timeoutMs = 120_000, IReadOnlyDictionary<string, string?>? environment = null)
+    /// <summary>
+    /// GR-883: run the built CLI with the machine's licence visible (GRIDSIM_LICENCE and the per-user licence file, as an
+    /// operator's shell would see them). Only for a test that needs a licensed tier; such a test passes only on a machine
+    /// that holds a licence.
+    /// </summary>
+    internal static Result RunBuiltWithMachineLicence(params string[] args)
+        => Run(DotnetHost(), new[] { BuiltCliDll() }.Concat(args).ToArray(), machineLicence: true);
+
+    /// <summary>The name of the isolated licence file inside a run's temporary folder (GR-883).</summary>
+    internal const string IsolatedLicenceFileName = "licence.gridsim";
+
+    /// <summary>
+    /// Run an executable with arguments, in a fresh temp folder, with a timeout. Never hangs a test run. Unless
+    /// <paramref name="machineLicence"/> is true, the child is isolated from the machine's licence (GR-883, see the class
+    /// summary).
+    /// </summary>
+    internal static Result Run(string exe, string[] args, int timeoutMs = 120_000, IReadOnlyDictionary<string, string?>? environment = null,
+        bool machineLicence = false)
     {
         string work = Path.Combine(Path.GetTempPath(), "gridsim-cli-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(work);
@@ -81,6 +104,12 @@ internal static class CliProcess
             };
             foreach (string a in args) psi.ArgumentList.Add(a);
             psi.Environment["GRIDSIM_CRASH_DIR"] = Path.Combine(work, "crash");
+            if (!machineLicence)
+            {
+                // GR-883: no key from the environment, and the licence file is one in this run's own folder.
+                psi.Environment.Remove("GRIDSIM_LICENCE");
+                psi.Environment["GRIDSIM_LICENCE_FILE"] = Path.Combine(work, IsolatedLicenceFileName);
+            }
             if (environment is not null)
                 foreach (KeyValuePair<string, string?> kv in environment)
                 {

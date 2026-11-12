@@ -77,7 +77,8 @@ public static class AuditAnchorFile
     /// <summary>
     /// Write <paramref name="anchor"/> to <paramref name="anchorPath"/>, replacing any earlier anchor in one step (a
     /// temporary file in the same folder, flushed to disk, then moved over the old one), so a crash leaves either the
-    /// old anchor or the new one, never half a line.
+    /// old anchor or the new one, never half a line. GR-837 (November 2026): on Linux and macOS the folder is then
+    /// flushed too (<see cref="DirectorySync.Flush"/>), so the rename itself is on disk; before, only the file was.
     /// </summary>
     public static void Write(string anchorPath, AuditAnchor anchor)
     {
@@ -91,6 +92,7 @@ public static class AuditAnchorFile
             fs.Flush(flushToDisk: true);
         }
         File.Move(temp, full, overwrite: true);
+        DirectorySync.Flush(Path.GetDirectoryName(full)!);   // GR-837: the rename is durable only once its folder is
     }
 
     // Count non-negative; head GENESIS exactly when the count is 0, otherwise 64 upper-case hex digits (the

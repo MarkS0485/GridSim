@@ -51,6 +51,10 @@ public enum BranchEnd
 /// so an external crosswalk (GDA GSP/BMU mapping) can author sets without knowing solver internals.
 /// Values travel in engineering units (pu for voltage, MW/MVAr for power) and are converted to
 /// per-unit once, at ingestion, against the model's BaseMva.
+/// <para><see cref="Source"/> is the row's CLASS (the noise-floor grouping, the distrust key, the hard-constraint tag);
+/// <see cref="Provenance"/> (GR-529, November 2026) is optional per-row detail that must not split the class, such as a
+/// phase-angle row's frequency and instant. Null when there is none; a JSON file without it reads as null and a set
+/// without it is written exactly as before.</para>
 /// </summary>
 public sealed record Measurement(
     MeasurementKind Kind,
@@ -61,7 +65,8 @@ public sealed record Measurement(
     int To = 0,
     BranchEnd End = BranchEnd.From,
     string? Circuit = null,
-    string Source = "scada")
+    string Source = "scada",
+    string? Provenance = null)
 {
     /// <summary>True for the branch-flow kinds (which address a branch, not a bus).</summary>
     public bool IsBranch => Kind is MeasurementKind.PFlowMw or MeasurementKind.QFlowMvar

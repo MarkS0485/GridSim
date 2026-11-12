@@ -65,18 +65,19 @@ public static class ForwardInferenceGuard
     public static DateTime Horizon(DateTime utcNow) => UtcTime.Normalise(utcNow).AddHours(-HorizonHours);
 
     /// <summary>Throw <see cref="ForwardInferenceException"/> if <paramref name="stampUtc"/> is newer than the horizon.</summary>
-    /// <remarks>Bug hunt 2026-10-29, finding 82 (decided, documented): a supplied <paramref name="utcNow"/> is NOT held to
-    /// the real clock here. Some callers rely on that on purpose: the live RTU path passes <see cref="DateTime.MaxValue"/>
-    /// to defer this check to the consuming engine, which re-checks against the real clock (RtuMeasurementSetMapper,
-    /// pinned by RtuMeasurementSetMapperTests). A caller that takes its "now" from outside (a client, a command line)
-    /// must pass it through <see cref="RequireNotAfterRealClock"/> first, as <c>serve --utc-now</c> does; otherwise a later
-    /// "now" would move the horizon forward and admit recent data.</remarks>
+    /// <remarks>GR-365 (November 2026): a supplied <paramref name="utcNow"/> later than the real clock is clamped to the
+    /// real clock, so it can never move the horizon forward (bug hunt 2026-10-29 finding 82 had left it unclamped). The
+    /// explicit deferral <see cref="DateTime.MaxValue"/> is kept: the live RTU path passes it to hand this check to the
+    /// consuming engine, which re-checks against the real clock (RtuMeasurementSetMapper, pinned by
+    /// RtuMeasurementSetMapperTests). A caller that takes its "now" from outside (a client, a command line) still passes
+    /// it through <see cref="RequireNotAfterRealClock"/> first, as <c>serve --utc-now</c> does, so a later "now" is refused
+    /// by name there rather than silently clamped here.</remarks>
     public static void RejectFuture(DateTime stampUtc, DateTime? utcNow = null, string? what = null)
     {
         // The now is normalised exactly as the stamp is. A Local-kind now (DateTime.Now, say) passed the real-clock
         // check by the instant it names but its ticks were the local wall clock, so on a host east of UTC the horizon
         // moved forward by the UTC offset (BST: 168 h-old data accepted against the 169 h rule).
-        DateTime now = UtcTime.Normalise(utcNow ?? DateTime.UtcNow);
+        DateTime now = EffectiveNow(utcNow);   // GR-365: clamped to the real clock (see EffectiveNow)
         DateTime horizon = now.AddHours(-HorizonHours);
         DateTime stamp = UtcTime.Normalise(stampUtc);   // Unspecified is UTC by contract (same rule as before)
         if (stamp > horizon)
@@ -84,6 +85,22 @@ public static class ForwardInferenceGuard
                 $"{what ?? "input"} timestamp {stamp:o} is newer than the historical horizon {horizon:o} " +
                 $"(data must lag real time by >={HorizonHours} h). GridSim replays history only - it never " +
                 $"processes recent or future data, so it cannot forward-infer.");
+    }
+
+    /// <summary>
+    /// GR-365 (November 2026): the "now" the horizon checks judge against. Null reads the real clock. A supplied now is
+    /// normalised to UTC and, when later than the real clock, CLAMPED to it, so no caller can move the horizon forward
+    /// by passing a later "now" (it can only make the check stricter). The one exception is the explicit deferral
+    /// <see cref="DateTime.MaxValue"/> (see <see cref="RejectFuture"/>'s remarks), returned as it is. A now at or before
+    /// the real clock (every test, every replay) is returned exactly as given (normalised).
+    /// </summary>
+    public static DateTime EffectiveNow(DateTime? utcNow)
+    {
+        if (utcNow is not DateTime given) return UtcTime.Normalise(DateTime.UtcNow);
+        if (given == DateTime.MaxValue) return UtcTime.Normalise(given);
+        DateTime now = UtcTime.Normalise(given);
+        DateTime real = UtcTime.Normalise(DateTime.UtcNow);
+        return now > real ? real : now;
     }
 
     /// <summary>

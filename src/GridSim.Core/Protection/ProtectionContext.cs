@@ -121,6 +121,7 @@ public sealed class ProtectionContext
         ZLineAngleDeg = new double[m];
         PFromMw = new double[m];
         BranchInService = new bool[m];
+        CurrentUnknown = new bool[m];
 
         // Line series impedance per branch, matched to the flow list by (from,to) - the LineFlow order is
         // the branch order, but resolve defensively by endpoints.
@@ -133,6 +134,10 @@ public sealed class ProtectionContext
             double sFromPu = sFrom / baseMva, sToPu = sTo / baseMva;
             IFromPu[l] = vmFrom > MinVoltageForCurrentPu ? sFromPu / vmFrom : 0.0;
             IToPu[l] = vmTo > MinVoltageForCurrentPu ? sToPu / vmTo : 0.0;
+            // GR-623: with BOTH ends collapsed the current cannot be derived as S/|V| at either end, so the 0 above is
+            // "not known", not "no current" (the branch may be carrying fault current). Flagged so an element that
+            // operates on LOW current (37) does not read it as an undercurrent.
+            CurrentUnknown[l] = !(vmFrom > MinVoltageForCurrentPu) && !(vmTo > MinVoltageForCurrentPu);
             PFromMw[l] = lf.PFromMw;
 
             double ratePu = lf.RatingMva > 0 ? lf.RatingMva / baseMva : 0.0;
@@ -233,6 +238,7 @@ public sealed class ProtectionContext
                     $"Protection: branch result {l} of the unbalanced study ({bc.From} -> {bc.To}) does not match line flow {l} ({lf.From} -> {lf.To}).");
             IFromPu[l] = bc.MaxPhaseFromPu;
             IToPu[l] = bc.MaxPhaseToPu;
+            CurrentUnknown[l] = false;   // GR-623: the study's phase currents are known directly, not derived as S/|V|
             LoadingFraction[l] = IRatedPu[l] > 0 ? Math.Max(IFromPu[l], IToPu[l]) / IRatedPu[l] : 0.0;
             if (seqBus.TryGetValue(lf.From, out int f))
             {
@@ -252,6 +258,11 @@ public sealed class ProtectionContext
         string nm = branchIndex >= 0 && branchIndex < Flows.Count ? Flows[branchIndex].Name : "";
         return nm.Length > 0 && Settings.PerAsset.TryGetValue(nm, out ProtectionSettings? s) ? s : Settings;
     }
+
+    /// <summary>GR-623: per branch, true when both end voltages are collapsed (at or below the current-derivation
+    /// threshold), so <see cref="IFromPu"/> and <see cref="IToPu"/> are 0 because the current is unknown, not because no
+    /// current flows. Always false on the sequence-domain (fault) path, which takes the branch currents directly.</summary>
+    public bool[] CurrentUnknown { get; private set; }
 
     public int BusIndex(int busId) => _busIndex.TryGetValue(busId, out int i) ? i : -1;
     /// <summary>The solved voltage magnitude (pu) of bus <paramref name="busId"/>. GR-623 (October 2026): a bus the

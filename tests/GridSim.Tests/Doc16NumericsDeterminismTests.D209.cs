@@ -27,20 +27,27 @@ public partial class Doc16NumericsDeterminismTests
     [Fact]
     public void D210_the_shared_pivot_floor_decides_at_the_exact_boundary_in_every_cpu_lu()
     {
-        // aNorm = 1, so the shared floor is exactly 1e-12: a pivot AT it is singular, the next double above it is not.
+        // The pivot row's scale is 1, so the shared floor is exactly 1e-12: a pivot AT it is singular, the next double above
+        // it is not.
+        // GR-044 test correction (approved): the matrices were diag(1, p), whose second row has scale p itself; under the
+        // row-relative floor (1e-12 x the pivot row's own largest entry) that row is never singular. A whole-matrix
+        // absolute pivot floor is not invariant under row scaling; the row floor refuses exactly the rows that are
+        // singular at rounding level relative to their own scale. The boundary is kept, exactly at 1e-12, on [[1, 0],
+        // [1, p]]: column 0 ties, row 0 wins, and row 1 becomes [0, p] with its own scale 1. The row-relative boundary
+        // and the old diag(1, p) matrices are pinned by Gr044RowRelativePivotFloorTests.
         double atFloor = NumericTolerances.PivotFloor(1.0);
         double above = Math.BitIncrement(atFloor);
         Assert.Equal(1e-12, atFloor);
 
         // The dense real LU (the WLS estimator's and the GPU fallback's solver).
-        Assert.Throws<InvalidOperationException>(() => new DenseLuSolver().SolveInPlace(new double[,] { { 1, 0 }, { 0, atFloor } }, new[] { 1.0, 1.0 }));
-        var x = new[] { 1.0, 1.0 };
-        new DenseLuSolver().SolveInPlace(new double[,] { { 1, 0 }, { 0, above } }, x);
-        Assert.Equal(1.0 / above, x[1]);
+        Assert.Throws<InvalidOperationException>(() => new DenseLuSolver().SolveInPlace(new double[,] { { 1, 0 }, { 1, atFloor } }, new[] { 1.0, 1.0 }));
+        var x = new[] { 1.0, 2.0 };
+        new DenseLuSolver().SolveInPlace(new double[,] { { 1, 0 }, { 1, above } }, x);
+        Assert.Equal((2.0 - 1.0) / above, x[1]);
 
         // The batched CPU LU: the singular system alone is masked (NaN, flag false); the others are the dense LU's bits.
-        double[] aFlat = { 2, 1, 1, 3,   1, 0, 0, atFloor,   1, 0, 0, above };
-        double[] bFlat = { 1, 2,   1, 1,   1, 1 };
+        double[] aFlat = { 2, 1, 1, 3,   1, 0, 1, atFloor,   1, 0, 1, above };
+        double[] bFlat = { 1, 2,   1, 1,   1, 2 };
         bool[] ok = new CpuBatchedLuSolver().SolveBatch(3, 2, aFlat, bFlat);
         Assert.Equal(new[] { true, false, true }, ok);
         Assert.True(double.IsNaN(bFlat[2]) && double.IsNaN(bFlat[3]));
@@ -48,11 +55,11 @@ public partial class Doc16NumericsDeterminismTests
         new DenseLuSolver().SolveInPlace(new double[,] { { 2, 1 }, { 1, 3 } }, b0);
         Assert.Equal(Bits(b0[0]), Bits(bFlat[0]));
         Assert.Equal(Bits(b0[1]), Bits(bFlat[1]));
-        Assert.Equal(Bits(1.0 / above), Bits(bFlat[5]));
+        Assert.Equal(Bits((2.0 - 1.0) / above), Bits(bFlat[5]));
 
         // The Kron reduction (the RMS / swing network reduction).
-        Assert.Throws<InvalidOperationException>(() => KronReduction.Reduce(new Complex[,] { { 1, 0 }, { 0, atFloor } }, new[] { 0 }));
-        KronReduction.Reduce(new Complex[,] { { 1, 0 }, { 0, above } }, new[] { 0 });
+        Assert.Throws<InvalidOperationException>(() => KronReduction.Reduce(new Complex[,] { { 1, 0 }, { 1, atFloor } }, new[] { 0 }));
+        KronReduction.Reduce(new Complex[,] { { 1, 0 }, { 1, above } }, new[] { 0 });
 
         // The ROCm post-factorisation check (host-callable): the same boundary on U(k,k).
         Assert.Throws<InvalidOperationException>(() => RocmDenseLinearSolver.ThrowIfNearSingular(new[] { 1.0, 0, 0, atFloor }, 2, 1.0));
@@ -61,17 +68,25 @@ public partial class Doc16NumericsDeterminismTests
 
     /// <summary>The textbook partial-pivoting LU (first largest pivot, separate multiply and subtract): the arithmetic of
     /// <see cref="DenseLuSolver"/>'s elimination, returned column-major with the matrix scale. Stands in for hipSOLVER's
-    /// getrf, which cannot be run here (no AMD device).</summary>
-    private static (double[] Lu, double Scale) HostLu(double[,] src)
+    /// getrf, which cannot be run here (no AMD device).
+    /// GR-044 test correction (approved): it also returns getrf's one-based pivot vector and each row's largest entry,
+    /// which the row-aware ROCm check needs (the whole-matrix check no longer gives the CPU LU's verdict: a whole-matrix
+    /// absolute pivot floor is not invariant under row scaling, and the CPU LU now uses 1e-12 x the pivot row's own
+    /// largest entry). The factorisation arithmetic is unchanged.</summary>
+    private static (double[] Lu, double Scale, int[] Ipiv, double[] RowScales) HostLu(double[,] src)
     {
         int n = src.GetLength(0);
         var m = (double[,])src.Clone();
         double scale = NumericTolerances.MaxAbs(src);
+        var rowScales = new double[n];
+        for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) rowScales[i] = Math.Max(rowScales[i], Math.Abs(src[i, j]));
+        var ipiv = new int[n];
         for (int k = 0; k < n; k++)
         {
             int p = k;
             double max = Math.Abs(m[k, k]);
             for (int i = k + 1; i < n; i++) { double v = Math.Abs(m[i, k]); if (v > max) { max = v; p = i; } }
+            ipiv[k] = p + 1;
             for (int j = 0; j < n; j++) (m[k, j], m[p, j]) = (m[p, j], m[k, j]);
             if (m[k, k] == 0.0) continue;
             for (int i = k + 1; i < n; i++)
@@ -84,7 +99,7 @@ public partial class Doc16NumericsDeterminismTests
         }
         var col = new double[n * n];
         for (int j = 0; j < n; j++) for (int i = 0; i < n; i++) col[j * n + i] = m[i, j];
-        return (col, scale);
+        return (col, scale, ipiv, rowScales);
     }
 
     [Fact]
@@ -115,9 +130,11 @@ public partial class Doc16NumericsDeterminismTests
                 bool cpuSingular;
                 try { new DenseLuSolver().SolveInPlace((double[,])a.Clone(), new double[n]); cpuSingular = false; }
                 catch (InvalidOperationException) { cpuSingular = true; }
-                (double[] lu, double scale) = HostLu(a);
+                // GR-044 test correction (approved): the row-aware check, which is the one the ROCm solve makes (the
+                // whole-matrix check disagreed with the row-relative CPU LU on 14 of these 720 matrices).
+                (double[] lu, double scale, int[] ipiv, double[] rowScales) = HostLu(a);
                 bool rocmSingular;
-                try { RocmDenseLinearSolver.ThrowIfNearSingular(lu, n, scale); rocmSingular = false; }
+                try { RocmDenseLinearSolver.ThrowIfNearSingular(lu, ipiv, n, scale, rowScales); rocmSingular = false; }
                 catch (InvalidOperationException) { rocmSingular = true; }
                 Assert.True(cpuSingular == rocmSingular, $"order {n}, trial {trial}: CPU singular {cpuSingular}, ROCm check singular {rocmSingular}");
                 agree++;

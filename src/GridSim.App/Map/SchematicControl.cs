@@ -129,6 +129,15 @@ public sealed class SchematicControl : Control, ICustomHitTest
     private StreamGeometry? _dnoWorldGeo, _gspWorldGeo;
     private StreamGeometry? _coastWorldGeo;
 
+    // The loaded case's own geography (its geography.json), or null. While it is set, the map draws the case's land in
+    // place of the GB coastline and its regions in place of the GB DNO/GSP layers, and the GB layers (drawn in the GB box,
+    // so wrong for any other projection) are not drawn at all. Null is the GB drawing, unchanged.
+    private CaseGeography? _caseGeo;
+    private StreamGeometry? _caseLandWorldGeo, _caseRegionWorldGeo;
+
+    // The GB geography layers, only when no case geography replaces them.
+    private GeographyData? GbGeo => _caseGeo is null ? _geo : null;
+
     // ---- minimap ----
     private Rect _mmRect;
     private double _mmScale = 1;
@@ -359,7 +368,10 @@ public sealed class SchematicControl : Control, ICustomHitTest
     public bool ShowAssets { get => _showAssets; set { if (_showAssets != value) { _showAssets = value; InvalidateVisual(); } } }
 
     /// <summary>True when geography GeoJSON was found locally (drives whether the geography toggles do anything).</summary>
-    public bool HasGeography => _geo is not null;
+    public bool HasGeography => _caseGeo is not null ? _caseGeo.Regions.Count > 0 : _geo is not null;
+
+    /// <summary>True while the loaded case's own geography (geography.json) is drawn in place of the GB layers.</summary>
+    public bool HasCaseGeography => _caseGeo is not null;
 
     // ---- UI programme Phase 5d (2026-10-21): the asset overlay's line routes (View / Line routes) ----
 
@@ -694,9 +706,17 @@ public sealed class SchematicControl : Control, ICustomHitTest
         // GB coastline backdrop (under everything), if toggled on.
         if (_showCoast) DrawCoast(context);
 
-        // Real DNO/GSP admin boundaries (context, under the network), if toggled on.
-        if (_showDnoAreas && _dnoWorldGeo is not null) DrawRegions(context, _dnoWorldGeo, MapPaint.DnoPenBrush, 1.3);
-        if (_showGspRegions && _gspWorldGeo is not null) DrawRegions(context, _gspWorldGeo, MapPaint.GspPenBrush, 0.9);
+        // Real DNO/GSP admin boundaries (context, under the network), if toggled on. A case with its own geography draws
+        // its regions on the DNO toggle instead, and no GB layer (those are in the GB box).
+        if (_caseGeo is not null)
+        {
+            if (_showDnoAreas && _caseRegionWorldGeo is not null) DrawRegions(context, _caseRegionWorldGeo, MapPaint.DnoPenBrush, 1.0);
+        }
+        else
+        {
+            if (_showDnoAreas && _dnoWorldGeo is not null) DrawRegions(context, _dnoWorldGeo, MapPaint.DnoPenBrush, 1.3);
+            if (_showGspRegions && _gspWorldGeo is not null) DrawRegions(context, _gspWorldGeo, MapPaint.GspPenBrush, 0.9);
+        }
 
         using (context.PushTransform(shift))
         {
@@ -1009,6 +1029,17 @@ public sealed class SchematicControl : Control, ICustomHitTest
     /// <summary>Draw the simplified GB coastline as a faint filled outline behind the network.</summary>
     private void DrawCoast(DrawingContext dc)
     {
+        if (_caseLandWorldGeo is not null)
+        {
+            // The case's own land (every ring of every land area), drawn as the GB outline is: faint fill, 1 px edge.
+            double z = _view.Zoom;
+            using (dc.PushTransform(new Matrix(z, 0, 0, z, _view.OffsetX, _view.OffsetY)))
+            {
+                var landPen = new ImmutablePen(MapPaint.CoastPenBrush, MapPaint.CoastPen.Thickness / z, null, PenLineCap.Round, PenLineJoin.Round);
+                dc.DrawGeometry(MapPaint.CoastFill, landPen, _caseLandWorldGeo);
+            }
+            return;
+        }
         IReadOnlyList<WorldPoint> w = CoastlineGb.World;
         if (w.Count < 2) return;
         // Baked once in world coordinates and drawn through the world-to-screen transform with a pen whose world width
@@ -1045,6 +1076,35 @@ public sealed class SchematicControl : Control, ICustomHitTest
         InvalidateVisual();
     }
 
+    /// <summary>
+    /// Feed the loaded case's own geography (its geography.json), or null for the GB drawing. Its land rings are baked
+    /// once as filled world-coordinate figures (the coastline and land shading) and its region rings as outlines (drawn
+    /// on the DNO toggle). While it is set no GB layer is drawn: the GB coastline, DNO/GSP outlines and geocoded GB
+    /// assets are all placed in the GB box and would be wrong over any other projection.
+    /// </summary>
+    public void SetCaseGeography(CaseGeography? geography)
+    {
+        _caseGeo = geography;
+        _caseLandWorldGeo = geography is null ? null : BakeAreas(geography.Land, filled: true);
+        _caseRegionWorldGeo = geography is null || geography.Regions.Count == 0 ? null : BakeAreas(geography.Regions, filled: false);
+        InvalidateVisual();
+    }
+
+    private static StreamGeometry BakeAreas(IReadOnlyList<CaseGeography.Area> areas, bool filled)
+    {
+        var g = new StreamGeometry();
+        using StreamGeometryContext c = g.Open();
+        foreach (CaseGeography.Area a in areas)
+            foreach (WorldPoint[] ring in a.Rings)
+            {
+                // CaseGeography guarantees at least 3 points per ring.
+                c.BeginFigure(new Point(ring[0].X, ring[0].Y), filled);
+                for (int i = 1; i < ring.Length; i++) c.LineTo(new Point(ring[i].X, ring[i].Y));
+                c.EndFigure(true);
+            }
+        return g;
+    }
+
     private static StreamGeometry? BakeRings(IReadOnlyList<GeographyData.Region> regions)
     {
         if (regions.Count == 0) return null;
@@ -1075,14 +1135,15 @@ public sealed class SchematicControl : Control, ICustomHitTest
     /// <summary>Plot the geocoded assets as fuel-coloured diamonds, batched by brush and viewport-culled.</summary>
     private void DrawAssets(DrawingContext dc)
     {
-        if (_geo is null || _geo.Assets.Count == 0) return;
+        GeographyData? geo = GbGeo;   // GB assets are in the GB box: none over a case with its own geography
+        if (geo is null || geo.Assets.Count == 0) return;
         var view = new Rect(-12, -12, Bounds.Width + 24, Bounds.Height + 24);
-        double maxMw = _geo.MaxAssetMw;
+        double maxMw = geo.MaxAssetMw;
 
         var byBrush = new Dictionary<ImmutableSolidColorBrush, (StreamGeometry G, StreamGeometryContext C)>(ReferenceEqualityComparer.Instance);
-        for (int ai = 0; ai < _geo.Assets.Count; ai++)
+        for (int ai = 0; ai < geo.Assets.Count; ai++)
         {
-            GeographyData.AssetMarker a = _geo.Assets[ai];
+            GeographyData.AssetMarker a = geo.Assets[ai];
             Point s = WorldToScreen(a.World.X, a.World.Y);
             if (s.X < view.Left || s.X > view.Right || s.Y < view.Top || s.Y > view.Bottom) continue;
 
@@ -1100,18 +1161,31 @@ public sealed class SchematicControl : Control, ICustomHitTest
     /// <summary>A compact top-right key for whichever geography layers are on (FastSchematic.DrawGeoLegend).</summary>
     private void DrawGeoLegend(DrawingContext dc)
     {
-        if (_geo is null) return;
-        bool anyAssets = _showAssets && _geo.Assets.Count > 0;
-        if (!_showDnoAreas && !_showGspRegions && !anyAssets) return;
-
         var rows = new List<(Color Col, bool Line, string Text)>();
-        if (_showDnoAreas) rows.Add((MapPaint.DnoColor, true, "DNO licence area"));
-        if (_showGspRegions) rows.Add((MapPaint.GspColor, true, "GSP region"));
-        if (anyAssets)
-            foreach ((string tech, Color col) in AssetLegendKeys())
-                rows.Add((col, false, tech));
-        if (rows.Count == 0) return;
+        if (_caseGeo is not null)
+        {
+            // A case with its own geography: its regions are the only geography layer (on the DNO toggle).
+            if (_showDnoAreas && _caseRegionWorldGeo is not null) rows.Add((MapPaint.DnoColor, true, "Region"));
+        }
+        else
+        {
+            if (_geo is null) return;
+            bool anyAssets = _showAssets && _geo.Assets.Count > 0;
+            if (!_showDnoAreas && !_showGspRegions && !anyAssets) return;
 
+            if (_showDnoAreas) rows.Add((MapPaint.DnoColor, true, "DNO licence area"));
+            if (_showGspRegions) rows.Add((MapPaint.GspColor, true, "GSP region"));
+            if (anyAssets)
+                foreach ((string tech, Color col) in AssetLegendKeys())
+                    rows.Add((col, false, tech));
+        }
+        if (rows.Count == 0) return;
+        DrawLegendRows(dc, rows);
+    }
+
+    // The legend panel itself (unchanged drawing, split out so the case-geography key uses it too).
+    private void DrawLegendRows(DrawingContext dc, List<(Color Col, bool Line, string Text)> rows)
+    {
         const double sw = 14, pad = 9, rowH = 16;
         var texts = rows.Select(r => new FormattedText(r.Text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight,
             MapPaint.LabelFace, 11, MapPaint.LabelBrush)).ToList();
@@ -1339,8 +1413,23 @@ public sealed class SchematicControl : Control, ICustomHitTest
             }
             dc.DrawGeometry(MapPaint.MinimapDot, null, _minimapDots);
 
+            // The case's own land in the minimap, when it has geography and the coastline is enabled.
+            if (_showCoast && _caseGeo is not null)
+            {
+                var lg = new StreamGeometry();
+                using (StreamGeometryContext lc = lg.Open())
+                    foreach (CaseGeography.Area a in _caseGeo.Land)
+                        foreach (WorldPoint[] ring in a.Rings)
+                        {
+                            lc.BeginFigure(new Point(left + (ring[0].X - wl) * scale, top + (ring[0].Y - wt) * scale), false);
+                            for (int i = 1; i < ring.Length; i++)
+                                lc.LineTo(new Point(left + (ring[i].X - wl) * scale, top + (ring[i].Y - wt) * scale));
+                            lc.EndFigure(true);
+                        }
+                dc.DrawGeometry(null, MapPaint.CoastPen, lg);
+            }
             // The GB coastline in the minimap too, when enabled.
-            if (_showCoast)
+            else if (_showCoast)
             {
                 IReadOnlyList<WorldPoint> w = CoastlineGb.World;
                 var cg = new StreamGeometry();

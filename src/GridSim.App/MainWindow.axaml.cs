@@ -19,6 +19,8 @@ using GridSim.Ui.Assets.Editing;
 using GridSim.Ui.Assets.Navigation;
 using GridSim.Ui.Assets.Overlay;
 using GridSim.Ui.Commands;
+using GridSim.Ui.Geography;
+using GridSim.Ui.Models;
 using GridSim.Ui.Hosting;
 using GridSim.Ui.Shell;
 using GridSim.Ui.Tabs.Scada;
@@ -295,9 +297,12 @@ public sealed partial class MainWindow : Window
         SchematicControl map = Schematic;
         ColorButton.Content = MapCommands.ColourButtonLabel(map.ColorMode);
         FleetButton.Opacity = MapCommands.ToggleButtonOpacity(map.ShowFleet);
-        DnoButton.IsEnabled = GspRegionButton.IsEnabled = map.HasGeography;
+        // A case with its own geography draws its regions on DNO and has no GSP layer (GSP regions are GB only).
+        bool gsp = map.HasGeography && !map.HasCaseGeography;
+        DnoButton.IsEnabled = map.HasGeography;
+        GspRegionButton.IsEnabled = gsp;
         DnoButton.Opacity = MapCommands.ToggleButtonOpacity(map.ShowDnoAreas, map.HasGeography);
-        GspRegionButton.Opacity = MapCommands.ToggleButtonOpacity(map.ShowGspRegions, map.HasGeography);
+        GspRegionButton.Opacity = MapCommands.ToggleButtonOpacity(map.ShowGspRegions, gsp);
     }
 
     // COLOR: the View menu's Colour by item for the next mode in the WPF cycle.
@@ -396,6 +401,30 @@ public sealed partial class MainWindow : Window
     private readonly Stopwatch _animationClock = new();
     private TimeSpan _lastAnimate;
 
+    /// <summary>The status-bar words that open a case-geography problem (so a later good load can clear just that).</summary>
+    public const string CaseGeographyProblemPrefix = "Case geography not used, the GB map is drawn instead: ";
+
+    /// <summary>
+    /// Give the map the loaded case's own geography (geography.json beside its buses.json), or the GB drawing when the
+    /// case has none or is not read from a case folder (a MATPOWER file, a replay, the bridge). A geography.json that is
+    /// present but malformed is never drawn in part and never silent: the map falls back to GB and the status bar says
+    /// which file failed and why. The title, header and map panel name the case when it has its own geography.
+    /// </summary>
+    private void ApplyCaseGeography(GridModel model)
+    {
+        ModelSource? s = _vm.Run.CurrentSource;
+        string? caseDir = s is { Bridge: null, MFile: null, ReplayDir: null } && !_vm.Run.IsReplay && !_vm.Run.IsBridge ? s.Dir : null;
+        CaseGeography.TryLoad(caseDir, out CaseGeography? geo, out string? problem);
+        Schematic.SetCaseGeography(geo);
+        if (problem is not null)
+            _vm.ProblemText = CaseGeographyProblemPrefix + problem;
+        else if (_vm.ProblemText is { } old && old.StartsWith(CaseGeographyProblemPrefix, StringComparison.Ordinal))
+            _vm.ProblemText = null;   // the previous case's geography problem no longer applies
+        _vm.SetCaseIdentity(geo is null ? null : model.Name, geo?.LandName);
+        NetworkDashboard.SetNetworkName(geo?.LandName);
+        UpdateMapButtons();
+    }
+
     private void WireMap(ShellOptions options)
     {
         // Real DNO/GSP geography and geocoded assets (from gda-out/geo, if present locally). A layer that could not
@@ -420,6 +449,7 @@ public sealed partial class MainWindow : Window
             if (MapAuthor.IsActive) return;   // never while authoring (a load leaves AUTHOR first); defensive
             if (!_vm.Run.IsBridge) _vm.Map.ModelChanged(_vm.Run.IsReplay);
             Schematic.Load(model);
+            ApplyCaseGeography(model);
             // Phase 5d: the loaded case's line routes (none for a case without an asset overlay, a replay or a bridge).
             Schematic.SetLineRoutes(LineRouteMap.Build(_vm.Run.LoadedOverlay, model));
             UpdateLayout();
@@ -865,6 +895,8 @@ public sealed partial class MainWindow : Window
     {
         // Slice 1.8, WPF OnClosing: with a live bridge the first close is cancelled while the socket is closed
         // asynchronously; the window then closes itself and this handler runs again with the bridge gone.
+        // NCSC CAF B5: first, no automatic reconnect may start (or finish) while the window closes.
+        _vm.Run.Bridge?.StopAutoReconnect();
         if (!_closeAfterBridgeDisposed && _vm.Run.Bridge is { IsActive: true }) { CloseAfterBridgeDisposal(e); return; }
 
         // Stop the play loop: it is cancelled now and ends by itself (its task completes; it never throws).

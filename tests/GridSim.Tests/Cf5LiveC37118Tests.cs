@@ -35,7 +35,23 @@ public class Cf5LiveC37118Tests
         listener.Start();
         int port = ((IPEndPoint)listener.LocalEndpoint).Port;
         List<byte[]> toSend = chunks.ToList();
-        Task<List<ushort>> pmu = Task.Run(() =>
+        // Bug #160 (test harness only; no assertion changed). Old: the simulated PMU ran with Task.Run, on the shared
+        // thread pool. New: it runs on a dedicated background thread of its own (the result still comes back as a Task).
+        // Why: under full-suite load a starved pool could start the fake device more than the 1 s of the timeout test
+        // late, so the receiver saw no CONFIG frame and the test failed although the transport was right. The transport
+        // was fixed as well (separate connect, first-frame and collection budgets); this removes the other half, a fake
+        // device that cannot answer on time through no fault of the code under test. The receiver did the same for its
+        // own connect in #46.
+        var done = new TaskCompletionSource<List<ushort>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var device = new Thread(() =>
+        {
+            try { done.SetResult(RunPmu()); }
+            catch (Exception ex) { done.SetException(ex); }
+        }) { IsBackground = true, Name = "Cf5 simulated PMU" };
+        device.Start();
+        return (port, done.Task);
+
+        List<ushort> RunPmu()
         {
             var commands = new List<ushort>();
             try
@@ -53,8 +69,7 @@ public class Cf5LiveC37118Tests
             }
             finally { listener.Stop(); }
             return commands;
-        });
-        return (port, pmu);
+        }
     }
 
     private static byte[] ReadExactly(NetworkStream s, int n)
@@ -219,7 +234,11 @@ public class Cf5LiveC37118Tests
 
     [Theory]
     [InlineData("tcp://10.0.0.5:4712", true, "10.0.0.5", 4712)]
-    [InlineData("udp://:4713", false, "0.0.0.0", 4713)]
+    // Bug #173 (2.1.006). Old: "udp://:4713" meant 0.0.0.0 (every interface). New: 127.0.0.1 (loopback). Why: listening on
+    // every interface with no sender filter let any host that could reach the port inject CRC-valid frames (CRC is not
+    // authentication); every interface is now asked for explicitly (udp://0.0.0.0:port) and needs a sender rule.
+    [InlineData("udp://:4713", false, "127.0.0.1", 4713)]
+    [InlineData("udp://0.0.0.0:4713", false, "0.0.0.0", 4713)]
     [InlineData("UDP://127.0.0.1:4713", false, "127.0.0.1", 4713)]
     public void Live_addresses_parse(string address, bool tcp, string host, int port)
         => Assert.Equal((tcp, host, port), C37118LiveReceiver.ParseAddress(address));

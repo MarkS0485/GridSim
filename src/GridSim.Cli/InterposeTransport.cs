@@ -21,6 +21,42 @@ internal interface IRtuTransport : IDisposable
     /// resynchronising to the next frame start, and a partial frame left in the buffer when its client went away.
     /// Printed in the interposer's stop summary (discarded-bytes) and its audit outcome.</summary>
     long DiscardedBytes { get; }
+
+    /// <summary>Bug #174: connections refused because their address is not in the client allow-list.</summary>
+    long RefusedClients { get; }
+
+    /// <summary>Bug #174: clients dropped because they sent nothing for the idle timeout (so the next can connect).</summary>
+    long IdleDrops { get; }
+}
+
+/// <summary>
+/// Bug #174 (2026-11-01): who may hold the interposer's single client slot, and for how long while silent. Before, the
+/// listener served the first client from anyone, and the Modbus transport never dropped an idle one (a read timeout just
+/// looped), so any peer that connected and stayed silent held the only slot and locked the real RTU out indefinitely.
+/// </summary>
+/// <param name="AllowedClients">The remote addresses that may connect, or null for any (the caller decides when that is
+/// allowed: the CLI permits it only on loopback or with the explicit opt-out). A connection from any other address is
+/// closed at once and counted.</param>
+/// <param name="IdleTimeoutMs">A client that sends no byte for this long is dropped so the next one can connect; 0 never
+/// drops one (explicit opt-out). IEC 104 keeps a healthy link busy with TESTFR every t3 = 20 s, so only a silent peer
+/// is dropped.</param>
+internal sealed record InterposeAccessPolicy(IReadOnlyList<IPAddress>? AllowedClients, long IdleTimeoutMs)
+{
+    /// <summary>The default idle timeout: two minutes.</summary>
+    public const long DefaultIdleTimeoutMs = 120_000;
+
+    /// <summary>Any client, the default idle timeout (the transport unit tests' policy).</summary>
+    public static InterposeAccessPolicy Default { get; } = new(null, DefaultIdleTimeoutMs);
+
+    /// <summary>True when <paramref name="remote"/> may connect.</summary>
+    public bool Allows(IPAddress remote)
+    {
+        if (AllowedClients is null) return true;
+        IPAddress r = remote.IsIPv4MappedToIPv6 ? remote.MapToIPv4() : remote;
+        foreach (IPAddress a in AllowedClients)
+            if ((a.IsIPv4MappedToIPv6 ? a.MapToIPv4() : a).Equals(r)) return true;
+        return false;
+    }
 }
 
 /// <summary>Classifies socket read failures for the TCP transports.</summary>
@@ -63,12 +99,23 @@ internal abstract class TcpFrameTransportBase : IRtuTransport
     // supplies its own, so the IEC 104 timers can be driven deterministically).
     private readonly Func<long> _clockMs;
 
+    // Bug #174: the client allow-list and idle timeout, and when the current client last sent a byte.
+    private readonly InterposeAccessPolicy _policy;
+    private long _lastRxMs;
+
+    /// <inheritdoc/>
+    public long RefusedClients { get; private set; }
+
+    /// <inheritdoc/>
+    public long IdleDrops { get; private set; }
+
     /// <summary>The local endpoint actually bound (useful when port 0 asked the OS to pick one).</summary>
     public IPEndPoint LocalEndpoint => (IPEndPoint)_listener.LocalEndpoint;
 
-    protected TcpFrameTransportBase(string host, int port, Func<long>? clockMs = null)
+    protected TcpFrameTransportBase(string host, int port, Func<long>? clockMs = null, InterposeAccessPolicy? policy = null)
     {
         _clockMs = clockMs ?? (static () => Environment.TickCount64);
+        _policy = policy ?? InterposeAccessPolicy.Default;
         IPAddress addr = host is "0.0.0.0" or "*" or "" ? IPAddress.Any
             : IPAddress.TryParse(host, out IPAddress? p) ? p
             : Dns.GetHostAddresses(host)[0];
@@ -85,7 +132,16 @@ internal abstract class TcpFrameTransportBase : IRtuTransport
             // Wait up to the timeout for an inbound connection without blocking the loop for ever.
             if (!_listener.Server.Poll((int)Math.Max(0, timeout.TotalMilliseconds * 1000), SelectMode.SelectRead))
                 return false;
-            _client = _listener.AcceptTcpClient();
+            TcpClient accepted = _listener.AcceptTcpClient();
+            // Bug #174: a connection from an address outside the allow-list is closed at once and never takes the slot.
+            if (accepted.Client.RemoteEndPoint is not IPEndPoint remote || !_policy.Allows(remote.Address))
+            {
+                RefusedClients++;
+                accepted.Dispose();
+                return false;
+            }
+            _client = accepted;
+            _lastRxMs = _clockMs();
             _stream = _client.GetStream();
             _stream.ReadTimeout = (int)Math.Max(1, timeout.TotalMilliseconds);
             // N230: a link layer that drives the session (IEC 104: STARTDT act) speaks first.
@@ -96,6 +152,14 @@ internal abstract class TcpFrameTransportBase : IRtuTransport
         if (!SendToClient(OnPoll(_clockMs()))) return false;
         // GR-803: the link layer decided the connection must close (IEC 104 t1 expired): drop the client.
         if (LinkWantsClose) { DropClient(); return false; }
+        // Bug #174: a client silent for the idle timeout is dropped, so a peer that connects and says nothing cannot hold
+        // the only slot for ever.
+        if (_policy.IdleTimeoutMs > 0 && _clockMs() - _lastRxMs >= _policy.IdleTimeoutMs)
+        {
+            IdleDrops++;
+            DropClient();
+            return false;
+        }
 
         if (TryExtract(out frame)) return Delivered(frame); // a frame may already be buffered
 
@@ -103,6 +167,7 @@ internal abstract class TcpFrameTransportBase : IRtuTransport
         {
             int n = _stream!.Read(_rx, 0, _rx.Length);
             if (n == 0) { DropClient(); return false; }   // the peer closed cleanly (FIN)
+            _lastRxMs = _clockMs();   // bug #174: the client is alive
             Buffer.AddRange(_rx.AsSpan(0, n).ToArray());
         }
         catch (IOException ex) when (TransportErrors.IsReadTimeout(ex))
@@ -206,7 +271,8 @@ internal sealed class TcpDelimitedFrameTransport : TcpFrameTransportBase
     private readonly Iec104ControllingStation? _station;
 
     public TcpDelimitedFrameTransport(string host, int port, byte startByte,
-        Iec104ControllingStation? station = null, Func<long>? clockMs = null) : base(host, port, clockMs)
+        Iec104ControllingStation? station = null, Func<long>? clockMs = null, InterposeAccessPolicy? policy = null)
+        : base(host, port, clockMs, policy)
     {
         _startByte = startByte;
         _station = station;
@@ -248,7 +314,8 @@ internal sealed class TcpDelimitedFrameTransport : TcpFrameTransportBase
 /// </summary>
 internal sealed class TcpMbapFrameTransport : TcpFrameTransportBase
 {
-    public TcpMbapFrameTransport(string host, int port) : base(host, port) { }
+    public TcpMbapFrameTransport(string host, int port, Func<long>? clockMs = null, InterposeAccessPolicy? policy = null)
+        : base(host, port, clockMs, policy) { }
 
     // Modbus/TCP MBAP length field = unit identifier (1 byte) + PDU. The PDU is at most 253 bytes (function code +
     // data; Modbus Application Protocol v1.1b3 section 4.1), so the length is 2..254 and a whole ADU is at most
@@ -279,11 +346,11 @@ internal sealed class TcpMbapFrameTransport : TcpFrameTransportBase
 /// serial and layer-2 transports register here as their protocols land.</summary>
 internal static class TransportFactory
 {
-    public static IRtuTransport Open(IRtuProtocol protocol, string host, int port) => protocol.Name switch
+    public static IRtuTransport Open(IRtuProtocol protocol, string host, int port, InterposeAccessPolicy? policy = null) => protocol.Name switch
     {
         // N230: interpose is the IEC 104 controlling station, so its transport drives the link (STARTDT act, ...).
-        "iec104" => new TcpDelimitedFrameTransport(host, port, startByte: 0x68, station: new Iec104ControllingStation()),
-        "modbus" => new TcpMbapFrameTransport(host, port),
+        "iec104" => new TcpDelimitedFrameTransport(host, port, startByte: 0x68, station: new Iec104ControllingStation(), policy: policy),
+        "modbus" => new TcpMbapFrameTransport(host, port, policy: policy),
         _ => throw new NotSupportedException(
             $"no transport is wired for protocol '{protocol.Name}' yet (transport kind {protocol.Transport})."),
     };

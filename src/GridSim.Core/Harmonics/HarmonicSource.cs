@@ -24,6 +24,33 @@ public sealed record HarmonicSource(
     string? AssetId = null,
     string? Name = null)
 {
+    // Bug hunt 2026-11-01 (#168): each order at most once. InjectionAt (and with it the penetration solve and THD)
+    // reads the FIRST component of an order, so an API-built spectrum with (5, 20 %) and (5, 10 %) silently lost the
+    // second from the injection while other readers (K-factor) still counted it. The spectra file loader (GR-652) and
+    // ThreePhaseHarmonicSource.Balanced (GR-577) already refuse a repeated order; the record now refuses it on
+    // construction and on every with-expression, naming the bus and the order. A spectrum with distinct orders is
+    // kept as the same list object, so nothing else changes.
+    private readonly IReadOnlyList<HarmonicComponent> _spectrum = RequireDistinctOrders(Spectrum, Bus);
+
+    /// <summary>The per-order injection, as percent of <see cref="FundamentalCurrentPu"/>; each order at most once.</summary>
+    public IReadOnlyList<HarmonicComponent> Spectrum
+    {
+        get => _spectrum;
+        init => _spectrum = RequireDistinctOrders(value, Bus);
+    }
+
+    private static IReadOnlyList<HarmonicComponent> RequireDistinctOrders(IReadOnlyList<HarmonicComponent> spectrum, int bus)
+    {
+        if (spectrum is null) return spectrum!;   // left to the readers, exactly as before (no new null contract here)
+        var seen = new HashSet<int>();
+        foreach (HarmonicComponent c in spectrum)
+            if (!seen.Add(c.Order))
+                throw new ArgumentException(
+                    $"Harmonic source at bus {bus}: order {c.Order} appears more than once in the spectrum; give each order once "
+                    + "(the injection reads one component per order).", nameof(spectrum));
+        return spectrum;
+    }
+
     /// <summary>The complex injection current (pu) this source contributes at harmonic order
     /// <paramref name="order"/>, or 0 if its spectrum carries no such order.</summary>
     public Complex InjectionAt(int order)

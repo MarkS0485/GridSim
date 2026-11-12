@@ -42,6 +42,16 @@ public sealed class LicenceGate
     /// <summary>The environment variable that can carry a licence key for a single run.</summary>
     public const string EnvVar = "GRIDSIM_LICENCE";
 
+    /// <summary>
+    /// GR-883 (November 2026): the environment variable that names the licence FILE to use instead of the per-user one
+    /// (<see cref="DefaultLicenceFilePath"/>). When set to a non-blank value it is the file read at start-up and the file
+    /// <c>--importLicence</c> and <c>gridsim licence import</c> write (a relative value is taken from the working
+    /// folder). A run can then be isolated from the licence installed on the machine: the test suite points every CLI
+    /// child process at a file in its own temporary folder, so a result never depends on whether the machine running
+    /// the tests holds a licence. Unset or blank: the per-user file, as before.
+    /// </summary>
+    public const string FileEnvVar = "GRIDSIM_LICENCE_FILE";
+
     /// <summary>The active, verified entitlement (or <see cref="Entitlement.FreeDefault"/>).</summary>
     public Entitlement Entitlement { get; }
 
@@ -87,9 +97,24 @@ public sealed class LicenceGate
         return false;
     }
 
-    /// <summary>The machine-local licence file: <c>%LOCALAPPDATA%\GridSim\licence.gridsim</c>.</summary>
-    public static string LicenceFilePath => Path.Combine(
+    /// <summary>
+    /// The licence file this process reads and installs to: the file named by <see cref="FileEnvVar"/> when that is set
+    /// to a non-blank value (GR-883, as a full path), otherwise <see cref="DefaultLicenceFilePath"/>.
+    /// </summary>
+    public static string LicenceFilePath => LicenceFilePathFor(Environment.GetEnvironmentVariable(FileEnvVar));
+
+    /// <summary>The per-user licence file: <c>%LOCALAPPDATA%\GridSim\licence.gridsim</c> (the platform's local
+    /// application-data folder on Linux and macOS).</summary>
+    public static string DefaultLicenceFilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GridSim", "licence" + FileExtension);
+
+    /// <summary>
+    /// GR-883: the licence file for a given value of <see cref="FileEnvVar"/>: the value as a full path (surrounding
+    /// white space removed) when it is non-blank, otherwise <see cref="DefaultLicenceFilePath"/>. Split out so the rule is
+    /// tested without changing the test process's own environment.
+    /// </summary>
+    internal static string LicenceFilePathFor(string? fileEnvValue)
+        => string.IsNullOrWhiteSpace(fileEnvValue) ? DefaultLicenceFilePath : Path.GetFullPath(fileEnvValue.Trim());
 
     /// <summary>Resolve the active entitlement using the standard precedence and the embedded public key.</summary>
     public static LicenceGate Resolve(string? explicitToken = null)

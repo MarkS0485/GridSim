@@ -1,7 +1,7 @@
 # Third-party notices
 
 GridSim itself is licensed under the terms in [LICENSE.md](LICENSE.md). The binaries GridSim ships (the `gridsim`
-command line tool and the GridSim web app container image; the desktop app, which ships after 1.0, and source builds
+command line tool and the GridSim web app container image; the desktop apps (GridSim.App.Desktop and GridSim.Wpf, both in the 2.1.000 RC-1 release), and source builds
 carry the same components) also contain or depend on the third-party components listed below. Each package is used
 unmodified under its own licence, reproduced or referenced here as that licence requires. The one piece of
 third-party SOURCE code compiled into GridSim itself, including the GridSim.Core NuGet package, is the C# port of
@@ -60,8 +60,9 @@ Bundled third-party network DATA (as opposed to code) is listed under "Bundled n
 | Cascadia Mono (font: Regular, SemiBold, Bold; in GridSim.App/Fonts) | 2407.24 | SIL Open Font License 1.1 (reproduced below) | Copyright (c) 2019 - Present, Microsoft Corporation, with Reserved Font Name Cascadia Code | GridSim.App.Desktop (the monospaced number font) | https://github.com/microsoft/cascadia-code |
 | .NET runtime, ASP.NET Core and Windows Desktop runtime | 10.0 | MIT | Copyright (c) .NET Foundation and Contributors | every self-contained binary and the container image | https://github.com/dotnet/runtime |
 
-The self-contained binaries and the container image carry the .NET runtime itself. Its own third-party notices
-are published at https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT and, for ASP.NET Core, at
+The self-contained binaries and the container image carry the .NET runtime itself. The self-contained binaries ship
+its own third-party notices beside them as `dotnet-THIRD-PARTY-NOTICES.txt`; for the container image they are
+published at https://github.com/dotnet/runtime/blob/main/THIRD-PARTY-NOTICES.TXT and, for ASP.NET Core, at
 https://github.com/dotnet/aspnetcore/blob/main/THIRD-PARTY-NOTICES.txt.
 
 ILGPU in turn uses System.Collections.Immutable, System.Memory, System.Reflection.Metadata and

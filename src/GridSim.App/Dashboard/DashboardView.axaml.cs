@@ -36,6 +36,18 @@ public partial class DashboardView : UserControl
         DataContext = _host.Model;
     }
 
+    /// <summary>The map panel's GB heading, as WPF writes it.</summary>
+    public const string GbNetworkHeader = "GB TRANSMISSION NETWORK  LIVE POWER FLOW";
+
+    /// <summary>
+    /// Name the map panel after the loaded case's land ("INDIA TRANSMISSION NETWORK  LIVE POWER FLOW"), or put the GB
+    /// heading back with a null (every case without its own geography).
+    /// </summary>
+    public void SetNetworkName(string? landName) =>
+        NetworkPanelHeader.Text = string.IsNullOrWhiteSpace(landName)
+            ? GbNetworkHeader
+            : $"{landName.Trim().ToUpperInvariant()} TRANSMISSION NETWORK  LIVE POWER FLOW";
+
     /// <summary>The model every tile binds to (the same object as the data context).</summary>
     public AppDashboardModel Model => _host.Model;
 

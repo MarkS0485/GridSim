@@ -171,7 +171,7 @@ public sealed class PresolvedReplay
 
             double? hour = null;
             string? label = null;
-            if (iT >= 0 && Num(iT) is double ts) { hour = ts / 3600.0; label = $"t={ts:F2}s"; }
+            if (iT >= 0 && Num(iT) is double ts) { hour = ts / 3600.0; label = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"t={ts:F2}s"); }   // bug #193: invariant
             else if (iTime >= 0 && iTime < f.Length)
             {
                 label = f[iTime].Trim();

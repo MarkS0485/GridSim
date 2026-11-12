@@ -2,6 +2,7 @@
 @inject CaseCatalog Catalog
 @inject GridSim.Web.Sessions.SessionManager Sessions
 @inject NavigationManager Nav
+@inject GridSim.Web.Site.AccessControl Access
 
 <PageTitle>GridSim - @(Sessions.ReplayOnly ? "Grid Replay" : "Grid Control Suite")</PageTitle>
 
@@ -34,7 +35,10 @@ else
                 <span class="case-id">bridge:gb-spine&#64;estimated</span>
             </a>
         }
-        @foreach (CaseEntry e in Catalog.Entries)
+        @* GR-715: the models found under results/ and gda-out/ are shown only when the anonymous role reaches
+           CaseCatalog.PrivateListingRole. The home page uses the anonymous role (a signed-in caller's claims are not read
+           here), which is the safe side. *@
+        @foreach (CaseEntry e in ListedCases)
         {
             <a class="case-card @(e.IsReplay ? "replay" : "")" href="/dashboard/@e.Id">
                 <span class="case-kind">@e.Kind</span>
@@ -43,7 +47,7 @@ else
             </a>
         }
     </div>
-    @if (Catalog.Entries.Count == 0)
+    @if (ListedCases.Count == 0)
     {
         <p class="empty">No models discovered next to the app.</p>
     }
@@ -51,6 +55,8 @@ else
 }
 
 @code {
+    private IReadOnlyList<CaseEntry> ListedCases => Catalog.EntriesFor(Access.AnonymousRole);
+
     // A replay-only instance never shows the solver case picker: land straight on the raw public-data replay.
     // NavigateTo in OnInitialized is the standard redirect (it also flows correctly through static prerender).
     protected override void OnInitialized()

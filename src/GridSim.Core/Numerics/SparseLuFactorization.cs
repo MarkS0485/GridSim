@@ -56,8 +56,8 @@ internal sealed class SparseLuFactorization
     /// Factor the matrix given in compressed-sparse-column form with column permutation
     /// <paramref name="q"/>. Returns <c>null</c> if a zero/negligible pivot is hit
     /// (structurally or numerically singular). "Negligible" is the shared relative floor
-    /// <see cref="NumericTolerances.RelativePivotFloor"/> times the largest |A_ij|, the same test the
-    /// dense LU applies; before October 2026 (R034/R280) it was an absolute 1e-300, so a matrix singular
+    /// <see cref="NumericTolerances.RelativePivotFloor"/> times the largest |A_ij| of the ORIGINAL row that wins the pivot
+    /// (GR-044, November 2026; it was the largest entry of the whole matrix), the same test the dense LU applies; before October 2026 (R034/R280) it was an absolute 1e-300, so a matrix singular
     /// to working precision "factorised" and returned huge finite garbage instead of null.
     /// <para><paramref name="diagonalPreference"/> (OPT-IN, default 0 = off): when positive, the pivot of column
     /// <c>q[k]</c> is its diagonal row whenever that row is still a candidate and its magnitude is at least
@@ -80,7 +80,10 @@ internal sealed class SparseLuFactorization
         // and a corrupt matrix was reported as a singular one.
         if (double.IsInfinity(aNorm))
             throw new ArgumentException("Sparse LU: the matrix contains an infinite entry, so it cannot be factorised.", nameof(ax));
-        double pivotFloor = NumericTolerances.PivotFloor(aNorm);
+        // GR-044: one floor per ORIGINAL row (1e-12 x that row's largest entry). A step is tested against the floor of the
+        // row that wins its pivot search; every row floor is at or below the old whole-matrix floor, so every factorisation
+        // that floor accepted is unchanged to the bit and only refusals can turn into factorisations.
+        double[] rowFloor = NumericTolerances.RowPivotFloorsCsc(n, ap, ai, ax, aNorm);
 
         // Storage for L and U grows on demand (doubling); seed with a generous guess.
         int nnz = ax.Length;
@@ -145,15 +148,16 @@ internal sealed class SparseLuFactorization
                 }
             }
             double pivot = ipiv >= 0 ? x[ipiv] : 0.0;
-            // Singular: no candidate row at all (structural), or the best candidate has collapsed to the
-            // relative floor (numerical). best == |pivot|; the comparison is <= so an exact zero is always
-            // caught, matching DenseLuSolver's "max <= pivotFloor".
-            if (ipiv < 0 || best <= pivotFloor)
+            // Singular: no candidate row at all (structural), or the best candidate has collapsed to its own
+            // row's relative floor (numerical; GR-044). best == |pivot|; the comparison is <= so an exact zero is
+            // always caught, matching DenseLuSolver's "max <= rowFloor[p]".
+            if (ipiv < 0 || best <= rowFloor[ipiv])
                 return null;
             if (diagonalPreference > 0.0)
             {
-                // Opt-in threshold rule (see the summary); never reached on the default path.
-                ipiv = PreferDiagonal(col, ipiv, best, pivotFloor, diagonalPreference, xi, top, n, x, pinv);
+                // Opt-in threshold rule (see the summary); never reached on the default path. GR-044: the diagonal row is
+                // held to its OWN floor.
+                ipiv = PreferDiagonal(col, ipiv, best, rowFloor[col], diagonalPreference, xi, top, n, x, pinv);
                 pivot = x[ipiv];
             }
             if (keepPlan) pivotRow![k] = ipiv;
@@ -192,8 +196,10 @@ internal sealed class SparseLuFactorization
 
     /// <summary>The opt-in diagonal-preference rule: the diagonal row <paramref name="col"/> replaces the largest
     /// candidate <paramref name="ipiv"/> when it is in this column's reach, not yet pivotal (<paramref name="pinv"/> &lt; 0)
-    /// and its magnitude is at least <paramref name="tau"/> times <paramref name="best"/> and above the singular floor.</summary>
-    private static int PreferDiagonal(int col, int ipiv, double best, double pivotFloor, double tau,
+    /// and its magnitude is at least <paramref name="tau"/> times <paramref name="best"/> and above the singular floor
+    /// <paramref name="diagonalRowFloor"/> of the diagonal row itself (GR-044: its own row floor; before November 2026 the
+    /// whole-matrix floor, so a diagonal between the two was passed over).</summary>
+    private static int PreferDiagonal(int col, int ipiv, double best, double diagonalRowFloor, double tau,
         int[] xi, int top, int n, double[] x, int[] pinv)
     {
         if (ipiv == col || pinv[col] >= 0) return ipiv;
@@ -201,7 +207,7 @@ internal sealed class SparseLuFactorization
         {
             if (xi[px] != col) continue;
             double td = Math.Abs(x[col]);
-            return td >= tau * best && td > pivotFloor ? col : ipiv;
+            return td >= tau * best && td > diagonalRowFloor ? col : ipiv;
         }
         return ipiv;
     }
@@ -224,7 +230,7 @@ internal sealed class SparseLuFactorization
     /// <summary><see cref="PreferDiagonal"/> for a replay: the reach is <paramref name="reach"/>[r0..r1) and a row is
     /// still a candidate at step <paramref name="k"/> when its pivot step is at least k. <paramref name="stride"/> and
     /// <paramref name="lane"/> address an interleaved multi-case workspace (1 and 0 for a single case).</summary>
-    internal static int PreferDiagonalInReach(int col, int ipiv, double best, double pivotFloor, double tau,
+    internal static int PreferDiagonalInReach(int col, int ipiv, double best, double diagonalRowFloor, double tau,
         int[] reach, int r0, int r1, double[] x, int[] step, int k, int stride = 1, int lane = 0)
     {
         if (ipiv == col || step[col] < k) return ipiv;
@@ -232,7 +238,7 @@ internal sealed class SparseLuFactorization
         {
             if (reach[px] != col) continue;
             double td = Math.Abs(x[col * stride + lane]);
-            return td >= tau * best && td > pivotFloor ? col : ipiv;
+            return td >= tau * best && td > diagonalRowFloor ? col : ipiv;
         }
         return ipiv;
     }
@@ -246,7 +252,7 @@ internal sealed class SparseLuFactorization
             throw new ArgumentException("Sparse LU: the matrix contains a NaN entry, so it cannot be factorised.", nameof(ax));
         if (double.IsInfinity(aNorm))
             throw new ArgumentException("Sparse LU: the matrix contains an infinite entry, so it cannot be factorised.", nameof(ax));
-        double pivotFloor = NumericTolerances.PivotFloor(aNorm);
+        double[] rowFloor = NumericTolerances.RowPivotFloorsCsc(n, ap, ai, ax, aNorm);   // GR-044: as Factor
 
         int[] lp = plan.Lp, liO = plan.LiOriginal, up = plan.Up, step = plan.PivotStep, reach = plan.Reach, rp = plan.ReachPtr;
         var lx = new double[lp[n]];
@@ -280,10 +286,12 @@ internal sealed class SparseLuFactorization
                 }
                 else ux[unz++] = x[i];
             }
-            if (ipiv >= 0 && best > pivotFloor && plan.DiagonalPreference > 0.0)
-                ipiv = PreferDiagonalInReach(col, ipiv, best, pivotFloor, plan.DiagonalPreference, reach, r0, r1, x, step, k);
+            // GR-044: the largest candidate is held to its own row's floor (Factor's refusal), and the opt-in diagonal to its.
+            bool clears = ipiv >= 0 && best > rowFloor[ipiv];
+            if (clears && plan.DiagonalPreference > 0.0)
+                ipiv = PreferDiagonalInReach(col, ipiv, best, rowFloor[col], plan.DiagonalPreference, reach, r0, r1, x, step, k);
             if (ipiv != plan.PivotRow[k]) return null;   // a different pivot: a different pattern; fall back
-            if (best <= pivotFloor) return null;          // singular, as Factor reports
+            if (!clears) return null;                     // singular, as Factor reports
             double pivot = x[ipiv];
             ux[unz++] = pivot;
             lx[lnz++] = 1.0;

@@ -25,7 +25,7 @@ public static class KronReduction
     /// the wording is exactly the one this class always used (moved here unchanged, so every message is the same string).
     /// </summary>
     internal static string NearSingularPivotMessage(int k, double pivotMagnitude, double pivotFloor, double aNorm) =>
-        $"Cannot eliminate bus index {k}: self-admittance {pivotMagnitude:E3} is at or below the near-singular tolerance {pivotFloor:E3} (matrix scale {aNorm:E3}) - bus is (near-)isolated.";
+        $"Cannot eliminate bus index {k}: self-admittance {pivotMagnitude:E3} is at or below the near-singular tolerance {pivotFloor:E3} (1e-12 x the largest admittance in its row; matrix scale {aNorm:E3}, whose whole-matrix floor {GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm):E3} is no longer the test) - bus is (near-)isolated.";
 
     /// <summary>
     /// Reduce <paramref name="y"/> to the buses in <paramref name="keepIndices"/> (matrix indices, not
@@ -49,14 +49,24 @@ public static class KronReduction
         // Reference scale for the near-singular pivot test. Dividing by a self-admittance that is a tiny
         // fraction of the matrix scale (a near-isolated bus) blows the reduced admittances up to NaN/Inf,
         // so reject it as (numerically) singular rather than only the exact-zero case.
+        // GR-044 (November 2026): the floor is per row, 1e-12 x the largest admittance magnitude in that bus's ORIGINAL row
+        // (no pivoting here, so bus k's pivot is always row k's). Every row floor is at or below the old whole-matrix floor,
+        // so every reduction that floor allowed is unchanged to the bit; a weakly tied bus whose own row has not cancelled
+        // is no longer refused. A matrix with an infinite entry keeps the infinite whole-matrix floor (refused as before).
         double aNorm = 0.0;
         bool inputHasNaN = false;   // R126: see the zero-row shortcut below
-        foreach (Complex c in w)
+        var rowFloor = new double[n];
+        for (int i = 0; i < n; i++)
         {
-            double mag = c.Magnitude; if (mag > aNorm) aNorm = mag;
-            if (double.IsNaN(c.Real) || double.IsNaN(c.Imaginary)) inputHasNaN = true;
+            for (int j = 0; j < n; j++)
+            {
+                Complex c = w[i, j];
+                double mag = c.Magnitude; if (mag > rowFloor[i]) rowFloor[i] = mag;   // a NaN magnitude never wins, as before
+                if (double.IsNaN(c.Real) || double.IsNaN(c.Imaginary)) inputHasNaN = true;
+            }
+            if (rowFloor[i] > aNorm) aNorm = rowFloor[i];
         }
-        double pivotFloor = GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm);   // N008: the shared floor (aNorm x 1e-12, same bits)
+        GridSim.Core.Numerics.NumericTolerances.ToRowPivotFloors(rowFloor, aNorm);
 
         // October 2026 review (R126). The elimination is the historical one - the same nodes in the same order, and
         // for every entry the same update w[i,j] -= yik * w[k,j] / pivot, as the same expression on the same values -
@@ -97,8 +107,8 @@ public static class KronReduction
         foreach (int k in toEliminate)
         {
             Complex pivot = w[k, k];
-            if (pivot.Magnitude <= pivotFloor)
-                throw new InvalidOperationException(NearSingularPivotMessage(k, pivot.Magnitude, pivotFloor, aNorm));
+            if (pivot.Magnitude <= rowFloor[k])
+                throw new InvalidOperationException(NearSingularPivotMessage(k, pivot.Magnitude, rowFloor[k], aNorm));
 
             bool pivotFinite = double.IsFinite(pivot.Real) && double.IsFinite(pivot.Imaginary);
 

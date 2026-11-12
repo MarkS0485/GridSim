@@ -41,10 +41,14 @@ public class NumericsTests
     [Fact]
     public void DenseLu_throws_on_a_near_singular_pivot_not_just_an_exact_zero()
     {
-        // Diagonal but ill-conditioned to ~1e15 (cond*eps ~ 1 - no reliable digits left). The pivot
-        // 1e-9 is a genuine NON-zero, so the old exact-zero guard would have solved it and returned a
-        // number precision can't support; the relative floor (1e6*1e-12 = 1e-6) rejects it instead.
-        var a = new double[,] { { 1e6, 0.0 }, { 0.0, 1e-9 } };
+        // The pivot 1e-13 is a genuine NON-zero, so the old exact-zero guard would have solved it and returned a
+        // number precision can't support; the relative floor of its row (1 x 1e-12) rejects it instead.
+        // GR-044 test correction (approved): this case used diag(1e6, 1e-9), which a whole-matrix floor refused only
+        // because of units. A whole-matrix absolute pivot floor is not invariant under row scaling; the row-relative
+        // floor (1e-12 x the pivot row's own largest entry) refuses exactly the rows that are singular at rounding level
+        // relative to their own scale, and solves diag(1e6, 1e-9) exactly (pinned by Gr044RowRelativePivotFloorTests).
+        // The intent is kept on a matrix whose second row really has cancelled to 1e-13 of its own scale.
+        var a = new double[,] { { 1e6, 0.0 }, { 1.0, 1e-13 } };
         var b = new double[] { 1.0, 1.0 };
         Assert.Throws<InvalidOperationException>(() => new DenseLuSolver().Solve(a, b));
     }
