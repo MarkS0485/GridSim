@@ -5,8 +5,8 @@ namespace GridSim.Core.Assets;
 /// changer plus first-order thermal derating. Unlike the solver's instantaneous OLTC loop, a tap step
 /// commits only after the controlled-bus voltage has stayed outside the deadband for
 /// <c>interTapDelayS</c> (and <c>initialTapDelayS</c> before the very first move) - the seconds-to-tens-
-/// of-seconds mechanical delay real tap changers have. Thermal state is a first-order lag of loading vs
-/// ambient (top-oil/winding), driving a rating derate. Emits a <see cref="PlantStateUpdate"/>, never a
+/// of-seconds mechanical delay real tap changers have. Thermal state is a first-order lag of loading squared
+/// (the I^2 R load loss) vs ambient (top-oil/winding), driving a rating derate. Emits a <see cref="PlantStateUpdate"/>, never a
 /// swing-power term - a different (voltage-stability/thermal) timescale from the frequency window.
 /// </summary>
 /// <remarks>
@@ -39,6 +39,7 @@ public sealed class TransformerDynamics : IPassiveAssetDynamics
     private readonly double _targetVpu, _stepPu, _deadbandPu, _minTap, _maxTap;
     private readonly double _interTapDelayS, _initialTapDelayS;
     private readonly double _thermalTauMin, _ambient, _derateFull;
+    private readonly double _thermalTauS;   // #190: the thermal time constant in seconds (validated, never clamped to dt)
 
     // The tap the controller starts from (and returns to on Reset): the bound branch's TapRatio.
     private readonly double _initialTap;
@@ -77,6 +78,7 @@ public sealed class TransformerDynamics : IPassiveAssetDynamics
         _thermalTauMin = cls.Param(AssetParams.ThermalTauMin, DefaultThermalTauMin);
         _ambient = cls.Param(AssetParams.AmbientLoadingFraction, DefaultAmbientLoadingFraction);
         _derateFull = cls.Param(AssetParams.DerateAtFullThermal, DefaultDerateAtFullThermal);
+        _thermalTauS = ThermalLag.TauSeconds(_thermalTauMin, cls.Name, branchName);   // #190: fail loud on a bad tau
 
         // Fail loud on a starting tap the class cannot hold (see the summary).
         if (!double.IsFinite(initialTap) || initialTap < _minTap || initialTap > _maxTap)
@@ -134,9 +136,14 @@ public sealed class TransformerDynamics : IPassiveAssetDynamics
             }
         }
 
-        // First-order thermal lag of loading (per minute tau -> seconds), then a linear derate.
-        double tauS = Math.Max(dt, _thermalTauMin * 60.0);
-        _thermal += (Math.Max(ctx.LoadingFraction, _ambient) - _thermal) / tauS * dt;
+        // First-order thermal lag, stepped exactly (ThermalLag, #190), then a linear derate.
+        // Bug hunt 2026-11-01 (#191): the drive is loading SQUARED, K^2, as for the line. The heat that raises the
+        // oil and winding temperatures is the load loss, I^2 R, so it scales with K^2 (IEC 60076-7:2018, the steady-state temperature
+        // equations, [VERIFY] the clause number against the text: the top-oil rise follows ((1 + R K^2) / (1 + R))^x and the winding gradient K^y; this one-state model takes the
+        // load-loss term, the same I^2 R drive as LineThermalDynamics). The state used to chase K itself, so at K = 0.5
+        // it settled at 0.50 instead of 0.25 and the derate was twice too large (0.80 vs 0.64 at K = 0.8).
+        double k = ctx.LoadingFraction;
+        _thermal = ThermalLag.Step(_thermal, Math.Max(k * k, _ambient), dt, _thermalTauS);
         double derate = _derateFull * Math.Clamp(_thermal, 0.0, 1.0);
 
         return new PlantStateUpdate(TapRatio: _tap, RatingDerateFraction: derate, ThermalStatePu: _thermal);

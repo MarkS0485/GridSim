@@ -25,6 +25,8 @@ RestartSec=5
 # Same address as the Compose deployment, so one nginx file serves both.
 Environment=ASPNETCORE_URLS=http://127.0.0.1:5540
 Environment=ASPNETCORE_ENVIRONMENT=Production
+# The public name nginx forwards in Host (bug #170): without it every request answers 400 naming AllowedHosts.
+Environment=AllowedHosts=gridsim.example.com
 # Data-protection key ring (must be writable by the service user unless it is a shared, pre-populated ring).
 Environment=Auth__KeysDirectory=/var/lib/gridsim-web/keys
 StateDirectory=gridsim-web

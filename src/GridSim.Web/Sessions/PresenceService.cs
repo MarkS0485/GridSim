@@ -27,6 +27,22 @@ public sealed class PresenceService : IDisposable
     private readonly object _logLock = new();
     private int _sessionsThisRun;
     private int _totalVisits;
+
+    // Bug #188 (2026-11-01): the usage log is ROTATED. It used to grow by one line per visit for ever and was read in
+    // full at every start-up (CountVisits), so a public instance's log grew without limit and start-up slowed with it.
+    // Now, once the live file passes MaxLogBytes, it is renamed usage-<UTC stamp>.jsonl beside it (never overwriting)
+    // and a fresh file starts; the visits in every rotated file are kept as one number in a sidecar,
+    // <log>.visits, so start-up reads that number and the live file only (at most MaxLogBytes plus one line).
+    /// <summary>The configuration key for the rotation size (bytes).</summary>
+    public const string MaxLogBytesKey = "Analytics:MaxLogBytes";
+    /// <summary>The default rotation size: 16 MiB (roughly 100,000 visits).</summary>
+    public const long DefaultMaxLogBytes = 16L * 1024 * 1024;
+    private readonly long _maxLogBytes;
+    private long _liveBytes;        // size of the live file (start-up length plus every line appended since)
+    private int _liveVisits;        // visit lines in the live file
+    private int _rotatedVisits;     // visit lines in every rotated file (the sidecar's number)
+    /// <summary>The rotation size in force (<see cref="MaxLogBytesKey"/>).</summary>
+    public long MaxLogBytes => _maxLogBytes;
     /// <summary>Sessions started since this server process started.</summary>
     public int SessionsThisRun => _sessionsThisRun;
     /// <summary>All-time visits recorded in the usage log (connect events).</summary>
@@ -50,13 +66,22 @@ public sealed class PresenceService : IDisposable
 
     public PresenceService(IConfiguration config)
     {
+        ArgumentNullException.ThrowIfNull(config);
+        _maxLogBytes = ParseMaxLogBytes(config[MaxLogBytesKey]);
         _logPath = ResolveLogPath(config, out string? disabledReason);
         LogDisabledReason = disabledReason;
         // The log stays best-effort (the app starts either way), but an operator now sees that it is off and why,
         // instead of finding an empty visit count weeks later (systemd ProtectSystem=strict, a container user).
         if (disabledReason is not null)
             Console.Error.WriteLine($"GridSim.Web: warning: the usage log is off: {disabledReason}");
-        _totalVisits = CountVisits(_logPath);
+        // Bug #188: the rotated visits from the sidecar, plus the live file (bounded by the rotation size).
+        _rotatedVisits = ReadRotatedVisits(_logPath);
+        _liveVisits = CountVisits(_logPath);
+        _liveBytes = _logPath is not null && File.Exists(_logPath) ? new FileInfo(_logPath).Length : 0;
+        _totalVisits = _rotatedVisits + _liveVisits;
+        // A log already above the size (an install upgraded from before rotation) is rotated now, once.
+        if (_logPath is not null && _liveBytes > _maxLogBytes)
+            lock (_logLock) RotateLocked();
         Sample(null);   // prime the CPU delta + first readings
         _sampler = new Timer(Sample, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(3));
     }
@@ -102,13 +127,76 @@ public sealed class PresenceService : IDisposable
         catch { return 0; }
     }
 
-    private void LogEvent(object ev)
+    // Bug #188: the rotation size, checked once at start-up (fail loud: a value that is not a whole number of at least
+    // 4096 bytes stops start-up naming the setting). Unset means DefaultMaxLogBytes.
+    private static long ParseMaxLogBytes(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return DefaultMaxLogBytes;
+        if (!long.TryParse(text.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out long v) || v < 4096)
+            throw new InvalidOperationException(
+                $"The setting {MaxLogBytesKey} ('{text}') is not valid: it is the usage log's rotation size, a whole number of bytes, at least 4096.");
+        return v;
+    }
+
+    // Bug #188: the sidecar holding the number of visits in every rotated file.
+    private static string SidecarPath(string logPath) => logPath + ".visits";
+
+    private static int ReadRotatedVisits(string? logPath)
+    {
+        if (logPath is null) return 0;
+        try
+        {
+            string side = SidecarPath(logPath);
+            if (!File.Exists(side)) return 0;
+            return int.TryParse(File.ReadAllText(side).Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out int n) ? n : 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return 0; }
+    }
+
+    // Bug #188: rename the live file to usage-<UTC stamp>.jsonl (with -N added if that exists), add its visits to the
+    // sidecar first (written to a temp file and moved over, so a crash never leaves a half-written number), and start a
+    // fresh live file. Called under _logLock. Best-effort like every other log write: a failure is reported once.
+    private void RotateLocked()
+    {
+        if (_logPath is null) return;
+        try
+        {
+            int rotated = _rotatedVisits + _liveVisits;
+            string side = SidecarPath(_logPath);
+            string tmp = side + ".tmp";
+            File.WriteAllText(tmp, rotated.ToString(CultureInfo.InvariantCulture));
+            File.Move(tmp, side, overwrite: true);
+            string dir = Path.GetDirectoryName(_logPath)!;
+            string stem = Path.GetFileNameWithoutExtension(_logPath);
+            string stamp = DateTime.UtcNow.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
+            string target = Path.Combine(dir, $"{stem}-{stamp}.jsonl");
+            for (int k = 2; File.Exists(target); k++) target = Path.Combine(dir, $"{stem}-{stamp}-{k}.jsonl");
+            File.Move(_logPath, target);
+            File.AppendAllText(_logPath, string.Empty);
+            _rotatedVisits = rotated;
+            _liveVisits = 0;
+            _liveBytes = 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            if (Interlocked.Exchange(ref _appendFailureReported, 1) == 0)
+                Console.Error.WriteLine($"GridSim.Web: warning: the usage log '{_logPath}' could not be rotated ({ex.GetType().Name}: {ex.Message}).");
+        }
+    }
+
+    private void LogEvent(object ev, bool isVisit = false)
     {
         if (_logPath is null) return;
         try
         {
             string line = System.Text.Json.JsonSerializer.Serialize(ev) + "\n";
-            lock (_logLock) File.AppendAllText(_logPath, line);
+            lock (_logLock)
+            {
+                File.AppendAllText(_logPath, line);
+                _liveBytes += System.Text.Encoding.UTF8.GetByteCount(line);
+                if (isVisit) _liveVisits++;
+                if (_liveBytes > _maxLogBytes) RotateLocked();   // bug #188
+            }
         }
         catch (Exception ex)
         {
@@ -133,7 +221,7 @@ public sealed class PresenceService : IDisposable
         {
             t = now.ToString("o"), ev = "visit", id = v.Handle, @case = v.Case, raw = v.Raw,
             connected = v.ConnectedUtc.ToString("o"), dur_s = dur, replay = v.ReplayUtc?.ToString("o"),
-        });
+        }, isVisit: true);
     }
 
     // ---- presence -----------------------------------------------------------

@@ -35,6 +35,57 @@ public sealed class InterposePipeline
     /// <summary>The frame-correction stage (exposes accept/reject tallies for the monitor).</summary>
     public FrameCorrection Correction { get; }
 
+    /// <summary>
+    /// GR-305 (November 2026), opt-in: the widest spread allowed between the earliest and the latest device time tag in
+    /// one window. The horizon is judged on the window instant (its newest time tag) only, so without a limit a point
+    /// stamped long before the others is merged into the same snapshot. With a limit, a window whose time-tagged points
+    /// span more than it is refused whole at flush: it is cleared, counted in <see cref="SpreadRefused"/>, and an
+    /// <see cref="InvalidDataException"/> marked by <see cref="IsSpreadRefusal"/> is thrown naming the spread (it is not
+    /// counted as a map error). Null, the default, is the old behaviour (no check), so no pinned window moves. Points with
+    /// no time tag take no part. Must be zero or more.
+    /// </summary>
+    public TimeSpan? MaxStampSpread
+    {
+        get => _maxStampSpread;
+        init
+        {
+            if (value is { } v && v < TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "A time-tag spread limit must be zero or more (or null for no limit).");
+            _maxStampSpread = value;
+        }
+    }
+    private readonly TimeSpan? _maxStampSpread;
+
+    /// <summary>GR-305: windows refused because their time tags spread wider than <see cref="MaxStampSpread"/>.</summary>
+    public long SpreadRefused { get; private set; }
+
+    private const string SpreadRefusalKey = "GridSim.InterposeStampSpreadRefusal";
+
+    /// <summary>GR-305: true when <paramref name="ex"/> is a flush refused for its time-tag spread (not a crosswalk
+    /// mismatch). InvalidDataException is sealed, so the refusal is marked in <see cref="Exception.Data"/>.</summary>
+    public static bool IsSpreadRefusal(Exception ex) => ex is InvalidDataException && ex.Data.Contains(SpreadRefusalKey);
+
+    // GR-305: refuse (clear, count, throw) a window whose time tags spread wider than the opt-in limit.
+    private void RefuseWideSpread()
+    {
+        if (_maxStampSpread is not { } limit) return;
+        DateTime? first = null, last = null;
+        foreach (RtuPoint p in _window)
+        {
+            if (p.StampUtc is not DateTime s) continue;
+            DateTime u = UtcTime.Normalise(s);
+            if (first is null || u < first) first = u;
+            if (last is null || u > last) last = u;
+        }
+        if (first is not DateTime f || last is not DateTime l || l - f <= limit) return;
+        _window.Clear();
+        SpreadRefused++;
+        var ex = new InvalidDataException(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"window refused: its time tags span {(l - f).TotalMilliseconds} ms ({f:o} to {l:o}), more than the {limit.TotalMilliseconds} ms limit; a point stamped that far from the others would be merged into one snapshot (GR-305)."));
+        ex.Data[SpreadRefusalKey] = true;
+        throw ex;
+    }
+
     public InterposePipeline(IRtuProtocol protocol, RtuPointMap crosswalk,
         QualityFold? quality = null, string caseName = "rtu")
     {
@@ -82,6 +133,7 @@ public sealed class InterposePipeline
     public MeasurementSet? FlushWindow(DateTime fallbackUtc, DateTime? utcNow = null)
     {
         if (_window.Count == 0) return null;
+        RefuseWideSpread();
         DateTime windowUtc = WindowInstant(fallbackUtc);
 
         try
@@ -125,6 +177,7 @@ public sealed class InterposePipeline
     public InterposeFlush? FlushWindow(DateTime fallbackUtc, InterposeFreshPolicy freshPolicy, DateTime? utcNow = null)
     {
         if (_window.Count == 0) return null;
+        RefuseWideSpread();
         try
         {
             DateTime now = ForwardInferenceGuard.RequireNotAfterRealClock(utcNow, "the interpose flush 'now'");

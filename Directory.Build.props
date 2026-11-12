@@ -16,6 +16,13 @@
          restored dependency set (and therefore the SBOM built from it) cannot drift silently. Generating the
          lock files is automatic; CI can add the locked restore mode to refuse a restore that would change them. -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Bug #161: on CI the restore runs in LOCKED mode, so a restore that would change any packages.lock.json (for
+         example a newer SDK that brings its own implicit Microsoft.NET.ILLink.Tasks or AspNetCore Internal.Assets
+         version) fails loud instead of rewriting the locks and stamping the build "-dirty". The SDK itself is pinned
+         by global.json at the repository root (exact version, no roll-forward), which every workflow installs from.
+         A local build is left in the normal mode so a developer can still refresh the locks on purpose; to check a
+         local tree the same way CI does, run: dotnet restore GridSim.slnx locked-mode (the double-dash flag). -->
+    <RestoreLockedMode Condition="'$(GITHUB_ACTIONS)' == 'true'">true</RestoreLockedMode>
   </PropertyGroup>
 
   <!-- CAF A4.b (secure software development and support): the release build injects the SHA-256 of the SBOM it
@@ -57,7 +64,7 @@
        the web OpenAPI document and the desktop app's About box all show it.
        =================================================================================================== -->
   <PropertyGroup Label="Version">
-    <Version>2.1.002</Version>
+    <Version>2.1.031</Version>
     <!-- Keep the "+<commit>" suffix on InformationalVersion (this is the SDK default; stated here so
          nobody turns it off by accident, because the CLI version flag relies on it to name the exact commit). -->
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>

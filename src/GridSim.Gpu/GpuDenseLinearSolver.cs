@@ -59,6 +59,7 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
         // Flatten A and b into a row-major augmented matrix [A | b].
         var aug = new double[n * ncol];
         double aNorm = 0.0;   // matrix scale for the relative near-singular floor (mirrors DenseLuSolver)
+        var rowFloor = new double[n];   // GR-044: each row's largest |A(i,:)|, then its pivot floor (mirrors DenseLuSolver)
         for (int i = 0; i < n; i++)
         {
             int baseRow = i * ncol;
@@ -72,10 +73,11 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
                 aug[baseRow + j] = v;
                 double av = Math.Abs(v);
                 if (av > aNorm) aNorm = av;
+                if (av > rowFloor[i]) rowFloor[i] = av;
             }
             aug[baseRow + rhs] = b[i];
         }
-        double pivotFloor = GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm);   // the shared relative floor (WS5)
+        GridSim.Core.Numerics.NumericTolerances.ToRowPivotFloors(rowFloor, aNorm);   // the shared relative floor, per row
         // Bug #40: a NaN or infinite right-hand side is refused, as the CPU dense LU refuses it (it used to come back as a
         // NaN / Inf solution). Read-only pre-checks: on finite input the device arithmetic is unchanged. Without a device
         // the CPU dense LU above makes the same checks.
@@ -89,11 +91,13 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
             using var dPiv = acc.Allocate1D<int>(1);      // pivot row for the current column
             using var dInfo = acc.Allocate1D<int>(1);     // 0 = ok; else (firstSingularCol + 1)
             using var dX = acc.Allocate1D<double>(n);     // solution
+            using var dFloor = acc.Allocate1D<double>(n); // GR-044: per-row floors, swapped with their rows
             dAug.CopyFromCPU(aug);
+            dFloor.CopyFromCPU(rowFloor);
             dInfo.CopyFromCPU(new int[1]);                // clear the singularity flag
 
-            var pivot = acc.LoadStreamKernel<ArrayView<double>, ArrayView<int>, ArrayView<int>, int, int, int, double>(PivotKernel);
-            var swap = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<int>, int, int>(SwapRowsKernel);
+            var pivot = acc.LoadStreamKernel<ArrayView<double>, ArrayView<int>, ArrayView<int>, int, int, int, ArrayView<double>>(PivotKernel);
+            var swap = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<int>, int, int, ArrayView<double>>(SwapRowsKernel);
             var eliminate = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, int, int, int>(EliminateKernel);
             var divide = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<double>, int, int, int>(BackDivideKernel);
             var backUpd = acc.LoadAutoGroupedStreamKernel<Index1D, ArrayView<double>, ArrayView<double>, int, int, int>(BackUpdateKernel);
@@ -104,9 +108,9 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
             for (int k = 0; k < n; k++)
             {
                 // Pick the pivot row on-device (argmax of |A[k..,k]|) -> dPiv[0].
-                pivot(pivotConfig, dAug.View, dPiv.View, dInfo.View, k, n, ncol, pivotFloor);
-                // Swap the pivot row into place across all columns.
-                swap(ncol, dAug.View, dPiv.View, k, ncol);
+                pivot(pivotConfig, dAug.View, dPiv.View, dInfo.View, k, n, ncol, dFloor.View);
+                // Swap the pivot row (and its floor) into place across all columns.
+                swap(ncol, dAug.View, dPiv.View, k, ncol, dFloor.View);
                 // Eliminate every row below the pivot in one launch (the trailing update).
                 eliminate(n, dAug.View, k, n, ncol);
             }
@@ -116,8 +120,8 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
             dInfo.CopyToCPU(infoHost);
             if (infoHost[0] != 0)
                 throw new InvalidOperationException(
-                    $"Near-singular matrix in GPU LU solve: pivot at or below the relative floor {pivotFloor:E3} "
-                    + $"(matrix scale {aNorm:E3}) at column {infoHost[0] - 1}.");
+                    $"Near-singular matrix in GPU LU solve: pivot at or below its row's relative floor "
+                    + $"(1e-12 x the pivot row's largest entry; matrix scale {aNorm:E3}) at column {infoHost[0] - 1}.");
 
             // ---- Back substitution (column sweep, queued, no per-row host stalls) ----
             for (int i = n - 1; i >= 0; i--)
@@ -138,7 +142,7 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
     /// Writes the pivot row into <c>piv[0]</c>; if the largest magnitude is zero the column is
     /// singular and <c>info[0]</c> is set to (k+1) (only the first failing column matters).
     /// </summary>
-    private static void PivotKernel(ArrayView<double> aug, ArrayView<int> piv, ArrayView<int> info, int k, int n, int ncol, double pivotFloor)
+    private static void PivotKernel(ArrayView<double> aug, ArrayView<int> piv, ArrayView<int> info, int k, int n, int ncol, ArrayView<double> rowFloor)
     {
         var sVal = SharedMemory.Allocate1D<double>(ReduceGroupSize);
         var sIdx = SharedMemory.Allocate1D<int>(ReduceGroupSize);
@@ -173,16 +177,24 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
             // Relative near-singular floor, mirroring the CPU DenseLuSolver:
             // an exact-zero test alone accepted ill-conditioned pivots and
             // returned garbage as success (exact zero = the aNorm==0 subcase).
-            if (sVal[0] <= pivotFloor) info[0] = k + 1;
+            // GR-044: the floor of the original row now at the winning position (floors travel with their rows).
+            if (sVal[0] <= rowFloor[sIdx[0]]) info[0] = k + 1;
         }
     }
 
     /// <summary>Swap rows k and piv[0] across all ncol columns (no-op when they are equal).</summary>
-    private static void SwapRowsKernel(Index1D index, ArrayView<double> aug, ArrayView<int> piv, int k, int ncol)
+    private static void SwapRowsKernel(Index1D index, ArrayView<double> aug, ArrayView<int> piv, int k, int ncol, ArrayView<double> rowFloor)
     {
         int p = piv[0];
         if (p == k) return;
         int j = index.X;
+        if (j == 0)
+        {
+            // GR-044: one thread carries the row's floor with it.
+            double f = rowFloor[k];
+            rowFloor[k] = rowFloor[p];
+            rowFloor[p] = f;
+        }
         int a = k * ncol + j;
         int b = p * ncol + j;
         double tmp = aug[a];

@@ -25,6 +25,9 @@ public static class NumericTolerances
     /// twelve of its sixteen significant digits in that direction, so any answer built on it is noise. The
     /// reference scale is the largest magnitude anywhere in the ORIGINAL matrix (see <see cref="PivotFloor"/>),
     /// which makes the test scale-independent; an exact-zero pivot is the <c>max|A_ij| = 0</c> subcase.
+    /// GR-044 (November 2026): the real LUs (dense, batched, sparse and its replays, Kron, ILGPU and ROCm) take the
+    /// scale of the ORIGINAL ROW that wins the pivot instead (<see cref="ToRowPivotFloors"/>), which is also invariant
+    /// under row scaling; the complex LUs, QR, eigen and estimator inverses keep the whole-matrix scale.
     /// Every linear-system elimination site that used 1e-12, 1e-13, 1e-14 (relative or absolute), 1e-300 or exact zero
     /// for this concept now uses this one value. Not every Numerics threshold is this concept: the bounded simplex keeps
     /// its own absolute EtaPivotFloor (1e-12) and RefactorPivotClamp (1e-14), Complex2x2 a relative 1e-15, and
@@ -42,6 +45,105 @@ public static class NumericTolerances
             throw new ArgumentOutOfRangeException(nameof(matrixScale), matrixScale,
                 "The matrix scale for a pivot floor must be a non-negative number (the largest |A_ij|).");
         return matrixScale * RelativePivotFloor;
+    }
+
+    /// <summary>
+    /// GR-044 (November 2026): turn per-row scales (the largest |A(r,:)| of each row of the ORIGINAL matrix) into
+    /// per-row pivot floors, in place: <c>floor_r = RelativePivotFloor * max|A(r,:)|</c>. The LUs test the pivot of a
+    /// step against the floor of the original row that WINS that step's pivot search, instead of one floor for the
+    /// whole matrix.
+    /// <para><b>Why.</b> A whole-matrix floor is not invariant under row scaling: it refused well-posed systems such as
+    /// diag(1e6, 1e-9) purely because one equation was written in smaller units. The row floor refuses exactly the rows
+    /// that have cancelled to rounding level relative to their own scale.</para>
+    /// <para><b>Bit-identity.</b> Every row scale is at most the matrix scale and multiplication by the positive
+    /// constant is monotone, so <c>floor_r &lt;= PivotFloor(matrixScale)</c> for every row: a pivot the whole-matrix
+    /// floor accepted is accepted here too, with the same pivot row and the same arithmetic. Only refusals can turn into
+    /// factorisations.</para>
+    /// <para><b>Non-finite matrices.</b> When <paramref name="matrixScale"/> is +infinity (an infinite entry somewhere),
+    /// every row keeps the whole-matrix floor (infinite), so such a matrix is refused exactly as before; a NaN or
+    /// negative scale, or a row scale above the matrix scale, is a caller error and fails loud.</para>
+    /// </summary>
+    public static void ToRowPivotFloors(Span<double> rowScales, double matrixScale)
+    {
+        double whole = PivotFloor(matrixScale);   // throws on a NaN or negative matrix scale
+        bool infinite = double.IsPositiveInfinity(matrixScale);
+        for (int r = 0; r < rowScales.Length; r++)
+        {
+            double s = rowScales[r];
+            if (double.IsNaN(s) || s < 0.0)
+                throw new ArgumentException($"Row {r} has the scale {s:R}; a row scale must be a non-negative number (the largest |A(r,:)|).", nameof(rowScales));
+            if (s > matrixScale)
+                throw new ArgumentException($"Row {r} has the scale {s:R}, above the matrix scale {matrixScale:R}; the matrix scale must be the largest row scale.", nameof(rowScales));
+            rowScales[r] = infinite ? whole : PivotFloor(s);
+        }
+    }
+
+    /// <summary>GR-044: the per-row pivot floors of a square row-major matrix (<paramref name="n"/> x <paramref name="n"/>,
+    /// element (i, j) at <c>i*n + j</c>) whose largest entry is <paramref name="matrixScale"/>. See
+    /// <see cref="ToRowPivotFloors"/>. A NaN entry makes its row's scale NaN, which fails loud there.</summary>
+    public static double[] RowPivotFloorsRowMajor(ReadOnlySpan<double> rowMajor, int n, double matrixScale)
+    {
+        if (n < 0) throw new ArgumentOutOfRangeException(nameof(n), n, "The matrix order must be non-negative.");
+        if (rowMajor.Length < (long)n * n)
+            throw new ArgumentException($"The matrix holds {rowMajor.Length} values but an order-{n} matrix needs {(long)n * n}.", nameof(rowMajor));
+        var floors = new double[n];
+        for (int i = 0; i < n; i++) floors[i] = MaxAbs(rowMajor.Slice(i * n, n));
+        ToRowPivotFloors(floors, matrixScale);
+        return floors;
+    }
+
+    /// <summary>GR-044: the per-row pivot floors of an <paramref name="n"/> x <paramref name="n"/> matrix held
+    /// compressed-sparse-column (<paramref name="ap"/>, <paramref name="ai"/>, <paramref name="ax"/>; only the first
+    /// <c>ap[n]</c> slots are live) whose largest entry is <paramref name="matrixScale"/>. Rows are the ORIGINAL row
+    /// indices <paramref name="ai"/> holds. See <see cref="ToRowPivotFloors"/>.</summary>
+    public static double[] RowPivotFloorsCsc(int n, ReadOnlySpan<int> ap, ReadOnlySpan<int> ai, ReadOnlySpan<double> ax, double matrixScale)
+    {
+        if (n < 0) throw new ArgumentOutOfRangeException(nameof(n), n, "The matrix order must be non-negative.");
+        if (ap.Length < n + 1) throw new ArgumentException($"The column pointer holds {ap.Length} values; an order-{n} matrix needs {n + 1}.", nameof(ap));
+        var floors = new double[n];
+        int nnz = ap[n];
+        for (int p = 0; p < nnz; p++)
+        {
+            int r = ai[p];
+            if (r < 0 || r >= n) throw new ArgumentException($"Entry {p} names row {r}, outside the order-{n} matrix.", nameof(ai));
+            double v = ax[p];
+            if (double.IsNaN(v)) { floors[r] = double.NaN; continue; }
+            double av = Math.Abs(v);
+            if (av > floors[r]) floors[r] = av;   // NaN never compares greater, so a NaN row stays NaN
+        }
+        ToRowPivotFloors(floors, matrixScale);
+        return floors;
+    }
+
+    /// <summary>
+    /// GR-044: index of the first diagonal entry of a LAPACK-style factored matrix (getrf) whose magnitude is at or below
+    /// the floor of the ORIGINAL row that became U row k, or -1 when every pivot clears its floor. <paramref name="ipivOneBased"/>
+    /// is getrf's pivot vector (step k swapped rows k and ipiv[k] - 1, applied in order); replaying it maps U row k to its
+    /// original row. <paramref name="rowFloors"/> are the original rows' floors (<see cref="ToRowPivotFloors"/>). With
+    /// partial pivoting this is the test the CPU LU applies during elimination.
+    /// </summary>
+    public static int FirstSingularPivot(ReadOnlySpan<double> luColumnMajor, int n, ReadOnlySpan<int> ipivOneBased, ReadOnlySpan<double> rowFloors)
+    {
+        if (n < 0) throw new ArgumentOutOfRangeException(nameof(n), n, "The matrix order must be non-negative.");
+        if (luColumnMajor.Length < (long)n * n)
+            throw new ArgumentException($"The factored matrix holds {luColumnMajor.Length} values but an order-{n} matrix needs {(long)n * n}.", nameof(luColumnMajor));
+        if (ipivOneBased.Length < n)
+            throw new ArgumentException($"The pivot vector holds {ipivOneBased.Length} values; an order-{n} factorisation has {n}.", nameof(ipivOneBased));
+        if (rowFloors.Length < n)
+            throw new ArgumentException($"The row floors hold {rowFloors.Length} values; an order-{n} matrix has {n} rows.", nameof(rowFloors));
+        var origin = new int[n];   // origin[i]: the original row now at position i
+        for (int i = 0; i < n; i++) origin[i] = i;
+        for (int k = 0; k < n; k++)
+        {
+            int p = ipivOneBased[k] - 1;
+            if (p < k || p >= n)
+                throw new ArgumentException($"Pivot {k} names row {p + 1} (one-based); getrf pivots lie in [{k + 1}, {n}].", nameof(ipivOneBased));
+            (origin[k], origin[p]) = (origin[p], origin[k]);
+            double u = luColumnMajor[k * n + k];
+            // NaN fails every comparison, so test it explicitly: a NaN pivot is never a valid factorisation.
+            if (double.IsNaN(u) || Math.Abs(u) <= rowFloors[origin[k]]) return k;
+        }
+        return -1;
     }
 
     /// <summary>The largest absolute entry of a dense matrix (the reference scale for

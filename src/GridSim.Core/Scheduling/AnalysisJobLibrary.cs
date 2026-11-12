@@ -58,9 +58,12 @@ public static class AnalysisJobLibrary
             for (int i = 0; i < n; i++)
                 if (r.LineFlows[i].LoadingPercent >= opt.HotBranchLoadingPercent) hot.Add(i);
             if (hot.Count == 0) return Array.Empty<ContingencyResult>();
-            return ContingencyAnalysis.ScreenBranchesParallel(
+            IReadOnlyList<ContingencyResult> screened = ContingencyAnalysis.ScreenBranchesParallel(
                 m, ctx.SolverFactory, WithCancellation(solveOpt, ct), maxDegreeOfParallelism: 1,
                 branchIndices: hot, ct: ct);
+            // GR-339: every result names the frame it was screened on (all one frame here, the cycle's own).
+            int tick = ctx.Frame.Tick;
+            return screened.Select(c => c with { FrameTick = tick }).ToArray();
         },
     };
 
@@ -76,7 +79,11 @@ public static class AnalysisJobLibrary
     /// to discard all partial work on cancellation, so on a large case (gb-full: about 740 outages per shard
     /// against a 1,000 ms window) every shard was cancelled every cycle and rolling N-1 coverage never reached
     /// even one shard. A resumed shard's results were each screened against the frame current when that
-    /// outage was reached - the same frame mixing that rolling coverage already has across shards.</para>
+    /// outage was reached - the same frame mixing that rolling coverage already has across shards. Since GR-339
+    /// (November 2026) each result carries the tick of the frame it was screened on
+    /// (<see cref="ContingencyResult.FrameTick"/>) and <see cref="FrameRange"/> gives a shard's range, so a mixed
+    /// shard is labelled rather than read as one instant. Discarding the partial results on a frame change was
+    /// rejected: under live load a large shard would then never complete.</para>
     ///
     /// <para><b>Keyed by branch identity (R288).</b> The chunk is fixed at construction, but a frame's model can
     /// have fewer branches (IslandPartition drops every branch of a dead island once a recloser holds a spur
@@ -142,6 +149,32 @@ public static class AnalysisJobLibrary
         }
     }
 
+    /// <summary>
+    /// GR-339 (November 2026): the lowest and highest <see cref="ContingencyResult.FrameTick"/> in a job payload, or null
+    /// when the payload is not a list of contingency results or none of them carries a tick. A resumed N-1 shard can
+    /// hold outages screened on several frames; the range says so. Reporting only; it changes no result.
+    /// </summary>
+    public static (int First, int Last)? FrameRange(object? payload)
+    {
+        if (payload is not IReadOnlyList<ContingencyResult> list) return null;
+        int? lo = null, hi = null;
+        foreach (ContingencyResult c in list)
+        {
+            if (c.FrameTick is not int t) continue;
+            if (lo is null || t < lo) lo = t;
+            if (hi is null || t > hi) hi = t;
+        }
+        return lo is int a && hi is int b ? (a, b) : null;
+    }
+
+    /// <summary>GR-339: <see cref="FrameRange"/> as display text ("frame 12" or "frames 12..15"), or null.</summary>
+    public static string? FrameRangeText(object? payload) => FrameRange(payload) switch
+    {
+        null => null,
+        (int a, int b) when a == b => FormattableString.Invariant($"frame {a}"),
+        (int a, int b) => FormattableString.Invariant($"frames {a}..{b}"),
+    };
+
     /// <summary>How far a resumable shard has got: the next chunk position and the results so far (R042).</summary>
     private sealed class ShardProgress
     {
@@ -172,7 +205,8 @@ public static class AnalysisJobLibrary
                 {
                     ct.ThrowIfCancellationRequested();
                     if (index.TryGetValue(chunk[progress.Next], out int bi))
-                        progress.Done.Add(ContingencyAnalysis.ScreenOutage(m, new[] { bi }, solver, options));
+                        progress.Done.Add(ContingencyAnalysis.ScreenOutage(m, new[] { bi }, solver, options)
+                            with { FrameTick = ctx.Frame.Tick });   // GR-339: the frame this outage was screened on
                     // else: the branch is not in this frame (a de-energised dead island) - nothing to outage.
                     progress.Next++;
                 }

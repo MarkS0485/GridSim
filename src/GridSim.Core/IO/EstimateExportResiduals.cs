@@ -104,7 +104,8 @@ public static class EstimateExportResiduals
                     Circuit: OptionalString(m, "circuit"),
                     // The export always writes the source tag; an absent one reads as the empty class, exactly as
                     // NoiseFloorAnalysis treats a null source.
-                    Source: OptionalString(m, "source") ?? "");
+                    Source: OptionalString(m, "source") ?? "",
+                    Provenance: OptionalString(m, "provenance"));   // GR-529: optional, absent = null
 
                 list.Add(new MeasurementResidual(
                     measurement,

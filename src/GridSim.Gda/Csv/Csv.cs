@@ -64,6 +64,27 @@ public sealed class CsvTable : IDisposable
     public bool HasColumn(string name) => IndexOf(name) >= 0;
 
     /// <summary>
+    /// GR-289 (November 2026): refuse a table that lacks any of the named columns, before a single row is read. A column
+    /// that does not exist reads as blank (text) or 0 (number) on every row (<see cref="CsvRow"/>), so a source that
+    /// renamed "R1" to "R1 (ohm)" used to build a model of zero-impedance branches without a word. The error names
+    /// every missing column, the table and the headers that were found. A duplicated header throws as a lookup of it
+    /// always does (GR-793).
+    /// </summary>
+    /// <param name="what">What the table is, for the message (for example "LTDS circuits table").</param>
+    /// <param name="columns">The column names the caller will read.</param>
+    public void RequireColumns(string what, params string[] columns)
+    {
+        ArgumentNullException.ThrowIfNull(what);
+        ArgumentNullException.ThrowIfNull(columns);
+        var missing = columns.Where(c => !HasColumn(c)).ToList();
+        if (missing.Count == 0) return;
+        throw new InvalidDataException(
+            $"{what}: the CSV has no column {string.Join(", ", missing.Select(m => "'" + m + "'"))}, which the reader needs " +
+            "(a column that is absent would read as blank or 0 on every row). Headers found: " +
+            string.Join(", ", Headers.Select(h => "'" + h + "'")) + ".");
+    }
+
+    /// <summary>
     /// Stream the data rows. Each row is reusable only within its iteration. A row with FEWER cells than headers is
     /// accepted (its missing trailing cells read as empty); a row with MORE cells than headers whose extra cells are
     /// not all blank throws (GR-811), because that is almost always an unquoted comma inside a value, which shifts

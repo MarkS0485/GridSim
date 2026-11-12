@@ -2132,7 +2132,7 @@ non-finite `double` as `null`.
 `fleet[]` (`bus`, `mw`, `fuel`, `fuelColor`, `synchronous`, `name`, `powerFlowOnly`), `boundaries[]` (`name`, `limitMw`,
 `edgeIndices`) and `isGeolocated`. `FrameEnvelope` (`type:"state"`) is `tick`, `hour`, `clock`, `label`, `headline`
 (`frequencyHz`, `rocofHzPerS`, `generationMw`, `demandMw`, `lossMw`, `inertiaGvaS`, `avgVoltagePu`, `converged`,
-`minVoltagePu`, `maxVoltagePu`), `nodes[]` (`id`, `vm`, `vaDeg`, `pInjMw`, `qInjMvar`), `edges[]` (`index`, `pFromMw`,
+`minVoltagePu`, `maxVoltagePu`, `notSolved`: true on a raw replay frame, where `converged` is false because no power flow ran), `nodes[]` (`id`, `vm`, `vaDeg`, `pInjMw`, `qInjMvar`), `edges[]` (`index`, `pFromMw`,
 `qFromMvar`, `pLossMw`, `loadingFrac`, joined to the topology by `index`), `boundaries[]` (`name`, `flowMw`, `limitMw`,
 `loadingPercent`, `overloaded`), then one nullable sub-block per dashboard tab, all defined in
 `src/GridSim.Web/Projection/Dtos.cs`.

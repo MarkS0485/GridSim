@@ -206,7 +206,7 @@
                        Foreground="#FF5B5B" FontWeight="Bold" FontSize="14" TextWrapping="Wrap" TextAlignment="Center"
                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40,0" />
           </Border>
-          <TextBlock Text="GB TRANSMISSION NETWORK  LIVE POWER FLOW" Classes="PanelHeader"
+          <TextBlock x:Name="NetworkPanelHeader" Text="GB TRANSMISSION NETWORK  LIVE POWER FLOW" Classes="PanelHeader"
                      Margin="14,10" VerticalAlignment="Top" HorizontalAlignment="Left" />
 
           <!-- bridge status pill: connection state / horizon rejections / query errors (GDA bridge only) -->

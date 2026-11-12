@@ -74,7 +74,7 @@ distribute it in compiled form as part of them, with **no Bus limit**. Condition
 - You may not redistribute or resell the Software's source code itself, nor ship a
   substantially unmodified copy of the Software as a competing standalone product.
 - The licence covers **every release within the licensed Major Version** (the
-  current Major Version is 1; the current release is 1.3.0). Your rights to the
+  current Major Version is 2; the current release is 2.1.000 (RC-1)). Your rights to the
   releases You have licensed are perpetual. A new Major Version requires a new licence.
 
 ## 6. Commercial Deployment Licence

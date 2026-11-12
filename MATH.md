@@ -24,9 +24,9 @@ way in new code. The full specification is
 
 1. **Its own elementary functions.** `DetMath` (`src/GridSim.Core/Numerics/DetMath.cs`) is a line-by-line C# port of
    Sun's FDLIBM 5.3, the library Java's `StrictMath` is defined by: `Sin`, `Cos`, `SinCos`, `Tan`, `Asin`, `Acos`,
-   `Atan`, `Atan2`, `Exp`, `Expm1`, `Log`, `Log10`, `Pow`, `Sinh`, `Cosh`, plus the complex `Phase`, `FromPolar`, `Sinh`
-   and `Tanh`. It is plain IEEE 754 arithmetic and integer bit work, so it gives the same bits everywhere. It is checked
-   bit for bit against Java 21 `StrictMath` on special values and about 1.1 million pseudo-random arguments.
+   `Atan`, `Atan2`, `Exp`, `Expm1`, `Log`, `Log10`, `Pow`, `Sinh`, `Cosh`, `Tanh`, plus the complex `Phase` and
+   `FromPolar`. It is plain IEEE 754 arithmetic and integer bit work, so it gives the same bits everywhere. It is checked
+   bit for bit against Java 21 `StrictMath` on special values and about 1.1 million results across 14 functions.
 2. **No fused multiply-add** in any numerical path.
 3. **One defined order for every reduction.** The vector kernels (`SimdKernels`) pick AVX-512, AVX2, SSE or scalar at
    run time, and each arm performs exactly the same IEEE operations in the same order. The dot product, for example,

@@ -361,7 +361,7 @@ public sealed record QstsStudy
     public void Validate(GridModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
-        var p = new List<string>();
+        var p = new InvariantProblemList();   // bug #193: every interpolated number in a message is formatted invariantly
         if (StepSeconds < 1) p.Add($"stepSeconds must be a whole number of seconds, at least 1 (got {StepSeconds}).");
         if (Steps < 1) p.Add($"steps must be at least 1 (got {Steps}).");
         if (StartSecondOfDay < 0 || StartSecondOfDay >= 86400) p.Add($"startSecondOfDay must be in [0, 86400) (got {StartSecondOfDay}).");

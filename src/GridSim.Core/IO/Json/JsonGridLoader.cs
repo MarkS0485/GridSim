@@ -533,7 +533,26 @@ public static class JsonGridLoader
         {
             throw new InvalidDataException($"{file}: {ex.Message}", ex);
         }
+        catch (Exception ex) when (IsRawJsonFailure(ex))
+        {
+            // GR-642: System.Text.Json's other refusals of the input (not a JsonException) are the case's problem too.
+            throw new InvalidDataException($"{file}: {ex.Message}", ex);
+        }
     }
+
+    /// <summary>
+    /// GR-642 (November 2026): an exception System.Text.Json itself raised about the input that is not a
+    /// <see cref="JsonException"/>: an <see cref="InvalidOperationException"/> (for example a JsonElement read as the wrong
+    /// kind), a <see cref="FormatException"/> or <see cref="OverflowException"/> (a number out of range), a
+    /// <see cref="KeyNotFoundException"/> (a missing property) or a <see cref="NotSupportedException"/>. Told apart from
+    /// the same types raised by GridSim's own code (a defect, which must surface) by the exception's source assembly
+    /// (System.Text.Json, which marks some as "System.Text.Json.Rethrowable"). The loaders turn these into
+    /// <see cref="InvalidDataException"/> naming the file, so a caller (the case editor) need catch only the loader's own
+    /// refusal type.
+    /// </summary>
+    internal static bool IsRawJsonFailure(Exception ex) =>
+        ex is InvalidOperationException or FormatException or OverflowException or KeyNotFoundException or NotSupportedException
+        && ex.Source is string source && source.StartsWith("System.Text.Json", StringComparison.Ordinal);
 }
 
 /// <summary>

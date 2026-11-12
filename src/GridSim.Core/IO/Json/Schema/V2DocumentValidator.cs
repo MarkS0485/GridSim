@@ -59,8 +59,25 @@ public static class V2DocumentValidator
         ArgumentNullException.ThrowIfNull(paths);
         ArgumentNullException.ThrowIfNull(schemasDir);
         JsonSchemaSubset schemas = JsonSchemaSubset.LoadDirectory(schemasDir);
-        var validator = new SchemaValidator(schemas);
         KindSpecRegistry kinds = KindSpecRegistry.LoadDirectory(Path.Combine(schemasDir, "kinds"), schemas);
+        return ValidateFiles(paths, schemasDir, schemas, kinds);
+    }
+
+    /// <summary>
+    /// GR-183 (November 2026): <see cref="ValidateFiles(IReadOnlyList{string}, string)"/> with the schema set and the kind
+    /// registry already loaded by the caller, so a case load that validates in several stages reads them from disk once
+    /// instead of once per stage. <paramref name="schemas"/> and <paramref name="kinds"/> must have been loaded from
+    /// <paramref name="schemasDir"/> (the folder is still used for the overlay kind specs); the result is identical to the
+    /// two-argument overload.
+    /// </summary>
+    public static IReadOnlyList<V2DocumentReport> ValidateFiles(
+        IReadOnlyList<string> paths, string schemasDir, JsonSchemaSubset schemas, KindSpecRegistry kinds)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        ArgumentNullException.ThrowIfNull(schemasDir);
+        ArgumentNullException.ThrowIfNull(schemas);
+        ArgumentNullException.ThrowIfNull(kinds);
+        var validator = new SchemaValidator(schemas);
 
         var reports = new List<V2DocumentReport>();
         var seen = new HashSet<string>(FilePathComparison.Comparer);

@@ -72,7 +72,12 @@ public class WorkflowReleaseGateTests
         Assert.Contains("  ci:\n    name: CI matrix (release gate)\n    needs: verify\n    uses: ./.github/workflows/ci.yml\n", rel, StringComparison.Ordinal);
         Assert.Contains("    name: CLI ${{ matrix.rid }}\n    needs: [ verify, ci, sbom ]\n", rel, StringComparison.Ordinal);
         Assert.Contains("    name: Web container image (replay-only)\n    needs: [ verify, ci, sbom ]\n", rel, StringComparison.Ordinal);
-        Assert.Contains("    needs: [ verify, ci, cli, web-image, sbom ]\n", rel, StringComparison.Ordinal);
+        // Test correction (2026-11-01, owner decisions B7 and GA-5, recorded in the commit and CHANGELOG): the Release job
+        // now also waits for the independent reproducible-build check and for the desktop apps, which ship from this
+        // workflow since GA-5. This was "needs: [ verify, ci, cli, web-image, sbom ]"; the gate only gains jobs, so
+        // nothing that was required before is dropped.
+        Assert.Contains("    needs: [ verify, ci, cli, web-image, sbom, reproducible, desktop ]\n", rel, StringComparison.Ordinal);
+        Assert.Contains("    name: Desktop ${{ matrix.app }} ${{ matrix.rid }}\n    needs: [ verify, ci, sbom ]\n", rel, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -81,7 +86,14 @@ public class WorkflowReleaseGateTests
         string rel = Read(".github/workflows/release.yml");
         Assert.Contains("-p:GridSimSbomSha256=\"$SBOM_SHA256\"", rel, StringComparison.Ordinal);
         Assert.Contains("--build-arg SBOM_SHA256=\"$SBOM_SHA256\"", rel, StringComparison.Ordinal);
-        Assert.Contains("sbom-sha256: ${{ needs.sbom.outputs.cli_sha256 }}", rel, StringComparison.Ordinal);
+        // Test correction (2026-11-01, owner decision B5, recorded in the commit and CHANGELOG): the NuGet package is
+        // GridSim.Core alone, and the workflow now builds an SBOM of exactly that project, so the package carries that
+        // SBOM's hash instead of the CLI SBOM's (which also lists Gda and Gpu). This was "...outputs.cli_sha256 }}".
+        Assert.Contains("sbom-sha256: ${{ needs.sbom.outputs.core_sha256 }}", rel, StringComparison.Ordinal);
+        Assert.DoesNotContain("sbom-sha256: ${{ needs.sbom.outputs.cli_sha256 }}", rel, StringComparison.Ordinal);
+        // GA-5: each desktop app is built with its own SBOM's hash, validated as 64 hex digits first.
+        Assert.Contains("SBOM_SHA256: ${{ matrix.sbom == 'wpf' && needs.sbom.outputs.wpf_sha256 || needs.sbom.outputs.app_desktop_sha256 }}", rel, StringComparison.Ordinal);
+        Assert.Contains("[[ \"$SBOM_SHA256\" =~ ^[0-9a-f]{64}$ ]] || { echo \"::error::bad desktop SBOM hash '$SBOM_SHA256'\"; exit 1; }", rel, StringComparison.Ordinal);
         Assert.Contains("compliance verify", rel, StringComparison.Ordinal);
         Assert.Contains("^  release build  yes", rel, StringComparison.Ordinal);
         Assert.Contains("-p:GridSimSbomSha256=\"${SBOM_SHA256}\"", Read("Dockerfile"), StringComparison.Ordinal);

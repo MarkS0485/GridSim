@@ -25,6 +25,10 @@ public sealed class DenseLuSolver : ILinearSolver
 {
     public string Name => "dense-lu (cpu)";
 
+    /// <summary>GR-044: up to this order the per-row pivot floors live on the stack (8 KiB at 1024 rows); above it, on
+    /// the heap. Storage only: the floors' values and the arithmetic are the same either way.</summary>
+    private const int StackRowLimit = 1024;
+
     public void SolveInPlace(double[,] a, double[] b)
     {
         int n = b.Length;
@@ -75,21 +79,34 @@ public sealed class DenseLuSolver : ILinearSolver
         // A pivot that has collapsed to a tiny fraction of this is numerically singular - dividing
         // by it would emit NaN/Inf and corrupt the whole Newton step, so fail loudly instead. The
         // relative floor makes the test scale-invariant (an exact-zero pivot is the aNorm==0 subcase).
+        // GR-044: each row's own scale (the largest |A(r,:)|) is taken in the same pass; it becomes that row's pivot floor
+        // below. rowFloor travels with its row through the swaps, so rowFloor[p] is always the floor of the ORIGINAL row
+        // now at position p. The whole-matrix scale is the largest row scale, the same double the old single pass gave.
         double aNorm = 0.0;
-        foreach (double v in m)
+        Span<double> rowFloor = n <= StackRowLimit ? stackalloc double[n] : new double[n];
+        for (int i = 0; i < n; i++)
         {
-            // A NaN entry is refused (the sparse LU refuses it too): it never wins the max or fails the pivot test, so it
-            // used to be factored into a NaN solution reported as success.
-            if (double.IsNaN(v))
-                throw new InvalidOperationException("LU solve: the matrix contains a NaN entry.");
-            double av = Math.Abs(v); if (av > aNorm) aNorm = av;
+            double rowMax = 0.0;
+            Span<double> row = m.Slice(i * n, n);
+            foreach (double v in row)
+            {
+                // A NaN entry is refused (the sparse LU refuses it too): it never wins the max or fails the pivot test, so
+                // it used to be factored into a NaN solution reported as success.
+                if (double.IsNaN(v))
+                    throw new InvalidOperationException("LU solve: the matrix contains a NaN entry.");
+                double av = Math.Abs(v); if (av > rowMax) rowMax = av;
+            }
+            rowFloor[i] = rowMax;
+            if (rowMax > aNorm) aNorm = rowMax;
         }
         // Bug #40: a NaN or infinite right-hand side is refused too (it used to come back as a NaN / Inf solution reported
         // as success). A read-only pre-check: on finite input nothing below changes.
         int badRow = GridSim.Core.Numerics.NumericTolerances.FirstNonFinite(b);
         if (badRow >= 0)
             throw new InvalidOperationException(GridSim.Core.Numerics.NumericTolerances.NonFiniteRightHandSide("LU solve", b[badRow], badRow));
-        double pivotFloor = GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm);   // N008: the shared floor (aNorm x 1e-12, same bits)
+        // GR-044: row scales -> row floors (1e-12 x the row's largest entry; every one at or below the old whole-matrix
+        // floor aNorm x 1e-12, so every pivot that floor accepted is still accepted, with the same bits).
+        GridSim.Core.Numerics.NumericTolerances.ToRowPivotFloors(rowFloor, aNorm);
 
         for (int k = 0; k < n; k++)
         {
@@ -103,15 +120,17 @@ public sealed class DenseLuSolver : ILinearSolver
                 double v = Math.Abs(m[i * n + k]);
                 if (v > max) { max = v; p = i; }
             }
-            if (max <= pivotFloor)
+            // GR-044: the floor of the original row that wins the pivot search.
+            if (max <= rowFloor[p])
                 throw new InvalidOperationException(
-                    $"Near-singular matrix in LU solve: pivot {max:E3} at column {k} is at or below the tolerance {pivotFloor:E3} (matrix scale {aNorm:E3}).");
+                    $"Near-singular matrix in LU solve: pivot {max:E3} at column {k} is at or below the tolerance {rowFloor[p]:E3} (1e-12 x its row's largest entry; matrix scale {aNorm:E3}, whose whole-matrix floor {GridSim.Core.Numerics.NumericTolerances.PivotFloor(aNorm):E3} is no longer the test).");
 
             if (p != k)
             {
                 int pp = p * n;
                 for (int j = k; j < n; j++) (m[kk + j], m[pp + j]) = (m[pp + j], m[kk + j]);
                 (b[k], b[p]) = (b[p], b[k]);
+                (rowFloor[k], rowFloor[p]) = (rowFloor[p], rowFloor[k]);
             }
 
             double pivot = m[kk + k];

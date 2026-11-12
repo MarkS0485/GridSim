@@ -70,7 +70,10 @@ public static class LicenceKey
         BinaryPrimitives.WriteUInt16BigEndian(signed.AsSpan(MagicLen + 1, 2), (ushort)payload.Length);
         payload.CopyTo(signed.AsSpan(HeaderLen));
 
-        byte[] signature = signer.SignData(signed, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        // GR-726: written in the low-S form, so each key issued from now on has one canonical signature (verification
+        // still accepts both forms, so keys issued before keep working).
+        byte[] signature = EcdsaLowS.Normalise(signer,
+            signer.SignData(signed, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation));
         if (signature.Length != SignatureLen)
             throw new InvalidOperationException($"Expected a {SignatureLen}-byte P-256 signature, got {signature.Length}.");
 

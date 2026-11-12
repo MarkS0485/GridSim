@@ -228,28 +228,15 @@ public static class LinearPmuStateEstimator
     private static (int F, int T, Complex Yff, Complex Yft) ResolveBranch(
         GridModel model, Dictionary<int, int> idToIndex, PmuCurrentMeasurement c)
     {
-        Branch? branch = null;
-        bool ambiguous = false;
-        // 1.95.245: the ordinal circuit form "#k" (model branch index) of gridsim-measurements/1, used for unnamed
-        // parallels (MeasurementSet.TryResolveBranch); before, "#k" matched no branch name and was refused.
-        if (c.Circuit is not null && c.Circuit.StartsWith('#')
-            && int.TryParse(c.Circuit.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out int ordinal)
-            && ordinal < model.Branches.Count && model.Branches[ordinal] is { } byOrdinal
-            && byOrdinal.From == c.FromBusId && byOrdinal.To == c.ToBusId && byOrdinal.InService
-            && !model.Branches.Any(b => string.Equals(b.Name, c.Circuit, StringComparison.Ordinal)))
-            branch = byOrdinal;
-        else foreach (Branch b in model.Branches)
-        {
-            if (b.From != c.FromBusId || b.To != c.ToBusId) continue;
-            if (!b.InService) continue;   // a switched-out branch carries no current - never model its closed admittance
-            if (c.Circuit is not null && !string.Equals(b.Name, c.Circuit, StringComparison.Ordinal)) continue;
-            if (branch is null) branch = b;
-            else if (c.Circuit is null) ambiguous = true;   // parallel circuits both match - need a Circuit to pick one
-        }
-        if (branch is null)
-            throw new InvalidDataException($"PMU current references branch {c.FromBusId}->{c.ToBusId} which is not an in-service model branch.");
-        if (ambiguous)
-            throw new InvalidDataException($"PMU current for {c.FromBusId}->{c.ToBusId} matches parallel circuits; set Circuit to disambiguate.");
+        // GR-536 (November 2026): the one strict resolver the WLS family uses too (MeasurementSet.TryResolveBranch),
+        // in-service branches only: a switched-out branch carries no current, so its closed admittance is never
+        // modelled. It used to resolve by a rule of its own: an ordinal "#k" was blocked by a branch of that name
+        // anywhere in the model, a bad "#k" fell back to a name search, and two parallels sharing a name were taken
+        // as the first one without a word.
+        if (!MeasurementSet.TryResolveBranch(model, c.FromBusId, c.ToBusId, c.Circuit, inServiceOnly: true,
+                out int branchIndex, out string? error))
+            throw new InvalidDataException($"PMU current for {c.FromBusId}->{c.ToBusId}: {error}.");
+        Branch branch = model.Branches[branchIndex];
 
         // The same pi-model stamps as YBus.Build / MeasurementModel.
         Complex ys = Complex.One / new Complex(branch.R, branch.X);

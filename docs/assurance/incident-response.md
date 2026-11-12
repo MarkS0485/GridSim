@@ -1,6 +1,6 @@
 # Incident-response runbook
 
-**Assurance statement. Status as at GridSim 1.95.296.** This is the incident-response and recovery runbook
+**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This is the incident-response and recovery runbook
 for the GridSim state estimator and its services, mapping to CAF Objective D1 (Response and recovery
 planning) and D2 (Lessons learned). It is the runbook that `caf-mapping.md` section 7.1 cites.
 CAF v4.0 (released 6 August 2025) strengthens D1: response plans must be tested, and their scope must extend
@@ -49,8 +49,26 @@ also written as its own `action=security` audit entry at the detection site:
   the end of a `serve` run and of the web resident estimator's run; the `/health` endpoint answers 503 but
   raises nothing itself.
 
-Two kinds have no product detection site at this release: an access denial (`RoleGuard` is not called by any
-host) and a distrusted source or dependency alert (no product path produces them).
+- **An access denial (since 2026-11-01).** The web host's role gate (`Site.AccessControl`, through `RoleGuard`)
+  refusing a request below its band: `POST /api/solve` below Analyst (403) or a `/ws/sim` control frame below
+  Operator (an error frame). Each denial is one `AccessDenied` entry (severity Low; the reason names the operation,
+  the required and actual bands, the subject and the request id) in the host's audit log and its `Audit:ForwardPath`
+  copy. It raises no incident by itself: a denial's baseline severity is below Significant and `IncidentPolicy` sets
+  no burst threshold for `AccessDenied`, so watch for a run of them in the forwarded log (or in
+  `gridsim audit show`). Only a host with an audit log records it
+  (`Audit:LogPath`, which needs the resident estimator); a host without one refuses the request and records nothing.
+  A rising rate from one subject suggests probing of the solve surface, or a deployment whose callers lack
+  their `GridSim.<role>` role claims; one write failure is reported on the host's standard error, not in the log.
+
+- **A distrusted source applied (since 2026-11-01).** An operator applied the distrusted-source control (section 4)
+  to a run with `gridsim estimate --distrust`, `gridsim serve --distrust` or the web host's
+  `Realtime:DistrustedSources`. Each is one `DistrustedSource` entry (severity Significant) per distrusted source per
+  run (per run, not per window, for `serve` and the resident estimator), naming the source, what applied it and, for
+  `estimate`, how many rows were demoted. It records the containment, not a new detection:
+  with `--incident-log` / `Audit:IncidentLogPath` each one is raised as an incident, so the containment step joins
+  the incident record of the event that led to it.
+
+One kind still has no product detection site at this release: a dependency alert (no product path produces it).
 
 These are the same signals listed in `nis-oes-gap-assessment.md` section 7.1 and `caf-mapping.md` section 6.
 
@@ -76,7 +94,7 @@ both of which need the audit log:
 
 Incidents are not themselves written into the audit chain; each one names, by hash, the audit entry that
 evidences it, so the incident and the trail are linked. A failure to write an incident never stops the run; the
-CLI reports it at the end and exits 1 (the web host does not report it at this release).
+CLI reports it at the end and exits 1, and the web host reports it on stderr when the resident run ends or fails.
 
 Restriction constraint on raising: an `IncidentReport` carries `RaisedUtc` as run metadata and, if present, a
 `StateTimeUtc` that is a historical grid instant guard-checked on construction and never newer than the
@@ -112,12 +130,16 @@ Once an incident is confirmed, contain it before recovering:
   is emitting the suspect output, or fail it over if a redundant instance is available. Because the estimator
   is deterministic and stateless per call, stopping a service loses no state that cannot be re-derived
   (section 5).
-- **Quarantine a poisoned measurement source.** Where a specific feed is implicated, withhold that source's
-  data from the affected runs (remove it from the input set or the window directory) and re-run. The
-  distrusted-source control (`DistrustedSources`, `caf-mapping.md` section 7.1), which forces a distrusted
-  source's rows to pseudo-measurement treatment rather than trusted observations, is built as a primitive but
-  no CLI verb or host setting applies it at this release, and distrusted rows would still count towards the
-  chi-square redundancy, so it is not yet an operator action. Live telemetry captured by the RTU interposer is already
+- **Quarantine a poisoned measurement source.** Where a specific feed is implicated, apply the distrusted-source
+  control to the affected runs and re-run: `gridsim estimate ... --distrust <source>[,<source>...]`,
+  `gridsim serve ... --distrust <source>` (static `wls` only), or `Realtime:DistrustedSources=<source>,...` on the
+  web host (read at start-up, so restart the host). Each named source's rows are forced to pseudo-measurement
+  treatment (sigma x 10000; values unchanged, rows kept for observability) and left out of the chi-square
+  redundancy, so the source can neither pull the estimate nor widen the bad-data threshold, and the run records
+  one `DistrustedSource` security event per source (section 1). Name the exact source tag the rows carry: `estimate`
+  refuses a tag no row carries (exit 2) and `serve` warns of one; `--hti` does not take the control (use the default
+  bad-data removal). Withholding the source's data altogether (removing it from the input set or the window
+  directory) remains available where the source is not needed for observability. Live telemetry captured by the RTU interposer is already
   written to `QuarantineLiveStore`, which refuses any path inside the evidence lake, so live data cannot
   contaminate the historical record; `PmuLiveQuarantine` sorts synchrophasor frames by the guard's horizon.
   Quarantine is the containment action for a suspected false-data-injection or poisoning incident.
@@ -200,15 +222,19 @@ loop functioning for the one seam that matters; this template generalises it to 
 
 CAF v4.0 requires that the plan is exercised and that its scope extends to suppliers.
 
-- **The plan is to be exercised.** A tabletop exercise is planned, walking a `SuspectedFdia` and an
+- **The plan is to be exercised.** Two tabletop exercises are planned. The first walks the vulnerability-handling
+  path of section 9 with a mock CVE scored 7.5 (CVSS v3.1) in a shipped component, from private report to published
+  fix and automatic notice, and the deploying OES's Regulation 11 decision; its script and record form are
+  [`tabletop-cve-exercise.md`](tabletop-cve-exercise.md). The second walks a `SuspectedFdia` and an
   audit-verify-failure scenario end to end - detection, raising, significance assessment, quarantine, replay
-  recovery, the 72-hour timeline, and the post-incident review - so the runbook is tested rather than only
-  written. The exercise result and its date are to be recorded against this document at the next review point.
+  recovery, the 72-hour timeline, and the post-incident review. Each exercise's result and date are recorded against
+  this document. As at 2026-11-01 the first script is written and neither exercise has been held, so the plan is
+  written but untested (`caf-mapping.md` section 9, item 17).
 - **Supplier and upstream incidents are in scope.** The GDA data lake is GridSim's primary upstream supplier,
   and an incident originating there (a poisoned or tampered upstream feed, an integrity failure in the lake)
   is in scope for this runbook per v4.0. Containment uses the same steps (section 4): a poisoned upstream
-  source's data is withheld from the affected runs (the distrusted-source control, once wired, will do this in
-  the estimator), and the guard already refuses any sub-horizon upstream datum regardless of its source. A
+  source is distrusted for the affected runs (`--distrust` or `Realtime:DistrustedSources`; section 4) or its data
+  withheld, and the guard already refuses any sub-horizon upstream datum regardless of its source. A
   dependency-supplier incident (a CVE flagged by the OES scanner, the vulnerable-package gate or Dependabot) is
   raised by the OES through its own process: the incident wiring would raise a `DependencyAlert` event, but no
   product path produces one at this release (`caf-mapping.md` section 7.1, `nis-oes-gap-assessment.md`
@@ -216,10 +242,46 @@ CAF v4.0 requires that the plan is exercised and that its scope extends to suppl
 
 ---
 
-## 9. Cross-references
+## 9. Vulnerabilities in GridSim itself (supplier role)
+
+Sections 1 to 8 cover incidents detected in a running deployment. This section covers the other direction: a
+vulnerability in GridSim, or in a component a GridSim build ships (the bundled .NET runtime, a NuGet dependency),
+reported to the maintainer. The public policy is [`SECURITY.md`](../../SECURITY.md); this is how it is run.
+
+1. **Receive privately.** Reports arrive through GitHub private vulnerability reporting on the public repository
+   (enabled; `tools/github/apply-public-settings.ps1` verifies it) or by email to `gdatooling@proton.me`. Nothing is
+   discussed in public issues, pull requests or discussions until the advisory is published.
+2. **Assess objectively and record it.** The maintainer reproduces the report and scores it with the CVSS v4.0 and
+   CVSS v3.1 base metrics, from the facts of the vulnerability as it affects GridSim. The vector strings, the base
+   scores, the UTC time of the assessment and the reasoning for any non-obvious metric are recorded in the draft
+   repository security advisory. A score published elsewhere is considered and any difference is explained there.
+3. **Apply the target.** Where either base score is 7.0 or above, the target is remediation within 48 hours of the
+   recorded assessment. Remediation means a fixed release published on the Releases page with the security advisory
+   published alongside it. Below 7.0 the fix ships in a normal release with no stated time target.
+4. **Fix under the normal discipline.** The fix carries a test that reproduces the vulnerability, the CHANGELOG
+   gains a `Security` entry naming the advisory id (`GHSA-...`), and the version is bumped. No test or tolerance is
+   loosened to meet the target.
+5. **Ship and publish.** The fixed release is published (its notes come from the CHANGELOG and so name the advisory
+   id), then the advisory is published, with a CVE id requested through GitHub where the vulnerability qualifies.
+   Earlier releases are not patched.
+6. **Automatic notice.** On publication, `.github/workflows/security-notice.yml` finds the advisory id in the
+   release notes, checks the advisory is published, and posts an announcement in the Discussions Announcements
+   category. GitHub notifies everyone watching the repository for Releases (the release) and for Discussions (the
+   announcement), by email where their notification settings send email. If the advisory was still a draft when the
+   release went out, the workflow fails loudly; publish the advisory and re-run it by hand with the tag.
+7. **Review.** The incident closes with a post-incident review (section 7), as any other.
+
+For a deploying OES the notice is an input to its own process: whether the vulnerability, or its use against the
+OES's deployment, is a significant incident under Regulation 11 is the OES's decision (sections 3 and 6). GridSim
+supplies the advisory, the fixed release and the audit tools (`gridsim audit verify`) to establish whether the flaw
+was used.
+
+---
+
+## 10. Cross-references
 
 - `caf-mapping.md` - section 6 (detection controls: audit trail, `FdiaScreen`); section 7 (Objective D,
-  including the distrusted-source control, built but not yet wired); section 8 traceability matrix; section 9
+  including the distrusted-source control, applied by `--distrust` and `Realtime:DistrustedSources`); section 8 traceability matrix; section 9
   gap register.
 - `nis-oes-gap-assessment.md` - section 7.1 (the incident-reporting seam and Regulation 11); section 6 (why
   the horizon bounds the impact); section 8 honest gap table.
@@ -227,3 +289,5 @@ CAF v4.0 requires that the plan is exercised and that its scope extends to suppl
 - `security-governance.md` - the owner, the review cadence, and the CHANGELOG Security discipline that
   records a control change arising from a lesson learned.
 - `UnderstandingRestrictions.md` - the governing no-forward-inference document.
+- `SECURITY.md` - the public vulnerability reporting, assessment, remediation-target and notice policy (section 9).
+- `tabletop-cve-exercise.md` - the exercise script for section 9 and its record form (section 8).

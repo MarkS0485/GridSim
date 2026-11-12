@@ -154,6 +154,15 @@ public sealed class GdaBuildOptions
     /// matched buses onto GB geography. Has no effect when SubstationsPath is null.
     /// </summary>
     public bool Geolocate { get; set; } = true;
+
+    /// <summary>
+    /// GR-311 (November 2026): when true, a build whose <c>GridModel.Validate</c> reports any Error-severity finding throws
+    /// <see cref="InvalidDataException"/> listing every error, instead of returning the model with the findings folded
+    /// into the notes. Warnings never throw. Default false, so every existing build (and every pinned build) is unchanged:
+    /// a real data-merge pipeline legitimately merges nodes and spans many islands, which is why validation findings are
+    /// notes by default.
+    /// </summary>
+    public bool StrictValidation { get; set; } = false;
 }
 
 /// <summary>Counts and notes describing what was built  -  printed as the structural report (no data values leak).</summary>
@@ -743,6 +752,8 @@ public static class GdaModelBuilder
 
         // ---- generation -------------------------------------------------------
         var generators = new List<Generator>();
+        // GR-796 (November 2026): how many generators have taken each base name so far (see UniqueGeneratorName).
+        var generatorNameCount = new Dictionary<string, int>(StringComparer.Ordinal);
         int unmatchedGen = 0;
         double totalGenCap = 0;
         // Connection-status filter (R015, October 2026 review). Every reader captures a
@@ -853,10 +864,16 @@ public static class GdaModelBuilder
             }
             else
             {
+                // GR-796 (November 2026): the name is "<primary> <fuel type>", so two rows of the same fuel at the
+                // same primary (two solar farms on one substation) used to get the SAME name. Everything that finds
+                // a generator by name (QSTS files, cost files, the provenance manifest) refuses or skips a
+                // duplicated name, so the second and later rows now get a stable " #2", " #3" suffix in the order
+                // the rows are read. The first row keeps its plain name, so no existing name changes. A name is
+                // only a label: no solver reads it, so no number changes.
                 generators.Add(new Generator(
                     Bus: bus, Pg: output, Qg: 0, Vg: 1.0,
                     Qmin: -GdaBuildDefaults.EmbeddedGenQRatio * cap, Qmax: GdaBuildDefaults.EmbeddedGenQRatio * cap, Pmin: 0, Pmax: cap,
-                    MBase: cap, H: kind.H, Name: $"{g.PrimarySubstation} {kind.Type}", Type: kind.Type));
+                    MBase: cap, H: kind.H, Name: UniqueGeneratorName($"{g.PrimarySubstation} {kind.Type}", generatorNameCount), Type: kind.Type));
             }
         }
 
@@ -1087,8 +1104,18 @@ public static class GdaModelBuilder
         // Validate WARN-ONLY: a real data-merge pipeline legitimately merges nodes and
         // spans many islands, so it must never be hard-blocked. Fold every finding into the
         // structural notes and carry on.
-        foreach (GridDiagnostic d in model.Validate())
+        // GR-311 (November 2026): opt-in strict mode. Off by default, so the loop is exactly what it was.
+        List<GridDiagnostic> findings = model.Validate().ToList();
+        foreach (GridDiagnostic d in findings)
             notes.Add($"validation: {d}");
+        if (opt.StrictValidation)
+        {
+            List<GridDiagnostic> errors = findings.Where(d => d.Severity == ValidationSeverity.Error).ToList();
+            if (errors.Count > 0)
+                throw new InvalidDataException(
+                    $"GDA build: the model has {errors.Count} validation error(s) and strict validation is on: " +
+                    string.Join("; ", errors.Select(d => d.Message)));
+        }
 
         var diag = new GdaDiagnostics(
             rawNodes, n, ties, seriesCount, tx2.Count, tx3.Count, starNodes,
@@ -1190,6 +1217,26 @@ public static class GdaModelBuilder
             return TapRangeVerdict.Invalid;
         }
         return TapRangeVerdict.Valid;
+    }
+
+    /// <summary>
+    /// GR-796 (November 2026): make a generator name unique. The first use of a base name is returned unchanged; the
+    /// n-th use (n of 2 or more) gets " #n". If the suffixed spelling happens to be taken already (a primary that is
+    /// really called "X Solar #2"), n is stepped on until the name is free, so the result is never a duplicate.
+    /// </summary>
+    public static string UniqueGeneratorName(string baseName, Dictionary<string, int> used)
+    {
+        used.TryGetValue(baseName, out int seen);
+        seen++;
+        used[baseName] = seen;
+        if (seen == 1) return baseName;
+        while (true)
+        {
+            string candidate = baseName + " #" + seen.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (!used.ContainsKey(candidate)) { used[candidate] = 1; return candidate; }
+            seen++;
+            used[baseName] = seen;
+        }
     }
 
     /// <summary>Equipment words that name a genuine zero-impedance tie (busbar, switchgear) rather than a cable or line.</summary>

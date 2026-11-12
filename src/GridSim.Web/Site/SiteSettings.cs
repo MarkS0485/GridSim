@@ -74,6 +74,23 @@ public sealed class SiteSettings
     /// </summary>
     public string? SecurityTxt { get; private init; }
 
+    /// <summary>
+    /// GR-738: the <c>Expires</c> moment of <see cref="SecurityTxt"/> (UTC), or null when no file is configured. Start-up
+    /// refuses an expiry already in the past; this is kept so the served answer can be re-checked on every request
+    /// (<see cref="SecurityTxtAt"/>) and a host that runs past the date stops serving a stale contact.
+    /// </summary>
+    public DateTimeOffset? SecurityTxtExpiresUtc { get; private init; }
+
+    /// <summary>
+    /// GR-738: the body to serve for <c>/.well-known/security.txt</c> at <paramref name="nowUtc"/>: <see cref="SecurityTxt"/>
+    /// while <paramref name="nowUtc"/> is before its <c>Expires</c>, else null (the path answers 404, as for an unconfigured
+    /// file). RFC 9116 section 2.5.5 says an expired file is stale, and start-up already refuses to serve one; this applies the same rule
+    /// per request instead of once, so a long-running host does not keep publishing an out-of-date contact. Pure: the
+    /// caller passes the clock. The file is never read or written; only the text built from configuration is answered.
+    /// </summary>
+    public string? SecurityTxtAt(DateTimeOffset nowUtc) =>
+        SecurityTxt is not null && SecurityTxtExpiresUtc is { } expires && nowUtc < expires ? SecurityTxt : null;
+
     /// <summary>True when a Google tag or a first-party analytics script is configured.</summary>
     public bool HasAnalytics => GoogleTagId.Length > 0 || AnalyticsScriptUrl.Length > 0;
 
@@ -145,6 +162,8 @@ public sealed class SiteSettings
         if (orgName.Length == 0 && (orgUrl.Length > 0 || orgLogo.Length > 0))
             throw Bad("OrganisationName", "is required when Site:OrganisationUrl or Site:OrganisationLogoUrl is set");
 
+        string? securityTxt = BuildSecurityTxt(s.GetSection("SecurityTxt"), nowUtc, out DateTimeOffset? securityTxtExpires);
+
         return new SiteSettings
         {
             GoogleTagId = tag,
@@ -156,7 +175,8 @@ public sealed class SiteSettings
             OrganisationUrl = orgUrl,
             OrganisationLogoUrl = orgLogo,
             FooterLinks = ReadFooterLinks(s),
-            SecurityTxt = BuildSecurityTxt(s.GetSection("SecurityTxt"), nowUtc),
+            SecurityTxt = securityTxt,
+            SecurityTxtExpiresUtc = securityTxtExpires,
         };
     }
 
@@ -187,8 +207,9 @@ public sealed class SiteSettings
     /// 9116 section 2.5.5 whenever the file is served), optional <c>PreferredLanguages</c> and an optional one-line
     /// <c>Comment</c> written first as a "# " line. Null when no contact is configured.
     /// </summary>
-    private static string? BuildSecurityTxt(IConfigurationSection s, DateTimeOffset nowUtc)
+    private static string? BuildSecurityTxt(IConfigurationSection s, DateTimeOffset nowUtc, out DateTimeOffset? expiresUtc)
     {
+        expiresUtc = null;
         string contact = Text(s, "Contact");
         string expires = Text(s, "Expires");
         string comment = Text(s, "Comment");
@@ -218,6 +239,7 @@ public sealed class SiteSettings
             throw Bad("SecurityTxt:Expires", $"{when.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ss'Z'", CultureInfo.InvariantCulture)} is already in the past; renew it");
 
         if (languages.Length == 0) languages = DefaultSecurityPreferredLanguages;
+        expiresUtc = when;   // GR-738: kept so each request can re-check it
 
         var sb = new StringBuilder();
         if (comment.Length > 0) sb.Append("# ").Append(comment).Append("\n\n");

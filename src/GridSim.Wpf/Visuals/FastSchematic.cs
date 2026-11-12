@@ -566,7 +566,10 @@ public sealed class FastSchematic : FrameworkElement
         DrawGeoLegend(dc);
 
         // Overview minimap with viewport rectangle (drawn last, on top).
+        // F-055: a hidden minimap has no clickable panel. Clearing the rect here (and at the top of DrawMinimap)
+        // means the hit test can never act on a panel that is not on screen this frame.
         if (_showMinimap) DrawMinimap(dc);
+        else _mmRect = Rect.Empty;
     }
 
     /// <summary>
@@ -581,6 +584,10 @@ public sealed class FastSchematic : FrameworkElement
 
     private void DrawMinimap(DrawingContext dc)
     {
+        // F-055: forget last frame's panel first. Each early return below draws no minimap, and the old rect used to
+        // survive it, so clicks in that now-empty corner still recentred the view (a phantom minimap). Rect.Empty
+        // contains no point, so the hit test in OnMouseLeftButtonDown ignores it.
+        _mmRect = Rect.Empty;
         if (_nodes.Count == 0 || _worldBounds.Width <= 0 || _worldBounds.Height <= 0) return;
 
         const double maxW = 156, maxH = 200;
@@ -1258,7 +1265,10 @@ public sealed class FastSchematic : FrameworkElement
 
         // A click inside the minimap recenters the main view (and is not a node click / pan).
         Point down = e.GetPosition(this);
-        if (_showMinimap && _mmRect.Contains(down)) { RecenterFromMinimap(down); e.Handled = true; return; }
+        // F-055: only a panel actually drawn on the last render counts (the rect is Rect.Empty otherwise, and a zero
+        // scale would make RecenterFromMinimap divide by zero).
+        if (_showMinimap && !_mmRect.IsEmpty && _mmScale > 0 && _mmRect.Contains(down))
+        { RecenterFromMinimap(down); e.Handled = true; return; }
 
         // Double-click drills in: onto a substation (centre + zoom to substation level), or
         // zoom toward the cursor on empty space.

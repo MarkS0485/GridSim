@@ -1,6 +1,6 @@
 # gb-full licence and provenance audit
 
-**Status as at GridSim 2.0.171.** This page audits where the data of the bundled full GB case (`data/gb-full`) comes
+**Status as at GridSim 2.1.005 (re-checked 2026-11-01; first written at 2.0.171).** This page audits where the data of the bundled full GB case (`data/gb-full`) comes
 from and what that means for publishing it. It is a document only: no data is removed or changed, and no gb-full
 number moves. The rule it applies is the public / private boundary: a public GB model is exactly the published Long
 Term Development Statement (LTDS) data and the other published sources it cites, and an element that cannot be traced
@@ -13,7 +13,10 @@ to a published source cannot appear in a public export (`gridsim convert --publi
 generation rows, 1,383 on-load tap changers, 5 boundaries and the asset-dynamics files. Its README records that it was
 assembled outside GridSim from the NESO transmission network data, the distribution network operators' LTDS tables and
 the NESO registers, and committed as a pinned reference model: every gb-full number in the tests and the docs is
-computed from these files.
+computed from these files. At 2.0.200 the line charging of 25 Northern Powergrid 132 kV cable rows was corrected from
+202 to 542 uS/km to 126 uS/km times each row's published length (354.6 MVAr of charging at 1 pu became 148.1 MVAr);
+that is an assembly-step value replaced by a modelling assumption, not a value read from a published source, and it
+changes none of the counts below.
 
 ## What the files record about their sources
 

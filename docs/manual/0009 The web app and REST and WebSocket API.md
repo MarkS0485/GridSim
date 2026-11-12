@@ -19,7 +19,8 @@ in [ch. 26](<0026 Audit log, deployment and assurance.md>).
 - The two environments differ in one decisive way. `Development` (the `http` launch profile) maps the whole API.
   `Production` (`appsettings.Production.json`, which the container image and the systemd unit select) sets
   `GridSim:ReplayOnly=true`: only the raw public-data replay is offered, and `/api/*` and `/ws/sim` are not mapped.
-  The API has no authorisation or rate limit, so it is meant for a trusted network.
+  The API has no per-client rate limit (see [the solve and socket limits](#the-solve-and-socket-limits) for the
+  per-instance caps), so it is meant for a trusted network.
 - A licence, if the host needs one, is read as for the CLI: `Licence:Key` (`Licence__Key`), then `GRIDSIM_LICENCE`, then
   the installed licence file, then the free Personal tier ([ch. 4](<0004 Licensing and activation.md>)). A case above
   the tier's bus limit is refused (HTTP 403 on the API).
@@ -67,15 +68,17 @@ loads the case, solves it once with the on-load tap changer loop (at most 25 pas
 ### `GET /api/cases`
 
 An array of `{ "id", "label", "kind", "replay" }`, in a stable order: built-ins, GB JSON cases, MATPOWER files, replay
-runs.
+runs. The replay runs and the `gda-*` models found under `results/` and `gda-out/` are listed only to a caller in the
+`Operator` band or above (on a host that answers non-loopback names, an anonymous caller is a Viewer and does not see them).
 
 ### `GET /api/topology?case=<id>`
 
 The one-time map of a case: `type` (`topology`), `caseId`, `caseLabel`, `baseMva`, `busCount`, `replay`, `frameCount`,
 the `nodes`, `edges` and `fleet` lists, the transmission `boundaries`, and `isGeolocated` (true when the case ships real GB
 coordinates, so the geography overlays line up). A replay's topology is built once per run and rebuilt only when the
-run's files change. Status codes: 200, 400 for a missing or blank `?case=`, 403 when the licence does not cover the
-model, 404 for an unknown case.
+run's files change (a change is noticed within five seconds). Status codes: 200, 400 for a missing or blank `?case=`, 403 when the licence does not cover the
+model or when the case is a replay run or `gda-*` model and the caller is below the `Operator` band (the denial is audited), 404 for an unknown case, 503 when every solve slot is in use and 504 when the load runs past the solve timeout
+([the solve limits](#the-solve-and-socket-limits)).
 
 ### `POST /api/solve`
 
@@ -88,10 +91,12 @@ The body is `{ "case": "<id>" }`. The answer always says whether the solve conve
 | 400 | No case in the body, or the case is a replay run (use `/ws/sim` for a replay). |
 | 403 | The licence does not cover the model. |
 | 404 | Unknown case. |
+| 503 | Every solve slot is in use (`GridSim:MaxConcurrentSolves`); the call was not started. Retry after the `Retry-After` seconds. |
+| 504 | The solve did not finish within `GridSim:SolveTimeoutSeconds`; no result. |
 
 `state` is one frame envelope: `type` (`state`), `tick`, `hour`, `clock`, `label`, the `headline` (`frequencyHz`,
 `rocofHzPerS`, `generationMw`, `demandMw`, `lossMw`, `inertiaGvaS`, `avgVoltagePu`, `converged`, `minVoltagePu`,
-`maxVoltagePu`), the per-bus `nodes` (`id`, `vm`, `vaDeg`, `pInjMw`, `qInjMvar`), the per-branch `edges` (`index`,
+`maxVoltagePu`, `notSolved`), the per-bus `nodes` (`id`, `vm`, `vaDeg`, `pInjMw`, `qInjMvar`), the per-branch `edges` (`index`,
 `pFromMw`, `qFromMvar`, `pLossMw`, `loadingFrac`), the `boundaries` (`name`, `flowMw`, `limitMw`, `loadingPercent`,
 `overloaded`), and one block per tab (`genInertia`, `operator`, `market`, `rp1`, `mechanical`, `scada`, `machine`, and
 the rest, null where a tab is not computed). The one-shot solve fills the tab blocks from fresh services, so the
@@ -105,7 +110,9 @@ The resident real-time estimator's output, when `Realtime:Enabled=true`: `summar
 enabled. It runs once, at start-up, on `Realtime:Case` (default `case9`) over the windows in `Realtime:WindowsDir`; it
 does not watch the folder. Every window passes the 169-hour horizon guard inside the engine. With `Audit:LogPath` set,
 the run is recorded in the audit log, opened and verified against its anchor before the host serves anything
-([ch. 26](<0026 Audit log, deployment and assurance.md>)).
+([ch. 26](<0026 Audit log, deployment and assurance.md>)). With `Realtime:DistrustedSources` set (comma-separated source
+tags), the named sources' rows are demoted to pseudo-measurements in every window and left out of the chi-square
+redundancy, and the audited run records one `DistrustedSource` security event per source ([ch. 3](<0003 Configuration.md>)).
 
 ### `GET /api/openapi.json`
 
@@ -164,6 +171,21 @@ Each browser tab and each `/ws/sim` connection holds one session, private to it 
 64 sessions (GridSim:MaxSessions); close another dashboard or connection, or try again shortly.` A value that is not a
 whole number of 1 or more stops start-up.
 
+### The solve and socket limits
+
+`POST /api/solve` and `GET /api/topology` share `GridSim__MaxConcurrentSolves` slots (default 8). A call that finds none
+free is refused at once with 503 and `Retry-After: 5`; it does not queue. A call whose solve has not finished after
+`GridSim__SolveTimeoutSeconds` (default 120) answers 504 with an `error` saying so. A solve cannot be stopped part-way, so
+a timed-out one finishes in the background and keeps its slot until it does. The role check runs first: a refused call
+never takes a slot.
+
+Each `/ws/sim` socket may send `GridSim__WsControlBurst` (default 20) `step` or `start` frames at once and
+`GridSim__WsControlRatePerSecond` (default 5) a second after that. A frame over the limit is answered with an
+`{"type":"error","message":"rate limit: ..."}` frame and is not run; the connection and its session stay as they were.
+`play`, `pause`, `seek`, `speed` and `trip` are not counted. A value that is not a whole number in range stops
+start-up, naming the setting. The limits are per instance and per socket, so a public instance still wants a
+rate-limiting proxy in front.
+
 ### The analysis cycle
 
 A live session runs the resident analysis cycle (the CYCLE tab of [ch. 10](<0010 Analysis views.md>)) unless
@@ -192,8 +214,8 @@ address also needs `GridSim__BridgeAllowUnencrypted=true`, or the host stops at 
 
 ## Limits
 
-- The solve API and `/ws/sim` have no authorisation and no rate limit; only the session cap bounds them. Production
-  starts replay-only for that reason.
+- The solve API and `/ws/sim` are bounded per instance and per socket, not per client: see [the solve and socket
+  limits](#the-solve-and-socket-limits) and the session cap. Production starts replay-only for that reason.
 - `/api/solve` solves one case once, from its stored state; it takes no options (engine, tolerance, outages).
 - A replay case cannot be solved through `/api/solve`; it is streamed through `/ws/sim`.
 - The `state` frames of the one-shot solve carry no history, so their ramp and time-error fields read zero.

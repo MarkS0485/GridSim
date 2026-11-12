@@ -13,7 +13,8 @@ namespace GridSim.Core.Estimation;
 /// the Gauss-Newton warm start.
 ///
 /// Model construction: every bus's net injection is read off the set's PInjMw/QInjMvar rows
-/// (duplicates summed; unmeasured buses default to zero injection). Buses injecting more than
+/// (several rows at one bus are redundant meters of the same injection and are combined by their inverse-variance
+/// weighted mean, bug hunt 2026-11-01 #183; unmeasured buses default to zero injection). Buses injecting more than
 /// <see cref="PvThresholdMw"/> become PV at <see cref="PvSetpointPu"/> (a generating site holds
 /// its voltage - without var support a pure-PQ conversion sags unrealistically); everything
 /// else is PQ with the measured injection as (negative) load. The slack keeps its reference
@@ -56,15 +57,16 @@ public static class MeasuredInjectionPrior
     /// warm start and as the value source for voltage-schedule prior measurements.</summary>
     public static PowerFlowResult Solve(GridModel model, MeasurementSet set, IPowerFlowSolver solver)
     {
-        var pMeas = new Dictionary<int, double>();
-        var qMeas = new Dictionary<int, double>();
-        foreach (Measurement m in set.Measurements)
-        {
-            if (m.Kind == MeasurementKind.PInjMw)
-                pMeas[m.Bus] = pMeas.GetValueOrDefault(m.Bus) + m.Value;
-            else if (m.Kind == MeasurementKind.QInjMvar)
-                qMeas[m.Bus] = qMeas.GetValueOrDefault(m.Bus) + m.Value;
-        }
+        // Bug hunt 2026-11-01 (#183): the WLS treats EVERY PInjMw / QInjMvar row as an observation of the WHOLE bus
+        // injection (MeasurementModel: a PInjMw row's h(x) is the bus's net injection), so two rows at one bus are two
+        // redundant meters of one quantity, not two parts of it. The prior used to SUM them: two redundant 300 MW meters
+        // built a 600 MW bus, so the prior-solved VmPu rows (sigma 0.02, excluded from chi-square per N078) and the warm
+        // start came from a wrong operating point. The rows are now combined as the estimator would weigh them, by the
+        // inverse-variance weighted mean sum(z / sigma^2) / sum(1 / sigma^2) (the WLS estimate of one quantity from
+        // several meters of it). A bus with a single row keeps that row's value exactly, so every set without duplicate
+        // injection rows solves the same conditioned case, bit for bit, as before.
+        Dictionary<int, double> pMeas = CombineRedundantRows(set, MeasurementKind.PInjMw);
+        Dictionary<int, double> qMeas = CombineRedundantRows(set, MeasurementKind.QInjMvar);
 
         int slackId = model.Buses.First(b => b.Type == BusType.Slack).Id;
         var buses = new List<Bus>(model.BusCount);
@@ -105,6 +107,33 @@ public static class MeasuredInjectionPrior
         GridModel conditioned = model.CopyWith(
             buses: buses, generators: gens, name: $"{model.Name}-measured-injection");
         return solver.Solve(conditioned, new PowerFlowOptions { MaxIterations = PriorSolveMaxIterations, EnforceQLimits = true });
+    }
+
+    /// <summary>#183: each bus's value of the <paramref name="kind"/> rows: the row's own value when there is one, the
+    /// inverse-variance weighted mean when several meter the same injection. Fails loud on a duplicate row whose sigma
+    /// is not a finite number above 0 (it cannot be weighed).</summary>
+    private static Dictionary<int, double> CombineRedundantRows(MeasurementSet set, MeasurementKind kind)
+    {
+        // Per bus, in set order: the first value, the row count, and the weight sums.
+        var acc = new Dictionary<int, (double First, int Count, double SumW, double SumWz)>();
+        foreach (Measurement m in set.Measurements)
+        {
+            if (m.Kind != kind) continue;
+            acc.TryGetValue(m.Bus, out var a);
+            double w = m.Sigma > 0.0 && double.IsFinite(m.Sigma) ? 1.0 / (m.Sigma * m.Sigma) : double.NaN;
+            acc[m.Bus] = a.Count == 0 ? (m.Value, 1, w, w * m.Value) : (a.First, a.Count + 1, a.SumW + w, a.SumWz + w * m.Value);
+        }
+        var combined = new Dictionary<int, double>(acc.Count);
+        foreach ((int bus, var a) in acc)
+        {
+            if (a.Count == 1) { combined[bus] = a.First; continue; }   // bit for bit the single meter
+            if (!(a.SumW > 0.0) || !double.IsFinite(a.SumW) || !double.IsFinite(a.SumWz))
+                throw new ArgumentException(
+                    $"Measured-injection prior: bus {bus} has {a.Count} {kind} rows and at least one has a sigma that is not a "
+                    + "finite number above 0, so the redundant meters cannot be weighed.", nameof(set));
+            combined[bus] = a.SumWz / a.SumW;
+        }
+        return combined;
     }
 
     /// <summary>Replace the values of voltage-schedule prior rows (source

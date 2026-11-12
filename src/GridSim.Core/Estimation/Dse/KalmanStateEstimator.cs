@@ -42,6 +42,7 @@ public sealed class KalmanStateEstimator
     private readonly GridModel _model;
     private readonly int _n;
     private readonly double _slackRefRad;
+    private readonly double[] _fixedVaRad;   // #185: each bus's angle when it is not a state (each slack its OWN VaDeg)
     private readonly double _initialStateVariance;
 
     private IProcessModel? _process;
@@ -68,6 +69,7 @@ public sealed class KalmanStateEstimator
         foreach (Bus b in model.Buses)
             if (b.Type == BusType.Slack) { refRad = b.VaDeg * Math.PI / 180.0; break; }
         _slackRefRad = refRad;
+        _fixedVaRad = FixedAnglesRad(model, refRad);
 
         // R107: every window holds and inverts dense s x s matrices (s = non-slack angles + every magnitude),
         // so the filter fails loud at construction above the shared dense-filter limit rather than exhausting
@@ -106,8 +108,8 @@ public sealed class KalmanStateEstimator
         double[,] pPrior;
         if (!_initialized) (xPrior, pPrior) = InitialState(mm);
         else if (s != _stateSize)
-            throw new InvalidOperationException(
-                $"state layout changed between windows ({_stateSize} -> {s}); the filter tracks one fixed network.");
+            throw DomainRefusal.Mark(new InvalidOperationException(
+                $"state layout changed between windows ({_stateSize} -> {s}); the filter tracks one fixed network."));
         else { xPrior = _x; pPrior = _p; }
 
         IProcessModel process = _process ?? new RandomWalkProcessModel(s - _n);
@@ -240,6 +242,27 @@ public sealed class KalmanStateEstimator
         }
     }
 
+    /// <summary>
+    /// Bug hunt 2026-11-01 (#185): the angle (radians) each bus takes when it is not in the state vector, shared by the
+    /// Kalman, unscented and ensemble filters. A slack bus is not a state, and each one is held at its OWN
+    /// <see cref="Bus.VaDeg"/>, as the snapshot WLS estimator holds it (WlsStateEstimator: a slack keeps its
+    /// <c>bus.VaDeg</c>). The filters used to hold EVERY slack at the FIRST slack's angle, so a second slack at -5 deg
+    /// (another island, or a model with two references) was pinned at 0 deg each window, biasing the angles and flows
+    /// near it whenever that angle was observed (PMU rows). Non-slack entries carry the first slack's angle, the value
+    /// the state overwrites (and the flat-start reference). With a single slack every entry is the old reference, the
+    /// same double from the same expression, so single-slack results are bit for bit as before.
+    /// </summary>
+    internal static double[] FixedAnglesRad(GridModel model, double firstSlackRad)
+    {
+        var va = new double[model.BusCount];
+        for (int i = 0; i < model.BusCount; i++)
+        {
+            Bus b = model.Buses[i];
+            va[i] = b.Type == BusType.Slack ? b.VaDeg * Math.PI / 180.0 : firstSlackRad;
+        }
+        return va;
+    }
+
     /// <summary>The first window's prior: flat start (angles at the slack reference, Vm at 1 pu) and a diagonal
     /// covariance. D-DOC-117: returned rather than stored, so a first window that throws leaves the filter
     /// uninitialised (the next window starts from this same prior again).</summary>
@@ -261,7 +284,7 @@ public sealed class KalmanStateEstimator
     {
         vm = new double[_n];
         va = new double[_n];
-        for (int i = 0; i < _n; i++) va[i] = _slackRefRad; // slack (and default) reference angle
+        for (int i = 0; i < _n; i++) va[i] = _fixedVaRad[i]; // #185: each slack's own angle (non-slack ones are overwritten)
         for (int c = 0; c < x.Length; c++)
         {
             int bus = mm.StateBusIndex(c, out bool angle);
@@ -351,7 +374,7 @@ internal static class DseLinAlg
                 if (v > max) { max = v; piv = r; }
             }
             if (max <= floor)
-                throw new InvalidOperationException($"singular matrix in DSE covariance inverse (pivot {max:E3} at column {col}).");
+                throw DomainRefusal.Mark(new InvalidOperationException($"singular matrix in DSE covariance inverse (pivot {max:E3} at column {col})."));
             if (piv != col)
                 for (int j = col; j < 2 * n; j++) (m[col, j], m[piv, j]) = (m[piv, j], m[col, j]);
 
@@ -427,8 +450,8 @@ internal static class DseLinAlg
                 {
                     // !(sum > 0) also catches NaN.
                     if (!(sum > 0.0))
-                        throw new InvalidOperationException(
-                            $"DSE covariance is not positive definite: Cholesky pivot {sum:E3} at row {i} is not positive.");
+                        throw DomainRefusal.Mark(new InvalidOperationException(
+                            $"DSE covariance is not positive definite: Cholesky pivot {sum:E3} at row {i} is not positive."));
                     l[i, j] = Math.Sqrt(sum);
                 }
                 else
@@ -458,7 +481,7 @@ internal static class DseLinAlg
     {
         double scale = Numerics.NumericTolerances.MaxAbs(a);
         if (!double.IsFinite(scale))
-            throw new InvalidOperationException("the matrix is not finite, so it has no Cholesky factor.");
+            throw DomainRefusal.Mark(new InvalidOperationException("the matrix is not finite, so it has no Cholesky factor."));
         double t = Numerics.NumericTolerances.PivotFloor(scale);
         var l = new double[n, n];
         for (int j = 0; j < n; j++)
@@ -485,14 +508,14 @@ internal static class DseLinAlg
                     double sum = a[i, j];
                     for (int k = 0; k < j; k++) sum -= l[i, k] * l[j, k];
                     if (Math.Abs(sum) > t)
-                        throw new InvalidOperationException(
+                        throw DomainRefusal.Mark(new InvalidOperationException(
                             $"the matrix is not positive semi-definite: row {j} has no variance left (pivot {d:E3}) but is still " +
-                            $"correlated with row {i} ({sum:E3}).");
+                            $"correlated with row {i} ({sum:E3})."));
                 }
             }
             else
-                throw new InvalidOperationException(
-                    $"the matrix is not positive semi-definite: Cholesky pivot {d:E3} at row {j} is negative (beyond the floor {t:E3}).");
+                throw DomainRefusal.Mark(new InvalidOperationException(
+                    $"the matrix is not positive semi-definite: Cholesky pivot {d:E3} at row {j} is negative (beyond the floor {t:E3})."));
         }
         return l;
     }

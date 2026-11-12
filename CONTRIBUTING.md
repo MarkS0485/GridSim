@@ -1,7 +1,12 @@
 # Contributing to GridSim
 
-.NET 10 power-system simulator. Solution `GridSim.slnx`: Core and Cli hold all capability; Gda, Gpu;
-Web (Blazor) and Wpf are presentation only; tests in `tests/GridSim.Tests`.
+Solution `GridSim.slnx`.
+
+- `GridSim.Core` (the engine) and `GridSim.Cli` (the `gridsim` command line tool) hold all capability.
+- `GridSim.Gda` (the GDA data-lake bridge) and `GridSim.Gpu` (the GPU backends) plug into the engine.
+- `GridSim.Web`, `GridSim.Wpf`, `GridSim.App`, `GridSim.App.Desktop`, `GridSim.Ui` and `GridSim.SchemaEditor` are
+  presentation only.
+- Tests live in `tests/GridSim.Tests` and `tests/GridSim.App.Tests`.
 
 ## Acceptance criteria for every change
 
@@ -35,8 +40,8 @@ shell as well if you build Avalonia projects outside this repository. Do not rem
 - CHANGELOG entries are a user-facing changelog (Keep a Changelog: Added / Changed / Deprecated / Removed / Fixed /
   Security). Short, impersonal bullets that say what changed for users. A test change is recorded as a brief
   "Tests: ..." bullet.
-- Version: 2.0.N (from 2.0.0; 1.95.478 was the last 1.95 release). Each commit bumps N with a new CHANGELOG heading
-  `## [2.0.N]`; the single `<Version>` lives in Directory.Build.props (no csproj sets its own; VersionContractTests
-  checks it and the CHANGELOG heading).
+- Version: 2.1.N. 2.1.000 is the RC-1 release (2026-10-31); the RC label appears only in the git tag and the release
+  title. Each commit bumps N with a new CHANGELOG heading `## [2.1.N]`. The single `<Version>` lives in
+  `Directory.Build.props` (no csproj sets its own; `VersionContractTests` checks it and the CHANGELOG heading).
 - Commit subjects in plain English.
 - Only `main` exists. Any other branch is merged or discarded and then deleted.

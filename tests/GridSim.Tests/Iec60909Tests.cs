@@ -600,7 +600,7 @@ public class Iec60909Tests
         Assert.Equal(pure, llg.IkppPu, 12);
     }
 
-    // ---- On an ungrounded bus the earth faults carry no current ----
+    // ---- On an ungrounded bus the single-line-to-earth fault carries no current; double-line-to-earth is line-to-line ----
     [Fact]
     public void Earth_faults_on_an_ungrounded_bus_are_zero()
     {
@@ -613,7 +613,15 @@ public class Iec60909Tests
             Branches = new[] { new Branch(1, 2, R: 0.0, X: 0.10, R0: 0.0, X0: 0.20) },
         };
         Assert.Equal(0.0, Iec60909.SingleLineToGround(m, 1).IkppPu, 12);
-        Assert.Equal(0.0, Iec60909.DoubleLineToGround(m, 1).IkppKa, 12);
+        // Moved 2026-11-01 (bug hunt 2026-11-01 #163, delegated agreement for justified corrections): with no earth path a
+        // double-line-to-earth fault still shorts two phases together, so its current is the line-to-line current
+        // (Z0 -> infinity takes I0 -> 0 and I2 -> -I1, the line-to-line connection; FaultAnalysis.Unbalanced already
+        // solved it so). Before: DoubleLineToGround(m, 1).IkppKa == 0.0 (the all-zero duty that let CheckBreaker read
+        // every breaker adequate). After: it equals LineToLine(m, 1).IkppKa exactly, sqrt(3) x 1.1 / (0.2 + 0.2) pu
+        // (X''d 0.2 default, X2 = X''d) = 4.763 pu, 2.083 kA at 132 kV, and above zero.
+        Iec60909.Duty dlg = Iec60909.DoubleLineToGround(m, 1);
+        Assert.Equal(BitConverter.DoubleToInt64Bits(Iec60909.LineToLine(m, 1).IkppKa), BitConverter.DoubleToInt64Bits(dlg.IkppKa));
+        Assert.Equal(Math.Sqrt(3.0) * 1.1 / 0.4, dlg.IkppPu, 12);
     }
 
     // ---- Generator impedance-correction factor K_G: closed form, reductions and monotonicity ----

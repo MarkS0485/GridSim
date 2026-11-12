@@ -60,6 +60,14 @@ public sealed record ContingencyResult(
     public RedispatchOutcome? CorrectiveOutcome { get; init; }
 
     /// <summary>
+    /// GR-339 (November 2026): the tick of the live frame (<c>SimFrame.Tick</c>) this outage was screened on, set by the
+    /// cycle scheduler's N-1 jobs; null for every screen run outside the live cycle. A resumed N-1 shard can hold outages
+    /// screened on different frames, and this says which; <c>AnalysisJobLibrary.FrameRange</c> gives a shard's range.
+    /// Reporting only: it changes no screened number.
+    /// </summary>
+    public int? FrameTick { get; init; }
+
+    /// <summary>
     /// N107 (October 2026): for a state with no converged solution, whether the outage SPLIT the network: the state has
     /// more connected parts (buses joined by in-service branches) than the un-outaged model. True reads "islanded"; false,
     /// with <see cref="Converged"/> false, is a connected network that did not solve (for example the reactive collapse of

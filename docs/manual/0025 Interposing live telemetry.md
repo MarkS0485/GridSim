@@ -73,6 +73,14 @@ the written measurement, and it is the weight the estimator gives the value. `sc
 (the scaled-integer feed `1568` times `0.1` is 156.8 MW), `baseKv` divides a kV voltage into per-unit, and
 `datumAngleDeg` is subtracted from an angle so a feed with its own angle reference lands on the estimator's slack.
 
+Two stations on one IEC 104 link can use the same IOA. By default points are named by IOA alone, as above; when an IOA
+arrives with a second common address (CASDU) on one link, its points are marked invalid from then on, the first such
+collision is named once on stderr, and the count is given on an `iec104:` line after the stop line. To keep the
+stations apart, add `"iec104Key": "casdu-ioa"` at the top level of the crosswalk: points are then named
+`CA:<casdu>/IOA:<n>` (for example `CA:1/IOA:1001`), and the bindings use those names. The only values are `"ioa"`
+(the default) and `"casdu-ioa"`; any other value, or the member in a crosswalk used with another protocol, is refused
+when the crosswalk is loaded (exit 1).
+
 ### Step 1: watch the feed
 
 Monitor mode decodes to the console and writes nothing. It is how you discover the addresses a feed produces before

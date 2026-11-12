@@ -334,7 +334,11 @@ public static class NpgSource
             // folder) quietly became a RAWData CSV read, possibly of another publication with other columns. It is now
             // stated in the build notes with the reason, and an error with no CSV to fall back to still throws.
             try { return DataSourceTable.Open(pq); }
-            catch (Exception ex) when (rawHasCsv)
+            // GR-313 (November 2026): the catch is narrowed. A Parquet folder that is ambiguous (parts from several
+            // publication dates, an AmbiguousDataset-marked refusal) is never worked around by reading some other publication's
+            // CSV: it surfaces so the caller points at one vintage. A process-level failure (out of memory) is never a
+            // reason to read the CSV either. A damaged or unreadable Parquet file still falls back, with the note.
+            catch (Exception ex) when (rawHasCsv && !AmbiguousDataset.Is(ex) && ex is not OutOfMemoryException)
             {
                 fallbackNotes.Add($"NPg {dataset}: the Parquet copy could not be read ({ex.GetType().Name}: {ex.Message}); " +
                                   "the RAWData CSV was read instead.");

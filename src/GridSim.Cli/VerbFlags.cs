@@ -10,15 +10,17 @@ namespace GridSim.Cli;
 // run "succeeded" without doing what was asked. A few verbs had their own accepted-flag list (RequireVerbFlags: the
 // evidence verbs, pf, dcpf, zonal, convert, validate); most had none.
 //
-// The accepted flags of a verb are the flags its own section of ch. 19 names: the same text `gridsim <verb> --help`
+// The accepted flags of a verb are the flags its own section of ch. 19 declares: the same text `gridsim <verb> --help`
 // prints (see VerbHelp.cs), compiled into the binary. So there is one list per verb, the documented one, and a flag the
-// documentation does not give a verb is refused for it. A verb's set is every `--flag` written anywhere in:
-//   * its section (usage line, flag table, prose), and its other modes' sections ("bench --estimate", "bench --perf");
+// documentation does not give a verb is refused for it. A verb's set is every `--flag` DECLARED in:
+//   * its section, and its other modes' sections ("bench --estimate", "bench --perf");
 //   * the shared notes of its group (the text between the group heading and its first verb);
 //   * the "Global switches" section (usable with any command), and the "Result files" flags for a writer verb.
-// Taking every flag the section mentions errs on the side of accepting (a flag named in passing in a verb's prose is
-// accepted for it), never of refusing a flag the documentation gives the verb. The test VerbFlagsTests checks the other
-// direction against the source: every flag a verb's code reads is in the verb's set.
+// GR-194 (November 2026): a flag is declared by a usage line (a line starting "`gridsim") or by the first cell of a
+// flag-table row (a line starting "|"). It used to be every flag written anywhere in those sections, prose included, so
+// a flag named in passing ("the file `stability --rms` reads", "`--prices` applies to dcopf") was accepted by a verb
+// that never reads it and silently ignored. The test VerbFlagsTests checks the other direction against the source:
+// every flag a verb's code reads is in the verb's set.
 //
 // The check runs once, in Program.cs, after the global switches and the result-writer flags have been taken off the
 // argument list and before the verb runs. A first token that is not a verb (a case name, a .m file, --dir) is the
@@ -45,7 +47,7 @@ internal static class VerbFlags
         void Take(int from, int to)
         {
             for (int i = from; i < to && i < lines.Length; i++)
-                foreach (Match mt in FlagToken.Matches(lines[i])) accepted.Add(mt.Value);
+                foreach (Match mt in FlagToken.Matches(Declared(lines[i]))) accepted.Add(mt.Value);
         }
 
         // The verb's own section, and its other modes ("bench" with "bench --estimate" and "bench --perf").
@@ -75,6 +77,23 @@ internal static class VerbFlags
         // Help is always answered (it is handled before any verb runs).
         accepted.Add("--help");
         return accepted;
+    }
+
+    /// <summary>
+    /// GR-194: the part of a chapter line that declares flags: the whole of a usage line (one that starts, after any
+    /// indentation, with "`gridsim"), the first cell of a table row (one that starts with "|"), and nothing of any other
+    /// line (prose, which names flags in passing, often another verb's).
+    /// </summary>
+    internal static string Declared(string line)
+    {
+        string t = line.TrimStart();
+        if (t.StartsWith("`gridsim", StringComparison.Ordinal)) return t;
+        if (t.StartsWith('|'))
+        {
+            int next = t.IndexOf('|', 1);
+            return next > 0 ? t[1..next] : "";
+        }
+        return "";
     }
 
     /// <summary>

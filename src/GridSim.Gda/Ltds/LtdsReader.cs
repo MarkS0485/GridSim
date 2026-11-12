@@ -14,6 +14,8 @@ public static class LtdsReader
     public static IReadOnlyList<LtdsNode> Nodes(string path)
     {
         using CsvTable t = CsvTable.Open(path);
+        // GR-289 (November 2026): a missing or renamed column is refused here, before the rows, not read as blank or 0.
+        t.RequireColumns("LTDS nodes table", "Licence", "Code", "Name", "BSP Group", "GSP Group", "Status");
         var list = new List<LtdsNode>(23000);
         foreach (CsvRow r in t.Rows())
         {
@@ -27,6 +29,8 @@ public static class LtdsReader
     public static IReadOnlyList<LtdsCircuit> Circuits(string path)
     {
         using CsvTable t = CsvTable.Open(path);
+        // GR-289 (November 2026): a missing or renamed column is refused here, before the rows, not read as blank or 0.
+        t.RequireColumns("LTDS circuits table", "Licence", "GSP Group", "BSP Group", "Node 1", "Node 2", "Circuit Status", "Operating Voltage (kV)", "Circuit Code", "R1", "X1", "B1", "R0", "X0", "Winter", "Summer", "Circuit Length (km)", "Equipment");
         var list = new List<LtdsCircuit>(23000);
         foreach (CsvRow r in t.Rows())
         {
@@ -44,6 +48,8 @@ public static class LtdsReader
     public static IReadOnlyList<LtdsTransformer2> TwoWindingTransformers(string path)
     {
         using CsvTable t = CsvTable.Open(path);
+        // GR-289 (November 2026): a missing or renamed column is refused here, before the rows, not read as blank or 0.
+        t.RequireColumns("LTDS two-winding transformers table", "Licence", "GSP Group", "Node 1", "Operating Voltage 1", "Node 2", "Operating Voltage 2", "Status", "Vector Group", "R1", "X1", "X0", "Min Tap", "Max Tap", "Nominal Rating", "Emergency Rating");
         var list = new List<LtdsTransformer2>(3000);
         foreach (CsvRow r in t.Rows())
         {
@@ -62,6 +68,8 @@ public static class LtdsReader
     public static IReadOnlyList<LtdsTransformer3> ThreeWindingTransformers(string path)
     {
         using CsvTable t = CsvTable.Open(path);
+        // GR-289 (November 2026): a missing or renamed column is refused here, before the rows, not read as blank or 0.
+        t.RequireColumns("LTDS three-winding transformers table", "Licence", "GSP Group", "Node 1", "Operating Voltage 1", "Node 2", "Operating Voltage 2", "Node 3", "Operating Voltage 3", "Status", "Vector Group", "R1", "X1 HV-LV", "X1 LV-Tertiary", "X1 HV-Tertiary", "Min Tap", "Max Tap", "Nominal Rating", "Emergency Rating");
         var list = new List<LtdsTransformer3>(100);
         foreach (CsvRow r in t.Rows())
         {
@@ -81,6 +89,8 @@ public static class LtdsReader
     public static IReadOnlyList<LtdsDemand> Demand(string path)
     {
         using CsvTable t = CsvTable.Open(path);
+        // GR-289 (November 2026): a missing or renamed column is refused here, before the rows, not read as blank or 0.
+        t.RequireColumns("LTDS demand table", "GSP Group", "BSP Group", "Primary Substation", "Node", "Operating Voltage", "Current Year Max Demand", "Firm Capacity of Substation", "Status");
         var list = new List<LtdsDemand>(2400);
         foreach (CsvRow r in t.Rows())
         {
@@ -98,6 +108,8 @@ public static class LtdsReader
     public static IReadOnlyList<LtdsGeneration> Generation(string path)
     {
         using CsvTable t = CsvTable.Open(path);
+        // GR-289 (November 2026): a missing or renamed column is refused here, before the rows, not read as blank or 0.
+        t.RequireColumns("LTDS generation table", "GSP Group", "Bulk Supply Point", "Primary Substation", "Connection Voltage", "Agreed Export Capacity", "Fuel Type", "Connection Status");
         var list = new List<LtdsGeneration>(1000);
         foreach (CsvRow r in t.Rows())
         {

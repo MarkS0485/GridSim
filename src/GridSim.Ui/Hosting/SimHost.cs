@@ -204,11 +204,13 @@ public sealed class SimHost
         GridModel model;
         CaseAssetOverlay? overlay;
         IReadOnlyList<string> notes;
+        // Bug #178: the bundled check is made before the read as well as after it; only both passing exempts the model.
+        bool bundledBefore = IsBundledSource(s);
         // Slice 5-view: a v2 case's overlay and notes come back beside the model; a refusal is "Load failed: ..." as for v1.
         try { (model, overlay, notes) = ReadCase(s); }
         catch (Exception ex) { return new LiveLoadResult(null, null, $"Load failed: {ex.Message}"); }
 
-        GateResult lic = licence.Check(model.BusCount, IsBundledSource(s));
+        GateResult lic = licence.Check(model.BusCount, bundledBefore && IsBundledSource(s));
         if (!lic.Allowed) return new LiveLoadResult(null, null, lic.Message);
 
         var dynCfg = LiveSim.AuthoredBundleConfig(model);
@@ -230,13 +232,29 @@ public sealed class SimHost
     /// cannot be read is refused as <c>Replay load failed: ...</c>, one with no frames as
     /// <c>Run has no exported frames.</c>; on a refusal nothing changes.
     /// </summary>
-    public ReplayLoadResult LoadReplay(string dir)
+    public ReplayLoadResult LoadReplay(string dir) => LoadReplay(dir, FreeTier);
+
+    // Bug #198: the gate the one-argument LoadReplay uses: the free tier, the safe direction for a caller that passes none.
+    private static readonly LicenceGate FreeTier = new(Entitlement.FreeDefault);
+
+    /// <summary>
+    /// Bug #198 (2026-11-01): as <see cref="LoadReplay(string)"/>, through the software licence gate. A replay run is a
+    /// network model the host loads (LICENSE.md section 1), as on the web since #171; the desktop hosts used to play a
+    /// replay of any size on the free tier. A run is bundled only when its model has the shipped network's topology
+    /// (<see cref="BundledNetworks.IsShippedTopology"/>), never by the name inside its own files. A refusal leaves
+    /// whatever ran before running and carries the gate's message.
+    /// </summary>
+    public ReplayLoadResult LoadReplay(string dir, LicenceGate licence)
     {
         ArgumentNullException.ThrowIfNull(dir);
+        ArgumentNullException.ThrowIfNull(licence);
         PresolvedReplay replay;
         try { replay = PresolvedReplay.Load(dir); }
         catch (Exception ex) { return new ReplayLoadResult(null, null, null, null, null, $"Replay load failed: {ex.Message}"); }
         if (replay.Count == 0) return new ReplayLoadResult(null, null, null, null, null, "Run has no exported frames.");
+        GateResult lic = licence.Check(replay.LayoutModel.BusCount,
+            BundledNetworks.IsShippedTopology(replay.LayoutModel, replay.LayoutModel.Name));
+        if (!lic.Allowed) return new ReplayLoadResult(null, null, null, null, null, lic.Message);
 
         lock (_gate)
         {

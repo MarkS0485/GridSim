@@ -108,8 +108,9 @@ public sealed record FrozenParameterSet(string AnchorEventId, DynamicsConfig Sha
     {
         ArgumentNullException.ThrowIfNull(candidate);
         var d = new List<string>();
-        void Num(string name, double frozen, double now) { if (!frozen.Equals(now)) d.Add($"{name} ({frozen:R} -> {now:R})"); }
-        void Same<T>(string name, T frozen, T now) { if (!EqualityComparer<T>.Default.Equals(frozen, now)) d.Add($"{name} ({frozen} -> {now})"); }
+        // Bug #193: the refusal is formatted with the invariant culture (it used to follow the machine's).
+        void Num(string name, double frozen, double now) { if (!frozen.Equals(now)) d.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{name} ({frozen:R} -> {now:R})")); }
+        void Same<T>(string name, T frozen, T now) { if (!EqualityComparer<T>.Default.Equals(frozen, now)) d.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{name} ({frozen} -> {now})")); }
         DynamicsConfig f = Shared;
         Num(nameof(DynamicsConfig.NominalHz), f.NominalHz, candidate.NominalHz);
         Num(nameof(DynamicsConfig.DroopPu), f.DroopPu, candidate.DroopPu);
@@ -181,7 +182,8 @@ public static class AssetValidation
         bool passed = nadirErr <= tol.NadirHz && rocofErr <= tol.RocofHzPerS && timeErr <= tol.NadirTimeS;
         string note = passed
             ? "within tolerance of the recorded event"
-            : $"OUTSIDE tolerance (nadir {nadirErr:F3}/{tol.NadirHz}, rocof {rocofErr:F3}/{tol.RocofHzPerS}, t {timeErr:F1}/{tol.NadirTimeS})";
+            : string.Create(System.Globalization.CultureInfo.InvariantCulture,   // bug #193: the same bytes on every machine
+                $"OUTSIDE tolerance (nadir {nadirErr:F3}/{tol.NadirHz}, rocof {rocofErr:F3}/{tol.RocofHzPerS}, t {timeErr:F1}/{tol.NadirTimeS})");
         return new ValidationReport(passed, nadirErr, rocofErr, timeErr, note,
             simRocof, recRocof, sim.NadirSeconds, recorded.NadirTimeS);
     }

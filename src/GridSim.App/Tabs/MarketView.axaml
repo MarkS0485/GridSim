@@ -9,7 +9,7 @@
        order (title; six headline price tiles; the imbalance price trace beside the interconnectors), the same theme
        brushes, the Sparkline instrument from Controls/, and every colour from the shared MarketModel's tokens through
        TokenBrush (the bytes WPF shows). The DataContext is the shared MarketModel. -->
-  <Grid Margin="10" RowDefinitions="Auto,Auto,*">
+  <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,*">
 
     <!-- ============ title ============ -->
     <Border Grid.Row="0" Classes="Card" Padding="14,8" Margin="0,0,0,10">
@@ -58,8 +58,30 @@
       </UniformGrid>
     </Border>
 
+    <!-- ============ prices row (GR-765): system sell price, day-ahead and NIV, computed but not shown before ============ -->
+    <Border Grid.Row="2" Classes="Card" Padding="12,6" Margin="0,0,0,10">
+      <UniformGrid Columns="3">
+        <StackPanel Margin="6">
+          <TextBlock Text="SYSTEM SELL PRICE" Classes="Label" />
+          <TextBlock x:Name="SystemSellPriceText" Text="{Binding SystemSellPrice}" Classes="Value" FontSize="20" />
+          <TextBlock Text="GBP/MWh" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="DAY-AHEAD" Classes="Label" />
+          <TextBlock x:Name="DayAheadText" Text="{Binding DayAhead}" Classes="Value" FontSize="20" />
+          <TextBlock Text="GBP/MWh" Classes="Unit" />
+        </StackPanel>
+        <StackPanel Margin="6">
+          <TextBlock Text="NIV" Classes="Label" />
+          <TextBlock x:Name="NivText" Text="{Binding Niv}" Classes="Value" FontSize="20"
+                     Foreground="{Binding NivColour, Converter={x:Static tabs:TokenBrush.Instance}}" />
+          <TextBlock Text="net imbalance volume" Classes="Unit" />
+        </StackPanel>
+      </UniformGrid>
+    </Border>
+
     <!-- ============ body: price trace + interconnectors ============ -->
-    <Grid Grid.Row="2" ColumnDefinitions="1.6*,10,1*">
+    <Grid Grid.Row="3" ColumnDefinitions="1.6*,10,1*">
 
       <Border Grid.Column="0" Classes="Card" Padding="12">
         <DockPanel>

@@ -20,7 +20,7 @@ public static class NesoReader
             list.Add(new TecEntry(
                 name, r["Customer Name"], r["Connection Site"], r["Stage"],
                 r.Double("MW Connected"), r.Double("Cumulative Total Capacity (MW)"),
-                r["Project Status"], r["HOST TO"], r["Plant Type"], r["Project ID"]));
+                r["Project Status"], r["HOST TO"], r["Plant Type"], r["Project ID"], r["MW Effective From"]));
         }
         return list;
     }
@@ -53,7 +53,8 @@ public static class NesoReader
             list.Add(new EmbeddedEntry(
                 name, r["Connection Site"],
                 r.Double("MW Connected"), r.Double("Cumulative Total Capacity (MW)"),
-                r["Project Status"], r["HOST TO"], r["Plant Type"]));
+                r["Project Status"], r["HOST TO"], r["Plant Type"],
+                r["Stage"], r["Project ID"], r["MW Effective From"]));
         }
         return list;
     }

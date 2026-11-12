@@ -33,6 +33,29 @@ follows, lists the ones that exist, and says how to fetch, update and add them.
 
 ## Planned kinds
 
+- **Network models (in preparation for RC2).** A separate, free and openly licensed repository of national and
+  synchronous-area network models, one folder per grid, each a GridSim case folder (`system.json`, `buses.json`,
+  `transmission.json`, `transformer.json`, `generation.json`, `demand.json`, `onloadtapchanger.json`,
+  `boundaries.json`) plus:
+  - `geography.json` (format `gda-geography/1`): the case's projection, land outline and regions, which the desktop
+    map draws in place of the GB coastline (from 2.1.003);
+  - `MODEL_CARD.md`, `ATTRIBUTION.txt`, `provenance.json` and `evidence_tags.json`: what each value rests on, every
+    source and its licence, and which values are recorded, derived, estimated or synthetic;
+  - `BUILD_README.md`: the sources, the licences applied, and how the model was constructed and iterated.
+
+  Every model is a snapshot built from public data, solves and passes `physics-check`, carries `UnvalidatedAtScale`
+  in its name, and is general purpose by design, not planning grade. The database is licensed ODbL 1.0, with
+  per-source credits in each model. Grids covered: UK, Ireland (all-island), Spain and Portugal, France, Belgium,
+  the Netherlands, Germany, Switzerland, Italy (with Sardinia), Austria, Czechia, Poland, Slovakia, Hungary,
+  Slovenia, Croatia, Romania, Greece, Bulgaria, the Western Balkans, the Baltic states, Denmark (DK1, DK2), Norway,
+  Sweden, Finland, India, the USA (ERCOT), Canada (Quebec, Ontario, Alberta and BC), Australia (NEM, WEM) and Japan
+  (east 50 Hz, west 60 Hz).
+
+  Release is subject to licensing checks: models derived from data whose terms need written consent before
+  redistribution ship only once that consent is held, or as open-data rebuilds. As with every submodule, GridSim
+  needs none of it to build, test or run (rule 1), and the models are ordinary input to the normal loaders (rule 3).
+  Bundled, signed models are planned to be exempt from licence-tier bus limits; that is a GridSim change recorded in
+  its own release, not something the submodule can grant.
 - **Data libraries.** Recorded datasets shipped as Parquet in their own repository, for example the 9 August 2019
   disturbance or the 2026 solar-bashing events. GridSim reads them as replay or evidence inputs through the normal
   loaders (rule 3). A library submodule may add data, never code.

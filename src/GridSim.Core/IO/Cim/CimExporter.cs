@@ -306,7 +306,8 @@ public static class CimExporter
                     string endId = $"{tx.MRID}_e{k + 1}";
                     if (e.TapRatio != 1.0)
                         RatioChanger(root, $"rtc_{tx.MRID}_{k + 1}", endId, e.TapRatio);
-                    if (Math.Abs(e.PhaseShiftDeg) > 1e-12)
+                    // GR-151 (November 2026): exact non-zero compare, as the tap above; a shift inside 1e-12 of zero is no longer dropped.
+                    if (e.PhaseShiftDeg != 0.0)
                         root.Add(new XElement(Cim + "PhaseTapChangerLinear",
                             new XAttribute(Rdf + "ID", $"_ptc_{tx.MRID}_{k + 1}"),
                             new XElement(Cim + "PhaseTapChanger.TransformerEnd", new XAttribute(Rdf + "resource", "#_" + endId)),
@@ -322,7 +323,8 @@ public static class CimExporter
                 RatioChanger(root, "rtc_" + tx.MRID, fromEndId, tx.TapRatio);
             // Export pack (2026-10): the rating, only when the network carries one.
             if (tx.RateAMva is double txRate && tx.Ends.Count == 2) AddRating(root, tx.MRID, $"t_{fromEndId}", txRate);
-            if (tx.Ends.Count > 0 && Math.Abs(tx.PhaseShiftDeg) > 1e-12)
+            // GR-151 (November 2026): exact non-zero compare, as the tap above (the old 1e-12 band dropped tiny shifts).
+            if (tx.Ends.Count > 0 && tx.PhaseShiftDeg != 0.0)
                 root.Add(new XElement(Cim + "PhaseTapChangerLinear",
                     new XAttribute(Rdf + "ID", "_ptc_" + tx.MRID),
                     new XElement(Cim + "PhaseTapChanger.TransformerEnd", new XAttribute(Rdf + "resource", "#_" + fromEndId)),

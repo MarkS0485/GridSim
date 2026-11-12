@@ -68,7 +68,7 @@ public static class PmuLiveQuarantine
     /// comparison), as a predicate so a caller can partition frames instead of refusing the whole capture.
     /// </summary>
     public static bool IsNewerThanHorizon(DateTime stampUtc, DateTime utcNow)
-        => UtcTime.Normalise(stampUtc) > ForwardInferenceGuard.Horizon(utcNow);
+        => UtcTime.Normalise(stampUtc) > ForwardInferenceGuard.Horizon(ForwardInferenceGuard.EffectiveNow(utcNow));   // GR-365: the guard's clamp
 
     /// <summary>
     /// Refuse (<see cref="InvalidDataException"/>) a quarantine folder inside the GDA public evidence lake: a

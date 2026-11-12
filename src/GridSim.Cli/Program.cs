@@ -201,6 +201,18 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         Console.Error.WriteLine($"error: {((Exception)e.ExceptionObject).Message}");
         Environment.Exit(1);
     }
+    // GR-190: the loader gate's refusal (the licence's bus limit, an ambiguous MATPOWER name) used to call
+    // Environment.Exit(2) inside the loader. It is now a GateRefusedException, which batch verbs record as a LOAD FAIL
+    // row; everywhere else it ends the run here with the same "error: <message>" line and exit 2 as the old exit. A
+    // refusal raised inside a parallel loop arrives wrapped in an AggregateException.
+    GateRefusedException? gateRefusal = e.ExceptionObject as GateRefusedException
+        ?? (e.ExceptionObject as AggregateException)?.Flatten().InnerExceptions.OfType<GateRefusedException>().FirstOrDefault();
+    if (gateRefusal is not null)
+    {
+        Console.Out.Flush();
+        Console.Error.WriteLine("error: " + gateRefusal.Message);
+        Environment.Exit(CliExit.Usage);
+    }
     // DOC-1 (D-DOC-001 / 002 class): a ForwardInferenceException is never a defect. It is the horizon guard refusing data
     // newer than 169 h, by design, and manual ch. 19 gives it one code on every verb: REJECTED and exit 2. Every known
     // site catches it itself with that message; this is the backstop, so a site that is missed (or added later) still
@@ -447,8 +459,10 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--live-idcode",    // N340 (CF5): the device IDCODE a live TCP pmu-ingest addresses its commands to
     "--live-quarantine", // N358 (CF6): the folder a live pmu-ingest writes present-time frames to (quarantine, never ingested)
     "--live-udp-source", // GR-818: the only sender address a live UDP pmu-ingest reads datagrams from
+    "--live-udp-any-sender", // bug #173: a live UDP pmu-ingest on a non-loopback bind reads any sender, on purpose (no value)
     "--batched-lanes",  // N349 (CF5): nminus1 branch outages by the batched sweep (R071), N lanes (0 = one per processor)
     "--max-windows",
+    "--max-stamp-spread-ms", // GR-305: interpose, opt-in: refuse a window whose time tags span more than N ms
     "--robust-passes",   // D-DOC-217: dist3ph estimate --method wlav, the IRLS pass cap (default 8)
     "--robust-floor",    // D-DOC-217: dist3ph estimate --method wlav, the residual floor of the weights (default 1e-3)
     "--method",
@@ -546,6 +560,9 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--source-id",
     "--list-protocols",
     "--tolerate-malformed",   // N230: interpose exits 0 despite malformed frames (they are still warned and counted)
+    "--allow-client",         // bug #174: interpose, the only client addresses that may connect (comma-separated)
+    "--allow-any-client",     // bug #174: interpose on a non-loopback listener accepts any client, on purpose (no value)
+    "--idle-seconds",         // bug #174: interpose drops a client silent this long (default 120; 0 never)
     "--monitor",
     "--window-ms",
     "--no-parquet",
@@ -570,6 +587,8 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--hti",
     "--hti-correct",   // N061: HTI corrects identified bad data in place (HtiAction.CorrectThenReverify)
     "--fdia-screen",
+    // estimate and serve: CAF-9 / gap B2 distrusted-source containment (DistrustedSourceSetting)
+    "--distrust",
     // estimate-noise-floor (R062)
     "--miscal-tol",
     "--min-samples",
@@ -983,6 +1002,9 @@ GridSim.Core.Diagnostics.AuditRunRecorder? auditRun = null;
             Console.Error.WriteLine($"warning: audit log '{recorder.FilePath}' has entries but no anchor file '{recorder.AnchorPath}'; " +
                 "tail truncation before this run cannot be detected. Verify it against an anchor you kept (gridsim audit verify " +
                 "--anchor-count N --anchor-head H). The anchor is written from this run on.");
+        // GR-374: an anchor signature in the older v1 form verified but binds no log identity or signing time.
+        if (recorder.AnchorSignatureWarning is string signatureWarning)
+            Console.Error.WriteLine($"warning: audit log '{recorder.FilePath}': {signatureWarning}.");
         void FinishAudit(int exitCode)
         {
             GridSim.Core.Diagnostics.AuditAnchor? anchor = recorder.Finish(exitCode);
@@ -1025,6 +1047,20 @@ void AuditSecurityEvent(GridSim.Core.Diagnostics.SecurityEventKind kind, string 
         Console.Error.WriteLine($"error: audit: the {kind} security event could not be recorded: {ex.Message}");
         if (Environment.ExitCode == 0) Environment.ExitCode = 1;
     }
+}
+
+// GR-851 (November 2026): an audited run hashes an input on one read and loads it on another, so a file replaced in
+// between used to be recorded with the OLD hash, naming data the run never used. Each audited load site calls this once
+// the input is loaded: the input is hashed again and, if it no longer matches the recorded hash, the run is refused
+// (stderr, exit 1, the outcome names the input). True means "refused, return now". A no-op (false) without --audit-log.
+bool AuditInputChangedSinceRecorded(string name, string argument)
+{
+    if (auditRun is null) return false;
+    if (auditRun.InputChangedSinceRecorded(name, argument) is not string why) return false;
+    Console.Error.WriteLine($"error: {why}");
+    auditRun.SetOutcome($"refused=input-changed input={name}");
+    Environment.ExitCode = 1;
+    return true;
 }
 
 bool once = rest.Remove("--once");
@@ -1400,6 +1436,27 @@ CliOutput.TakeFlags(rest);
         Console.Error.WriteLine(flagError);
         Environment.Exit(2);
     }
+}
+
+// GR-195 (November 2026): a global switch given to a verb that does not read it is accepted (the gate above takes the
+// global switches for every verb) but has no effect. Say so on stderr; the run goes on (GlobalSwitchUse.cs lists which
+// verbs read which switch, and the switches left to their own checks). Only for a verb run: the no-verb case run reads
+// these switches itself.
+if (rest.Count > 0 && !rest[0].StartsWith('-') && VerbFlags.Accepted(VerbHelp.LoadEmbedded(), rest[0], writerVerb: false) is not null)
+{
+    var givenSwitches = new List<string>();
+    if (imIdx >= 0) givenSwitches.Add("--inertia-model");
+    if (adIdx >= 0) givenSwitches.Add("--asset-dynamics");
+    if (fmIdx >= 0) givenSwitches.Add("--forming");
+    if (fiIdx >= 0) givenSwitches.Add("--forming-inertia");
+    if (fdIdx >= 0) givenSwitches.Add("--forming-damping");
+    if (once) givenSwitches.Add("--once");
+    if (ti >= 0) givenSwitches.Add("--ticks");
+    if (useBfs) givenSwitches.Add("--bfs");
+    if (doExport) givenSwitches.Add("--enableExport");
+    if (exportJac) givenSwitches.Add("--export-jacobian");
+    foreach (string warning in GlobalSwitchUse.Warnings(rest[0], givenSwitches))
+        Console.Error.WriteLine(warning);
 }
 
 if (rest.Count > 0 && rest[0].Equals("freq", StringComparison.OrdinalIgnoreCase))
@@ -2689,7 +2746,8 @@ void RunTransientBatch(List<string> a, string root)
                 ? Gated.Matpower(cname)   // GR-702: the shared resolution (the path as given, then under data/matpower)
                 : LoadNamed(cname, root);
         }
-        catch (Exception ex)
+        // GR-190: in a multi-case run a gate refusal is this case's 'load fail' line; with one case it ends the run as before (exit 2)
+        catch (Exception ex) when (batch || ex is not GateRefusedException)
         {
             Console.Error.WriteLine($"[transient] load fail {cname}: {ex.Message}");
             // D-DOC-130 (one rule for every verb): a single case argument that names no case at all is a usage error,
@@ -3088,11 +3146,10 @@ void RunScenario(List<string> a, string root)
     DeviceConfig device;
     string? deviceFile = FlagString(a, "--device");
     if (deviceFile is not null)
-        try { device = DeviceConfig.Load(deviceFile); }
-        catch (Exception ex) { Console.Error.WriteLine($"error: --device '{deviceFile}': {ex.Message}"); Environment.Exit(2); return; }
+        device = LoadDeviceFileOrFail(deviceFile);
     else device = new DeviceConfig("tsgb",
-        RotationalInertiaMwS: FlagDouble(a, "--device-inertia", GridSim.Cli.CliDefaults.DefaultDeviceInertiaGvaS) * 1000.0, // GVA.s -> MW.s
-        FastResponseMw: FlagDouble(a, "--device-ffr", GridSim.Cli.CliDefaults.DefaultDeviceFfrGw) * 1000.0);           // GW -> MW
+        RotationalInertiaMwS: FlagDoubleNonNegative(a, "--device-inertia", GridSim.Cli.CliDefaults.DefaultDeviceInertiaGvaS) * 1000.0, // GVA.s -> MW.s
+        FastResponseMw: FlagDoubleNonNegative(a, "--device-ffr", GridSim.Cli.CliDefaults.DefaultDeviceFfrGw) * 1000.0);           // GW -> MW
 
     IReadOnlyList<double> inertia = ParseDoubleList(FlagString(a, "--inertia"), "--inertia", 0, minExclusive: true) ?? SweepAxes.GbInertiaTrajectoryGvaS;
     IReadOnlyList<Corner> corners = ParseCorners(FlagString(a, "--corners")) ?? new[] { Corner.Best, Corner.Worst };
@@ -3232,7 +3289,8 @@ void RunH0Study(List<string> a, string root)
 
     GridModel model;
     try { model = Gated.Dir(caseDir); }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{caseDir}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{caseDir}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
     if (model.AssetDynamics is null)
     {
         Console.Error.WriteLine($"error: case '{caseDir}' ships no asset-classes.json/asset-bindings.json - the H=0 study needs a converter fleet to transform.");
@@ -3368,10 +3426,23 @@ void WriteH0StudyCsv(string outDir, H0StudyResult result, string desc)
 // trace out of Main.
 // GR-197: each list names the flag it came from (every error used to say "--inertia/list"), and its values must be
 // finite and inside [min, max]: NaN, Infinity and impossible fractions used to run as sweep cells.
+// F-064: the three list parsers below used to split with RemoveEmptyEntries, so "260,,120", "260,120," and ",260" ran
+// silently as if the stray comma were not there, and a value of "," or ",," became an EMPTY list (an empty sweep with
+// no cells) instead of an error. A stray comma is nearly always a shell variable that expanded to nothing, so every
+// empty entry is refused, naming the flag and showing the whole value the caller typed. A null csv (flag absent) is the
+// only input that means "use the default".
+static string[] SplitListStrict(string csv, string flag)
+{
+    string[] tokens = csv.Split(',', StringSplitOptions.TrimEntries);
+    if (tokens.Any(t => t.Length == 0))
+        FailFlag<string>(flag, csv, "a comma-separated list with no empty entries (no leading, trailing or doubled comma)");
+    return tokens;
+}
+
 static IReadOnlyList<double>? ParseDoubleList(string? csv, string flag, double min = double.NegativeInfinity, double max = double.PositiveInfinity,
     bool minExclusive = false) =>
-    string.IsNullOrWhiteSpace(csv) ? null
-    : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    csv is null ? null
+    : SplitListStrict(csv, flag)
          .Select(t => double.TryParse(t, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v)
                       && double.IsFinite(v) && (minExclusive ? v > min : v >= min) && v <= max
                       ? v
@@ -3380,14 +3451,14 @@ static IReadOnlyList<double>? ParseDoubleList(string? csv, string flag, double m
                           (double.IsPositiveInfinity(max) ? "" : $" to {max.ToString(System.Globalization.CultureInfo.InvariantCulture)}"))).ToList();
 
 static IReadOnlyList<Corner>? ParseCorners(string? csv) =>
-    string.IsNullOrWhiteSpace(csv) ? null
-    : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-         .Select(t => Enum.TryParse<Corner>(t, ignoreCase: true, out Corner c)
+    csv is null ? null
+    : SplitListStrict(csv, "--corners")
+         .Select(t => Enum.TryParse<Corner>(t, ignoreCase: true, out Corner c) && Enum.IsDefined(c)
                       ? c : FailFlag<Corner>("--corners", t, "one of: " + string.Join(", ", Enum.GetNames<Corner>()))).ToList();
 
 static IReadOnlyList<int>? ParseIntList(string? csv, string flag) =>
-    string.IsNullOrWhiteSpace(csv) ? null
-    : csv.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    csv is null ? null
+    : SplitListStrict(csv, flag)
          .Select(t => int.TryParse(t, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int v) && v >= 1
                       ? v : FailFlag<int>(flag, t, "a comma-separated list of whole numbers, 1 or more")).ToList();
 
@@ -3427,9 +3498,8 @@ void RunEvidence(List<string> a, string root)
     DeviceConfig device;
     string? deviceFile = FlagString(a, "--device");
     if (deviceFile is not null)
-        try { device = DeviceConfig.Load(deviceFile); }
-        catch (Exception ex) { Console.Error.WriteLine($"error: --device '{deviceFile}': {ex.Message}"); Environment.Exit(2); return; }
-    else device = new DeviceConfig("tsgb", FlagDouble(a, "--device-inertia", GridSim.Cli.CliDefaults.DefaultDeviceInertiaGvaS) * 1000.0, FlagDouble(a, "--device-ffr", GridSim.Cli.CliDefaults.DefaultDeviceFfrGw) * 1000.0);
+        device = LoadDeviceFileOrFail(deviceFile);
+    else device = new DeviceConfig("tsgb", FlagDoubleNonNegative(a, "--device-inertia", GridSim.Cli.CliDefaults.DefaultDeviceInertiaGvaS) * 1000.0, FlagDoubleNonNegative(a, "--device-ffr", GridSim.Cli.CliDefaults.DefaultDeviceFfrGw) * 1000.0);
 
     // D-DOC-033 (October 2026, docs-session finding): --voll-source used to accept ANY text and tag the VoLL Recorded on the
     // word of the flag. It must now name a reference in docs/reference/voll that states a GB VoLL (S322, S323, S324), and
@@ -3583,7 +3653,8 @@ void RunGdaReplay(List<string> a, string root)
         bool isCaseDir = Directory.Exists(caseName) && File.Exists(Path.Combine(caseName, "system.json"));
         model = isCaseDir ? Gated.Dir(caseName) : LoadNamed(caseName, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
     // A label safe for a folder name: a case directory path becomes its last folder name.
     string caseLabel = Directory.Exists(caseName)
         ? Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(caseName)))
@@ -3708,7 +3779,7 @@ void RunServe(List<string> a, string root)
     if (caseName is null || measDir is null)
     {
         Console.Error.WriteLine("usage: gridsim serve <case> --measurements-dir <dir> [--method wls|ekf|ukf|enkf]");
-        Console.Error.WriteLine("                  [--utc-now <iso8601>] [--max-windows N]");
+        Console.Error.WriteLine("                  [--utc-now <iso8601>] [--max-windows N] [--distrust <source>[,<source>...]]");
         Console.Error.WriteLine("Runs the real-time estimator as a resident stream over a directory of gridsim-measurements/1");
         Console.Error.WriteLine("files (sorted by name). Real-time ENGINEERING on permitted-age/replay data: every window's");
         Console.Error.WriteLine($"timestamp passes the horizon guard - a window newer than now-{GridSim.Core.Diagnostics.ForwardInferenceGuard.HorizonHours}h is skipped, never estimated.");
@@ -3723,7 +3794,8 @@ void RunServe(List<string> a, string root)
         bool isCaseDir = Directory.Exists(caseName) && File.Exists(Path.Combine(caseName, "system.json"));
         model = isCaseDir ? Gated.Dir(caseName) : LoadNamed(caseName, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     // D-DOC-060: an audited serve run records the case and the window directory (hashed: every file's name and bytes)
     // as `estimate` records its case and measurement set, before any refusal below, so a refused run names its inputs
@@ -3740,6 +3812,20 @@ void RunServe(List<string> a, string root)
         Environment.ExitCode = 2;
         return;
     }
+    // CAF-9 / gap B2 (D1 distrusted-source containment): --distrust <source>[,<source>...] demotes the named sources'
+    // rows in every window to pseudo-measurements and leaves them out of the chi-square redundancy. It is a property of
+    // the static WLS estimator (sigma inflation plus the redundancy rule), so it is refused with the recursive filters
+    // (exit 2) rather than silently ignored. Null when the flag is absent: the feature is off and nothing changes.
+    GridSim.Core.Estimation.DistrustedSources? distrust = ParseDistrustFlag(FlagString(a, "--distrust"));
+    if (distrust is not null && method != "wls")
+    {
+        Console.Error.WriteLine($"error: --distrust applies to the static estimator (--method wls) only, not to --method {method}.");
+        Environment.ExitCode = 2;
+        return;
+    }
+    // Rows of each distrusted source seen across the loaded windows, for the warning after the run (a tag no window
+    // carried contained nothing, most likely a mistyped tag). Counted only when --distrust is given.
+    var distrustRowsSeen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
     // D-DOC-063: --utc-now parses strictly (ISO 8601 / round-trip shapes only, invariant culture), so an ambiguous
     // date such as 01/02/2100 is refused instead of being read as 2 January. A stamp with no zone is UTC.
@@ -3811,6 +3897,9 @@ void RunServe(List<string> a, string root)
                 unloadableWindows++;
                 Console.Error.WriteLine($"error: serve: window '{Path.GetFileName(f)}' cannot be loaded and is skipped: {ex.Message}");
             }
+            if (window is not null && distrust is not null)
+                foreach (string ds in distrust.Sources)
+                    distrustRowsSeen[ds] = distrustRowsSeen.GetValueOrDefault(ds) + GridSim.Core.Estimation.DistrustedSourceSetting.RowsFrom(window, ds);
             if (window is not null) yield return window;
         }
     }
@@ -3820,8 +3909,19 @@ void RunServe(List<string> a, string root)
     var opt = new GridSim.Core.Simulation.RealtimeEstimatorOptions
     {
         UtcNow = now,
-        Estimation = new EstimationOptions { ComputeStateCovariance = true },
+        // CAF-9 / gap B2: null without --distrust, which is exactly the options serve always used.
+        Estimation = new EstimationOptions { ComputeStateCovariance = true, DistrustedSources = distrust },
     };
+    // CAF-9 / gap B2: the run applies the distrusted sources to every window, so it records one DistrustedSource
+    // security event per source now, before the first window (a no-op without --audit-log).
+    if (distrust is not null)
+    {
+        IReadOnlyList<string> recordedDistrust = GridSim.Core.Estimation.DistrustedSourceSetting.RecordApplied(
+            distrust, "serve --distrust", rowsDemoted: null, AuditSecurityEvent);
+        foreach (string ds in recordedDistrust)
+            Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"distrust: source '{ds}': its rows in every window demoted to pseudo-measurements (sigma x {distrust.SigmaInflation:R}) and left out of the chi-square redundancy"));
+    }
 
     // D-DOC-163 (October 2026): serve printed only a status per window (OK / J / chi2, or OK / non-finite), never the
     // state it had estimated nor how sure it was. Now each window line ends with the largest 1-sigma bound of the window
@@ -3920,6 +4020,11 @@ void RunServe(List<string> a, string root)
     int rejectedFresh = summary.WindowsRejectedFresh + freshWindowsAtLoad;
     Console.WriteLine($"done: processed {summary.WindowsProcessed}, converged {summary.WindowsConverged}, " +
         $"rejected-fresh {rejectedFresh}, failed {summary.WindowsFailed}");
+    // CAF-9 / gap B2: a distrusted tag that no loaded window carried demoted nothing; say so (stderr), naming it.
+    if (distrust is not null)
+        foreach (string ds in GridSim.Core.Estimation.DistrustedSourceSetting.OrderedSources(distrust))
+            if (distrustRowsSeen.GetValueOrDefault(ds) == 0)
+                Console.Error.WriteLine($"warning: --distrust '{ds}': no row of any loaded window carried this source tag, so nothing was demoted for it.");
     // D-DOC-163: the last usable window's state, one row per bus (sigma columns "n/a" when the WLS covariance was not
     // computed, which happens above the dense covariance limit).
     if (lastState is { } shown)
@@ -3985,6 +4090,8 @@ void RunInterpose(List<string> a, string root)
     // makes the run exit 1 at its end unless the operator opts in to line noise with --tolerate-malformed (then the
     // warning and the counts still say so, and the exit stays 0).
     bool tolerateMalformed = a.Remove("--tolerate-malformed");
+    // Bug #174: the explicit opt-out of the client allow-list on a listener beyond loopback (a value-less flag).
+    bool allowAnyClient = a.Remove("--allow-any-client");
     _ = a.Remove("--no-parquet"); // reserved for the Phase-2 quarantine sink; consume so it isn't read as a value
 
     string? protoName = FlagString(a, "--protocol");
@@ -3993,6 +4100,7 @@ void RunInterpose(List<string> a, string root)
         Console.Error.WriteLine("usage: gridsim interpose [case] --protocol <name> (--listen host:port | --port N) --crosswalk <map.json>");
         Console.Error.WriteLine("                         [--measurements-dir <dir>] [--out-store <dir>] [--source-id <id>] [--window-ms N]");
         Console.Error.WriteLine("                         [--monitor] [--ticks N] [--live-seconds S] [--tolerate-malformed]");
+        Console.Error.WriteLine("                         [--allow-client IP[,IP...] | --allow-any-client] [--idle-seconds S]");
         Console.Error.WriteLine("       gridsim interpose --list-protocols");
         Console.Error.WriteLine("Receives live RTU/SCADA frames, corrects & decodes them, and writes gridsim-measurements/1 windows.");
         Console.Error.WriteLine($"Live frames feed the estimator only after ageing past the {GridSim.Core.Diagnostics.ForwardInferenceGuard.HorizonHours} h horizon (monitor-only until then).");
@@ -4007,9 +4115,20 @@ void RunInterpose(List<string> a, string root)
     auditRun?.AddInput(GridSim.Core.Diagnostics.AuditInput.OfFile("crosswalk", crosswalkPath));   // R075
     try { crosswalk = RtuPointMap.Load(crosswalkPath); }
     catch (Exception ex) { Console.Error.WriteLine($"error loading crosswalk '{crosswalkPath}': {ex.Message}"); Environment.ExitCode = 1; return; }
+    if (AuditInputChangedSinceRecorded("crosswalk", crosswalkPath)) return;   // GR-851
+    // GR-306: the crosswalk's IEC 104 naming (absent: by IOA alone, as before). It means nothing to another protocol, so
+    // a crosswalk that sets it for one is refused like any other bad crosswalk (exit 1).
+    if (protocol is GridSim.Core.Interpose.Protocols.Iec104Protocol iec104Naming) iec104Naming.PointKey = crosswalk.ResolveIec104Key();
+    else if (crosswalk.Iec104Key is not null)
+    {
+        Console.Error.WriteLine($"error loading crosswalk '{crosswalkPath}': iec104Key applies to --protocol iec104 only (this run is {protocol.Name}).");
+        Environment.ExitCode = 1;
+        return;
+    }
 
-    // Endpoint: --listen host:port wins; else --port (default per protocol) on all interfaces.
-    string host = "0.0.0.0";
+    // Endpoint: --listen host:port wins; else --port (default per protocol) on loopback. Bug #174: the default used to be
+    // every interface (0.0.0.0); any other interface is now asked for explicitly with --listen.
+    string host = "127.0.0.1";
     int port = protocol.DefaultPort;
     // GR-706: the port is checked against 0..65535 here (a usage error, exit 2; it used to reach TcpListener and exit 1
     // as a transport failure), and an IPv6 address is given in brackets, [::1]:2404 (the value used to be split on
@@ -4026,8 +4145,46 @@ void RunInterpose(List<string> a, string root)
             FailFlag<int>("--port", port.ToString(System.Globalization.CultureInfo.InvariantCulture), "a TCP port, 0 to 65535");
     }
 
+    // Bug #174: who may take the single client slot, and how long a silent client may keep it.
+    List<System.Net.IPAddress>? allowedClients = null;
+    if (FlagString(a, "--allow-client") is string allowText)
+    {
+        allowedClients = new List<System.Net.IPAddress>();
+        foreach (string part in allowText.Split(','))
+        {
+            string t = part.Trim();
+            if (!System.Net.IPAddress.TryParse(t, out System.Net.IPAddress? ip))
+            { Console.Error.WriteLine($"error: interpose --allow-client takes IP addresses separated by commas (got '{part}')."); Environment.ExitCode = 2; return; }
+            allowedClients.Add(ip);
+        }
+        if (allowAnyClient)
+        { Console.Error.WriteLine("error: interpose: --allow-client and --allow-any-client contradict each other; give one."); Environment.ExitCode = 2; return; }
+    }
+    if (!InterposeListenIsLoopback(host) && allowedClients is null && !allowAnyClient)
+    {
+        Console.Error.WriteLine($"error: interpose would listen on {host}:{port.ToString(System.Globalization.CultureInfo.InvariantCulture)}, reachable from other machines, "
+            + "and serve the first client from anyone. Name the RTU's address with --allow-client <ip>[,<ip>...], or accept any client on "
+            + "purpose with --allow-any-client. (Without --listen, interpose listens on 127.0.0.1 only.)");
+        Environment.ExitCode = 2;
+        return;
+    }
+    long idleMs = GridSim.Cli.Interpose.InterposeAccessPolicy.DefaultIdleTimeoutMs;
+    if (FlagString(a, "--idle-seconds") is string idleText)
+    {
+        if (!double.TryParse(idleText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double idleSeconds)
+            || !double.IsFinite(idleSeconds) || idleSeconds < 0 || idleSeconds > 86400)
+        { Console.Error.WriteLine($"error: interpose --idle-seconds must be a number from 0 (never drop) to 86400 (got '{idleText}')."); Environment.ExitCode = 2; return; }
+        idleMs = (long)Math.Ceiling(idleSeconds * 1000.0);
+    }
+    var accessPolicy = new GridSim.Cli.Interpose.InterposeAccessPolicy(allowedClients, idleMs);
+
     string caseName = PositionalArg(a) ?? (crosswalk.Case.Length > 0 ? crosswalk.Case : "rtu");
     int windowMs = FlagCount(a, "--window-ms", 1000, 1);   // GR-682: refused below 1, not raised to 1
+    // GR-305 (November 2026), opt-in: the widest spread of device time tags one window may hold, in ms. Absent: no check
+    // (the old behaviour). A window that spreads wider is discarded and counted, and the run exits 3.
+    TimeSpan? maxStampSpread = FlagString(a, "--max-stamp-spread-ms") is null
+        ? null
+        : TimeSpan.FromMilliseconds(FlagCount(a, "--max-stamp-spread-ms", 0, 0));
     int maxTicks = ticks; // --ticks is parsed and removed up front (shared with the live loop); 0 = interactive
     string? measDir = FlagString(a, "--measurements-dir");
     string? outStoreFlag = FlagString(a, "--out-store");
@@ -4073,13 +4230,19 @@ void RunInterpose(List<string> a, string root)
         catch (Exception ex) { Console.Error.WriteLine($"error opening quarantine store '{outStore}': {ex.Message}"); Environment.ExitCode = 1; return; }
     }
 
-    var pipeline = new InterposePipeline(protocol, crosswalk, QualityFold.Default, caseName);
+    var pipeline = new InterposePipeline(protocol, crosswalk, QualityFold.Default, caseName) { MaxStampSpread = maxStampSpread };
 
     IRtuTransport transport;
-    try { transport = TransportFactory.Open(protocol, host, port); }
+    try { transport = TransportFactory.Open(protocol, host, port, accessPolicy); }
     catch (Exception ex) { Console.Error.WriteLine($"error opening {protocol.Name} transport on {host}:{port}: {ex.Message}"); Environment.ExitCode = 1; return; }
 
     Console.WriteLine($"interpose {protocol.DisplayName}: listening {host}:{port}, case '{caseName}', {crosswalk.Bindings.Count} binding(s)");
+    // Bug #174: say who may connect and when a silent client is dropped.
+    Console.WriteLine("clients: " + (allowedClients is not null ? "only " + string.Join(", ", allowedClients) + " (--allow-client)"
+        : allowAnyClient && !InterposeListenIsLoopback(host) ? "ANY address (--allow-any-client)" : "this machine only (loopback)")
+        + "; a client silent for " + (idleMs > 0 ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{idleMs / 1000.0:0.###} s is dropped") : "any time is kept (--idle-seconds 0)") + ".");
+    if (allowAnyClient && !InterposeListenIsLoopback(host))
+        Console.Error.WriteLine("interpose: WARNING --allow-any-client: any host that can reach the port can take the client slot and feed frames.");
     // R075: a start entry now (a listener can run for days), the stop entry at exit. Frame contents are never logged.
     auditRun?.RecordNow(string.Create(System.Globalization.CultureInfo.InvariantCulture,
         $"started protocol={protocol.Name} listen={host}:{port} monitor={monitor}"));
@@ -4098,6 +4261,7 @@ void RunInterpose(List<string> a, string root)
     }
     bool stoppedOnTime = false;   // N230: true when --live-seconds, not a key or --ticks, ended the run
     bool malformedWarned = false; // N230: the first malformed frame is named on stderr, the rest are counted
+    bool collisionWarned = false; // GR-306: the first IEC 104 common-address collision is named on stderr, the rest are counted
 
     bool interactive = maxTicks <= 0;
     long tick = 0, windowsWritten = 0, seq = 0, windowsDuplicateNamed = 0;
@@ -4168,6 +4332,13 @@ void RunInterpose(List<string> a, string root)
                         Console.Error.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
                             $"WARNING: interpose: malformed {protocol.Name} frame ({what}, {frame.Length} octet(s)) at frame {tick + 1}; later malformed frames are counted, not named."));
                     }
+                    // GR-306: name the first IOA that arrived with two common addresses (its points are invalid from then on).
+                    if (!collisionWarned && protocol is GridSim.Core.Interpose.Protocols.Iec104Protocol { FirstCommonAddressCollision: string clash })
+                    {
+                        collisionWarned = true;
+                        Console.Error.WriteLine($"WARNING: interpose: {clash}; its points are marked invalid from now on and later collisions are counted, not named. "
+                            + "To keep the stations apart, name points by common address with \"iec104Key\": \"casdu-ioa\" in the crosswalk.");
+                    }
                     pointTally.Add(pts);
                     if (monitor)
                         foreach (RtuPoint p in pts)
@@ -4204,6 +4375,11 @@ void RunInterpose(List<string> a, string root)
             ? GridSim.Core.Interpose.InterposeFreshPolicy.QuarantineCapture
             : GridSim.Core.Interpose.InterposeFreshPolicy.Refuse;
         try { flush = pipeline.FlushWindow(DateTime.UtcNow, freshPolicy); }
+        catch (InvalidDataException ex) when (InterposePipeline.IsSpreadRefusal(ex))
+        {
+            Console.Error.WriteLine($"  window discarded (time-tag spread, --max-stamp-spread-ms): {ex.Message}");
+            return;
+        }
         catch (InvalidDataException ex)
         {
             Console.Error.WriteLine($"  window discarded (crosswalk mismatch): {ex.Message}");
@@ -4241,6 +4417,14 @@ void RunInterpose(List<string> a, string root)
         $"windows-written {windowsWritten}, duplicate-names {windowsDuplicateNamed}, client-resets {transport.ClientResets}, " +
         $"unsupported-type-ids {unsupported}, held-fresh {pipeline.HeldFresh}, quarantined {windowsQuarantined}, " +
         $"discarded-bytes {transport.DiscardedBytes}");
+    // GR-306: IEC 104 common-address collisions, on a line of their own so the stop line above keeps its fields.
+    if (protocol is GridSim.Core.Interpose.Protocols.Iec104Protocol { CommonAddressCollisions: > 0 } iecClash)
+        Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"iec104: common-address collisions {iecClash.CommonAddressCollisions} (points marked invalid; first: {iecClash.FirstCommonAddressCollision})"));
+    // Bug #174: refused and idle-dropped clients, on a line of their own so the stop line above keeps its fields.
+    if (transport.RefusedClients > 0 || transport.IdleDrops > 0)
+        Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"clients: refused {transport.RefusedClients} (not in --allow-client), idle-dropped {transport.IdleDrops} (silent for --idle-seconds)"));
     auditRun?.SetOutcome(string.Create(System.Globalization.CultureInfo.InvariantCulture,
         $"stopped accepted={pipeline.Correction.Accepted} rejected={pipeline.Correction.Rejected} decode-errors={pipeline.DecodeErrors} map-errors={pipeline.MapErrors} {pointTally.AuditFields()} windows-written={windowsWritten} duplicate-names={windowsDuplicateNamed} client-resets={transport.ClientResets} unsupported-type-ids={unsupported} held-fresh={pipeline.HeldFresh} quarantined={windowsQuarantined} discarded-bytes={transport.DiscardedBytes}"));
     // A discarded window is lost evidence caused by a configuration fault: the run did not do everything it was
@@ -4255,6 +4439,15 @@ void RunInterpose(List<string> a, string root)
         Console.Error.WriteLine($"REJECTED (forward inference): {pipeline.HeldFresh} window(s) newer than the {ForwardInferenceGuard.HorizonHours} h " +
             $"horizon were not written to --measurements-dir{(store is not null ? $" ({windowsQuarantined} kept as quarantine captures in --out-store)" : "")}.");
         Environment.ExitCode = CliExit.Usage;
+    }
+
+    // GR-305: a window refused for its time-tag spread (opt-in --max-stamp-spread-ms) is lost evidence, as a map error is:
+    // exit 3, ahead of the forward-inference refusal, on a line of its own so the stop line keeps its fields.
+    if (pipeline.SpreadRefused > 0)
+    {
+        Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"spread-refused: {pipeline.SpreadRefused} window(s) whose time tags spanned more than {maxStampSpread!.Value.TotalMilliseconds} ms (--max-stamp-spread-ms)"));
+        Environment.ExitCode = 3;
     }
 
     // N230 (main's ruling on question 1): any malformed frame fails the run, exit 1, unless --tolerate-malformed. Map
@@ -4318,7 +4511,8 @@ void RunEmt(List<string> a, string root)
     {
         model = emtSel.Load();
     }
-    catch (Exception ex) { Console.Error.WriteLine($"emt: error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"emt: error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     string Num(double x) => x.ToString("R", inv);
@@ -5271,6 +5465,7 @@ void RunEstimate(List<string> a, string root)
         Console.Error.WriteLine("                        [--method wls|huber|lav|lav-lp|schweppe-gm|qr|constrained|feasible]");
         Console.Error.WriteLine("                        [--prior flat|solve] [--warm-start] [--no-bad-data] [--backfill-removals]");
         Console.Error.WriteLine("                        [--hti [--hti-correct]] [--fdia-screen] [--lean] [--trace] [--export-solve]");
+        Console.Error.WriteLine("                        [--distrust <source>[,<source>...]]");
         Console.Error.WriteLine("                        [--tol 1e-8] [--max-iter N] [--out <dir>]");
         Console.Error.WriteLine("                        [--phaseangle BUS:ANGLE:UTC:FREQ ...] [--phaseangle-ref auto|referenced|raw]");
         Console.Error.WriteLine("                        [--phaseangle-sigma DEG] [--phaseangle-at UTC] [--phaseangle-from-gda <gda-root>]");
@@ -5287,6 +5482,9 @@ void RunEstimate(List<string> a, string root)
         Environment.ExitCode = 2;
         return;
     }
+    // CAF-9 / gap B2: --distrust <source>[,<source>...] is read and validated here, before any input is loaded, so a
+    // malformed value is a usage error (exit 2) naming the flag. Null when the flag is absent (the feature is off).
+    GridSim.Core.Estimation.DistrustedSources? distrust = ParseDistrustFlag(FlagString(a, "--distrust"));
 
     // R075: the case and the measurement file, hashed before anything reads them, so even a run that fails to load
     // them records which inputs it was given (a bundled case name is recorded as case-id, the hash of the name, never
@@ -5311,7 +5509,9 @@ void RunEstimate(List<string> a, string root)
         bool isCaseDir = Directory.Exists(caseName) && File.Exists(Path.Combine(caseName, "system.json"));
         model = isCaseDir ? Gated.Dir(caseName) : LoadNamed(caseName, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{caseName}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    if (AuditInputChangedSinceRecorded("case", caseName)) return;   // GR-851
 
     string caseLabel = Path.GetFileName(caseName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
     string outDir = FlagString(a, "--out") ?? DefaultResultsPath($"estimate-{caseLabel}");
@@ -5352,6 +5552,7 @@ void RunEstimate(List<string> a, string root)
     catch (ForwardInferenceException ex) { Console.Error.WriteLine($"REJECTED (forward inference): {ex.Message}"); AuditSecurityEvent(GridSim.Core.Diagnostics.SecurityEventKind.HorizonViolation, $"estimate input refused: {ex.Message}"); Environment.ExitCode = 2; return; }
     catch (Exception ex) when (ex is not OutputRefusedException)   // D-DOC-072: a refused --synth save is exit 2 (the process-wide handler), not a load error
     { Console.Error.WriteLine($"error loading measurements: {ex.Message}"); Environment.ExitCode = 1; return; }
+    if (!synth && AuditInputChangedSinceRecorded("measurements", measurementsPath!)) return;   // GR-851
 
     // Phase-angle override: turn manually-supplied (or GDA-referenced) per-bus voltage angles into
     // slack-referenced VaDeg measurement rows and merge them in - BEFORE the prior/warm-start so the injected
@@ -5588,9 +5789,50 @@ void RunEstimate(List<string> a, string root)
         Environment.ExitCode = 2;
         return;
     }
+    // CAF-9 / gap B2 (D1 distrusted-source containment). With --distrust, every row of a named source is demoted to a
+    // pseudo-measurement inside the estimator (sigma x DistrustedSources.DefaultSigmaInflation, value unchanged) and left
+    // out of the chi-square redundancy (its residual is not in J and it is not a degree of freedom). Refusals first, each
+    // a usage error (exit 2) before anything is estimated or recorded:
+    //   * with --hti: HTI identifies and removes rows by reference against its own set, which the demoted copies would
+    //     not match (HtiBadDataEstimation refuses it too);
+    //   * a named source that no row of the set carries: the operator meant to contain something and would contain
+    //     nothing (most likely a mistyped tag), so the run stops and lists the tags the set does carry.
+    if (distrust is not null)
+    {
+        if (useHti)
+        {
+            Console.Error.WriteLine("error: --distrust is not supported with --hti (HTI removes rows by reference, and distrusted rows are demoted copies); use the default bad-data removal.");
+            Environment.ExitCode = 2;
+            return;
+        }
+        List<string> unmatched = GridSim.Core.Estimation.DistrustedSourceSetting.OrderedSources(distrust)
+            .Where(s => GridSim.Core.Estimation.DistrustedSourceSetting.RowsFrom(set, s) == 0).ToList();
+        if (unmatched.Count > 0)
+        {
+            string carried = string.Join(", ", set.Measurements.Select(m => m.Source).Where(s => s is not null).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(s => s, StringComparer.Ordinal));
+            Console.Error.WriteLine($"error: --distrust names {string.Join(", ", unmatched.Select(s => $"'{s}'"))}, which no row of the measurement set carries (the set's source tags: {(carried.Length == 0 ? "none" : carried)}).");
+            Environment.ExitCode = 2;
+            return;
+        }
+        eopt = eopt with { DistrustedSources = distrust };
+    }
 
     string desc = $"estimate  case={caseLabel}  measurements={set.Measurements.Count}  source={(synth ? "synthetic" : measurementsPath)}";
     RunInfo.WriteJson(CliFiles.Output(Path.Combine(outDir, "run-metadata.json"), "run-metadata.json"), desc);
+
+    // CAF-9 / gap B2: the run applies the distrusted sources, so it records one DistrustedSource security event per source
+    // (a no-op without --audit-log; with --incident-log each is raised as an incident, baseline severity Significant),
+    // and says on the console what it did to each.
+    if (eopt.DistrustedSources is GridSim.Core.Estimation.DistrustedSources appliedDistrust)
+    {
+        MeasurementSet distrustedFrom = set;
+        IReadOnlyList<string> recorded = GridSim.Core.Estimation.DistrustedSourceSetting.RecordApplied(
+            appliedDistrust, "estimate --distrust",
+            s => GridSim.Core.Estimation.DistrustedSourceSetting.RowsFrom(distrustedFrom, s), AuditSecurityEvent);
+        foreach (string s in recorded)
+            Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"  distrust: source '{s}': {GridSim.Core.Estimation.DistrustedSourceSetting.RowsFrom(distrustedFrom, s)} row(s) demoted to pseudo-measurements (sigma x {appliedDistrust.SigmaInflation:R}) and left out of the chi-square redundancy"));
+    }
 
     EstimationResult est;
     HtiEstimationResult? hti = null;
@@ -5750,18 +5992,27 @@ void RunEstimate(List<string> a, string root)
                           "--method lav solves it exactly (linear programming).");
     if (est.Converged)
     {
-        if (!est.ChiSquareIsVerdict)
+        if (!est.ChiSquareIsVerdict && est.LavObjective is not null)
         {
             // N356 (CF6, Ruling R1): a LAV estimate (lav, lav-lp, lav-irls) reports the objective LAV minimises and gives
             // no chi-square verdict: neither sum |r| / sigma nor J at the LAV state is chi-square distributed, so a
             // PASS / FAIL against the chi-square quantile would test nothing. J is still printed, labelled as
-            // information only. Every non-LAV run takes the else branch, which is the previous code unchanged.
+            // information only. GR-521: the hint no longer names huber, which gives no verdict either.
             Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
                 $"  objective: sum |r| / sigma = {est.LavObjective:F2} (the LAV objective, over {est.Residuals.Count} measurements)"));
             Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
                 $"  consistency: no chi-square verdict (J = {est.ObjectiveJ:F2}, information only)"));
             Console.WriteLine("  NOTE: the LAV objective is not chi-square distributed (and J at the LAV state is not the least-squares " +
-                              "minimum), so no chi-square test applies to a LAV estimate; use --method wls or huber for a consistency verdict.");
+                              "minimum), so no chi-square test applies to a LAV estimate; use --method wls for a consistency verdict.");
+        }
+        else if (!est.ChiSquareIsVerdict)
+        {
+            // GR-521 (November 2026): an M-estimate (huber, schweppe-gm) gives no chi-square verdict. J at an M-estimate is
+            // not the WLS minimum, so it is not chi-square(m - n) distributed under H0; J is printed as information only.
+            Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"  consistency: no chi-square verdict (J = {est.ObjectiveJ:F2}, information only)"));
+            Console.WriteLine($"  NOTE: J at a robust M-estimate ({methodName}) is not the least-squares minimum, so it is not chi-square " +
+                              "distributed and no chi-square test applies; read the robust weights, or use --method wls for a consistency verdict.");
         }
         else
         {
@@ -5824,9 +6075,11 @@ void RunEstimate(List<string> a, string root)
         else if (!est.ChiSquareIsVerdict)
         {
             // N356 (CF6): a LAV estimate has no chi-square verdict, so the measurement-consistency half of the screen
-            // has nothing to stand on: no verdict, exactly as for a test that did not run.
+            // has nothing to stand on: no verdict, exactly as for a test that did not run. GR-521: nor has an M-estimate.
             fdiaVerdict = "no-verdict";
-            fdiaSummary = "not run: a LAV estimate gives no chi-square verdict (its objective is not chi-square distributed), so the measurement-consistency half of the screen has no verdict.";
+            fdiaSummary = est.LavObjective is not null
+                ? "not run: a LAV estimate gives no chi-square verdict (its objective is not chi-square distributed), so the measurement-consistency half of the screen has no verdict."
+                : $"not run: a robust M-estimate ({methodName}) gives no chi-square verdict (J at it is not chi-square distributed), so the measurement-consistency half of the screen has no verdict.";
             fdiaFailed = true;
         }
         else if (est.ChiSquareTest == ChiSquareOutcome.NotRun)
@@ -6039,7 +6292,9 @@ void RunCrossval(List<string> a, string root)
         {
             m = LoadCaseArgument(arg, root);
         }
-        catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+        // GR-190: a gate refusal ends the run as before (exit 2)
+        catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+        if (AuditInputChangedSinceRecorded("case", arg)) return;   // GR-851
 
         var trace = new GridSim.Core.Diagnostics.SolveTrace();
         var opt = new PowerFlowOptions { MaxIterations = 100, EnforceQLimits = true, Trace = trace };
@@ -6981,6 +7236,22 @@ static double FlagDouble(List<string> a, string name, double dflt)
     return FailFlag<double>(name, a[i + 1], "a finite number");
 }
 
+// Bug #208: a number flag that is a physical quantity which cannot be negative (the device inertia in GVA.s and the
+// device fast frequency response in GW). Same rules as FlagDouble (absent takes the default, a present flag with no
+// value is refused, non-numeric is refused) but the value must also be finite AND 0 or more, so NaN, +/-Infinity,
+// overflow such as 1e999 and any negative number all exit 2 under the real flag name. Zero is allowed (no device).
+// The default is returned untouched when the flag is absent; it is not re-checked.
+static double FlagDoubleNonNegative(List<string> a, string name, double dflt)
+{
+    int i = FlagIndex(a, name);
+    if (i < 0) return dflt;
+    if (FlagValueMissing(a, i)) return FailFlag<double>(name, "", "a number that is finite and 0 or more");
+    if (double.TryParse(a[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v)
+        && double.IsFinite(v) && v >= 0.0)
+        return v;
+    return FailFlag<double>(name, a[i + 1], "a number that is finite and 0 or more");
+}
+
 static int FlagInt(List<string> a, string name, int dflt)
 {
     int i = FlagIndex(a, name);
@@ -6996,6 +7267,80 @@ static T FailFlag<T>(string name, string value, string expected)
     Console.Error.WriteLine($"error: {name} expected {expected} but got '{value}'");
     Environment.Exit(2);
     return default!; // unreachable; Exit does not return
+}
+
+// CAF-9 / gap B2 (D1 distrusted-source containment): read the value of --distrust (estimate and serve), already taken
+// with FlagString by the verb (null when the flag is absent: the feature is off and nothing changes). The one shared
+// validation (DistrustedSourceSetting.Parse) refuses an empty item, a space or control character in a tag, a reserved
+// tag GridSim writes itself (prior-solved, removal-backfill-prior), an over-long tag and a repeated tag; each refusal is
+// a usage error naming the flag, exit 2, before the verb does any work.
+static GridSim.Core.Estimation.DistrustedSources? ParseDistrustFlag(string? raw)
+{
+    if (raw is null) return null;
+    try { return GridSim.Core.Estimation.DistrustedSourceSetting.Parse(raw, GridSim.Core.Estimation.DistrustedSourceSetting.CliFlag); }
+    catch (ArgumentException ex)
+    {
+        Console.Error.WriteLine($"error: {ex.Message}");
+        Environment.Exit(CliExit.Usage);
+        return null; // unreachable; Exit does not return
+    }
+}
+
+// F-064: the --device file loader shared by scenario and evidence. DeviceConfig.Load alone let a missing "rotationalInertiaMwS"
+// or "fastResponseMw" default silently to 0 (so a typo'd key ran as "no device"), ignored unknown keys, and accepted
+// negative values; a directory or unreadable file surfaced only as a raw framework message. Every failure here is a named
+// "--device" error through FailFlag (exit 2). Property names are matched case-insensitively, as the JSON reader does.
+static DeviceConfig LoadDeviceFileOrFail(string path)
+{
+    const string shape = "a device JSON object with name (text), rotationalInertiaMwS and fastResponseMw " +
+        "(finite, 0 or more), and optionally fastResponseTimeConstantS (finite, above 0) and fastResponseDeadbandHz (finite, 0 or more)";
+    if (Directory.Exists(path)) return FailFlag<DeviceConfig>("--device", path, "a device JSON file but that is a directory");
+    if (!File.Exists(path)) return FailFlag<DeviceConfig>("--device", path, "an existing device JSON file but it was not found");
+    try
+    {
+        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(path));
+        if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+            return FailFlag<DeviceConfig>("--device", path, shape);
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "name", "rotationalInertiaMwS", "fastResponseMw", "fastResponseTimeConstantS", "fastResponseDeadbandHz" };
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var p in doc.RootElement.EnumerateObject())
+        {
+            // A key starting with "_" is an annotation that is never read (the bundled data/devices/tsgb-fleet.json
+            // carries its sources under "_provenance"), so it is allowed with any value. Only a repeat is refused.
+            if (p.Name.StartsWith('_'))
+            {
+                if (!seen.Add(p.Name))
+                    return FailFlag<DeviceConfig>("--device", path, $"each key once but '{p.Name}' appears twice");
+                continue;
+            }
+            if (!allowed.Contains(p.Name))
+                return FailFlag<DeviceConfig>("--device", path, $"only the known device keys but found unknown key '{p.Name}'");
+            if (!seen.Add(p.Name))
+                return FailFlag<DeviceConfig>("--device", path, $"each key once but '{p.Name}' appears twice");
+            bool wantText = p.Name.Equals("name", StringComparison.OrdinalIgnoreCase);
+            if (p.Value.ValueKind != (wantText ? System.Text.Json.JsonValueKind.String : System.Text.Json.JsonValueKind.Number))
+                return FailFlag<DeviceConfig>("--device", path, $"key '{p.Name}' to be {(wantText ? "text" : "a number")}");
+        }
+        foreach (string req in new[] { "name", "rotationalInertiaMwS", "fastResponseMw" })
+            if (!seen.Contains(req))
+                return FailFlag<DeviceConfig>("--device", path, $"the required key '{req}' but it is missing");
+        DeviceConfig d = DeviceConfig.Load(path);
+        if (string.IsNullOrWhiteSpace(d.Name)) return FailFlag<DeviceConfig>("--device", path, "a non-empty name");
+        if (!double.IsFinite(d.RotationalInertiaMwS) || d.RotationalInertiaMwS < 0)
+            return FailFlag<DeviceConfig>("--device", path, "rotationalInertiaMwS finite and 0 or more");
+        if (!double.IsFinite(d.FastResponseMw) || d.FastResponseMw < 0)
+            return FailFlag<DeviceConfig>("--device", path, "fastResponseMw finite and 0 or more");
+        if (!double.IsFinite(d.FastResponseTimeConstantS) || d.FastResponseTimeConstantS <= 0)
+            return FailFlag<DeviceConfig>("--device", path, "fastResponseTimeConstantS finite and above 0");
+        if (!double.IsFinite(d.FastResponseDeadbandHz) || d.FastResponseDeadbandHz < 0)
+            return FailFlag<DeviceConfig>("--device", path, "fastResponseDeadbandHz finite and 0 or more");
+        return d;
+    }
+    catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException or UnauthorizedAccessException or InvalidDataException)
+    {
+        return FailFlag<DeviceConfig>("--device", path, $"{shape} (could not be read: {ex.Message})");
+    }
 }
 
 // Null only when the flag is ABSENT. Present with no value fails loud (R219), so "--out" with an empty shell
@@ -7045,9 +7390,18 @@ static int FlagCount(List<string> a, string name, int dflt, int min)
 // GR-706: "host:port", "[ipv6]:port", "[ipv6]" (default port) or a bare "port"; the port is 0..65535. False for
 // anything else, including an unbracketed value with more than one ':' (an IPv6 address without brackets, which
 // cannot be told apart from a port).
+// Bug #174: true when an interpose listen host is a loopback address or name (127.x.x.x, ::1, localhost). Any other
+// host, including 0.0.0.0, "*" and a name that is not localhost, is reachable from other machines.
+static bool InterposeListenIsLoopback(string host)
+{
+    if (string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase)) return true;
+    return System.Net.IPAddress.TryParse(host, out System.Net.IPAddress? ip) && System.Net.IPAddress.IsLoopback(ip);
+}
+
 static bool TryParseListen(string value, int defaultPort, out string host, out int port)
 {
-    host = "0.0.0.0";
+    // Bug #174: a bare port listens on loopback (it was every interface).
+    host = "127.0.0.1";
     port = defaultPort;
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     static bool PortOk(string t, System.Globalization.CultureInfo c, out int p)
@@ -7368,8 +7722,62 @@ static string CaseFileTag(string label)
 // The default network of the GB verbs: the shipped reduced GB model in data/uk.
 GridModel LoadUkDefault(string root) => Gated.Dir(Path.Combine(root, "data", "uk"));
 
+// GR-696 (November 2026): gda has four modes (--fleet, then --schema, then --all-gsps, else one build), and each mode
+// used to ignore the flags that do not apply to it without a word: "gda --fleet --dno ukpn" printed the NESO fleet,
+// "gda --all-gsps --licence EMIDS" built every area of every licence, "gda --dense" without --solve solved nothing, and
+// "--as-of" with --dno ukpn or npg (whose readers take no register date) built from the files as found. Such a flag is
+// now refused (exit 2) naming it and the mode, as RefuseIgnoredGlobalSwitches does for the event verbs. Only gda's own
+// flags are looked at (the gates before the verb have refused any other). Null when every flag applies.
+static string? GdaModeIgnoredFlag(List<string> a)
+{
+    string[] gdaFlags =
+    {
+        "--root", "--dno", "--licence", "--gsp", "--all-gsps", "--minkv", "--base", "--neg-gen", "--all-gen", "--no-oltc",
+        "--no-geo", "--as-of", "--out", "--solve", "--dense", "--sparse", "--fleet", "--schema",
+    };
+    string mode;
+    string[] applies;
+    if (a.Contains("--fleet")) { mode = "--fleet"; applies = new[] { "--root", "--as-of", "--fleet" }; }
+    else if (a.Contains("--schema")) { mode = "--schema"; applies = new[] { "--root", "--schema" }; }
+    else if (a.Contains("--all-gsps"))
+    {
+        // RunGdaAllGsps builds every GSP area of the whole DNO and always solves each (--solve is redundant, not ignored;
+        // --no-geo asks for what it does anyway), with the build options it copies: --minkv, --base, --neg-gen, --all-gen,
+        // --no-oltc. It carries no licence, no GSP, no output folder and its own per-area engine rule.
+        mode = "--all-gsps";
+        applies = new[] { "--root", "--dno", "--as-of", "--minkv", "--base", "--neg-gen", "--all-gen", "--no-oltc", "--no-geo", "--solve", "--all-gsps" };
+    }
+    else { mode = "build"; applies = gdaFlags; }
+
+    foreach (string tok in a)
+        if (gdaFlags.Contains(tok) && !applies.Contains(tok))
+            return mode == "build"
+                ? $"error: gda does not use {tok} here (it would be silently ignored)."
+                : $"error: gda {mode} does not use {tok} (that mode ignores it, so it would be silently ignored).";
+
+    if (mode == "build" && !a.Contains("--solve"))
+        foreach (string engine in new[] { "--dense", "--sparse" })
+            if (a.Contains(engine))
+                return $"error: gda {engine} chooses the engine of --solve, and there is no --solve (it would be silently ignored).";
+
+    if (mode != "--schema" && mode != "--fleet" && a.Contains("--as-of"))
+    {
+        int d = a.IndexOf("--dno");
+        string dnoName = d >= 0 && d + 1 < a.Count ? a[d + 1].ToLowerInvariant() : "nged";
+        if (dnoName is "ukpn" or "npg")
+            return $"error: gda --as-of picks the NGED register vintage; the {dnoName} reader takes no register date, so it would be silently ignored.";
+    }
+    return null;
+}
+
 void RunGda(List<string> a)
 {
+    if (GdaModeIgnoredFlag(a) is string gdaIgnored)
+    {
+        Console.Error.WriteLine(gdaIgnored);
+        Environment.ExitCode = CliExit.Usage;
+        return;
+    }
     // D06 (Ruling R1, Mark delegated 2026-10-04): an explicit --root wins; otherwise GDA_DATA_ROOT (the GDA estate's
     // own convention) is read first and GDA_ROOT is the fallback. A variable that is set but names no folder is
     // refused naming the variable (exit 1, an input error); its value is never printed.
@@ -7832,7 +8240,8 @@ void RunDcOpf(List<string> a, string root)
         // not a known name loads as a case folder, so the loader names what is wrong instead of "unknown case").
         m = LoadCaseArgument(arg, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     if (costs is not null)
     {
@@ -8032,7 +8441,8 @@ GridModel? LoadAnalysisCase(List<string> a, string root, string verb, string usa
     {
         return LoadCaseArgument(arg, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return null; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return null; }
 }
 
 // cpf <case> [--step 0.25] [--min-step 1e-3] [--max-steps 200]
@@ -9367,7 +9777,8 @@ void RunInertiaPlacement(List<string> a, string root)
     string caseArg = AnalysisCasePositional("inertia-placement", a) ?? "gb-full";
     GridModel m;
     try { m = LoadCaseArgument(caseArg, root); }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{caseArg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{caseArg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     var options = defaults with
     {
@@ -10203,7 +10614,9 @@ void RunAudit(List<string> a)
                 return;
             }
             using System.Security.Cryptography.ECDsa key = GridSim.Core.Diagnostics.AuditRecorderOptions.LoadKey(keyPath, requirePrivate: true);
-            GridSim.Core.Diagnostics.SignedAuditAnchor.Write(sigOut, toSign, key);
+            // GR-374: the v2 form also binds the log's first entry and the signing time.
+            string firstToSign = toSign.Count == 0 ? GridSim.Core.Diagnostics.AuditLog.Genesis : check.FirstHash;
+            GridSim.Core.Diagnostics.SignedAuditAnchor.WriteV2(sigOut, toSign, firstToSign, DateTimeOffset.UtcNow, key);
             Console.WriteLine($"signed anchor count={toSign.Count} head={toSign.HeadHash} -> {Path.GetFullPath(sigOut)}");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
@@ -10295,13 +10708,25 @@ void RunAudit(List<string> a)
             }
             string? sig = GridSim.Core.Diagnostics.SignedAuditAnchor.ReadIfExists(sigFile);
             string why = "";
-            if (sig is null || !GridSim.Core.Diagnostics.SignedAuditAnchor.Verify(signedAnchor, sig, pub, out why))
+            // GR-374: the strict check also matches a v2 signature's first entry against this log's (the log is read once
+            // more for it; the full verification below is unchanged). A v1 signature is accepted with a warning.
+            string logFirst = signedAnchor.Count == 0
+                ? GridSim.Core.Diagnostics.AuditLog.Genesis
+                : GridSim.Core.Diagnostics.AuditLogFile.Verify(file).FirstHash;
+            bool legacyV1 = false;
+            DateTimeOffset? signedAt = null;
+            if (sig is null || !GridSim.Core.Diagnostics.SignedAuditAnchor.VerifyStrict(signedAnchor, logFirst, sig, pub, out why, out legacyV1, out signedAt))
             {
                 Console.Error.WriteLine($"TAMPERED {file}: anchor signature '{sigFile}': {(sig is null ? "missing" : why)}");
                 Environment.ExitCode = 3;
                 return;
             }
             Console.WriteLine($"signature OK: {sigFile} signs anchor count={signedAnchor.Count} head={signedAnchor.HeadHash}");
+            if (legacyV1)
+                Console.Error.WriteLine($"warning: '{sigFile}' is a v1 anchor signature: it binds the count and head hash only, not this log's identity or a signing time. Re-sign it (gridsim audit sign) to get the v2 form.");
+            else if (signedAt is DateTimeOffset at)
+                Console.Error.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"note: the signature binds this log's first entry and was made at {at.UtcDateTime:yyyy-MM-ddTHH:mm:ssZ}; a signature older than your last signing means an older log and anchor were restored."));
             anchor = signedAnchor;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -10349,7 +10774,8 @@ void RunDistributionFactors(List<string> a, string root)
         // not a known name loads as a case folder, so the loader names what is wrong instead of "unknown case").
         m = LoadCaseArgument(arg, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     GridSim.Core.Analysis.DistributionFactors df;
     try { df = GridSim.Core.Analysis.DistributionFactors.Build(m); }
@@ -10439,7 +10865,8 @@ void RunExperimental(List<string> a, string root)
             // D-DOC-151: LoadCaseArgument (same branches, plus the folder fallback).
             return LoadCaseArgument(arg, root);
         }
-        catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return null; }
+        // GR-190: a gate refusal ends the run as before (exit 2)
+        catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return null; }
     }
 
     // F10: each subcommand fills the result file (when asked for) from the values it prints; the bare listing has no
@@ -10805,6 +11232,7 @@ void RunConformance(List<string> a, string root)
     {
         GridModel model;
         try { model = load(); }
+        // GR-190: a gate refusal is this case's LOAD FAIL row
         catch (Exception ex) { Console.Error.WriteLine($"  [skip] {label}: {ex.Message}"); skipped++; continue; }
 
         string caseName = Path.GetFileNameWithoutExtension(label);
@@ -10897,7 +11325,8 @@ void RunPhysicsCheck(List<string> a, string root)
         // not a known name loads as a case folder, so the loader names what is wrong instead of "unknown case").
         m = LoadCaseArgument(arg, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     double tol = tolFlag ?? GridSim.Core.Physics.PhysicsLaws.DefaultTolMva(m);
     var opt = new PowerFlowOptions { MaxIterations = 100, EnforceQLimits = true };
@@ -11012,7 +11441,8 @@ void RunProtectionCheck(List<string> a, string root)
         // not a known name loads as a case folder, so the loader names what is wrong instead of "unknown case").
         m = LoadCaseArgument(arg, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
     if (faultBus is int fbCheck && !m.Buses.Any(b => b.Id == fbCheck))
     {
         Console.Error.WriteLine($"protection-check: fault bus {fbCheck} is not in case '{m.Name}'.");
@@ -11985,7 +12415,8 @@ void RunPmuEstimate(List<string> a, string root)
 
     GridModel m;
     try { m = LoadCaseArgument(pos[0], root); }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{pos[0]}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{pos[0]}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     MeasurementSet set;
     try { set = MeasurementSet.Load(setPath); set.Validate(m); }
@@ -12045,7 +12476,7 @@ void RunPmuEstimate(List<string> a, string root)
 // the PMU / PDC, send CONFIG-2 and transmission-on commands to --live-idcode) or UDP (listen), and returns the frames as a
 // capture for the recorded pipeline. Usage errors exit 2, an address or transport failure (no connection, a framing
 // fault) exits 1 (an input error, as an unreadable capture file is); null then, with the reason printed.
-GridSim.Core.Synchrophasor.C37118LiveCapture? ReceiveLivePmu(List<string> a, string address)
+GridSim.Core.Synchrophasor.C37118LiveCapture? ReceiveLivePmu(List<string> a, string address, bool udpAnySender)
 {
     var inv = System.Globalization.CultureInfo.InvariantCulture;
     (bool tcp, string host, int port) target;
@@ -12074,7 +12505,26 @@ GridSim.Core.Synchrophasor.C37118LiveCapture? ReceiveLivePmu(List<string> a, str
         if (!System.Net.IPAddress.TryParse(sourceText, out udpSource))
         { Console.Error.WriteLine($"error: pmu-ingest --live-udp-source must be an IP address (got '{sourceText}')."); Environment.ExitCode = 2; return null; }
     }
-    var options = new GridSim.Core.Synchrophasor.C37118LiveOptions(dataFrames, TimeSpan.FromSeconds(seconds), udpSource);
+    // Bug #173: --live-udp-any-sender is the explicit opt-out of the sender rule; it means nothing for tcp://.
+    if (target.tcp && udpAnySender)
+    { Console.Error.WriteLine("error: pmu-ingest --live-udp-any-sender qualifies a udp:// stream; a tcp:// connection already has one peer."); Environment.ExitCode = 2; return null; }
+    if (!target.tcp && udpSource is not null && udpAnySender)
+    { Console.Error.WriteLine("error: pmu-ingest: --live-udp-source and --live-udp-any-sender contradict each other; give one."); Environment.ExitCode = 2; return null; }
+    var options = new GridSim.Core.Synchrophasor.C37118LiveOptions(dataFrames, TimeSpan.FromSeconds(seconds), udpSource, AllowAnyUdpSender: udpAnySender);
+    if (!target.tcp)
+    {
+        System.Net.IPAddress bind = System.Net.IPAddress.Parse(target.host);
+        // Bug #173: refuse a bind beyond loopback with nobody named as the sender, as a usage error (exit 2), before the
+        // port is opened, naming both flags.
+        try { options.RequireUdpSenderRule(bind); }
+        catch (ArgumentException ex)
+        { Console.Error.WriteLine($"error: pmu-ingest --live {address}: {ex.Message.Split(" (Parameter", 2)[0]}"); Environment.ExitCode = 2; return null; }
+        if (address.StartsWith("udp://:", StringComparison.OrdinalIgnoreCase))
+            Console.Error.WriteLine($"pmu-ingest: listening on {target.host}:{target.port.ToString(inv)} (this machine only; udp://:port means loopback). "
+                + $"For a PMU on another machine use udp://0.0.0.0:{target.port.ToString(inv)} with --live-udp-source <pmu-ip>.");
+        if (udpAnySender && !System.Net.IPAddress.IsLoopback(bind))
+            Console.Error.WriteLine($"pmu-ingest: WARNING --live-udp-any-sender: any host that can reach {target.host}:{target.port.ToString(inv)} can inject frames (a CRC is not authentication).");
+    }
     try
     {
         return target.tcp
@@ -12116,6 +12566,9 @@ void RunPmuIngest(List<string> a)
     const string usage = "usage: gridsim pmu-ingest (<capture.bin> | --live tcp://host:port|udp://[bind]:port --live-frames N [--live-seconds S] [--live-idcode ID] [--live-quarantine <dir>])\n" +
                          "                          [--channels <map.json> --measurements-dir <dir>]   (an IEEE C37.118.2 stream: CONFIG then DATA frames)";
     var inv = System.Globalization.CultureInfo.InvariantCulture;
+    // Bug #173: the one value-less live flag is taken off first, so the positional reading below never mistakes the next
+    // token for its value.
+    bool udpAnySender = a.Remove("--live-udp-any-sender");
     RequireVerbFlags("pmu-ingest", a, "--channels", "--measurements-dir", "--live", "--live-frames", "--live-seconds", "--live-idcode",
         "--live-quarantine",   // N358 (CF6)
         "--live-udp-source");  // GR-818
@@ -12137,10 +12590,10 @@ void RunPmuIngest(List<string> a)
     // a capture holding a present-time frame is still refused whole, as before).
     string? quarantineDir = FlagString(a, "--live-quarantine");
     bool liveFlagsAlone = liveAddress is null && (a.Contains("--live-frames") || a.Contains("--live-seconds") || a.Contains("--live-idcode")
-        || a.Contains("--live-quarantine"));
+        || a.Contains("--live-quarantine") || udpAnySender);
     if (liveFlagsAlone || (liveAddress is null ? pos.Count != 1 : pos.Count != 0))
     {
-        if (liveFlagsAlone) Console.Error.WriteLine("error: pmu-ingest: --live-frames, --live-seconds, --live-idcode and --live-quarantine qualify --live.");
+        if (liveFlagsAlone) Console.Error.WriteLine("error: pmu-ingest: --live-frames, --live-seconds, --live-idcode, --live-quarantine and --live-udp-any-sender qualify --live.");
         else if (liveAddress is not null) Console.Error.WriteLine("error: pmu-ingest: --live reads a stream; give no capture file with it.");
         Console.Error.WriteLine(usage);
         Environment.ExitCode = 2;
@@ -12178,7 +12631,7 @@ void RunPmuIngest(List<string> a)
     bool liveShortfall = false;
     if (liveAddress is not null)
     {
-        GridSim.Core.Synchrophasor.C37118LiveCapture? live = ReceiveLivePmu(a, liveAddress);
+        GridSim.Core.Synchrophasor.C37118LiveCapture? live = ReceiveLivePmu(a, liveAddress, udpAnySender);
         if (live is null) return;   // usage or transport error already reported, exit code set
         liveReceivedUtc = DateTime.UtcNow;
         bytes = live.Bytes;
@@ -12485,6 +12938,10 @@ void RunPmuIngest(List<string> a)
         verdicts.Add(v);
     }
     int droppedSamples = droppedInvalid + droppedUnsync + droppedFrameTime;
+    // GR-325: STAT bit 10 announces a coming configuration change; the data stays valid (the verdicts above are
+    // unchanged), but the operator is asked once to re-send CONFIG so later frames decode with the new configuration.
+    int configChangeFrames = samples.Count(s => s.Blocks.Any(b => GridSim.Core.Synchrophasor.C37118SampleQuality.ConfigChangePending(b.Stat)));
+    if (configChangeFrames > 0) Console.Error.WriteLine(GridSim.Core.Synchrophasor.C37118SampleQuality.ConfigChangeHint(configChangeFrames));
 
     // N260 (October 2026): the PMUs of EVERY configuration in force for a decoded DATA frame, in order of first appearance
     // (the last configuration's PMUs when no DATA frame decoded). The per-PMU table and the expected-PMU list used only the
@@ -12712,7 +13169,8 @@ void RunFault(List<string> a, string root)
         // not a known name loads as a case folder, so the loader names what is wrong instead of "unknown case").
         m = LoadCaseArgument(arg, root);
     }
-    catch (Exception ex) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException) { Console.Error.WriteLine($"error loading case '{arg}': {ex.Message}"); Environment.ExitCode = CliExit.CaseLoadFailure(ex); return; }
 
     // D-DOC-159 (one rule for an unknown bus on every verb): a --bus that is not a bus of the case is a flag value that
     // names nothing in it, a usage error, exit 2, naming the bus and the case. fault used to find out inside the fault
@@ -13056,7 +13514,8 @@ void RunBenchEstimate(List<string> a, int runs, string root)
         {
             model = Directory.Exists(label) ? Gated.Dir(label) : LoadNamed(label, root);
         }
-        catch (Exception ex) { Console.Error.WriteLine($"  [skip] {label}: {ex.Message}"); estTally.LoadFailed(label); continue; }
+        // GR-190: in a multi-case run a gate refusal is this case's [skip] line (a load failure in the tally); with one case it ends the run as before (exit 2)
+        catch (Exception ex) when (labels.Count > 1 || ex is not GateRefusedException) { Console.Error.WriteLine($"  [skip] {label}: {ex.Message}"); estTally.LoadFailed(label); continue; }
 
         IPowerFlowSolver raw = backend.Solver(model);
         PowerFlowResult truth = raw.Solve(model, new PowerFlowOptions { MaxIterations = 100, EnforceQLimits = true });
@@ -13358,7 +13817,8 @@ void RunBench(int runs, int parallel, string? outPath, string root, string? gpuV
         {
             GridModel m;
             try { m = c.Load(); }
-            catch (Exception ex) { after[idx] = () => { Emit($"| {c.Label} | - | - | - | LOAD FAIL: {ex.Message} |"); Record(c.Label, eng.Name, "load-fail"); benchTally.LoadFailed($"{c.Label} ({eng.Name})"); }; return; }
+            // GR-190: in a multi-case run a gate refusal is this case's LOAD FAIL row; with one case it ends the run as before (exit 2)
+            catch (Exception ex) when (cases.Count > 1 || ex is not GateRefusedException) { after[idx] = () => { Emit($"| {c.Label} | - | - | - | LOAD FAIL: {ex.Message} |"); Record(c.Label, eng.Name, "load-fail"); benchTally.LoadFailed($"{c.Label} ({eng.Name})"); }; return; }
             lock (gate) { busOf[c.Label] = m.BusCount; }
 
             IPowerFlowSolver? solver = eng.Make(m);
@@ -13523,7 +13983,8 @@ void RunNMinus1Sweep(List<string> a, int parallel, int sample, string? outPath, 
     {
         GridModel m;
         try { m = load(); }
-        catch (Exception ex) { Emit($"| {label} | - | - | LOAD FAIL: {ex.Message} | | | | | | | |"); loadFailed++; continue; }
+        // GR-190: in a multi-case run a gate refusal is this case's LOAD FAIL row; with one case it ends the run as before (exit 2)
+        catch (Exception ex) when (cases.Count > 1 || ex is not GateRefusedException) { Emit($"| {label} | - | - | LOAD FAIL: {ex.Message} | | | | | | | |"); loadFailed++; continue; }
         ran++;
 
         // Newton engine per worker by the shared rule (was a local 'BusCount > 1000'); bit-identical engines on the
@@ -13850,7 +14311,8 @@ void RunStress(List<string> a, double from, double to, double step, int parallel
     {
         GridModel baseM;
         try { baseM = load(); }
-        catch (Exception ex) { Emit($"| {label} | - | LOAD FAIL: {ex.Message} | | |"); loadFailed++; continue; }
+        // GR-190: in a multi-case run a gate refusal is this case's LOAD FAIL row; with one case it ends the run as before (exit 2)
+        catch (Exception ex) when (cases.Count > 1 || ex is not GateRefusedException) { Emit($"| {label} | - | LOAD FAIL: {ex.Message} | | |"); loadFailed++; continue; }
         ran++;
         // Shared dense/sparse rule (was a local 1,000), wrapped in the OLTC loop (D04; skipped when the model has no OLTCs).
         Func<IPowerFlowSolver> factory = () => ContingencyAnalysis.WithOltcLoop(backend.NewtonSolver(baseM));
@@ -13956,7 +14418,8 @@ void RunChain(List<string> a, int steps, string mode, double rampPct, string? ou
     {
         baseM = chainLoad();
     }
-    catch (Exception ex)
+    // GR-190: a gate refusal ends the run as before (exit 2)
+    catch (Exception ex) when (ex is not GateRefusedException)
     {
         // A bad case name threw out of the load and dumped a raw stack trace after the output stubs were
         // already opened. Fail cleanly with a non-zero exit instead.

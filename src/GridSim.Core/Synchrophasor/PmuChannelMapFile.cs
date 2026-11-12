@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using GridSim.Core.Estimation;
 
 namespace GridSim.Core.Synchrophasor;
 
@@ -98,6 +99,8 @@ public static class PmuChannelMapFile
         public double? BaseAmps { get; set; }
         public double? IMagSigmaPu { get; set; }
         public double? IAngSigmaDeg { get; set; }
+        // GR-808: optional, "from" (the default when absent) or "to": the branch end the current is metered at.
+        public string? End { get; set; }
     }
 
     /// <summary>Load and check a channel map. Throws <see cref="InvalidDataException"/> naming every problem, or the
@@ -148,8 +151,16 @@ public static class PmuChannelMapFile
                     int ph = Index(c.Phasor, $"{w}.phasor", problems);
                     if (ph >= 0 && !usedPhasors.Add(ph)) problems.Add($"{w}: phasor {ph} is mapped twice in this PMU");
                     if (c.From is not int from || c.To is not int to) { problems.Add($"{w}.from / .to is missing"); continue; }
+                    // GR-808: the metered end. Absent means the From end (every map written before GR-808 reads as it did).
+                    BranchEnd end = BranchEnd.From;
+                    if (c.End is not null)
+                    {
+                        if (string.Equals(c.End, "to", StringComparison.OrdinalIgnoreCase)) end = BranchEnd.To;
+                        else if (!string.Equals(c.End, "from", StringComparison.OrdinalIgnoreCase))
+                            problems.Add($"{w}.end is '{c.End}'; it must be 'from' or 'to'");
+                    }
                     amps.Add(new PmuCurrentChannel(ph, from, to, c.Circuit, Positive(c.BaseAmps, $"{w}.baseAmps", problems),
-                        Positive(c.IMagSigmaPu, $"{w}.iMagSigmaPu", problems), Positive(c.IAngSigmaDeg, $"{w}.iAngSigmaDeg", problems)));
+                        Positive(c.IMagSigmaPu, $"{w}.iMagSigmaPu", problems), Positive(c.IAngSigmaDeg, $"{w}.iAngSigmaDeg", problems), end));
                 }
                 if (volts.Count == 0 && amps.Count == 0) problems.Add($"{where} maps no channel");
                 maps.Add(new PmuChannelMap(pmuId, volts, amps));

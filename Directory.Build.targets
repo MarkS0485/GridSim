@@ -9,4 +9,38 @@
        intent is visible where builds are configured. AvaloniaTelemetryOptOutTests pins both. -->
   <Target Name="AvaloniaStats" />
 
+  <!-- Bug #176: a release build (one with an SBOM hash injected, -p:GridSimSbomSha256=<hex>) also records whether the
+       source tree was CLEAN when it was built. Source Link stamps the HEAD commit even when files are modified, so
+       without this a modified tree could attest "release build, commit <sha>" for code that is not that commit.
+       GridSim.Core.Diagnostics.SupplyChain.BuildProvenance reads the value and refuses to call a build a release build
+       unless it says "clean".
+
+       How it is decided: "git status porcelain" lists every modified, staged or untracked file that is not ignored.
+       Empty output with exit code 0 means clean; any output means dirty. When git cannot run (a container build, whose
+       context leaves out .git), the value handed in with -p:GridSimSourceTree=clean|dirty is used instead (the release
+       workflow computes it from its own checkout and passes it to the image build); with neither, nothing is stamped
+       and the build reads "unknown", which is never a release build. Only the two exact words are accepted.
+       A build without an SBOM hash skips all of this: it is not a release build whatever the tree looks like. -->
+  <Target Name="StampGridSimSourceTree" BeforeTargets="CoreGenerateAssemblyInfo;GetAssemblyAttributes"
+          Condition="'$(GridSimSbomSha256)' != ''">
+    <Exec Command="git status --porcelain" ConsoleToMSBuild="true" IgnoreExitCode="true"
+          StandardOutputImportance="low" StandardErrorImportance="low" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GridSimGitPorcelain" />
+      <Output TaskParameter="ExitCode" PropertyName="_GridSimGitStatusExit" />
+    </Exec>
+    <PropertyGroup>
+      <_GridSimSourceTreeValue Condition="'$(_GridSimGitStatusExit)' == '0' And '$(_GridSimGitPorcelain)' == ''">clean</_GridSimSourceTreeValue>
+      <_GridSimSourceTreeValue Condition="'$(_GridSimGitStatusExit)' == '0' And '$(_GridSimGitPorcelain)' != ''">dirty</_GridSimSourceTreeValue>
+      <_GridSimSourceTreeValue Condition="'$(_GridSimGitStatusExit)' != '0' And ('$(GridSimSourceTree)' == 'clean' Or '$(GridSimSourceTree)' == 'dirty')">$(GridSimSourceTree)</_GridSimSourceTreeValue>
+    </PropertyGroup>
+    <!-- Say it in the build log, loudly when the tree is dirty: such a build will not attest a release. -->
+    <!-- A high-importance message, not a warning: warnings are errors in this repository, and a dirty build with an
+         SBOM hash is not wrong to make (it is only not a release), so it must build and then say "not a release". -->
+    <Message Condition="'$(_GridSimSourceTreeValue)' != 'clean'" Importance="high"
+             Text="GridSim: GridSimSbomSha256 is set but the source tree is '$(_GridSimSourceTreeValue)' (empty means unknown): this build will NOT attest a release build." />
+    <ItemGroup Condition="'$(_GridSimSourceTreeValue)' != ''">
+      <AssemblyMetadata Include="GridSimSourceTree" Value="$(_GridSimSourceTreeValue)" />
+    </ItemGroup>
+  </Target>
+
 </Project>

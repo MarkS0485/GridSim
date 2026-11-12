@@ -17,6 +17,11 @@ public interface IRealtimeWindowFeed
 
     /// <summary>Inputs the feed could not read and skipped (R100: surfaced through /api/realtime). Empty by default.</summary>
     IReadOnlyList<string> SkippedFiles => Array.Empty<string>();
+
+    /// <summary>Bug #175: the audit input that names exactly the windows this feed handed to the estimator so far (one
+    /// hash over every consumed file's name and content hash, in order), or null for a feed that records none. The
+    /// hosted service adds it to the audit entry when the run ends.</summary>
+    GridSim.Core.Diagnostics.AuditInput? ConsumedInput => null;
 }
 
 /// <summary>
@@ -81,6 +86,14 @@ public sealed class RealtimeEstimatorHostedService : BackgroundService
         RealtimeRunSummary summary;
         try
         {
+            // CAF-9 / gap B2 (D1 distrusted-source containment): when Realtime:DistrustedSources named sources, this run
+            // applies them to every window (EstimationOptions.DistrustedSources), so it records one DistrustedSource
+            // security event per source, once, before the first window (baseline severity Significant: with
+            // Audit:IncidentLogPath each is raised as an incident). Inside the try, so a failure to record ends the run
+            // through the same audited failure path as any other. Nothing happens without the setting or without a log.
+            if (_audit is AuditRunRecorder distrustAudit && _options.Estimation.DistrustedSources is { IsEmpty: false } distrust)
+                DistrustedSourceSetting.RecordApplied(distrust, DistrustedSourceSetting.WebSetting, rowsDemoted: null,
+                    (kind, reason) => distrustAudit.RecordSecurityEvent(kind, reason));
             summary = engine.Run(_feed.Windows(), _options, f =>
             {
                 LatestFrame = f;
@@ -98,6 +111,7 @@ public sealed class RealtimeEstimatorHostedService : BackgroundService
             if (ex is ForwardInferenceException fie)
                 _audit.RecordSecurityEvent(SecurityEventKind.HorizonViolation, $"resident estimator stopped: {fie.Message}");
             _audit.SetOutcome($"rejected={ex.GetType().Name}");
+            if (_feed.ConsumedInput is GridSim.Core.Diagnostics.AuditInput consumedSoFar) _audit.AddInput(consumedSoFar);   // bug #175
             AuditAnchor = _audit.Finish(ex is ForwardInferenceException ? 2 : 1);
             // GR-340: a failed run reports a failed audit delivery or anchor write as the completed run does below.
             foreach (string error in _audit.DeliveryErrors)
@@ -125,6 +139,9 @@ public sealed class RealtimeEstimatorHostedService : BackgroundService
             _audit.SetOutcome(string.Create(System.Globalization.CultureInfo.InvariantCulture,
                 $"method=wls processed={summary.WindowsProcessed} converged={summary.WindowsConverged} rejected-fresh={summary.WindowsRejectedFresh} failed={summary.WindowsFailed} skipped-files={skipped} cancelled={ct.IsCancellationRequested}"));
             _audit.StateTimeUtc = summary.LastStateTimeUtc;
+            // Bug #175: the record names exactly the windows that were estimated (taken as they were read), not a hash
+            // of the folder made once at start-up.
+            if (_feed.ConsumedInput is GridSim.Core.Diagnostics.AuditInput consumed) _audit.AddInput(consumed);
             AuditAnchor = _audit.Finish(code);
             // A forwarding or incident channel that failed never stopped the run, but the operator must hear of it.
             foreach (string error in _audit.DeliveryErrors)

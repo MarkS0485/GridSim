@@ -151,6 +151,9 @@ public sealed class UnderCurrentRelay : IProtectionRelay
             // as "a dead circuit still marked in service" and operate on every switched-out branch. A circuit the model
             // has taken out of service is open on purpose, so it is skipped (no verdict, operating or not).
             if (!ctx.BranchInService[l]) continue;
+            // GR-623: a branch whose two ends have collapsed has no derivable current (it may be carrying fault current).
+            // It used to read 0 pu here and the element operated on it; now it gives no verdict, as for an open branch.
+            if (ctx.CurrentUnknown[l]) continue;
             double i = Math.Max(ctx.IFromPu[l], ctx.IToPu[l]);
             double margin = floor - i; // operate when i below the floor
             bool op = i < floor;
@@ -178,6 +181,9 @@ public sealed class ThermalOverloadRelay : IProtectionRelay
         for (int l = 0; l < ctx.Flows.Count; l++)
         {
             if (ctx.IRatedPu[l] <= 0) continue;
+            // GR-623 follow-up (November 2026): on a branch whose two ends have collapsed the loading (MVA over the
+            // rating) says nothing about the heating current, which cannot be derived there; no verdict, as for 37, 50, 51.
+            if (ctx.CurrentUnknown[l]) continue;
             ProtectionSettings s = ctx.SettingsFor(l); // site-specific override if registered, else generic
             double pickup = s.ThermalPickupFraction;
             double tau = s.ThermalTimeConstantS;
@@ -215,6 +221,9 @@ public sealed class InstantaneousOvercurrentRelay : IProtectionRelay
         {
             double rated = ctx.IRatedPu[l];
             if (rated <= 0) continue;
+            // GR-623 follow-up (November 2026): a branch whose two ends have collapsed has no derivable current (it may
+            // be carrying fault current). It used to read 0 pu here, a confident "not operating"; now no verdict.
+            if (ctx.CurrentUnknown[l]) continue;
             double mult = ctx.SettingsFor(l).InstantaneousOcMultiple; // site-specific override if registered
             double i = Math.Max(ctx.IFromPu[l], ctx.IToPu[l]);
             double m = i / rated;
@@ -245,6 +254,7 @@ public sealed class TimeOvercurrentRelay : IProtectionRelay
         {
             double rated = ctx.IRatedPu[l];
             if (rated <= 0) continue;
+            if (ctx.CurrentUnknown[l]) continue;   // GR-623 follow-up: no derivable current, so no verdict (as 37 and 50)
             ProtectionSettings st = ctx.SettingsFor(l); // site-specific override if registered
             double mult = st.TimeOcMultiple;
             double tms = st.TimeOcTms;

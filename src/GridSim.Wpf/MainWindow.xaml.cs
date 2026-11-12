@@ -443,7 +443,7 @@ public partial class MainWindow : Window
     /// <summary>Load a pre-solved run directory and enter replay mode: paused on frame 0, driven by the cursor.</summary>
     private void LoadReplay(ModelSource s)
     {
-        ReplayLoadResult replay = _host.LoadReplay(s.ReplayDir!);
+        ReplayLoadResult replay = _host.LoadReplay(s.ReplayDir!, App.Licence);   // bug #198: through the licence gate
         if (!replay.Loaded) { _vm.Log("--:--", replay.Refusal!); return; }
         int count = replay.Cursor!.Count;
 
@@ -525,6 +525,16 @@ public partial class MainWindow : Window
         client.TopologyReceived += model => Dispatcher.BeginInvoke(() =>
         {
             if (!ReferenceEquals(_bridge, client)) return;
+            // Bug #198: the licence gate the desktop bridge never called; a refused topology is not shown and the feed closes.
+            GridSim.Core.Licensing.GateResult verdict = App.Licence.Check(model.BusCount,
+                GridSim.Core.Licensing.BundledNetworks.IsShippedTopology(model, _bridgeCase));
+            if (!verdict.Allowed)
+            {
+                _vm.Log("--:--", "Bridge refused: " + verdict.Message);
+                _vm.SetBridgeStatus("REFUSED  *  licence", BridgeWarnBrush);
+                _ = DisposeBridgeAsync();
+                return;
+            }
             _vm.ModelChanged();   // a topology is a (possibly different) model: per-model caches rebuild on its frames
             _renderer.Load(model);
             _renderer.FitToView();

@@ -238,9 +238,11 @@ reason=<one line>`. The kinds written today:
 | `RestrictionRefused` | `serve` when the output guard refuses an estimate |
 | `LiveDataQuarantined` | `interpose`, for each window held as a quarantine capture |
 | `AvailabilityDegraded` | the end of a `serve` run, and of the web resident estimator's run, that breached its service-level objective |
+| `DistrustedSource` | `estimate --distrust` and `serve --distrust`, and the web resident estimator run with `Realtime:DistrustedSources`: one per distrusted source per run, before the estimate (not one per window) |
 
-`AccessDenied`, `DistrustedSource` and `DependencyAlert` exist as kinds but nothing in the CLI or the apps writes them
-yet. A log that does not verify is refused before the run starts (above) and reported on stderr; that is not written
+`AccessDenied` is written by the web host for each request its role gate refuses (`POST /api/solve` below Analyst, a
+`/ws/sim` control frame below Operator), when the host has an audit log. `DependencyAlert` exists
+as a kind but nothing in the CLI or the apps writes it yet. A log that does not verify is refused before the run starts (above) and reported on stderr; that is not written
 into the same log, because its chain cannot be trusted. When the run ends, the `audit:` line adds
 `security-events=<n>` when there were any. A failure to write a security entry prints an error and the run exits 1.
 
@@ -267,8 +269,13 @@ strong form keeps the private key off the host and gives the host only the publi
 `--audit-verify-key` rewrites the anchor unsigned at the end of each run, so its next run is refused until that new
 anchor has been signed off the host: copy the log and its anchor to the signing station, run
 `gridsim audit sign <log> --key <private.pem>` there, and return the `.anchor.sig` file. The signature file is one
-line, `gridsim-audit-anchor-sig/1 count=<N> head=<hash> sig=<base64>`, where the signature is ECDSA P-256 with SHA-256
-over the exact anchor line, in the fixed 64-byte form.
+line, `gridsim-audit-anchor-sig/2 count=<N> head=<hash> first=<hash> signed=<unix seconds> sig=<base64>`, where the
+signature is ECDSA P-256 with SHA-256 over the whole line before ` sig=`, in the fixed 64-byte form: it binds the
+anchor, the hash of the log's first entry (`GENESIS` for an empty log) and the time it was made. `gridsim audit verify
+--pubkey` prints that time on stderr; a signature older than your last signing means an older log and its older signed
+anchor were restored, which the signature alone cannot tell from the current pair. The older v1 line,
+`gridsim-audit-anchor-sig/1 count=<N> head=<hash> sig=<base64>` (signed over the exact anchor line), still verifies,
+with a warning; a run with a signing key replaces it with the v2 form, and `gridsim audit sign` always writes v2.
 
 ### How the hash chain works
 
@@ -581,7 +588,9 @@ instance needs one, is supplied the same way as for the CLI, through `Licence__K
 readable only by the service account, never in the repository. `Secrets__Directory` names a folder of
 one-file-per-secret (Docker or Compose secrets at `/run/secrets`, a Kubernetes secret volume, systemd
 `$CREDENTIALS_DIRECTORY`); the key-ring certificate password is looked up there first and in the environment second,
-so it need not be in either the configuration or the environment. A folder that does not exist stops start-up. No
+so it need not be in either the configuration or the environment. In the environment a secret is read from the ASP.NET
+form (`Auth__KeyCertificatePassword`); the older doubled form (`Bridge__API__KEY` for `Bridge:API_KEY`) is read only when
+it is the only one set, and a secret set under both forms stops start-up naming both variables. A folder that does not exist stops start-up. No
 OS keychain or vault backend ships. `compose.yml` sets neither this nor the `Audit__*` settings of the
 [audit log](#forwarding-incidents-and-the-signed-anchor); add them in `compose.override.yml`.
 
@@ -729,21 +738,26 @@ The workflows are in `.github/workflows/`.
   runs when the release workflow calls it and when started by hand; it does not run on every push.
 - **Release** (`release.yml`) runs on a `v*` tag. It requires the tag to equal the version in `Directory.Build.props`
   and a matching `CHANGELOG.md` heading, runs the test suite and the vulnerability gate, and calls the whole CI matrix
-  above; every publishing job waits for it, so nothing is built for shipping unless every leg passed. It builds the two
-  CycloneDX software bills of materials (the command-line tool and the web app) first, then publishes the
-  command-line binaries for each platform with the bill of materials' SHA-256 built in and runs each on its own
-  platform (`--version` must answer, `case9` must solve with exit 0, and `gridsim compliance verify` must report
-  `release build  yes` with exactly that SHA-256). It signs the Windows binary (Authenticode) when the signing
+  above; every publishing job waits for it, so nothing is built for shipping unless every leg passed. It builds the five
+  CycloneDX software bills of materials (the command-line tool, the web app, `GridSim.Core`, the Avalonia app and the
+  WPF app) first, then publishes the command-line binaries for each platform with the bill of materials' SHA-256 built
+  in and runs each on its own platform (`--version` must answer, `case9` must solve with exit 0, and
+  `gridsim compliance verify` must report `release build  yes` with exactly that SHA-256). It publishes the WPF app
+  (Windows x64) and the Avalonia app (Windows x64 and Linux x64), each built with its own bill of materials' SHA-256 and
+  checked to carry it; the desktop apps are not run (they need a display) and there is no macOS desktop build. An
+  independent rebuild of the Linux command-line archive must match it byte for byte, or the release stops. It signs
+  the Windows binaries (the command-line tool and both desktop apps, Authenticode) when the signing
   certificate is configured, trusting for the check only the committed self-signed certificate by its thumbprint;
   without the certificate secret the binary is released unsigned with a warning, or, when the repository variable
   `GRIDSIM_ALLOW_UNSIGNED_RELEASE` is `false`, the release fails in its first job. It builds and probes the
-  replay-only web container image (with the web bill of materials' SHA-256 built in), attaches the binaries, their
-  SHA-256 checksums, the bills of materials and the changelog notes to the GitHub Release, and gives every one of
-  those files a signed build-provenance attestation (check one with `gh attestation verify <file> -R <owner>/GridSim`).
-  The container image, which is neither signed nor attested, is pushed to the GitHub Container Registry once the
-  Release exists. The desktop app is not a release artefact.
+  replay-only web container image (with the web bill of materials' SHA-256 built in), attaches the command-line and
+  desktop archives, their SHA-256 checksums, the bills of materials and the changelog notes to the GitHub Release, and
+  gives every one of those files a signed build-provenance attestation (check one with
+  `gh attestation verify <file> -R <owner>/GridSim`). The container image is pushed to the GitHub Container Registry
+  once the Release exists and then gets its own provenance attestation. This workflow is written but no release has yet
+  been made through it.
 - **Publish packages** (`publish.yml`) packs the core library (`GridSim.Core`, the only package that ships) to the
-  repository's GitHub Packages feed, built with the command-line tool's bill-of-materials SHA-256 when the release
+  repository's GitHub Packages feed, built with the `GridSim.Core` bill-of-materials SHA-256 when the release
   calls it, signs the package when the signing certificate is configured (verifying it against the same pinned
   certificate), and refuses any version that differs from the source version. Started by hand or by a published
   GitHub Release, it first runs the whole CI workflow on the commit and packs nothing unless that passes; called by
@@ -775,15 +789,18 @@ security control.
   optional signed anchor, incident raising, the secrets store, deterministic estimates and replay, and the
   false-data-injection screen are Achieved; web sign-in, single sign-on and the replay-only gate are in place as
   compensating access controls; role-based access control, the distrusted-source control and service resilience are
-  Partially achieved, because each is built in the library but nothing in the CLI or the apps applies it (no endpoint
-  enforces the role gate, nothing marks a source distrusted, and no host drives the reconnect schedule).
+  Partially achieved: the web host enforces the role gate on its REST and WebSocket solve surface but not on the
+  dashboard's own sessions, the distrusted-source control (applied by `--distrust` and `Realtime:DistrustedSources`)
+  is held at Partially achieved until the release test run has exercised it, and the supervised bridge reconnect
+  (`GridSim:BridgeReconnect`, `BridgeAutoReconnect`) is off by default and not yet confirmed by a release test run.
 - **[`nis-oes-gap-assessment.md`](../assurance/nis-oes-gap-assessment.md)** assesses GridSim as a component inside an
   operator of essential services under the NIS Regulations 2018, against the CAF outcomes as Ofgem adapts them. Its
   rows are Met, Partial, Gap or organisational, and each gap was turned into a named seam (incident reporting, access
   control, supply-chain assurance, availability objectives). Its distinctive argument is that the 169-hour horizon
   shrinks the attack surface, because week-old state gives an attacker nothing operational. Where GridSim stands: the
   data boundary, input validation, supply chain, data security, monitoring and incident reporting are Met for the
-  component; access control (the role gate is not enforced) and resilience (no supervised reconnect) are Partial, and
+  component; access control (the role gate is not enforced on the dashboard's own sessions) and resilience (the
+  supervised reconnect is off by default) are Partial, and
   so is the distrusted-source part of incident containment.
 - **[`rbac-sbom-secrets-notes.md`](../assurance/rbac-sbom-secrets-notes.md)** records, for access control, the bill
   of materials, secrets and availability, what is in place and what is built but not yet applied: role-based access
@@ -791,7 +808,8 @@ security control.
   dependency surface, and no secrets in the core path (feed credentials arrive from the environment or a secrets
   directory at the edges). It ends with what is already in code. Where GridSim stands: sign-in, single sign-on, the
   replay-only gate, the release bills of materials, provenance attestation and signing, the secrets store, the guard,
-  the review gate, the FDIA screen and the audit log exist; the role gate exists but no host enforces it.
+  the review gate, the FDIA screen and the audit log exist; the web host enforces the role gate on its REST and
+  WebSocket solve surface.
 
 `gridsim compliance verify` (and the web `/compliance` endpoint) reports the same position from a running binary: the
 version, commit, build hash, bill-of-materials hash and the recorded control set. Only a release build can read
@@ -845,7 +863,7 @@ as far as the private key is kept from the attacker.
 - `runUtc` is the writing machine's clock and the `actor` is the operating-system account name; neither is attested.
 - Only `estimate`, `crossval`, `interpose` and `serve` write audit entries, and the web host its resident real-time
   estimator run (one run entry plus its security events) when `Audit:LogPath` is set. The dashboards and the API write
-  none. No access denial, distrusted source or dependency alert is ever written, because nothing produces them yet.
+  none. No dependency alert is ever written, because nothing produces one yet.
 - Incidents go to a JSON-lines file only; routing them to a SOC, ticketing or notification system is yours.
 - A run killed forcibly or cut by power loss leaves no entry.
 - `audit verify` reads the whole log into memory, so a log larger than the .NET array limit cannot be verified in one
@@ -857,8 +875,8 @@ as far as the private key is kept from the attacker.
 - SSO single use is per instance; a deployment with several instances needs a shared distributed cache.
 - On Linux without `Auth__KeyCertificatePath`, data-protection keys are still stored unencrypted (a start-up warning
   says so).
-- Role-based access control and the distrusted-source control exist in the library but nothing in the CLI or the apps
-  applies them, and no host drives the bridge reconnect schedule, so there is no supervised failover; the assurance
+- Role-based access control is enforced on the web host's REST and WebSocket solve surface only, not on the
+  dashboard's own sessions, and the supervised bridge reconnect is off by default (there is no failover); the assurance
   documents list these as Partially achieved. Secrets come from the environment or a secrets directory; no OS
   keychain or vault backend ships.
 - `gridsim compliance verify` reads `NOT COMPLIANT` even on a release build while those controls are Partially

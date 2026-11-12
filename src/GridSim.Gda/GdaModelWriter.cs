@@ -208,10 +208,22 @@ public static class GdaModelWriter
         int lostTxShunt = model.Branches.Count(b => b.InService && b.IsTransformer && !SameBits(b.B, 0.0));
         int lostZeroSeq = model.Branches.Count(b => b.InService && (b.FromWinding is not null || b.ToWinding is not null
             || b.FromNeutralXPu != 0 || b.ToNeutralXPu != 0 || (b.IsTransformer && (b.R0 != 0 || b.X0 != 0))));
-        if (lostTxShunt > 0)
-            notes.Add($"{lostTxShunt} transformer(s) carry a shunt susceptance (B), which a JSON v1 transformer row cannot hold; the written case has none for them.");
-        if (lostZeroSeq > 0)
-            notes.Add($"{lostZeroSeq} branch(es) carry transformer winding connections, neutral reactances or transformer zero-sequence impedances, which JSON v1 cannot hold; earth-fault studies of the written case will differ.");
+        // GR-332 (November 2026): these two used to be only counted in a note, and the written case then differed from the
+        // model (a transformer without its shunt, an earth-fault study without its winding data) while the write
+        // "succeeded". The write is now refused, by name and count, before any file is written (the files are staged
+        // above and only moved into place after this point). No GDA build and no synthesised GB model carries either, so
+        // those writes are unchanged; a model that does carry them cannot be written as JSON v1 without loss.
+        if (lostTxShunt > 0 || lostZeroSeq > 0)
+        {
+            var parts = new List<string>();
+            if (lostTxShunt > 0)
+                parts.Add($"{lostTxShunt} transformer(s) carry a shunt susceptance (B), which a JSON v1 transformer row cannot hold");
+            if (lostZeroSeq > 0)
+                parts.Add($"{lostZeroSeq} branch(es) carry transformer winding connections, neutral reactances or transformer zero-sequence impedances, which JSON v1 cannot hold");
+            throw new InvalidDataException(
+                "The GDA writer refuses to write this model as a JSON v1 case, because it would lose data: " +
+                string.Join("; ", parts) + ". Nothing was written.");
+        }
 
         var oltcs = model.Oltcs.Select(o => new
         {

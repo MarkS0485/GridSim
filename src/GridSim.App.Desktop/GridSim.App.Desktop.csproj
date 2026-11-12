@@ -15,6 +15,9 @@
     <RootNamespace>GridSim.App.Desktop</RootNamespace>
     <AssemblyName>GridSim.App.Desktop</AssemblyName>
     <IsPackable>false</IsPackable>
+    <!-- Include the release restore graph in the normal lock file, as for the CLI. -->
+    <RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
     <!-- Avalonia's desktop backends do not use the built-in COM interop; leaving it off keeps the app trimmable. -->
     <BuiltInComInteropSupport>false</BuiltInComInteropSupport>
   </PropertyGroup>
@@ -66,5 +69,9 @@
     <Content Include="..\..\LICENSE.md" Link="LICENSE.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
+
+  <!-- GR-892: ship the .NET runtime's own third-party notices (dotnet-THIRD-PARTY-NOTICES.txt) beside a self-contained
+       publish. The target is in ..\DotnetRuntimeNotices.targets and fails the publish if the notices cannot be found. -->
+  <Import Project="..\DotnetRuntimeNotices.targets" />
 
 </Project>

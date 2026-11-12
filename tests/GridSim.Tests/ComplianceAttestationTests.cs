@@ -40,7 +40,11 @@ public class ComplianceAttestationTests
         // opening one) must change this list on purpose.
         string[] notAchieved = ComplianceManifest.InScope
             .Where(c => c.Status != ComplianceStatus.Achieved).Select(c => c.Id).OrderBy(s => s, StringComparer.Ordinal).ToArray();
-        Assert.Equal(new[] { "distrusted-source", "rbac", "resilience" }, notAchieved);
+        // Bug #196 (2.1.006). Old: { distrusted-source, rbac, resilience }. New: secure-sdlc-attestation and supply-chain
+        // added. Why: both were recorded Achieved while their descriptions claimed a release made after the full test
+        // matrix with a signed provenance attestation, which the published 2.1.000 RC-1 (built outside release.yml) did
+        // not have; the manifest now records them PartiallyAchieved with the gap named, exactly as this test requires.
+        Assert.Equal(new[] { "distrusted-source", "rbac", "resilience", "secure-sdlc-attestation", "supply-chain" }, notAchieved);
         Assert.False(ComplianceManifest.AllInScopeAchieved);
         foreach (ComplianceControl c in ComplianceManifest.InScope.Where(c => c.Status != ComplianceStatus.Achieved))
             Assert.Contains("(", c.Description, StringComparison.Ordinal);   // the gap is stated in the description

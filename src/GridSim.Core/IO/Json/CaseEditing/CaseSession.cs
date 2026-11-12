@@ -402,10 +402,16 @@ internal sealed class CaseSession
     internal static IReadOnlyList<string> WarningsOf(GridModel model)
         => model.Validate().Where(d => d.Severity == ValidationSeverity.Warning).Select(d => d.Message).ToList();
 
-    /// <summary>The exception types a loader run turns bad input into (anything else is a bug and is not swallowed).</summary>
+    /// <summary>The exception types a loader run turns bad input into (anything else is a bug and is not swallowed).
+    /// <para>GR-642 (November 2026): the loader's own refusal type (<see cref="InvalidDataException"/>, which the loaders
+    /// now also raise for System.Text.Json's other refusals of the input, see <see cref="JsonGridLoader.IsRawJsonFailure"/>),
+    /// a <see cref="System.Text.Json.JsonException"/>, a file problem (<see cref="IOException"/>) and an invalid argument
+    /// value (<see cref="ArgumentException"/>, which the model's own constructors raise for a bad value). It used to take
+    /// <see cref="InvalidOperationException"/>, <see cref="KeyNotFoundException"/>, <see cref="FormatException"/> and
+    /// <see cref="NotSupportedException"/> as well, so a loader defect of those types was shown as a problem of the case;
+    /// they now surface as the defects they are.</para></summary>
     internal static bool IsLoaderFailure(Exception ex)
-        => ex is InvalidDataException or System.Text.Json.JsonException or IOException or ArgumentException
-              or InvalidOperationException or KeyNotFoundException or FormatException or NotSupportedException;
+        => ex is InvalidDataException or System.Text.Json.JsonException or IOException or ArgumentException;
 
     // ---------------------------------------------------------------------------------------------------------------
     // Transactions, undo and redo

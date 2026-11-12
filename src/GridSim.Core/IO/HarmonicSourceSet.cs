@@ -74,8 +74,19 @@ public sealed record HarmonicSourceSet
         // D-DOC-070: the file must declare its schema; a file with no "schema" member used to load as a set because the
         // Schema property defaults to SchemaId.
         SchemaMember.Require(json, path, SchemaId, "harmonic source set");
-        HarmonicSourceSet s = JsonSerializer.Deserialize(json, JsonInfo)
-            ?? throw new InvalidDataException($"Not a harmonic source set: {path}");
+        HarmonicSourceSet s;
+        try
+        {
+            s = JsonSerializer.Deserialize(json, JsonInfo)
+                ?? throw new InvalidDataException($"Not a harmonic source set: {path}");
+        }
+        catch (ArgumentException ex)
+        {
+            // Bug hunt 2026-11-01 (#168): a HarmonicSource now refuses a repeated order on construction, so a file with
+            // one fails while it is read, before Validate can list it; it is reported as the file's data error, naming
+            // the file, as Validate's GR-652 check reports it.
+            throw new InvalidDataException($"Harmonic source set '{path}' failed validation: {ex.Message}", ex);
+        }
         if (!string.Equals(s.Schema, SchemaId, StringComparison.Ordinal))
             throw new InvalidDataException(
                 $"'{path}' declares schema '{s.Schema}'; this build reads '{SchemaId}'.");

@@ -193,7 +193,9 @@ The active licence is resolved once, when the program starts, from the first of 
    environment variable `Licence__Key`).
 2. The environment variable `GRIDSIM_LICENCE`, whose value is the key itself (not a path), for a single run with
    nothing installed.
-3. The installed `licence.gridsim` file.
+3. The installed `licence.gridsim` file, or the file named by the environment variable `GRIDSIM_LICENCE_FILE` when
+   that is set (a full or relative path; installing a licence then writes to that file too). This keeps a run, or a
+   test machine, apart from the licence installed for the user.
 4. Otherwise the free Personal tier.
 
 A source that is empty or blank is skipped. A source that holds a key which verifies is used. A source that holds a key

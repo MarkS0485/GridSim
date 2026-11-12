@@ -16,6 +16,7 @@ public sealed class LineThermalDynamics : IPassiveAssetDynamics
     internal const double DefaultThermalTauMin = 15.0;   // AssetParams.ThermalTauMin
 
     private readonly double _thermalTauMin, _ambient, _derateFull;
+    private readonly double _thermalTauS;   // #190: the thermal time constant in seconds (validated, never clamped to dt)
     private double _thermal;
 
     public LineThermalDynamics(AssetClass cls, string branchName)
@@ -25,6 +26,7 @@ public sealed class LineThermalDynamics : IPassiveAssetDynamics
         _thermalTauMin = cls.Param(AssetParams.ThermalTauMin, DefaultThermalTauMin);
         _ambient = cls.Param(AssetParams.AmbientLoadingFraction, DefaultAmbientLoadingFraction);
         _derateFull = cls.Param(AssetParams.DerateAtFullThermal, DefaultDerateAtFullThermal);
+        _thermalTauS = ThermalLag.TauSeconds(_thermalTauMin, cls.Name, branchName);   // #190: fail loud on a bad tau
         _thermal = _ambient;
     }
 
@@ -40,10 +42,10 @@ public sealed class LineThermalDynamics : IPassiveAssetDynamics
     public PlantStateUpdate Advance(in AssetStepContext ctx)
     {
         double dt = ctx.DtSeconds;
-        double tauS = Math.Max(dt, _thermalTauMin * 60.0);
-        // Thermal state chases loading^2 (heating ~ I^2 R), clamped; slow lag.
+        // Thermal state chases loading^2 (heating ~ I^2 R); a first-order lag stepped exactly (ThermalLag, #190: the
+        // old explicit Euler with tau = max(dt, 60 tauMin) lost the lag entirely once a tick reached tau).
         double drive = ctx.LoadingFraction * ctx.LoadingFraction;
-        _thermal += (Math.Max(drive, _ambient) - _thermal) / tauS * dt;
+        _thermal = ThermalLag.Step(_thermal, Math.Max(drive, _ambient), dt, _thermalTauS);
         double derate = _derateFull * Math.Clamp(_thermal, 0.0, 1.0);
         return new PlantStateUpdate(TapRatio: null, RatingDerateFraction: derate, ThermalStatePu: _thermal);
     }

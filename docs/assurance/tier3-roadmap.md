@@ -1,6 +1,6 @@
 # Assurance roadmap (further frameworks)
 
-**Status as at GridSim 1.95.295.** This note records the assurance frameworks that are candidates for later work,
+**Status as at GridSim 2.1.005 (reviewed 2026-11-01).** This note records the assurance frameworks that are candidates for later work,
 each with where it would attach to the existing evidence and why it is parked rather than pursued now. It keeps the
 forward view honest: the assurance set deliberately covers the Cyber Assessment Framework (`caf-mapping.md`), the NIS
 Regulations (`nis-oes-gap-assessment.md`), the secure-development lifecycle (`ssdf-mapping.md`), build provenance
@@ -40,9 +40,10 @@ forward-inference guard. Recorded so that, if that posture ever changes, the req
 
 ### 2.2 FAIR data principles
 
-Findable, Accessible, Interoperable, Reusable, applied to the planned per-asset profile library. This is a data-asset
-framework, not a security one, and it attaches to that library when it is built, not to the engine. Parked until the
-profile library exists, since there is nothing to apply it to before then.
+Findable, Accessible, Interoperable, Reusable, applied to the planned per-asset profile library and to the planned
+network models submodule (`SUBMODULES.md`: per-model case files, geography, model card, attribution and provenance,
+under ODbL). This is a data-asset framework, not a security one, and it attaches to those data sets when they are
+published, not to the engine. Parked until they are, since there is nothing to apply it to before then.
 
 ---
 

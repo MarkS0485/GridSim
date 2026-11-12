@@ -132,9 +132,19 @@ public class CliInputHandlingTests
         Assert.Contains("SearchOption.AllDirectories", gated);
         // Deterministic order, and an ambiguous name is refused with exit 2 listing the candidates.
         Assert.Contains(".OrderBy(f => Path.GetRelativePath(library, f), StringComparer.Ordinal)", gated);
-        int amb = gated.IndexOf("is ambiguous", StringComparison.Ordinal);
-        Assert.True(amb >= 0);
-        Assert.True(gated.IndexOf("Environment.Exit(2);", amb, StringComparison.Ordinal) > amb);
+        // The loader throws the refusal so batch commands can continue. Single-case commands map it to exit 2.
+        int resolver = gated.IndexOf("string ResolveMatpower(", StringComparison.Ordinal);
+        Assert.True(resolver >= 0);
+        string resolve = gated[resolver..gated.IndexOf("\n    }\n", resolver, StringComparison.Ordinal)];
+        Assert.Contains("throw new GateRefusedException(", resolve, StringComparison.Ordinal);
+        Assert.Contains("is ambiguous", resolve, StringComparison.Ordinal);
+        Assert.Contains("matches.Select(f => Path.GetRelativePath(library, f)", resolve, StringComparison.Ordinal);
+        string program = Cli("Program.cs");
+        int handler = program.IndexOf("if (gateRefusal is not null)", StringComparison.Ordinal);
+        Assert.True(handler >= 0);
+        Assert.Contains("Environment.Exit(CliExit.Usage);", program[handler..program.IndexOf('}', handler)],
+            StringComparison.Ordinal);
+        Assert.Contains("const int Usage = 2;", Cli("CliExit.cs"), StringComparison.Ordinal);
         // Every shipped .m file really is in a subfolder (the reason the old top-level-only fallback was dead).
         string lib = Path.Combine(Root(), "data", "matpower");
         Assert.Empty(Directory.GetFiles(lib, "*.m", SearchOption.TopDirectoryOnly));

@@ -104,7 +104,11 @@ Measured 2026-10-05 (pandapower 3.5.5, NumPy 2.4.6, SciPy 1.18.1), every case th
 2.0e-15; uk 4.4e-16 / 7.8e-17; gb-reduced-29 7.8e-16 / 1.4e-15; pypsa-gb-reduced 7.4e-15 / 3.5e-15; gb-synthetic 1.9e-14
 / 3.9e-14; gb-full 2.6e-13 / 3.9e-13 (the worst, 1774 eps, a 2.3x margin inside 4096 eps); gb-network-2224 3.9e-13 /
 2.8e-12 under its allowance (2e-12 pu, 4e-12 rad: a floating-point floor; pandapower disagrees with itself by 3.6e-12
-rad between a flat and a DC start on that case). Verb exit codes: 0 agrees, 3 mismatch or sidecar failure, 77 no interpreter
+rad between a flat and a DC start on that case). The gb-full figure above was measured on the data before the 2.0.200
+line-charging correction (25 Northern Powergrid 132 kV cable rows). Re-measured on the corrected data by the Crossval
+workflow on 2026-10-31 (2.1.000, commit 3bd847dd, the same pandapower, NumPy and SciPy versions, 15 cases, every one
+AGREES): gb-full 3.333e-13 pu / 3.046e-13 rad (still the worst at the default tolerance, 1501 eps, a 2.7x margin inside
+4096 eps); gb-network-2224 1.715e-12 pu / 2.643e-12 rad under its allowance. Verb exit codes: 0 agrees, 3 mismatch or sidecar failure, 77 no interpreter
 or no pandapower, 1 a case or script that cannot be found, 2 a missing argument. Sidecar exit codes: 0 within tolerance,
 1 mismatch, 3 unreadable export, 4 pandapower solve crashed or the translation guard fired, 77 NumPy, SciPy or
 pandapower absent. A skip is never a pass. `N243CrossvalMachineEpsilonTests` pins the default, the translation, the
@@ -471,7 +475,7 @@ value that moves toward the gate.
 | Any converged solve | `residual_check.py` | `1e-6` MVA, no reactive-limit violation | at most 1.4e-7 MVA on the six classic cases and 1.8e-11 MW on case300 |
 | Dense and sparse power flow | `DenseSparseParityTests` | exact | every bit, iteration count and status equal |
 | Default routing | `DefaultEngineRoutingTests`, `SolverRoutingTests` | exact | routed solves bit identical to dense |
-| Power flow against pandapower | `crossval.py` | 4096 machine epsilons (9.09e-13) on `Vm` pu and `Va` rad; a listed case its own allowance | at most 1.9e-14 pu and 1.2e-14 rad on case9, 14, 30, 57, 118, 145; 5.2e-14 pu and 8.7e-14 rad on case300; 2.6e-13 pu and 3.9e-13 rad on gb-full |
+| Power flow against pandapower | `crossval.py` | 4096 machine epsilons (9.09e-13) on `Vm` pu and `Va` rad; a listed case its own allowance | at most 1.9e-14 pu and 1.2e-14 rad on case9, 14, 30, 57, 118, 145; 5.2e-14 pu and 8.7e-14 rad on case300; 3.3e-13 pu and 3.0e-13 rad on gb-full (2026-10-31, after the 2.0.200 charging correction; 2.6e-13 pu and 3.9e-13 rad before it) |
 | Estimation against pandapower | `crossval_estimation.py` | 1e-6 pu; 1e-5 deg | at most 5.6e-12 pu and 7.7e-11 deg on case14, 30, 118 |
 | Estimate honesty and optimality | `se_residual_check.py` | 1e-6 | honesty at most 7.1e-12, optimality step at most 3.1e-11 on case14, 30, 118 |
 | Swing against SciPy RK45 | `crossval_freq.py` | 0.02 Hz/s; 0.05 Hz | 1.6e-4 Hz/s and 2.2e-4 Hz on `gb-largest-loss-1320` |

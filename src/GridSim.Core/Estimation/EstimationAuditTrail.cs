@@ -38,7 +38,7 @@ public static class EstimationAuditTrail
         string chi2 = estimate.Converged && !double.IsNaN(estimate.ChiSquareThreshold) ? ChiText(estimate.ChiSquareTest) : NotRunText;
         // CF6 (main's ruling on CF6-F1, Ruling R1): a LAV estimate gives no chi-square verdict anywhere, so its chi2 field
         // is "no-verdict" (never PASS or FAIL) and the LAV objective follows it as lav_objective=<round-trip> (written only
-        // when the estimate converged). Every non-LAV outcome line is byte-for-byte what it was.
+        // when the estimate converged). GR-521: a Huber or Schweppe-GM estimate is "no-verdict" too, with no objective.
         string lav = "";
         if (!estimate.ChiSquareIsVerdict)
         {

@@ -18,6 +18,8 @@ namespace GridSim.Web.Projection;
 /// <see cref="StatusLampRules.IsFrequencyDeviationEvent"/>; the web used to fire ON the band edge too), or RoCoF above
 /// the GB loss-of-mains setting, 1 Hz/s (N041, B4 2026-10: <see cref="StatusLampRules.IsRocofEvent"/>; it was "at or
 /// above the legacy 0.125 Hz/s").</item>
+/// <item><b>NO SOLVE</b> (GR-240) - a raw replay frame: no power flow ran, so no voltage, corridor or normal verdict is
+/// drawn. Placed straight after FREQUENCY EVENT, because the raw frequency and RoCoF are real measurements.</item>
 /// <item><b>VOLTAGE ALERT</b> - any bus outside the SCADA alarm band, judged on the lowest and highest bus voltage (Q10,
 /// 2026-10: the shared Core rule <see cref="StatusLampRules.IsVoltageAlert"/>; the web used to test the average,
 /// which hides a single bus out of band).</item>
@@ -43,6 +45,10 @@ public static class StatusLamp
     /// <summary>The lamp's CSS class and text when the solve did not converge (R051).</summary>
     public static readonly (string Cls, string Text) NotConverged = ("lamp-unconverged", "NOT CONVERGED");
 
+    /// <summary>GR-240: the lamp's CSS class and text when no power flow was run for the frame at all (a raw replay tick,
+    /// <see cref="HeadlineDto.NotSolved"/>). It is not "NOT CONVERGED" (nothing failed to converge) and never SYSTEM NORMAL.</summary>
+    public static readonly (string Cls, string Text) NoSolve = ("lamp-nosolve", "NO SOLVE");
+
     /// <summary>Work out the lamp for a frame. <paramref name="headline"/> is null when no frame has arrived;
     /// <paramref name="anyBoundaryOverloaded"/> is whether any OPERATOR boundary is over its limit.</summary>
     public static (string Cls, string Text) Evaluate(HeadlineDto? headline, bool anyBoundaryOverloaded)
@@ -58,7 +64,10 @@ public static class StatusLamp
 
         // Non-convergence outranks everything that is read off the solved state (R051). Fail loud: the numbers
         // below come from an unconverged iterate and must not be graded as if they were an operating point.
-        if (!headline.Converged) return NotConverged;
+        // GR-240: a frame with no solve at all (a raw replay tick) is told apart from one that failed to converge. Its
+        // measured frequency and RoCoF are real, so a frequency event is still shown (next test); its placeholder voltages
+        // and absent boundaries are never graded, so it can never read VOLTAGE ALERT, CORRIDOR ALERT or SYSTEM NORMAL.
+        if (!headline.Converged && !headline.NotSolved) return NotConverged;
 
         // Frequency: the shared strict deviation test (Q10), or a RoCoF above the GB loss-of-mains setting.
         // N041 (B4, October 2026; Ruling R1; source EREC G99 Issue 2 Table 10.1 and Ofgem's DC0079 decision, see
@@ -67,6 +76,7 @@ public static class StatusLamp
         if (StatusLampRules.IsFrequencyDeviationEvent(headline.FrequencyHz, bands)
             || StatusLampRules.IsRocofEvent(headline.RocofHzPerS))
             return ("lamp-freq", "FREQUENCY EVENT");
+        if (headline.NotSolved) return NoSolve;
         // Voltage: the shared min / max bus voltage test (Q10).
         if (StatusLampRules.IsVoltageAlert(headline.MinVoltagePu, headline.MaxVoltagePu))
             return ("lamp-volt", "VOLTAGE ALERT");

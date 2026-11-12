@@ -220,6 +220,8 @@ main {
 .status-lamp.lamp-fault { color: var(--muted); }
 /* R051: a power flow that stopped without converging - shown as a fault, never as normal. */
 .status-lamp.lamp-unconverged { color: var(--bad); border-color: #7a3a3a; }
+/* GR-240: a raw replay frame has no solve at all - neutral, never green. */
+.status-lamp.lamp-nosolve { color: var(--muted); }
 /* Active-solver / source readout; on a live session it holds the solver picker (N063) */
 .dash-head .case-solver {
     display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 999px;

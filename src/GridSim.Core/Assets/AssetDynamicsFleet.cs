@@ -22,9 +22,15 @@ public readonly record struct AssetFleetStep(
     double TrippedInertiaMwS,
     double ProtectionInjectionMw = 0.0);
 
-/// <summary>Per-class rollup for the dashboard (raw numbers; formatting lives in the UI).</summary>
+/// <summary>Per-class rollup for the dashboard (raw numbers; formatting lives in the UI).
+/// <para>Bug hunt 2026-11-01 (#192): <see cref="Mode"/> names what the class's assets are ("grid-forming",
+/// "grid-following", "protection" or "synchronous"); every non-grid-forming asset, protection controllers included
+/// (the gb-synthetic LFDD classes), used to read "grid-following". <see cref="SocApplicable"/> is false for a class with
+/// no state-of-charge-bearing asset, whose <see cref="SocPercent"/> is then 0.0 as a placeholder, not a measured empty
+/// store; the 0.0 is kept (not NaN) because the rollup is serialised to JSON frames, where NaN is not a number.</para></summary>
 public readonly record struct AssetClassRollup(
-    string ClassName, string Mode, int Count, double OnlineMw, int TrippedCount, double SocPercent);
+    string ClassName, string Mode, int Count, double OnlineMw, int TrippedCount, double SocPercent,
+    bool SocApplicable = true);
 
 /// <summary>
 /// The bound active-asset fleet - the new <c>pAssetFleet</c> term. Advances every bound inverter
@@ -263,7 +269,7 @@ public sealed class AssetDynamicsFleet
         var by = new Dictionary<string, (string mode, int count, double mw, int tripped, double socSum, int socN)>();
         foreach (IActiveAssetDynamics a in _active)
         {
-            string mode = a.Kind == AssetKind.GridFormingInverter ? "grid-forming" : "grid-following";
+            string mode = ModeLabel(a.Kind);   // #192: protection controllers are not inverters
             var cur = by.GetValueOrDefault(a.ClassName, (mode: mode, count: 0, mw: 0.0, tripped: 0, socSum: 0.0, socN: 0));
             double soc = a.SocFraction;
             bool hasSoc = !double.IsNaN(soc);
@@ -272,6 +278,18 @@ public sealed class AssetDynamicsFleet
         }
         return by.Select(kv => new AssetClassRollup(
             kv.Key, kv.Value.mode, kv.Value.count, kv.Value.mw, kv.Value.tripped,
-            kv.Value.socN > 0 ? 100.0 * kv.Value.socSum / kv.Value.socN : 0.0)).ToList();
+            kv.Value.socN > 0 ? 100.0 * kv.Value.socSum / kv.Value.socN : 0.0,
+            SocApplicable: kv.Value.socN > 0)).ToList();
     }
+
+    /// <summary>#192: the dashboard mode label of an active asset kind. Grid-forming and grid-following inverters are
+    /// named as before; a protection controller and a synchronous machine are named as what they are.</summary>
+    internal static string ModeLabel(AssetKind kind) => kind switch
+    {
+        AssetKind.GridFormingInverter => "grid-forming",
+        AssetKind.GridFollowingInverter => "grid-following",
+        AssetKind.Protection => "protection",
+        AssetKind.SynchronousMachine => "synchronous",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "not an active asset kind"),
+    };
 }

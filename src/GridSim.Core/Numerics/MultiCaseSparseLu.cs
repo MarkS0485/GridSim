@@ -152,7 +152,7 @@ internal static class MultiCaseSparseLu
         var shared = new bool[count];
         var singular = new bool[count];
         var own = new SparseLuFactorization?[count];
-        var floor = new double[Lanes];
+        var rowFloor = new double[Lanes][];     // GR-044: each lane's per-row pivot floors
         var live = new bool[Lanes];
         for (int l = 0; l < count; l++)
         {
@@ -162,7 +162,7 @@ internal static class MultiCaseSparseLu
                 throw new ArgumentException($"Sparse LU: case {l} contains a NaN entry, so it cannot be factorised.", nameof(ax));
             if (double.IsInfinity(aNorm))
                 throw new ArgumentException($"Sparse LU: case {l} contains an infinite entry, so it cannot be factorised.", nameof(ax));
-            floor[l] = NumericTolerances.PivotFloor(aNorm);
+            rowFloor[l] = NumericTolerances.RowPivotFloorsCsc(n, pap, pai, ax[l], aNorm);
             live[l] = true;
         }
 
@@ -213,11 +213,14 @@ internal static class MultiCaseSparseLu
                         if (t > best) { best = t; ipiv = i; }
                     }
                 }
-                if (ipiv >= 0 && best > floor[l] && plan.DiagonalPreference > 0.0)
-                    ipiv = SparseLuFactorization.PreferDiagonalInReach(col, ipiv, best, floor[l], plan.DiagonalPreference,
+                // GR-044: the largest candidate is held to its own row's floor, the opt-in diagonal to its own (as Factor).
+                double[] fl = rowFloor[l];
+                bool clears = ipiv >= 0 && best > fl[ipiv];
+                if (clears && plan.DiagonalPreference > 0.0)
+                    ipiv = SparseLuFactorization.PreferDiagonalInReach(col, ipiv, best, fl[col], plan.DiagonalPreference,
                         reach, r0, r1, x, step, k, Lanes, l);
                 if (ipiv != plan.PivotRow[k]) { live[l] = false; continue; }
-                if (best <= floor[l]) { live[l] = false; singular[l] = true; }
+                if (!clears) { live[l] = false; singular[l] = true; }
             }
             // U entries above the pivot, the pivot, then L below it (all lanes: a lane that left carries garbage that is
             // never read).

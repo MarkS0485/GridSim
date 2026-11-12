@@ -1,6 +1,6 @@
 # Security governance
 
-**Assurance statement. Status as at GridSim 1.95.296.** This document is the security governance artefact
+**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This document is the security governance artefact
 for the GridSim state estimator and the services that host it, mapping to CAF Objective A1 (Governance). It
 names the accountable security owner, states the review cadence, and records the change-control discipline
 that governs the security-critical values in the codebase. It is the broader governance artefact that
@@ -27,7 +27,9 @@ and 8.
 owner for the security posture of the estimator and its services: for accepting residual risk, for deciding
 when a control's status changes, and for the change control of the security-critical values in section 4. The
 security and licensing contact of record is `gdatooling@proton.me`. The project also publishes an RFC 9116
-`.well-known/security.txt` for vulnerability disclosure.
+`.well-known/security.txt` for vulnerability disclosure, and the vulnerability policy in
+[`SECURITY.md`](../../SECURITY.md): private reporting, objective CVSS assessment, a 48-hour remediation target at a
+base score of 7.0 or above, and automatic notice to subscribers (run by `incident-response.md` section 9).
 
 When GridSim is embedded in an Operator of Essential Services, the OES names its own accountable owner inside
 its security governance (CAF A1), and that owner, not the component owner above, carries the Regulation 10
@@ -54,7 +56,8 @@ source change that must still pass `RestrictionInvariantTests`; there is no runt
 The security posture is reviewed on two triggers, so that review is tied to real change rather than to a
 calendar alone:
 
-- **Per release.** Every GridSim release (1.95.NNN) is a review point. The `caf-mapping.md` header carries
+- **Per release.** Every GridSim release (2.1.NNN on the current line, including each release candidate) is a
+  review point. The `caf-mapping.md` header carries
   the release it describes, and the owner confirms that every section-8 row still reflects the code and the
   tests at that release. A downgrade (a dependency CVE, a persistence bug that breaks an audit guarantee) is
   recorded with the same honesty as an upgrade: the affected row returns to Partially achieved with a gap
@@ -65,9 +68,10 @@ calendar alone:
   artefact that evidences it is named and green (`caf-mapping.md` section 2.2 and 10.5).
 
 Between triggers the invariant tests (section 4) fail the test run if a pinned security-critical value is
-changed. The suite runs locally and in the release gate (CI runs when the release calls it on a tag, or by
-hand, not on every push), so such a change is caught at the latest when a release is cut; it is not stopped
-at the moment it is pushed.
+changed. The suite runs locally on every build the owner makes for use, and in CI when CI is started by hand or
+called by the release workflow (not on every push), so such a change is caught by the next local run or CI run; it is
+not stopped at the moment it is pushed. At RC-1 the release workflow did not run (section 4.4), so the local suite was
+the check that preceded the release.
 
 ---
 
@@ -143,14 +147,23 @@ document alone, is what refuses an unreviewed change.
 
 ### 4.4 Continuous-integration cadence (a risk-accepted deviation)
 
-The repository is private and keeps the free GitHub Actions allowance, so by owner decision (October 2026) the CI
-workflow does not run on every push or pull request, and CodeQL runs only when started by hand. CI runs when the
-release workflow calls it on a release tag, and every publishing job of the release needs it, so nothing ships unless
-the full matrix passed (Linux and Windows in every SIMD mode, including forced AVX-512 and FMA off, and macOS on
-Apple silicon; no leg is advisory). Day-to-day verification is the local batch run. The residual accepted is that a
-defect can sit on `main` between releases until the next local batch run or release finds it; it cannot reach a
-release. The choice is reviewed at each release review point (section 2). `caf-mapping.md` section 4.4 and
-`ssdf-mapping.md` section 7 cite this record.
+By owner decision (October 2026, taken while the repository was private, to keep within the free GitHub Actions
+allowance), the CI workflow does not run on every push or pull request, and CodeQL runs only when started by hand.
+Development pushes now go to a private repository (`GridSim-dev`); CI and releases run on the public `GridSim`
+repository. The compensating control is twofold: every build the owner makes for use is a production build carrying
+the compliance attestation and checked by the local test suite, and CI is run by hand as the witness of a release. As
+written, the release workflow also calls CI on a release tag and every publishing job needs it (Linux and Windows in
+every SIMD mode, macOS on Apple silicon, Linux and Windows on ARM64; no leg is advisory).
+
+Recorded failure at RC-1: the release workflow refused the RC tag form and did not run, so RC-1 was built and published
+by hand after the local suite, and the three CI runs started by hand after publication (2026-10-31) all failed, the last
+on one desktop-app layout test on one macOS leg. Since 2.1.008 the workflow accepts the RC tag form and that test waits
+for the rows to be shown before measuring them (harness timing only), but no release has been made through the workflow
+and no CI run has been made since, so the witness is still not shown green. The residual is therefore larger than first
+accepted: a defect can sit on `main` until the next local run or CI run finds it, and at RC-1 a release was published
+without a green CI witness. The choice, and whether the witness must be green before a release is published, is reviewed
+at each release review point (section 2); it is an open owner decision at 2.1.010 (`caf-mapping.md` section 9, items 10
+and 12). `caf-mapping.md` section 4.4 and `ssdf-mapping.md` section 7 cite this record.
 
 ---
 

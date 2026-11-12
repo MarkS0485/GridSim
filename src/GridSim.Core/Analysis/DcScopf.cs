@@ -258,6 +258,11 @@ public static class DcScopf
                 foreach (int l in monitored)
                 {
                     if (l == outages[c]) continue;
+                    // Bug hunt 2026-11-01 (#186): skip the pairs the outage does not touch (LODF exactly 0), as the
+                    // constraint-generation loop above and the full constraint set do. Their post-outage flow is the base
+                    // flow, so a base-binding branch whose post rating equals RateA was listed once more per contingency,
+                    // as if each outage bound it; it is listed once, as the pre-outage binding (Contingency -1).
+                    if (lodf[c][l] == 0.0) continue;
                     double post = flow[l] + lodf[c][l] * fk;
                     if (Math.Abs(post) >= postRate[l] - BindingToleranceMw)
                         bindings.Add(new ScopfBinding(l, BranchName(model, l), outages[c], post, postRate[l]));

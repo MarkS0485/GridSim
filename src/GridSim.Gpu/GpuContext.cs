@@ -100,14 +100,19 @@ public static class GpuContext
     private static void EnsureInitialised()
     {
         if (_initialised) return;
+        // Direct CUDA-driver probe (bypasses ILGPU) - isolates "can .NET see the GPU at all?" from "did ILGPU enumerate
+        // it?". Recorded into the CUDA description for diagnostics.
+        // GR-471: a wedged driver can block cuInit for ever. The probe used to run inside InitLock on the calling thread,
+        // so one hung cuInit hung every thread that touched the GPU surface (each waits on InitLock). It now runs on a
+        // worker, OUTSIDE the lock, bounded by DriverProbeTimeout; a timeout is recorded in the CUDA description instead.
+        // The probe is a diagnostic only, so a second thread arriving before the first sets _initialised may probe
+        // again (cuInit is idempotent); nothing else changes.
+        string drv = ProbeWithTimeout(DriverProbe, DriverProbeTimeout);
         lock (InitLock)
         {
             if (_initialised) return;
             try
             {
-                // Direct CUDA-driver probe (bypasses ILGPU) - isolates "can .NET see the GPU at all?"
-                // from "did ILGPU enumerate it?". Recorded into the CUDA description for diagnostics.
-                string drv = DriverProbe();
 
                 _context = Context.CreateDefault();
 
@@ -277,6 +282,38 @@ public static class GpuContext
     [DllImport("cuda", EntryPoint = "cuInit")] private static extern int cuInit(uint flags);
     [DllImport("cuda", EntryPoint = "cuDeviceGetCount")] private static extern int cuDeviceGetCount(out int count);
     [DllImport("cuda", EntryPoint = "cuDriverGetVersion")] private static extern int cuDriverGetVersion(out int version);
+
+    /// <summary>GR-471: how long the CUDA driver probe may take before it is recorded as timed out. cuInit on a healthy
+    /// machine returns in well under a second; 10 s leaves a slow first driver load plenty of room.</summary>
+    internal static readonly TimeSpan DriverProbeTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    /// GR-471: run <paramref name="probe"/> on a background worker and wait at most <paramref name="timeout"/>. Returns
+    /// its result; a probe still running at the timeout is left on its worker (a blocked native call cannot be aborted)
+    /// and reported as timed out; a probe that throws is reported by type and message. Never throws, never blocks longer
+    /// than the timeout.
+    /// </summary>
+    internal static string ProbeWithTimeout(Func<string> probe, TimeSpan timeout)
+    {
+        ArgumentNullException.ThrowIfNull(probe);
+        string? result = null;
+        Exception? failure = null;
+        var worker = new Thread(() =>
+        {
+            try { result = probe(); }
+            catch (Exception ex) { failure = ex; }
+        })
+        {
+            IsBackground = true,   // a wedged probe must never keep the process alive
+            Name = "GridSim CUDA driver probe",
+        };
+        worker.Start();
+        if (!worker.Join(timeout))
+            return System.FormattableString.Invariant(
+                $"driver probe timed out after {timeout.TotalSeconds:0.###} s (cuInit did not return; the driver may be wedged)");
+        if (failure is not null) return $"{failure.GetType().Name}: {failure.Message}";
+        return result ?? "driver probe returned nothing";
+    }
 
     private static string DriverProbe()
     {

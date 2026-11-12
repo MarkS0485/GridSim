@@ -283,12 +283,16 @@ public sealed class HumanScaleVm : Notify
                       : angleByBus.Count > 0 ? angleByBus.Values.Average() : 0.0;
 
         // ---- regional gauge: mean rotor lead per band, vs the south ----
+        // The corridor oracle uses the unrounded means. Rounding each operand first can
+        // move their difference by 0.1 degrees and can change which corridor is selected.
+        var unroundedMeans = new List<double>();
         Regions.Clear();
         for (int band = 0; band < labels.Length; band++)
         {
             var degs = bandOfBus.Where(kv => kv.Value == band).Select(kv => angleByBus[kv.Key] - refDeg).ToList();
             if (degs.Count == 0) continue;
             double mean = degs.Average();
+            unroundedMeans.Add(mean);
             Regions.Add(new TwistRegionRow
             {
                 Label = labels[band],
@@ -330,8 +334,8 @@ public sealed class HumanScaleVm : Notify
         }
         for (int i = Machines.Count - 1; i >= 0; i--)
             if (!seen.Contains(Machines[i].Key)) { _machineByKey.Remove(Machines[i].Key); Machines.RemoveAt(i); }
-        // keep most-advanced first
-        var ordered = Machines.OrderByDescending(m => ParseDeg(m.DegText)).ToList();
+        // Read the already ordered physical angles. Formatted rows can tie at a tenth of a degree.
+        var ordered = mach.Select(m => _machineByKey[m.Key]).ToList();
         for (int i = 0; i < ordered.Count; i++)
             if (!ReferenceEquals(Machines[i], ordered[i])) Machines.Move(Machines.IndexOf(ordered[i]), i);
 
@@ -372,16 +376,13 @@ public sealed class HumanScaleVm : Notify
             double best = 0; string a = "", b = "";
             for (int i = 0; i < Regions.Count - 1; i++)
             {
-                double gap = ParseDeg(Regions[i].DegText) - ParseDeg(Regions[i + 1].DegText);
+                double gap = unroundedMeans[i] - unroundedMeans[i + 1];
                 if (Math.Abs(gap) > Math.Abs(best)) { best = gap; a = Regions[i].Label; b = Regions[i + 1].Label; }
             }
             TwistCorridor = $"The working twist sits between {a} and {b}: {Math.Abs(best):F1} deg of wind-up, and every megawatt crossing it is carried by that angle.";
         }
         else TwistCorridor = "-";
     }
-
-    private static double ParseDeg(string s) =>
-        double.TryParse(s.EndsWith(" deg", StringComparison.Ordinal) ? s[..^4] : s, out double d) ? d : 0.0;   // N310: the text is "+12.3 deg" (it was "+12.3" and a degree sign)
 
     // GB latitude bands, north -> south, matched on the bus name keywords the GB models actually use.
     private static readonly (string Label, string[] Keys)[] GbBands =

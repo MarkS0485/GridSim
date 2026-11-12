@@ -60,7 +60,7 @@ else
                     <div class="stat-row">
                         <span>
                             <b class="@(j.Priority == "High" ? "g-green" : "")">@j.Priority</b>
-                            | @j.Name @(j.FromStaleFrame ? "| (prev frame)" : "")
+                            | @j.Name @(j.FromStaleFrame ? "| (prev frame)" : "") @(j.Frames is null ? "" : "| " + j.Frames)
                         </span>
                         <b class="@OutcomeClass(j.Outcome)">@OutcomeText(j) </b>
                     </div>

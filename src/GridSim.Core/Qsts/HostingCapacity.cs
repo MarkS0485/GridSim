@@ -176,7 +176,7 @@ public static class HostingCapacity
 
     private static void Validate(GridModel model, HostingStudy s)
     {
-        var p = new List<string>();
+        var p = new InvariantProblemList();   // bug #193: every interpolated number in a message is formatted invariantly
         if (!(s.MaxMw > 0) || !double.IsFinite(s.MaxMw)) p.Add($"maxMw must be a finite number above 0 (got {s.MaxMw}).");
         if (!(s.ToleranceMw > 0) || !(s.ToleranceMw < s.MaxMw)) p.Add($"toleranceMw must be above 0 and below maxMw (got {s.ToleranceMw}).");
         if (!(s.MvaPerMw >= 1) || !double.IsFinite(s.MvaPerMw)) p.Add("mvaPerMw must be at least 1.");

@@ -138,16 +138,56 @@ public sealed class C37118StreamFramer
 /// <param name="Timeout">The longest the receive may run (above zero).</param>
 /// <param name="DataFrames">How many DATA frames to collect.</param>
 /// <param name="Timeout">The longest the receive may take.</param>
-/// <param name="UdpSource">GR-818 (opt-in): UDP only. When set, a datagram from any other source address is dropped and
-/// counted (<see cref="C37118LiveCapture.ForeignDatagrams"/>), never added to the capture. Null (the default) keeps the
-/// old rule: any sender is read. The port is not compared, because a PMU may send from any ephemeral port.</param>
-public sealed record C37118LiveOptions(int DataFrames, TimeSpan Timeout, IPAddress? UdpSource = null)
+/// <param name="UdpSource">GR-818: UDP only. When set, a datagram from any other source address is dropped and
+/// counted (<see cref="C37118LiveCapture.ForeignDatagrams"/>), never added to the capture. The port is not compared,
+/// because a PMU may send from any ephemeral port. Bug #173: on a socket bound to anything but loopback it is REQUIRED,
+/// unless <paramref name="AllowAnyUdpSender"/> says otherwise on purpose.</param>
+/// <param name="AllowAnyUdpSender">Bug #173 (explicit opt-out): read datagrams from any sender on a non-loopback bind
+/// with no <paramref name="UdpSource"/>. CRC is not authentication, so any host that can reach the port can then inject
+/// frames into the capture. False by default.</param>
+/// <param name="ConnectTimeout">Bug #160: TCP only, the longest the connection to the device may take. Null means
+/// <paramref name="Timeout"/>. The connect no longer shares its budget with the receive.</param>
+/// <param name="FirstFrameTimeout">Bug #160: TCP only, the longest from the connection to the device's first frame (its
+/// reply to "send CONFIG-2"). Null means <paramref name="Timeout"/>. <paramref name="Timeout"/> itself then runs from that
+/// first frame, so a slow connect or a slow first answer no longer eats the time asked for collecting DATA frames.</param>
+/// <param name="MaxNonDataFrames">Bug #177: the most frames that are not DATA frames (CONFIG, HEADER, COMMAND) one receive
+/// keeps. A device that sends more is faulty or hostile, and the receive stops with InvalidDataException rather than let
+/// the capture grow until the timeout (up to 86400 s). Each frame is at most 65535 bytes, so the default bounds that part
+/// of the capture at 64 MiB.</param>
+public sealed record C37118LiveOptions(int DataFrames, TimeSpan Timeout, IPAddress? UdpSource = null, bool AllowAnyUdpSender = false,
+    TimeSpan? ConnectTimeout = null, TimeSpan? FirstFrameTimeout = null, int MaxNonDataFrames = C37118LiveOptions.DefaultMaxNonDataFrames)
 {
+    /// <summary>The default <see cref="MaxNonDataFrames"/>: far above the one CONFIG frame (plus one per configuration
+    /// change) a real device sends.</summary>
+    public const int DefaultMaxNonDataFrames = 1024;
+
+    /// <summary>The connect budget in force (<see cref="ConnectTimeout"/>, or <see cref="Timeout"/>).</summary>
+    public TimeSpan ConnectBudget => ConnectTimeout ?? Timeout;
+
+    /// <summary>The first-frame budget in force (<see cref="FirstFrameTimeout"/>, or <see cref="Timeout"/>).</summary>
+    public TimeSpan FirstFrameBudget => FirstFrameTimeout ?? Timeout;
+
     /// <summary>Refuse a stop rule that could never end or never start.</summary>
     public void Validate()
     {
         if (DataFrames < 1) throw new ArgumentOutOfRangeException(nameof(DataFrames), DataFrames, "a live receive needs at least one DATA frame to collect.");
         if (!(Timeout > TimeSpan.Zero)) throw new ArgumentOutOfRangeException(nameof(Timeout), Timeout, "a live receive needs a timeout above zero.");
+        if (ConnectTimeout is { } c && !(c > TimeSpan.Zero)) throw new ArgumentOutOfRangeException(nameof(ConnectTimeout), c, "a connect timeout must be above zero.");
+        if (FirstFrameTimeout is { } f && !(f > TimeSpan.Zero)) throw new ArgumentOutOfRangeException(nameof(FirstFrameTimeout), f, "a first-frame timeout must be above zero.");
+        if (MaxNonDataFrames < 1) throw new ArgumentOutOfRangeException(nameof(MaxNonDataFrames), MaxNonDataFrames, "a live receive must keep at least the device's CONFIG frame.");
+    }
+
+    /// <summary>Bug #173: refuse to listen beyond this machine with nobody named as the sender. A UDP bind address that is
+    /// not loopback, with no <see cref="UdpSource"/> and no <see cref="AllowAnyUdpSender"/>, throws ArgumentException
+    /// naming both ways forward.</summary>
+    public void RequireUdpSenderRule(IPAddress bindAddress)
+    {
+        ArgumentNullException.ThrowIfNull(bindAddress);
+        if (IPAddress.IsLoopback(bindAddress) || UdpSource is not null || AllowAnyUdpSender) return;
+        throw new ArgumentException(
+            $"listening for C37.118 datagrams on {bindAddress} accepts them from any host that can reach the port, and a CRC is "
+            + "not authentication. Name the PMU's address as the only sender (--live-udp-source <ip>), or accept any sender "
+            + "on purpose (--live-udp-any-sender).", nameof(bindAddress));
     }
 }
 
@@ -193,8 +233,13 @@ public static class C37118LiveReceiver
         if (port is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(port), port, "a TCP port is 1 to 65535.");
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
-        // GR-817: the deadline is measured on the monotonic clock (a wall-clock step, such as an NTP correction, used to
+        // GR-817: every deadline is measured on the monotonic clock (a wall-clock step, such as an NTP correction, used to
         // shorten or stretch it).
+        // Bug #160: three budgets, one after the other, instead of one clock started before the connect. The connect gets
+        // ConnectBudget; the device's first frame gets FirstFrameBudget from the moment the connection is made; and the
+        // Timeout for collecting DATA frames starts at that first frame. With one shared clock a slow connect (or a busy
+        // host starting the connect thread late) left too little of a short timeout for the device's CONFIG reply, and a
+        // device that answered was reported as having sent nothing.
         var clock = System.Diagnostics.Stopwatch.StartNew();
         using var client = new TcpClient();
         // The connect is a blocking call on a thread of its own, not a task awaited with a timeout: a task's completion
@@ -210,8 +255,8 @@ public static class C37118LiveReceiver
         while (!connector.Join(ReadSlice))
         {
             ct.ThrowIfCancellationRequested();
-            if (clock.Elapsed >= options.Timeout)
-                throw new IOException(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"no connection to {host}:{port} within {options.Timeout.TotalSeconds:0.###} s."));   // GR-817: invariant
+            if (clock.Elapsed >= options.ConnectBudget)
+                throw new IOException(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"no connection to {host}:{port} within {options.ConnectBudget.TotalSeconds:0.###} s."));   // GR-817: invariant
         }
         // The connect failed (refused, unreachable, unknown host): say so plainly, keeping the cause.
         if (connectFault is not null)
@@ -222,15 +267,20 @@ public static class C37118LiveReceiver
 
         var framer = new C37118StreamFramer();
         var capture = new List<byte>();
-        int data = 0;
+        int data = 0, nonData = 0;
         bool timedOut = false;
         var rx = new byte[8192];
+        // Bug #160: the first-frame budget runs from here (the connection is made); the collection deadline is set when
+        // the first frame arrives.
+        clock.Restart();
+        TimeSpan deadline = options.FirstFrameBudget;
+        bool firstFrameSeen = false;
         try
         {
             while (data < options.DataFrames)
             {
                 ct.ThrowIfCancellationRequested();
-                TimeSpan left = options.Timeout - clock.Elapsed;
+                TimeSpan left = deadline - clock.Elapsed;
                 if (left <= TimeSpan.Zero) { timedOut = true; break; }
                 stream.ReadTimeout = (int)Math.Max(1, Math.Min(left.TotalMilliseconds, ReadSlice.TotalMilliseconds));
                 int n;
@@ -244,8 +294,19 @@ public static class C37118LiveReceiver
                 framer.Append(rx.AsSpan(0, n));
                 while (data < options.DataFrames && framer.TryTakeFrame(out byte[] frame))
                 {
+                    if (!firstFrameSeen)
+                    {
+                        // Bug #160: the device has answered; the time for collecting DATA frames starts now.
+                        firstFrameSeen = true;
+                        clock.Restart();
+                        deadline = options.Timeout;
+                    }
+                    bool isData = C37118CommonHeader.Parse(frame).FrameType == C37118FrameType.Data;
+                    // Bug #177: refuse an endless run of non-DATA frames before keeping one more.
+                    if (!isData && ++nonData > options.MaxNonDataFrames)
+                        throw TooManyNonDataFrames($"the device at {host}:{port}", options.MaxNonDataFrames, data);
                     capture.AddRange(frame);
-                    if (C37118CommonHeader.Parse(frame).FrameType == C37118FrameType.Data) data++;
+                    if (isData) data++;
                 }
             }
         }
@@ -268,6 +329,8 @@ public static class C37118LiveReceiver
         if (port is < 1 or > 65535) throw new ArgumentOutOfRangeException(nameof(port), port, "a UDP port is 1 to 65535.");
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
+        // Bug #173: a bind beyond loopback must name its sender (or opt out on purpose); refused before the port is opened.
+        options.RequireUdpSenderRule(bindAddress);
         using var udp = new UdpClient(new IPEndPoint(bindAddress, port));
         return ReceiveUdpOn(udp, options, bound, ct);
     }
@@ -278,12 +341,14 @@ public static class C37118LiveReceiver
         ArgumentNullException.ThrowIfNull(udp);
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
+        // Bug #173: the same sender rule on a socket the caller bound.
+        options.RequireUdpSenderRule(((IPEndPoint)udp.Client.LocalEndPoint!).Address);
         bound?.Invoke((IPEndPoint)udp.Client.LocalEndPoint!);
         // GR-817: the deadline is measured on the monotonic clock (a wall-clock step, such as an NTP correction, used to
         // shorten or stretch it).
         var clock = System.Diagnostics.Stopwatch.StartNew();
         var capture = new List<byte>();
-        int frames = 0, data = 0, crc = 0, malformed = 0, foreign = 0;
+        int frames = 0, data = 0, crc = 0, malformed = 0, foreign = 0, nonData = 0;
         bool timedOut = false;
         // GR-818: the allowed sender, compared as IPv4 when it is an IPv4-mapped IPv6 address (a dual-stack socket reports
         // an IPv4 sender in that form).
@@ -311,17 +376,30 @@ public static class C37118LiveReceiver
             }
             try { C37118FrameCheck.RequireWholeFrame(datagram, "datagram"); }
             catch (InvalidDataException) { malformed++; continue; }   // dropped and counted: the run reports it (exit 3)
+            bool isData = C37118CommonHeader.Parse(datagram).FrameType == C37118FrameType.Data;
+            // Bug #177: refuse an endless run of non-DATA frames before keeping one more.
+            if (!isData && ++nonData > options.MaxNonDataFrames)
+                throw TooManyNonDataFrames($"the sender {from}", options.MaxNonDataFrames, data);
             frames++;
             if (!C37118Decoder.VerifyCrc(datagram)) crc++;
             capture.AddRange(datagram);
-            if (C37118CommonHeader.Parse(datagram).FrameType == C37118FrameType.Data) data++;
+            if (isData) data++;
         }
         return new C37118LiveCapture(capture.ToArray(), frames, data, crc, malformed, timedOut, foreign);
     }
 
+    // Bug #177: the refusal for a device that keeps sending frames that are not DATA frames.
+    private static InvalidDataException TooManyNonDataFrames(string who, int max, int data) =>
+        new(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"{who} sent more than {max} frames that are not DATA frames (CONFIG, HEADER, COMMAND) after {data} DATA frame(s); a working device sends one CONFIG frame per configuration, so the receive stops rather than keep buffering them."));
+
+    /// <summary>The bind address <c>udp://:port</c> (no address) means. Bug #173: loopback, not every interface.</summary>
+    public const string DefaultUdpBind = "127.0.0.1";
+
     /// <summary>
     /// Parse a <c>--live</c> address: <c>tcp://host:port</c> (connect to the device) or <c>udp://[bind]:port</c> (listen;
-    /// the bind address defaults to 0.0.0.0). Refuses anything else naming the expected forms (ArgumentException).
+    /// the bind address defaults to <see cref="DefaultUdpBind"/>, loopback: bug #173, it used to be 0.0.0.0, every
+    /// interface). Refuses anything else naming the expected forms (ArgumentException).
     /// </summary>
     public static (bool Tcp, string Host, int Port) ParseAddress(string address)
     {
@@ -336,6 +414,6 @@ public static class C37118LiveReceiver
             throw new ArgumentException($"'{address}' needs a port from 1 to 65535 after the last ':'.", nameof(address));
         string host = rest[..colon];
         if (tcp && host.Length == 0) throw new ArgumentException($"'{address}' needs the device's host before the port.", nameof(address));
-        return (tcp, host.Length == 0 ? "0.0.0.0" : host, port);
+        return (tcp, host.Length == 0 ? (tcp ? host : DefaultUdpBind) : host, port);
     }
 }

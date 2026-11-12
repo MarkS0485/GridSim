@@ -81,6 +81,22 @@ public static class C37118SampleQuality
         return C37118SampleVerdict.Usable;
     }
 
+    /// <summary>
+    /// GR-325 (November 2026): true when STAT bit 10 (configuration change) is set. IEEE C37.118.2 sets it for about a
+    /// minute BEFORE a configuration change, as a warning; the data is still valid under the configuration in force, so
+    /// it does not enter <see cref="OfStat"/>'s verdict. pmu-ingest counts such frames and prints <see cref="ConfigChangeHint"/>.
+    /// </summary>
+    public static bool ConfigChangePending(ushort stat) => ((stat >> 10) & 1) != 0;
+
+    /// <summary>GR-325: the one stderr line pmu-ingest prints when <paramref name="frames"/> (at least 1) DATA frames carry
+    /// STAT bit 10.</summary>
+    public static string ConfigChangeHint(int frames)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(frames, 1);
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"pmu-ingest: {frames} DATA frame(s) carry STAT bit 10 (configuration change pending). Their data is valid under the configuration in force and was used; once the PMU has changed its configuration, re-send the CONFIG frame (CFG-2) so the frames that follow are decoded with the new one.");
+    }
+
     /// <summary>The verdict on one block of a frame: the frame's time quality first (it applies to every block), then
     /// the block's STAT word.</summary>
     public static C37118SampleVerdict Of(byte frameTimeQuality, ushort stat)

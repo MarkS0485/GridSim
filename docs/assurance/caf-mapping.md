@@ -1,22 +1,41 @@
 # NCSC Cyber Assessment Framework (CAF) mapping
 
-**Assurance statement. Status as at GridSim 1.95.296.** This document maps the GridSim state estimator and the
-services that host it to the four objectives of the NCSC Cyber Assessment Framework v4.0 (released 6 August 2025),
-principle by principle. v4.0 carries 41 contributing outcomes (39 in v3.x) across the same four objectives and
-fourteen principles; the new outcomes relevant to a software component are A4.b Secure software development and
-support, and the expanded monitoring and threat-hunting expectations under C1/C2 and the tested, supplier-aware
-response expectations under D1. Each outcome names the controls that exist in the code at this release, the test or
-build artefact that evidences them, and the gaps that remain.
+**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01, first against 2.1.005 and again after the
+2.1.008 to 2.1.010 fixes; release candidate RC-1 was released on 2026-10-31 as 2.1.000).** This document maps the
+GridSim state estimator and the services that host it to the four objectives of the NCSC Cyber Assessment Framework v4.0
+(released 6 August 2025), principle by principle. v4.0 carries 41 contributing outcomes (39 in v3.x) across the same
+four objectives and fourteen principles; the new outcomes relevant to a software component are A4.b Secure software
+development and support, and the expanded monitoring and threat-hunting expectations under C1/C2 and the tested,
+supplier-aware response expectations under D1. Each outcome names the controls that exist in the code at this release,
+the test or build artefact that evidences them, and the gaps that remain.
 
 No outcome is marked "Achieved" unless a control is built and a named test or artefact evidences it. Any control
 still owned by the deploying party is named as such with its design, so the boundary is concrete.
 
 The headline position at this release: most GridSim-owned controls are Achieved with a named test; three are Partially
-achieved because the control exists but no product path applies it yet (B2 role-based access control, the D1
-distrusted-source control, and the B5 reconnect schedule; section 9). The compliance attestation (A4.b, section 4.5)
+achieved: B2 role-based access control, which the web host enforces on its REST and WebSocket solve surface since
+2026-11-01 but not on the dashboard's own sessions; the D1 distrusted-source control, wired into the estimator
+paths since 2026-11-01 and held at Partially achieved until the release test run confirms it; and the B5 supervised
+reconnect of a lost bridge stream, which the web host and the desktop app drive since 2026-11-01 but only when it is
+switched on (off by default) and which a release test run has not yet confirmed (section 9). The compliance attestation (A4.b, section 4.5)
 reports this honestly: it reads COMPLIANT only for a release build whose every in-scope control is recorded Achieved,
-so at this release even a release build reads NOT COMPLIANT until those three are closed. Full CAF compliance *as*
-an Operator of Essential Services is not achievable by a component (A1 governance at org level, B1 policy, B6
+so at this release even a release build reads NOT COMPLIANT until every Partially achieved control is closed.
+
+Three more outcomes are recorded Partially achieved at this release because the published release did not go through
+the release controls this document describes: the software-inventory half of A3, A4 supply chain and A4.b secure
+software development (sections 4.3 to 4.5, gap register items 10 to 13). RC-1 was built, signed and published from
+the owner's build machine. At RC-1 the tag-driven release workflow (`release.yml`) refused the RC tag form, so it
+stopped in its first step on both RC tags; no published file carries the signed build-provenance attestation, none was
+built behind the CI matrix gate, and the "release build" flag a binary reports was set by a local build, not by the
+workflow. Since 2.1.008 the workflow accepts a release-candidate tag, but no release has yet been made through it.
+Since 2.1.008 the code inventory (`ComplianceManifest`) agrees with this document: it records `supply-chain` and
+`secure-sdlc-attestation` as Partially achieved, naming that gap, so five in-scope controls are recorded Partially
+achieved (`rbac`, `distrusted-source`, `resilience`, `supply-chain`, `secure-sdlc-attestation`) and the count recorded
+Achieved is two lower than at 2.1.005. No overstated verdict reached a user: an RC-1 command line binary (2.1.000,
+built before that change) reports `release build  yes` and the verdict `NOT COMPLIANT`, listing the three controls
+that were open then.
+
+Full CAF compliance *as* an Operator of Essential Services is not achievable by a component (A1 governance at org level, B1 policy, B6
 awareness, host OS, perimeter and physical security are the deploying party's); what is aimed at here is full
 *in-component* compliance, with the remaining in-component gaps and the deploying-party boundary stated throughout.
 
@@ -35,7 +54,13 @@ lens through which every control below is read.
 
 The unit of assessment is the GridSim estimation core (`GridSim.Core`: the WLS, robust and constrained estimators
 and their ingestion seams) and the services that host it: the `gridsim serve` resident estimator, the RTU interposer
-(`gridsim interpose`), and the web host (`GridSim.Web`, including its resident estimator). It does **not** assess an
+(`gridsim interpose`), and the web host (`GridSim.Web`, including its resident estimator). The release artefacts that
+carry them are assessed as well. RC-1 (2.1.000) shipped the command line tool for Windows x64 and Linux x64, the
+Windows WPF desktop app (`GridSim.Wpf`), the cross-platform Avalonia desktop app (`GridSim.App.Desktop`, Windows x64
+and Linux x64), the `GridSim.Core` NuGet package, one CycloneDX SBOM and `SHA256SUMS.txt` (`RC1.md`). No web host
+image or web host build was published at RC-1, so a deployed web host is built by its deployer. The desktop apps are
+presentation hosts: they hold no estimator of their own, apply `ResilienceOptions` to every bridge client they create
+(section 5.4) and offer the AUDIT LOG viewer. It does **not** assess an
 operator's EMS - GridSim is not deployed inside a control room and, by the restriction invariant, cannot be. The
 relevant regulatory framing is therefore "a critical-infrastructure-adjacent evidence and analysis tool handling
 sensitive (if lagged) national grid data", not "an Operator of Essential Services running live SCADA". The CAF is
@@ -209,7 +234,8 @@ feasible-landing sub-class as well (`FdiaScreen` with PMU-anchored protected mea
 physics-conformance layer (`PhysicsLaws`, `PhysicsFeasibility`) is an independent-validator risk control: a state that
 passes chi-square but breaks conservation of energy, Ohm's law, Joule heating, KCL or complex-power balance
 (`PhysicsCheckRegistry.HardGateLaws = {1,2,3,6,8}`) is flagged or rejected. Technical ch. 35 carries a threat-model
-table for the deployed services.
+table for the deployed services; it does not cover the Avalonia desktop app and
+its case-folder inputs such as `geography.json`, or the hand-built release path (gap register item 18).
 
 The consolidated risk register for the *conventional* risks (dependency CVEs, secret leakage, denial of service of the
 resident services, log tampering at rest), each with a likelihood and impact treatment, exists at
@@ -224,7 +250,9 @@ dangerous attacker class has no target here (section 6, and the same argument in
 
 ### 4.3 A3 Asset management
 
-**Status: Achieved.**
+**Status: Achieved for data assets; Partially achieved for the software inventory of the published release (the
+published SBOM covers the command line tool only; the workflow now builds five and stamps each into its artefact, but
+no release has been made through it; gap register item 11).**
 
 Data-asset provenance is a first-class, enforced concept: every emitted series carries a `ProvenanceTag` (`Recorded`,
 `DerivedFromRecorded`, `CuratedPlaceholder`, `Synthetic`, `Counterfactual`, `Interpolated`, `UnvalidatedAtScale`), and
@@ -235,103 +263,209 @@ forward-inference guard checks time stamps only and never reads a tag; a correct
 is a rule for authors and reviewers. Knowing the trust class of every datum is the CAF A3 outcome for information
 assets. `AssetProvenanceTests` pins the tags on asset data.
 
-Software-asset inventory: the release workflow builds two CycloneDX software bills of materials (SBOMs), one for the
-CLI and one for the web host, and attaches them to the GitHub Release next to the artefacts they describe.
-`THIRD-PARTY-NOTICES.md` names each shipped package with its licence (`ThirdPartyNoticesTests`). The restore graph is
-now recorded: per-project `packages.lock.json` lock files (`RestorePackagesWithLockFile=true` in
-`Directory.Build.props`) record the resolved dependency set. No CI or release restore runs in locked mode
-(`RestoreLockedMode` or `--locked-mode`), so a restore that resolves differently rewrites a lock file rather than
-failing, and the SBOM job restores on its own rather than reusing the publishing job's restore; the SBOM therefore
-describes the graph its own restore resolved, which matches the shipped build while both resolve the committed lock
-files. `BuildProvenance`
+Software-asset inventory: the release workflow is written to build five CycloneDX software bills of materials
+(SBOMs), all Release files: the CLI, the web host, GridSim.Core (the NuGet package's own), the Avalonia desktop app and
+the WPF desktop app. Since 2026-11-02 (GR-439) the Release also carries an SBOM of the built web image (Syft: the Ubuntu base's packages and the ASP.NET runtime, checked for both), and the CLI and desktop SBOMs list the .NET runtime they bundle (the WPF app's also the Windows Desktop runtime) as framework components, added before the SBOMs are hashed. Each shipped artefact is built with the SHA-256 of its own SBOM injected (`-p:GridSimSbomSha256`):
+the CLI, each desktop app (job `desktop`, which checks that the single-file bundle carries the hash) and the web image
+with theirs, and the NuGet package with the GridSim.Core SBOM's hash (`sbom-sha256: core_sha256` in the `nuget` job;
+`WorkflowReleaseGateTests` and `SlsaSupplyChainPinTests` pin that wiring). The software-inventory gap (gap register
+item 11) is therefore closed in the workflow but not yet exercised by a release: the workflow did not produce RC-1
+(section 4.4) and no release has been made through it. The RC-1 Release carries one CycloneDX SBOM,
+`gridsim-2.1.000.sbom.json`, for the command line tool, made on the owner's build machine; its SHA-256 is stamped into
+the CLI (`gridsim compliance verify` reports it). The two desktop apps and the NuGet package were published with no
+SBOM of their own, so the Avalonia app's packages (Avalonia, SkiaSharp and HarfBuzzSharp with their native libraries,
+CommunityToolkit.Mvvm) are inventoried, for the published RC-1, only in `THIRD-PARTY-NOTICES.md` and the lock files,
+not in a published SBOM.
+`THIRD-PARTY-NOTICES.md` names each shipped package with its licence, including the Avalonia app's packages and its
+bundled fonts (Inter, Barlow, Cascadia Mono), and `ThirdPartyNoticesTests` checks it against every package in the
+lock files. The restore graph is recorded: per-project `packages.lock.json` lock files
+(`RestorePackagesWithLockFile=true` in `Directory.Build.props`) record the resolved dependency set. Since 2.1.008 the
+.NET SDK is pinned by `global.json` to 10.0.401 (the SDK RC-1 was built with) with `rollForward` `disable`, so a
+machine without exactly that SDK refuses to build rather than building with another; every workflow installs the SDK
+from that file (`global-json-file: global.json`), and the container image builds on the `sdk:10.0.401` image. Restores
+on GitHub Actions run in locked mode (`RestoreLockedMode` is true in `Directory.Build.props` when `GITHUB_ACTIONS` is
+true) and the container image restores with `--locked-mode`, so there a restore that would change a lock file fails
+instead of rewriting it. A restore on the owner's machine is not in locked mode; the SDK pin removes the cause of drift
+seen before 2.1.008 (a newer SDK rewriting the implicit SDK package entries), and the command line tool's lock file
+now covers its three release runtimes, so a release publish no longer rewrites it. In the workflow the SBOM job
+restores on its own rather than reusing the publishing job's restore; with locked mode both resolve exactly the
+committed lock files, so the SBOM describes the graph the shipped build used. Evidence for the pin and locked mode:
+`BugHunt1101WebTests` (`B161_*`). `BuildProvenance`
 (`GridSim.Core.Diagnostics.SupplyChain`) exposes the version, commit, toolchain (the .NET SDK version stamped at build
 time), SBOM hash and deterministic build hash at runtime, so an emitted estimate or audit entry can be correlated with
 the build that produced it. The build hash is an identity label over those metadata strings, not an integrity proof:
-no byte of the shipped files is hashed into it (section 4.5). Running the workflow on a GitHub tag (so the SBOMs exist
-as published artefacts rather than as a built control) is a deploying-maintainer action at the first tagged release,
-not a code gap. Evidence: `SupplyChainManifestTests`, `ThirdPartyNoticesTests`.
+no byte of the shipped files is hashed into it (section 4.5). Evidence: `SupplyChainManifestTests`,
+`ThirdPartyNoticesTests`; the published `gridsim-2.1.000.sbom.json` (SHA-256 `fcf0cb79...6ce32`, listed in `RC1.md`).
 
 ### 4.4 A4 Supply chain
 
-**Status: Achieved in-component (low intrinsic exposure; lock files and build provenance now pin the graph and the
-build).**
+**Status: Partially achieved (low intrinsic exposure; the lock files, notices and signing are in place, but the
+published RC-1 release did not pass through the release workflow's gates; gap register item 10).**
 
 GridSim.Core is deliberately close to the base class library - the measurement model, solvers and guard use
 `System.Numerics`, `System.Security.Cryptography`, `System.Text.Json` and little else, so the third-party attack
-surface is small by construction. The controls that keep it small:
+surface is small by construction. The Avalonia desktop app adds the largest third-party surface the product ships
+(Avalonia 11.3.22, SkiaSharp 2.88.9 and HarfBuzzSharp 8.3.1.1 with their native libraries, CommunityToolkit.Mvvm
+8.4.2), admitted with exact versions in committed lock files. The controls that keep the surface small and known:
 
-- the per-release SBOMs (A3) and `THIRD-PARTY-NOTICES.md`;
-- per-project `packages.lock.json` lock files (`RestorePackagesWithLockFile=true` in `Directory.Build.props`) that pin
-  the restore graph, and `BuildProvenance` (`GridSim.Core.Diagnostics.SupplyChain`) exposing version, commit,
-  toolchain, SBOM hash and build hash at runtime. The release workflow generates the SBOMs first and builds the CLI,
-  the web image and the NuGet package with the SBOM's SHA-256 injected (`-p:GridSimSbomSha256=<hash>`, the
-  `SBOM_SHA256` build argument for the image); each published CLI binary must then report `release build  yes` and
-  exactly that SBOM hash from `gridsim compliance verify`, or the release stops;
-- a signed SLSA build-provenance attestation (`actions/attest-build-provenance`, Sigstore) over every file on the
-  GitHub Release (the CLI archives, the SBOMs and `SHA256SUMS.txt`), checked with
-  `gh attestation verify <file> -R <owner>/GridSim`;
-- a vulnerable-package gate (`dotnet list package --vulnerable --include-transitive`) in CI and in the release;
-- NuGet audit warnings fail the build (through `TreatWarningsAsErrors`);
-- CodeQL analysis of the C# (`codeql.yml`, started by hand only) and Dependabot over NuGet, Docker and GitHub Actions
-  (monthly). GitHub Actions are referenced by version tag, not pinned to a commit SHA;
-- release signing: the Windows CLI binary is Authenticode-signed and the NuGet package is signed with one self-signed
-  certificate (`signing/README.md`). The verify steps trust exactly that certificate: the committed public `.cer` is
-  imported into the runner's `LocalMachine\Root`, `signtool verify /pa` must pass and the signer thumbprint must equal
-  the pinned one; the NuGet verify appends the certificate to the runner SDK's code-signing root bundle and passes
-  `--certificate-fingerprint`. The Linux and macOS archives, `SHA256SUMS.txt` and the container image are not signed.
-  When the signing secret is not configured, signing is skipped with a warning and the release is unsigned
-  (`release.yml`, `publish.yml`, pinned by `WorkflowContractTests`).
+- the SBOM (A3) and `THIRD-PARTY-NOTICES.md`;
+- per-project `packages.lock.json` lock files (`RestorePackagesWithLockFile=true` in `Directory.Build.props`) that
+  record the restore graph, enforced by a locked-mode restore on GitHub Actions and in the container image build, with
+  the SDK pinned by `global.json` (since 2.1.008; a local restore is not locked, section 4.3), and `BuildProvenance`
+  (`GridSim.Core.Diagnostics.SupplyChain`) exposing version, commit, toolchain, SBOM hash and build hash at runtime;
+- NuGet audit warnings fail the build (through `TreatWarningsAsErrors`), on every build including the owner's local
+  builds;
+- CodeQL analysis of the C# with the `security-extended` query suite (`codeql.yml`, started by hand only; the runs on
+  2026-10-31 passed) and Dependabot over NuGet, Docker and GitHub Actions (monthly, merged by hand; Dependabot security
+  updates are enabled on the public repository). Every GitHub Action in every workflow is pinned to a full commit
+  SHA, with the release tag it was taken from in a comment, and the CycloneDX SBOM tool is installed at a named
+  version (since 2026-11-01);
+- build telemetry is off on every build: `Directory.Build.targets` replaces the Avalonia build-services statistics
+  target with an empty one and every building workflow sets `AVALONIA_TELEMETRY_OPTOUT=1`
+  (`AvaloniaTelemetryOptOutTests`), so no build reports to a third party;
+- release signing with one self-signed certificate (`signing/gridsim-signing.cer`, thumbprint
+  `86DD43B731D2B8A5133972F7B7C91C0FDA8EB721`). At RC-1 the three Windows executables (`gridsim.exe`,
+  `GridSim.Wpf.exe`, `GridSim.App.Desktop.exe`) carry an Authenticode signature (SHA-256, RFC 3161 timestamp) and the
+  NuGet package an author signature, all made on the owner's build machine (`RC1.md`). The Linux binaries,
+  `SHA256SUMS.txt` and the SBOM are not signed. A consumer checks the signer thumbprint; Windows reports the signature
+  as not trusted because the certificate is self-signed. The self-signed certificate is an accepted residual (owner
+  decision, 2026-11-01): a CA-issued code-signing certificate is not planned, and the published certificate and its
+  pinned thumbprint are the trust anchor (`slsa-provenance.md` section 5, item 5).
 
-Evidence: `SupplyChainManifestTests` (lock-file pin and build provenance), `WorkflowReleaseGateTests`, plus the
-existing `WorkflowContractTests` and `ThirdPartyNoticesTests`.
+What the release workflow adds, as written. `release.yml` generates the five SBOMs first, builds the CLI, the web
+image, the two desktop apps and the NuGet package, each with the SHA-256 of its own SBOM injected
+(`-p:GridSimSbomSha256=<hash>`, the `SBOM_SHA256` build argument for the image), requires each CLI binary to report
+`release build  yes` with exactly that hash and each desktop bundle to carry its hash, runs a vulnerable-package gate
+(`dotnet list package --vulnerable --include-transitive`), puts a signed SLSA build-provenance attestation
+(`actions/attest-build-provenance`, Sigstore) over every Release file and over the pushed image (and, in
+`publish.yml`, over the NuGet package after signing and before the push), and signs the Windows CLI, the Windows WPF
+and Avalonia executables and the NuGet package with the pinned certificate, trusting exactly that certificate in its
+verify steps. Since 2026-11-01 (GA-5, an owner decision) its ship scope covers the desktop apps as RC-1 shipped them:
+job `desktop` builds the WPF app (`GridSim.Wpf`) for win-x64 and the Avalonia app (`GridSim.App.Desktop`) for win-x64
+and linux-x64, each a self-contained single file, archived as `gridsim-wpf-<version>-win-x64.zip`,
+`gridsim-app-<version>-win-x64.zip` and `gridsim-app-<version>-linux-x64.tar.gz` and put on the Release page, where
+every file is attested. There is no macOS desktop build and no smoke run of the desktop apps (they need a display).
+Job `reproducible` rebuilds the linux-x64 CLI on a fresh runner and compares it byte for byte with the shipped archive;
+the Release job waits for it (`needs: [ verify, ci, cli, web-image, sbom, reproducible, desktop ]`), so a
+non-reproducible Linux CLI stops the release. Since 2.1.008 it accepts a release-candidate tag (`vMAJOR.MINOR.PATCH-<label>`, for example `v2.1.000-RC-1`):
+the numeric part must still equal the source `<Version>`, the GitHub Release is marked a pre-release, and no NuGet
+package or container image is pushed for a candidate; the candidate's Release files still pass every gate and get the
+attestation. The web-image job passes the source-tree state into the image build (`SOURCE_TREE`), so the image can
+attest a release build only from a clean tree (section 4.5). These steps are pinned by `WorkflowReleaseGateTests`,
+`WorkflowContractTests` and `BugHunt1101WebTests` (`B195_*`, `B176_*`).
+
+What happened at RC-1. None of those workflow steps ran for a published file. At RC-1 the workflow's first step
+accepted only a `vMAJOR.MINOR.PATCH` tag, so the pushes of `v2.0.195-rc1.0` (2026-10-30) and `v2.1.000-RC-1`
+(2026-10-31) stopped it within seconds, and the package workflow failed with it (the tag form is accepted since
+2.1.008). Its ship scope now covers the desktop apps as RC-1 shipped them (2026-11-01) but still differs from RC-1 in
+the CLI: it builds an osx-arm64 CLI as well and names the CLI archives `gridsim-<version>-<rid>`, where RC-1 used
+`gridsim-cli-<version>-<rid>` and had no macOS CLI. The Release was assembled by hand from the owner's build: no file carries a
+provenance attestation (`gh attestation verify` has nothing to check), no web image or web SBOM was published, the
+NuGet package is attached to the Release rather than pushed to the package feed, and `SHA256SUMS.txt` comes from the
+same hand-made upload as the files it lists. The signing secrets the workflow reads are not set on the repository, so
+the workflow would publish unsigned, with a warning, if it ran; the RC-1 signatures exist because the owner signed on
+the build machine.
+
+Evidence: `SupplyChainManifestTests` (lock-file pin and build provenance), `WorkflowReleaseGateTests`,
+`WorkflowContractTests`, `ThirdPartyNoticesTests`, `AvaloniaTelemetryOptOutTests`, `BugHunt1101WebTests` (`B161_*`
+SDK pin and locked restore, `B195_*` candidate tags); `RC1.md` (the RC-1 file list, SHA-256 values and signing
+statement).
 
 **Continuous integration cadence (a deliberate, risk-accepted deviation).** CI runs when the release workflow calls it
-on a release tag, or by hand; CodeQL runs by hand only. Neither runs on every push. CAF is outcome-based, and the
-outcome CAF asks for - every shipped change built and checked deterministically - is met at the release: `release.yml`
-calls `ci.yml` as a reusable workflow (job `ci`) and every publishing job needs it, so a release exists only after the
-full matrix passed (Linux and Windows in the normal, AVX2-off, hardware-intrinsics-off, forced AVX-512 and FMA-off
-modes, and macOS on Apple silicon in the normal and hardware-intrinsics-off modes; no leg is advisory). Between
-releases, day-to-day verification is the local batch run. The deviation is recorded and risk-accepted in
-[`security-governance.md`](security-governance.md). The remaining deploying-maintainer action is to run the tagged
-release so the SBOM, provenance and signing steps execute on GitHub, and to run CodeQL by hand before it.
+on a release tag, or by hand, and since 2026-11-01 (GR-382) on every push to main and weekly on the public repository,
+where Actions minutes are free (its jobs are guarded to that repository, so pushes to the private development
+repository start nothing); CodeQL runs by hand only. Development commits are therefore checked by CI only when they
+reach the public repository. CAF is outcome-based, and the
+outcome CAF asks for is every shipped change built and checked deterministically. The compensating control the owner
+has chosen is twofold: every build the owner makes for use is a production build carrying the compliance attestation,
+checked by the local test suite, and CI is run by hand as the witness of a release. As designed, the witness is also a
+gate: `release.yml` calls `ci.yml` (job `ci`) and every publishing job needs it. The matrix covers Linux and Windows
+in the normal, AVX2-off (which also holds the non-FMA axis: on .NET 10 it turns FMA off, and its preflight requires
+`Fma=False`), hardware-intrinsics-off and forced 256-bit modes; a forced AVX-512 leg on each, reported NOT CHECKED
+and skipped when the runner's CPU has no AVX-512; and macOS on Apple silicon and Linux and Windows on ARM64 in the
+normal and hardware-intrinsics-off modes. No leg is advisory. At RC-1 the witness did not hold: RC-1 was published at
+13:00 UTC on 2026-10-31 after the local suite (GridSim.Tests 10,291 passed and 31 skipped by the RAM gate on an 8 GB
+machine, GridSim.App.Tests 310 passed; `RC1.md`), and the three CI runs started by hand later that day all failed. The
+last of them (on 2.1.002) failed one desktop-app layout test on the macOS hardware-intrinsics-off leg, every other leg
+passing; no CI run on `main` has passed since the history reset at RC 1.0. That test now waits for the rows to be shown
+before it measures them (a harness timing change, no assertion changed), and passes locally, but no CI run has been
+made since, so the witness is still not shown green. The deviation is recorded and risk-accepted
+in [`security-governance.md`](security-governance.md); the failing witness is gap register item 12.
 
 ### 4.5 A4.b Secure software development and support (new outcome in v4.0)
 
-**Status: Achieved (the attestation mechanism); its verdict honestly reads NOT COMPLIANT at this release (below).**
+**Status: Partially achieved. The attestation mechanism is built and reports honestly (its verdict reads NOT COMPLIANT
+at this release), but the integrity half of the indicator rests on workflow steps that did not run for RC-1, and the
+"release build" flag, now checked for form and a clean tree, can still be set by a local build (gap register items 10,
+12 and 13).**
 
 v4.0 adds A4.b, which asks a supplier to run an established secure-development framework, to know the composition and
 origin of its software and monitor its components for vulnerabilities, to secure its development, test and production
 environments and its source and repositories, to develop against a threat model, and - the load-bearing new indicator
-- to **attest to the authenticity and integrity of software, including updates and patches**. GridSim meets these:
+- to **attest to the authenticity and integrity of software, including updates and patches**. Against these:
 
 - **Established secure-development framework.** The development process maps to NIST SSDF (SP 800-218) and the
   Microsoft SDL; the mapping is in [`ssdf-mapping.md`](ssdf-mapping.md).
-- **Known composition and origin, monitored for vulnerabilities.** The SBOMs, lock files, `THIRD-PARTY-NOTICES.md`,
-  the vulnerable-package gate, CodeQL and Dependabot (A3/A4).
+- **Known composition and origin, monitored for vulnerabilities.** The lock files, `THIRD-PARTY-NOTICES.md`, NuGet
+  audit as a build error, CodeQL and Dependabot (A3/A4). The published RC-1 SBOM covers the command line tool only; the
+workflow is written to publish five (section 4.3), not yet exercised by a release.
 - **Secured dev/test/prod and source/repos; threat-informed development.** The zero-warning analyser gate
   (section 10.5), the restriction review discipline (section 3), and the threat model in technical ch. 35 and
-  [`risk-register.md`](risk-register.md).
+  [`risk-register.md`](risk-register.md). Every commit on `main` is signed with the owner's key; release tags are
+  lightweight and unsigned. Development pushes go to a private repository (`GridSim-dev`); the public `GridSim`
+  repository is where CI and releases run. Since 2026-11-01 the public repository has a ruleset on `main` that blocks
+  deletion and force pushes (repository administrators may bypass it; pull requests are not required, since `main`
+  is pushed to directly), secret scanning with push protection, Dependabot alerts and private vulnerability
+  reporting, applied and read back by `tools/github/apply-public-settings.ps1`. RC-1 was
+  built on the owner's own machine, so the development environment and the release build environment are one machine
+  (gap register item 13).
 - **Authenticity and integrity attestation.** Two separate things meet this indicator, and they must not be confused.
-  - *Integrity and origin of a download* come from outside the binary: the signed SLSA build-provenance attestation
-    over every Release file (`gh attestation verify <file> -R <owner>/GridSim`), `SHA256SUMS.txt`, and the Authenticode
-    signature of the Windows binary (section 4.4). These bind the published bytes to the workflow run and commit that
-    built them.
+  - *Integrity and origin of a download* come from outside the binary. For RC-1 they are the Authenticode signatures
+    on the three Windows executables and the author signature on the NuGet package (self-signed certificate, checked
+    by thumbprint), and `SHA256SUMS.txt` with the SHA-256 values in `RC1.md`. The Linux archives and binaries are
+    covered only by those checksums, which are published beside them by the same hand. The signed build-provenance
+    attestation the workflow is written to produce (`gh attestation verify <file> -R <owner>/GridSim`) does not exist
+    for any RC-1 file.
   - *What a running binary states about itself* is the compliance attestation. `ComplianceManifest`
     (`GridSim.Core.Diagnostics.SupplyChain`) is the machine-readable control inventory, each control bound to its
     evidencing test and given a status that is maintained by hand in source (an inventory, not a measurement).
     `ComplianceAttestation` binds the manifest hash to the build identity (version, commit, SDK, SBOM hash and the
     build hash over them). The build hash is an identity label, not an integrity proof: it covers no artefact bytes,
     so a modified binary that keeps the same metadata reports the same hash. `IsCompliant` needs BOTH a release build
-    (the SBOM hash was injected by the release workflow, which builds only after the full test matrix passed) AND every
-    in-scope control recorded Achieved. A local or development build always reports
-    `NOT ATTESTED (not a release build...)` and `gridsim compliance verify` exits 1 for it; the report lists each
-    in-scope control not recorded Achieved. The web `/compliance` endpoint returns the same fields plus a
-    `notAchieved` list. At this release three controls are recorded Partially achieved (`rbac`, `distrusted-source`,
-    `resilience`; section 9), so even a release build reads `NOT COMPLIANT` until they are closed.
+    AND every in-scope control recorded Achieved. Since 2.1.008 a build is a release build only when all three hold
+    (`BuildProvenance.ReleaseRefusal`): the injected SBOM hash (`-p:GridSimSbomSha256`) is exactly 64 hexadecimal
+    digits, the commit is known, and the source tree was clean. The build stamps the tree state
+    (`GridSimSourceTree`, from `git status --porcelain`, by the `StampGridSimSourceTree` target in
+    `Directory.Build.targets`, which runs only when an SBOM hash is given); a dirty or unrecorded tree builds normally
+    but reports `release build  no` with the reason (`NotReleaseReason`). The source-tree state is not part of the
+    build hash. What the check cannot do: it does not prove the hash is that of a real SBOM, or that the build was made
+    by the workflow, so a local build of a clean, committed tree given any 64-hex value still reports
+    `release build  yes`. The design premise that the flag implies a green CI matrix therefore holds only for a build
+    made by the workflow; the RC-1 binaries (2.1.000, before this check) carry the flag from a local build. A build
+    that is not a release build reports `NOT ATTESTED (not a release build...)` and `gridsim compliance verify` exits
+    1 for it; the report shows the source-tree state, says why a build is not a release build, and lists each in-scope
+    control not recorded Achieved. The web `/compliance` endpoint (anonymous, always mapped) returns the same fields
+    (including `sourceTree` and `notReleaseReason`) plus a `notAchieved` list. At this release five controls are
+    recorded Partially achieved in the manifest (`rbac`, `distrusted-source`, `resilience`, and since 2.1.008
+    `supply-chain` and `secure-sdlc-attestation`, whose descriptions now name the gap: no published release has yet
+    been made through `release.yml`; section 9): 13 of the 18 in-scope controls are recorded Achieved (15 of 18 at
+    2.1.005), so even a release build reads `NOT COMPLIANT` until they are closed. Evidence for the release-build
+    rule and the manifest statuses: `BugHunt1101WebTests` (`B176_*`, `B196_*`), `ComplianceAttestationTests`.
+- **Support, including updates and patches.** [`SECURITY.md`](../../SECURITY.md) (owner policy, 2026-11-01)
+  states the support period (the latest release; earlier releases are not patched, and a .NET runtime fix arrives in
+  a new GridSim build because the builds are self-contained), private reporting through GitHub private vulnerability
+  reporting or `gdatooling@proton.me` (the RFC 9116 `security.txt` is unchanged), an objective CVSS v4.0 and v3.1
+  base-score assessment recorded in the advisory, a remediation target of 48 hours from the recorded assessment for
+  a base score of 7.0 or above (remediation meaning a fixed release and the published advisory), and the update
+  channel: the security advisory, with a CVE requested through GitHub, and an automatic notice to subscribers
+  (`security-notice.yml` posts a Discussions announcement on publication; GitHub notifies Watch subscribers of the
+  release and the announcement). Security fixes follow the slice discipline (fix, test, CHANGELOG `Security` bullet
+  naming the advisory id, version bump). The runbook is `incident-response.md` section 9. No release has yet been
+  made under this policy (gap register item 14).
 
   This rests on the build provenance (A4) and the SLSA build-track provenance mapped in
   [`slsa-provenance.md`](slsa-provenance.md). Evidence: `ComplianceAttestationTests` (which also pins exactly which
-  controls are not yet Achieved), `SupplyChainManifestTests`, `WorkflowReleaseGateTests`.
+  controls the manifest records as not Achieved), `SupplyChainManifestTests`, `WorkflowReleaseGateTests`; `RC1.md`.
 
 ---
 
@@ -352,7 +486,21 @@ baseline for the services is documented in `docs/developer/deploy/` and technica
   `127.0.0.1:5540` and sets `NoNewPrivileges`, `ProtectSystem=strict` and `PrivateTmp`;
 - TLS terminates at the reverse proxy (the nginx example), not in the application;
 - the web host trusts forwarded headers only from an allow-listed proxy (`TrustedProxies`);
-- the production configuration runs replay-only (B2).
+- the production configuration runs replay-only (B2);
+- since 2.1.008 the web host answers only the host names in `AllowedHosts` (default the loopback names `localhost`,
+  `127.0.0.1` and `[::1]`; Compose `GRIDSIM_ALLOWED_HOSTS`): any other `Host` gets a 400 naming the setting, from the
+  first middleware after the exception handler, before any page, API call or WebSocket runs (`Site.HostAllowList`). A
+  malformed value stops start-up; `AllowedHosts=*` restores the old behaviour with a start-up warning. The systemd and
+  nginx examples set `AllowedHosts=gridsim.example.com`;
+- since 2.1.008 every web answer carries (by default) `Content-Security-Policy: frame-ancestors 'none'`,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`
+  (`Site.SecurityHeaders`; `GridSim:FrameAncestors` names sites allowed to frame the pages), and outside Development the
+  host sends HSTS (`max-age=31536000`, no sub-domains, no preload) on HTTPS requests, never for the loopback names;
+  `GridSim:Hsts=false` leaves HSTS to the reverse proxy. Evidence: `BugHunt1101WebTests` (`B170_*`, `B179_*`).
+
+Not in the baseline: the Content-Security-Policy sets only `frame-ancestors`; there is no script or resource policy
+(`script-src`, `default-src`), so the headers stop framing and content-type sniffing but not injected script. The nginx
+example adds no security headers of its own and relies on the application's.
 
 The transport and resource-limits gaps are closed: `GridBridgeClient` refuses an unencrypted `ws://` endpoint unless
 explicitly allowed (B3 transport); on the web host a `ws://` bridge endpoint stops start-up unless
@@ -364,10 +512,11 @@ step, documented in `docs/developer/deploy/`.
 ### 5.2 B2 Identity and access control
 
 **Status: Partially achieved.** Authentication and exposure controls are in place, and the shipped exposure control in
-production is the replay-only gate. The role-based access-control gate is built and tested as a primitive only: no
-hosting surface (no endpoint, CLI verb or hosted service) calls it at this release, so no request is ever authorised by
-role and no access denial is ever written to the audit trail. The manifest records `rbac` as Partially achieved for
-that reason.
+production is the replay-only gate. Since 2026-11-01 the web host enforces the role-based access-control gate on its
+REST and WebSocket solve surface (`POST /api/solve`, `GET /api/topology`, every `/ws/sim` control frame) and writes
+each denial to its audit log when it has one. Two gaps keep it Partially achieved, and the manifest records `rbac` so:
+the Blazor dashboard's own sessions are not role-gated, and a web host without the resident estimator has no audit log
+(`Audit:LogPath` is refused there), so its denials are refused but not audited.
 
 What exists at this release:
 
@@ -379,28 +528,73 @@ What exists at this release:
   (`ReplayOnlyRefusedException`). On a production instance the solve surface does not exist, so there is nothing to
   authorise. Pinned by `WebSecurityDoc2Tests` and `WebHostDoc2Tests`.
 - **Exposure by design.** `serve` binds no network port; `GridBridgeClient` is an outbound client; the anonymous-visitor
-  rule keeps every page usable without signing in, and sign-in only shows "signed in as".
+  rule keeps every page usable without signing in; sign-in shows "signed in as" and, since 2026-11-01, carries the
+  caller's `GridSim.<role>` role claims to the role gate below.
+- **Cross-site WebSocket check.** A browser upgrade to `/ws/sim` must come from the request's own host or an origin
+  listed in `GridSim:AllowedOrigins`; any other origin is refused with 403, so a page elsewhere cannot drive or read
+  sessions through a visitor's browser. The check trusts the request's `Host` header; since 2.1.008 that header has
+  already passed the `AllowedHosts` list (B1), so a DNS-rebinding page, which arrives under the attacker's host name,
+  gets a 400 before the socket is reached. With `AllowedHosts=*` an origin equal to the host is accepted only for a
+  loopback host, and otherwise only when listed in `GridSim:AllowedOrigins`. Evidence: `BugHunt1101WebTests`
+  (`B170_*`).
+- **Network listeners bound to loopback by default (since 2.1.008).** `pmu-ingest --live udp://:port` listens on
+  127.0.0.1 (it listened on every interface); a listener on another interface needs `--live-udp-source <pmu-ip>` or,
+  on purpose, `--live-udp-any-sender`, or the run stops before listening (exit 2). `interpose` listens on 127.0.0.1
+  when no address is given; a listener reachable from other machines needs `--allow-client <ip>[,<ip>...]` or, on
+  purpose, `--allow-any-client` (exit 2 otherwise), and a client silent for `--idle-seconds` (default 120) is dropped
+  so it cannot hold the single slot (`InterposeAccessPolicy`). Evidence: `BugHunt1101WebTests` (`B173_*`, `B174_*`),
+  `Cf5LiveC37118Tests`.
 
-Role-based access-control gate (built and tested as a primitive, in `GridSim.Core.Security`). It is the mechanism
-intended to authorise the solve surface when that surface is exposed; at this release no hosting surface calls it, so
-it does not authorise `/api` or `/ws/sim` (the shipped exposure control there is the replay-only gate, and existing
-constitutional tests reach the solve surface without a role):
+Role-based access-control gate (`GridSim.Core.Security`), enforced by the web host since 2026-11-01
+(`Site.AccessControl`):
 
 - `OperationRole` enum: `Viewer`, `Analyst`, `Operator`, `Administrator` - least-privilege bands.
 - `IdentityContext` (record): the authenticated principal id, role, and a correlation id, taken from the signed-in
   cookie or SSO claims at the service boundary.
 - `RoleGuard.Require(IdentityContext, OperationRole)` - a fail-loud gate, mirroring
-  `RestrictionReview.AssertPermitted` in spirit (throws a typed `AccessDeniedException`), intended for the *service*
-  boundary, never inside the inner solver loop where it would cost per-iteration overhead and pollute the numerics.
-- The audited overload writes a `SecurityEventKind.AccessDenied` audit entry for each deny (section 6.1), tying B2 to
-  C1; because no hosting surface calls the gate, no product path writes that event today.
+  `RestrictionReview.AssertPermitted` in spirit (throws a typed `AccessDeniedException`), at the *service* boundary,
+  never inside the inner solver loop where it would cost per-iteration overhead and pollute the numerics.
+- **Where the host calls it, and the band each surface needs.** `POST /api/solve` needs `Analyst` (an on-demand
+  analysis); `GET /api/topology` needs `Viewer` (a read, so every caller holds it; it passes the gate so the band is
+  stated in one place); every `/ws/sim` control frame (`start`, `play`, `pause`, `step`, `seek`, `speed`, `trip`)
+  needs `Operator` (a start selects the stream source, live, replay or bridge, and runs a session; the others drive
+  it). The gate runs before the action: a refused solve answers 403 before the body or the case is looked at; a refused
+  control frame gets an error frame and leaves the connection's session exactly as it was (a refused `start` neither
+  disposes the current session nor creates one). Opening a `results/` or `gda-out/` model by id on the dashboard needs
+  `Operator` too (operation `dashboard.private`, decided on the interactive pass: one audit entry, no session built;
+  the prerender of a private id does nothing); a `/ws/sim` `start` already
+  needs it for every case. The resident estimator has no control surface on the web host (it
+  is configured by `Realtime:*` and runs once at start-up; `GET /api/realtime` only reads it), so there is nothing
+  there to authorise. The read-only calls (`/api/cases`, `/api/realtime`, `/api/openapi.json`), the pages,
+  `/compliance` and `/health` are not gated.
+- **Who the caller is.** A signed-in caller (the estate cookie or the SSO consumer) holds the highest band among its
+  role claims whose value is `GridSim.Viewer`, `GridSim.Analyst`, `GridSim.Operator` or `GridSim.Administrator`; the
+  `GridSim.` prefix keeps an estate-wide role given for another application from granting control of GridSim. Any
+  other caller is anonymous and holds `GridSim:AnonymousRole`; a signed-in caller never holds less.
+- **The default, decided on purpose.** `GridSim:AnonymousRole` unset gives an anonymous caller `Operator` when the
+  instance answers only loopback names (the default `AllowedHosts`: the documented single-user `dotnet run` use keeps
+  working), and `Viewer` when it answers any other name or `*` (fail-safe: an unknown caller may read but not solve or
+  drive sessions). A value that is not one of the four band names stops start-up naming the setting. A replay-only
+  instance maps neither `/api` nor `/ws/sim`, so nothing changes there.
+- **Denials are audited (C1).** Each denial writes one `SecurityEventKind.AccessDenied` entry (severity Low; the reason
+  names the operation, the required and actual bands, the subject and the request id) through
+  `AuditRunRecorder.RecordSecurityEvent`, the path the resident estimator's own security events take, so
+  `Audit:ForwardPath` carries it (section 6.1); it raises no incident on its own (`IncidentPolicy` grades it Low and
+  sets no burst threshold for it). The resident estimator's run closes the log when
+  it finishes; a later denial reopens the same log against its anchor, with the same sinks and keys, for that one entry
+  (`AuditRunRecorder.AppendSecurityEvent`). A failure to record is reported on standard error and never replaces the
+  refusal. A host with no audit log still refuses.
 - The gate is *additive to* the forward-inference guard, never a replacement. The two are independent: the guard
   consults no role and has no bypass, so even an Administrator cannot obtain sub-169h data, and the guard caps what any
   caller can learn (week-stale reconstruction only) regardless of role.
 
 Evidence: `RoleGuardTests` (each role against each operation; deny is audited; an invariant that no role reaches
-sub-169h data). The gap: wire the gate, with the host's audit writer, into the solve and resident-estimator control
-surfaces (section 9).
+sub-169h data); `CafB2RoleGateWebTests` (through the real host: the band of each surface, an allowed band passes, each
+denied band on each surface is refused with a 403 or an error frame and no side effect, exactly one `AccessDenied`
+entry per denial while the run holds the log and after it has closed it, a host with no audit log still refuses, the
+default anonymous role and the setting's fail-loud parsing, the role-claim mapping). The remaining gaps: the Blazor
+dashboard's sessions are not role-gated, and a host without the resident estimator cannot audit its denials
+(section 9).
 
 ### 5.3 B3 Data security
 
@@ -419,15 +613,25 @@ invariant are now built and tested.
   read from plain configuration; a protection setting that cannot be honoured stops start-up (pinned by
   `WebSecurityDoc2Tests`). On Linux without a certificate the keys are stored unencrypted with a start-up warning;
   providing that certificate is a deploying-party step.
-- **Licensing:** only an ECDSA P-256 public key is embedded, so a binary can verify a licence but cannot mint one.
-  The release signing key is held in repository secrets only; the `signing/` folder holds the public certificate. The
-  licence key is signed, not encrypted (it is inspectable, not a confidential secret), so it needs no secret store.
+- **Licensing:** only an ECDSA P-256 public key is embedded, so a binary can verify a licence but cannot mint one. The
+  bus-limit exemption for a bundled network is decided by content, not by name: since 2.1.008 the shipped files are
+  hashed afresh on every load and checked both before and after the model is read (`BundledNetworks.BundledAcrossLoad`;
+  the earlier cache keyed on size and write time is gone), a replay counts as bundled only when its model has the
+  shipped network's bus ids and branch ends (`BundledNetworks.SameTopology`), and web bridge sessions pass the licence
+  gate when the server's topology arrives; since 2.1.010 the desktop apps gate a replay and a GDA bridge topology the
+  same way (`BundledNetworks.IsShippedTopology`). Evidence: `BugHunt1101WebTests` (`B171_*`, `B172_*`, `B178_*`,
+  `B198_*`). The release signing private key is not in the repository: it is held by the owner, outside the repository,
+  and RC-1 was signed on the owner's build machine; the repository secrets the release workflow is written to read are
+  not set. The `signing/` folder holds the public certificate. The licence key is signed, not encrypted (it is
+  inspectable, not a confidential secret), so it needs no secret store.
 - **Secrets management (Achieved):** `ISecretStore` (`GridSim.Core.Security`), with `EnvironmentSecretStore`,
   `DirectorySecretStore`, `CompositeSecretStore` and `NullSecretStore`, is BCL-only (no new third-party dependency).
   `DirectorySecretStore` reads one file per secret, the form Docker and Compose secrets (`/run/secrets`), a Kubernetes
   secret volume and systemd credentials (`$CREDENTIALS_DIRECTORY`) take. The web setting `Secrets:Directory` puts it in
   front of the environment for the key-ring certificate password, so that password need not be in configuration or
-  the environment. No OS-keychain or vault backend ships; a deployer can supply their own `ISecretStore` in code.
+  the environment. In the environment a secret set under both the ASP.NET spelling and the older doubled spelling is
+  refused, naming both variables, and stops web start-up (ambiguous configuration can hide a stale secret). No
+  OS-keychain or vault backend ships; a deployer can supply their own `ISecretStore` in code.
   Evidence: `SecretStoreTests`, `DirectorySecretStoreTests`, `NoSecretInAuditTests`.
 - **No secret in the audit trail (Achieved):** audit summaries are plaintext and hashed, so they must stay
   secret-free. `AuditEvent` records inputs by SHA-256 and sanitises the actor's user and machine names, and a test now
@@ -449,21 +653,33 @@ invariant are now built and tested.
   silent degradation an attacker can hide behind).
 - **Input validation (Achieved for measurements):** `MeasurementSet.Validate(model)` runs before estimation; branch
   measurements resolve against real topology; malformed rows fail loud (`InvalidDataException`) rather than producing
-  a quietly-wrong state.
+  a quietly-wrong state. Case validation runs schema patterns on a linear-time matcher with no time limit, so whether a
+  case validates no longer depends on machine load. The desktop map refuses a case's `geography.json` whole (a wrong
+  format or projection, a malformed point layout, a ring of fewer than three points, or written x/y that disagree with
+  the declared projection by more than 1e-4) and never draws it in part.
 - **Build hardening (Achieved):** `TreatWarningsAsErrors=true`, `EnableNETAnalyzers=true`, `AnalysisLevel=latest`,
   `AnalysisMode=Recommended`, `Nullable=enable` in `Directory.Build.props` (section 10.5). A whole class of latent
   defects cannot ship.
 - **Resource limits (Achieved in-component):** the web host caps concurrent sessions (`GridSim:MaxSessions`, default
-  64, `SessionLimitException`), closes a `/ws/sim` control frame over 16 KiB (`MessageTooBig`), and the Modbus
+  64, `SessionLimitException`) and the sessions one client holds (`GridSim:MaxSessionsPerClient`, default 16,
+  `ClientSessionLimitException`), closes a `/ws/sim` control frame over 16 KiB (`MessageTooBig`), and the Modbus
   transport caps the frame length; the audit-log viewer caps what it reads. `GridBridgeClient` now caps the
   single-message size (default 8 MiB) and the in-flight-query count (default 256), and `MeasurementSet.Load` caps the
   measurement count, all carried by `ResilienceOptions` (`GridSim.Core.Net`), which the web and desktop hosts apply to
-  every bridge client they create. Evidence: `ResilienceOptionsTests`, `BridgeEndpointSettingTests`.
-  Request rate limiting at the network edge remains a deploying-party reverse-proxy concern.
+  every bridge client they create. Since 2.1.008 a live C37.118 receive stops (exit 1) when a device sends more than
+  1024 frames that are not DATA frames (`C37118LiveOptions.MaxNonDataFrames`), instead of buffering them until the
+  timeout, and the web usage log is rotated once it passes `Analytics:MaxLogBytes` (default 16 MiB; the old file kept
+  as `usage-<UTC stamp>.jsonl`, the visit count carried in `usage.jsonl.visits`), so start-up no longer reads an
+  ever-growing file. Evidence: `ResilienceOptionsTests`, `BridgeEndpointSettingTests`, `BugHunt1101WebTests`
+  (`B177_*`, `B188_*`). The solve REST calls are capped per instance (`GridSim:MaxConcurrentSolves`, 503 when full;
+  `GridSim:SolveTimeoutSeconds`, 504) and each `/ws/sim` socket has a token bucket on its `step` and `start` frames
+  (`GridSim:WsControlBurst`, `GridSim:WsControlRatePerSecond`), settings read and checked at start-up
+  (`GA7E3Batch2WebTests`). None of these is per client or per address: request rate limiting per client at the network
+  edge remains a deploying-party reverse-proxy concern.
 
 ### 5.5 B5 Resilient networks and systems
 
-**Status: Partially achieved in-component (no host drives the reconnect schedule); not applicable to the library.**
+**Status: Partially achieved in-component (supervised reconnect built and wired, off by default, not yet confirmed by a release test run); not applicable to the library.**
 
 The library is deterministic and stateless per call (section 10.3), so it has no availability state to lose. The
 services do. What exists: `GridBridgeClient` fails every pending query when the stream closes or faults (the `Faulted`
@@ -476,9 +692,20 @@ What is built:
 - `ResilienceOptions` (`GridSim.Core.Net`): the resource limits (max in-flight queries, max message bytes) and the
   transport policy (`ws://` refused unless allowed), applied by `ApplyTo` to every bridge
   client the web and desktop hosts create; and a bounded exponential reconnect backoff schedule
-  (`ResilienceOptions.BackoffDelay`). **The gap:** no host drives that schedule at this release, so there is no
-  supervised auto-reconnect loop; a dropped bridge stream fails its pending queries (the `Faulted` event) and is not
-  reconnected automatically.
+  (`ResilienceOptions.BackoffDelay`).
+- `BridgeReconnectSupervisor` (`GridSim.Core.Net`, since 2026-11-01) drives that schedule. On a lost bridge stream it
+  waits `BackoffDelay(n)` and reconnects through the host's own connect path, up to
+  `ResilienceOptions.MaxReconnectAttempts` (0, the default, means no bound), then reports one give-up. A horizon
+  rejection (`ForwardInferenceException`) is never retried; a successful connection resets the count. The web host
+  wires it into each bridge session (`GridSim:BridgeReconnect=true`, `GridSim:BridgeReconnectMaxAttempts`, read in
+  `SessionManager`; a malformed value stops start-up) and the Avalonia desktop app into its bridge session
+  (`BridgeAutoReconnect`, `BridgeReconnectMaxAttempts` in `AppSettings`). **It is off by default in both**: with the
+  settings unset, a dropped bridge stream fails its pending queries (the `Faulted` event) and is not reconnected. Each
+  attempt and the give-up go to the host's log (web: standard error and the session's Warning or Error; desktop: the
+  event log, the status pill and an alarm on give-up), not to the security audit. The legacy WPF window is not wired.
+  The bridge client has no keep-alive or stall detection, so a silent stall is not seen as a loss. Evidence:
+  `BridgeReconnectSupervisorTests`, `BridgeReconnectHostWiringTests`. The `resilience` manifest status stays Partially
+  achieved: the control is off by default and a release test run has not yet confirmed it.
 - `ServiceLevelObjective` + `HealthProbe` (`GridSim.Core.Simulation.Health`) fold the engine's `RealtimeRunSummary`
   into a `HealthReport`. At the end of a `gridsim serve` run with `--audit-log`, and of the web resident estimator's
   run with `Audit:LogPath`, an SLO breach is recorded as an `AvailabilityDegraded` security event, which becomes an
@@ -550,8 +777,11 @@ against it, so truncation from the end and a whole-log rewrite are caught. The a
 `audit-anchor=missing` in its next entry.
 
 **Who writes it.** `--audit-log <file>` on `estimate`, `crossval`, `interpose` and `serve`; the web host's resident
-estimator through `Audit:LogPath`. `gridsim audit verify` and `gridsim audit show` check and display a log, and the web
-and desktop apps have an AUDIT LOG viewer.
+estimator through `Audit:LogPath`. Since 2.1.008 the web resident estimator's entry names exactly the window files it
+estimated (input `windows-consumed`: each file's name and SHA-256, hashed before and after its load, a file that
+changed during the read skipped and named), instead of a hash of the whole folder taken at start-up
+(`ReplayDirectoryWindowFeed.ConsumedInput`; evidence `BugHunt1101WebTests`, `B175_*`). `gridsim audit verify` and
+`gridsim audit show` check and display a log, and the web and desktop apps have an AUDIT LOG viewer.
 
 CAF-relevant properties:
 
@@ -576,8 +806,8 @@ CAF-relevant properties:
 | (d) a suspected FDIA (`FdiaScreen`) | a `SuspectedFdia` entry from `estimate` when `--fdia-screen` is given and the screen reads suspected. |
 | (e) an `Infeasible` / `Unobservable` estimate | an `InfeasibleState` entry from `estimate`, from each infeasible `serve` window (WLS method) and from each infeasible web resident-estimator window; `Unobservable` is in the outcome and the counts only. |
 | (f) a breached service-level objective | an `AvailabilityDegraded` entry at the end of a `serve` run and of the web resident estimator's run (B5). |
-| (g) an access denial | not recorded by any product path: the `RoleGuard` audited overload writes an `AccessDenied` entry, but no hosting surface calls the gate (B2). |
-| (h) a distrusted source or a dependency alert | not recorded: no product path applies `DistrustedSources` and nothing produces a `DependencyAlert` event at this release. |
+| (g) an access denial | an `AccessDenied` entry from the web host for each request its role gate refuses (`POST /api/solve`, `/ws/sim` control frames; B2), when the host has an audit log (that is, with the resident estimator); a host without one refuses but records nothing. The CLI has no role gate. |
+| (h) a distrusted source or a dependency alert | a `DistrustedSource` entry once per named source per run when `--distrust` or `Realtime:DistrustedSources` is set (since 2026-11-01); nothing produces a `DependencyAlert` event at this release. |
 | (i) a broken audit chain | refused, not logged in the same file: a log that does not verify stops the run before it starts (CLI exit 1, web start-up failure) and is reported on stderr. The `AuditChainBroken` event is deliberately not written into the log whose chain cannot be trusted. |
 
 **Per-security-event audit (wired).** `SecurityAudit.Record` (`GridSim.Core.Diagnostics`), reached through
@@ -589,7 +819,8 @@ loud (stderr, exit 1).
 **Forwarding.** `--audit-forward <file>` (CLI) or `Audit:ForwardPath` (web) attaches `JsonLinesAuditSink`, which
 appends every entry, all fields including both hashes, as one JSON line to a second file: the input for a SIEM
 collector or a copy on a write-once mount. Sinks are notified by `AuditLogWriter` after the durable append, so a
-forwarder failure never fails the append; the CLI reports it at the end of the run and exits 1 (the web host does not report it at this release). Each of these
+forwarder failure never fails the append; the CLI reports it at the end of the run and exits 1, and the web host
+reports a failed forward, incident write or anchor update on stderr when the resident run ends or fails. Each of these
 settings needs `--audit-log` / `Audit:LogPath`, or the CLI refuses the command line (usage error) and the web host
 refuses to start. Evidence: `SecurityAuditTests`, `AuditWiringTests`.
 
@@ -607,11 +838,14 @@ The hash chain is tamper-**evident**. The former "unsigned anchor" limit is clos
   a key pair. There is no embedded public key: the verifier is the public key the deployer supplies. **The trust
   model, stated honestly:** a host that holds the private key (the `--audit-sign-key` form) only protects against an
   attacker who does not have that key; an attacker with the host's privileges can re-sign a rewritten anchor. The
-  strong form keeps the private key off the host and gives the host only the public key. GridSim ships no separate
-  offline signing verb: the signature line is a documented ECDSA P-256 / SHA-256 signature over the exact anchor line
-  (`gridsim-audit-anchor-sig/1`), so the off-host form signs each new anchor with the deployer's own tooling, and a
-  host running with only `--audit-verify-key` refuses its next run until the anchor its last run wrote has been
-  signed. Evidence: `SignedAuditAnchorTests`, `AuditWiringTests`. The anchor
+  strong form keeps the private key off the host and gives the host only the public key. The off-host form is
+  served by `gridsim audit sign <log> --key <private.pem> [--anchor f] [--sig f]`: at a checkpoint the key holder
+  verifies the whole log against its anchor and signs that anchor, and a log that does not verify is never signed
+  (`TAMPERED`, exit 3). The signature line is a documented ECDSA P-256 / SHA-256 signature
+  (`gridsim-audit-anchor-sig/2`, over the entry count, head hash, first-entry hash and signing time; a `/1` line still
+  verifies, with a warning, and is replaced at the next signing), so a deployer may also sign with their own tooling. A host running with only
+  `--audit-verify-key` refuses its next run until the anchor its last run wrote has been signed. Evidence:
+  `SignedAuditAnchorTests`, `AuditWiringTests`. The anchor
   may still be kept where the log's writer cannot change it (`--audit-anchor`, `Audit:AnchorPath`, write-once media)
   as defence in depth.
 - **Write-once or remote copy.** `--audit-forward` / `Audit:ForwardPath` appends every entry to a second file
@@ -645,7 +879,12 @@ FdiaScreenReport(
 
 A limit breach counts only when it exceeds k standard deviations of the estimated quantity (k = 3 by default, the same
 three-sigma rule the bad-data tests use), with the standard deviation bounded by the sigma of the telemetry that
-measures it. A true state sitting on a limit therefore does not raise a false alarm from noise. The screen refuses to
+measures it. A true state sitting on a limit therefore does not raise a false alarm from noise. Where several
+telemetry rows measure one quantity, the screen keeps the smallest sigma (failing towards a flag): for a bus quantity,
+and since 2.1.010 for a branch flow on a single line between two buses too, so a loose second meter (a
+pseudo-measurement) no longer widens the margin enough to hide a rating breach. Only where parallel circuits join the
+same two buses (a breach names its buses, not its circuit) is the widest circuit's bound kept (gap register item 16,
+closed; `BugHunt1101WebTests`, `B189_*`). The screen refuses to
 screen an estimate that did not converge, or whose chi-square test did not run, rather than reading "not run" as a
 pass.
 
@@ -729,15 +968,18 @@ is isolated, how a poisoned measurement source is quarantined), and the reportin
   into the audit chain. Evidence: `IncidentRouterTests`, `AuditWiringTests`.
 - **Distrusted-source control (D1 containment), Partially achieved.** `DistrustedSources` (`GridSim.Core.Estimation`)
   marks a measurement source distrusted and forces its rows to pseudo-measurement treatment (it inflates sigma, never
-  changes a value). It is a primitive only: no product path (CLI verb or host setting) applies it at this release, and
-  distrusted rows still count towards the chi-square redundancy. Until it is wired, the runbook's containment step is
-  to withhold the source's data from the run. Evidence: `DistrustedSourceTests`.
+  changes a value). `estimate --distrust`, `serve --distrust` and the web host's `Realtime:DistrustedSources` apply it (since 2026-11-01): each run writes one `DistrustedSource` security event per named source (severity Significant, so each raises an incident when an incident log is set), and the distrusted rows are left out of the chi-square J and its degrees of freedom while staying in the fit. With no source named every number is bit-identical to a run without the option. The HTI
+  estimator and the recursive filters (`ekf`, `ukf`, `enkf`) refuse it, and a row with no source tag is refused while
+  a list is set. The status is held at Partially achieved until the release test run confirms the wiring (the
+  manifest status is pinned by `ComplianceAttestationTests`). Evidence: `DistrustedSourceTests`,
+  `DistrustedSourceRedundancyTests`, `DistrustedSourceSettingTests`.
 
 **v4.0 D1 (tested plans, suppliers in scope).** v4.0 strengthens D1: a response plan must be exercised, and its scope
-must extend to suppliers. The plan in [`incident-response.md`](incident-response.md) is to be exercised as a tabletop,
-and upstream and supplier incidents - chiefly the GDA data lake GridSim draws from - are in scope: a poisoned or
-compromised upstream source is handled by quarantine (`QuarantineLiveStore`) and, once it is wired into a product
-path, by the distrusted-source control above. A `DependencyAlert` event would be raised as an incident by the incident
+must extend to suppliers. The plan in [`incident-response.md`](incident-response.md) is to be exercised as a tabletop;
+no exercise has been held or recorded as at 2.1.010, so the plan is written but untested (gap register item 17). Upstream
+and supplier incidents - chiefly the GDA data lake GridSim draws from - are in scope: a poisoned or
+compromised upstream source is handled by quarantine (`QuarantineLiveStore`) and by the distrusted-source control
+above (`--distrust`, `Realtime:DistrustedSources`). A `DependencyAlert` event would be raised as an incident by the incident
 wiring, but nothing produces one at this release: dependency advisories surface through the vulnerable-package gate
 and Dependabot (section 4.4), outside the running product.
 
@@ -763,30 +1005,30 @@ marks an outcome the host environment or operator organisation owns.
 | A1 / A2 | Dynamics->Estimation review gate | `Diagnostics.RestrictionReview` + `RestrictionReview.Reviewed` register | Achieved | `RestrictionInvariantTests` |
 | A2 / B4 / C1 | Physics-conformance audit | `Physics.PhysicsLaws`, `Physics.PhysicsCheckRegistry.HardGateLaws` | Achieved | `PhysicsAuditTests`, `FeasibleKclGateTests` |
 | A3 / B3 | Data-provenance labelling | `Diagnostics.ProvenanceTag` | Achieved | `AssetProvenanceTests` |
-| A3 / A4 | SBOMs, dependency audit, code scanning | Two CycloneDX SBOMs attached to each GitHub Release (`release.yml`); vulnerable-package gate in CI and the release; NuGet audit warnings are build errors; CodeQL (`codeql.yml`, by hand only); Dependabot; `THIRD-PARTY-NOTICES.md` | Achieved in-component (running the workflow on a GitHub tag is a deploying-maintainer action; CI runs on a release tag through `release.yml` or by hand, CodeQL by hand only, as a risk-accepted deviation, section 4.4) | `ThirdPartyNoticesTests`, `WorkflowContractTests` |
-| A4 | Lock files, build provenance and release provenance | `packages.lock.json` (`RestorePackagesWithLockFile=true`); `Diagnostics.SupplyChain.BuildProvenance` (version/commit/build SDK/SBOM-hash/build-hash, an identity label); SBOM hash injected into the CLI, web image and NuGet builds and checked on each CLI binary; signed build-provenance attestation over every Release file | Achieved | `SupplyChainManifestTests`, `WorkflowReleaseGateTests`, `WorkflowContractTests` |
-| A4 | Release signing | Authenticode for the Windows CLI (`release.yml`), NuGet package signing (`publish.yml`), with one self-signed certificate trusted for verification only by its pinned thumbprint; Linux / macOS archives, `SHA256SUMS.txt` and the container image are not signed; signing skipped with a warning when the secret is absent | Achieved in-component (signing secret exercised at the first tagged release, a deploying-maintainer action; a CA-issued certificate is not yet in place) | `WorkflowContractTests`, `WorkflowReleaseGateTests` |
-| A4.b | Secure-SDLC attestation | `Diagnostics.SupplyChain.ComplianceManifest` (hand-maintained inventory) + `ComplianceAttestation` (manifest hash bound to the build identity; `IsCompliant` only for a release build with every in-scope control recorded Achieved; a local build is NOT ATTESTED and `compliance verify` exits 1) | Achieved (the mechanism; the verdict reads NOT COMPLIANT at this release while three controls are Partially achieved) | `ComplianceAttestationTests` |
-| B1 | Secure-configuration baseline | `docs/developer/deploy/`, technical ch. 35, `Site.TrustedProxies`, non-root container, systemd hardening | Achieved in-component (bridge `ws://` refused unless `GridSim:BridgeAllowUnencrypted=true`; compose hardening is deploying-party) | `Cf2OpenCodeFindingsTests` (trusted proxies), `BridgeEndpointSettingTests` |
-| B2 | Authentication and exposure | Cookie sign-in, SSO consumer (`Sso.EstateSso`), replay-only gate (`GridSim:ReplayOnly`) | Achieved (as compensating controls) | `WebSecurityDoc2Tests`, `WebHostDoc2Tests` |
-| B2 | Role-based access-control gate | `Security.OperationRole`, `IdentityContext`, `RoleGuard.Require`, `AccessDeniedException`; the audited overload writes `SecurityEventKind.AccessDenied` (primitive only: no hosting surface calls it; replay-only remains the production control) | Partially achieved | `RoleGuardTests` |
+| A3 / A4 | SBOMs, dependency audit, code scanning | CycloneDX SBOMs (the workflow is written to attach five - CLI, web host, GridSim.Core, Avalonia app, WPF app - each stamped into its artefact; RC-1 carries one, for the CLI, made on the owner's build machine); vulnerable-package gate in CI and the release workflow; NuGet audit warnings are build errors on every build; CodeQL `security-extended` (`codeql.yml`, by hand only); Dependabot; `THIRD-PARTY-NOTICES.md`; build telemetry off | Partially achieved (the desktop apps and the NuGet package were published with no SBOM and no release has been made through the workflow that now builds one for each; CI and CodeQL by hand only, a risk-accepted deviation, section 4.4) | `ThirdPartyNoticesTests`, `WorkflowContractTests`, `AvaloniaTelemetryOptOutTests` |
+| A4 | Lock files, build provenance and release provenance | `packages.lock.json` (`RestorePackagesWithLockFile=true`; locked-mode restore on GitHub Actions and in the image build, SDK pinned to 10.0.401 by `global.json`, since 2.1.008; a local restore is not locked); `Diagnostics.SupplyChain.BuildProvenance` (version/commit/build SDK/SBOM-hash/build-hash, an identity label); in `release.yml`, each artefact's own SBOM hash injected into the CLI, web image, desktop app and NuGet builds and checked on each CLI binary and desktop bundle, the linux-x64 CLI rebuilt byte for byte as a release gate, and a signed build-provenance attestation over every Release file and the image (the package is attested in `publish.yml`) | Partially achieved (the workflow did not run for RC-1: no published file is attested and no release passed the CI gate; it accepts a candidate tag since 2.1.008 but no release has been made through it, section 4.4) | `SupplyChainManifestTests`, `WorkflowReleaseGateTests`, `WorkflowContractTests`, `BugHunt1101WebTests` (`B161_*`, `B195_*`) |
+| A4 | Release signing | One self-signed certificate checked by its pinned thumbprint. RC-1: Authenticode on the three Windows executables and an author signature on the NuGet package, made on the owner's build machine; Linux binaries, `SHA256SUMS.txt` and the SBOM not signed. In the workflow: the Windows CLI, the Windows WPF and Avalonia executables and the NuGet package, skipped with a warning when the signing secret is absent (it is not set; the private key is held by the owner outside the repository) | Achieved in-component for the Windows executables and the package (self-signed certificate: accepted residual, owner decision 2026-11-01) | `RC1.md`; `WorkflowContractTests`, `WorkflowReleaseGateTests` |
+| A4.b | Secure-SDLC attestation | `Diagnostics.SupplyChain.ComplianceManifest` (hand-maintained inventory) + `ComplianceAttestation` (manifest hash bound to the build identity; `IsCompliant` only for a release build with every in-scope control recorded Achieved; since 2.1.008 a release build needs a 64-hex SBOM hash, a known commit and a clean source tree, and any other build is NOT ATTESTED and `compliance verify` exits 1) | Partially achieved (the verdict reads NOT COMPLIANT while five controls are Partially achieved, 13 of 18 Achieved; a local build of a clean tree given any 64-hex value still reports a release build; download integrity rests on workflow steps that did not run for RC-1; the manifest records `supply-chain` and `secure-sdlc-attestation` Partially achieved since 2.1.008) | `ComplianceAttestationTests`, `BugHunt1101WebTests` (`B176_*`, `B196_*`) |
+| B1 | Secure-configuration baseline | `docs/developer/deploy/`, technical ch. 35, `Site.TrustedProxies`, non-root container, systemd hardening | Achieved in-component (bridge `ws://` refused unless `GridSim:BridgeAllowUnencrypted=true`; `AllowedHosts` host list and security headers with HSTS since 2.1.008, the CSP covering framing only; compose hardening is deploying-party) | `Cf2OpenCodeFindingsTests` (trusted proxies), `BridgeEndpointSettingTests`, `BugHunt1101WebTests` (`B170_*`, `B179_*`) |
+| B2 | Authentication and exposure | Cookie sign-in, SSO consumer (`Sso.EstateSso`), replay-only gate (`GridSim:ReplayOnly`), `/ws/sim` origin check (`GridSim:AllowedOrigins`) behind the `AllowedHosts` list; `pmu-ingest` UDP and `interpose` listeners on loopback by default with sender and client rules | Achieved (as compensating controls) | `WebSecurityDoc2Tests`, `WebHostDoc2Tests`, `BugHunt1101WebTests` (`B170_*`, `B173_*`, `B174_*`) |
+| B2 | Role-based access-control gate | `Security.OperationRole`, `IdentityContext`, `RoleGuard.Require`, `AccessDeniedException`; enforced by the web host (`Site.AccessControl`) on `POST /api/solve` (Analyst), `GET /api/topology` (Viewer) and every `/ws/sim` control (Operator), from `GridSim.<role>` role claims or `GridSim:AnonymousRole` (default Operator on a loopback-only instance, Viewer otherwise); each denial a `SecurityEventKind.AccessDenied` audit entry when the host has an audit log; replay-only remains the production control | Partially achieved (the dashboard's own sessions are not role-gated; a host without the resident estimator has no audit log, so its denials are not audited) | `RoleGuardTests`, `CafB2RoleGateWebTests` |
 | B3 | Data-protection keys at rest | `Site.KeyRingProtection` (DPAPI / PKCS#12; certificate password resolved through `ISecretStore`) | Achieved in-component (Linux without a certificate is a deploying-party step) | `WebSecurityDoc2Tests`, `Cf3OpenCodeFindingsTests` |
 | B3 | Secrets management | `Security.ISecretStore` (`EnvironmentSecretStore`, `DirectorySecretStore`, `CompositeSecretStore`, `NullSecretStore`), BCL-only; web `Secrets:Directory` | Achieved (no OS-keychain or vault backend ships) | `SecretStoreTests`, `DirectorySecretStoreTests`, `NoSecretInAuditTests` |
 | B4 | Feasibility acceptance gate | `Estimation.FeasibleWlsStep` (Ring C) -> `EstimationStatus.Infeasible` | Achieved | `FeasibleEstimationTests`, `FeasibleKclGateTests` |
 | B4 | Fail-loud status doctrine | `Estimation.EstimationStatus` (`Unobservable`/`NonFinite`/`Infeasible`) | Achieved | `ObservabilityTests`, `DenseEstimationLimitsTests`, `EstimationRobustnessFixTests` |
 | B4 | Build hardening gate | `Directory.Build.props` (warnings-as-errors, analysers, nullable) | Achieved | CI build |
-| B4 | Resource limits | `GridSim:MaxSessions` (64), `/ws/sim` 16 KiB frame cap, Modbus frame cap; `Net.ResilienceOptions` bridge message cap (8 MiB) and in-flight-query cap (256); `MeasurementSet.Load` measurement cap | Achieved in-component (edge rate limiting is deploying-party) | `WebHostDoc2Tests`, `ResilienceOptionsTests` |
-| B5 | Service resilience / health | `Net.ResilienceOptions` (limits and transport policy applied to every bridge client; bounded `BackoffDelay` schedule not driven by any host); `Simulation.Health.ServiceLevelObjective` + `HealthProbe`; an SLO breach at the end of a `serve` / resident run is an `AvailabilityDegraded` security event | Partially achieved (no supervised reconnect) | `ResilienceOptionsTests`, `BridgeEndpointSettingTests`, `HealthProbeTests`, `AuditWiringTests`, `BridgeClientRobustnessTests` |
+| B4 | Resource limits | `GridSim:MaxSessions` (64), `GridSim:MaxSessionsPerClient` (16, per signed-in subject or remote address), `GridSim:MaxConcurrentSolves` (8, 503 beyond) and `GridSim:SolveTimeoutSeconds` (120, 504 after) on `/api/solve` and `/api/topology`, a per-socket token bucket on `/ws/sim` `step` and `start` frames (`GridSim:WsControlBurst` 20, `GridSim:WsControlRatePerSecond` 5), `/ws/sim` 16 KiB frame cap, Modbus frame cap; `Net.ResilienceOptions` bridge message cap (8 MiB) and in-flight-query cap (256); `MeasurementSet.Load` measurement cap; C37.118 non-DATA frame cap (1024); usage-log rotation (`Analytics:MaxLogBytes`, 16 MiB) | Achieved in-component (edge rate limiting is deploying-party) | `WebHostDoc2Tests`, `ResilienceOptionsTests`, `BugHunt1101WebTests` (`B177_*`, `B188_*`), `GA7E3Batch2WebTests`, `GA7E4WebTests` |
+| B5 | Service resilience / health | `Net.ResilienceOptions` (limits and transport policy applied to every bridge client; bounded `BackoffDelay` schedule driven by `BridgeReconnectSupervisor` in the web host and the desktop app, off by default); `Simulation.Health.ServiceLevelObjective` + `HealthProbe`; an SLO breach at the end of a `serve` / resident run is an `AvailabilityDegraded` security event | Partially achieved (supervised reconnect off by default; not yet confirmed by a release test run) | `ResilienceOptionsTests`, `BridgeEndpointSettingTests`, `HealthProbeTests`, `AuditWiringTests`, `BridgeClientRobustnessTests`, `BridgeReconnectSupervisorTests`, `BridgeReconnectHostWiringTests` |
 | C1 | Hash-chained audit | `Diagnostics.AuditLog`, `AuditLogEntry` | Achieved | `AuditLogTests`, `AuditLogDeletionTests` |
 | C1 | Audit persistence | `Diagnostics.AuditLogWriter`, `AuditLogFile`, `AuditEvent`, `AuditRunRecorder` (`gridsim-audit/1`); `--audit-log` on `estimate`, `crossval`, `interpose`, `serve`; web host `Audit:LogPath`; `gridsim audit verify` / `show` | Achieved | `AuditLogFileTests`, `AuditRunRecorderTests`, `EstimationAuditTrailTests` |
 | C1 | Audit anchoring | `Diagnostics.AuditAnchor`, `AuditAnchorFile` (`gridsim-audit-anchor/1`), checked on every open; `SignedAuditAnchor` (detached ECDSA P-256 over the anchor) via `--audit-sign-key` / `--audit-verify-key`, `Audit:AnchorSigningKeyPath` / `Audit:AnchorVerificationKeyPath`, `audit verify --pubkey`, `audit keygen`; `--audit-anchor`, `Audit:AnchorPath` | Achieved (protection against a key-holding host needs the private key off the host, section 6.2) | `AuditLogFileTests`, `Doc3AuditAnchorTests`, `SignedAuditAnchorTests`, `AuditWiringTests` |
-| C1 | Per-event security logging | `Diagnostics.SecurityAudit.Record` via `AuditRunRecorder.RecordSecurityEvent` at the detection sites of `estimate`, `serve`, `interpose` and the web resident estimator; forwarded by `JsonLinesAuditSink` (`--audit-forward`, `Audit:ForwardPath`) | Achieved (no product site yet for `AccessDenied`, `DistrustedSource`, `DependencyAlert`; `AuditChainBroken` refused and reported on stderr, not logged, section 6.1) | `SecurityAuditTests`, `AuditWiringTests` |
-| C1 / C2 | Residual-cloaked FDIA detection | `Estimation.Security.FdiaScreen`, `FdiaScreenReport` (incl. `AnchorInconsistent` with `protectedAnchors`) | Achieved (out-of-envelope and feasible-landing sub-classes) | `FdiaProtectedAnchorTests`, `FdiaCloakedAttackTests`, `FdiaScreenTests` |
+| C1 | Per-event security logging | `Diagnostics.SecurityAudit.Record` via `AuditRunRecorder.RecordSecurityEvent` at the detection sites of `estimate`, `serve`, `interpose` and the web resident estimator; forwarded by `JsonLinesAuditSink` (`--audit-forward`, `Audit:ForwardPath`) | Achieved (`AccessDenied` from the web host's role gate since 2026-11-01; no product site yet for `DistrustedSource`, `DependencyAlert`; `AuditChainBroken` refused and reported on stderr, not logged, section 6.1) | `SecurityAuditTests`, `AuditWiringTests` |
+| C1 / C2 | Residual-cloaked FDIA detection | `Estimation.Security.FdiaScreen`, `FdiaScreenReport` (incl. `AnchorInconsistent` with `protectedAnchors`) | Achieved (out-of-envelope and feasible-landing sub-classes; tightest-meter bound for bus and single-line branch quantities since 2.1.010) | `FdiaProtectedAnchorTests`, `FdiaCloakedAttackTests`, `FdiaScreenTests`, `BugHunt1101WebTests` (`B189_*`) |
 | C2 | Security-event aggregation / threat hunting | `Diagnostics.Incident.SecurityEventMonitor` (an `IAuditSink`), attached by `--incident-log` / `Audit:IncidentLogPath` | Achieved | `SecurityEventMonitorTests`, `AuditWiringTests` |
 | D1 | Deterministic estimate and replay for forensics | `WlsStateEstimator`, `GdaReplayLoop`; no clock in estimation code | Achieved | `EstimatorDeterminismTests`, `GdaReplayDeterminismTests`, `EstimationClockIndependenceTests`, `Doc16NumericsDeterminismTests` |
 | D1 | Live-data quarantine | `QuarantineLiveStore` (refuses the evidence lake) | Achieved | `QuarantineLiveStoreTests` |
 | D1 | Incident hooks | `Diagnostics.Incident.IncidentReport` / `IIncidentSink` / `IncidentRouter` / `IncidentPolicy`; `SecurityIncidentSink`, `JsonLinesIncidentSink` and `IncidentWiring` attached by `--incident-log` / `Audit:IncidentLogPath`; [`incident-response.md`](incident-response.md) | Achieved | `IncidentRouterTests`, `AuditWiringTests` |
-| D1 | Distrusted-source containment | `Estimation.DistrustedSources` (primitive only: no product path applies it; distrusted rows still count as chi-square redundancy) | Partially achieved | `DistrustedSourceTests` |
+| D1 | Distrusted-source containment | `Estimation.DistrustedSources` applied by `estimate --distrust`, `serve --distrust` and `Realtime:DistrustedSources`; one `DistrustedSource` event per source per run; distrusted rows excluded from the chi-square J and degrees of freedom (`DistrustedSourceSetting`, `WlsStateEstimator`) | Partially achieved (held until the release test run) | `DistrustedSourceTests`, `DistrustedSourceRedundancyTests`, `DistrustedSourceSettingTests` |
 | A1 / A2 / D1 / D2 | Governance, risk and incident documents | [`security-governance.md`](security-governance.md), [`risk-register.md`](risk-register.md), [`incident-response.md`](incident-response.md) | Achieved (org-level governance remains deploying-party) | the documents, cross-referenced from sections 4.1, 4.2, 7.1 |
 | Out of scope / deploying-party | Host OS, perimeter, physical security, org-level A1 governance, B6 awareness | the deploying party's environment and organisation | Out of scope / deploying-party | the deploying party's own CAF assessment |
 
@@ -794,36 +1036,52 @@ marks an outcome the host environment or operator organisation owns.
 
 ## 9. Gap register
 
-Three in-component gaps remain open; each is recorded Partially achieved in `ComplianceManifest`, so the compliance
-attestation reads NOT COMPLIANT until it is closed (section 4.5). The other entries are kept as a record of what closed
-them.
+Three in-component code gaps remain open (items 1, 4 and 9); each is recorded Partially achieved in
+`ComplianceManifest`, so the compliance attestation reads NOT COMPLIANT until it is closed (section 4.5). Items 10 to
+18 were opened at the 2.1.005 review: they concern the release process, the source repository and a few code paths,
+and items 10 to 12 are why A3, A4 and A4.b read Partially achieved. Since 2.1.008 the manifest agrees, recording
+`supply-chain` and `secure-sdlc-attestation` as Partially achieved with the release-path gap named (item 10). The
+2.1.008 to 2.1.010 fixes closed items 15 and 16 and narrowed items 10 and 13. The other entries are kept as a record of
+what closed them.
 
-1. **RBAC (B2) - open (Partially achieved).** The access-control gate `OperationRole`, `IdentityContext`,
-   `RoleGuard.Require(...)`, `AccessDeniedException` (`GridSim.Core.Security`) is built and tested, never inside the
-   solver loop, and its audited overload writes a `SecurityEventKind.AccessDenied` entry for each deny. It is a
-   primitive only: no endpoint, CLI verb or hosted service calls it, so nothing is authorised by role and no denial is
-   ever audited. The replay-only gate remains the production exposure control. Independent of `ForwardInferenceGuard`;
-   no role reaches sub-169h data. To close: enforce it, with the host's audit writer, on the solve and
-   resident-estimator control surfaces. Evidence: `RoleGuardTests`.
+1. **RBAC (B2) - open (Partially achieved), narrowed 2026-11-01.** The access-control gate `OperationRole`,
+   `IdentityContext`, `RoleGuard.Require(...)`, `AccessDeniedException` (`GridSim.Core.Security`) is built and tested,
+   never inside the solver loop. Since 2026-11-01 the web host enforces it (`Site.AccessControl`, section 5.2):
+   `POST /api/solve` needs Analyst, `GET /api/topology` Viewer, every `/ws/sim` control frame Operator; the caller's
+   band comes from `GridSim.<role>` role claims or `GridSim:AnonymousRole` (default Operator on an instance that answers
+   only loopback names, Viewer otherwise); a denial is refused before the action runs and written as one
+   `SecurityEventKind.AccessDenied` entry through the host's audit writer (`AuditRunRecorder.RecordSecurityEvent`, or
+   `AuditRunRecorder.AppendSecurityEvent` once the resident estimator's run has closed the log). The resident estimator
+   has no control surface on the web host to gate. The replay-only gate remains the production exposure control.
+   Independent of `ForwardInferenceGuard`; no role reaches sub-169h data. Still open: the Blazor dashboard creates its
+   own sessions with no role check, and a host without the resident estimator has no audit log (`Audit:LogPath` is
+   refused there), so its denials are refused but not audited. To close: gate the dashboard's session start and
+   controls, and give a host without the resident estimator an audit log for its security events. Evidence:
+   `RoleGuardTests`, `CafB2RoleGateWebTests`.
 2. **Per-event audit and signed anchor (C1) - closed.** `AuditRunRecorder.RecordSecurityEvent` writes one entry per
    security event at the detection sites listed in section 6.1, forwarded by `--audit-forward` / `Audit:ForwardPath`;
    `SignedAuditAnchor` is wired through `--audit-sign-key` / `--audit-verify-key`, the matching web settings and
    `audit verify --pubkey`, so a joint rewrite of log and anchor is detectable by anyone who lacks the private key
-   (fully so only when the private key is off the host). `AccessDenied`, `DistrustedSource` and `DependencyAlert` have
-   no product detection site yet (items 1 and 9). Evidence: `SecurityAuditTests`, `SignedAuditAnchorTests`,
+   (fully so only when the private key is off the host). Since 2026-11-01 the web host's role gate writes
+   `AccessDenied` (item 1) and the distrust setting writes `DistrustedSource` (item 9); `DependencyAlert` has no product detection site yet. Evidence: `SecurityAuditTests`, `SignedAuditAnchorTests`,
    `AuditWiringTests`.
-3. **Supply chain (A3/A4) - closed in-component.** `packages.lock.json` lock files pin the restore graph;
-   `BuildProvenance` exposes version/commit/build SDK/SBOM-hash/build-hash (an identity label); the release injects
-   the SBOM hash into every shipped build, checks it on each CLI binary, and attaches a signed build-provenance
-   attestation to every Release file. Running the workflow on a GitHub tag is a deploying-maintainer action, and the
-   CI-at-release cadence is a risk-accepted deviation (section 4.4). Actions are referenced by version tag, not
-   pinned by SHA. Evidence: `SupplyChainManifestTests`, `WorkflowReleaseGateTests`.
+3. **Supply chain (A3/A4) - reopened at 2.1.005; see items 10 and 11.** `packages.lock.json` lock files record the
+   restore graph; `BuildProvenance` exposes version/commit/build SDK/SBOM-hash/build-hash (an identity label); the
+   release workflow is written to inject each artefact's own SBOM hash into every shipped build, check it on each CLI
+   binary and desktop bundle, rebuild the Linux CLI byte for byte as a release gate, and attach a signed
+   build-provenance attestation to every Release file and the image. Those workflow steps did not run for
+   either published release candidate. Since 2.1.008 the SDK is pinned by `global.json` and CI restores in locked
+   mode (item 13). Since 2026-11-01 every Action is pinned to a full commit SHA. Evidence: `SupplyChainManifestTests`,
+   `WorkflowReleaseGateTests`, `BugHunt1101WebTests` (`B161_*`).
 4. **Service resilience (B5) - open (Partially achieved); resource limits (B4) - closed in-component.**
    `ResilienceOptions` (bridge message cap, in-flight-query cap; `ws://` refused unless allowed) is
    applied to every bridge client, and an SLO breach at the end of a `serve` / resident run is an
-   `AvailabilityDegraded` security event. The open part: no host drives the bounded reconnect backoff schedule, so
-   there is no supervised auto-reconnect. Edge rate limiting is deploying-party. Evidence: `ResilienceOptionsTests`,
-   `BridgeEndpointSettingTests`, `HealthProbeTests`, `AuditWiringTests`.
+   `AvailabilityDegraded` security event. Since 2026-11-01 `BridgeReconnectSupervisor` drives the bounded reconnect
+   backoff schedule in the web host (`GridSim:BridgeReconnect`) and the desktop app (`BridgeAutoReconnect`). The open
+   part: both are off by default, a release test run has not yet confirmed them, the legacy WPF window is not wired,
+   the bridge client has no keep-alive, and the attempts go to the host log, not the security audit. Edge rate limiting
+   is deploying-party. Evidence: `ResilienceOptionsTests`, `BridgeEndpointSettingTests`, `HealthProbeTests`,
+   `AuditWiringTests`, `BridgeReconnectSupervisorTests`, `BridgeReconnectHostWiringTests`.
 5. **Secrets management (B3) - closed.** `ISecretStore` (`EnvironmentSecretStore`, `DirectorySecretStore`,
    `CompositeSecretStore`, `NullSecretStore`), BCL-only; the key-ring certificate password resolved through it, from a
    secrets directory first when `Secrets:Directory` is set; no secret in any audit summary. No OS-keychain or vault
@@ -839,17 +1097,97 @@ them.
 8. **Feasible-landing FDIA (C1) - closed.** `FdiaScreen.Screen` takes `protectedAnchors` and flags a feasible,
    in-limit cloaked attack that disturbs a PMU-anchored quantity (`FdiaScreenReport.AnchorInconsistent`). Evidence:
    `FdiaProtectedAnchorTests`.
-9. **Distrusted-source containment (D1) - open (Partially achieved).** `DistrustedSources` marks a source distrusted
-   and forces its rows to pseudo-measurement treatment, but no product path applies it, and distrusted rows still
-   count towards the chi-square redundancy. To close: a CLI / host setting that applies it, with a
-   `DistrustedSource` security event, and redundancy that excludes the distrusted rows. Evidence:
-   `DistrustedSourceTests`.
+9. **Distrusted-source containment (D1) - open (Partially achieved), wired 2026-11-01.** The asked-for wiring now
+   exists: `estimate --distrust`, `serve --distrust` and the web host's `Realtime:DistrustedSources` apply it (since 2026-11-01): each run writes one `DistrustedSource` security event per named source (severity Significant, so each raises an incident when an incident log is set), and the distrusted rows are left out of the chi-square J and its degrees of freedom while staying in the fit. With no source named, every number is bit-identical (`DistrustedSourceRedundancyTests`, exact
+   comparison on case14 and case30). Still open: the wiring has not been through the release test run, so the
+   manifest keeps `distrusted-source` at Partially achieved; HTI and the recursive filters refuse the option.
+   Evidence: `DistrustedSourceTests`, `DistrustedSourceRedundancyTests`, `DistrustedSourceSettingTests`.
+10. **Release path bypasses the release gates (A4/A4.b) - open, narrowed at 2.1.008 (Partially achieved).** At RC-1
+    `release.yml` accepted only a `vMAJOR.MINOR.PATCH` tag, so it stopped in its first step on `v2.0.195-rc1.0` and
+    `v2.1.000-RC-1`. RC-1 was built, signed and published by hand from the owner's build machine: no published file
+    has a provenance attestation, none was built behind the CI matrix gate, no web image or web SBOM exists, and the
+    binaries' "release build" flag came from a local build. Done since: the workflow accepts a release-candidate tag
+    (the numeric part must equal `<Version>`; marked a pre-release; no NuGet package or image pushed for a candidate;
+    `BugHunt1101WebTests`, `B195_*`), and the manifest records `supply-chain` and `secure-sdlc-attestation` as Partially
+    achieved, naming this gap (`B196_*`, `ComplianceAttestationTests`). Still open: no release has been made through
+    the workflow, its ship scope (GA-5, 2026-11-01: the desktop apps as RC-1 shipped them, five SBOMs, the independent
+    Linux CLI rebuild as a release gate) is written but has not been run, it still differs from RC-1 in the CLI (it
+    builds osx-arm64 as well and names archives `gridsim-<version>-<rid>`, RC-1 used `gridsim-cli-<version>-<rid>` with
+    no macOS CLI) and does not attach the NuGet package to the Release (the package goes to the feed), and the signing
+    secrets it reads are not set, so it would publish unsigned. To close: build and publish the next release through the workflow, with the ship
+    scope decided and the signing secrets set (or an unsigned release chosen on purpose), and confirm its attestation
+    with `gh attestation verify`.
+11. **SBOM coverage (A3) - closed in the workflow 2026-11-01, not yet exercised by a release.** The published RC-1
+    SBOM describes the command line tool only; the WPF and Avalonia desktop apps and the NuGet package were published
+    without one. Done: the release workflow builds five SBOMs, all Release files (CLI, web host, GridSim.Core for the
+    NuGet package, Avalonia app, WPF app); each desktop app is built by job `desktop` with its own SBOM's hash
+    injected and the bundle checked for it, and the NuGet package is stamped with the GridSim.Core SBOM's hash
+    (`SlsaSupplyChainPinTests`, `WorkflowReleaseGateTests`, `WorkflowContractTests`). Still open: no release has been
+    made through the workflow, so the published RC-1 still has one SBOM. To close: a release made through the
+    workflow, its five SBOMs and their stamped hashes confirmed.
+12. **CI witness not green (A4) - open.** No CI run on `main` has passed since the history reset. The three runs
+    started by hand on 2026-10-31 all came after RC-1 was published and all failed; the last (on 2.1.002) failed one
+    desktop-app layout test on the macOS hardware-intrinsics-off leg. That test now waits for the rows to be shown
+    before measuring them (harness timing only, no assertion changed) and passes locally; no CI run has been made
+    since, so the matrix is still not shown green. The forced AVX-512 legs are reported NOT CHECKED
+    and skipped on a runner without AVX-512, and RC-1's local suite skipped 31 large-case tests by the RAM gate, so the
+    AVX-512 tier and the largest cases were not exercised for RC-1. To close: a green matrix on the release commit,
+    recorded before publication, and the large-case run on a machine that holds it.
+13. **Build environment and source repository (A4.b) - open, narrowed at 2.1.008.** Done since: a release build needs
+    a 64-hex `GridSimSbomSha256`, a known commit and a clean source tree, recorded in the build
+    (`BuildProvenance.ReleaseRefusal`, `GridSimSourceTree`; `BugHunt1101WebTests`, `B176_*`); the SDK is pinned to
+    10.0.401 by `global.json` with no roll-forward, every workflow and the image use it, and restores on GitHub Actions
+    and in the image build run in locked mode (`B161_*`). Still open: the release build that was published ran on the
+    owner's development machine; the release-build check proves form and a clean tree, not that the hash is a real
+    SBOM's or that the workflow built the binary, so a local build of a clean tree can still set the flag; a local
+    restore is not locked; release tags are lightweight and unsigned (commits are signed). Done 2026-11-01: the public
+    repository has a ruleset on `main` (no deletion, no force push; administrators may bypass), secret scanning with
+    push protection, Dependabot alerts and private vulnerability reporting (`tools/github/apply-public-settings.ps1`,
+    which reads each setting back). To close: releases built only by the workflow (or on a clean, recorded build
+    machine), and signed tags.
+14. **Support and update policy (A4.b) - closed 2026-11-01 (owner policy).** [`SECURITY.md`](../../SECURITY.md)
+    states the support period (latest release only), how to report (GitHub private vulnerability reporting, or
+    `gdatooling@proton.me`), the objective CVSS v4.0 and v3.1 base-score assessment recorded in the advisory, the
+    remediation target (48 hours from the recorded assessment for a base score of 7.0 or above, meaning a fixed
+    release and the published advisory), how fixes ship (advisory, CVE requested through GitHub, CHANGELOG
+    `Security` entry) and how runtime fixes are delivered (a new self-contained build). Deployers learn of a fix
+    through the automatic notice: `.github/workflows/security-notice.yml` posts a Discussions announcement when a
+    release naming a published advisory is published, and GitHub notifies Watch subscribers of the release and the
+    announcement. The statement lives in the repository root (GitHub shows it as the security policy) rather than
+    inside the release archives. No release has yet been made under it, so the 48-hour target is stated, not yet
+    evidenced; the runbook is `incident-response.md` section 9.
+15. **Web host browser hardening (B1/B2) - closed at 2.1.008.** The host answers only the names in `AllowedHosts`
+    (default the loopback names; any other `Host` gets a 400 naming the setting before any page, API call or WebSocket
+    runs), which stops a DNS-rebinding page reaching `/ws/sim`; every answer carries `Content-Security-Policy:
+    frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy:
+    strict-origin-when-cross-origin` by default, and outside Development HSTS is sent on HTTPS requests; the systemd
+    and nginx examples set the public name. Evidence: `BugHunt1101WebTests` (`B170_*`, `B179_*`), `Site.HostAllowList`,
+    `Site.SecurityHeaders`. Left as stated limits, not gaps: the CSP covers framing only (no script policy), and
+    `AllowedHosts=*` restores the old behaviour with a start-up warning.
+16. **FDIA margin rule for branch flows (C1) - closed at 2.1.010.** `FdiaScreen` now bounds a branch-flow breach by
+    the tightest meter on the line, as it does for bus meters; only parallel circuits between the same two buses keep
+    the widest circuit's bound, because a breach names its buses, not its circuit. The estimate itself is unchanged;
+    only the screen's significance margin moves. Evidence: `BugHunt1101WebTests` (`B189_*`), `FdiaScreenTests`.
+17. **Incident plan not exercised (D1) - open.** The script for the first tabletop exercise, a mock CVE scored 7.5
+    (CVSS v3.1) taken from private report to published fix, automatic notice and the deploying OES's Regulation 11
+    decision, is written with its record form ([`tabletop-cve-exercise.md`](tabletop-cve-exercise.md)). Neither it
+    nor the `SuspectedFdia` / audit-verify-failure exercise named in [`incident-response.md`](incident-response.md)
+    section 8 has been held. To close: hold the exercise, fill in its record and commit it.
+18. **Threat model not refreshed (A2/A4.b) - closed 2026-11-01.** Technical ch. 35 now models the Avalonia desktop
+    app, its case-folder input `geography.json` and the release path (building, signing, source and distribution),
+    each with its threat, control and residual ("Threat model: the desktop app, case geography and the release
+    path"). Residuals it names: no file-size cap on `geography.json` or on case files (a very large file can exhaust
+    memory), the hand-built RC-1 with no attestation, the self-signed certificate (accepted), and unsigned tags.
 
-**Remaining deploying-party actions (not code gaps):** run the first tagged release so the SBOM, provenance and
-signing steps execute on GitHub, and run CodeQL by hand before it; provide a PKCS#12 certificate on Linux so the key
+**Remaining owner actions:** items 10 to 13 and 17 are actions on the release process, the repository and the
+runbook rather than on the product code; items 15 and 16, the two code changes, are closed.
+
+**Remaining deploying-party actions (not code gaps):** provide a PKCS#12 certificate on Linux so the key
 ring is encrypted at rest; point `--audit-forward` / `Audit:ForwardPath` at a WORM mount or SIEM collector; keep the
-anchor-signing private key off the host where the threat model needs it; set `read_only`, `cap_drop` and `no-new-privileges` on the compose file; apply edge rate
-limiting at the reverse proxy; exercise the incident-response plan as a tabletop.
+anchor-signing private key off the host where the threat model needs it; set `read_only`, `cap_drop` and
+`no-new-privileges` on the compose file; set `AllowedHosts` to the public name; apply edge rate limiting at the
+reverse proxy, and a script Content-Security-Policy there if the threat model needs one;
+build the web host itself, since no web host build was published at RC-1; exercise its own incident-response plan.
 
 **Numerics-roadmap note (explicitly not a compliance gap).** On the CPU every WLS and robust estimate is solved by one
 canonical step (`CanonicalWlsStep`, the sparse arithmetic) at every size, so the estimate is bit-identical across the
@@ -894,13 +1232,23 @@ ones still planned.
   verdict. `AuditWiringTests`: a security event is its own forwarded entry, a significant event raises one incident and
   a burst is escalated once, and the signed anchor is written, checked and refused when rewritten or missing.
 - `WorkflowReleaseGateTests`: the release calls the CI matrix and every publishing job waits for it, the matrix covers
-  macOS, forced AVX-512 and FMA off with no advisory leg, the SBOM hash is injected and checked, Release files get a
-  provenance attestation, signing trusts only the pinned certificate, and the build SDK is stamped.
-- `RoleGuardTests` (role x operation matrix; deny is audited; no role reaches sub-horizon data), `SecurityAuditTests`
+  macOS, forced AVX-512 and the non-FMA axis (the AVX2-off leg, whose preflight requires `Fma=False`) with no advisory
+  leg, the SBOM hash is injected and checked, Release files and the web image get a provenance attestation, signing
+  trusts only the pinned certificate, and the build SDK is stamped. These tests read the workflow files; they show
+  what the workflow would do, not that it ran (section 4.4).
+- `RoleGuardTests` (role x operation matrix; deny is audited; no role reaches sub-horizon data),
+  `CafB2RoleGateWebTests` (the web host's role gate on each surface, one audited `AccessDenied` per denial, no side
+  effect on a denial, the default anonymous role), `SecurityAuditTests`
   (one entry per security event with its reason), `SignedAuditAnchorTests` (joint rewrite detected),
   `SecurityEventMonitorTests` (burst escalation), `IncidentRouterTests` (one incident per detection, no future-dated
   claim), `DistrustedSourceTests`, `SecretStoreTests`, `NoSecretInAuditTests`, `SupplyChainManifestTests` and
   `ComplianceAttestationTests`: the controls built this release.
+- `BugHunt1101WebTests` (the 2.1.008 to 2.1.010 fixes, one test group per fix): `B161_*` SDK pin and locked restore;
+  `B176_*` release-build rule (64-hex SBOM hash, known commit, clean tree); `B195_*` candidate tags; `B196_*` manifest
+  statuses; `B170_*` host allow-list; `B179_*` security headers and HSTS; `B173_*` and `B177_*` C37.118 UDP sender rule
+  and non-DATA frame cap; `B174_*` `interpose` client rule and idle drop; `B171_*`, `B172_*`, `B178_*` and `B198_*`
+  licence gating by content and topology; `B175_*` resident-estimator audit inputs; `B188_*` usage-log rotation;
+  `B189_*` FDIA branch bound. The workflow tests read the workflow files, as above.
 
 ### 10.3 Determinism and replay (forensic-integrity requirement)
 

@@ -232,13 +232,22 @@ public static class FrequencyDependentYBus
 
     /// <summary>
     /// A machine's harmonic source reactance on the SYSTEM base (pu): X2 (default X''d) plus its unit
-    /// transformer, both on MBase, scaled by BaseMva/MBase - the same conversion the fault studies make. A
-    /// machine with no MBase is taken as rated at the system base. Fails loudly on a non-positive or
-    /// non-finite reactance (it would be a short circuit to ground, or garbage), naming the unit.
+    /// transformer, both on MBase, scaled by BaseMva/MBase - the same conversion the fault studies make. Fails
+    /// loudly on a non-positive or non-finite reactance (it would be a short circuit to ground, or garbage), naming
+    /// the unit. Bug hunt 2026-11-01 (#166): a machine with no MBase (<c>MBase &lt;= 0</c>, or NaN / infinite) is
+    /// refused, naming the unit, as the fault studies (<see cref="GridSim.Core.Protection.FaultAnalysis"/>, IEC 60909 GR-603) and
+    /// this class's own active-front-end conversion refuse it. It used to be rated at the system base without a word, so
+    /// a 1000 MVA unit stored with MBase 0 had a source reactance ten times too large on a 100 MVA base.
     /// </summary>
     public static double GeneratorSourceReactanceSystemPu(Generator g, double baseMva, double fallbackXdPu)
     {
-        double mBase = g.MBase > 0 ? g.MBase : baseMva;
+        if (!(g.MBase > 0.0) || !double.IsFinite(g.MBase))
+            throw new InvalidOperationException(
+                $"Generator '{g.Name ?? "(unnamed)"}' at bus {g.Bus} has rating MBase = "
+                + g.MBase.ToString("R", System.Globalization.CultureInfo.InvariantCulture)
+                + " MVA; its X''d / X2 and unit transformer are per unit on that rating, so the harmonic study needs it. "
+                + "Give the unit its MBase in MVA (or mark it power-flow only).");
+        double mBase = g.MBase;
         double xSys = g.FaultSourceNegativeSeqReactancePu(fallbackXdPu) * baseMva / mBase;
         if (!(xSys > 0.0) || !double.IsFinite(xSys))
             throw new InvalidOperationException(

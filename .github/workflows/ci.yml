@@ -37,15 +37,24 @@ name: CI
 # triggers, so with workflow_call and workflow_dispatch alone the note is history.
 #
 # NOTE: the matrix legs have generated names ("Test (ubuntu-latest, normal)" and so on). The single job literally
-# named "Build & test" at the end waits for all of them and fails if any failed, so branch protection keeps working
-# with the same required check name as before.
-# Triggers (2026-10-04, N176): the repository is private and keeps the free Actions allowance, so this workflow does
-# not run on every push or pull request. It runs when release.yml calls it on a release tag (workflow_call: the
+# named "Build & test" at the end waits for all of them and fails if any failed, so a branch protection rule can require
+# the same check name as before (no such rule is enabled on the public repository at present).
+# Triggers (2026-10-04, N176): set when the repository was private, to keep within the free Actions allowance, and
+# kept now that CI runs on the public repository (development pushes go to a private repository), so this workflow
+# does not run on every push or pull request. It runs when release.yml calls it on a release tag (workflow_call: the
 # release waits for it) and when started by hand (Actions tab or `gh workflow run`). It has no tag trigger of its
 # own, so a tag does not start a second, competing copy. Day-to-day verification is the local three-mode batch run.
+# GR-382 (2026-11-01, owner decision): it also runs on every push to main and once a week, so main's state is shown by a
+# CI result between releases. Those runs happen only on the public repository, where Actions minutes are free: every
+# job is guarded by the repository name (or a run started by hand), as pages.yml is, so a push to the private
+# development repository starts nothing and costs nothing. Still no tag trigger.
 on:
   workflow_call:
   workflow_dispatch:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 1'   # Mondays 03:17 UTC
 
 # A newer push to the same ref cancels the in-flight run.
 concurrency:
@@ -63,6 +72,8 @@ env:
 jobs:
   matrix:
     name: Test (${{ matrix.os }}, ${{ matrix.simd }})
+    # GR-382: the public repository (any trigger, including the release's call), or a run started by hand anywhere.
+    if: github.repository == 'MarkS0485/GridSim' || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.os }}
     # GR-900: a hung leg stops at the limit instead of holding the runner for GitHub's 6-hour default.
     timeout-minutes: 180
@@ -86,11 +97,11 @@ jobs:
           - { os: windows-11-arm,   simd: normal }          # Phase 0.5: Windows ARM64
           - { os: windows-11-arm,   simd: hwintrinsic-off }
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68  # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       # The build itself always runs in the normal mode (the compiler is not under test); only the test run is
       # switched to the reduced vector tier.
@@ -155,14 +166,15 @@ jobs:
 
   vulnerable:
     name: Vulnerable package gate
+    if: github.repository == 'MarkS0485/GridSim' || github.event_name == 'workflow_dispatch'   # GR-382
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Set up .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68  # v6.0.0
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
       # F07: fail when any direct or transitive NuGet package has a published vulnerability advisory. (NuGet's own
       # restore audit also turns an advisory into a build error here, because warnings are errors; this step lists
       # them all in one place.)
@@ -178,10 +190,11 @@ jobs:
 
   container:
     name: Container image builds
+    if: github.repository == 'MarkS0485/GridSim' || github.event_name == 'workflow_dispatch'   # GR-382
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       # F05: prove the Dockerfile builds and the image starts and serves the home page. Nothing is pushed anywhere.
       - name: Build image
         env:
@@ -203,7 +216,8 @@ jobs:
   test:
     name: Build & test
     needs: [ matrix, vulnerable, container ]
-    if: always()
+    # always(): the summary runs (and fails) when a leg failed; GR-382: only where the legs themselves may run.
+    if: always() && (github.repository == 'MarkS0485/GridSim' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

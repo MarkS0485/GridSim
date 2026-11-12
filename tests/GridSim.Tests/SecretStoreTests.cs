@@ -63,10 +63,11 @@ public sealed class SecretStoreTests
         }
     }
 
+    // Test correction (2026-11-02, owner decision GR-719; recorded in the commit and CHANGELOG): two names holding the same secret is ambiguous configuration, and silent precedence can hide a stale secret, so both set is refused. This asserted that the aspnet form won.
     [Fact]
-    public void The_aspnet_form_wins_over_the_older_doubled_form()
+    public void Both_forms_set_is_refused_naming_both()
     {
-        // GR-719: both spellings set; the ASP.NET one is the documented form and is read first. The older form is
+        // GR-719: both spellings set is refused, naming both variables. The older form is
         // still read when it is the only one set, so an existing deployment keeps working.
         const string aspNetForm = "GridSimTest__BOTH_KEY";
         const string legacyForm = "GridSimTest__BOTH__KEY";
@@ -77,8 +78,12 @@ public sealed class SecretStoreTests
             Assert.Equal("legacy-form", legacyOnly);
 
             Environment.SetEnvironmentVariable(aspNetForm, "aspnet-form");
-            Assert.True(EnvironmentSecretStore.Instance.TryGet("GridSimTest:BOTH_KEY", out string? both));
-            Assert.Equal("aspnet-form", both);
+            InvalidOperationException refusal = Assert.Throws<InvalidOperationException>(
+                () => EnvironmentSecretStore.Instance.TryGet("GridSimTest:BOTH_KEY", out _));
+            Assert.Contains(aspNetForm, refusal.Message, StringComparison.Ordinal);
+            Assert.Contains(legacyForm, refusal.Message, StringComparison.Ordinal);
+            Assert.DoesNotContain("aspnet-form", refusal.Message, StringComparison.Ordinal);   // names, never values
+            Assert.DoesNotContain("legacy-form", refusal.Message, StringComparison.Ordinal);
         }
         finally
         {

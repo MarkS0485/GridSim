@@ -5,8 +5,11 @@ namespace GridSim.Web.Projection;
 
 // ---- CYCLE (prioritised parallel analysis cycle telemetry) ----
 
-/// <summary>One job's outcome in the latest cycle, for the CYCLE tab's job table.</summary>
-public sealed record CycleJobDto(string Name, string Priority, string Outcome, double CoreMs, bool FromStaleFrame);
+/// <summary>One job's outcome in the latest cycle, for the CYCLE tab's job table. <paramref name="Frames"/> (GR-339,
+/// November 2026) is the live-frame range an N-1 job's outages were screened on ("frame 12" or "frames 12..15": a
+/// resumed shard can span several frames), null for every other job.</summary>
+public sealed record CycleJobDto(string Name, string Priority, string Outcome, double CoreMs, bool FromStaleFrame,
+    string? Frames = null);
 
 /// <summary>
 /// Telemetry for the most recently completed analysis cycle: how the single-core base solve and the
@@ -49,7 +52,8 @@ public static class CycleProjection
 
         foreach (JobResult jr in r.Results)
         {
-            jobs.Add(new CycleJobDto(jr.Name, jr.Priority.ToString(), jr.Outcome.ToString(), jr.CoreMs, jr.FromStaleFrame));
+            jobs.Add(new CycleJobDto(jr.Name, jr.Priority.ToString(), jr.Outcome.ToString(), jr.CoreMs, jr.FromStaleFrame,
+                AnalysisJobLibrary.FrameRangeText(jr.Payload)));
 
             // The N-1 jobs carry a list of ContingencyResult; surface the single worst outage seen this cycle.
             if (jr.Payload is IReadOnlyList<ContingencyResult> contingencies)

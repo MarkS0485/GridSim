@@ -45,6 +45,8 @@
     <Compile Include="..\..\src\GridSim.Cli\CliResultWriter.cs" Link="Linked\CliResultWriter.cs" />
     <!-- N103: the per-verb flag check reads the same chapter; VerbFlagsTests drive it directly. -->
     <Compile Include="..\..\src\GridSim.Cli\VerbFlags.cs" Link="Linked\VerbFlags.cs" />
+    <!-- GR-195: the global-switch warning table is pure; Gr195GlobalSwitchWarningTests drive it directly. -->
+    <Compile Include="..\..\src\GridSim.Cli\GlobalSwitchUse.cs" Link="Linked\GlobalSwitchUse.cs" />
     <!-- DOC-1: the shared exit-code mapping (unknown case vs unloadable case, the user-facing message, the failure tally
          of gpucheck and bench) has no other dependency; CliExitTests drive it directly. -->
     <Compile Include="..\..\src\GridSim.Cli\CliExit.cs" Link="Linked\CliExit.cs" />

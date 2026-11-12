@@ -195,10 +195,21 @@ public static class Iec60909
     /// </summary>
     public static double ThermalDcFactor(double kappa, double f0Hz, double faultDurationSeconds)
     {
-        double l = DetMath.Log(kappa - 1.0);                 // ln(kappa - 1)
+        double l = DetMath.Log(kappa - 1.0);                 // ln(kappa - 1); kappa - 1 is exact for kappa in [0.5, 2] (Sterbenz)
         double denom = 2.0 * f0Hz * faultDurationSeconds * l;
-        if (Math.Abs(l) < 1e-9) return 2.0;               // kappa -> 2 limit (see summary)
-        return (DetMath.Exp(2.0 * denom) - 1.0) / denom;     // 4 f Tk l = 2 * denom
+        double x = 2.0 * denom;                              // 4 f Tk l = 2 * denom
+        // Exactly kappa = 2 (R = 0): the removable 0/0 has the limit 2 (see summary).
+        if (denom == 0.0) return 2.0;
+        // Near kappa = 2 the numerator e^x - 1 cancels: computed as Exp(x) - 1 it keeps only about eps / |x| relative
+        // accuracy (1e-9 at |x| = 2e-7), and the old cut |l| < 1e-9 returned exactly 2 where the true m is about
+        // 2 + 2 denom. Bug hunt 2026-11-01 (#169): for |x| < 1 the numerator is taken by expm1, which has no
+        // cancellation, so m is good to a few ulp right down to x = 0. For |x| >= 1 the cancellation costs at most
+        // one rounding of 1 against e^x, so that branch keeps the Exp(x) - 1 form and every value there is bit for bit
+        // as before. Where the line falls: |x| >= 1 needs |ln(kappa - 1)| >= 1 / (4 f Tk), about R/X >= 0.0017 at
+        // 50 Hz and Tk = 1 s; a shorter Tk widens the expm1 region in proportion (R/X below about 0.017 at Tk = 0.1 s),
+        // and a value inside it moves towards the exact m, by up to about 1e-16 / |x| relative (a few ulp near |x| = 1).
+        if (Math.Abs(x) < 1.0) return DetMath.Expm1(x) / denom;
+        return (DetMath.Exp(x) - 1.0) / denom;
     }
 
     /// <summary>The IEC 60909-0 breaking-time break points for the decay factors mu and q, in seconds.</summary>
@@ -691,6 +702,15 @@ public static class Iec60909
     {
         if (nominalKvLL <= 0.0) throw new ArgumentOutOfRangeException(nameof(nominalKvLL), "Nominal voltage must be > 0.");
         if (baseMva <= 0.0) throw new ArgumentOutOfRangeException(nameof(baseMva), "System base MVA must be > 0.");
+        // Bug hunt 2026-11-01 (#167): the same time and frequency checks as FromThevenin. They were missing here, so
+        // Tk = 0 gave m = (e^0 - 1) / 0 = NaN and a NaN Ith came back as a valid duty, and a negative breaker time put
+        // idc above sqrt(2) Ik''.
+        if (!(f0Hz > 0.0) || !double.IsFinite(f0Hz))
+            throw new ArgumentOutOfRangeException(nameof(f0Hz), f0Hz, "The nominal frequency must be a finite number of Hz above 0.");
+        if (!(breakTimeSeconds >= 0.0) || !double.IsFinite(breakTimeSeconds))
+            throw new ArgumentOutOfRangeException(nameof(breakTimeSeconds), breakTimeSeconds, "The breaker time tb must be a finite number of seconds, 0 or more.");
+        if (!(faultDurationSeconds > 0.0) || !double.IsFinite(faultDurationSeconds))
+            throw new ArgumentOutOfRangeException(nameof(faultDurationSeconds), faultDurationSeconds, "The fault duration Tk must be a finite number of seconds above 0.");
 
         double c = cVoltageFactor;
         double dlgRatio = double.NaN;   // GR-617: set for a double-line-to-earth fault only
@@ -725,6 +745,12 @@ public static class Iec60909
                 throw new ArgumentOutOfRangeException(nameof(type), type, "Unknown fault type.");
         }
 
+        // #167: a fault loop is inductive, as FromThevenin requires of its Zk: the connection's series impedance must have
+        // X above 0 and finite parts. X = 0 used to give R/X = 0 silently (the opposite of a purely resistive loop's
+        // infinite R/X), a negative X was taken as given, and a NaN impedance passed straight through.
+        if (!(loopZ.Imaginary > 0.0) || !double.IsFinite(loopZ.Imaginary) || !double.IsFinite(loopZ.Real))
+            throw new ArgumentOutOfRangeException(nameof(z1), loopZ,
+                $"The {type} sequence loop impedance must have a finite reactance above 0 pu (and a finite resistance).");
         double zMag = loopZ.Magnitude;
         if (!(zMag > 0.0)) throw new ArgumentOutOfRangeException(nameof(z1), "Sequence loop impedance magnitude must be > 0.");
         double rOverX = loopZ.Imaginary != 0.0 ? loopZ.Real / loopZ.Imaginary : 0.0;
@@ -785,8 +811,10 @@ public static class Iec60909
 
     /// <summary>
     /// Double-line-to-earth IEC 60909 duty at <paramref name="faultBusId"/> from the model, wired end-to-end
-    /// through all three sequence networks (the reported current is the earth current <c>|3 I0|</c>). An
-    /// ungrounded fault bus yields an all-zero duty, as for the single-line fault. See
+    /// through all three sequence networks (the reported current is the earth current <c>|3 I0|</c>). On an
+    /// ungrounded fault bus (no earth path) the fault is the line-to-line fault between the two shorted phases, and the
+    /// duty returned is the <see cref="LineToLine"/> duty (Ik'' the faulted-phase line current, earth current zero,
+    /// <see cref="Duty.DlgLineToEarthRatio"/> NaN); before bug hunt 2026-11-01 #163 it was an all-zero duty. See
     /// <see cref="SingleLineToGround"/> for the parameters.
     /// </summary>
     public static Duty DoubleLineToGround(
@@ -798,9 +826,9 @@ public static class Iec60909
         => UnbalancedFromModel(UnbalancedFaultType.DoubleLineToGround, model, faultBusId, objective,
             subtransientXdPu, lineZeroSeqRatio, f0Hz, breakTimeSeconds, faultDurationSeconds, peakFactorMethod);
 
-    /// <summary>Shared driver for the earth-fault duties from the model: builds all three sequence Thevenins,
-    /// and returns an all-zero duty (via <see cref="Assemble"/> with a zero current) when the fault bus is
-    /// ungrounded in the zero sequence.</summary>
+    /// <summary>Shared driver for the earth-fault duties from the model: builds all three sequence Thevenins.
+    /// When the fault bus is ungrounded in the zero sequence it returns an all-zero single-line-to-earth duty (via
+    /// <see cref="Assemble"/> with a zero current), and for a double-line-to-earth fault the line-to-line duty (#163).</summary>
     private static Duty UnbalancedFromModel(
         UnbalancedFaultType type, GridModel model, int faultBusId, ShortCircuitObjective objective,
         double subtransientXdPu, double lineZeroSeqRatio, double f0Hz, double breakTimeSeconds, double faultDurationSeconds,
@@ -814,9 +842,32 @@ public static class Iec60909
         (Complex z0, _, bool grounded) = ZeroSequenceThevenin(model, faultBusId, lineZeroSeqRatio);
         double c = VoltageFactor(un, objective);
 
+        if (!grounded && type == UnbalancedFaultType.DoubleLineToGround)
+        {
+            // Bug hunt 2026-11-01 (#163): with no earth path (Z0 infinite) a double-line-to-earth fault is still two
+            // phases shorted together; only the earth connection carries nothing. Its sequence connection is the
+            // line-to-line one: with Z0 -> infinity, I0 = -I1 Z2 / (Z2 + Z0) -> 0 and I2 = -I1 Z0 / (Z2 + Z0) -> -I1, the
+            // line-to-line equations (IEC 60909-0:2016 subclause 7.3, line-to-line short circuit, Ik2'' = c Un / |Z1 + Z2|;
+            // the earth-connected form is 7.4, whose currents take this limit as Z0 grows; [VERIFY] the subclause numbers
+            // against the 2016 text when it is on disk, as for the other citations in this file).
+            // This used to return an all-zero duty here, so CheckBreaker scaled zero by 1 and reported every breaker
+            // ADEQUATE (Z1 = Z2 = j0.1 pu, 100 MVA, 33 kV, c 1.1: 16.67 kA reported as 0). The duty returned is now the
+            // line-to-line duty itself: Ik'' (and every current derived from it) is the faulted-phase LINE current,
+            // which is what a breaker pole interrupts; the earth current is zero; DlgLineToEarthRatio stays NaN, so
+            // CheckBreaker judges the line current as it stands. FaultAnalysis.Unbalanced solves the same case the same
+            // way (its "no earth return: the line-to-line fault"), and the iec60909 CLI already describes it so.
+            Duty ll = FromSequenceImpedances(UnbalancedFaultType.LineToLine, c, un, z1, z2, Complex.Zero, model.BaseMva,
+                f0Hz, breakTimeSeconds, faultDurationSeconds, net.Meshed);   // D-DOC-098: meshed kappa
+            if (peakFactorMethod == PeakFactorMethod.MethodC)
+                ll = WithMethodC(ll, UnbalancedFaultType.LineToLine, model, faultBusId, subtransientXdPu, lineZeroSeqRatio,
+                    f0Hz, breakTimeSeconds);
+            return AddConverterShare(ll, net, UnbalancedFaultType.LineToLine, z2, Complex.Zero, model.BaseMva,
+                f0Hz, breakTimeSeconds, faultDurationSeconds);
+        }
         if (!grounded)
         {
-            // No earth path: the earth-fault current is exactly zero. Report a well-formed all-zero duty
+            // No earth path: the single-line-to-earth current is exactly zero (no return path at all, and no second
+            // phase involved). Report a well-formed all-zero duty
             // (the R/X shown is the positive sequence's; every current is zero regardless).
             double rOverX = z1.Imaginary != 0.0 ? z1.Real / z1.Imaginary : 0.0;
             return Assemble(0.0, rOverX, z1.Real, z1.Imaginary, un, model.BaseMva, f0Hz, breakTimeSeconds, faultDurationSeconds,
@@ -825,7 +876,8 @@ public static class Iec60909
         Duty sync = FromSequenceImpedances(type, c, un, z1, z2, z0, model.BaseMva, f0Hz, breakTimeSeconds, faultDurationSeconds,
             net.Meshed);   // D-DOC-098: meshed kappa
         // N134 rest (CF4): Method C on this fault's own sequence connection; skipped under Method B (bit for bit). An
-        // ungrounded bus returned its all-zero duty above, where no method changes anything.
+        // ungrounded bus returned above (single-line-to-earth all-zero, where no method changes anything; double-line-
+        // to-earth as the line-to-line duty, with Method C applied there).
         if (peakFactorMethod == PeakFactorMethod.MethodC)
             sync = WithMethodC(sync, type, model, faultBusId, subtransientXdPu, lineZeroSeqRatio, f0Hz, breakTimeSeconds);
         return AddConverterShare(sync, net, type, z2, z0, model.BaseMva, f0Hz, breakTimeSeconds, faultDurationSeconds);
@@ -1240,8 +1292,11 @@ public static class Iec60909
     /// <summary>One synchronous machine's partial current for a three-phase fault (R095): its partial initial current
     /// (pu and kA), its rated current (kA), its near-generator factor mu, its single-fed breaking current mu * Ik''_G
     /// (kA), and <see cref="VoltageRatio"/>, the magnitude of the initial voltage difference across its subtransient
-    /// reactance relative to the equivalent source, <c>|dU''_G| / (c Un / sqrt 3) = |V_G| / c</c> (pu), which the
-    /// meshed-network breaking current weights its decay by.</summary>
+    /// reactance relative to the equivalent source, <c>|dU''_G| / (c Un / sqrt 3) = |I_G| X''d / c</c> (pu), which the
+    /// meshed-network breaking current weights its decay by. #165 (bug hunt 2026-11-01): that is <c>|V_G| / c</c> only
+    /// when no unit transformer is modelled; with one, the network bus voltage V_G also holds the transformer drop, which
+    /// the weight used to include (X''d 0.2, XT 0.15, mu 0.7 at the fault bus: deduction 0.300 Ik''_G instead of
+    /// 0.171 Ik''_G, so Ib was 0.129 Ik''_G too low).</summary>
     private readonly record struct SyncPartial(
         int Bus, string Name, double IPu, double IKa, double RatedKa, double Mu, double IbKa, double VoltageRatio);
 
@@ -1258,7 +1313,7 @@ public static class Iec60909
         Complex[] zColumn = net.ZColumn;
         Complex zkk = net.Zkk;
         var partials = new List<SyncPartial>(net.Machines.Count);
-        foreach ((int bus, string name, Complex yShunt, double mBase) in net.Machines)
+        foreach ((int bus, string name, Complex yShunt, double mBase, double xdShare) in net.Machines)
         {
             int gi = net.Index[bus];
             Complex vG = c * zColumn[gi] / zkk;       // during-fault voltage at the machine bus (pu)
@@ -1270,7 +1325,13 @@ public static class Iec60909
             double mu = BreakingFactorMu(ratio, minTimeDelaySeconds);
             double ibKa = mu * iGka;
             double ratedKa = ratedPu * iBaseKa;
-            partials.Add(new SyncPartial(bus, name, iGpu, iGka, ratedKa, mu, ibKa, vG.Magnitude / c));
+            // #165: the weight dU''_G / (c Un / sqrt 3) is the drop across the machine's OWN subtransient reactance,
+            // |I_G| X''d / c = |V_G| (X''d / (X''d + XT)) / c, not |V_G| / c at its network bus, which also holds the
+            // unit transformer drop (IEC 60909-0:2016 subclause 9.1.7: dU''_G = j X''_dK I''_kG, the initial voltage
+            // difference at the machine's connection point; 2001 edition 4.5.2.3, equations 75 and 76; [VERIFY] the
+            // equation numbers against the text). With no unit transformer xdShare is exactly 1.0 and the product
+            // is |V_G| bit for bit, so the weight is the same double as before.
+            partials.Add(new SyncPartial(bus, name, iGpu, iGka, ratedKa, mu, ibKa, vG.Magnitude * xdShare / c));
         }
         return partials;
     }
@@ -1289,9 +1350,11 @@ public static class Iec60909
     /// with <c>I''_kGi</c> machine i's partial initial current, mu_i its factor at the breaker minimum time delay, and
     /// <c>dU''_Gi = j X''_d,i I''_kGi</c> the initial voltage difference at its connection point. (The standard's
     /// asynchronous-motor term, <c>(1 - mu_j q_j)</c>, has no counterpart: the model carries no motor data.) A
-    /// machine AT the fault bus has <c>dU'' = c Un / sqrt 3</c>, weight 1, so a single machine at its own terminals
-    /// gives exactly <c>Ib = mu Ik''</c>, the single-fed form (2016 subclause 9.1.1). A remote machine's decay counts
-    /// only in proportion to its terminal voltage dip, so Ib here is never below the multiple-single-fed sum of the
+    /// machine with no unit transformer AT the fault bus has <c>dU'' = c Un / sqrt 3</c>, weight 1, so a single machine
+    /// at its own terminals gives exactly <c>Ib = mu Ik''</c>, the single-fed form (2016 subclause 9.1.1). #165: a machine
+    /// with a unit transformer (<see cref="Generator.UnitTransformerXPu"/>) is weighted by the drop across its X''d
+    /// alone, <c>|I''_kG| X''d / c</c>, never by its HV bus voltage, which includes the transformer drop. A remote
+    /// machine's decay counts only in proportion to its voltage difference, so Ib here is never below the multiple-single-fed sum of the
     /// per-machine <c>mu_i * Ik''_i</c> (listed by <see cref="PartialThreePhase"/>) for in-phase partials, the
     /// conservative side for a breaker rating. When every
     /// mu is 1 (every machine far from the fault, <c>Ik''_G / I_rG &lt;= 2</c>) the deduction is exactly zero and
@@ -1432,6 +1495,11 @@ public static class Iec60909
         if (un <= 0.0)
             throw new InvalidOperationException($"fault bus {faultBusId} has no base kV; IEC 60909 needs a nominal voltage.");
 
+        // GR-144 (b): an earth fault on a model whose zero-sequence network this method cannot represent (a three-winding
+        // unit, an unknown or one-sided winding connection) is refused here, naming the units, before any stamp is built.
+        // A model it can represent passes untouched, so every Z0 below is the same to the bit.
+        RequireRepresentableZeroSequence(model);
+
         // F21 (October 2026): the zero-sequence stamps are built by BuildZeroSequenceNetwork, shared with the
         // operating-point earth-fault study (FaultAnalysis.Unbalanced). It is this method's former loop moved
         // verbatim: the same stamps in the same order, so this driving-point impedance is unchanged to the bit.
@@ -1467,6 +1535,135 @@ public static class Iec60909
         e[local[k]] = Complex.One;
         Complex[] zColumn = FaultNetworkSystem.FromTriplets(m, subTrip).Solve(e);
         return (zColumn[local[k]], un, true);
+    }
+
+    /// <summary>How many star-point buses a refusal names before it summarises the rest as a count.</summary>
+    private const int StarPointsNamed = 10;
+
+    /// <summary>
+    /// GR-144 (b), November 2026: refuse an earth-fault study (single or double line to ground) on a model whose
+    /// zero-sequence network GridSim cannot represent, naming what it cannot represent. The zero-sequence network pairs a
+    /// transformer's windings two at a time (<see cref="ZeroSequenceThevenin"/>: YNyn a series path, YNd and dYN a shunt
+    /// path, every other pairing blocks; a transformer with no winding data is a series path like a line). Two kinds of
+    /// model break that rule, and both used to be solved without a word:
+    /// <list type="number">
+    ///   <item><b>An unknown or one-sided winding connection</b>: a branch whose <see cref="Branch.FromWinding"/> or
+    ///   <see cref="Branch.ToWinding"/> is not a <see cref="WindingConnection"/> member (a code cast in from elsewhere),
+    ///   or that gives one side and not the other. The network read the first as "blocks" and the second as a line, so
+    ///   a corrupt or half-entered unit silently changed the earth-fault current. Always refused.</item>
+    ///   <item><b>A three-winding unit</b>: every reader (PSS/E, CIM, the GDA builds, JSON star legs) turns one into a
+    ///   star-point bus with one transformer branch per winding, and the pairing rule then reads each winding against the
+    ///   fictitious star point, so a delta tertiary (which shunts zero-sequence current to earth) or a YNyn0d
+    ///   autotransformer is misrepresented and the earth-fault duty can be non-conservative. Refused when the model
+    ///   carries any earthing data at all (a branch winding connection, or a machine's own zero-sequence impedance): a
+    ///   model with none has no earthed neutral anywhere, every earth-fault current is zero whatever its three-winding
+    ///   units are, and the CLI already reports that as missing data (exit 3).</item>
+    /// </list>
+    /// A star point is found by its generated name and network shape (<see cref="ThreeWindingStarPoints"/>), as the GridModel carries no
+    /// separate three-winding record. Three-phase and line-to-line studies never touch the zero sequence and are not
+    /// refused. A model with neither kind passes untouched, so every result it gives is unchanged to the bit.
+    /// Representing three-winding units properly (the PSS/E three-winding connection codes) needs a published
+    /// three-winding zero-sequence example to validate against, and autotransformer and zigzag units come after that
+    /// (technical chapter 36, Short circuit and protection).
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The model holds a unit the zero-sequence network cannot represent.</exception>
+    public static void RequireRepresentableZeroSequence(GridModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        var busIds = new HashSet<int>();
+        foreach (Bus b in model.Buses) busIds.Add(b.Id);
+
+        static string Label(Branch br) => $"{br.From}-{br.To}{(br.Name is null ? "" : $" ('{br.Name}')")}";
+
+        // 1. Unknown or one-sided winding connections: always refused. Out-of-service branches and branches with an end
+        //    bus missing are skipped exactly as BuildZeroSequenceNetwork skips them (they take no part in the network).
+        var unknown = new List<string>();
+        foreach (Branch br in model.Branches)
+        {
+            if (!br.InService || !busIds.Contains(br.From) || !busIds.Contains(br.To)) continue;
+            bool fromGiven = br.FromWinding is not null, toGiven = br.ToWinding is not null;
+            if (!fromGiven && !toGiven) continue;   // a line, or a transformer with no winding data
+            if (fromGiven != toGiven)
+                unknown.Add($"{Label(br)}: only the {(fromGiven ? "from" : "to")} winding is given");
+            else if (!Enum.IsDefined(br.FromWinding!.Value) || !Enum.IsDefined(br.ToWinding!.Value))
+                unknown.Add(System.FormattableString.Invariant(
+                    $"{Label(br)}: winding connection codes {(int)br.FromWinding!.Value} / {(int)br.ToWinding!.Value} are not Delta, WyeGrounded or WyeUngrounded"));
+        }
+        if (unknown.Count > 0)
+            throw new InvalidOperationException(
+                "Earth-fault study refused: the zero-sequence network cannot read the winding connections of "
+                + $"{unknown.Count} transformer(s): {string.Join("; ", unknown.Take(StarPointsNamed))}"
+                + (unknown.Count > StarPointsNamed ? $"; and {unknown.Count - StarPointsNamed} more" : "")
+                + ". Give both windings as Delta, WyeGrounded or WyeUngrounded. Three-phase and line-to-line studies are not affected.");
+
+        // 2. Three-winding units, when the model carries earthing data (see the summary for why only then).
+        bool earthingData = false;
+        foreach (Branch br in model.Branches)
+            if (br.InService && (br.FromWinding is not null || br.ToWinding is not null)) { earthingData = true; break; }
+        if (!earthingData)
+            foreach (Generator g in model.Generators)
+                if (!g.PowerFlowOnly && g.ZeroSequenceZPu is not null) { earthingData = true; break; }
+        if (!earthingData) return;
+
+        List<int> stars = ThreeWindingStarPoints(model);
+        if (stars.Count == 0) return;
+        var named = new List<string>();
+        foreach (int s in stars.Take(StarPointsNamed))
+        {
+            Bus sb = model.Buses.First(b => b.Id == s);
+            var legs = model.Branches.Where(br => br.InService && (br.From == s || br.To == s)).Select(Label);
+            named.Add($"bus {s}{(sb.Name is null ? "" : $" ('{sb.Name}')")} joining windings {string.Join(", ", legs)}");
+        }
+        throw new InvalidOperationException(
+            $"Earth-fault study refused: the model holds {stars.Count} three-winding transformer(s), each a star-point bus "
+            + $"joining three or more transformer windings: {string.Join("; ", named)}"
+            + (stars.Count > StarPointsNamed ? $"; and {stars.Count - StarPointsNamed} more" : "")
+            + ". GridSim's zero-sequence network pairs windings two at a time, so a three-winding unit's delta tertiary or "
+            + "star-point earthing would be misread and the single- and double-line-to-ground duties could be non-conservative. "
+            + "Three-phase and line-to-line studies are not affected (technical chapter 36, Short circuit and protection).");
+    }
+
+    /// <summary>
+    /// GR-144 (b): the bus ids, in model order, that are the star points of three-winding transformers. The GridModel holds
+    /// no three-winding record of its own (every reader expands a unit into a star-point bus with one transformer branch
+    /// per winding). PSS/E and CIM use the suffix " star point", and the LTDS builder uses the prefix "STAR ".
+    /// Require one of those names as well as the expected shape: a PQ bus with no load, machine or line, where
+    /// at least three in-service transformer legs meet. The same shape alone also occurs at real busbars.
+    /// A magnetising shunt (as placed at the star point by PSS/E) does not affect the classification.
+    /// With only two active legs the pairing rule reads them as two transformers in series.
+    /// </summary>
+    internal static List<int> ThreeWindingStarPoints(GridModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        int n = model.BusCount;
+        var index = new Dictionary<int, int>(n);
+        for (int i = 0; i < n; i++) index[model.Buses[i].Id] = i;
+        var legs = new int[n];
+        var other = new bool[n];   // a line, a machine or an induction machine at the bus: not a star point
+        foreach (Branch br in model.Branches)
+        {
+            if (!br.InService) continue;
+            if (!index.TryGetValue(br.From, out int f) || !index.TryGetValue(br.To, out int t)) continue;
+            // A SEQ overlay can give a line winding connections without making it a transformer leg.
+            bool transformer = br.IsTransformer;
+            if (transformer) { legs[f]++; legs[t]++; }
+            else { other[f] = true; other[t] = true; }
+        }
+        foreach (Generator g in model.Generators)
+            if (index.TryGetValue(g.Bus, out int i)) other[i] = true;
+        foreach (InductionMachine im in model.InductionMachines)
+            if (index.TryGetValue(im.Bus, out int i)) other[i] = true;
+        var stars = new List<int>();
+        for (int i = 0; i < n; i++)
+        {
+            Bus b = model.Buses[i];
+            if (other[i] || legs[i] < 3 || b.Type != BusType.Pq || b.Pd != 0.0 || b.Qd != 0.0) continue;
+            if (b.Name is not string name ||
+                !(name.EndsWith(" star point", StringComparison.OrdinalIgnoreCase)
+                  || name.StartsWith("STAR ", StringComparison.Ordinal))) continue;
+            stars.Add(b.Id);
+        }
+        return stars;
     }
 
     /// <summary>F21: how one branch appears in the zero-sequence network.</summary>
@@ -1624,7 +1821,11 @@ public static class Iec60909
         {
             if (g.ZeroSequenceZPu is not MachineZeroSequence z0g || g.PowerFlowOnly) continue;
             if (!index.TryGetValue(g.Bus, out int b)) continue;
-            double scale = model.BaseMva / (g.MBase <= 0 ? model.BaseMva : g.MBase);
+            // GR-603: the machine's own base through the one refusal every near-generator path uses (RatedMva: MBase must
+            // be finite and above 0, named). This line used to fall back to the system base for MBase <= 0, so a unit
+            // without a rating had its zero-sequence impedance taken on the wrong base, and a NaN MBase slipped past the
+            // "<= 0" test into a NaN shunt. Every unit with a valid MBase gets the same scale, bit for bit.
+            double scale = model.BaseMva / RatedMva(g);
             Complex zs = new Complex(z0g.RPu, z0g.XPu) * scale;
             trip.Add((b, b, Complex.One / zs));
             hasGround[b] = true;
@@ -1778,7 +1979,11 @@ public static class Iec60909
         public required double Un { get; init; }
         public required Complex[] ZColumn { get; init; }
         public required FaultNetworkSystem Lu { get; init; }
-        public required List<(int Bus, string Name, Complex YShunt, double MBase)> Machines { get; init; }
+        /// <summary>Each synchronous machine: its bus, name, shunt admittance to ground (1 / j(X''d + XT) on the system
+        /// base), rating, and <c>XdShare</c> = X''d / (X''d + XT), the part of its source reactance that is the machine's
+        /// own (exactly 1 when no unit transformer is modelled). #165: the multiple-fed breaking-current weight is the
+        /// voltage drop across X''d alone.</summary>
+        public required List<(int Bus, string Name, Complex YShunt, double MBase, double XdShare)> Machines { get; init; }
         public required List<ConverterInfeed> Converters { get; init; }
 
         /// <summary>D-DOC-098: the fault network is MESHED in the IEC 60909 sense (see <see cref="IsMeshed"/>), so the
@@ -1853,7 +2058,7 @@ public static class Iec60909
 
         double baseMva = model.BaseMva;
         var shunts = new List<(int Index, Complex Y)>();
-        var machines = new List<(int Bus, string Name, Complex YShunt, double MBase)>();
+        var machines = new List<(int Bus, string Name, Complex YShunt, double MBase, double XdShare)>();
         var converterRaw = new List<(int Bus, int Index, string Name, double CurrentPu, double MBase)>();
         foreach (Generator g in model.Generators)
         {
@@ -1870,7 +2075,11 @@ public static class Iec60909
             if (xdSys <= 0) continue;
             Complex yShunt = Complex.One / new Complex(0.0, xdSys);
             shunts.Add((i, yShunt));
-            machines.Add((g.Bus, name, yShunt, mBase));
+            // #165: the machine's own share of its source reactance, X''d / (X''d + XT) (both on MBase, so the ratio is
+            // base-free). With no unit transformer it is xd / xd, exactly 1.0 in floating point.
+            double xdOwn = g.EffectiveSubtransientXdPu(subtransientXdPu);
+            double xdShare = xdOwn / g.FaultSourceReactancePu(subtransientXdPu);
+            machines.Add((g.Bus, name, yShunt, mBase, xdShare));
         }
         if (machines.Count == 0) throw NoSynchronousSource(model, ReferenceEquals(model, whole) ? int.MinValue : faultBusId);
 

@@ -49,4 +49,9 @@ public readonly record struct ProtectionStage(
     // directly: no asset-class parameter populates it, and an 'armDelayS' key in a class is refused at load as
     // unknown (R073), so an author cannot believe it took effect.
     double ArmDelayS = 0.0,
-    string? TargetBranch = null);     // for OpenBranch (Phase 3)
+    string? TargetBranch = null,      // for OpenBranch (Phase 3)
+    // GR-123: the most automatic reclosures (shots) before the stage locks out. After this many recloses the next
+    // operation latches (no further restore), as a real recloser does on a persistent fault. The default is unlimited,
+    // the behaviour before GR-123, so every existing stage is unchanged. Only meaningful with a finite
+    // AutoRestoreDelayS. Set only by code that builds stages directly (no asset-class key populates it, like ArmDelayS).
+    int MaxRecloseShots = int.MaxValue);

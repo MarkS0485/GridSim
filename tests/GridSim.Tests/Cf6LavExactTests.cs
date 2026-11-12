@@ -144,10 +144,11 @@ public class Cf6LavExactTests
             $"LAV objective {e.LavObjective.Value:R} vs the residual table's {fromTable:R}");
     }
 
+    // GR-521 (2026-11-01, an agreed test correction): Huber and SchweppeGm were removed from this theory. At an M-estimate
+    // J(x^) is not the WLS minimum, so it is not chi-square(m - n) distributed under H0 (the reason already applied to
+    // LAV); their ChiSquareIsVerdict is now false, pinned by Gr521RobustChiSquareNoVerdictTests.
     [Theory]
     [InlineData(EstimationMethod.Wls)]
-    [InlineData(EstimationMethod.Huber)]
-    [InlineData(EstimationMethod.SchweppeGm)]
     [InlineData(EstimationMethod.Qr)]
     public void Every_other_method_keeps_its_chi_square_verdict_and_has_no_lav_objective(EstimationMethod method)
     {

@@ -59,12 +59,66 @@ public sealed class CaseCatalog
 
     public CaseCatalog(string baseDir) : this(baseDir, null) { }
 
-    public CaseCatalog(string baseDir, LicenceGate? license)
+    /// <summary>
+    /// GR-715: the setting that names the folders case discovery searches for <c>results/</c> and <c>gda-out/</c>, as a
+    /// list separated by the platform's path separator (<c>;</c> on Windows, <c>:</c> elsewhere). Environment variable
+    /// <c>GridSim__CaseRoots</c>. Unset: the earlier search (the install folder and up to seven ancestors of it).
+    /// </summary>
+    public const string CaseRootsSetting = "GridSim:CaseRoots";
+
+    /// <summary>
+    /// GR-715: the lowest role that is shown the models found under <c>results/</c> and <c>gda-out/</c> in a listing.
+    /// Those folders hold run outputs and licensed or private GDA models, so a caller below this band (an anonymous caller
+    /// on a host that answers non-loopback names is a Viewer) sees only the built-in, bundled GB and MATPOWER cases.
+    /// </summary>
+    public const GridSim.Core.Security.OperationRole PrivateListingRole = GridSim.Core.Security.OperationRole.Operator;
+
+    // GR-715: the configured discovery roots, or null for the earlier ancestor walk.
+    private readonly IReadOnlyList<string>? _discoveryRoots;
+    // GR-715: the ids found under results/ or gda-out/ (the entries a low role is not shown in a listing).
+    private readonly HashSet<string> _privateIds = new(StringComparer.OrdinalIgnoreCase);
+
+    public CaseCatalog(string baseDir, LicenceGate? license, IReadOnlyList<string>? discoveryRoots = null)
     {
         _baseDir = baseDir;
         _license = license ?? new LicenceGate(Entitlement.FreeDefault);
+        if (discoveryRoots is not null && discoveryRoots.Count == 0)
+            throw new ArgumentException(
+                $"GridSim.Web: configuration setting {CaseRootsSetting} names no folder; name at least one, or leave it unset.", nameof(discoveryRoots));
+        _discoveryRoots = discoveryRoots;
         Discover();
     }
+
+    /// <summary>
+    /// GR-715: read <see cref="CaseRootsSetting"/>. Null when unset or blank (the earlier search). Otherwise every item must
+    /// be an existing folder, or start-up stops naming the setting and the item (fail loud: a typo must not silently list
+    /// nothing).
+    /// </summary>
+    public static IReadOnlyList<string>? ParseCaseRoots(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        var roots = new List<string>();
+        foreach (string item in raw.Split(Path.PathSeparator, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!Directory.Exists(item))
+                throw new InvalidOperationException(
+                    $"GridSim.Web: configuration setting {CaseRootsSetting} names '{item}', which is not a folder; give existing folders separated by '{Path.PathSeparator}'.");
+            roots.Add(Path.GetFullPath(item));
+        }
+        if (roots.Count == 0)
+            throw new InvalidOperationException($"GridSim.Web: configuration setting {CaseRootsSetting} names no folder; name at least one, or leave it unset.");
+        return roots;
+    }
+
+    /// <summary>GR-715: true when <paramref name="id"/> names a model found under <c>results/</c> or <c>gda-out/</c>
+    /// (a bundled, built-in or MATPOWER case is not).</summary>
+    public bool IsPrivate(string id) => _privateIds.Contains(id);
+
+    /// <summary>GR-715: the entries a caller holding <paramref name="role"/> is shown. Everything for
+    /// <see cref="PrivateListingRole"/> and above; below it, the entries not found under <c>results/</c> or <c>gda-out/</c>.
+    /// Listing only: opening a case by id is decided where it is opened.</summary>
+    public IReadOnlyList<CaseEntry> EntriesFor(GridSim.Core.Security.OperationRole role) =>
+        role >= PrivateListingRole ? _entries : _entries.Where(e => !_privateIds.Contains(e.Id)).ToList();
 
     /// <summary>Everything loadable, in a stable order (built-ins, GB JSON, MATPOWER, replays).</summary>
     public IReadOnlyList<CaseEntry> Entries => _entries;
@@ -85,16 +139,36 @@ public sealed class CaseCatalog
     public GridModel LoadModel(string id)
     {
         CaseEntry e = Find(id) ?? throw new KeyNotFoundException($"Unknown case '{id}'.");
-        GridModel model = e.Kind switch
-        {
-            CaseKind.BuiltIn  => _builtInFactories[e.Id](),
-            CaseKind.JsonDir  => JsonGridLoader.LoadDirectory(e.Path),
-            CaseKind.Matpower => MatpowerUnitNormalizer.Normalize(MatpowerParser.ParseFile(e.Path)),
-            CaseKind.Replay   => throw new InvalidOperationException($"Case '{id}' is a replay run - use LoadReplay."),
-            _ => throw new InvalidOperationException($"Unhandled case kind {e.Kind}."),
-        };
-        _license.Enforce(model.BusCount, IsBundled(e));
+        GridModel model = LoadEntry(e, out bool bundled, refuseBeforeParse: true);
+        _license.Enforce(model.BusCount, bundled);
         return model;
+    }
+
+    /// <summary>
+    /// GR-712: the number of bus rows a MATPOWER case text declares in its <c>mpc.bus = [ ... ];</c> block, counted
+    /// without parsing the case (comments after <c>%</c> are ignored; a row is a <c>;</c>-terminated piece holding a
+    /// digit), or -1 when no such block is found (then no early decision is made and the full parse and the licence check
+    /// after it decide, exactly as before). Only an early REFUSAL uses it: the check after the parse stays, so a count
+    /// that was too low can never let an oversize model through.
+    /// </summary>
+    internal static int CountMatpowerBusRows(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(
+            text, @"^[ \t]*mpc\.bus[ \t]*=[ \t]*\[", System.Text.RegularExpressions.RegexOptions.Multiline);
+        if (!m.Success) return -1;
+        int end = text.IndexOf(']', m.Index + m.Length);
+        if (end < 0) return -1;
+        var body = new System.Text.StringBuilder();
+        foreach (string line in text.Substring(m.Index + m.Length, end - (m.Index + m.Length)).Split('\n'))
+        {
+            int pct = line.IndexOf('%');
+            body.Append(pct >= 0 ? line.AsSpan(0, pct) : line.AsSpan()).Append('\n');
+        }
+        int rows = 0;
+        foreach (string piece in body.ToString().Split(';'))
+            if (piece.Any(char.IsDigit)) rows++;
+        return rows;
     }
 
     /// <summary>
@@ -107,6 +181,73 @@ public sealed class CaseCatalog
     // MATPOWER entry used to be bundled by its kind alone ("_ => true"), so any .m file the catalogue listed was exempt;
     // a shipped GB JSON id now also needs its folder to hold the shipped content. Built-in cases never touch a file and
     // stay bundled. Every shipped entry is unchanged (its files match the manifest).
+    // Bug #178: the model and its bundled verdict from checks made before AND after the load (BundledAcrossLoad).
+    // GR-712 (November 2026): for a MATPOWER file the bundled verdict (a content hash) is taken FIRST, the file's bytes are
+    // read ONCE, and when the file is not bundled the licence is checked against the bus rows its text declares BEFORE
+    // the parser runs, so an oversize user model is refused without being parsed in full (a large file used to be parsed
+    // and normalised first, then refused). The parse reads the same bytes (the same text MatpowerParser.ParseFile reads,
+    // the same case name), so the model is exactly the one built before. The check after the parse (LoadModel) stays, so
+    // the early check can only refuse sooner, never let more through. A JSON case directory is still parsed in full
+    // first (its bus count lives in several files, with no cheap count): that part of the limitation remains.
+    private GridModel LoadEntry(CaseEntry e, out bool bundled, bool refuseBeforeParse = false)
+    {
+        string? matpowerText = null;
+        if (refuseBeforeParse && e.Kind == CaseKind.Matpower)
+        {
+            bool bundledFirst = IsBundled(e);
+            byte[] bytes = File.ReadAllBytes(e.Path);
+            using (var reader = new StreamReader(new MemoryStream(bytes), detectEncodingFromByteOrderMarks: true))
+                matpowerText = reader.ReadToEnd();
+            int rows = CountMatpowerBusRows(matpowerText);
+            if (!bundledFirst && rows >= 0) _license.Enforce(rows, bundled: false);   // throws LicenceException
+        }
+        GridModel Load() => e.Kind switch
+        {
+            CaseKind.BuiltIn  => _builtInFactories[e.Id](),
+            CaseKind.JsonDir  => JsonGridLoader.LoadDirectory(e.Path),
+            CaseKind.Matpower => MatpowerUnitNormalizer.Normalize(matpowerText is null
+                ? MatpowerParser.ParseFile(e.Path)
+                : MatpowerParser.Parse(matpowerText, Path.GetFileNameWithoutExtension(e.Path))),
+            CaseKind.Replay   => throw new InvalidOperationException($"Case '{e.Id}' is a replay run - use LoadReplay."),
+            _ => throw new InvalidOperationException($"Unhandled case kind {e.Kind}."),
+        };
+        if (e.Kind == CaseKind.BuiltIn) { bundled = true; return Load(); }   // built in: no file to check
+        bool before = IsBundled(e);
+        GridModel model = Load();
+        bundled = before && IsBundled(e);
+        return model;
+    }
+
+    /// <summary>
+    /// Bug #171 / #172: whether a model that arrived without shipped files (a replay run's snapshot, a bridge server's
+    /// topology) is a Bundled Network. It is when <paramref name="name"/> names a built-in case or a shipped JSON case
+    /// whose files verify (<see cref="IsBundled"/>, by content), AND the model has that shipped network's topology
+    /// (<see cref="GridSim.Core.Licensing.BundledNetworks.SameTopology"/>). The name alone used to decide, and the name
+    /// is written inside the run's own exported files, so any replay renamed gb-full played above the free tier limit.
+    /// </summary>
+    public bool IsBundledModel(GridModel model, string? name)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        GridModel? shipped = null;
+        foreach ((string id, _, Func<GridModel> factory) in BuiltIns)
+            if (string.Equals(id, name, StringComparison.OrdinalIgnoreCase)) { shipped = factory(); break; }
+        if (shipped is null && GridSim.Core.Licensing.BundledNetworks.IsBundledJsonCase(name)
+            && Find(name) is { Kind: CaseKind.JsonDir } entry)
+        {
+            GridModel loaded = LoadEntry(entry, out bool verified);
+            if (verified) shipped = loaded;   // only shipped content may serve as the reference
+        }
+        return shipped is not null && GridSim.Core.Licensing.BundledNetworks.SameTopology(model, shipped);
+    }
+
+    /// <summary>Bug #172: the licence verdict for a model a bridge server sent, named by the remote case it asked for.</summary>
+    public GateResult CheckLicence(GridModel model, string? name)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        return _license.Check(model.BusCount, IsBundledModel(model, name));
+    }
+
     private static bool IsBundled(CaseEntry e) => e.Kind switch
     {
         CaseKind.BuiltIn => true,
@@ -123,11 +264,10 @@ public sealed class CaseCatalog
             throw new InvalidOperationException($"Case '{id}' is not a replay run.");
         PresolvedReplay replay = PresolvedReplay.Load(e.Path);
         // A replay run is a network model the host loads (LICENSE.md section 1), so the licence bus limit applies to it
-        // as to a live case; only LoadModel enforced it before, so a free-tier host played a replay of any size. A run
-        // of a bundled network (a built-in benchmark or a shipped GB case, by the model's name) stays exempt.
-        string name = replay.LayoutModel.Name;
-        bool bundled = BuiltIns.Any(b => string.Equals(b.Id, name, StringComparison.OrdinalIgnoreCase))
-                       || GridSim.Core.Licensing.BundledNetworks.IsBundledJsonCase(name);
+        // as to a live case; only LoadModel enforced it before, so a free-tier host played a replay of any size.
+        // Bug #171: a run of a bundled network stays exempt only when its model HAS the shipped network's topology
+        // (IsBundledModel, by content); the name inside the run's files no longer decides on its own.
+        bool bundled = IsBundledModel(replay.LayoutModel, replay.LayoutModel.Name);
         _license.Enforce(replay.LayoutModel.BusCount, bundled);
         return replay;
     }
@@ -161,7 +301,11 @@ public sealed class CaseCatalog
         foreach (string root in NamedDirsUp(_baseDir, "gda-out"))
             foreach (string sub in SafeDirs(root))
                 if (File.Exists(Path.Combine(sub, "system.json")))
-                    _entries.Add(new CaseEntry(UniqueId($"gda-{Slug(Path.GetFileName(sub))}"), $"GDA * {Path.GetFileName(sub)}", CaseKind.JsonDir, sub));
+                {
+                    var gdaEntry = new CaseEntry(UniqueId($"gda-{Slug(Path.GetFileName(sub))}"), $"GDA * {Path.GetFileName(sub)}", CaseKind.JsonDir, sub);
+                    _entries.Add(gdaEntry);
+                    _privateIds.Add(gdaEntry.Id);   // GR-715: not listed to a caller below PrivateListingRole
+                }
 
         string matpower = Path.Combine(_baseDir, "data", "matpower");
         if (Directory.Exists(matpower))
@@ -182,7 +326,9 @@ public sealed class CaseCatalog
                     // Distinct run directories can slug to the same id (names differing only in case, spacing
                     // or punctuation). Find() is FirstOrDefault by id, so a collision would open the wrong
                     // run's data - disambiguate the id here.
-                    _entries.Add(new CaseEntry(UniqueId($"run-{Slug(name)}"), $"Replay * {name}", CaseKind.Replay, sub));
+                    var runEntry = new CaseEntry(UniqueId($"run-{Slug(name)}"), $"Replay * {name}", CaseKind.Replay, sub);
+                    _entries.Add(runEntry);
+                    _privateIds.Add(runEntry.Id);   // GR-715: not listed to a caller below PrivateListingRole
                 }
     }
 
@@ -203,9 +349,19 @@ public sealed class CaseCatalog
     private IReadOnlyList<string> SafeDirs(string root) => DirectoryScan.Subdirectories(root, _skippedFolders);
 
     /// <summary>Walk up from <paramref name="baseDir"/> yielding each existing <c>&lt;ancestor&gt;/name</c>.</summary>
-    private static IEnumerable<string> NamedDirsUp(string baseDir, string name)
+    private IEnumerable<string> NamedDirsUp(string baseDir, string name)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // GR-715: with configured roots (GridSim:CaseRoots) only <root>/name is looked at, for each root; nothing is walked up.
+        if (_discoveryRoots is not null)
+        {
+            foreach (string root in _discoveryRoots)
+            {
+                string g = Path.Combine(root, name);
+                if (Directory.Exists(g) && seen.Add(g)) yield return g;
+            }
+            yield break;
+        }
         DirectoryInfo? dir = new(baseDir);
         for (int i = 0; i < 8 && dir is not null; i++, dir = dir.Parent)
         {

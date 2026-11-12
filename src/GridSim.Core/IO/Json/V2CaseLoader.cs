@@ -132,8 +132,23 @@ public static class V2CaseLoader
     public static GridModel Load(string manifestPath, string schemasDir, string? dataRoot = null, bool dispatch = true)
         => LoadWithNotes(manifestPath, schemasDir, dataRoot, dispatch).Model;
 
-    /// <summary><see cref="Load"/>, also returning the load's notes.</summary>
+    /// <summary><see cref="Load"/>, also returning the load's notes.
+    /// <para>GR-642 (November 2026): an exception System.Text.Json raises about the input that is not a JsonException
+    /// (<see cref="JsonGridLoader.IsRawJsonFailure"/>, for example a value read as the wrong JSON kind) is turned into an
+    /// <see cref="InvalidDataException"/> naming the manifest, so the loader refuses bad input with its own type.</para></summary>
     public static V2CaseLoadResult LoadWithNotes(string manifestPath, string schemasDir, string? dataRoot = null, bool dispatch = true)
+    {
+        try
+        {
+            return LoadWithNotesCore(manifestPath, schemasDir, dataRoot, dispatch);
+        }
+        catch (Exception ex) when (JsonGridLoader.IsRawJsonFailure(ex))
+        {
+            throw new InvalidDataException($"{Path.GetFileName(manifestPath)}: {ex.Message}", ex);
+        }
+    }
+
+    private static V2CaseLoadResult LoadWithNotesCore(string manifestPath, string schemasDir, string? dataRoot, bool dispatch)
     {
         ArgumentNullException.ThrowIfNull(manifestPath);
         ArgumentNullException.ThrowIfNull(schemasDir);
@@ -204,8 +219,13 @@ public static class V2CaseLoader
         }
 
         // ---- Step 1: the manifest and its network files against the schemas (the validate verb's checks). ----
+        // GR-183 (November 2026): the schema set and the kind registry are read from disk once per case load and passed
+        // to every validation stage below (they used to be loaded again for the manifest, again for the library files
+        // and again here). Both are read-only after loading, so the checks and their messages are unchanged.
+        JsonSchemaSubset schemas = JsonSchemaSubset.LoadDirectory(schemasDir);
+        KindSpecRegistry kinds = KindSpecRegistry.LoadDirectory(Path.Combine(schemasDir, "kinds"), schemas);
         var problems = new List<string>();
-        foreach (V2DocumentReport rep in V2DocumentValidator.ValidateFiles(new[] { manifestFull }, schemasDir))
+        foreach (V2DocumentReport rep in V2DocumentValidator.ValidateFiles(new[] { manifestFull }, schemasDir, schemas, kinds))
             foreach (SchemaError e in rep.Errors) problems.Add($"{Path.GetFileName(rep.Path)}: {e}");
         ThrowIfAny(shown, "the schema checks", problems);
 
@@ -227,9 +247,6 @@ public static class V2CaseLoader
             ni++;
         }
         ThrowIfAny(shown, "the network file list", problems);
-
-        JsonSchemaSubset schemas = JsonSchemaSubset.LoadDirectory(schemasDir);
-        KindSpecRegistry kinds = KindSpecRegistry.LoadDirectory(Path.Combine(schemasDir, "kinds"), schemas);
 
         // ---- Step 2: imports. ----
         var templates = new TemplateIndex();
@@ -253,7 +270,7 @@ public static class V2CaseLoader
             ThrowIfAny(shown, "the import list", problems);
 
             // The library files as one set: schema, kind specs, unique id@rev, controller references (the validator's rules).
-            foreach (V2DocumentReport rep in V2DocumentValidator.ValidateFiles(libraryFiles.Select(l => l.Full).ToList(), schemasDir))
+            foreach (V2DocumentReport rep in V2DocumentValidator.ValidateFiles(libraryFiles.Select(l => l.Full).ToList(), schemasDir, schemas, kinds))
             {
                 if (rep.SchemaTag != V2LibraryChecker.SchemaTag)
                     problems.Add($"{Path.GetFileName(rep.Path)}: imported as a library, but its \"schema\" is '{rep.SchemaTag ?? "(none)"}', not '{V2LibraryChecker.SchemaTag}'.");

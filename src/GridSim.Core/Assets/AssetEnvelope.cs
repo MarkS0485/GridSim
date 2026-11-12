@@ -55,6 +55,11 @@ public static class AssetEnvelope
             throw new InvalidOperationException("Sweep needs a model carrying an authored asset-dynamics bundle.");
         int k = sweep.Count;
         if (k > 12) throw new ArgumentException($"At most 12 swept parameters ({1 << 12} corners); got {k}.", nameof(sweep));
+        // GR-605: a NaN end is no value at all. Refused before any corner runs (the check used to sit after the corner
+        // sweep, so every NaN corner was simulated first).
+        foreach (AssetSweepParam p in sweep)
+            if (double.IsNaN(p.Low) || double.IsNaN(p.High))
+                throw new ArgumentException($"Swept parameter {Key(p)} has a NaN end ({p.Low} .. {p.High}); give both ends as numbers.", nameof(sweep));
 
         var samples = new List<AssetSweepSample>(1 << k);
         int corners = k == 0 ? 1 : 1 << k;
@@ -73,12 +78,10 @@ public static class AssetEnvelope
         // GR-605 (October 2026): a parameter with an infinite end (an element switched off by an infinite threshold) has
         // no finite midpoint; 0.5 (Low + High) gave infinity (or NaN for -inf..+inf) and ran every other parameter's
         // tornado with that value. Such a parameter is now left at the class's own authored value while the others
-        // swing. A NaN end is refused: it is no value at all.
+        // swing. (A NaN end was refused at the top.)
         var mid = new Dictionary<string, double>(StringComparer.Ordinal);
         foreach (AssetSweepParam p in sweep)
         {
-            if (double.IsNaN(p.Low) || double.IsNaN(p.High))
-                throw new ArgumentException($"Swept parameter {Key(p)} has a NaN end ({p.Low} .. {p.High}); give both ends as numbers.", nameof(sweep));
             double m = 0.5 * (p.Low + p.High);
             if (double.IsFinite(m)) mid[Key(p)] = m;
         }

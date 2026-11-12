@@ -105,7 +105,7 @@ internal sealed class FeasibleWlsStep : IWlsStep
     {
         _linear = linear;
         _feas = feas;
-        _base = new ConstrainedDenseWlsStep(linear);
+        _base = new ConstrainedDenseWlsStep(linear, refuseDuplicateConstraints: false);   // GR-507: Feasible re-gates instead
     }
 
     public void Begin(GridModel model, MeasurementModel mm, double[] w)

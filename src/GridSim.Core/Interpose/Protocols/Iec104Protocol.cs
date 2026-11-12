@@ -8,8 +8,13 @@ namespace GridSim.Core.Interpose.Protocols;
 /// an I-format APDU's ASDU is decoded to information objects, each becoming an <c>IOA:&lt;n&gt;</c>-addressed
 /// <see cref="RtuPoint"/>. S/U-format frames (acknowledgements, STARTDT/STOPDT/TESTFR) carry no
 /// measurement and decode to an empty list.
+/// <para>GR-306 (November 2026): with the opt-in <see cref="Iec104PointKey.CasduIoa"/> (crosswalk
+/// <c>"iec104Key": "casdu-ioa"</c>) points are named <c>CA:&lt;casdu&gt;/IOA:&lt;n&gt;</c>, so stations sharing a link never
+/// collide. With the default <see cref="Iec104PointKey.Ioa"/> the names are unchanged, but an IOA that arrives with a
+/// second common address on one link is a collision: from then on its points are marked <see cref="RtuQuality.Invalid"/>
+/// (the crosswalk cannot say which station it means), counted, and the first one is named.</para>
 /// </summary>
-public sealed class Iec104Protocol : IRtuProtocol
+public sealed class Iec104Protocol : IRtuProtocol, IRtuSessionState
 {
     public string Name => "iec104";
     public string DisplayName => "IEC 60870-5-104";
@@ -42,6 +47,52 @@ public sealed class Iec104Protocol : IRtuProtocol
     /// "unknown" causes 44 to 47 (unknown type identification, cause, common address or object address); kept, marked
     /// <see cref="RtuQuality.Invalid"/>.</summary>
     public long RefusedCausePoints => Interlocked.Read(ref _refusedCause);
+
+    /// <summary>GR-306: how points are named: by IOA alone (the default, the names every crosswalk has used) or by common
+    /// address and IOA. Set from the crosswalk's <c>iec104Key</c> (<see cref="RtuPointMap.ResolveIec104Key"/>) before the
+    /// first frame.</summary>
+    public Iec104PointKey PointKey { get; set; } = Iec104PointKey.Ioa;
+
+    // GR-306: per link (cleared by ResetSession), the common address each IOA first arrived with and the IOAs that have
+    // arrived with two. The counters are never cleared.
+    private readonly object _addressLock = new();
+    private readonly Dictionary<int, int> _casduByIoa = new();
+    private readonly HashSet<int> _collidedIoas = new();
+    private long _casduCollisions;
+    private string? _firstCollision;
+
+    /// <summary>GR-306: points (by IOA alone) whose IOA has arrived with two common addresses on one link; each is marked
+    /// <see cref="RtuQuality.Invalid"/>. Always 0 under <see cref="Iec104PointKey.CasduIoa"/>.</summary>
+    public long CommonAddressCollisions => Interlocked.Read(ref _casduCollisions);
+
+    /// <summary>GR-306: the first collision, in words ("IOA 10 arrived with common address 2 after common address 1 on one
+    /// link"), or null when there has been none. The interposer prints it once on stderr.</summary>
+    public string? FirstCommonAddressCollision { get { lock (_addressLock) return _firstCollision; } }
+
+    /// <summary>GR-306: a new client is a new link, so the common address each IOA came with is forgotten (the counts
+    /// stay).</summary>
+    public void ResetSession()
+    {
+        lock (_addressLock)
+        {
+            _casduByIoa.Clear();
+            _collidedIoas.Clear();
+        }
+    }
+
+    /// <summary>GR-306: true when <paramref name="ioa"/> has (now or before, on this link) arrived with a common address
+    /// other than <paramref name="casdu"/>; the first such arrival is recorded and named.</summary>
+    private bool Collides(int casdu, int ioa)
+    {
+        lock (_addressLock)
+        {
+            if (!_casduByIoa.TryGetValue(ioa, out int first)) { _casduByIoa[ioa] = casdu; return _collidedIoas.Contains(ioa); }
+            if (first != casdu && _collidedIoas.Add(ioa))
+                _firstCollision ??= string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"IOA {ioa} arrived with common address {casdu} after common address {first} on one link");
+            return _collidedIoas.Contains(ioa);
+        }
+    }
 
     public IReadOnlyList<RtuPoint> Decode(ReadOnlySpan<byte> frame, QualityFold quality)
     {
@@ -76,8 +127,28 @@ public sealed class Iec104Protocol : IRtuProtocol
             if (asdu.Test) q |= RtuQuality.Invalid; // a test ASDU is never live telemetry
             if (refusedCause) { q |= RtuQuality.Invalid; Interlocked.Increment(ref _refusedCause); }
             if (o.Transient) q |= RtuQuality.Transient; // N337: a step position reported while the tap changer moves
-            points.Add(new RtuPoint($"IOA:{o.Ioa}", o.Type, o.Value, q, o.TimeUtc));
+            string address;
+            if (PointKey == Iec104PointKey.CasduIoa)
+                address = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"CA:{asdu.CommonAddress}/IOA:{o.Ioa}");
+            else
+            {
+                // GR-306: by IOA alone two stations on one link would feed one crosswalk point; a collided IOA is invalid.
+                if (Collides(asdu.CommonAddress, o.Ioa)) { q |= RtuQuality.Invalid; Interlocked.Increment(ref _casduCollisions); }
+                address = $"IOA:{o.Ioa}";
+            }
+            points.Add(new RtuPoint(address, o.Type, o.Value, q, o.TimeUtc));
         }
         return points;
     }
+}
+
+/// <summary>GR-306: how IEC 104 points are named, chosen by the crosswalk's optional top-level <c>iec104Key</c>.</summary>
+public enum Iec104PointKey
+{
+    /// <summary><c>IOA:&lt;n&gt;</c> (crosswalk <c>"ioa"</c> or no member): the names every crosswalk has used. An IOA that
+    /// arrives with two common addresses on one link is marked invalid.</summary>
+    Ioa,
+
+    /// <summary><c>CA:&lt;casdu&gt;/IOA:&lt;n&gt;</c> (crosswalk <c>"casdu-ioa"</c>): one name per station and object.</summary>
+    CasduIoa,
 }

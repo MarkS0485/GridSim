@@ -233,10 +233,14 @@ public enum CimTapPositions
 /// <param name="ApparentPowerRatings">Export pack (2026-10): read each line's and two-winding transformer's permanent
 /// (PATL) <c>ApparentPowerLimit</c> into <see cref="CimBranch.RateAMva"/> / <see cref="CimTransformer.RateAMva"/>. Off by
 /// default (no rating is read, as before). Current limits (amperes) are not converted.</param>
+/// <param name="RequireSshSetPoints">GR-641 (November 2026), opt-in: when the document carries an SSH profile (at least
+/// one load or machine has its <c>p</c> set-point), refuse a load, asynchronous machine or synchronous machine in service
+/// that lacks its <c>p</c> or <c>q</c> set-point, naming it, instead of taking 0 for it. Off by default: a missing value
+/// is 0, as before (an EQ-only document has no set-points at all and is never refused).</param>
 public sealed record CimImportOptions(
     CimTopology Topology = CimTopology.Auto, CimTapPositions TapPositions = CimTapPositions.SteadyStateHypothesis,
     CimTapPositions ShuntSections = CimTapPositions.SteadyStateHypothesis, bool StartingVoltages = false,
-    bool ApparentPowerRatings = false)
+    bool ApparentPowerRatings = false, bool RequireSshSetPoints = false)
 {
     /// <summary>The default options: <see cref="CimTopology.Auto"/>, <see cref="CimTapPositions.SteadyStateHypothesis"/>
     /// for the tap positions and for the shunt sections.</summary>
@@ -864,6 +868,19 @@ public static partial class CimImporter
             .ToDictionary(g => g.Key, g => g.OrderBy(t => t.Seq).ThenBy(t => t.Order).Select(t => t.Node).ToList(),
                 StringComparer.Ordinal);
         List<string> NodesOf(string mrid) => nodesOf.TryGetValue(mrid, out List<string>? l) ? l : new List<string>();
+        // GR-640 (November 2026): a load, machine or injection has ONE terminal. It used to take the first of several and
+        // drop the rest without a word, so the equipment sat on one node whichever terminal order the document had.
+        // Terminals that are disconnected (connected = false) or have no node were already left out above, so this
+        // counts the terminals that really connect it. Equipment with no terminal still returns null, as before.
+        string? SingleNodeOf(CimObject o)
+        {
+            List<string> nodes = NodesOf(o.Mrid);
+            if (nodes.Count > 1)
+                throw new InvalidDataException(
+                    $"CIM {o.Describe} has {nodes.Count.ToString(CultureInfo.InvariantCulture)} connected terminals " +
+                    $"({string.Join(", ", nodes)}); a {o.Class} has one, and which of them to use would be a guess.");
+            return nodes.Count == 1 ? nodes[0] : null;
+        }
 
         // ---- N295 (CIM3): the base voltage of a CGMES 3.0 boundary bus -----------------------------------------
         // A boundary ConnectivityNode sits in a Line container, not a VoltageLevel, so it has no base voltage of its own.
@@ -998,13 +1015,30 @@ public static partial class CimImporter
         var loads = new List<CimLoad>();
         var generators = new List<CimGenerator>();
         int asynchronous = 0;
+        // GR-641 (opt-in, CimImportOptions.RequireSshSetPoints): with an SSH profile present, an in-service load or machine
+        // without its own p / q set-point is refused instead of taking 0. The profile is "present" when any load or
+        // machine carries a p set-point; an EQ-only document carries none and is never refused.
+        bool requireSsh = options.RequireSshSetPoints && objects.Any(o =>
+            (LoadClasses.Contains(o.Class) && o.Number("EnergyConsumer.p") is not null)
+            || ((o.Class is "AsynchronousMachine" or "SynchronousMachine") && o.Number("RotatingMachine.p", "SynchronousMachine.p") is not null));
+        // The p and q names are each read under every name the importer reads them by (first name = the one reported).
+        void RequireSetPoint(CimObject o, string[] pNames, string[] qNames)
+        {
+            if (!requireSsh) return;
+            string? missing = o.Number(pNames) is null ? pNames[0] : o.Number(qNames) is null ? qNames[0] : null;
+            if (missing is not null)
+                throw new InvalidDataException(
+                    $"CIM {o.Describe}: no SSH {missing} set-point, although the document carries an SSH profile; " +
+                    "refusing to take 0 for it (CimImportOptions.RequireSshSetPoints, GR-641).");
+        }
         foreach (CimObject o in objects)
         {
             if (LoadClasses.Contains(o.Class))
             {
                 if (OutOfService(o)) continue;
-                string? node = NodesOf(o.Mrid).FirstOrDefault();
+                string? node = SingleNodeOf(o);
                 if (node is null) { notes.Add($"{o.Class} {o.Name} ({o.Mrid}) has no connected terminal; left out."); continue; }
+                RequireSetPoint(o, new[] { "EnergyConsumer.p" }, new[] { "EnergyConsumer.q" });
                 // EnergyConsumer.p / .q are inherited by every subclass under the same (EnergyConsumer.) name. An
                 // absent value is 0: an EQ-only document has no SSH profile and so no set-point.
                 loads.Add(new CimLoad(o.Mrid, o.Name, node,
@@ -1022,8 +1056,9 @@ public static partial class CimImporter
                 // motor-starting behaviour are not represented (counted in one note). Before N286 it was listed as
                 // conducting equipment the importer does not represent, and its load was lost.
                 if (OutOfService(o)) continue;
-                string? node = NodesOf(o.Mrid).FirstOrDefault();
+                string? node = SingleNodeOf(o);
                 if (node is null) { notes.Add($"AsynchronousMachine {o.Name} ({o.Mrid}) has no connected terminal; left out."); continue; }
+                RequireSetPoint(o, new[] { "RotatingMachine.p" }, new[] { "RotatingMachine.q" });
                 loads.Add(new CimLoad(o.Mrid, o.Name, node,
                     o.Number("RotatingMachine.p") ?? 0.0, o.Number("RotatingMachine.q") ?? 0.0, o.Class));
                 asynchronous++;
@@ -1031,8 +1066,9 @@ public static partial class CimImporter
             else if (o.Class == "SynchronousMachine")
             {
                 if (OutOfService(o)) continue;
-                string? node = NodesOf(o.Mrid).FirstOrDefault();
+                string? node = SingleNodeOf(o);
                 if (node is null) { notes.Add($"SynchronousMachine {o.Name} ({o.Mrid}) has no connected terminal; left out."); continue; }
+                RequireSetPoint(o, new[] { "RotatingMachine.p", "SynchronousMachine.p" }, new[] { "RotatingMachine.q", "SynchronousMachine.q" });
                 generators.Add(ReadMachine(o, node, byId, terminalNode, inertia, fuelsOf, curvePointsOf, notes));
             }
             else if (InjectionClasses.Contains(o.Class))
@@ -1040,7 +1076,7 @@ public static partial class CimImporter
                 // N286: ExternalNetworkInjection, EquivalentInjection and (CGMES 3.0) PowerElectronicsConnection are
                 // generators (see ReadInjection for each mapping and its sources).
                 if (OutOfService(o)) continue;
-                string? node = NodesOf(o.Mrid).FirstOrDefault();
+                string? node = SingleNodeOf(o);
                 if (node is null) { notes.Add($"{o.Class} {o.Name} ({o.Mrid}) has no connected terminal; left out."); continue; }
                 generators.Add(ReadInjection(o, node, byId, terminalNode, unitsOf, curvePointsOf, notes));
             }

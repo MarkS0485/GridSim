@@ -117,12 +117,14 @@ public class CrashLogTests
         }
     }
 
-    [Fact]
+    // Test correction (2026-11-02, owner decision GR-404; recorded in the commit and CHANGELOG): this test returned early,
+    // and so PASSED having checked nothing, when the override variable was set. It is now SKIPPED with the reason in
+    // that case. The assertion is unchanged.
+    [EnvironmentUnsetFact("the default crash folder is only observable when the override is not set", CrashLog.DirectoryVariable)]
     public void Default_directory_is_under_the_user_data_folder()
     {
         // Only checked when the override variable is not set in this environment (it is process-wide, so this test
         // never sets it). %LOCALAPPDATA%\GridSim\crash on Windows, ~/.local/share/GridSim/crash on Linux.
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(CrashLog.DirectoryVariable))) return;
         string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         string expected = string.IsNullOrEmpty(local)
             ? Path.Combine(Path.GetTempPath(), "GridSim", "crash")

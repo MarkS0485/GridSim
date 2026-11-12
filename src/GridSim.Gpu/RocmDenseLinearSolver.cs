@@ -41,6 +41,7 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
         // column vector is identical in row- and column-major layout.
         var aCol = new double[n * n];
         double aNorm = 0.0;   // matrix scale for the relative near-singular floor (mirrors DenseLuSolver)
+        var rowScales = new double[n];   // GR-044: each row's largest |A(i,:)| for its own pivot floor
         for (int j = 0; j < n; j++)
             for (int i = 0; i < n; i++)
             {
@@ -50,7 +51,16 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
                     throw new ArgumentException("ROCm dense solve: the matrix contains a NaN entry.", nameof(a));
                 double av = Math.Abs(v);
                 if (av > aNorm) aNorm = av;
+                if (av > rowScales[i]) rowScales[i] = av;
             }
+        // GR-457: a NaN or infinite right-hand side is refused, as the CPU dense LU (the no-ROCm fallback above) and the
+        // ILGPU dense solver refuse it, with the same exception type and the shared wording. Only A was checked here, so a
+        // bad b went to the device and came back as a NaN / Inf solution. A read-only pre-check: on finite input nothing
+        // sent to the device changes.
+        int badRow = GridSim.Core.Numerics.NumericTolerances.FirstNonFinite(b);
+        if (badRow >= 0)
+            throw new InvalidOperationException(
+                GridSim.Core.Numerics.NumericTolerances.NonFiniteRightHandSide("ROCm dense solve", b[badRow], badRow));
 
         const int nrhs = 1;
         nuint dblBytes = (nuint)n * (nuint)n * sizeof(double);
@@ -105,7 +115,10 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
                 CheckHip(RocmInterop.hipDeviceSynchronize(), "hipDeviceSynchronize (getrf)");
                 var luCol = new double[n * n];
                 CheckHip(RocmInterop.hipMemcpy(luCol, dA, dblBytes, RocmInterop.HipMemcpyKind.DeviceToHost), "D2H LU");
-                ThrowIfNearSingular(luCol, n, aNorm);
+                // GR-044: getrf's pivots map each U row to its original row, whose own floor it is tested against.
+                var ipiv = new int[n];
+                CheckHip(RocmInterop.hipMemcpy(ipiv, dIpiv, pivBytes, RocmInterop.HipMemcpyKind.DeviceToHost), "D2H ipiv");
+                ThrowIfNearSingular(luCol, ipiv, n, aNorm, rowScales);
 
                 // Solve A x = b (no transpose): overwrites dB with the solution x.
                 Check(RocmInterop.hipsolverDgetrs(handle, RocmInterop.HipsolverOperation.None,
@@ -178,6 +191,9 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
     /// device-ordered factorisation) produces pivots close enough to the textbook ones that a matrix near the floor
     /// gets the same verdict on the device. A pivot within rounding of the floor can be judged differently there.</para>
     /// </summary>
+    /// <remarks>GR-044 (November 2026): this whole-matrix form is the check as it stood before the row-relative floor; the
+    /// solve itself now calls the row-aware overload, which gives the CPU LU's verdict. Kept for callers that have no
+    /// pivot vector; it refuses a superset of what the row-aware check refuses.</remarks>
     public static void ThrowIfNearSingular(double[] luColumnMajor, int n, double matrixScale)
     {
         int k = GridSim.Core.Numerics.NumericTolerances.FirstSingularPivot(luColumnMajor, n, matrixScale);
@@ -186,5 +202,37 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
         double pivot = Math.Abs(luColumnMajor[k * n + k]);
         throw new InvalidOperationException(
             $"Near-singular matrix in ROCm dense LU solve: pivot {pivot:E3} at column {k} is at or below the tolerance {floor:E3} (matrix scale {matrixScale:E3}).");
+    }
+
+    /// <summary>
+    /// GR-044 (November 2026): the row-aware post-factorisation check the ROCm solve makes. Throws
+    /// <see cref="InvalidOperationException"/> when a pivot U(k,k) of <paramref name="luColumnMajor"/> is at or below the
+    /// floor of the ORIGINAL row that became U row k: 1e-12 times that row's largest entry (<paramref name="rowScales"/>,
+    /// the largest |A(r,:)| of each row of the matrix as given; <paramref name="matrixScale"/> is the largest of them).
+    /// <paramref name="ipivOneBased"/> is getrf's pivot vector, which maps U rows to original rows. With the textbook
+    /// partial-pivoting factors this rejects exactly the matrices <see cref="DenseLuSolver"/> rejects (proved on a
+    /// randomised mixed-unit set by Gr044RowRelativePivotFloorTests). Public so the host-side test runs without AMD
+    /// hardware; what is not proved without a device is stated on the whole-matrix overload.
+    /// </summary>
+    public static void ThrowIfNearSingular(double[] luColumnMajor, int[] ipivOneBased, int n, double matrixScale, double[] rowScales)
+    {
+        ArgumentNullException.ThrowIfNull(luColumnMajor);
+        ArgumentNullException.ThrowIfNull(ipivOneBased);
+        ArgumentNullException.ThrowIfNull(rowScales);
+        if (rowScales.Length != n)
+            throw new ArgumentException($"The row scales hold {rowScales.Length} values; an order-{n} matrix has {n} rows.", nameof(rowScales));
+        var floors = (double[])rowScales.Clone();
+        GridSim.Core.Numerics.NumericTolerances.ToRowPivotFloors(floors, matrixScale);
+        int k = GridSim.Core.Numerics.NumericTolerances.FirstSingularPivot(luColumnMajor, n, ipivOneBased, floors);
+        if (k < 0) return;
+        // The original row behind U row k, for the message (the same replay the check made).
+        var origin = new int[n];
+        for (int i = 0; i < n; i++) origin[i] = i;
+        for (int s = 0; s <= k; s++) { int p = ipivOneBased[s] - 1; (origin[s], origin[p]) = (origin[p], origin[s]); }
+        double floor = floors[origin[k]];
+        double pivot = Math.Abs(luColumnMajor[k * n + k]);
+        throw new InvalidOperationException(
+            $"Near-singular matrix in ROCm dense LU solve: pivot {pivot:E3} at column {k} is at or below the tolerance {floor:E3} "
+            + $"(1e-12 x its row's largest entry; matrix scale {matrixScale:E3}).");
     }
 }

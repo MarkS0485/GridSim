@@ -4,6 +4,9 @@
 @inject SessionManager Sessions
 @inject NavigationManager Nav
 @inject PresenceService Presence
+@inject CaseCatalog Catalog
+@inject GridSim.Web.Site.AccessControl Access
+@inject Microsoft.AspNetCore.Http.IHttpContextAccessor HttpAccessor
 @implements IAsyncDisposable
 @rendermode InteractiveServer
 
@@ -264,7 +267,15 @@ else
             if (_session is not null) _ = DisposeSessionLoggedAsync();   // GR-729: a teardown failure is logged, not lost
             _error = null;
         }
-        if (_session is null && _error is null) StartSession();
+        if (_session is null && _error is null)
+        {
+            // A private id (results/ or gda-out/) is decided on the INTERACTIVE pass only: the prerender has no settled
+            // sign-in state, so it builds no session, writes no audit entry and shows the neutral "Initialising session"
+            // state below. The circuit's own pass then runs OnParametersSet again with the real identity.
+            if (GridSim.Web.Site.AccessControl.MustWaitForInteractive(Catalog.IsPrivate(CaseId), RendererInfo.IsInteractive))
+                return;
+            StartSession();
+        }
     }
 
     private string? _loadedSolver;
@@ -284,6 +295,14 @@ else
         Nav.NavigateTo(url);
     }
 
+    /// <summary>The cascading sign-in state (registered by AddCascadingAuthenticationState); null when none is supplied.</summary>
+    [CascadingParameter] public Task<AuthenticationState>? AuthState { get; set; }
+
+    /// <summary>The signed-in user, or null (treated as anonymous) when the sign-in state is missing or not yet complete.
+    /// Never blocks: an unfinished task is the anonymous caller, which can only refuse more, never allow more.</summary>
+    private System.Security.Claims.ClaimsPrincipal? CurrentUser() =>
+        AuthState is { IsCompletedSuccessfully: true } done ? done.Result.User : null;
+
     private string? _presenceHandle;
     private CancellationTokenSource? _presenceCts;
 
@@ -295,7 +314,19 @@ else
             _loadedSolver = Solver;
             // An unknown ?solver= name, or a solver asked of a replay / bridge feed, is refused here and shown on the
             // load-error panel (fail loud), never quietly replaced by Auto.
-            _session = Sessions.Create(CaseId, SolverChoice.Parse(Solver));
+            // Owner decision (November 2026): a model found under results/ or gda-out/ is a private one (CaseCatalog.IsPrivate),
+            // listed and read (GET /api/topology) only from CaseCatalog.PrivateListingRole. Opening one by id here is the same
+            // act, so it goes through the same AccessControl.Require (one AccessDenied audit entry, the same refusal text).
+            // The denial throws before Sessions.Create, so no session is built; the catch below shows it on the load-error
+            // panel. The caller is the signed-in user when the cascading sign-in state is already available, else anonymous
+            // (the safe side: never more than the anonymous role).
+            if (Catalog.IsPrivate(CaseId))
+                Access.Require(Access.IdentityFor(CurrentUser(), null), CaseCatalog.PrivateListingRole,
+                    GridSim.Web.Site.AccessControl.DashboardPrivateOperation);
+            // GR-235: counted against this client for GridSim:MaxSessionsPerClient (the signed-in user, else the remote
+            // address when the host can still see one; with neither, only the global cap applies).
+            _session = Sessions.Create(CaseId, SolverChoice.Parse(Solver),
+                Access.ClientKeyFor(CurrentUser(), HttpAccessor.HttpContext?.Connection.RemoteIpAddress));
             _frame = _session.Current;
             _session.FrameProduced += OnFrame;
             _session.StateChanged += OnStateChanged;

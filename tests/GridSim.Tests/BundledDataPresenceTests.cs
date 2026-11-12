@@ -16,8 +16,8 @@ namespace GridSim.Tests;
 /// <item>no test may add a new silent early return on a missing file without being listed here: the source scan below
 /// counts every such guard in the test project and names any that is not accounted for.</item>
 /// </list>
-/// The one genuinely optional data set is the v2 template library (data/library): V2LibraryFilesValidateTests is
-/// documented to pass with the library present or absent, so it is listed as optional, not required.
+/// The one genuinely optional data set is the v2 template library (data/library): V2LibraryFilesValidateTests runs
+/// when a library file is present and is SKIPPED (RepositoryDataFact) when none is, so it is optional, not required.
 /// </summary>
 public sealed class BundledDataPresenceTests
 {
@@ -59,10 +59,10 @@ public sealed class BundledDataPresenceTests
 
     /// <summary>
     /// Every silent early return on a missing file or folder, an unset environment variable or the operating system is
-    /// accounted for. GR-404: the guards of the tests listed in GuardedFiles are now assertions, so the only ones left
-    /// are the optional template library and the crash-log default-folder check (which can only check the default when
-    /// the override is unset). A new guard fails here, naming its file and line, so it is either listed or written to
-    /// fail loud (an assertion) or to skip visibly (an EnvironmentFact, EnvironmentTheory or WindowsFact attribute).
+    /// accounted for. GR-404: the guards of the tests listed in GuardedFiles are assertions, and the optional template
+    /// library and the crash-log default-folder check skip by attribute, so none is left. A new guard fails here,
+    /// naming its file and line, so it is written to fail loud (an assertion) or to skip visibly (an EnvironmentFact,
+    /// EnvironmentTheory, EnvironmentUnsetFact, RepositoryDataFact, WindowsFact or UnixFact attribute).
     /// </summary>
     [Fact]
     public void No_unlisted_test_skips_silently_on_missing_data()
@@ -71,14 +71,26 @@ public sealed class BundledDataPresenceTests
         {
             // GR-404: the guards of AnalysisCoverageTests, DistributionSolverTests, MatpowerParserTests,
             // SolverPropertyTests (2), LiveSimTests and Wave6IoTests (2) are assertions now, so they count 0 here.
-            ["V2LibraryFilesValidateTests.cs"] = 1,   // optional data: the template library may be absent by design
-            ["CrashLogTests.cs"] = 1,                 // the default folder is only observable with the override unset
+            // GR-404 completed (2026-11-02, owner decision; recorded in the commit and CHANGELOG): the last two,
+            // V2LibraryFilesValidateTests (optional template library) and CrashLogTests (default folder only observable
+            // with the override unset), are now skipped by attribute (RepositoryDataFact, EnvironmentUnsetFact) instead
+            // of returning early, so no silent early return is accounted for any more: these were 1 each.
         };
         // GR-404: the guard used to match only "if (!File.Exists(..)) return;" and "if (!Directory.Exists(..)) return;".
         // It now also matches the braced form, an OperatingSystem.IsXxx() test and a string.IsNullOrWhiteSpace test
         // (the environment-variable opt-in), each with or without the negation.
         var guard = new Regex(
             @"if\s*\(\s*!?\s*(?:(?:File|Directory)\.Exists\(.*\)|OperatingSystem\.Is\w+\(\s*\)|string\.IsNullOrWhiteSpace\(.*\))\s*\)\s*\{?\s*return\s*;",
+            RegexOptions.CultureInvariant);
+        // GR-404 narrow rule (2026-11-02, owner decision): an early return guarded by "x is null" or "x == null" is a
+        // silent skip only when x holds an opt-in, that is, it was assigned from Environment.GetEnvironmentVariable in
+        // the same method. A general "is null" pattern would flag the many ordinary null checks in test helpers, so the
+        // scan tracks those assignments and resets them at each method header.
+        var envAssign = new Regex(@"\b([A-Za-z_][A-Za-z0-9_]*)\s*=\s*Environment\.GetEnvironmentVariable\(",
+            RegexOptions.CultureInvariant);
+        var nullGuard = new Regex(@"if\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:is\s+null|==\s*null)\s*\)\s*\{?\s*return\s*;",
+            RegexOptions.CultureInvariant);
+        var methodHeader = new Regex(@"^\s*(?:\[[^\]]*\]\s*)*(?:(?:public|private|internal|protected|static|async|override|sealed|virtual)\s+)+[\w<>\[\],.?\s]+\s+\w+\s*\(",
             RegexOptions.CultureInvariant);
         string testsDir = Path.Combine(CliProcess.Root(), "tests", "GridSim.Tests");
         var found = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -89,9 +101,15 @@ public sealed class BundledDataPresenceTests
         {
             if (Path.GetFileName(file) == nameof(BundledDataPresenceTests) + ".cs") continue;   // this file quotes the pattern
             string[] lines = File.ReadAllLines(file);
+            var optIns = new HashSet<string>(StringComparer.Ordinal);   // variables holding an opt-in, this method
             for (int i = 0; i < lines.Length; i++)
             {
-                if (!guard.IsMatch(lines[i])) continue;
+                if (methodHeader.IsMatch(lines[i])) optIns.Clear();
+                Match assigned = envAssign.Match(lines[i]);
+                if (assigned.Success) optIns.Add(assigned.Groups[1].Value);
+                Match nulled = nullGuard.Match(lines[i]);
+                bool optInGuard = nulled.Success && optIns.Contains(nulled.Groups[1].Value);
+                if (!guard.IsMatch(lines[i]) && !optInGuard) continue;
                 string name = Path.GetFileName(file);
                 found[name] = found.GetValueOrDefault(name) + 1;
                 where.Add($"{Path.GetRelativePath(testsDir, file)}:{i + 1}");

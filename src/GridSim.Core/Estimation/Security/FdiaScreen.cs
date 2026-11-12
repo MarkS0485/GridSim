@@ -110,7 +110,10 @@ public static class FdiaScreen
         // GR-515: a LAV estimate's chi-square is documented as no verdict (ChiSquareIsVerdict false); the CLI refuses it,
         // and the Core API now does too, instead of reading its Passed as "measurement-consistent".
         if (!result.ChiSquareIsVerdict)
-            throw new InvalidOperationException("FDIA screen: this estimate's chi-square is not a verdict (a LAV estimate), so the measurement-consistency half of the screen has nothing to read.");
+            throw new InvalidOperationException(result.LavObjective is not null
+                ? "FDIA screen: this estimate's chi-square is not a verdict (a LAV estimate), so the measurement-consistency half of the screen has nothing to read."
+                // GR-521: an M-estimate (Huber, Schweppe-GM) gives no chi-square verdict either.
+                : "FDIA screen: this estimate's chi-square is not a verdict (a robust M-estimate or LAV: J at it is not chi-square distributed), so the measurement-consistency half of the screen has nothing to read.");
         if (!(significanceSigmas >= 0) || !double.IsFinite(significanceSigmas))
             throw new ArgumentOutOfRangeException(nameof(significanceSigmas), significanceSigmas, "the significance factor must be a finite number >= 0.");
         FeasibilityConstraints feas = constraints ?? new FeasibilityConstraints();
@@ -230,14 +233,21 @@ public static class FdiaScreen
     /// count. Several rows at one BUS (same kind) measure the same quantity, and H G^-1 H^T = R - Omega with Omega
     /// positive semi-definite gives Var(h_i(x^)) &lt;= sigma_i^2 for every one of them, so the SMALLEST sigma is the
     /// tightest valid bound (GR-077; the largest used to be taken, so a loose pseudo row or a distrusted row at the
-    /// bus widened the margin enough to hide an envelope breach). Branch rows keep the LARGEST sigma per (From, To,
-    /// end): parallel circuits share that key, so the rows may measure different quantities, and only the widest is
-    /// a bound for whichever circuit is the one.
+    /// bus widened the margin enough to hide an envelope breach).
+    /// <para>Bug #189 (2026-11-01): branch rows now follow the same rule wherever the rows are known to measure the same
+    /// quantity. They used to keep the LARGEST sigma per (From, To, end) always, widening the margin and hiding some
+    /// rating breaches, against GR-077. Now the rows are grouped by their circuit label within (kind, From, To, end) and
+    /// each group keeps its SMALLEST sigma (one circuit, one quantity). At the lookup, when the projected flow has ONE
+    /// line between those buses, every row measures it, so the smallest sigma of all groups is the bound; only when
+    /// there are parallel circuits (the violation names its buses, not its circuit) is the widest group bound kept, as
+    /// before, because only it bounds whichever circuit is the one. Rows with no circuit label form one group of their
+    /// own.</para>
     /// </summary>
     private sealed class TelemetrySigmas
     {
         private readonly Dictionary<(MeasurementKind Kind, int Bus), double> _bus = new();
-        private readonly Dictionary<(MeasurementKind Kind, int From, int To, BranchEnd End), double> _branch = new();
+        // Bug #189: per (kind, From, To, end), the smallest sigma of each circuit group ("" for unlabelled rows).
+        private readonly Dictionary<(MeasurementKind Kind, int From, int To, BranchEnd End), Dictionary<string, double>> _branch = new();
 
         public TelemetrySigmas(IReadOnlyList<MeasurementResidual> residuals)
         {
@@ -248,7 +258,10 @@ public static class FdiaScreen
                 if (m.IsBranch)
                 {
                     var key = (m.Kind, m.From, m.To, m.End);
-                    _branch[key] = Math.Max(_branch.GetValueOrDefault(key, 0.0), m.Sigma);
+                    if (!_branch.TryGetValue(key, out Dictionary<string, double>? groups))
+                        _branch[key] = groups = new Dictionary<string, double>(StringComparer.Ordinal);
+                    string circuit = m.Circuit ?? "";
+                    groups[circuit] = groups.TryGetValue(circuit, out double seen) ? Math.Min(seen, m.Sigma) : m.Sigma;   // GR-077
                 }
                 else
                 {
@@ -271,12 +284,24 @@ public static class FdiaScreen
                 case "Rating":
                     double best = 0.0;
                     bool found = false;
+                    // Bug #189: one line between these buses means every row measures it (smallest sigma); parallel
+                    // circuits keep the widest group's bound.
+                    int parallel = 0;
+                    foreach (LineFlow lf in projected.LineFlows)
+                        if (lf.From == v.A && lf.To == v.B) parallel++;
+                    bool single = parallel == 1;
                     foreach (LineFlow lf in projected.LineFlows)
                     {
                         if (lf.From != v.A || lf.To != v.B) continue;
-                        double u = Math.Max(EndBound(lf.From, lf.To, BranchEnd.From, lf.PFromMw, lf.QFromMvar),
-                                            EndBound(lf.From, lf.To, BranchEnd.To, lf.PToMw, lf.QToMvar));
-                        if (double.IsNaN(u)) return 0.0;   // an end is unmeasured: no bound, no margin
+                        double uFrom = EndBound(lf.From, lf.To, BranchEnd.From, lf.PFromMw, lf.QFromMvar, single);
+                        double uTo = EndBound(lf.From, lf.To, BranchEnd.To, lf.PToMw, lf.QToMvar, single);
+                        // GR-532: with both ends metered the bound is the larger of the two, as before. With ONE end
+                        // metered the margin is that end's bound (the other end's flow is the same branch current seen
+                        // across the series impedance, and the only telemetry on it is the metered end); it used to be
+                        // no margin at all, because Math.Max(NaN, x) is NaN. With neither end metered there is still no
+                        // bound and no margin.
+                        double u = double.IsNaN(uFrom) ? uTo : double.IsNaN(uTo) ? uFrom : Math.Max(uFrom, uTo);
+                        if (double.IsNaN(u)) return 0.0;   // neither end is measured: no bound, no margin
                         best = Math.Max(best, u);
                         found = true;
                     }
@@ -288,12 +313,22 @@ public static class FdiaScreen
 
         // First-order bound on std(|S|) at one end: (|P| sigma_P + |Q| sigma_Q) / |S|. NaN when that end lacks a P or
         // a Q measurement (no bound). A zero |S| gives the larger sigma (the limit of the expression is at most that).
-        private double EndBound(int from, int to, BranchEnd end, double p, double q)
+        private double EndBound(int from, int to, BranchEnd end, double p, double q, bool singleLine)
         {
-            if (!_branch.TryGetValue((MeasurementKind.PFlowMw, from, to, end), out double sp)) return double.NaN;
-            if (!_branch.TryGetValue((MeasurementKind.QFlowMvar, from, to, end), out double sq)) return double.NaN;
+            if (!TryBranchSigma((MeasurementKind.PFlowMw, from, to, end), singleLine, out double sp)) return double.NaN;
+            if (!TryBranchSigma((MeasurementKind.QFlowMvar, from, to, end), singleLine, out double sq)) return double.NaN;
             double s = Math.Sqrt(p * p + q * q);
             return s > 0 ? (Math.Abs(p) * sp + Math.Abs(q) * sq) / s : Math.Max(sp, sq);
+        }
+
+        // Bug #189: the sigma bound for one (kind, From, To, end): the smallest of the circuit groups when the buses carry
+        // one line, the largest group bound when they carry parallel circuits. False when no row measures it.
+        private bool TryBranchSigma((MeasurementKind, int, int, BranchEnd) key, bool singleLine, out double sigma)
+        {
+            sigma = 0.0;
+            if (!_branch.TryGetValue(key, out Dictionary<string, double>? groups) || groups.Count == 0) return false;
+            sigma = singleLine ? groups.Values.Min() : groups.Values.Max();
+            return true;
         }
     }
 }

@@ -194,6 +194,23 @@ public sealed record EstimationOptions
     public double HuberK { get; init; } = 1.345;
 
     /// <summary>
+    /// CAF-9 / gap B2 (D1 distrusted-source containment, November 2026): the measurement sources the operator has marked
+    /// distrusted (<c>gridsim estimate --distrust</c>, <c>gridsim serve --distrust</c>, the web host's
+    /// <c>Realtime:DistrustedSources</c>). When set and not empty, every row whose <see cref="Measurement.Source"/> is
+    /// distrusted is (1) demoted to pseudo-measurement treatment before the fit (its sigma multiplied by the control's
+    /// inflation factor, <see cref="GridSim.Core.Estimation.DistrustedSources.DefaultSigmaInflation"/> by default; its
+    /// value never changes) and (2) left out of the chi-square redundancy: its residual is not added to J and it is not
+    /// counted in the degrees of freedom, exactly as a <c>prior-solved</c> row is not (N078, see
+    /// <c>WlsStateEstimator.CountsAsRedundancy</c>). A demoted row still
+    /// takes part in the fit (with its tiny weight), in the residual list and in observability.
+    /// <para>Null (the default) or an empty control changes nothing: the estimator takes exactly the path it took before
+    /// this option existed, so every number is bit-for-bit identical.</para>
+    /// <para>The hosting layer, not the estimator, writes the <c>DistrustedSource</c> security event (see
+    /// <see cref="DistrustedSourceSetting.RecordApplied"/>); the estimator stays pure.</para>
+    /// </summary>
+    public GridSim.Core.Estimation.DistrustedSources? DistrustedSources { get; init; }
+
+    /// <summary>
     /// Refuse a knob that has no meaning, before the estimate runs (fail loud, naming it). An invalid confidence made
     /// the chi-square threshold NaN, so the bad-data loop removed rows while the test was reported NotRun; a HuberK at
     /// or below 0 gave negative IRLS weights; a non-positive step cap reversed the step; a NaN or non-positive
@@ -311,14 +328,41 @@ public sealed class WlsStateEstimator
     internal static bool CountsAsRedundancy(Measurement measurement) =>
         !string.Equals(measurement.Source, MeasuredInjectionPrior.SolvedPriorSource, StringComparison.Ordinal);
 
-    /// <summary>The number of rows of <paramref name="mm"/> that count toward the chi-square test (N078).</summary>
-    private static int RedundancyRows(MeasurementModel mm)
+    // ---- CAF-9 / gap B2 (November 2026): distrusted rows are not redundancy either ------------------------------------
+    //
+    // A row from a source the operator has marked distrusted (EstimationOptions.DistrustedSources) has had its sigma
+    // inflated (by 1e4 by default, 1e8 in weight): it is a pseudo-measurement, present for observability and negligible
+    // for the fit. It is not independent evidence the operator trusts, so, by the same reasoning as N078 above, it must
+    // not count as one more check on the fit: before this, each distrusted row still added one degree of freedom, so the
+    // chi-square threshold grew while the row's (tiny-weight) residual added almost nothing to J, and a misfit elsewhere
+    // could hide in that headroom. The ruling applied here is N078's: a distrusted row is left out of J and out of the
+    // degrees of freedom; it stays in the fit, the residual list, the observability gate and the bad-data identification.
+    //
+    // With no distrusted source (the option null or empty) this overload returns exactly CountsAsRedundancy(m), for every
+    // row, so every sum below runs over exactly the same rows in exactly the same order as before: bit-identical.
+
+    /// <summary>True when a measurement row counts toward the chi-square test: not a <c>prior-solved</c> row (N078) and,
+    /// when <paramref name="distrusted"/> is given, not a row from a distrusted source (gap B2).</summary>
+    internal static bool CountsAsRedundancy(Measurement measurement, DistrustedSources? distrusted) =>
+        CountsAsRedundancy(measurement)
+        && (distrusted is null || measurement.Source is null || !distrusted.IsDistrusted(measurement.Source));
+
+    /// <summary>The number of rows of <paramref name="mm"/> that count toward the chi-square test (N078, and gap B2's
+    /// distrusted rows when <paramref name="distrusted"/> is given).</summary>
+    private static int RedundancyRows(MeasurementModel mm, DistrustedSources? distrusted)
     {
         int count = 0;
         for (int r = 0; r < mm.MeasurementCount; r++)
-            if (CountsAsRedundancy(mm.Measurements[r])) count++;
+            if (CountsAsRedundancy(mm.Measurements[r], distrusted)) count++;
         return count;
     }
+
+    /// <summary>
+    /// The distrusted-source control a run actually applies: the option's control when it names at least one source,
+    /// otherwise null. Null is the "feature off" path: nothing is demoted and the redundancy predicate is exactly N078's.
+    /// </summary>
+    internal static DistrustedSources? ActiveDistrust(EstimationOptions opt) =>
+        opt.DistrustedSources is { IsEmpty: false } control ? control : null;
 
     public WlsStateEstimator(ILinearSolver? linearSolver = null)
         => _linear = linearSolver ?? new DenseLuSolver();
@@ -334,9 +378,31 @@ public sealed class WlsStateEstimator
         if (opt.Method == EstimationMethod.LavLp) opt = opt with { Method = EstimationMethod.Lav };
         opt.Validate();
         measurements.Validate(model);
+        // GR-076 (November 2026): every Slack bus is an angle reference held at its case-file angle, so a second slack in one
+        // island would be a hard angle constraint the measurements never test. Such a model is refused by name before
+        // any work (each island gets one slack for estimation). The Kalman filters keep their own rule (each slack held at
+        // its own angle, pinned by B185).
+        MeasurementModel.RefuseSlacksSharingAnIsland(model, "WLS state estimation");
+        // CAF-9 / gap B2: demote the distrusted sources' rows to pseudo-measurements (sigma inflated, value unchanged)
+        // before anything reads the set. Feature off (no option, or an empty control): this block does nothing and
+        // 'measurements' is the caller's own instance, so the run is the one it always was.
+        DistrustedSources? distrusted = ActiveDistrust(opt);
+        if (distrusted is not null)
+        {
+            // A row with no source tag cannot be judged trusted or distrusted; refuse it rather than guess (fail loud).
+            for (int i = 0; i < measurements.Measurements.Count; i++)
+                if (measurements.Measurements[i].Source is null)
+                    throw new InvalidDataException(
+                        $"Measurement set '{measurements.Case}': measurement #{i} has no source tag, so it cannot be checked against the distrusted sources ({string.Join(", ", distrusted.Sources)}).");
+            measurements = distrusted.Apply(measurements);
+            // An inflated sigma that overflowed to infinity (a sigma above about 1.8e304 times 1e-4) would poison the
+            // gain matrix; the set is validated again so it is refused here, naming the row.
+            measurements.Validate(model);
+        }
         int n = model.BusCount;
 
         var vm = new double[n];
+        var floorClamps = new List<int>();   // GR-518: state-bus index of every Vm the interior guard clamped to its floor
         var va = new double[n];
         InitialState(model, opt, vm, va);
         // The start state doubles as the backfill prior: for --prior=solve pipelines it is the
@@ -415,6 +481,48 @@ public sealed class WlsStateEstimator
             mm = new MeasurementModel(model, measurements with { Measurements = active.ToArray() });
             int m = mm.MeasurementCount;
             int s = mm.StateSize;
+            // Gap B2 (fail loud): a distrust list that leaves no redundancy is refused before any estimate is made. With
+            // every remaining evidence row needed just to fix the state (redundancy rows <= states), there is nothing
+            // left for the chi-square test to check, and the degrees of freedom would be zero or negative; a negative
+            // DOF must never be reported. Distrusting Measurement's default source ("scada") does exactly this on a
+            // typical set, so the refusal names the sources and the counts. Checked on the first pass only: later
+            // passes differ by bad-data removals, which the existing "mChi - s <= 0" stop already handles. Feature off
+            // (distrusted null): this block is skipped entirely, so nothing changes.
+            // Lane A follow-up (November 2026): the same refusal when it is the N078 rule that removes the redundancy. A set
+            // whose prior-solved rows (MeasuredInjectionPrior.SolvedPriorSource) are needed to reach the state count leaves
+            // the chi-square test no evidence row beyond the states, and reported DOF <= 0 without distrust being involved.
+            // A set with no prior-solved row and no distrust skips the block exactly as before (the row count below is
+            // a string compare per row and moves no number).
+            int priorSolved = 0;
+            if (pass == 0)
+                for (int r = 0; r < m; r++)
+                    if (!CountsAsRedundancy(mm.Measurements[r])) priorSolved++;
+            if (pass == 0 && (distrusted is not null || priorSolved > 0))
+            {
+                int evidence = RedundancyRows(mm, distrusted);
+                if (evidence <= s && distrusted is not null)
+                {
+                    int demoted = 0;
+                    for (int r = 0; r < m; r++)
+                    {
+                        string? src = mm.Measurements[r].Source;
+                        if (src is not null && distrusted.IsDistrusted(src)) demoted++;
+                    }
+                    throw new InvalidDataException(
+                        $"Measurement set '{measurements.Case}': distrusting {string.Join(", ", distrusted.Sources.Order(StringComparer.OrdinalIgnoreCase))} " +
+                        $"demotes {demoted} of {m} rows and leaves {evidence} rows of evidence for {s} states, so no redundancy " +
+                        "is left for the chi-square test (the degrees of freedom would be " + (evidence - s).ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                        ")" + (priorSolved > 0 ? $" ({priorSolved} {MeasuredInjectionPrior.SolvedPriorSource} rows are not evidence either)" : "") +
+                        ". Distrust fewer sources, or add measurements from trusted sources.");
+                }
+                if (evidence <= s)
+                    throw new InvalidDataException(
+                        $"Measurement set '{measurements.Case}': {priorSolved} of {m} rows are {MeasuredInjectionPrior.SolvedPriorSource} rows, " +
+                        "which are not independent evidence (a power flow of the set's own injection rows), and the remaining " +
+                        $"{evidence} rows of evidence for {s} states leave no redundancy for the chi-square test (the degrees of freedom " +
+                        "would be " + (evidence - s).ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                        "). Add independent measurements, or estimate without --prior solve.");
+            }
             var w = new double[m];
             for (int r = 0; r < m; r++) w[r] = 1.0 / (mm.SigmaPu[r] * mm.SigmaPu[r]);
             // N356 (CF6): the IRLS LAV is LavIrls now (Lav is the exact LP form, which keeps no IRLS weights).
@@ -503,7 +611,7 @@ public sealed class WlsStateEstimator
                         break;
                     }
 
-                    (bool finite, maxUpdate, double stepScale, double rawUpdate) = ApplyStep(mm, opt, dx, vm, va,
+                    (bool finite, maxUpdate, double stepScale, double rawUpdate) = ApplyStep(mm, opt, dx, vm, va, floorClamps,
                         opt.Method == EstimationMethod.Feasible ? opt.Feasibility : null);
                     opt.Trace?.Record(pass, iter + inner, maxUpdate, stepScale);
                     if (!finite) { status = EstimationStatus.NonFinite; break; }
@@ -590,7 +698,8 @@ public sealed class WlsStateEstimator
             if (status != EstimationStatus.Converged) break;
 
             // N078: the redundancy the chi-square test may count leaves out the prior-solved rows (see CountsAsRedundancy).
-            int mChi = RedundancyRows(mm);
+            // Gap B2: and the distrusted rows, when a distrusted source is named (null otherwise: N078's count exactly).
+            int mChi = RedundancyRows(mm, distrusted);
             if (!opt.DetectBadData || mChi - s <= 0) break;
             // N331 (CF5): the exact LAV joins the robust branch (it fits, never removes). N356 (CF6): Lav is the exact form
             // (LavLp was normalised to it on entry), LavIrls the IRLS one; both fit, never remove.
@@ -603,7 +712,7 @@ public sealed class WlsStateEstimator
                 double jRob = 0;
                 for (int r = 0; r < m; r++)
                 {
-                    if (!CountsAsRedundancy(mm.Measurements[r])) continue;   // N078
+                    if (!CountsAsRedundancy(mm.Measurements[r], distrusted)) continue;   // N078; gap B2: distrusted rows too
                     double rPu = mm.ZPu[r] - hRob[r];
                     jRob += rPu * rPu * w[r];
                 }
@@ -620,7 +729,7 @@ public sealed class WlsStateEstimator
             for (int r = 0; r < m; r++)
             {
                 residualPu[r] = mm.ZPu[r] - h[r];   // every row's residual: the bad-data analysis below reads them all
-                if (CountsAsRedundancy(mm.Measurements[r]))   // N078: J counts only the rows that are evidence
+                if (CountsAsRedundancy(mm.Measurements[r], distrusted))   // N078 (and gap B2): J counts only the rows that are evidence
                     objective += residualPu[r] * residualPu[r] * w[r];
             }
             chiThreshold = ChiSquare.Quantile(mChi - s, opt.ChiSquareConfidence);
@@ -670,16 +779,27 @@ public sealed class WlsStateEstimator
         EstimationResult result = Assemble(model, mm, opt, status, totalIters, maxUpdate, vm, va,
             normalized, critical, chiThreshold, chiPassed, removed, observability);
         result.IrlsCapReached = irlsCapReached;   // R175 (Q13): reported, never hidden
+        // GR-518: the interior guard's hard backstop (a Vm pushed below the floor is set to the floor) used to act
+        // without a word. Every clamp is now counted and the buses named, so a state that leaned on the backstop is
+        // visible in the result. Reporting only: the state and every other field are unchanged.
+        result.VmFloorClamps = floorClamps.Count;
+        result.VmFloorClampedBusIds = floorClamps.Distinct().Order().Select(i => mm.BusIds[i]).ToArray();
 
         // N356 (CF6, Ruling R1): a LAV estimate (exact or IRLS) reports the objective LAV minimises, sum |r_i| / sigma_i,
         // and says that its chi-square numbers are not a verdict (the LAV objective is not chi-square distributed, and
         // J at the LAV state is not the minimum of J, so comparing it with a chi-square quantile tests nothing). Every
-        // other method keeps ChiSquareIsVerdict = true and LavObjective = null: their results are unchanged bit for bit.
+        // other method keeps LavObjective = null.
         if (opt.Method is EstimationMethod.Lav or EstimationMethod.LavIrls)
         {
             result.ChiSquareIsVerdict = false;
             if (status == EstimationStatus.Converged) result.LavObjective = LavObjectiveAt(mm, vm, va);
         }
+        // GR-521 (November 2026): the M-estimators (Huber, Schweppe-GM) give no chi-square verdict either. At an
+        // M-estimate J(x^) is not the WLS minimum, so it is not chi-square(m - n) distributed under H0, and a robust
+        // fit that down-weighted an outlier could read FAIL. The chi-square figures are still filled for comparability;
+        // only the flag moves, so every estimated number is unchanged. WLS, QR, Constrained and Feasible keep the verdict.
+        else if (opt.Method is EstimationMethod.Huber or EstimationMethod.SchweppeGm)
+            result.ChiSquareIsVerdict = false;
         // Ring C - acceptance gate: a converged feasible-method estimate is audited against the hard
         // physical laws; a violation (a physically-impossible state that slipped past the interior
         // guard, e.g. from linearisation slop) is rejected as Infeasible rather than shipped. The gate
@@ -950,7 +1070,7 @@ public sealed class WlsStateEstimator
     /// <summary>Apply one (trust-capped) Gauss-Newton step; shared by all step backends.
     /// Returns the applied trust scale too (1.0 = uncapped) for the estimation trace.</summary>
     private static (bool Finite, double MaxUpdate, double Scale, double RawUpdate) ApplyStep(
-        MeasurementModel mm, EstimationOptions opt, double[] dx, double[] vm, double[] va,
+        MeasurementModel mm, EstimationOptions opt, double[] dx, double[] vm, double[] va, List<int> floorClamps,
         FeasibilityConstraints? feas)
     {
         int s = dx.Length;
@@ -1006,6 +1126,7 @@ public sealed class WlsStateEstimator
                 {
                     maxUpdate = Math.Max(maxUpdate, feas.VmFloor - vm[i]);
                     vm[i] = feas.VmFloor;
+                    floorClamps.Add(i);   // GR-518: reported on the result
                 }
         for (int i = 0; i < vm.Length && finite; i++)
             finite &= double.IsFinite(vm[i]) & double.IsFinite(va[i]);
@@ -1026,6 +1147,8 @@ public sealed class WlsStateEstimator
         double objective = 0;
         double objectiveAllRows = 0;   // every row, as J was before N078: only its finiteness is read (the NonFinite gate)
         int redundancyRows = 0;   // N078: the rows that count toward J and the degrees of freedom
+        // Gap B2: the distrusted rows are left out too (null when no distrusted source is named: N078's rule exactly).
+        DistrustedSources? distrusted = ActiveDistrust(opt);
         var residuals = new MeasurementResidual[m];
         bool haveRn = normalized.Length == m;
         for (int r = 0; r < m; r++)
@@ -1036,8 +1159,8 @@ public sealed class WlsStateEstimator
             objectiveAllRows += rPu * rPu * wr;
             // N078: the reported J (ObjectiveJ) is the statistic the chi-square test judged, so a prior-solved row's
             // residual is left out of it, as the row is left out of the degrees of freedom below. Its residual is still
-            // reported row by row.
-            if (CountsAsRedundancy(meas))
+            // reported row by row. Gap B2: a distrusted row likewise.
+            if (CountsAsRedundancy(meas, distrusted))
             {
                 objective += rPu * rPu * wr;
                 redundancyRows++;
@@ -1105,7 +1228,7 @@ public sealed class WlsStateEstimator
             Vm = vm,
             VaDeg = vaDeg,
             ObjectiveJ = objective,
-            DegreesOfFreedom = redundancyRows - mm.StateSize,   // N078: prior-solved rows are not redundancy
+            DegreesOfFreedom = redundancyRows - mm.StateSize,   // N078: prior-solved rows are not redundancy; gap B2: nor distrusted rows
             ChiSquareThreshold = chiThreshold,
             ChiSquarePassed = chiPassed,
             // R261: chiThreshold is reset to NaN on every pass and set only when the test is evaluated, so NaN

@@ -10,7 +10,11 @@ public sealed record IslandReport(
     IReadOnlyList<int> ElectedSlackBuses,   // buses promoted to reference (island had generation but no slack)
     IReadOnlyList<int> BlackedOutBuses,     // buses dropped from the solve (dead islands)
     double LostLoadMw,                 // demand on blacked-out buses (lost supply)
-    double LostGenMw)                  // generation on blacked-out buses (lost infeed)
+    // GR-491: generation on blacked-out buses. ALWAYS 0 by construction: an island is blacked out only when none of its
+    // units is scheduled (every Pg is 0) and none can produce real power, so there is no infeed to lose. Kept as a
+    // documented zero so the report's shape (and LiveSim's netBlackout = LostLoadMw - LostGenMw) is stable; pinned by
+    // Gr491IslandLostGenTests.
+    double LostGenMw)
 {
     public bool AnyChange => ElectedSlackBuses.Count > 0 || BlackedOutBuses.Count > 0;
 

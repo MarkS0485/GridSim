@@ -31,7 +31,11 @@ LicenceGate licence = LicenceGate.Resolve(builder.Configuration["Licence:Key"]);
 builder.Services.AddSingleton(licence);
 
 // One catalog for the process (filesystem discovery runs once); the session factory is stateless.
-var catalog = new CaseCatalog(AppContext.BaseDirectory, licence);
+// GR-715: GridSim:CaseRoots (GridSim__CaseRoots), when set, limits the search for results/ and gda-out/ to the folders it
+// names (read and checked once, here; a folder that does not exist stops start-up naming the setting). Unset: the earlier
+// search of the install folder and its ancestors. Either way, a caller below CaseCatalog.PrivateListingRole is not shown
+// those folders' models in a listing (/api/cases, the home page).
+var catalog = new CaseCatalog(AppContext.BaseDirectory, licence, CaseCatalog.ParseCaseRoots(builder.Configuration[CaseCatalog.CaseRootsSetting]));
 // A gda-out/ or results/ folder that could not be read is skipped, not fatal - but say which and why.
 foreach (string skipped in catalog.SkippedFolders)
     Console.Error.WriteLine($"GridSim.Web: model scan skipped an unreadable folder: {skipped}");
@@ -51,6 +55,48 @@ builder.Services.ConfigureHttpJsonOptions(o =>
 // Nothing configured = a neutral page: no third-party script, no host-specific metadata, security.txt answers 404.
 var site = GridSim.Web.Site.SiteSettings.FromConfiguration(builder.Configuration, DateTimeOffset.UtcNow);
 builder.Services.AddSingleton(site);
+
+// Bug #170 (SECURITY): the Host names this instance answers (AllowedHosts; default the loopback names only), read and
+// checked once here so a malformed value stops start-up naming the setting. The refusal itself is the first middleware
+// after the exception handler (below), with a plain-text answer that names the setting. ASP.NET Core's built-in host
+// filter reads the same key; it is set to answer everything so that the one GridSim filter (with the clear message)
+// decides, instead of a bare 400 from the framework for some names and GridSim's answer for others.
+var hostAllow = GridSim.Web.Site.HostAllowList.FromConfiguration(builder.Configuration);
+builder.Services.AddSingleton(hostAllow);
+builder.Services.PostConfigure<Microsoft.AspNetCore.HostFiltering.HostFilteringOptions>(o => o.AllowedHosts = new List<string> { "*" });
+Console.Error.WriteLine($"GridSim.Web: answers the host names {hostAllow.Description}");
+if (hostAllow.AllowsAny)
+    Console.Error.WriteLine("GridSim.Web: WARNING AllowedHosts=* answers ANY host name, so a DNS-rebinding page can reach this instance; list the real names instead.");
+
+// NCSC CAF B2 (November 2026): role-based access control on the solve surface (POST /api/solve, GET /api/topology, every
+// /ws/sim control frame), through Core's RoleGuard (see Site/AccessControl.cs for each surface's band and the default).
+// GridSim:AnonymousRole is read and checked HERE, once, before anything else is opened, so a malformed value stops
+// start-up naming the setting. Unset, an anonymous caller holds Operator on an instance that answers only loopback names
+// (the documented single-user `dotnet run` use keeps working) and Viewer on any instance reachable under another name
+// (fail-safe: an unknown caller may read but not solve). The denial recorder is attached below, once the audit log (if
+// any) is open; until then this instance carries none.
+GridSim.Web.Site.AccessControl accessRoles = GridSim.Web.Site.AccessControl.FromConfiguration(
+    builder.Configuration, hostAllow, GridSim.Web.Site.AccessDenialAudit.None);
+
+// GR-218 / GR-221: the resource limits (concurrent solves, solve timeout, /ws/sim step and start rate), read and checked
+// HERE, once, so a malformed GridSim:MaxConcurrentSolves, GridSim:SolveTimeoutSeconds, GridSim:WsControlRatePerSecond or
+// GridSim:WsControlBurst stops start-up naming the setting. See Site/WebLimits.cs.
+GridSim.Web.Site.WebLimits webLimits = GridSim.Web.Site.WebLimits.FromConfiguration(builder.Configuration);
+builder.Services.AddSingleton(webLimits);
+Console.Error.WriteLine($"GridSim.Web: resource limits: {webLimits.Description}");
+
+// Bug #179 (SECURITY): browser security headers (frame-ancestors / X-Frame-Options, nosniff, Referrer-Policy) and HSTS,
+// checked once here (GridSim:FrameAncestors, GridSim:Hsts; see SecurityHeaders).
+var securityHeaders = GridSim.Web.Site.SecurityHeaders.FromConfiguration(builder.Configuration);
+builder.Services.AddSingleton(securityHeaders);
+builder.Services.AddHsts(o =>
+{
+    // One year, this host only; no includeSubDomains and no preload, which would bind names GridSim does not own.
+    o.MaxAge = TimeSpan.FromDays(365);
+    o.IncludeSubDomains = false;
+    o.Preload = false;
+});
+Console.Error.WriteLine($"GridSim.Web: security headers {securityHeaders.Description}");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -78,14 +124,21 @@ Directory.CreateDirectory(authKeysDir);
 // D-DOC-064: the key ring is encrypted at rest with the platform's protector (DPAPI on Windows, a certificate where
 // Auth:KeyCertificatePath is set), chosen by Auth:KeyProtection and checked here, before anything else is built, so a
 // setting that cannot be honoured stops start-up naming itself. See Site/KeyRingProtection.cs for every mode.
+// GR-719: the two key-ring certificate passwords are looked up once, here, in every mode (not only where the chosen mode
+// reads them), so a secret given under BOTH environment spellings stops start-up with the refusal naming both variables.
+GridSim.Core.Security.ISecretStore startupSecrets = WebSecretStore(builder.Configuration);
+_ = GridSim.Core.Security.SecretStoreExtensions.Get(startupSecrets, GridSim.Web.Site.KeyRingProtection.CertificatePasswordSetting);
+_ = GridSim.Core.Security.SecretStoreExtensions.Get(startupSecrets, GridSim.Web.Site.KeyRingProtection.PreviousCertificatePasswordSetting);
 GridSim.Web.Site.KeyRingProtection.Plan keyPlan =
-    GridSim.Web.Site.KeyRingProtection.Resolve(builder.Configuration, OperatingSystem.IsWindows(), WebSecretStore(builder.Configuration));
+    GridSim.Web.Site.KeyRingProtection.Resolve(builder.Configuration, OperatingSystem.IsWindows(), startupSecrets);
 Console.Error.WriteLine(keyPlan.LogLine);
 IDataProtectionBuilder dataProtection = builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(authKeysDir))
     .SetApplicationName(authAppName);
 GridSim.Web.Site.KeyRingProtection.Apply(dataProtection, keyPlan);
 
+// GR-732: fail loud at start-up on a malformed Auth:SlidingHours / Auth:AbsoluteDays.
+GridSim.Web.Site.SessionCookieSettings sessionCookie = GridSim.Web.Site.SessionCookieSettings.Read(builder.Configuration);
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddCookie(IdentityConstants.ApplicationScheme, options =>
     {
@@ -107,6 +160,12 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
             ? CookieSecurePolicy.Always
             : CookieSecurePolicy.SameAsRequest;
         options.SlidingExpiration = true;
+        // GR-732: the idle window (Auth:SlidingHours, default 8) and the absolute cap from sign-in (Auth:AbsoluteDays,
+        // default 14), read and checked once above. The cap is enforced from a sign-in time stored inside the cookie,
+        // because a sliding renewal moves IssuedUtc.
+        options.ExpireTimeSpan = sessionCookie.Sliding;
+        options.Events.OnValidatePrincipal = ctx =>
+            GridSim.Web.Site.SessionCookieSettings.ValidateAsync(ctx, sessionCookie.Absolute, TimeProvider.System);
         // Demo app: never bounce anyone to a login form - an unauthenticated visitor is simply anonymous.
         // D-DOC-170: this app serves no login or access-denied page, so a challenge must not redirect to the cookie
         // handler's defaults (/Account/Login, /Account/AccessDenied), which answered "Nothing at this address". A
@@ -140,6 +199,8 @@ WebSite.Data.Sso.EstateSso.ValidatePublicOrigin(builder.Configuration["Sso:Publi
 WebSite.Data.Sso.EstateSso.AddEstateSso(builder.Services, builder.Configuration);
 
 builder.Services.AddAuthorization();
+// GR-235: the dashboard reads the caller's remote address through this, to count its sessions against the per-client quota.
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddCascadingAuthenticationState();
 
 // The resident real-time estimator runs only when explicitly enabled (Realtime:Enabled=true) with a case
@@ -179,6 +240,43 @@ if (!string.IsNullOrWhiteSpace(auditLogPath) && !realtimeEnabled)
         + (replayOnly ? "(GridSim:ReplayOnly=true)" : "(Realtime:Enabled is not true)")
         + ", so nothing would be recorded in it. Enable the resident estimator, or remove Audit:LogPath.");
 
+// CAF-9 / gap B2 (D1 distrusted-source containment): Realtime:DistrustedSources (environment variable
+// Realtime__DistrustedSources) names, comma-separated, the measurement sources the resident estimator distrusts: their
+// rows in every window are demoted to pseudo-measurements and left out of the chi-square redundancy, and the run records
+// one DistrustedSource security event per source in the audit log (RealtimeEstimatorHostedService). It is read and
+// validated ONCE, here, and every mistake stops start-up naming the setting (fail loud, never ignored):
+//   * a malformed value (an empty item, a space in a tag, a reserved tag, a repeat): DistrustedSourceSetting.Parse;
+//   * the list given as a configuration array (Realtime:DistrustedSources:0 ...), which a plain read would not see and
+//     so would silently distrust nothing;
+//   * the setting on a host that runs no resident estimator, where it would contain nothing.
+// Absent (the default): null, and the resident estimator runs exactly as before.
+GridSim.Core.Estimation.DistrustedSources? realtimeDistrust = null;
+{
+    const string distrustSetting = GridSim.Core.Estimation.DistrustedSourceSetting.WebSetting;
+    string? distrustRaw = builder.Configuration[distrustSetting];
+    if (builder.Configuration.GetSection(distrustSetting).GetChildren().Any())
+        throw new InvalidOperationException(
+            $"GridSim.Web: configuration setting {distrustSetting} is given as a list; give it as one comma-separated value "
+            + "(for example \"scada,pmu\", or the environment variable Realtime__DistrustedSources=scada,pmu).");
+    if (distrustRaw is not null)
+    {
+        if (!realtimeEnabled)
+            throw new InvalidOperationException(
+                $"GridSim.Web: configuration setting {distrustSetting} is set, but this host runs no resident estimator "
+                + (replayOnly ? "(GridSim:ReplayOnly=true)" : "(Realtime:Enabled is not true)")
+                + ", so it would contain nothing. Enable the resident estimator, or remove the setting.");
+        try { realtimeDistrust = GridSim.Core.Estimation.DistrustedSourceSetting.Parse(distrustRaw, distrustSetting); }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidOperationException($"GridSim.Web: configuration setting {ex.Message}", ex);
+        }
+    }
+}
+
+// D-DOC-060 / B2: the resident estimator's audit recorder and the options it was opened with, kept outside the block so
+// the access control below can record denials in the same log (null when there is no Audit:LogPath).
+GridSim.Core.Diagnostics.AuditRunRecorder? realtimeAudit = null;
+GridSim.Core.Diagnostics.AuditRecorderOptions? realtimeAuditOptions = null;
 if (realtimeEnabled)
 {
     string caseName = builder.Configuration["Realtime:Case"] ?? "case9";
@@ -198,18 +296,44 @@ if (realtimeEnabled)
             "; the resident estimator reads its measurement windows from it. Point it at the windows folder, or set Realtime:Enabled=false.");
     // D-DOC-060: open (and verify, against its anchor) the audit log NOW, before the host serves anything, so a tampered,
     // truncated, locked or misplaced log stops start-up with a message naming the setting.
-    GridSim.Core.Diagnostics.AuditRunRecorder? realtimeAudit = string.IsNullOrWhiteSpace(auditLogPath)
-        ? null
-        : StartRealtimeAudit(auditLogPath, auditAnchorPath, caseName, windowsDir, builder.Configuration);
+    if (!string.IsNullOrWhiteSpace(auditLogPath))
+        realtimeAudit = StartRealtimeAudit(auditLogPath, auditAnchorPath, caseName, windowsDir, builder.Configuration, out realtimeAuditOptions);
     builder.Services.AddSingleton<IRealtimeWindowFeed>(_ => new ReplayDirectoryWindowFeed(realtimeModel, windowsDir));
     // Registered as a singleton too, so GET /api/realtime can read its output (R100).
+    // CAF-9 / gap B2: options only when Realtime:DistrustedSources is set; otherwise null, exactly as before (the service
+    // then uses the default RealtimeEstimatorOptions, whose estimation options name no distrusted source).
+    GridSim.Core.Simulation.RealtimeEstimatorOptions? realtimeOptions = realtimeDistrust is null
+        ? null
+        : new GridSim.Core.Simulation.RealtimeEstimatorOptions
+        {
+            Estimation = new GridSim.Core.Estimation.EstimationOptions { DistrustedSources = realtimeDistrust },
+        };
+    if (realtimeDistrust is not null)
+        Console.Error.WriteLine("GridSim.Web: resident estimator distrusts source(s) "
+            + string.Join(", ", GridSim.Core.Estimation.DistrustedSourceSetting.OrderedSources(realtimeDistrust))
+            + $" ({GridSim.Core.Estimation.DistrustedSourceSetting.WebSetting}): their rows are demoted to pseudo-measurements and left out of the chi-square redundancy.");
     builder.Services.AddSingleton(sp => new RealtimeEstimatorHostedService(
-        sp.GetRequiredService<IRealtimeWindowFeed>(), options: null, audit: realtimeAudit));
+        sp.GetRequiredService<IRealtimeWindowFeed>(), options: realtimeOptions, audit: realtimeAudit));
     builder.Services.AddHostedService(sp => sp.GetRequiredService<RealtimeEstimatorHostedService>());
 }
 
+// B2 (November 2026): the access control the REST and WebSocket surfaces resolve, now with its denial recorder: the
+// resident estimator's audit log when Audit:LogPath is set (one AccessDenied entry per denial, through the same recorder
+// and sinks as the estimator's own security events), otherwise none (a denial is still refused, just not audited).
+// Registered on every host, replay-only included, so a surface that asks for it can never find it missing.
+GridSim.Web.Site.AccessControl accessControl = new(accessRoles.AnonymousRole, accessRoles.AnonymousRoleIsDefault,
+    realtimeAudit is null
+        ? GridSim.Web.Site.AccessDenialAudit.None
+        : new GridSim.Web.Site.AccessDenialAudit(realtimeAudit, realtimeAuditOptions));
+builder.Services.AddSingleton(accessControl);
+Console.Error.WriteLine($"GridSim.Web: access control: {accessControl.Description}");
+if (accessControl.AnonymousRole > GridSim.Core.Security.OperationRole.Viewer && !hostAllow.LoopbackOnly && !replayOnly)
+    Console.Error.WriteLine($"GridSim.Web: WARNING {GridSim.Web.Site.AccessControl.AnonymousRoleSetting}={accessControl.AnonymousRole} lets ANY anonymous caller "
+        + "of this instance, which answers more than the loopback names, solve or drive sessions; give callers GridSim.<role> role claims through sign-in instead.");
+
 // D-DOC-225: /api/topology caches a replay run's topology instead of reloading the whole run on every call.
-builder.Services.AddSingleton<ReplayTopologyCache>();
+// GR-870: the replay topology cache reuses a run's file fingerprint for a few seconds (see ReplayTopologyCache.StatLifetime).
+builder.Services.AddSingleton(new ReplayTopologyCache(ReplayTopologyCache.DefaultStatLifetime, TimeProvider.System));
 
 WebApplication app = builder.Build();
 
@@ -225,6 +349,37 @@ _ = app.Services.GetRequiredService<SessionManager>();
 if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
 
+// Bug #179: every answer (pages, API, static files, errors and the refusals below) carries the browser security
+// headers. They are added when the response starts, so a later middleware that ends the request still gets them.
+app.Use(async (ctx, next) =>
+{
+    ctx.Response.OnStarting(() =>
+    {
+        securityHeaders.Apply(ctx.Response.Headers);
+        return Task.CompletedTask;
+    });
+    await next();
+});
+if (securityHeaders.Hsts && !app.Environment.IsDevelopment())
+    app.UseHsts();
+
+// Bug #170 (SECURITY): refuse a Host this instance was not configured to answer, before security.txt, the replay-only
+// gate, any page, the API or the simulation socket. This is what defeats DNS rebinding: the rebound name is not on the
+// list. The answer names the setting, so a deployment reached under a public name sees at once what to set.
+app.Use(async (ctx, next) =>
+{
+    string host = ctx.Request.Host.Value ?? "";
+    if (!hostAllow.IsAllowed(host))
+    {
+        ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+        ctx.Response.ContentType = "text/plain; charset=utf-8";
+        await Microsoft.AspNetCore.Http.HttpResponseWritingExtensions.WriteAsync(ctx.Response,
+            GridSim.Web.Site.HostAllowList.RefusalText(host));
+        return;
+    }
+    await next();
+});
+
 // --- security.txt (RFC 9116); served first so auth/setup gates cannot intercept it ---
 // N086: the file is a deployment setting (Site:SecurityTxt:Contact / Expires / PreferredLanguages / Comment). With no
 // contact configured the path answers 404 here, explicitly, so no later middleware or page route can claim it.
@@ -232,13 +387,16 @@ app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Path == "/.well-known/security.txt")
     {
-        if (site.SecurityTxt is null)
+        // GR-738: the Expires moment is re-checked on EVERY request (SecurityTxtAt), not only at start-up, so a host that
+        // runs past the date answers 404 instead of publishing a stale contact. Start-up still refuses a past expiry.
+        string? securityTxtBody = site.SecurityTxtAt(DateTimeOffset.UtcNow);
+        if (securityTxtBody is null)
         {
             ctx.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
         }
         ctx.Response.ContentType = "text/plain; charset=utf-8";
-        await Microsoft.AspNetCore.Http.HttpResponseWritingExtensions.WriteAsync(ctx.Response, site.SecurityTxt);
+        await Microsoft.AspNetCore.Http.HttpResponseWritingExtensions.WriteAsync(ctx.Response, securityTxtBody);
         return;
     }
     await next();
@@ -345,6 +503,9 @@ app.MapGet("/compliance", () =>
         sbomSha256 = a.SbomSha256,
         manifestHash = a.ManifestHash,
         releaseBuild = a.IsReleaseBuild,
+        // Bug #176: the source-tree state the build stamped (clean, dirty or unknown), and why it is not a release build.
+        sourceTree = a.SourceTree,
+        notReleaseReason = a.NotReleaseReason,
         inScopeControls = a.InScopeControlCount,
         achievedControls = a.AchievedControlCount,
         compliant = a.IsCompliant,
@@ -359,17 +520,22 @@ app.MapGet("/compliance", () =>
 // folded against the default service-level objective; a breach answers 503 so an orchestrator can act on it.
 app.MapGet("/health", (IServiceProvider sp) =>
 {
+    // GR-709 (November 2026): the bridge sessions alive now, and how many of them have faulted, are named in every
+    // answer. Information only: the status word and the status code below are exactly as before, so one visitor's
+    // broken bridge session never makes an orchestrator restart a host that serves everyone else.
+    (int bridgeActive, int bridgeFaulted) = (sp.GetService(typeof(SessionManager)) as SessionManager)?.BridgeSessionCounts() ?? (0, 0);
+    var bridgeSessions = new { active = bridgeActive, faulted = bridgeFaulted };
     var svc = sp.GetService(typeof(GridSim.Web.Realtime.RealtimeEstimatorHostedService))
         as GridSim.Web.Realtime.RealtimeEstimatorHostedService;
     // No resident estimator configured: a plain liveness answer.
     if (svc is null)
-        return Results.Ok(new { status = "ok", version = GridSim.Core.BuildInfo.Version });
+        return Results.Ok(new { status = "ok", version = GridSim.Core.BuildInfo.Version, estimator = "not-configured", bridgeSessions });
     // GR-709 (October 2026): the estimator is configured but has not produced its first summary yet. This used to
     // answer "ok", which read as "checked and fine" although nothing had been checked. It now says "starting" (still
     // 200, so a liveness probe does not restart a host that is merely warming up) until the first summary arrives.
     GridSim.Core.Simulation.RealtimeRunSummary? summary = svc.LastSummary;
     if (summary is null)
-        return Results.Ok(new { status = "starting", version = GridSim.Core.BuildInfo.Version });
+        return Results.Ok(new { status = "starting", version = GridSim.Core.BuildInfo.Version, estimator = "starting", bridgeSessions });
     GridSim.Core.Simulation.Health.HealthReport report = new GridSim.Core.Simulation.Health.HealthProbe().Check(summary);
     return Results.Json(new
     {
@@ -378,11 +544,15 @@ app.MapGet("/health", (IServiceProvider sp) =>
         convergedFraction = report.ConvergedFraction,
         rejectedFreshFraction = report.RejectedFreshFraction,
         breaches = report.BreachedObjectives,
+        estimator = report.Healthy ? "healthy" : "degraded",
+        bridgeSessions,
     }, statusCode: report.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
 });
 
+// Bug #179: Blazor's interactive server render mode writes its own Content-Security-Policy frame-ancestors (default
+// 'self') on every page; it is given the configured value so the pages carry the same framing rule as every other answer.
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode(o => o.ContentSecurityFrameAncestorsPolicy = securityHeaders.FrameAncestors);
 
 WebSite.Data.Sso.EstateSso.MapEstateSso(app);
 
@@ -412,8 +582,11 @@ static GridSim.Core.Security.ISecretStore WebSecretStore(IConfiguration config)
     }
 }
 
+// B2 (November 2026): the options the log was opened with (sinks, anchor keys) are handed back through
+// recorderOptions, so the access control can reopen the same log with the same sinks and keys for a denial that
+// arrives after the resident estimator's run has finished and closed it (Site/AccessControl.cs, AccessDenialAudit).
 static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPath, string? anchorPath, string caseName, string windowsDir,
-    IConfiguration config)
+    IConfiguration config, out GridSim.Core.Diagnostics.AuditRecorderOptions recorderOptions)
 {
     try
     {
@@ -440,6 +613,7 @@ static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPa
             AnchorVerificationKey = config["Audit:AnchorVerificationKeyPath"] is { Length: > 0 } verifyPath
                 ? GridSim.Core.Diagnostics.AuditRecorderOptions.LoadKey(verifyPath, requirePrivate: false) : null,
         };
+        recorderOptions = options;
         GridSim.Core.Diagnostics.AuditRunRecorder audit = GridSim.Core.Diagnostics.AuditRunRecorder.Start(
             logPath, GridSim.Core.Diagnostics.AuditEvent.DefaultActor(), "web-realtime",
             GridSim.Core.Diagnostics.ProvenanceTag.DerivedFromRecorded, string.IsNullOrWhiteSpace(anchorPath) ? null : anchorPath, options);
@@ -447,8 +621,11 @@ static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPa
             Console.Error.WriteLine($"GridSim.Web: warning: audit log '{audit.FilePath}' has entries but no anchor file '{audit.AnchorPath}'; "
                 + "tail truncation before this run cannot be detected. The anchor is written from this run on.");
         audit.AddInput(GridSim.Core.Diagnostics.AuditRunRecorder.InputForArgument("case", caseName));
-        if (Directory.Exists(windowsDir))
-            audit.AddInput(GridSim.Core.Diagnostics.AuditRunRecorder.InputForArgument("windows-dir", windowsDir));
+        // Bug #175: the windows are recorded as they are consumed (input "windows-consumed", added by the hosted service
+        // when the run ends: every estimated file by name and content hash). A hash of the whole folder taken here, once,
+        // covered files the feed never reads and missed windows added after start-up. The folder itself is named by
+        // its setting, Realtime:WindowsDir, in the configuration.
+        _ = windowsDir;
         return audit;
     }
     catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)

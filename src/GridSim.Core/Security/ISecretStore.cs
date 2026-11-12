@@ -60,7 +60,9 @@ public sealed class NullSecretStore : ISecretStore
 /// <c>Auth:KeyCertificatePassword</c> is tried as given and in the ASP.NET double-underscore form
 /// (<c>Auth__KeyCertificatePassword</c>), so it matches how the host already surfaces configuration secrets. Only the
 /// ':' separator is mapped, as ASP.NET does: <c>Bridge:API_KEY</c> is read from <c>Bridge__API_KEY</c>. The older
-/// form with every '_' and '.' doubled (<c>Bridge__API__KEY</c>) is still tried after it.
+/// form with every '_' and '.' doubled (<c>Bridge__API__KEY</c>) is still read when it is the only one set; when BOTH
+/// are set the lookup throws <see cref="InvalidOperationException"/> naming both variables (GR-719), which stops a web
+/// host that reads the secret at start-up.
 /// An empty or whitespace value is treated as absent (an unset secret, not an empty secret).
 /// </summary>
 public sealed class EnvironmentSecretStore : ISecretStore
@@ -78,13 +80,23 @@ public sealed class EnvironmentSecretStore : ISecretStore
         // GR-719: the ASP.NET environment form replaces ONLY the section separator ':' with a double underscore and
         // leaves every other character alone, so Bridge:API_KEY is the variable Bridge__API_KEY. That form is tried
         // first. The older mapping (':' and '.' to '_', then every '_' doubled, giving Bridge__API__KEY) is still
-        // tried second so a deployment that already set the variable that way keeps working; for a name with no '_'
-        // or '.' the two forms are the same and the lookup happens once.
+        // read when it is the only one set, so a deployment that already set the variable that way keeps working; for a
+        // name with no '_' or '.' the two forms are the same and the lookup happens once. Both set is refused (below).
         string aspNetForm = name.Replace(":", "__", StringComparison.Ordinal);
         string legacyForm = name.Replace(':', '_').Replace('.', '_').Replace("_", "__", StringComparison.Ordinal);
-        if (TryVariable(aspNetForm, name, out value)) return true;
-        if (!string.Equals(legacyForm, aspNetForm, StringComparison.Ordinal) && TryVariable(legacyForm, name, out value))
-            return true;
+        bool hasAspNet = TryVariable(aspNetForm, name, out string? aspNetValue);
+        string? legacyValue = null;
+        bool hasLegacy = !string.Equals(legacyForm, aspNetForm, StringComparison.Ordinal)
+            && TryVariable(legacyForm, name, out legacyValue);
+        // GR-719 (owner decision, November 2026): two variables holding the same secret is ambiguous configuration, and a
+        // silent precedence can hide a stale secret behind a fresh one. When BOTH spellings are set the lookup refuses,
+        // naming both variables (never their values). The older spelling is still read when it is the only one set.
+        if (hasAspNet && hasLegacy)
+            throw new InvalidOperationException(
+                $"Secret '{name}' is set by two environment variables, {aspNetForm} and {legacyForm}. Set only one "
+                + $"(the ASP.NET form {aspNetForm} is the documented one) and unset the other.");
+        if (hasAspNet) { value = aspNetValue; return true; }
+        if (hasLegacy) { value = legacyValue; return true; }
 
         value = null;
         return false;
