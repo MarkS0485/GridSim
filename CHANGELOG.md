@@ -8984,3 +8984,8 @@ Release candidate 1.0.
 - Desktop releases use locked, runtime-specific restore profiles.
 - The web container records source-tree provenance in its build metadata.
 - Tests: verify typed MATPOWER ambiguity refusals still exit with code 2, and compare corridor angles and machine order using unrounded angles.
+
+## [2.1.032]
+
+### Added
+- Published the PEGASE AC power-flow comparison with a reproducible benchmark harness and downloadable evidence.

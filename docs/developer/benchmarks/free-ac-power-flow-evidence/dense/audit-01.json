@@ -1,0 +1,30 @@
+{
+  "schema": "gridsim-physics-audit/1",
+  "case": "case1354pegase.m",
+  "buses": 1354,
+  "tolerance_mva": 1e-06,
+  "basis": "case-dispatch",
+  "independent": {
+    "sum_injection_mw": 1663.4674949764099,
+    "energy_mw": 6.573372957063839e-10,
+    "reported_loss_mw": 1663.4674949770672,
+    "min_branch_loss_mw": -6.252776074688882e-13,
+    "kcl_mw": 2.2672553635134205e-10,
+    "s_vi_mvar": 4.330314276476391e-10,
+    "bus_types": "declared (no solve trace)",
+    "pinned_pv_buses_checked": 0,
+    "zip_buses": 0
+  },
+  "independent_checks": [
+    "energy",
+    "kcl"
+  ],
+  "independent_gate_pass": true,
+  "notes": [],
+  "exported_gate_pass": true,
+  "gate_agrees": true,
+  "exported_holds_within_tol": true,
+  "exported_law_mismatches": [],
+  "ok": true,
+  "checked": true
+}

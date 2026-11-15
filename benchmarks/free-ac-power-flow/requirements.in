@@ -1,0 +1,5 @@
+pandapower==3.5.6
+VeraGridEngine==6.8.4
+pypowsybl==1.16.1
+pypsa==1.2.4
+andes==2.0.0
