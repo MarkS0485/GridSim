@@ -15,10 +15,8 @@ from case_reference import (calculate, controlled_voltage_error, gridsim_import_
                             load_case, write_start_case)
 from external import differences, run_external
 
-CASE_HASHES = {
-    "case118.m": "bc2e6f22b4b9e776572885ee4b50e4f4ab2ee0c5577e9126e86d906f14c4b5f7",
-    "case1354pegase.m": "1b08b25a2f6c1d540d090009dfaff41ff2b05784a2d8d302a7ad695821557b89",
-}
+CASE_CATALOGUE = Path(__file__).with_name("matpower-8.1-cases.json")
+CASES = json.loads(CASE_CATALOGUE.read_text(encoding="ascii"))
 
 SOLVER_FIELDS = ("vm", "vaDeg", "pInjMw", "qInjMvar", "totalLossMw",
                  "totalLossMvar", "lineFlows")
@@ -89,9 +87,12 @@ def run_path(mode, case, output, driver, source, commit):
             if attempt["result"]["converged"]:
                 result = attempt["result"]
                 voltages = dict(zip(result["busIds"], zip(result["vm"], result["vaDeg"])))
-                _, mismatch = calculate(reference, voltages)
-                row["attempts"][-1]["referenceMismatchPu"] = mismatch
-                row["attempts"][-1]["referenceVoltageTargetErrorPu"] = controlled_voltage_error(reference, voltages)
+                record = row["attempts"][-1]
+                try:
+                    record["referenceMismatchPu"] = calculate(reference, voltages)[1]
+                    record["referenceVoltageTargetErrorPu"] = controlled_voltage_error(reference, voltages)
+                except (ValueError, ArithmeticError) as error:
+                    record["comparisonError"] = str(error)
                 attempts.append(attempt)
         else:
             row["attempts"].append(dict(attempt=index, status="missing"))
@@ -110,7 +111,10 @@ def run_path(mode, case, output, driver, source, commit):
         export = folder / f"export-{attempts[0]['attempt']:02}.json"
         if export.exists():
             model = json.loads(export.read_text(encoding="utf-8"))["model"]
-            row["importDifferences"] = gridsim_import_differences(reference, model)
+            try:
+                row["importDifferences"] = gridsim_import_differences(reference, model)
+            except (KeyError, ValueError) as error:
+                row["importComparisonError"] = str(error)
     return row, attempts, audit_indices
 
 
@@ -197,8 +201,11 @@ def main():
     parser.add_argument("--gridsim", type=Path, required=True)
     parser.add_argument("--driver", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--smoke", action="store_true")
+    selection = parser.add_mutually_exclusive_group()
+    selection.add_argument("--smoke", action="store_true")
+    selection.add_argument("--case", choices=tuple(CASES))
     parser.add_argument("--matpower", type=Path, default=Path(__file__).parent / "matpower-8.1")
+    parser.add_argument("--materialised-dir", type=Path)
     parser.add_argument("--external-python", type=Path)
     parser.add_argument("--octave", type=Path)
     parser.add_argument("--julia", type=Path)
@@ -211,14 +218,29 @@ def main():
     source = args.gridsim.resolve(strict=True)
     driver = args.driver.resolve(strict=True)
     output = args.output.resolve()
-    case_name = "case118.m" if args.smoke else "case1354pegase.m"
+    case_name = "case118.m" if args.smoke else args.case or "case1354pegase.m"
     case = args.matpower.resolve() / "data" / case_name
-    if digest(case) != CASE_HASHES[case_name]:
+    if digest(case) != CASES[case_name]["sha256"]:
         parser.error(f"Case bytes do not match MATPOWER 8.1: {case}")
     commit = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"],
                                      text=True).strip()
     output.mkdir(parents=True, exist_ok=False)
-    source_case = case
+    upstream_case = case
+    materialised = args.materialised_dir
+    if args.case and materialised is None:
+        if args.octave is None:
+            parser.error("--case requires --octave to materialise the MATPOWER case")
+        materialised = output / "materialised"
+        materialised.mkdir()
+        subprocess.run([str(args.octave.resolve(strict=True)), "--no-init-file", "--quiet",
+                        str(Path(__file__).with_name("materialise_cases.m")),
+                        str(args.matpower.resolve()), str(materialised), case_name],
+                       timeout=900, check=True)
+    source_case = materialised / case_name if materialised else upstream_case
+    if not source_case.is_file():
+        parser.error(f"MATPOWER could not materialise {case_name}; see materialisation log")
+    if len(load_case(source_case)["bus"]) != CASES[case_name]["buses"]:
+        parser.error(f"Unexpected bus count: {source_case}")
     (output / "input").mkdir()
     case = output / "input" / source_case.name
     write_start_case(source_case, case)
@@ -228,7 +250,7 @@ def main():
                "driver/BenchmarkDriver.csproj", "run-benchmark.ps1", "requirements.in",
                "requirements-windows-py312.lock",
                "julia-env/Project.toml", "julia-env/Manifest.toml", "verify_bundle.py",
-               "prepare_docs.py")
+               "prepare_docs.py", "run_suite.py", "materialise_cases.m", CASE_CATALOGUE.name)
     source_hashes = {file: digest(workspace / file) for file in sources}
     power_mode = None
     if os.name == "nt":
@@ -242,7 +264,8 @@ def main():
                     threadSettings={name: os.environ.get(name) for name in (
                         "OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS",
                         "NUMBA_NUM_THREADS", "JULIA_NUM_THREADS")},
-                    case=case.name, caseSha256=digest(source_case),
+                    case=case.name, buses=CASES[case_name]["buses"], caseSha256=digest(upstream_case),
+                    materialisedCaseSha256=digest(source_case),
                     startCaseSha256=digest(case),
                     gridSimCommit=commit, driverSha256=digest(driver),
                     gridSimCoreSha256=digest(driver.with_name("GridSim.Core.dll")),
@@ -270,7 +293,11 @@ def main():
         if attempts:
             result = attempts[0]["result"]
             voltage = dict(zip(result["busIds"], zip(result["vm"], result["vaDeg"])))
-            states[mode] = (voltage, calculate(reference_case, voltage)[0])
+            try:
+                states[mode] = (voltage, calculate(reference_case, voltage)[0])
+            except (ValueError, ArithmeticError):
+                # run_path already recorded this comparison error in the evidence.
+                pass
     workers = {}
     if args.octave:
         workers["matpower"] = [str(args.octave.resolve()), "--no-init-file", "--quiet",
@@ -295,7 +322,9 @@ def main():
             states[name] = state
     if args.only and {row["mode"] for row in manifest["paths"]} != set(args.only):
         parser.error("A requested adapter is missing its runtime argument")
-    if "matpower" in states:
+    if "matpower" in states and sum(bus[1] == 3 for bus in reference_case["bus"]) != 1:
+        manifest["matpowerComparisonError"] = "Angle comparison requires one reference bus."
+    elif "matpower" in states:
         manifest["differencesFromMatpower"] = {
             name: differences(reference_case, states["matpower"], state)
             for name, state in states.items() if name != "matpower"
