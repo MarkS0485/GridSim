@@ -155,21 +155,7 @@ Winners require 10/10 convergence and a worst residual at or below 1e-8 pu. Ties
 | case1197.m | 0 Dense/Sparse bit differences on first converged results; pandapower worst residual 1.7239801834809109e-07 pu at bus 15 (P); andes worst residual 3.6597104398350397e-08 pu at bus 2 (Q). |
 | case1354pegase.m | 0 Dense/Sparse bit differences on first converged results; andes worst residual 0.0012603176506581803 pu at bus 960 (Q). |
 
-## Interrupted case: ACTIVSg2000
 
-The run stopped during PyPSA. These saved attempts do not enter the win counts.
-
-| Solver | Recorded | Converged | Mean solve ms | Worst residual (pu) |
-| --- | ---: | ---: | ---: | ---: |
-| GridSim Dense | 10/10 | 10 | 8815.2956 | 6.646966426e-09 |
-| GridSim Sparse | 10/10 | 10 | 1018.7873 | 6.646966426e-09 |
-| MATPOWER | 10/10 | 10 | 358.14788 | 7.730136531e-12 |
-| pandapower | 10/10 | 10 | 93.22873 | 6.870095604e-12 |
-| PyPSA | 0/10 | - | - | - |
-| VeraGrid | 0/10 | - | - | - |
-| PowSyBl | 0/10 | - | - | - |
-| ANDES | 0/10 | - | - | - |
-| PowerModels | 0/10 | - | - | - |
 
 ## Data and charts
 
