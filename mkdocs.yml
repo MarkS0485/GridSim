@@ -220,6 +220,7 @@ nav:
       - Deployment examples: developer/deploy/README.md
       - Benchmarks:
           - Free AC power-flow comparison: developer/benchmarks/free-ac-power-flow.md
+          - AC power-flow suite rehearsal: developer/benchmarks/free-ac-power-flow-suite.md
           - AC power-flow comparison criteria: developer/benchmarks/free-ac-power-flow-criteria.md
           - Performance baseline: developer/benchmarks/perf-baseline.md
           - Performance after tuning: developer/benchmarks/perf-after.md

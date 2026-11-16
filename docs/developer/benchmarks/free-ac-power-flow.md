@@ -1,5 +1,7 @@
 # GridSim AC power-flow benchmark
 
+The [expanded suite rehearsal](free-ac-power-flow-suite.md) covers the additional MATPOWER cases run on the busy laptop.
+
 These results record an unattended run of the listed builds and settings.
 Each path made ten fresh attempts after one warm-up. The timed interval
 covers the solve API. Input loading, exports and audits are outside that
