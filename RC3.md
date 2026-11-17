@@ -69,7 +69,7 @@ All on one Windows 11 x64 machine (8 cores, 8 GB RAM), .NET SDK 10.0.401.
 - The new jobs are tested on small analytical and constructed cases (2 to 14 buses, one constructed CGMES bundle); no
   large or published utility case has been run through them yet.
 - Arc flash: the IEEE 1584-2018 coefficients were taken from an open-source implementation and checked against the
-  standard's Annex D worked examples it reproduces, not against a licensed copy of the standard.
+  standard's Annex D worked examples it reproduces, not against a copy of the standard obtained under licence.
 - Cable rating: the IEC 60287 arithmetic is independently re-derived in the tests; no published ampacity example has
   been compared, and the clause references are to be checked against the standard.
 - The large cases skipped by the RAM gate on an 8 GB machine.

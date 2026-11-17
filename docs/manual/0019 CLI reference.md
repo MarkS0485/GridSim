@@ -2219,7 +2219,7 @@ Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file
 `gridsim arc-flash <study.json> [--out <result.json>]`
 
 Incident energy and arc-flash boundary of one piece of equipment to IEEE 1584-2018 (RC3 P8): equations 1 to 25 with the
-coefficients of Tables 1 to 7, three-phase AC only. The coefficients are as transcribed in the MIT-licensed `arcflash`
+coefficients of Tables 1 to 7, three-phase AC only. The coefficients are as transcribed in the open-source (MIT licence) `arcflash`
 library (Li-aung Yip); they were not checked against a copy of the standard here. The `fault` and `iec60909` verbs, their
 duties and their equipment checks are independent and unchanged: this verb only reads `Iec60909.ThreePhase` outputs.
 
