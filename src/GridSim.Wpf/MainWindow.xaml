@@ -567,7 +567,7 @@
             <views:MarketView />
         </TabItem>
 
-        <TabItem Header="NESO RP1" Style="{StaticResource RoomTabItem}">
+        <TabItem Header="FREQUENCY SECURITY" Style="{StaticResource RoomTabItem}">
             <views:NesoRp1View />
         </TabItem>
 

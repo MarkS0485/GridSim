@@ -1,0 +1,6 @@
+[
+  { "id": 1, "name": "Grid 33kV", "baseKv": 33, "type": "slack", "vm": 1.0 },
+  { "id": 2, "name": "Peaker 33kV", "baseKv": 33, "type": "pv", "vm": 1.0 },
+  { "id": 3, "name": "Works 33kV", "baseKv": 33, "type": "pv", "vm": 1.0 },
+  { "id": 4, "name": "Motor 11kV", "baseKv": 11, "type": "pq" }
+]

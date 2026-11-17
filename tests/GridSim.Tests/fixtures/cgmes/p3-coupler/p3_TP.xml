@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RC3 P3 fixture, constructed for GridSim: the bus-branch topology of p3_EQ.xml with the A coupler closed (both A sections
+     are one TopologicalNode). -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:cim="http://iec.ch/TC57/2013/CIM-schema-cim16#" xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#">
+  <md:FullModel rdf:about="urn:uuid:c0a80001-0000-4000-8000-0000000000f1">
+    <md:Model.scenarioTime>2026-01-15T10:30:00Z</md:Model.scenarioTime>
+    <md:Model.created>2026-11-16T00:00:00Z</md:Model.created>
+    <md:Model.description>GridSim RC3 P3 coupler fixture, topology</md:Model.description>
+    <md:Model.version>1</md:Model.version>
+    <md:Model.DependentOn rdf:resource="urn:uuid:c0a80001-0000-4000-8000-0000000000e1"/>
+    <md:Model.profile>http://entsoe.eu/CIM/Topology/4/1</md:Model.profile>
+    <md:Model.modelingAuthoritySet>http://gridsim.invalid/rc3/p3</md:Model.modelingAuthoritySet>
+  </md:FullModel>
+  <cim:TopologicalNode rdf:ID="_TN_A"><cim:IdentifiedObject.name>A</cim:IdentifiedObject.name><cim:TopologicalNode.BaseVoltage rdf:resource="#_BV110"/><cim:TopologicalNode.ConnectivityNodeContainer rdf:resource="#_VL_A"/></cim:TopologicalNode>
+  <cim:TopologicalNode rdf:ID="_TN_B"><cim:IdentifiedObject.name>B</cim:IdentifiedObject.name><cim:TopologicalNode.BaseVoltage rdf:resource="#_BV110"/><cim:TopologicalNode.ConnectivityNodeContainer rdf:resource="#_VL_B"/></cim:TopologicalNode>
+  <cim:TopologicalNode rdf:ID="_TN_C"><cim:IdentifiedObject.name>C</cim:IdentifiedObject.name><cim:TopologicalNode.BaseVoltage rdf:resource="#_BV110"/><cim:TopologicalNode.ConnectivityNodeContainer rdf:resource="#_VL_C"/></cim:TopologicalNode>
+  <cim:ConnectivityNode rdf:about="#_CN_A1"><cim:ConnectivityNode.TopologicalNode rdf:resource="#_TN_A"/></cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:about="#_CN_A2"><cim:ConnectivityNode.TopologicalNode rdf:resource="#_TN_A"/></cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:about="#_CN_B"><cim:ConnectivityNode.TopologicalNode rdf:resource="#_TN_B"/></cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:about="#_CN_C"><cim:ConnectivityNode.TopologicalNode rdf:resource="#_TN_C"/></cim:ConnectivityNode>
+  <cim:Terminal rdf:about="#_T_BRK_A_1"><cim:Terminal.TopologicalNode rdf:resource="#_TN_A"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_BRK_A_2"><cim:Terminal.TopologicalNode rdf:resource="#_TN_A"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L1_1"><cim:Terminal.TopologicalNode rdf:resource="#_TN_A"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L1_2"><cim:Terminal.TopologicalNode rdf:resource="#_TN_B"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L2_1"><cim:Terminal.TopologicalNode rdf:resource="#_TN_A"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L2_2"><cim:Terminal.TopologicalNode rdf:resource="#_TN_B"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L3_1"><cim:Terminal.TopologicalNode rdf:resource="#_TN_B"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L3_2"><cim:Terminal.TopologicalNode rdf:resource="#_TN_C"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_G1"><cim:Terminal.TopologicalNode rdf:resource="#_TN_A"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_G2"><cim:Terminal.TopologicalNode rdf:resource="#_TN_C"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_LD_A2"><cim:Terminal.TopologicalNode rdf:resource="#_TN_A"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_LD_B"><cim:Terminal.TopologicalNode rdf:resource="#_TN_B"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_LD_C"><cim:Terminal.TopologicalNode rdf:resource="#_TN_C"/></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_SVC_B"><cim:Terminal.TopologicalNode rdf:resource="#_TN_B"/></cim:Terminal>
+</rdf:RDF>

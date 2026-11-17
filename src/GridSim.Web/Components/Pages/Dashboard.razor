@@ -149,7 +149,7 @@ else
             case "MARKET":
                 <MarketTab Frame="_frame" />
                 break;
-            case "NESO RP1":
+            case "FREQUENCY SECURITY":
                 <Rp1Tab Frame="_frame" NominalHz="_session.NominalHz" />
                 break;
             case "MECHANICAL":
@@ -214,7 +214,7 @@ else
     private static readonly string[] AllTabs =
     {
         "NETWORK", "GENERATION & INERTIA", "THE MACHINE", "SCADA",
-        "OPERATOR", "MARKET", "NESO RP1", "MECHANICAL", "HUMAN SCALE", "SPEED DOMAINS", "TRIP / DEVICE", "INVERTER FLEET",
+        "OPERATOR", "MARKET", "FREQUENCY SECURITY", "MECHANICAL", "HUMAN SCALE", "SPEED DOMAINS", "TRIP / DEVICE", "INVERTER FLEET",
         "CONFORMANCE", "EXPERIMENTAL", "HARMONICS", "CYCLE", "ASSETS", "AUDIT LOG",
     };
 
@@ -223,7 +223,7 @@ else
     // become _tab. NETWORK stays as the static topology backdrop.
     private static readonly string[] RawTabs =
     {
-        "NETWORK", "CHARTS", "GENERATION & INERTIA", "THE MACHINE", "NESO RP1", "HUMAN SCALE", "OPERATOR", "MARKET", "LIVE", "ABOUT",
+        "NETWORK", "CHARTS", "GENERATION & INERTIA", "THE MACHINE", "FREQUENCY SECURITY", "HUMAN SCALE", "OPERATOR", "MARKET", "LIVE", "ABOUT",
     };
 
     private string[] Tabs => (_session?.IsRaw ?? false) ? RawTabs : AllTabs;

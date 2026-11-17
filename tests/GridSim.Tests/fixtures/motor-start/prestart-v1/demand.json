@@ -1,0 +1,4 @@
+[
+  { "name": "Works load", "bus": 3, "pMw": 30, "powerFactor": 0.95 },
+  { "name": "Motor board load", "bus": 4, "pMw": 4, "powerFactor": 0.9 }
+]

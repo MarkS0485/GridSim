@@ -6,7 +6,7 @@
 // (no ForgetModel hook). The bridge's per-tick market data (UI programme slice 1.8, the WPF
 // DashboardViewModel.UpdateMarketData) calls NesoRp1.SetRp1Data(op, mk, tickUtc) after Market.SetMarketData (TabModels).
 // The main window hosts it after MARKET, as WPF:
-//     <TabItem Header="NESO RP1"><tabs:NesoRp1View x:Name="NesoRp1Tab" DataContext="{Binding Tabs.NesoRp1}" /></TabItem>
+//     <TabItem Header="FREQUENCY SECURITY"><tabs:NesoRp1View x:Name="NesoRp1Tab" DataContext="{Binding Tabs.NesoRp1}" /></TabItem>
 // The drill-down inspector: the InspectorView in InspectorSlot (x:Name Inspector) shows each page raised on
 // NesoRp1Model.InspectRequested, as the WPF NesoRp1Vm.ShowInspector shows each page in its InspectorVm (the stats and
 // rows as given, a row's Drill on click, the back-stack of the shared InspectorModel).
@@ -40,7 +40,7 @@ public sealed partial class NesoRp1View : UserControl
 
     // The tab's model: a click with no model behind the view is a wiring mistake and fails loud.
     private NesoRp1Model Model => DataContext as NesoRp1Model
-        ?? throw new InvalidOperationException("The NESO RP1 view has no NesoRp1Model as its DataContext.");
+        ?? throw new InvalidOperationException("The Frequency Security view has no NesoRp1Model as its DataContext.");
 
     /// <summary>Listen for the drill-down pages of the model now behind the view (and of no other).</summary>
     protected override void OnDataContextChanged(EventArgs e)

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RC3 P3 fixture, constructed for GridSim (no third-party content). A 110 kV three-substation network: substation A has
+     two busbar sections (CN_A1, CN_A2) joined by a breaker coupler; lines L1 (A1-B) and L2 (A2-B) supply B, L3 (B-C) is
+     radial to C. G1 at A1 is the slack (local voltage control, referencePriority 1), G2 at C holds its own voltage, the
+     static var compensator at B regulates B. Lines carry permanent (PATL) apparent-power limits; L3 also has a TATL. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:cim="http://iec.ch/TC57/2013/CIM-schema-cim16#" xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#">
+  <md:FullModel rdf:about="urn:uuid:c0a80001-0000-4000-8000-0000000000e1">
+    <md:Model.scenarioTime>2026-01-15T10:30:00Z</md:Model.scenarioTime>
+    <md:Model.created>2026-11-16T00:00:00Z</md:Model.created>
+    <md:Model.description>GridSim RC3 P3 coupler fixture, equipment</md:Model.description>
+    <md:Model.version>1</md:Model.version>
+    <md:Model.profile>http://entsoe.eu/CIM/EquipmentCore/3/1</md:Model.profile>
+    <md:Model.profile>http://entsoe.eu/CIM/EquipmentOperation/3/1</md:Model.profile>
+    <md:Model.modelingAuthoritySet>http://gridsim.invalid/rc3/p3</md:Model.modelingAuthoritySet>
+  </md:FullModel>
+  <cim:BaseVoltage rdf:ID="_BV110"><cim:IdentifiedObject.name>110 kV</cim:IdentifiedObject.name><cim:BaseVoltage.nominalVoltage>110</cim:BaseVoltage.nominalVoltage></cim:BaseVoltage>
+  <cim:VoltageLevel rdf:ID="_VL_A"><cim:IdentifiedObject.name>A 110</cim:IdentifiedObject.name><cim:VoltageLevel.BaseVoltage rdf:resource="#_BV110"/></cim:VoltageLevel>
+  <cim:VoltageLevel rdf:ID="_VL_B"><cim:IdentifiedObject.name>B 110</cim:IdentifiedObject.name><cim:VoltageLevel.BaseVoltage rdf:resource="#_BV110"/></cim:VoltageLevel>
+  <cim:VoltageLevel rdf:ID="_VL_C"><cim:IdentifiedObject.name>C 110</cim:IdentifiedObject.name><cim:VoltageLevel.BaseVoltage rdf:resource="#_BV110"/></cim:VoltageLevel>
+  <cim:ConnectivityNode rdf:ID="_CN_A1"><cim:IdentifiedObject.name>A section 1</cim:IdentifiedObject.name><cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_VL_A"/></cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_CN_A2"><cim:IdentifiedObject.name>A section 2</cim:IdentifiedObject.name><cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_VL_A"/></cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_CN_B"><cim:IdentifiedObject.name>B</cim:IdentifiedObject.name><cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_VL_B"/></cim:ConnectivityNode>
+  <cim:ConnectivityNode rdf:ID="_CN_C"><cim:IdentifiedObject.name>C</cim:IdentifiedObject.name><cim:ConnectivityNode.ConnectivityNodeContainer rdf:resource="#_VL_C"/></cim:ConnectivityNode>
+
+  <cim:Breaker rdf:ID="_BRK_A"><cim:IdentifiedObject.name>A coupler</cim:IdentifiedObject.name><cim:Switch.normalOpen>false</cim:Switch.normalOpen><cim:Switch.retained>false</cim:Switch.retained></cim:Breaker>
+  <cim:Terminal rdf:ID="_T_BRK_A_1"><cim:Terminal.ConductingEquipment rdf:resource="#_BRK_A"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_A1"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:Terminal rdf:ID="_T_BRK_A_2"><cim:Terminal.ConductingEquipment rdf:resource="#_BRK_A"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_A2"/><cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+
+  <cim:ACLineSegment rdf:ID="_L1"><cim:IdentifiedObject.name>L1 A1-B</cim:IdentifiedObject.name><cim:ACLineSegment.r>2.42</cim:ACLineSegment.r><cim:ACLineSegment.x>12.1</cim:ACLineSegment.x><cim:ACLineSegment.bch>0.0000826</cim:ACLineSegment.bch></cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_T_L1_1"><cim:Terminal.ConductingEquipment rdf:resource="#_L1"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_A1"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:Terminal rdf:ID="_T_L1_2"><cim:Terminal.ConductingEquipment rdf:resource="#_L1"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_B"/><cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:ACLineSegment rdf:ID="_L2"><cim:IdentifiedObject.name>L2 A2-B</cim:IdentifiedObject.name><cim:ACLineSegment.r>2.42</cim:ACLineSegment.r><cim:ACLineSegment.x>12.1</cim:ACLineSegment.x><cim:ACLineSegment.bch>0.0000826</cim:ACLineSegment.bch></cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_T_L2_1"><cim:Terminal.ConductingEquipment rdf:resource="#_L2"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_A2"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:Terminal rdf:ID="_T_L2_2"><cim:Terminal.ConductingEquipment rdf:resource="#_L2"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_B"/><cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:ACLineSegment rdf:ID="_L3"><cim:IdentifiedObject.name>L3 B-C</cim:IdentifiedObject.name><cim:ACLineSegment.r>3.63</cim:ACLineSegment.r><cim:ACLineSegment.x>18.15</cim:ACLineSegment.x><cim:ACLineSegment.bch>0</cim:ACLineSegment.bch></cim:ACLineSegment>
+  <cim:Terminal rdf:ID="_T_L3_1"><cim:Terminal.ConductingEquipment rdf:resource="#_L3"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_B"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:Terminal rdf:ID="_T_L3_2"><cim:Terminal.ConductingEquipment rdf:resource="#_L3"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_C"/><cim:ACDCTerminal.sequenceNumber>2</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+
+  <cim:GeneratingUnit rdf:ID="_GU1"><cim:IdentifiedObject.name>GU1</cim:IdentifiedObject.name><cim:GeneratingUnit.minOperatingP>0</cim:GeneratingUnit.minOperatingP><cim:GeneratingUnit.maxOperatingP>300</cim:GeneratingUnit.maxOperatingP></cim:GeneratingUnit>
+  <cim:SynchronousMachine rdf:ID="_G1"><cim:IdentifiedObject.name>G1</cim:IdentifiedObject.name><cim:RotatingMachine.GeneratingUnit rdf:resource="#_GU1"/><cim:RotatingMachine.ratedS>250</cim:RotatingMachine.ratedS><cim:SynchronousMachine.minQ>-100</cim:SynchronousMachine.minQ><cim:SynchronousMachine.maxQ>150</cim:SynchronousMachine.maxQ><cim:RegulatingCondEq.RegulatingControl rdf:resource="#_RC_G1"/></cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_T_G1"><cim:Terminal.ConductingEquipment rdf:resource="#_G1"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_A1"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:RegulatingControl rdf:ID="_RC_G1"><cim:IdentifiedObject.name>G1 voltage</cim:IdentifiedObject.name><cim:RegulatingControl.mode rdf:resource="http://iec.ch/TC57/2013/CIM-schema-cim16#RegulatingControlModeKind.voltage"/><cim:RegulatingControl.Terminal rdf:resource="#_T_G1"/></cim:RegulatingControl>
+  <cim:GeneratingUnit rdf:ID="_GU2"><cim:IdentifiedObject.name>GU2</cim:IdentifiedObject.name><cim:GeneratingUnit.minOperatingP>0</cim:GeneratingUnit.minOperatingP><cim:GeneratingUnit.maxOperatingP>100</cim:GeneratingUnit.maxOperatingP></cim:GeneratingUnit>
+  <cim:SynchronousMachine rdf:ID="_G2"><cim:IdentifiedObject.name>G2</cim:IdentifiedObject.name><cim:RotatingMachine.GeneratingUnit rdf:resource="#_GU2"/><cim:RotatingMachine.ratedS>120</cim:RotatingMachine.ratedS><cim:SynchronousMachine.minQ>-50</cim:SynchronousMachine.minQ><cim:SynchronousMachine.maxQ>60</cim:SynchronousMachine.maxQ><cim:RegulatingCondEq.RegulatingControl rdf:resource="#_RC_G2"/></cim:SynchronousMachine>
+  <cim:Terminal rdf:ID="_T_G2"><cim:Terminal.ConductingEquipment rdf:resource="#_G2"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_C"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:RegulatingControl rdf:ID="_RC_G2"><cim:IdentifiedObject.name>G2 voltage</cim:IdentifiedObject.name><cim:RegulatingControl.mode rdf:resource="http://iec.ch/TC57/2013/CIM-schema-cim16#RegulatingControlModeKind.voltage"/><cim:RegulatingControl.Terminal rdf:resource="#_T_G2"/></cim:RegulatingControl>
+
+  <cim:EnergyConsumer rdf:ID="_LD_A2"><cim:IdentifiedObject.name>Load A2</cim:IdentifiedObject.name></cim:EnergyConsumer>
+  <cim:Terminal rdf:ID="_T_LD_A2"><cim:Terminal.ConductingEquipment rdf:resource="#_LD_A2"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_A2"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:ConformLoad rdf:ID="_LD_B"><cim:IdentifiedObject.name>Load B</cim:IdentifiedObject.name></cim:ConformLoad>
+  <cim:Terminal rdf:ID="_T_LD_B"><cim:Terminal.ConductingEquipment rdf:resource="#_LD_B"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_B"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+  <cim:NonConformLoad rdf:ID="_LD_C"><cim:IdentifiedObject.name>Load C</cim:IdentifiedObject.name></cim:NonConformLoad>
+  <cim:Terminal rdf:ID="_T_LD_C"><cim:Terminal.ConductingEquipment rdf:resource="#_LD_C"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_C"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+
+  <cim:StaticVarCompensator rdf:ID="_SVC_B"><cim:IdentifiedObject.name>SVC B</cim:IdentifiedObject.name><cim:StaticVarCompensator.capacitiveRating>242</cim:StaticVarCompensator.capacitiveRating><cim:StaticVarCompensator.inductiveRating>-484</cim:StaticVarCompensator.inductiveRating><cim:StaticVarCompensator.slope>0</cim:StaticVarCompensator.slope></cim:StaticVarCompensator>
+  <cim:Terminal rdf:ID="_T_SVC_B"><cim:Terminal.ConductingEquipment rdf:resource="#_SVC_B"/><cim:Terminal.ConnectivityNode rdf:resource="#_CN_B"/><cim:ACDCTerminal.sequenceNumber>1</cim:ACDCTerminal.sequenceNumber></cim:Terminal>
+
+  <cim:OperationalLimitType rdf:ID="_OLT_PATL"><cim:IdentifiedObject.name>PATL</cim:IdentifiedObject.name><cim:OperationalLimitType.limitType rdf:resource="http://entsoe.eu/CIM/SchemaExtension/3/1#LimitTypeKind.patl"/></cim:OperationalLimitType>
+  <cim:OperationalLimitType rdf:ID="_OLT_TATL"><cim:IdentifiedObject.name>TATL 1200</cim:IdentifiedObject.name><cim:OperationalLimitType.limitType rdf:resource="http://entsoe.eu/CIM/SchemaExtension/3/1#LimitTypeKind.tatl"/><cim:OperationalLimitType.acceptableDuration>1200</cim:OperationalLimitType.acceptableDuration></cim:OperationalLimitType>
+  <cim:OperationalLimitSet rdf:ID="_OLS_L1"><cim:IdentifiedObject.name>L1 limits</cim:IdentifiedObject.name><cim:OperationalLimitSet.Terminal rdf:resource="#_T_L1_1"/></cim:OperationalLimitSet>
+  <cim:ApparentPowerLimit rdf:ID="_APL_L1"><cim:IdentifiedObject.name>L1 PATL</cim:IdentifiedObject.name><cim:OperationalLimit.OperationalLimitSet rdf:resource="#_OLS_L1"/><cim:OperationalLimit.OperationalLimitType rdf:resource="#_OLT_PATL"/><cim:ApparentPowerLimit.value>120</cim:ApparentPowerLimit.value></cim:ApparentPowerLimit>
+  <cim:OperationalLimitSet rdf:ID="_OLS_L2"><cim:IdentifiedObject.name>L2 limits</cim:IdentifiedObject.name><cim:OperationalLimitSet.Terminal rdf:resource="#_T_L2_1"/></cim:OperationalLimitSet>
+  <cim:ApparentPowerLimit rdf:ID="_APL_L2"><cim:IdentifiedObject.name>L2 PATL</cim:IdentifiedObject.name><cim:OperationalLimit.OperationalLimitSet rdf:resource="#_OLS_L2"/><cim:OperationalLimit.OperationalLimitType rdf:resource="#_OLT_PATL"/><cim:ApparentPowerLimit.value>120</cim:ApparentPowerLimit.value></cim:ApparentPowerLimit>
+  <cim:OperationalLimitSet rdf:ID="_OLS_L3"><cim:IdentifiedObject.name>L3 limits</cim:IdentifiedObject.name><cim:OperationalLimitSet.Terminal rdf:resource="#_T_L3_1"/></cim:OperationalLimitSet>
+  <cim:ApparentPowerLimit rdf:ID="_APL_L3"><cim:IdentifiedObject.name>L3 PATL</cim:IdentifiedObject.name><cim:OperationalLimit.OperationalLimitSet rdf:resource="#_OLS_L3"/><cim:OperationalLimit.OperationalLimitType rdf:resource="#_OLT_PATL"/><cim:ApparentPowerLimit.value>80</cim:ApparentPowerLimit.value></cim:ApparentPowerLimit>
+  <cim:ApparentPowerLimit rdf:ID="_APL_L3_T"><cim:IdentifiedObject.name>L3 TATL</cim:IdentifiedObject.name><cim:OperationalLimit.OperationalLimitSet rdf:resource="#_OLS_L3"/><cim:OperationalLimit.OperationalLimitType rdf:resource="#_OLT_TATL"/><cim:ApparentPowerLimit.value>100</cim:ApparentPowerLimit.value></cim:ApparentPowerLimit>
+</rdf:RDF>

@@ -214,6 +214,7 @@ public static class PsseRawParser
         // Impedance correction tables by number: the record (for messages) and the points, T strictly increasing.
         private readonly Dictionary<int, (PsseRecord Record, ImpedanceCorrectionPoint[] Points)> _impedanceTables = new();
         private int _multiSection, _interArea, _systemWide, _substations;
+        private readonly List<PsseSubstationBlock> _substationBlocks = new();
 
         public Reader(string[] lines, string? name, PsseReadOptions options)
         {
@@ -673,15 +674,28 @@ public static class PsseRawParser
                 case SubstationS:
                     // A substation record, then its node, switching device and terminal data, each ended by a 0 record.
                     _substations++;
-                    for (int part = 0; part < 3; part++)
+                    var groups = new List<IReadOnlyList<string?>>[3]
+                    {
+                        new List<IReadOnlyList<string?>>(),
+                        new List<IReadOnlyList<string?>>(),
+                        new List<IReadOnlyList<string?>>()
+                    };
+                    var sourceLines = new List<int>[3] { new(), new(), new() };
+                    for (int part = 0; part < groups.Length; part++)
                     {
                         while (true)
                         {
                             PsseRecord inner = cur.Next(key) ?? throw r.Error("the file ends inside this substation's data");
                             if (inner.IsEndOfData) throw inner.Error("the end-of-data record comes inside a substation's data");
                             if (inner.IsTerminator) break;
+                            groups[part].Add(inner.Values);
+                            sourceLines[part].Add(inner.Line);
                         }
                     }
+                    _substationBlocks.Add(new PsseSubstationBlock(r.Values, r.Line,
+                        Array.AsReadOnly(groups[0].ToArray()), Array.AsReadOnly(sourceLines[0].ToArray()),
+                        Array.AsReadOnly(groups[1].ToArray()), Array.AsReadOnly(sourceLines[1].ToArray()),
+                        Array.AsReadOnly(groups[2].ToArray()), Array.AsReadOnly(sourceLines[2].ToArray())));
                     break;
                 default:
                     throw r.Error($"internal error: no reader for section {key}");
@@ -1026,8 +1040,18 @@ public static class PsseRawParser
                 if (i == j) throw r.Error($"both ends are bus {i}");
                 string ckt = r.Str(2, "1");
                 double x = r.Real(3, "X", ZeroImpedanceXPu);
-                if (r.Code(16, "STAT", 1, 0, 1) == 0) { swDevOff++; continue; }
-                if (!Live(i) || !Live(j)) { brDangling++; continue; }
+                if (r.Code(16, "STAT", 1, 0, 1) == 0)
+                {
+                    swDevOff++;
+                    skippedKeys.Add(new PsseBranchKey("switching device", i, j, 0, ckt, 0));
+                    continue;
+                }
+                if (!Live(i) || !Live(j))
+                {
+                    brDangling++;
+                    skippedKeys.Add(new PsseBranchKey("switching device", i, j, 0, ckt, 0));
+                    continue;
+                }
                 if (x == 0) { x = ZeroImpedanceXPu; zeroZ++; }
                 string name = r.Str(20);
                 branches.Add(new Branch(i, j, 0, x, RateAMva: r.Real(4, "RATE1", 0), RateBMva: r.Real(5, "RATE2", 0),
@@ -1562,6 +1586,92 @@ public static class PsseRawParser
             var ownerNames = new Dictionary<int, string>();
             foreach (PsseRecord r in _owners) ownerNames[r.Int(0, "I")] = r.Str(1);
 
+            // Retention is a hashed lookup on the same composite keys the per-record scans compared (end pair or ordered
+            // buses, and the circuit or machine identifier trimmed and compared ignoring case), so a large case is not
+            // quadratic in its branch and machine counts. The answers, and the file order of the sources, are unchanged.
+            var retainedTwoTerminal = new HashSet<(string Kind, int Low, int High, string Id)>(RetainedKeyComparer.Instance);
+            var retainedTransformer = new HashSet<(string Kind, int Low, int High, string Id)>(RetainedKeyComparer.Instance);
+            var transformerThird = new Dictionary<(string Kind, int From, int To, string Id), List<int>>(RetainedKeyComparer.Instance);
+            foreach (PsseBranchKey k in branchKeys)
+            {
+                retainedTwoTerminal.Add((k.Kind, Math.Min(k.FromBus, k.ToBus), Math.Max(k.FromBus, k.ToBus), k.Circuit));
+                if (!transformerThird.TryGetValue((k.Kind, k.FromBus, k.ToBus, k.Circuit), out List<int>? thirds))
+                    transformerThird[(k.Kind, k.FromBus, k.ToBus, k.Circuit)] = thirds = new List<int>();
+                thirds.Add(k.ThirdBus);
+            }
+            var retainedMachines = new HashSet<(string Kind, int Low, int High, string Id)>(RetainedKeyComparer.Instance);
+            foreach (PsseMachineKey k in machineKeys) retainedMachines.Add(("machine", k.Bus, 0, k.Id));
+            bool RetainedBranch(string kind, int i, int j, string id) =>
+                retainedTwoTerminal.Contains((kind, Math.Min(i, j), Math.Max(i, j), id));
+            bool RetainedTransformer(string kind, int i, int j, int k, string id) =>
+                transformerThird.TryGetValue((kind, i, j, id), out List<int>? thirds) && thirds.Contains(k);
+
+            var equipmentSources = new List<PsseEquipmentSource>();
+            foreach (PsseRecord r in _branches)
+            {
+                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
+                string id = r.Str(2, "1");
+                bool inService = r.Code(_rev >= 34 ? 23 : 13, "ST", 1, 0, 1) == 1;
+                bool retained = inService && Live(i) && Live(j) && RetainedBranch("branch", i, j, id);
+                equipmentSources.Add(new("branch", "B", i, j, null, id, inService, retained, r.Line, r.Values));
+            }
+            foreach (PsseRecord r in _switching)
+            {
+                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
+                string id = r.Str(2, "1");
+                bool inService = r.Code(16, "STAT", 1, 0, 1) == 1;
+                bool retained = inService && Live(i) && Live(j) && RetainedBranch("switching device", i, j, id);
+                equipmentSources.Add(new("switching device", "B", i, j, null, id, inService, retained, r.Line, r.Values));
+            }
+            foreach (PsseRecord[] unit in _transformers)
+            {
+                PsseRecord r = unit[0];
+                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J")), k = Math.Abs(r.Int(2, "K", 0));
+                bool three = k != 0;
+                string id = r.Str(3, "1");
+                int status = r.Code(11, "STAT", 1, 0, 1, 2, 3, 4);
+                bool retained = RetainedTransformer(three ? "transformer3" : "transformer", i, j, k, id);
+                equipmentSources.Add(new("transformer", three ? "3" : "2", i, j, three ? k : null,
+                    id, status != 0, retained, r.Line,
+                    Array.AsReadOnly(unit.SelectMany(row => row.Values).ToArray()))
+                {
+                    SourceRows = Array.AsReadOnly(unit.Select(row => new PsseEquipmentSourceRow(row.Line, row.Values)).ToArray())
+                });
+            }
+            foreach (PsseRecord r in _gens)
+            {
+                int bus = r.Int(0, "I");
+                string id = r.Str(1, "1");
+                bool inService = r.Code(_rev >= 35 ? 15 : 14, "STAT", 1, 0, 1) == 1;
+                bool retained = !isolated.Contains(bus) && retainedMachines.Contains(("machine", bus, 0, id));
+                equipmentSources.Add(new("machine", "M", bus, null, null, id, inService, retained, r.Line, r.Values));
+            }
+            foreach (PsseRecord r in _loads)
+            {
+                int bus = r.Int(0, "I");
+                string id = r.Str(1, "1");
+                bool inService = r.Code(2, "STATUS", 1, 0, 1) == 1;
+                bool retained = inService && !isolated.Contains(bus);
+                equipmentSources.Add(new("load", "L", bus, null, null, id, inService, retained, r.Line, r.Values));
+            }
+            foreach (PsseRecord r in _fixedShunts)
+            {
+                int bus = r.Int(0, "I");
+                string id = r.Str(1, "1");
+                bool inService = r.Code(2, "STATUS", 1, 0, 1) == 1;
+                bool retained = inService && !isolated.Contains(bus);
+                equipmentSources.Add(new("fixed shunt", "F", bus, null, null, id, inService, retained, r.Line, r.Values));
+            }
+            foreach (PsseRecord r in _switchedShunts)
+            {
+                int bus = r.Int(0, "I");
+                string id = r.Str(1, "1");
+                bool inService = V30 || r.Code(_rev >= 35 ? 4 : 3, "STAT", 1, 0, 1) == 1;
+                bool retained = inService && !isolated.Contains(bus);
+                equipmentSources.Add(new("switched shunt", "S", bus, null, null, id, inService, retained, r.Line, r.Values));
+            }
+
+
             var model = new GridModel
             {
                 Name = caseName,
@@ -1589,15 +1699,51 @@ public static class PsseRawParser
                 Revision = _rev,
                 Titles = titles,
                 BusMeta = meta,
+                RawBusIds = Array.AsReadOnly(order.ToArray()),
                 AreaNames = areaNames,
                 ZoneNames = zoneNames,
                 OwnerNames = ownerNames,
                 MachineKeys = machineKeys,
+                LoadSources = Array.AsReadOnly(_loads.Select(r =>
+                {
+                    int loadBus = r.Int(0, "I");
+                    return new PsseLoadSource(new PsseLoadKey(loadBus, r.Str(1, "1")),
+                        r.Code(2, "STATUS", 1, 0, 1) == 1, !isolated.Contains(loadBus), r.Line, r.Values);
+                }).ToArray()),
+                ShuntSources = Array.AsReadOnly(_fixedShunts.Select(r =>
+                {
+                    int shuntBus = r.Int(0, "I");
+                    return new PsseShuntSource(PsseShuntKind.Fixed,
+                        new PsseShuntKey(shuntBus, r.Str(1, "1")),
+                        r.Code(2, "STATUS", 1, 0, 1) == 1, !isolated.Contains(shuntBus), r.Line, r.Values);
+                }).Concat(_switchedShunts.Select(r =>
+                {
+                    int shuntBus = r.Int(0, "I");
+                    int statusIndex = _rev >= 35 ? 4 : 3;
+                    bool inService = V30 || r.Code(statusIndex, "STAT", 1, 0, 1) == 1;
+                    return new PsseShuntSource(PsseShuntKind.Switched,
+                        new PsseShuntKey(shuntBus, r.Str(1, "1")), inService,
+                        !isolated.Contains(shuntBus), r.Line, r.Values);
+                })).ToArray()),
+                EquipmentSources = Array.AsReadOnly(equipmentSources.ToArray()),
                 BranchKeys = branchKeys,
                 SkippedBranchKeys = skippedKeys,
                 StarPointBuses = starIds,
                 SwitchedShunts = banks,
+                Substations = _substationBlocks.AsReadOnly(),
             };
+        }
+
+        /// <summary>Equality for the retention keys: kind and buses exactly, the identifier trimmed and compared ignoring
+        /// case (the comparison the earlier per-record scans made with <c>SameId</c>).</summary>
+        private sealed class RetainedKeyComparer : IEqualityComparer<(string Kind, int Low, int High, string Id)>
+        {
+            public static readonly RetainedKeyComparer Instance = new();
+            public bool Equals((string Kind, int Low, int High, string Id) x, (string Kind, int Low, int High, string Id) y) =>
+                x.Low == y.Low && x.High == y.High && string.Equals(x.Kind, y.Kind, StringComparison.Ordinal) &&
+                string.Equals(x.Id.Trim(), y.Id.Trim(), StringComparison.OrdinalIgnoreCase);
+            public int GetHashCode((string Kind, int Low, int High, string Id) k) =>
+                HashCode.Combine(k.Kind, k.Low, k.High, StringComparer.OrdinalIgnoreCase.GetHashCode(k.Id.Trim()));
         }
     }
 }

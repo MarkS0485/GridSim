@@ -1,0 +1,6 @@
+[
+  { "id": 1, "name": "North", "baseKv": 230 },
+  { "id": 2, "name": "East", "baseKv": 230 },
+  { "id": 3, "name": "South", "baseKv": 230 },
+  { "id": 4, "name": "West", "baseKv": 230 }
+]

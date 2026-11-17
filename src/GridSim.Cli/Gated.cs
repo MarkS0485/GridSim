@@ -66,6 +66,39 @@ internal static class Gated
     public static bool DeclaredFrequencyApplied { get; private set; }
 
     /// <summary>Load a JSON case directory, enforcing the licence unless it is a bundled network.</summary>
+    internal static GridModel TransmissionNative(string path, string root)
+    {
+        GridModel model = Unloadable(path, "native study case", () =>
+            Directory.Exists(path)
+                ? JsonGridLoader.LoadDirectory(path, dispatch: false)
+                : V2CaseLoader.LoadWithNotes(path, FindV2Schemas(root)
+                    ?? throw new InvalidDataException("v2 schemas unavailable."),
+                    Path.Combine(root, "data"), dispatch: false).Model);
+        Enforce(path, model);
+        return model;
+    }
+
+    /// <summary>RC3 P8: load a gridsim-case/2 manifest for the motor acceleration study (motor-start) through the native
+    /// adapter, with loader balancing suppressed at the seam, enforcing the licence as every native load does.</summary>
+    internal static GridSim.Core.Analysis.MotorStart.MotorStartCaseInput MotorNative(string path, string root)
+    {
+        GridSim.Core.Analysis.MotorStart.MotorStartCaseInput? loaded = null;
+        GridModel model = Unloadable(path, "native motor study case", () =>
+            (loaded = GridSim.Core.Analysis.MotorStart.MotorStartCase.LoadV2(path, FindV2Schemas(root)
+                ?? throw new InvalidDataException("v2 schemas unavailable."), Path.Combine(root, "data"), dispatch: false)).Model);
+        Enforce(path, model);
+        return loaded!;
+    }
+
+    /// <summary>RC3 P3: the licence check for a CGMES study's bridged model (cgmes-study). The model counts as bundled only
+    /// when every profile document sits under the shipped data tree; otherwise the tier's bus limit applies.</summary>
+    internal static void AdmitCgmes(IEnumerable<string> profilePaths, GridModel model)
+    {
+        bool bundled = profilePaths.All(IsBundledPath);
+        GateResult r = _gate.Check(model.BusCount, bundled);
+        if (!r.Allowed) throw new GateRefusedException(r.Message);
+    }
+
     public static GridModel Dir(string path)
     {
         // A missing folder is an input error with a clear message naming the full path. It is THROWN, not exited

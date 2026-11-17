@@ -35,7 +35,7 @@ public sealed partial class Lf3FollowUpsTests
     {
         string reason = FrequencyRiskPresenter.Rp1NotApplicableReason(60.0);
         Assert.Equal(
-            "NESO RP1 is a GB 50 Hz product page (purchased time to 49.2 Hz, GB RoCoF and MIF); this case runs at 60.0 Hz, "
+            "Frequency Security uses GB 50 Hz criteria (purchased time to 49.2 Hz, GB RoCoF and MIF); this case runs at 60.0 Hz, "
             + "so the page is not shown.", reason);
         Assert.DoesNotContain('\n', reason);
         Assert.All(reason, c => Assert.True(c < 128, $"non-ASCII character U+{(int)c:X4} in the RP1 reason"));

@@ -284,7 +284,7 @@ public sealed class IntegrationTests
             PumpFor(200);
 
             // NESO RP1: a dispatch-stack row opens the overlay on that fuel's page, as the WPF InspectFuelCommand.
-            ShowTab(w, "NESO RP1");
+            ShowTab(w, "FREQUENCY SECURITY");   // RC3 P0 rename of the NESO RP1 panel
             NesoRp1View rp1 = w.FindControl<NesoRp1View>("NesoRp1Tab")!;
             InspectorView rp1Overlay = rp1.FindControl<InspectorView>("Inspector")!;
             Assert.Same(rp1.InspectorModel, rp1Overlay.Model);

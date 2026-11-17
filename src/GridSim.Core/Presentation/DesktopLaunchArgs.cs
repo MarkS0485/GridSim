@@ -103,6 +103,9 @@ public sealed record DesktopLaunchArgs(
         return new DesktopLaunchArgs(model, zone, backDays, source, tab, errors);
     }
 
+    /// <summary>The Frequency Security panel's tab label, and the label it carried before RC3 (P0).</summary>
+    private const string FrequencySecurityLabel = "FREQUENCY SECURITY", LegacyFrequencySecurityLabel = "NESO RP1";
+
     /// <summary>
     /// Match each given value against the entries the app actually offers and return the picker indices, adding a
     /// refusal for every value that matches nothing (D-DOC-142). Matching keeps the documented rules: the zone, tab and
@@ -148,6 +151,10 @@ public sealed record DesktopLaunchArgs(
         if (Tab is not null)
         {
             tab = FirstContaining(tabHeaders, Tab);
+            // RC3 P0: the panel once labelled "NESO RP1" is now "FREQUENCY SECURITY". A --tab value that matched the
+            // old label (e.g. "rp1", "neso", "NESO RP1") still opens it, so existing shortcuts and scripts keep working.
+            if (tab is null && LegacyFrequencySecurityLabel.Contains(Tab, StringComparison.OrdinalIgnoreCase))
+                tab = FirstContaining(tabHeaders, FrequencySecurityLabel);
             if (tab is null) errors.Add($"--tab '{Tab}' matches no tab. Tabs: {string.Join(", ", tabHeaders)}.");
         }
         if (ModelText is not null)

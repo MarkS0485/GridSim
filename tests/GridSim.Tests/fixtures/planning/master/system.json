@@ -1,0 +1,6 @@
+{
+  "name": "P7 synthetic master",
+  "baseMva": 100,
+  "frequencyHz": 50,
+  "dispatch": false
+}

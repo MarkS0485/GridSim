@@ -1,0 +1,7 @@
+[
+  { "name": "L1-2", "from": 1, "to": 2, "rPu": 0.01, "xPu": 0.1, "bPu": 0.02, "ratingMva": 150, "ratingBMva": 180 },
+  { "name": "L2-3", "from": 2, "to": 3, "rPu": 0.01, "xPu": 0.1, "bPu": 0.02, "ratingMva": 150, "ratingBMva": 180 },
+  { "name": "L3-4", "from": 3, "to": 4, "rPu": 0.01, "xPu": 0.1, "bPu": 0.02, "ratingMva": 150, "ratingBMva": 180 },
+  { "name": "L4-1", "from": 4, "to": 1, "rPu": 0.01, "xPu": 0.1, "bPu": 0.02, "ratingMva": 150, "ratingBMva": 180 },
+  { "name": "L1-3 diagonal", "from": 1, "to": 3, "rPu": 0.01, "xPu": 0.1, "bPu": 0.02, "ratingMva": 150, "ratingBMva": 180 }
+]

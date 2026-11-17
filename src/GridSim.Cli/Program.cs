@@ -266,6 +266,73 @@ if (importLicencePath is not null)
 
 var licenceGate = GridSim.Core.Licensing.LicenceGate.Resolve();
 Gated.Init(licenceGate, baseDir);
+if (rest.Count > 0 && rest[0].Equals("transmission-security", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = TransmissionSecurityCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("motor-start", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = MotorStartCommand.Run(rest, baseDir);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("dynamics-study", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = DynamicsStudyCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("corrective-sequence", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CorrectiveSequenceCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+// RC3 P8: specialist study packages, each its own verb (the emt, iec60909 and fault verbs are unchanged).
+if (rest.Count > 0 && rest[0].Equals("emt-line", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = EmtLineCommand.Run(rest);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("arc-flash", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = ArcFlashCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("cable-rating", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CableRatingCommand.Run(rest);
+    return;
+}
+// RC3 P4: AC-verified directional transfer capability (a separate verb; transmission-security is unchanged).
+if (rest.Count > 0 && rest[0].Equals("transfer-capability", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = TransferCapabilityCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+// RC3 P3: CGMES as a normal study job (one profile bundle: import, topology, controls, AC solve, export and read-back).
+if (rest.Count > 0 && rest[0].Equals("cgmes-study", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CgmesStudyCommand.Run(rest);
+    return;
+}
+// RC3 P8: restoration switching-sequence enumeration with AC-verified steps (restore is unchanged), and analytical
+// radial-feeder reliability indices (no case). Two verbs: their schemas, verdicts and evidence are independent.
+if (rest.Count > 0 && rest[0].Equals("restoration-study", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = RestorationStudyCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("reliability-study", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = ReliabilityStudyCommand.Run(rest);
+    return;
+}
+// RC3 P7: versioned planning snapshots over the native gated loader; same pre-flag-gate placement as above.
+if (rest.Count > 0 && rest[0].Equals("planning-study", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = PlanningStudyCommand.Run(rest, baseDir);
+    return;
+}
+
 
 // FAIL LOUD on unknown flag NAMES, not just unparseable values: a typo like
 // --mnutes used to be silently ignored, the default substituted, and the run
@@ -626,11 +693,14 @@ if (rest.Contains("--help") || rest.Contains("-h"))
     Console.WriteLine("            --tap-control applies its automatic voltage-control taps, --shunt-control its switched shunts),");
     Console.WriteLine("            or a UCTE-DEF .uct file");
     Console.WriteLine("contingency: trip, screen, nminus1 (n-1), nminus2 (n-2), n-1-1 (nminus1minus1), nminus1-sweep, stress,");
-    Console.WriteLine("            chain, cycle");
+    Console.WriteLine("            chain, cycle, corrective-sequence");
     Console.WriteLine("dynamics:   transient, freq, replay, replay-event, scenario, h0-study, fleet, evidence, domains, stability,");
-    Console.WriteLine("            modal, fit-frequency, emt, impedance-stability, inertia-placement");
+    Console.WriteLine("            modal, fit-frequency, emt, emt-line, impedance-stability, inertia-placement, dynamics-study,");
+    Console.WriteLine("            motor-start");
     Console.WriteLine("analysis:   harmonics, fault, iec60909, protection-check, physics-check, conformance, ptdf, lodf, dcpf, dcopf, acopf,");
-    Console.WriteLine("            acopf-full, scuc, scopf, cpf, taps, restore, losses, grade, dist3ph, pf, qsts, hosting,");
+    Console.WriteLine("            acopf-full, scuc, scopf, transmission-security, cpf, taps, restore, losses, grade, dist3ph,");
+    Console.WriteLine("            pf, qsts, hosting, transfer-capability, cgmes-study, planning-study,");
+    Console.WriteLine("            restoration-study, reliability-study, arc-flash, cable-rating,");
     Console.WriteLine("            experimental, estimate, estimate-noise-floor, crossval");
     Console.WriteLine("data:       gda, gda-replay, synth, export, serve, interpose, convert, validate, zonal, pmu-ingest, pmu-estimate");
     Console.WriteLine("tools:      bench, simdcheck, gpucheck, batchsolve, licence, audit, compliance, ref, help");

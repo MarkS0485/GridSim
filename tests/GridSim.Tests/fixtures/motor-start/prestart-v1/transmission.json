@@ -1,0 +1,5 @@
+[
+  { "name": "L12", "from": 1, "to": 2, "rPu": 0.01, "xPu": 0.05, "ratingMva": 60 },
+  { "name": "L23", "from": 2, "to": 3, "rPu": 0.01, "xPu": 0.05, "ratingMva": 60 },
+  { "name": "L13", "from": 1, "to": 3, "rPu": 0.02, "xPu": 0.08, "ratingMva": 60 }
+]

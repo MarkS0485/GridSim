@@ -54,8 +54,8 @@ public sealed class TabModels : IDisposable
     /// <summary>The MARKET tab's header.</summary>
     public const string MarketHeader = "MARKET";
 
-    /// <summary>The NESO RP1 tab's header.</summary>
-    public const string NesoRp1Header = "NESO RP1";
+    /// <summary>The Frequency Security tab's header (labelled NESO RP1 before RC3; the identifier is unchanged).</summary>
+    public const string NesoRp1Header = "FREQUENCY SECURITY";
 
     /// <summary>The MECHANICAL tab's header.</summary>
     public const string MechanicalHeader = "MECHANICAL";

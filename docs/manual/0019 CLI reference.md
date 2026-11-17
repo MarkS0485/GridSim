@@ -19,11 +19,11 @@ has a section below.
 | Software licence | [`licence`](#licence) |
 | Help | [`help`](#help) (and `gridsim <verb> --help`) |
 | Running a case | [no verb](#running-a-case-no-verb) |
-| Contingency and analysis | [`trip`](#trip), [`screen`](#screen), [`nminus1`](#nminus1), [`nminus2`](#nminus2), [`n-1-1`](#n-1-1), [`nminus1-sweep`](#nminus1-sweep), [`stress`](#stress), [`chain`](#chain), [`cycle`](#cycle) |
-| Network analysis | [`pf`](#pf), [`ptdf`](#ptdf), [`lodf`](#lodf), [`dcpf`](#dcpf), [`dcopf`](#dcopf), [`acopf`](#acopf), [`acopf-full`](#acopf-full), [`scuc`](#scuc), [`scopf`](#scopf), [`qsts`](#qsts), [`hosting`](#hosting), [`cpf`](#cpf), [`taps`](#taps), [`restore`](#restore), [`losses`](#losses), [`dist3ph`](#dist3ph) (experimental) |
-| Physics and protection | [`physics-check`](#physics-check), [`conformance`](#conformance), [`protection-check`](#protection-check), [`grade`](#grade), [`fault`](#fault), [`iec60909`](#iec60909), [`experimental`](#experimental) |
-| Frequency and dynamics | [`freq`](#freq), [`replay`](#replay), [`transient`](#transient), [`domains`](#domains), [`stability`](#stability), [`modal`](#modal), [`fit-frequency`](#fit-frequency), [`inertia-placement`](#inertia-placement) |
-| Harmonics, impedance and EMT | [`harmonics`](#harmonics), [`impedance-stability`](#impedance-stability), [`emt`](#emt) |
+| Contingency and analysis | [`trip`](#trip), [`screen`](#screen), [`nminus1`](#nminus1), [`nminus2`](#nminus2), [`n-1-1`](#n-1-1), [`nminus1-sweep`](#nminus1-sweep), [`stress`](#stress), [`chain`](#chain), [`cycle`](#cycle), [`corrective-sequence`](#corrective-sequence) |
+| Network analysis | [`pf`](#pf), [`ptdf`](#ptdf), [`lodf`](#lodf), [`dcpf`](#dcpf), [`dcopf`](#dcopf), [`acopf`](#acopf), [`acopf-full`](#acopf-full), [`scuc`](#scuc), [`scopf`](#scopf), [`transmission-security`](#transmission-security), [`transfer-capability`](#transfer-capability), [`cgmes-study`](#cgmes-study), [`planning-study`](#planning-study), [`restoration-study`](#restoration-study), [`reliability-study`](#reliability-study), [`qsts`](#qsts), [`hosting`](#hosting), [`cpf`](#cpf), [`taps`](#taps), [`restore`](#restore), [`losses`](#losses), [`dist3ph`](#dist3ph) (experimental) |
+| Physics and protection | [`physics-check`](#physics-check), [`conformance`](#conformance), [`protection-check`](#protection-check), [`grade`](#grade), [`fault`](#fault), [`iec60909`](#iec60909), [`arc-flash`](#arc-flash), [`cable-rating`](#cable-rating), [`experimental`](#experimental) |
+| Frequency and dynamics | [`freq`](#freq), [`replay`](#replay), [`transient`](#transient), [`domains`](#domains), [`stability`](#stability), [`modal`](#modal), [`fit-frequency`](#fit-frequency), [`inertia-placement`](#inertia-placement), [`dynamics-study`](#dynamics-study), [`motor-start`](#motor-start) |
+| Harmonics, impedance and EMT | [`harmonics`](#harmonics), [`impedance-stability`](#impedance-stability), [`emt`](#emt), [`emt-line`](#emt-line) |
 | Evidence | [`replay-event`](#replay-event), [`scenario`](#scenario), [`h0-study`](#h0-study), [`fleet`](#fleet), [`evidence`](#evidence) |
 | Data | [`gda`](#gda), [`gda-replay`](#gda-replay), [`synth`](#synth), [`export`](#export), [`convert`](#convert), [`validate`](#validate), [`zonal`](#zonal), [`pmu-ingest`](#pmu-ingest) (experimental), [`pmu-estimate`](#pmu-estimate), [`estimate`](#estimate), [`estimate-noise-floor`](#estimate-noise-floor), [`crossval`](#crossval) |
 | Real-time and telemetry | [`serve`](#serve), [`interpose`](#interpose) |
@@ -783,6 +783,60 @@ harmonics, rocof, physics, conformance.`). An empty job set used to run every cy
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)).
 
+### corrective-sequence
+
+`gridsim corrective-sequence <study.json> [--out <result.json>]`
+
+Ordered corrective N-1-1 study (RC3). Each requested sequence is a first branch outage, corrective generator actions,
+then a second branch outage, run as an ordered list of auditable steps: `IntactBase`, `FirstOutage`, `FirstAcSolve`,
+`ActionProposal`, `ActionValidation`, `ActionApplication`, `IntermediateAcVerification`, `SecondOutage`,
+`FinalAcVerification`. A step runs only when every earlier step completed. Every step of every sequence is in the
+result: a failed step keeps its evidence and every later step is reported `Blocked` with the step that stopped it, so a
+plausible final solve can never hide a failed or missing intermediate state. Every AC state is solved and checked by
+the same absolute verifier as `transmission-security` (bus voltage against the study band, branch MVA at both ends, each
+unit's realised P and Q against its own range). It is separate from `n-1-1`, whose screen, ranking and corrective
+default are unchanged.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1), `case` (`path` or `builtIn`, plus `sha256`, with
+the same identity rules as `transmission-security`), `voltage` (`minPu`, `maxPu`), `ratings` (`firstStage`,
+`intermediate` and `final`, each `A`, `B` or `C`, falling back to A where a branch has none), `policy` and `sequences`.
+`policy.eligible` is the permitted action set: one envelope per unit with its model `generator` index and expected
+`bus`, `direction` (`Up`, `Down` or `Both`), `minFinalMw`, `maxFinalMw`, `maxDeltaMw`, `rampMwPerMin` and
+`windowMinutes`; `policy.availableMinutes` is the time assumed between the two outages, and the optional
+`policy.balanceToleranceMw` (default 1e-6) bounds the net MW of a proposal. A unit at the slack bus cannot be eligible:
+the slack balances losses in every state. Each sequence has `first` and `second` (zero-based branch `index` with its
+expected `from` and `to` bus IDs), `proposal` (`None`, `Prescribed` or `PlannedRedispatch`) and, for `Prescribed` only,
+`actions` (`generator`, `bus`, `deltaMw`). Sequences are run in input order, both orders of a pair when both are
+listed, each from a fresh copy of the case. Unknown or duplicated fields, non-finite numbers, an invalid outage, a
+repeated sequence or an invalid envelope are refused before any solve.
+
+The intact state is checked against RATE_A, the first post-outage state against `ratings.firstStage` (the temporary
+emergency rating; loading above `ratings.intermediate` there is listed as temporary emergency loading, not a failure,
+and loading above `firstStage` is a prohibited state), the intermediate state (first outage plus actions) against
+`ratings.intermediate`, and the final state (both outages, actions retained, no further control) against
+`ratings.final`. Actions are simultaneous independent ramps over a common window: each change must have an allowed
+sign, a final setpoint within the envelope and the unit's own Pmin and Pmax, and a magnitude within the tighter of
+`maxDeltaMw` and `rampMwPerMin` times the smaller of `windowMinutes` and `availableMinutes`; a rejected action reports
+its exact MW shortfall. A proposal is applied whole or not at all, and its MW changes must balance. `Prescribed`
+replays the given actions; `PlannedRedispatch` takes the changes of the incumbent DC minimum-change corrective
+redispatch on the first post-outage network as a candidate, with no authority outside the permitted set. Neither finds
+feasible corrective actions. Breaker and switching actions are not supported in this version.
+
+Sequence outcomes: `Verified`, `Violations`, `ActionRejected`, `Incomplete` (an `ISLANDED`, `NO SOLUTION` or
+`INCOMPLETE` state) or `Blocked` (the intact base is not secure), with the first failed step and its disposition. The
+study `status` is `SECURE` only when the intact base and every sequence are verified; otherwise `NOT SECURE`, with
+`outcome` by precedence `Incomplete`, `ActionRejected`, `Violations`. Counts give requested, attempted, completed,
+verified and incomplete sequences. The result JSON (`schemaVersion`, `study`, `provenance`, `effectiveOptions`,
+`stepOrder`, `inputGenerators`, `result`) is printed to stdout and, with `--out`, written to a new file via a temporary
+file and a final move; an existing `--out` path is refused.
+
+Exit 0 `SECURE`. Exit 1 for input it cannot accept (malformed or unknown-field study, case identity mismatch, invalid
+outage, sequence or policy, unreadable case, existing output path). Exit 2 for an invalid invocation. Exit 3 `NOT SECURE`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
 ## Network analysis verbs
 
 These verbs take their case as a positional argument only (a built-in name, a `.m` file, a JSON case folder or, for
@@ -1170,6 +1224,338 @@ Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file
 `lp_iterations`, `full_lp`) and the tables `dispatch` (`unit,bus,name,p_mw,marginal_cost_per_mwh`), `prices`
 (`bus_id,lmp_per_mwh`), `binding` (`branch,name,contingency,flow_mw,rate_mw`; contingency -1 is the intact network) and
 `islanding_outages` (`branch`). A run with no secure dispatch writes no result file.
+
+### transmission-security
+
+`gridsim transmission-security <study.json> [--out <result.json>]`
+
+Preventive branch N-1 study with AC verification (RC3). A DC candidate dispatch is formed by `scopf`'s optimiser
+(`DcScopf`) against an explicit list of branch outages, then the intact network and each listed outage are solved
+independently from that same candidate with the full AC Newton solver and checked against absolute limits: bus voltage
+against the study band, branch MVA at both ends against RATE_A intact and the requested post-fault rating after an
+outage (B or C, falling back to A where the branch has none), and each unit's realised P and Q against its own range.
+The DC optimiser's status and objective are kept separate from the AC verdict. It is a DC-propose, AC-verify study, not
+a full AC SCOPF and not a claim of global optimality.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1), `case` (`path`, relative to the study file, or
+`builtIn`, plus `sha256`), `outages` (ordered; each a zero-based branch `index` with its expected `from` and `to` bus
+IDs, so parallel circuits stay distinct), `voltage` (`minPu`, `maxPu`) and `postFaultRating` (`A`, `B` or `C`).
+Optional: `dc.maxRounds`, and `costs.perMwh` (one linear cost per in-service unit, in model order). Unknown or
+duplicated fields, non-finite numbers, inverted limits, a duplicated outage or one whose endpoints do not match are
+refused before any solve. `case.sha256` is the SHA-256 of the case file's exact bytes; for a native case directory or
+v2 manifest it is the SHA-256 of the UTF-8 manifest lines (path, TAB, lowercase file SHA-256, LF) in consumption order;
+for a built-in it binds the build identity and the model. A mismatch is refused and prints the resolved identity.
+
+Controls are declared in the result: taps fixed, reactive limits enforced (a PV-to-PQ switch is a valid solution, not a
+failure), and the single slack supplies the AC losses, so a slack unit whose realised P exceeds its range is reported.
+Unit P and Q are recovered from converged bus injections and are compared with a declared tolerance of the Newton bus
+mismatch times base MVA; margins are reported unrounded. Where several units share a bus their individual realised
+outputs cannot be observed and the row is incomplete rather than assumed. An outage that islands the network is left
+out of the DC candidate and reported as `ISLANDED`.
+
+Each listed outage has exactly one result row. Row dispositions: `SECURE`, `VIOLATIONxN`, `ISLANDED`, `NO SOLUTION`,
+`INCOMPLETE` or `UNEVALUATED`, each with its reason. The study `status` is `SECURE` only when the intact network and
+every listed outage are evaluated and meet every limit; otherwise `NOT SECURE`, with `outcome` `Violations`,
+`Incomplete` (missing evidence takes precedence over violations) or `CandidateFailure` (no usable DC candidate, with
+the optimiser's message).
+
+The result JSON (`schemaVersion`, `provenance` with study and case SHA-256, inputs and engine identity,
+`effectiveOptions`, `inputGenerators`, `result`) is printed to stdout and, with `--out`, written to a new file via a
+temporary file and a final move. An existing `--out` path is refused, and a failed run writes no result, so an earlier
+result can never be mistaken for the current one.
+
+Exit 0 `SECURE`. Exit 1 for input it cannot accept: a malformed or unknown-field study, a case identity mismatch, an
+invalid outage, an unreadable case or an existing output path. Exit 2 for an invalid invocation. Exit 3 `NOT SECURE`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
+### transfer-capability
+
+`gridsim transfer-capability <study.json> [--out <result.json>]`
+
+AC-verified directional transfer capability (RC3). Positive transfer raises the declared source units' generation and
+lowers the declared sink units' generation, each by the transfer times its normalised weight (weights summed in
+declared order); nothing else in the case changes, and the single slack balances the losses. Every trial is built
+from the same loaded case and verified exactly as `transmission-security` verifies a state: the intact network and
+each listed branch outage are solved with the full AC Newton solver and checked against the absolute voltage band,
+branch MVA at both ends (RATE_A intact, the requested post-fault rating after an outage) and each unit's realised P
+and Q range. A trial is feasible (every state evaluated and within limits), a violation (every state evaluated, at
+least one limit breached), or unknown (a state that islands, does not converge or lacks evidence). Unknown is never
+reported as a physical limit. A participant whose schedule would leave its own P range is a violation of that
+transfer (`ScheduledGeneratorP`); it is never clipped.
+
+A separate verb rather than a mode of `transmission-security`, so that command's strict schema, flags and exit codes
+stay exactly as published; the case identity, strict parsing and result-file rules are the same.
+
+Search: zero transfer is evaluated first. If it already violates a limit the result is `NOT SECURE` /
+`NoAdmissibleStart` (no headroom is reported, which is different from a solved zero-margin case); if it lacks evidence,
+`INCOMPLETE` / `ReferenceIncomplete`. Otherwise the search walks up at k x `stepMw` (the last point clamped to
+`maxMw`) until the first violation, the first unknown, the cap or the trial budget; evaluates up to `probes` further
+coarse points above a first violation only to detect a non-monotone feasible region; then bisects between the last
+feasible and first violating trial until the bracket is no wider than `toleranceMw`. Changes in solved control state
+(a PV-to-PQ switch) or in the first binding limit across the sampled trials, a feasible probe above a violation, an
+unknown midpoint and an unfinished bisection each qualify the result. Both bracket endpoints are then re-solved from
+the case and must reproduce their evidence bit for bit. The reported capability is the lower feasible MW; the first
+observed limit (state, element, criterion, observed value, limit and signed margin) comes from the re-solved upper
+endpoint, with any simultaneous violations in stable order (intact first, then outages in study order). Intervals
+between trials are not independently proven feasible, and the result is never a global maximum.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1), `case` (`path` or `builtIn`, plus `sha256`, as
+for `transmission-security`), `sources` and `sinks` (each row a zero-based in-service unit `index`, its expected `bus`
+ID and a positive `weight`; a unit may appear once), `outages` (as for `transmission-security`), `voltage` (`minPu`,
+`maxPu`), `postFaultRating` (`A`, `B` or `C`) and `search` (`maxMw`, `stepMw`, `toleranceMw` no larger than `stepMw`,
+`maxTrials` from 2 to 10000 including the zero-transfer trial, optional `probes` 0 to 10, default 1). Optional
+`interfaces`: each a `name`, `branches` (`index`, `from`, `to`, `sign` +1 or -1; the interface MW is the sum of sign
+times the active power leaving each branch's From terminal) and an optional `limitMw` that caps that signed sum in
+every state. Unknown or duplicated fields, non-finite numbers and mismatched identities are refused before any solve.
+
+The result JSON (`schemaVersion`, `study`, `provenance`, `effectiveOptions`, `inputGenerators`, `result`, `comparator`)
+is printed to stdout and, with `--out`, written to a new file via a temporary file and a final move; an existing path
+is refused. `result` holds `status`, `outcome` (`Limited`, `AtLeastMax`, `UnknownAbove`, `BudgetExhausted`,
+`NoAdmissibleStart`, `ReferenceIncomplete` or `Unsupported`), `qualifications`, `lowerMw`, `upperMw`, `firstLimit`,
+the full `reference`, `lower` and `upper` states, every trial in execution order (with the realised slack balancing
+and each interface's MW and change from zero transfer), the participation shares and exact trial accounting.
+`comparator` is the record shape for a paid-tool comparison; GridSim fills only its own side and marks it
+`UNVERIFIED`.
+
+Exit 0 `VERIFIED` (a limit bracketed to the tolerance, or the cap reached, with no qualification). Exit 1 for input it
+cannot accept (as `transmission-security`). Exit 2 for an invalid invocation. Exit 3 `QUALIFIED`, `INCOMPLETE` or
+`NOT SECURE`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
+### cgmes-study
+
+`gridsim cgmes-study <study.json> [--out <result.json>] [--export <model.xml>]`
+
+CGMES as a normal study job (RC3). One CGMES profile bundle runs the whole job in a fixed order, each stage over the
+existing CIM code that owns it: bundle inspection; import (`CimImporter`), with any switch actions applied before the
+topology processor builds the buses; the connected electrical model and its identity maps (`CimGridModelBridge`);
+control application and the AC solve (`CimControlledPowerFlow` around the Newton engine, reactive limits enforced);
+absolute intact limits; optionally the `transmission-security` preventive N-1 verification over the imported model;
+and export of the realised model (`CgmesWriter`) with a read-back that is compared with what was solved. A later stage
+never bypasses a failed earlier one.
+
+The study file is strict JSON, schema version 1. Required: `schemaVersion` (1), `bundle` (`sha256` and `profiles`) and
+`voltage` (`minPu`, `maxPu`, applied to every solved bus). Each profile names its `profile` type (`EQ`, `TP`, `SSH`,
+`SV`, `EQ_BD`, `TP_BD`, `DY`, `DL` or `GL`), its declared `version`, its `path` (relative to the study file) and the
+`sha256` of its exact bytes. `bundle.sha256` is the SHA-256 of the UTF-8 manifest lines (profile, TAB, version, TAB,
+path, TAB, lowercase file SHA-256, LF) in manifest order; a mismatch is refused and prints the resolved identity.
+Zipped bundles are not supported. Optional: `import` (`topology` `auto`, `topologicalNodes` or `switches`;
+`tapPositions` and `shuntSections` `ssh` or `sv`; `startingVoltages`, `apparentPowerRatings` and
+`requireSshSetPoints`, all true by default), `system` (`baseMva`, default 100; `frequencyHz`, default 50: CGMES
+carries neither, and the resolved values and their source are recorded), `controls` (`apply`, default true; `shunts`
+`asWritten`, `discrete`, `continuous` or `held`; `tolerancePu`; `maxSolves`), `switchActions` (each a switch `mrid`
+and `open` true or false; needs `topology` `switches`) and `security` (`outages`, each a branch `mrid`;
+`postFaultRating` `A`, `B` or `C`; optional `dc.maxRounds`).
+
+The bundle is refused, naming the profile and the record, before anything is imported when: a digest does not match;
+a required profile is missing (EQ and SSH always, TP unless `topology` is `switches`, SV when an option reads it); a
+profile type is listed twice; a header's `md:Model.profile` contradicts the declared type; a `md:Model.DependentOn`
+names no model of the bundle; a reference names an object no profile defines; or two profiles give one property of one
+object different values. A missing load or machine set-point is refused by the importer (`requireSshSetPoints`); an
+absent optional profile is only listed. No conformity to an external CGMES profile specification is checked or
+claimed.
+
+The result records each profile (declared and header identity, whether it is consumed by the import, what is preserved
+and what the solve uses), the importer and bridge notes, the identity of every solved bus, branch (with the source of
+its rating) and generator, the switch actions with the equipment terminals that changed bus, every control represented
+(local and remote voltage control, static var compensators, regulating shunts) with where it ended, and the automatic
+controls the study does not represent (automatic tap control: taps are held at the selected step). Ratings are the
+permanent (PATL) apparent-power limits; temporary limits are not imported, so a post-fault `B` or `C` falls back to
+`A`. The exchange output is one RDF/XML document holding the EQ, TP, SSH and SV content, written from the realised
+model (each control folded in at its realised value, the solved voltages as the starting state); it is read back and
+compared for equipment identity, topology, ratings bit for bit, model data (reported with exact differences) and the
+controlled AC output (voltage within 1e-6 pu, angle within 1e-5 degrees, terminal P and Q within 1e-4 MW or MVAr, the
+same limit disposition). The source mRIDs are not carried into the exported document; the result maps each one to its
+exported identity. The deferred items are listed in the result.
+
+The study `status` is `SECURE` only when the intact controlled state (and every listed outage, with `security`) is
+evaluated within its limits and the read-back is equivalent; otherwise `NOT SECURE`, with `outcome` `Violations` or
+`Incomplete` (missing evidence takes precedence). The intact state's disposition is `SECURE`, `VIOLATIONxN`,
+`NO SOLUTION` or `INCOMPLETE`, as in `transmission-security`. The result JSON (`schemaVersion`, `provenance`,
+`effectiveOptions`, `result`) is printed to stdout and, with `--out`, written to a new file; `--export` writes the
+exchange document to a new file. Both go through a temporary file and a final move, and an existing path is refused.
+
+Exit 0 `SECURE`. Exit 1 for input it cannot accept: a malformed or unknown-field study, a bundle identity or digest
+mismatch, a refused bundle, an unreadable profile or an existing output path. Exit 2 for an invalid invocation. Exit 3
+`NOT SECURE`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+| `--export` | none | Write the exchange CGMES document to this new file. |
+
+### planning-study
+
+`gridsim planning-study <manifest.json> --out <dir> [--parallel 1] [--max-jobs N]`
+
+Versioned planning snapshots and repeatable studies (RC3). One immutable master case, dated changes authored as
+ordered operations, and named snapshot instants are expanded deterministically into resolved cases; each snapshot is
+then run through each study in the manifest, and every job writes its own result into its own folder under one ordered
+result manifest.
+
+The manifest is strict JSON, `manifestVersion` `"gridsim-planning/1"`. Unknown or duplicated fields, non-finite
+numbers and wrong types are refused. Its separate objects are:
+
+- `master`: `case` (`path` to a native JSON case directory or v2 case manifest, relative to the manifest file, and
+  `sha256`, the SHA-256 of the UTF-8 consumed-file lines (path, TAB, lowercase file SHA-256, LF) in load order, the
+  same value `transmission-security` takes for that case) and `interpretation` (`loader` `"native-json"`, `dispatch`
+  `false`). Loader balancing is never run: only declared operations change the model. The master identity
+  (`masterSha256`) binds the bundle digest to the interpretation.
+- `projects`: each an `id` and ordered `operations`. An operation has an `id`, a `target`, a `field`, an
+  `expectedPrior` and a replacement `value`, an `effectiveFrom` and an optional `effectiveTo`. Targets: a branch
+  (`element` `branch`, zero-based `index`, expected `from` and `to` bus IDs), a generator (`generator`, zero-based
+  `index` in the whole fleet including out-of-service units, expected `bus`) or a load (`load`, `bus`: the bus's
+  aggregate constant-power demand); an optional `name` is an identity check. Fields: `inService` (branch, true or
+  false), `rateAMva` (normal rating, MVA), `rateBMva` and `rateCMva` (emergency ratings, MVA; 0 means not given),
+  `pgMw` and `qgMvar` (unit setpoints, within the unit's range), `pdMw` and `qdMvar` (bus demand).
+- `projectOrder`: the explicit order of projects. Two projects active at one instant that change the same field are
+  refused unless both are listed here; the earlier listed applies first.
+- `snapshots`: each an `id` and an `instant`.
+- `studies`: each an `id`, a `mode` and its `parameters`, which are the fields of that verb's own study file without
+  `schemaVersion` and `case`, bound to the master. Mode `transmission-security` takes the `transmission-security`
+  fields (`outages`, `voltage`, `postFaultRating`, optional `dc`, `costs`); mode `transfer` the `transfer-capability`
+  fields (`sources`, `sinks`, `outages`, `voltage`, `postFaultRating`, `search`, optional `interfaces`); mode
+  `corrective-n-1-1` the `corrective-sequence` fields (`voltage`, `ratings`, `policy`, `sequences`). Study unit
+  indices follow those verbs (the in-service unit list); operation generator indices count the whole fleet.
+
+Times are ISO 8601 with an explicit offset (`Z` or `+hh:mm`) and up to seven fractional digits; a local time without
+an offset is refused as ambiguous. Every instant is normalised to UTC. An operation is active at an instant when
+`effectiveFrom <= instant < effectiveTo` (from inclusive, to exclusive; no `effectiveTo` is open-ended), so a change
+ends by expiring and the master value returns.
+
+At each snapshot the active operations are applied to a copy of the master, projects in `projectOrder` then unlisted
+projects in declaration order, operations in authoring order. Each `expectedPrior` must equal exactly the value it
+replaces; a change shadowed by an earlier one is refused naming both operations. Any refusal stops the run before a
+job starts. Each resolved case then has its topology (one connected network) and ratings checked; a case that fails is
+`INVALID CASE` and is never given to a study. A requested outage of a branch that is out of service in the snapshot
+(a planned outage) keeps an explicit `NOT APPLICABLE` row and is not studied; a corrective sequence needing such a
+branch is likewise `NOT APPLICABLE`. `transmission-security` replaces unit P with its own DC candidate, so an authored
+`pgMw` changes the resolved case and its identity but not that study's candidate; `transfer` and `corrective-n-1-1`
+start from the scheduled unit P, so it moves their reference point.
+
+Outputs, in `--out` (a new folder, an empty one, or an earlier planning run folder, recognised by its marker file):
+`jobs/<NNN>-<snapshot>--<study>/result.json` per job (the audit of every operation with its original, prior and
+effective value, the validation, the study parameters and the study's unaltered result, and the case identities),
+`summary.txt`, `run-manifest.json` (every job in order with its state, verdict, result path and SHA-256, the master
+input files and digests, `caseSha256` content identity and `derivationSha256` per snapshot) and `evidence.json`
+(elapsed times and reuse decisions only; the other files are byte-identical between runs). The run manifest is written
+last and the previous one is removed first, so an interrupted run never leaves an older manifest looking current. On a
+rerun a job's earlier result is reused only when its completion record matches this build, the job's request and input
+fingerprints, and the file's recorded length and SHA-256; otherwise the earlier files are deleted before the job runs,
+so a failed job is never represented by an older result.
+
+Exit 0 when every job completed with its study's passing status (`SECURE`; `VERIFIED` for `transfer`). Exit 3 when
+the run completed with any other verdict (`NOT SECURE`, `QUALIFIED`, `INCOMPLETE`, `UNVERIFIED`), an `INVALID CASE` or
+a `FAILED` job (the engine refused the request, with its message), or when jobs were left unattempted (`--max-jobs` or Ctrl+C: run state `CANCELLED`, with each completed job
+kept). Exit 1 for input it cannot accept (malformed manifest, digest mismatch, unresolvable target, conflict, an
+unusable output folder) or when a result could not be written. Exit 2 for an invalid invocation.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | required | Planning run folder. |
+| `--parallel` | 1 | Jobs run at once (1-64). Results and their order do not depend on it. |
+| `--max-jobs` | all | Attempt at most this many jobs, in declared order; the rest are recorded as not attempted. |
+
+### restoration-study
+
+`gridsim restoration-study <study.json> [--out <result.json>]`
+
+Restoration switching-sequence study (RC3 P8). It searches for the order in which to close a set of candidate branches
+so that every intermediate network is admissible and the unserved energy during restoration is least. It is a separate
+study from `restore`, which checks one given order and is unchanged.
+
+Every candidate branch starts open, whatever its stored state; every other branch keeps its state in the case. An
+admissible sequence closes every candidate once, respects every precedence constraint, and leaves the initial state and
+the state after each action admissible: the live (slack-connected) network solves and passes the same absolute AC
+verifier as `transmission-security` (every live bus inside the voltage band, branch MVA at both ends within RATE_A,
+each unit's realised P and Q within its own range). A bus that is not live carries no load; units at a live bus run at
+their stated setpoint and the slack balances. A unit at its reactive limit is a valid solution reported by its margin,
+not a failure (unlike `restore`). The objective is the unserved energy in MWh: for each action, the net demand (positive
+Pd) of the buses still dead before it, times the action's minutes, divided by 60.
+
+The search is a deterministic finite enumeration: depth-first over the candidates in input order, each switching state
+(a set of closed candidates) solved once, every sequence through an inadmissible state pruned, and a branch-and-bound
+cut using the exact optimum of the same problem without the AC constraints (a lower bound found from connectivity
+alone). Outcomes are distinct: `OPTIMAL` (the enumeration finished and the reported sequence is a proven optimum;
+lower and upper bounds equal), `FEASIBLE` (an admissible, fully verified sequence, but optimality is not proven
+because the node budget ran out or a state could not be verified and the bound does not exclude it; both bounds are
+reported), `INFEASIBLE` (proven: no admissible sequence exists, for example the initial state already fails) and
+`UNRESOLVED` (no admissible sequence found and none proven impossible, or the target network, with every candidate
+closed, is outside the verifier's envelope: one connected network, one slack, positive RATE_A on every live branch, no
+coupled devices, flow controls, boundaries or ZIP demand). A state with no solution or incomplete evidence is never
+admissible and is counted as unverified. Of several optimal orders the first in input order is reported.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1), `case` (`path` or `builtIn`, plus `sha256`, with
+the same identity rules as `transmission-security`), `voltage` (`minPu`, `maxPu`) and `actions` (1 to 12, each an `id`,
+a `branch` with its zero-based `index` and expected `from` and `to` bus IDs, and `minutes`, the positive time the
+action takes). Optional: `precedence` (each `before` and `after`, two action ids) and `search.maxNodes` (default
+100000, the most prefix extensions the search may expand). Unknown or duplicated fields, non-finite numbers, a
+repeated action or branch, mismatched endpoints and cyclic precedence are refused before any solve.
+
+The result JSON (`schemaVersion`, `study`, `provenance`, `effectiveOptions`, `stepOrder`, `inputBranches`, `result`)
+is printed to stdout and, with `--out`, written to a new file via a temporary file and a final move; an existing `--out`
+path is refused. `result` holds the status and outcome with its reason, total, initial and final unserved load (MW),
+`objectiveMwh`, `lowerBoundMwh`, `upperBoundMwh` and `relaxedLowerBoundMwh`, the initial state's verifier evidence,
+the sequence (per step: action, branch, start and end minute, unserved MW before and after, step energy, energised
+buses and the full verifier evidence with original branch and unit indices), every evaluated state with its
+disposition, and the search counts (nodes, states, pruned, unverified).
+
+Exit 0 `OPTIMAL`. Exit 3 `FEASIBLE`, `INFEASIBLE` or `UNRESOLVED` (the result is still printed). Exit 1 for input it
+cannot accept (malformed or unknown-field study, case identity mismatch, invalid action or precedence, unreadable case,
+existing output path). Exit 2 for an invalid invocation.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
+### reliability-study
+
+`gridsim reliability-study <study.json> [--out <result.json>]`
+
+Analytical radial-feeder reliability study (RC3 P8). It reads no case and runs no power flow: the feeder topology,
+failure rates, repair and switching times, customers, average load and dependency assumptions are all stated in the
+study file before any index is computed.
+
+Each component is a series element fed from the downstream end of its `parent` (null: the source, behind the feeder
+breaker). A fault on a component is cleared by the nearest `fused` component on its path to the source (itself first),
+otherwise by the feeder breaker; every load point downstream of that device is interrupted. A load point at or
+downstream of the failed component waits for its repair (`repairHours`). Any other interrupted load point waits only
+for `switchingHours` when a `switchable` component lies on the failed component's path below the point where it joins
+the load point's path (that disconnector isolates the fault), otherwise for the repair. Per load point j: failure rate
+lambda_j = sum lambda_k (interruptions/yr), annual outage time U_j = sum lambda_k t_kj (h/yr), r_j = U_j / lambda_j
+(h/interruption), energy not supplied ENS_j = L_j U_j (MWh/yr). System indices over the customers N_j: SAIFI
+(interruptions/(customer.yr)), SAIDI (h/(customer.yr)), CAIDI = SAIDI / SAIFI (h/interruption), ASAI = 1 - SAIDI /
+hoursPerYear, ENS (MWh/yr) and AENS (MWh/(customer.yr)). Each load point lists every failure mode affecting it.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1), `assumptions` (`failureDependency`, which must
+be `IndependentFirstOrder`: independent failures, overlapping outages neglected; `alternateSupply`, which must be
+`None`: no back-feed; `hoursPerYear`, stated explicitly), optional `switchingHours`, `components` (each `id`, `parent`
+(required, may be null), `fused`, `switchable`, and `failuresPerYear` and `repairHours`, which may be omitted or null)
+and `loadPoints` (each `id`, `component`, `customers`, `averageLoadMw`). Unknown or duplicated fields, non-finite or
+negative numbers, an unknown parent or component, a cycle, an unsupported assumption and no customers are refused.
+
+Missing rate data is reported, never assumed: a component without `failuresPerYear` or `repairHours`, or a missing
+`switchingHours` where isolation applies, is listed with the load points whose indices it withholds; those values and
+the affected system indices are null and the status is `INCOMPLETE`. The result also lists the scope (radial, sustained
+interruptions only, perfect selective protection, no alternate supply or transfer-capacity check, constant average
+load) and the largest lambda x r product, as a check on the first-order approximation.
+
+The result JSON (`schemaVersion`, `study`, `provenance`, `effectiveOptions`, `stepOrder`, `result`) is printed to stdout
+and, with `--out`, written to a new file via a temporary file and a final move; an existing `--out` path is refused.
+
+Exit 0 `COMPLETE`. Exit 3 `INCOMPLETE` (missing rate data; the result is still printed). Exit 1 for input it cannot
+accept (malformed, unknown-field or invalid study, unsupported assumption, unreadable file, existing output path).
+Exit 2 for an invalid invocation.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
 
 ### qsts
 
@@ -1828,6 +2214,69 @@ October 2026 (D-DOC-096 / 097 / 098):
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)).
 
+### arc-flash
+
+`gridsim arc-flash <study.json> [--out <result.json>]`
+
+Incident energy and arc-flash boundary of one piece of equipment to IEEE 1584-2018 (RC3 P8): equations 1 to 25 with the
+coefficients of Tables 1 to 7, three-phase AC only. The coefficients are as transcribed in the MIT-licensed `arcflash`
+library (Li-aung Yip); they were not checked against a copy of the standard here. The `fault` and `iec60909` verbs, their
+duties and their equipment checks are independent and unchanged: this verb only reads `Iec60909.ThreePhase` outputs.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1); `label`; `equipment` (`systemVoltageKv` Voc,
+`configuration` `VCB`, `VCBB`, `HCB`, `VOA` or `HOA`, `gapMm`, `workingDistanceMm`, `frequencyHz`, `phases`, and
+`enclosure` with `heightMm`, `widthMm`, `depthMm` for the box configurations only); `boltedFault`, either `ka` with
+`source` (where the current came from) or `iec60909` (`case` with `builtIn` or a single case file `path` and its
+`sha256`, `bus`, `objective` `Maximum` or `Minimum`: the bolted current is that bus's three-phase Ik'', and its base
+voltage must match Voc to 0.5 %); `clearingTime` (`fullArcingCurrentMs`, `reducedArcingCurrentMs` and `source`: the
+arc durations at the full and reduced arcing currents, read by the user from the protective device's curve; no device
+curve is evaluated here).
+
+Envelope (clause 4.2): Voc 0.208 kV to 15 kV, 50 or 60 Hz, three-phase; Ibf 0.5 kA to 106 kA at or below 0.6 kV and
+0.2 kA to 65 kA above; gap 6.35 mm to 76.2 mm at or below 0.6 kV and 19.05 mm to 254 mm above; working distance at
+least 305 mm; enclosure width at least four times the gap (a height or width above 1244.6 mm is taken at 1244.6 mm, as
+Table 6 directs). Anything outside it gives `status` `OUT OF SCOPE` listing every breach, and no numbers.
+
+The result gives VarCf, the enclosure correction (type, equivalent width and height, EES, CF), and for the full and the
+reduced arcing current the intermediate and final arcing current (kA), the clearing time used (ms), the intermediate and
+final incident energy (J/cm2 and cal/cm2) at the working distance, and the arc-flash boundary (mm, the distance at which
+the energy is 1.2 cal/cm2); then the governing scenario (the higher energy) with its energy, boundary and time. Exit 0
+`EVALUATED`, 3 `OUT OF SCOPE`, 1 for input it cannot accept (a malformed study, a case identity mismatch, a voltage
+mismatch, an existing output path), 2 for an invalid invocation or an unknown built-in case name.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
+### cable-rating
+
+`gridsim cable-rating <study.json> [--out <result.json>]`
+
+Steady-state current rating of one single-core unarmoured cable laid direct in the ground, isolated from other cables
+(RC3 P8): IEC 60287-1-1 (rating equation with n = 1, T2 = 0 and lambda2 = 0; AC resistance with the skin effect for xs
+up to 2.8 and no proximity effect; dielectric losses) and IEC 60287-2-1 (T1, T3, and T4 of a single isolated buried
+cable, `rho/(2 pi) ln(u + sqrt(u^2 - 1))`, `u = 2L/De`). Groups, ducts, troughs, soil drying, the screen loss factor
+from the bonding arrangement and transient or cyclic ratings (IEC 60853) are not implemented, and no published ampacity
+example has been checked here.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1); `label`; `cable` (`material` `Copper` or
+`Aluminium`, `dcResistance20OhmPerKm`, `skinEffectKs`, `conductorDiameterMm`, `insulationDiameterMm`,
+`screenDiameterMm`, `overallDiameterMm`, `insulationThermalResistivity` and `oversheathThermalResistivity` in K.m/W,
+`relativePermittivity`, `lossTangent`, `maxConductorTemperatureC`); `system` (`u0Kv`, `frequencyHz` 50 or 60);
+`installation` (`depthToAxisM` to the cable axis, `soilThermalResistivity`, `ambientGroundTemperatureC`);
+`screenLoss` (`lambda1` and its `source`); optional `nameplate` (`amperes` and `source`); `selection` (`None`,
+`Calculated`, `Nameplate` or `Lower`).
+
+The result gives every intermediate quantity (resistance at the maximum temperature, xs, ys, AC resistance,
+capacitance, dielectric loss, T1, T3, u, T4, the permissible rise, the conductor and screen losses at the rating), the
+calculated rating in A, the nameplate rating with its source as separate evidence, their ratio, and the selected rating
+and its basis (none unless `selection` asks for one). An input outside the method's scope gives `status` `OUT OF SCOPE`
+with every reason. Exit 0 `EVALUATED`, 3 `OUT OF SCOPE`, 1 for input it cannot accept, 2 for an invalid invocation.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
 ### experimental
 
 `gridsim experimental [<subcommand> <case> [flags]]`
@@ -2022,6 +2471,126 @@ non-finite `--clear` or one above 1000 ms, `--export` with `--rms` or `--screen`
 disagrees with `--dir`, or an RMS study error (including a governor or exciter whose limits cannot hold the solved
 operating point); exit 1 for a case file or `--dir` folder that is missing or cannot be loaded, and for a `--dyn-data`
 file that is missing or invalid. A STABLE or UNSTABLE verdict does not change the exit code.
+
+### dynamics-study
+
+`gridsim dynamics-study <study.json> [--out <result.json>]`
+
+Native RMS dynamics study over a PSS/E RAW case and its DYR file (RC3 P6). It runs the same engine and model bindings as
+`stability --rms --dyn-data` (the RAW parse, the PSS/E DYR reader and the gridsim-dynamics/2 loader, unchanged) from one
+strict study file, and reports a model coverage report before any verdict. The existing `stability` verb, its
+`--dyn-data` refusal of unmodelled DYR data and its `--allow-unmodelled` permissive path are not changed.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1); `raw` and `dyr` (`path`, relative to the study
+file, and `sha256` of the file's exact bytes; a mismatch is refused and prints the resolved identity);
+`initialisation` (`powerFlow.tolerancePu`, `powerFlow.maxIterations`, and `unmodelled`: `refuse` or `leaveOut`);
+`integration` (`stepSeconds`, `durationSeconds`, a whole number of steps); `criteria` (`slipLimitRad`, the engine's
+centre-of-inertia synchronism limit, and `maxAngleSpreadDeg`); `angleReference` (a machine `bus` and `id`); `channels`
+(each `rotorAngle`, `speed` or `frequency` of a `machine`, or `busVoltage` of a `bus`); `cases` (the batch, in result
+order); optional `execution.maxParallelism` (default 1, serial). Every equipment reference is by native RAW identity: a
+machine by bus and machine ID (so two units at one bus stay distinct), a branch by `from`, `to` and `circuit`, a bus by
+number. Unknown or duplicated fields, non-finite numbers, an unknown identity, an out-of-service target, an ambiguous
+branch, a `seq` attachment (not supported in v1) and the global RAW switches (`--allow-unmodelled`, `--seq-data`,
+`--tap-control`, `--shunt-control`, `--psse-revision`, `--frequency-hz`) are refused before any solve.
+
+A case is `events` (an event list: `busFault` and `faultClear` with `bus`, `branchTrip` and `branchReclose` with
+`branch`, `machineTrip` with `machine`, `loadStep` with `bus`, `pMw`, `qMvar`; each with `at` in seconds) or `cct`
+(`faultBus`, `clearingTrips`, `onsetSeconds`, `maxClearingSeconds`, optional `refinedStepSeconds`, `iterations`,
+`scanSteps`). Any other event kind (an unbalanced fault, a fault part-way along a line) is refused.
+
+The coverage report lists every DYR record (line, bus, model, ID, role, generator index) with its status: `SUPPORTED`
+(every value carried, exactly or by the exact derivations it lists), `APPROXIMATED` (a value left out), `SKIPPED` (an
+unmapped model, a value its controller cannot honour, a controller with no machine), `UNMATCHED` (names a machine the RAW
+case does not hold: always refused), `OUT OF SERVICE` or `OUT OF SCOPE` (a renewable converter chain: v1 carries
+synchronous machine chains only), with the reasons and the traces the record's unit drives; and every in-service unit as
+`BOUND`, `APPROXIMATED` or `UNBOUND` (the study never synthesises machine data). Any gap makes the report `BLOCKED` and
+`likeForLike` false. With `refuse` nothing is simulated; with `leaveOut` the rows run with the gaps left out, labelled
+indicative, and the study is `INCOMPLETE` whatever they show.
+
+Before any disturbance the study runs a no-event interval over the study duration and checks the initial voltage and
+accelerating-power residuals and the speed, relative rotor angle and voltage drift against limits derived from the
+Newton tolerance (stated in the result); a drift beyond them stops the rows. Each event row records every event as
+requested and as applied (the first integration step at or after its time), with its processing order and simultaneous
+group, the traces of the monitored channels (angles in degrees, speed in pu, frequency in Hz, voltage in pu), the largest
+angle spread, and the post-event branch topology checked by its own power flow. A CCT row reports the bracket (stable and
+unstable endpoints, both re-run and verified, the search criteria, a non-monotone pocket if seen) and, with
+`refinedStepSeconds`, the bracket again at that step with the shifts: the engine's own timestep sensitivity, not a
+comparison with another tool. Rows run independently from the same solved case, each with fresh controllers; serial and
+parallel runs give the same numbers bit for bit.
+
+Row dispositions: `STABLE`, `UNSTABLE`, `CCT BRACKETED`, `CCT NON-MONOTONE`, `UNSTABLE AT ZERO CLEARING`, `STABLE THROUGH
+WINDOW`, `INCOMPLETE`, `FAILED`, `NOT RUN`, `NOT ATTEMPTED`. Study `status`: `STABLE` (coverage complete, every row
+evaluated, every events row stable), `UNSTABLE`, `EVALUATED` (a CCT-only batch evaluated in full) or `INCOMPLETE` (a
+coverage gap, a power flow with no solution, a drifting initialisation, or a failed, incomplete or unattempted row).
+
+The result JSON (`schemaVersion`, `provenance` with the study, RAW and DYR SHA-256 and engine identity,
+`effectiveOptions`, `coverage`, `engine`, `initialisation`, `cases`, `counts`, `status`, `likeForLike`, `reasons`) is
+printed to stdout and, with `--out`, written to a new file via a temporary file and a final move. An existing `--out`
+path is refused.
+
+Exit 0 `STABLE` or `EVALUATED`. Exit 1 for input it cannot accept (a malformed study, an identity or SHA-256 mismatch, an
+unreadable RAW or DYR file, an existing output path). Exit 2 for an invalid invocation or a refused global switch. Exit 3
+`UNSTABLE` or `INCOMPLETE`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
+
+### motor-start
+
+`gridsim motor-start <study.json> [--out <result.json>]`
+
+Motor acceleration study from a native JSON operating point (RC3 P8). It starts one placed induction motor of a
+gridsim-case/2 case (a `motors` row of its network file: see the v2 schema guide) direct-on-line and integrates its
+acceleration with the network solved at every step. It never calls the steady-state induction machine solve: the slip
+is derived from rotor speed (1 at standstill) and the single-cage equivalent circuit is evaluated at that slip. The
+existing power flow, the steady-state induction machine model and every other verb are unchanged.
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1); `case` (`path` of a gridsim-case/2 manifest,
+relative to the study file, and `sha256`, the digest of the consumed-file manifest exactly as `transmission-security`
+computes it for a native case: one `path<TAB>sha256` line per consumed file, the manifest, its network, asset and library
+files and the v2 schema set; a mismatch is refused and prints the resolved identity); `motor` (the motor row's name);
+`initial` (`speedPu`, at least 0 and below the running speed, and `connected`, which must be false: the start event
+connects the motor, and a motor already connected before it is refused); `start` (`atSeconds`, and `method`:
+`directOnLine`, the only method in v1); `integration.stepSeconds`; `termination` (`runningSpeedPu`, `horizonSeconds`,
+`stallDwellSeconds`, `stallAcceleratingTorquePu`); `preStart` (`pgToleranceMw`, `vmTolerancePu`, `maxSlackMovementMw`);
+optional `report` (`sampleEverySteps`, default 1, and `maxVoltageDipPercent`, a reported flag). The start time and the
+horizon must be whole numbers of steps. Unknown or duplicated fields, non-finite numbers, a v1 case folder (it has no
+motor rows) and an unknown motor are refused before any solve.
+
+The case is loaded with loader balancing suppressed at the loader seam, whatever its `system.dispatch` says, and the
+authored generator schedule is read from the network files: every in-service generator must give `outputMw`, `pMinMw`
+and `pMaxMw`. The result keeps three states apart: the authored schedule against the resolved model (a moved unit
+stops the study), and the realised pre-start AC solution with the motor disconnected (incumbent Newton, 100 iterations,
+reactive limits enforced, no OLTC loop): each non-slack generating bus at its schedule within `pgToleranceMw`, each
+voltage-controlled bus at its setpoint within `vmTolerancePu` (a bus released at a reactive limit fails), each
+generating bus within its summed unit bounds and the slack movement within `maxSlackMovementMw`. A failed check is
+`INCOMPLETE` and no event is run.
+
+From the event, at each step: the motor is the constant-impedance load its circuit is at the step's slip, the network is
+solved once and verified (a step with no converged solution is `NO SOLUTION` with the solver's exact status), and the
+swing equation 2 H dw/dt = Te - Tl is advanced by Heun's method (a predictor network solve, then the averaged
+accelerating torque). Torques are per unit of the motor torque base (rated MVA over synchronous mechanical speed);
+speed is per unit of synchronous speed. Every solve starts from the authored bus voltages.
+
+Outcomes (`status`): `RUNNING` (the speed reached `runningSpeedPu`; the acceleration time is the interpolated crossing
+less the start time), `STALLED` (the accelerating torque stayed at or below `stallAcceleratingTorquePu` for
+`stallDwellSeconds` below the running speed: locked, decelerating or crawling), `NO SOLUTION`, `HORIZON ENDED` (no
+decision by the horizon) and `INCOMPLETE` (pre-start point not reproduced). The result JSON (`schemaVersion`,
+`provenance` with the study and case digests, every consumed input and the engine identity, and `result`: the status,
+outcome and termination criterion, the motor row, the request, the load policy, the declared method, the generator
+states, the pre-start verification, the acceleration and decision times, the starting, peak-current and final states,
+the voltage dip at the motor bus and the deepest at any bus, the number of network solves, the sampled trajectory with
+current in pu and kA, P and Q, speed, slip and torques, and the reasons) is printed to stdout and, with `--out`, written
+to a new file via a temporary file and a final move. An existing `--out` path is refused.
+
+Exit 0 `RUNNING`. Exit 1 for input it cannot accept (a malformed study, a case identity mismatch, an unreadable or
+invalid case, a generator without an explicit schedule, an existing output path). Exit 2 for an invalid invocation.
+Exit 3 `STALLED`, `NO SOLUTION`, `HORIZON ENDED` or `INCOMPLETE`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
 
 ### modal
 
@@ -2289,6 +2858,43 @@ as given and what it became: the bus, the time, the resistance and the fault swi
 Exit 1 on a case file or folder that cannot be loaded; exit 2 on an unknown case name, a network that cannot be built
 (including a non-passive one without `--allow-non-passive`), a malformed or out-of-range `--event`, a probe that names
 nothing, or a `--duration` that gives no step; exit 3 on an engine failure or a non-finite value in the trajectory.
+
+### emt-line
+
+`gridsim emt-line <study.json> [--out <result.json>]`
+
+Lossy travelling-wave line impulse study (RC3 P8). One constant-parameter line between a Thevenin source and a
+termination is run on the same EMT engine as `emt`, unchanged: the line is a cascade of Bergeron sections with the
+EMTP lumped-resistance split (per section `R/4`, a lossless half-section, `R/2`, a lossless half-section, `R/4`, and
+`G/4` to ground at each half-section terminal), built from the engine's own lossless line, resistor and conductance
+elements. The `emt` verb and its lossless travelling-wave line model are not changed. Frequency-dependent and
+multi-phase line models are not implemented, and nothing has been compared with PSCAD or EMTP (the result says
+`comparator: unverified`).
+
+The study file is strict JSON, schema version 1: `schemaVersion` (1); `label`; `line` (`lengthM`, `rOhmPerM`,
+`lHenryPerM`, `cFaradPerM`, `gSiemensPerM`, SI units per metre); `segments` (sections for the base run); `source`
+(`kind` `Step` or `DoubleExponential`, `amplitudeV`, `matched` true for a source resistance equal to Zc or false with
+`resistanceOhm`, and `alphaPerS`, `betaPerS` for the double exponential `A (exp(-alpha t) - exp(-beta t))`);
+`termination` (`kind` `Open`, `Short`, `Resistance` or `Capacitance`, with `value` in ohm or farad for the last two; a
+short is a 1e-6 ohm resistance); `integration` (`dtSeconds`, `durationSeconds`, a whole number of steps);
+`refinement` (`timestepDivisors`, starting at 1 and increasing, and `segmentCounts`, increasing); `output`
+(`sampleEvery`, the trace decimation). Unknown, duplicated or missing fields are refused. Every run's half-section
+travel time `tau/(2n)` must be a whole number of its timesteps (the engine would otherwise round the delay).
+
+The result gives Zc `sqrt(L'/C')`, the velocity, the travel time `length/velocity`, the front attenuation
+`exp(-(R'/(2Zc) + G'Zc/2) length)` and the source and load reflection coefficients `(Z - Zc)/(Z + Zc)`; for the base
+run and every refinement pair the measured delay, front attenuation and reflection beside them; the base-run traces
+(sending and receiving voltage, sending current, and the analytic values when they exist); and, when the oracle is
+`EXACT` (a distortionless or lossless line with a matched source, where the travelling-wave solution is closed form),
+the largest error over every step and the observed convergence order along the timestep and section axes. A line that
+distorts (`R'C' != G'L'`) or an unmatched source has `FRONT AND DELAY ONLY`. `status` is `EVALUATED`.
+
+Exit 0 when evaluated. Exit 1 for input it cannot accept (a malformed or refused study, a delay that is not a whole
+number of steps, an existing output path). Exit 2 for an invalid invocation.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Also write the result JSON to this new file. |
 
 ## Evidence verbs
 

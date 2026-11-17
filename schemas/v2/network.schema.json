@@ -16,7 +16,8 @@
     "transformers": { "type": "array", "items": { "$ref": "#/$defs/transformer" } },
     "oltcs": { "type": "array", "items": { "$ref": "#/$defs/oltc" } },
     "boundaries": { "type": "array", "items": { "$ref": "#/$defs/boundary" } },
-    "protections": { "type": "array", "items": { "$ref": "#/$defs/protection" } }
+    "protections": { "type": "array", "items": { "$ref": "#/$defs/protection" } },
+    "motors": { "type": "array", "items": { "$ref": "#/$defs/motor" }, "description": "RC3 P8: placed induction motors for the motor acceleration study (motor-start). Optional; absent = none, and the case loads and solves exactly as without it. The rows are carried beside the power-flow model, never inside it: no existing study connects them. Readers built before this member (GridSim 2.1.067 and earlier) refuse a file containing it as an unknown member." }
   },
   "$defs": {
     "name": {
@@ -247,6 +248,40 @@
             }
           }
         }
+      }
+    },
+
+    "motorLoadTorque": {
+      "title": "Motor shaft load torque",
+      "description": "The shaft load torque against rotor speed: Tl(w) = constantPu + linearPu w + quadraticPu w^2, w in pu of synchronous speed, torque in pu of the motor torque base (ratedMva over synchronous mechanical speed). A positive torque opposes motoring rotation. Each member absent = 0; all absent is a no-load start.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "constantPu": { "type": "number", "description": "Constant (speed-independent) torque, pu (conveyor, hoist, friction)." },
+        "linearPu": { "type": "number", "description": "Torque proportional to speed, pu at synchronous speed." },
+        "quadraticPu": { "type": "number", "description": "Torque proportional to speed squared, pu at synchronous speed (fan, centrifugal pump)." }
+      }
+    },
+
+    "motor": {
+      "title": "Placed induction motor",
+      "description": "RC3 P8: an induction motor placed at a bus, with the data the motor acceleration study needs. Single-cage equivalent circuit (the PSS/E induction machine record's circuit, GridSim.Core.Model.InductionMachine): stator raPu + j xaPu, magnetising j xmPu, rotor r1Pu / s + j x1Pu, all per unit on the motor base (ratedMva, ratedKv). inertiaH is the stored energy at synchronous speed of the rotor AND the coupled load, over ratedMva (s); the study solves 2 H dw/dt = Te - Tl in per unit of synchronous speed and of the torque base ratedMva / w_sync,mech. Every member except description is required (no defaults: a missing motor parameter is a wrong answer). The loader also checks: the bus exists, names are unique among motors and differ from every demand name (the motor is not static demand in the pre-start network), the circuit values are finite with ratedMva, ratedKv, xmPu, r1Pu and inertiaH positive and raPu, xaPu, x1Pu not negative. Run setup (which motor, initial speed, start time, method, timestep, termination) belongs to the study request, not here. Templates and overrides do not apply to motor rows in this revision.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bus", "ratedMva", "ratedKv", "raPu", "xaPu", "xmPu", "r1Pu", "x1Pu", "inertiaH", "loadTorque"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "bus": { "$ref": "#/$defs/busId" },
+        "description": { "type": "string" },
+        "ratedMva": { "type": "number", "exclusiveMinimum": 0, "description": "Motor base apparent power, MVA (the impedance and inertia base)." },
+        "ratedKv": { "type": "number", "exclusiveMinimum": 0, "description": "Motor rated line-to-line voltage, kV (the impedance base). The terminal voltage in motor pu is the bus voltage times baseKv / ratedKv." },
+        "raPu": { "type": "number", "minimum": 0, "description": "Stator resistance, pu on the motor base." },
+        "xaPu": { "type": "number", "minimum": 0, "description": "Stator leakage reactance, pu on the motor base." },
+        "xmPu": { "type": "number", "exclusiveMinimum": 0, "description": "Magnetising reactance, pu on the motor base." },
+        "r1Pu": { "type": "number", "exclusiveMinimum": 0, "description": "Rotor resistance referred to the stator, pu on the motor base." },
+        "x1Pu": { "type": "number", "minimum": 0, "description": "Rotor leakage reactance referred to the stator, pu on the motor base." },
+        "inertiaH": { "type": "number", "exclusiveMinimum": 0, "description": "Inertia constant of motor and coupled load, s on ratedMva." },
+        "loadTorque": { "$ref": "#/$defs/motorLoadTorque" }
       }
     },
 

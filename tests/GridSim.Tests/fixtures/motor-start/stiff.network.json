@@ -1,0 +1,20 @@
+{
+  "schema": "gridsim-network/2",
+  "description": "RC3 P8 stiff-source reference: motor M1 sits on the slack bus, whose voltage is held at exactly 1.0 pu, so its terminal voltage never moves. Hand-written, not a real network.",
+  "buses": [
+    { "id": 1, "name": "Stiff 11kV", "baseKv": 11, "type": "slack", "vm": 1.0 },
+    { "id": 2, "name": "Load 11kV", "baseKv": 11, "type": "pq" }
+  ],
+  "generators": [
+    { "name": "Source", "bus": 1, "type": "interconnector", "role": "slack", "capacityMva": 1000, "outputMw": 2, "pMinMw": 0, "pMaxMw": 1000, "qMinMvar": -1000, "qMaxMvar": 1000, "voltageSetpoint": 1.0, "converter": { "interfaced": false } }
+  ],
+  "demands": [
+    { "name": "Load", "bus": 2, "pMw": 2, "powerFactor": 0.95 }
+  ],
+  "lines": [
+    { "name": "L12", "from": 1, "to": 2, "rPu": 0.01, "xPu": 0.02 }
+  ],
+  "motors": [
+    { "name": "M1", "bus": 1, "ratedMva": 5, "ratedKv": 11, "raPu": 0.01, "xaPu": 0.1, "xmPu": 3.0, "r1Pu": 0.012, "x1Pu": 0.08, "inertiaH": 0.6, "loadTorque": { "quadraticPu": 0.7 } }
+  ]
+}

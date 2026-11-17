@@ -86,7 +86,16 @@ public static partial class V2CaseWriter
     /// manifest or network file is refused with <see cref="IOException"/>. Returns both paths and the notes on what
     /// could not be carried (empty when nothing was lost).
     /// </summary>
-    public static V2CaseWriteResult Write(GridModel model, string manifestPath)
+    public static V2CaseWriteResult Write(GridModel model, string manifestPath) => Write(model, manifestPath, null);
+
+    /// <summary>
+    /// RC3 P8 (motor acceleration): <see cref="Write(GridModel, string)"/> plus the case's placed motors
+    /// (<see cref="V2CaseLoadResult.Motors"/>), which live beside the model rather than in it. They are written as the
+    /// network file's <c>motors</c> array after every other array, in the given order, with every member the loader
+    /// requires (description only when given), so <see cref="V2CaseLoader"/> reads back the same rows bit for bit. With
+    /// no motors (null or empty) the bytes are exactly those of <see cref="Write(GridModel, string)"/>.
+    /// </summary>
+    public static V2CaseWriteResult Write(GridModel model, string manifestPath, IReadOnlyList<PlacedMotor>? motors)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(manifestPath);
@@ -108,7 +117,7 @@ public static partial class V2CaseWriter
         // the notes say which); both files then follow the one plan, so a manifest never lists a template the network
         // file does not use as planned, or the other way round.
         Bundles? bundles = PlanBundles(model, notes);
-        byte[] network = NetworkBytes(model, bundles, notes);
+        byte[] network = NetworkBytes(model, bundles, notes, motors);
         byte[] manifest = ManifestBytes(model, networkName, bundles);
         Directory.CreateDirectory(dir);
         // The network file first: a manifest never exists without the file it lists.
@@ -237,7 +246,7 @@ public static partial class V2CaseWriter
     // The network file
     // ---------------------------------------------------------------------------------------------------------------
 
-    private static byte[] NetworkBytes(GridModel model, Bundles? bundles, List<string> notes)
+    private static byte[] NetworkBytes(GridModel model, Bundles? bundles, List<string> notes, IReadOnlyList<PlacedMotor>? motors = null)
     {
         // Bus types by id, for each generator's role (the loader re-derives bus types from the buses and the roles, so
         // writing the role of the bus a unit sits on reproduces every type exactly; the v1 writer's rule).
@@ -493,6 +502,36 @@ public static partial class V2CaseWriter
                     w.WriteNumber("monitorBus", d.MonitorBus);
                     if (BitConverter.DoubleToInt64Bits(d.CapacityMw) != 0) Num(w, "capacityMw", d.CapacityMw, at + " capacityMw");
                     if (d.TargetBranch is not null) w.WriteString("targetBranch", d.TargetBranch);
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+            }
+
+            // RC3 P8: the placed motors (carried beside the model), last, so a case without them is byte-unchanged.
+            if (motors is { Count: > 0 })
+            {
+                w.WriteStartArray("motors");
+                foreach (PlacedMotor m in motors)
+                {
+                    string at = $"motor '{m.Name}'";
+                    RequireNonBlankName(m.Name, "a motor");
+                    w.WriteStartObject();
+                    w.WriteString("name", m.Name);
+                    w.WriteNumber("bus", m.Bus);
+                    if (m.Description is not null) w.WriteString("description", m.Description);
+                    Positive(w, "ratedMva", m.RatedMva, at + " ratedMva");
+                    Positive(w, "ratedKv", m.RatedKv, at + " ratedKv");
+                    NonNegative(w, "raPu", m.RaPu, at + " raPu");
+                    NonNegative(w, "xaPu", m.XaPu, at + " xaPu");
+                    Positive(w, "xmPu", m.XmPu, at + " xmPu");
+                    Positive(w, "r1Pu", m.R1Pu, at + " r1Pu");
+                    NonNegative(w, "x1Pu", m.X1Pu, at + " x1Pu");
+                    Positive(w, "inertiaH", m.InertiaH, at + " inertiaH");
+                    w.WriteStartObject("loadTorque");
+                    Num(w, "constantPu", m.LoadTorque.ConstantPu, at + " loadTorque constantPu");
+                    Num(w, "linearPu", m.LoadTorque.LinearPu, at + " loadTorque linearPu");
+                    Num(w, "quadraticPu", m.LoadTorque.QuadraticPu, at + " loadTorque quadraticPu");
+                    w.WriteEndObject();
                     w.WriteEndObject();
                 }
                 w.WriteEndArray();

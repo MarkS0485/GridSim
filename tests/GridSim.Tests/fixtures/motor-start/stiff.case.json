@@ -1,0 +1,6 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Motor start stiff source",
+  "system": { "baseMva": 100, "frequencyHz": 50, "dispatch": false },
+  "network": ["stiff.network.json"]
+}

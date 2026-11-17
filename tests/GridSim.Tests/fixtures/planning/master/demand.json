@@ -1,0 +1,4 @@
+[
+  { "name": "East demand", "bus": 2, "pMw": 150, "qMvar": 30 },
+  { "name": "West demand", "bus": 4, "pMw": 120, "qMvar": 25 }
+]

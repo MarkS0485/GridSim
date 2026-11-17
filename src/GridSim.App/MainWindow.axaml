@@ -278,7 +278,7 @@
           <tabs:MarketView x:Name="MarketTab" DataContext="{Binding Tabs.Market}" />
         </TabItem>
 
-        <TabItem Header="NESO RP1" Classes="RoomTabItem">
+        <TabItem Header="FREQUENCY SECURITY" Classes="RoomTabItem">
           <tabs:NesoRp1View x:Name="NesoRp1Tab" DataContext="{Binding Tabs.NesoRp1}" />
         </TabItem>
 

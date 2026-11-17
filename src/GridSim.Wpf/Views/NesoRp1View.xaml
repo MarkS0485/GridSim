@@ -13,7 +13,7 @@
         <Border Grid.Row="0" Style="{StaticResource Card}" Padding="14,8" Margin="0,0,0,10">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Left">
-                    <TextBlock Text="NESO RP1  *  SITUATIONAL AWARENESS" Style="{StaticResource PanelHeader}" FontSize="13" />
+                    <TextBlock Text="FREQUENCY SECURITY  *  SITUATIONAL AWARENESS" Style="{StaticResource PanelHeader}" FontSize="13" />
                     <TextBlock Text="where am I now  *  where am I going  *  how long do I have"
                                Style="{StaticResource Label}" FontSize="10" Margin="0,2,0,0" />
                 </StackPanel>

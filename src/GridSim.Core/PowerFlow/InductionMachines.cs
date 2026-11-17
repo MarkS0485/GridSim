@@ -102,5 +102,41 @@ public static class InductionMachines
         return Math.Abs(flo) <= Math.Abs(fhi) ? lo : hi;
     }
 
+    /// <summary>
+    /// RC3 P8 (motor acceleration): the machine's electrical state at a SPECIFIED slip, with no schedule and no slip
+    /// search. A separate, additive entry point over the same single-cage arithmetic <see cref="Solve"/> uses
+    /// (<see cref="Powers"/>, unchanged): the motor acceleration study derives the slip from rotor speed at every step
+    /// (s = 1 at standstill) and must never select a slip through the steady-state equilibrium search.
+    /// <paramref name="vMotorPu"/> is the terminal voltage in pu of the machine's rated voltage. Slip 0 opens the rotor
+    /// branch, as in <see cref="Solve"/>.
+    /// </summary>
+    public static InductionMachineSlipPoint AtSlip(InductionMachine m, double vMotorPu, double slip)
+    {
+        ArgumentNullException.ThrowIfNull(m);
+        if (!double.IsFinite(vMotorPu) || vMotorPu < 0) throw new ArgumentOutOfRangeException(nameof(vMotorPu), vMotorPu, "terminal voltage must be finite and not negative.");
+        if (!double.IsFinite(slip)) throw new ArgumentOutOfRangeException(nameof(slip), slip, "slip must be finite.");
+        (double p, double q, double ag) = Powers(m, vMotorPu, slip);
+        // At 1 pu the same arithmetic gives the input admittance itself: P - jQ drawn at |V| = 1 is conj(1 / Zin), so
+        // G = P1 and B = -Q1 (pu on the machine base). v2 = 1 exactly, so these are zr / |Z|^2 and zi / |Z|^2 unrounded.
+        (double p1, double q1, _) = Powers(m, 1.0, slip);
+        double s2 = p * p + q * q;
+        double current = vMotorPu > 0 ? Math.Sqrt(s2) / vMotorPu : 0.0;
+        return new InductionMachineSlipPoint(slip, vMotorPu, p, q, ag, ag * (1 - slip), current, p1, -q1);
+    }
+
     private static string F(double v) => v.ToString("G6", CultureInfo.InvariantCulture);
+}
+
+/// <summary>
+/// RC3 P8: an induction machine's electrical state at a specified slip (<see cref="InductionMachines.AtSlip"/>), all in
+/// per unit on the machine base (MBASE, RATEKV): input active and reactive power (reactive positive when absorbed), the
+/// air-gap power, which is also the electrical torque in pu of the synchronous torque base, the mechanical power
+/// (air-gap times (1 - s)), the terminal current magnitude, and the input admittance G + jB (B negative: inductive) that
+/// represents the machine at this slip as a constant-impedance load.
+/// </summary>
+public sealed record InductionMachineSlipPoint(double Slip, double VoltagePu, double PPu, double QPu, double AirGapPu,
+    double MechanicalPu, double CurrentPu, double ConductancePu, double SusceptancePu)
+{
+    /// <summary>Electrical torque, pu of the torque base (rated MVA over synchronous mechanical speed).</summary>
+    public double TorquePu => AirGapPu;
 }

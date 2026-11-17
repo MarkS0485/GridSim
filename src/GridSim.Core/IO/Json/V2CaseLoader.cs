@@ -18,6 +18,14 @@ public sealed record V2CaseLoadResult(GridModel Model, IReadOnlyList<string> Not
     /// input to it or to any solver, so <see cref="Model"/> is the same with or without it (AssetOverlayPinTests).
     /// </summary>
     public CaseAssetOverlay? Overlay { get; init; }
+
+    /// <summary>
+    /// RC3 P8 (motor acceleration): the placed induction motors of the case's network files (their <c>motors</c>
+    /// arrays, in network-file order), checked and carried BESIDE the model like <see cref="Overlay"/>. Empty when no
+    /// network file has a <c>motors</c> array. They are never an input to <see cref="Model"/> or to any steady-state
+    /// solver, so <see cref="Model"/> is the same with or without them; only the motor acceleration study connects one.
+    /// </summary>
+    public IReadOnlyList<PlacedMotor> Motors { get; init; } = Array.Empty<PlacedMotor>();
 }
 
 /// <summary>
@@ -401,6 +409,9 @@ public static class V2CaseLoader
         foreach (IGrouping<string, BoundaryDto> g in dtos.Boundaries.GroupBy(b => b.Name, StringComparer.Ordinal).Where(g => g.Count() > 1))
             problems.Add($"{shown}: {g.Count().ToString(CultureInfo.InvariantCulture)} boundaries are named '{g.Key}'; boundary names must be unique.");
 
+        // RC3 P8: the placed motors' rules the schema cannot express (bus reference, unique names, not also a demand).
+        CheckMotors(dtos, problems);
+
         // Placeholder / unmodelled-kind refusals and other v2-only content were collected by the mapper above.
         ThrowIfAny(shown, "the network elements", problems);
 
@@ -470,8 +481,12 @@ public static class V2CaseLoader
         // Nothing below touches the model: the overlay is carried beside it on the load result and is never an input
         // to the builder or to any solver. Without "assets" the result is exactly the pre-5a result (Overlay null, no
         // extra note).
+        // RC3 P8: placed motors are carried beside the model (never in it); a case without any keeps the pre-P8 result.
+        IReadOnlyList<PlacedMotor> motors = dtos.Motors.Count == 0 ? Array.Empty<PlacedMotor>() : dtos.Motors.Select(m => m.Motor).ToList();
+        if (motors.Count > 0)
+            notes.Add($"motors: {motors.Count.ToString(CultureInfo.InvariantCulture)} placed motor {(motors.Count == 1 ? "row" : "rows")} carried beside the model for the motor acceleration study; the steady-state power flow does not use them, and a verb that writes the case from the model (convert) does not carry them");
         if (!manifest.TryGetProperty("assets", out JsonElement assetList))
-            return new V2CaseLoadResult(model, notes);
+            return new V2CaseLoadResult(model, notes) { Motors = motors };
         var assetDocs = new List<(string Name, JsonElement Root)>();
         foreach (JsonElement a in assetList.EnumerateArray())
         {
@@ -482,7 +497,7 @@ public static class V2CaseLoader
         CaseAssetOverlay overlay = CaseAssetOverlay.FromCheckedDocuments(assetDocs);
         int count = overlay.Records.Count;
         notes.Add($"overlay: {count.ToString(CultureInfo.InvariantCulture)} {(count == 1 ? "record" : "records")} carried, not used by the solver");
-        return new V2CaseLoadResult(model, notes) { Overlay = overlay };
+        return new V2CaseLoadResult(model, notes) { Overlay = overlay } with { Motors = motors };   // AssetOverlayGuardTests pins "{ Overlay = overlay }"
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -685,6 +700,9 @@ public static class V2CaseLoader
         public List<AssetClassDto> AssetClasses { get; } = new();
         public List<AssetBindingDto> AssetBindings { get; } = new();
 
+        /// <summary>RC3 P8: the placed motors, in network-file order, each with where it was written.</summary>
+        public List<(PlacedMotor Motor, string At)> Motors { get; } = new();
+
         /// <summary>N234: the fault sequence data of each generator, index-aligned with <see cref="Generators"/> (null
         /// where the element gives none).</summary>
         public List<GeneratorSequenceData?> GeneratorSequence { get; } = new();
@@ -740,6 +758,7 @@ public static class V2CaseLoader
                     case "oltcs": into.Oltcs.Add(MapOltc(e)); break;
                     case "boundaries": into.Boundaries.Add(MapBoundary(e)); break;
                     case "protections": into.Protections.Add(MapProtection(e, at, templates, problems)); break;
+                    case "motors": into.Motors.Add((MapMotor(e, at, problems), at)); break;
                     // The schema refuses any other member; this is a second, independent net.
                     default: throw new InvalidDataException($"{file}: unexpected network member '{arr.Name}'.");
                 }
@@ -1177,6 +1196,86 @@ public static class V2CaseLoader
             }
         }
         return d;
+    }
+
+    /// <summary>RC3 P8: a placed motor row (network.schema.json motor). Every member but description is required by
+    /// the schema; each value is checked again here (finite, and positive or not negative as its meaning needs) so the
+    /// loader does not rest on the schema alone.</summary>
+    private static PlacedMotor MapMotor(JsonElement e, string at, List<string> problems)
+    {
+        string name = "", description = "";
+        bool hasDescription = false;
+        int bus = 0;
+        double ratedMva = double.NaN, ratedKv = double.NaN, ra = double.NaN, xa = double.NaN, xm = double.NaN, r1 = double.NaN, x1 = double.NaN, h = double.NaN;
+        double c0 = 0, c1 = 0, c2 = 0;
+        bool hasLoad = false;
+        foreach (JsonProperty p in e.EnumerateObject())
+        {
+            switch (p.Name)
+            {
+                case "name": name = p.Value.GetString()!; break;
+                case "bus": bus = JsonWhole.Int(p); break;
+                case "description": description = p.Value.GetString()!; hasDescription = true; break;
+                case "ratedMva": ratedMva = p.Value.GetDouble(); break;
+                case "ratedKv": ratedKv = p.Value.GetDouble(); break;
+                case "raPu": ra = p.Value.GetDouble(); break;
+                case "xaPu": xa = p.Value.GetDouble(); break;
+                case "xmPu": xm = p.Value.GetDouble(); break;
+                case "r1Pu": r1 = p.Value.GetDouble(); break;
+                case "x1Pu": x1 = p.Value.GetDouble(); break;
+                case "inertiaH": h = p.Value.GetDouble(); break;
+                case "loadTorque":
+                    hasLoad = true;
+                    foreach (JsonProperty c in p.Value.EnumerateObject())
+                    {
+                        double v = c.Value.GetDouble();
+                        switch (c.Name)
+                        {
+                            case "constantPu": c0 = v; break;
+                            case "linearPu": c1 = v; break;
+                            case "quadraticPu": c2 = v; break;
+                            default: throw new InvalidDataException($"motor loadTorque: unexpected member '{c.Name}'.");
+                        }
+                        if (!double.IsFinite(v)) problems.Add($"{at}/loadTorque/{c.Name}: {v.ToString("R", CultureInfo.InvariantCulture)} is not a finite torque coefficient (pu of the motor torque base).");
+                    }
+                    break;
+                default: throw new InvalidDataException($"motor: unexpected member '{p.Name}'.");
+            }
+        }
+        static string R(double x) => x.ToString("R", CultureInfo.InvariantCulture);
+        foreach ((string key, double v, bool strict, string unit) in new[]
+        {
+            ("ratedMva", ratedMva, true, "MVA"), ("ratedKv", ratedKv, true, "kV"), ("raPu", ra, false, "pu on the motor base"),
+            ("xaPu", xa, false, "pu on the motor base"), ("xmPu", xm, true, "pu on the motor base"), ("r1Pu", r1, true, "pu on the motor base"),
+            ("x1Pu", x1, false, "pu on the motor base"), ("inertiaH", h, true, "s on ratedMva"),
+        })
+        {
+            if (double.IsNaN(v)) problems.Add($"{at}: motor '{name}' has no {key} ({unit}); every motor parameter is required.");
+            else if (!double.IsFinite(v) || (strict ? v <= 0 : v < 0))
+                problems.Add($"{at}/{key}: {R(v)} is not a finite {(strict ? "positive" : "non-negative")} value ({unit}).");
+        }
+        if (!hasLoad) problems.Add($"{at}: motor '{name}' has no loadTorque; give it (an empty object is a no-load start).");
+        return new PlacedMotor(name, bus, ratedMva, ratedKv, ra, xa, xm, r1, x1, h, new MotorLoadTorque(c0, c1, c2), hasDescription ? description : null);
+    }
+
+    /// <summary>RC3 P8: the motor rules the schema cannot express. Each motor's bus must be a bus of the case; motor
+    /// names are unique; and a motor may not share a demand's name, because the motor is a study device connected by
+    /// the motor acceleration study and must not also be counted as static demand in the pre-start network.</summary>
+    private static void CheckMotors(MappedCase dtos, List<string> problems)
+    {
+        if (dtos.Motors.Count == 0) return;
+        var buses = new HashSet<int>(dtos.Buses.Select(b => b.Id));
+        var demands = new HashSet<string>(dtos.Demands.Where(d => d.Name is not null).Select(d => d.Name!), StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach ((PlacedMotor m, string at) in dtos.Motors)
+        {
+            if (!buses.Contains(m.Bus))
+                problems.Add($"{at}/bus: motor '{m.Name}' is placed at bus {m.Bus.ToString(CultureInfo.InvariantCulture)}, which no network file defines.");
+            if (!seen.Add(m.Name))
+                problems.Add($"{at}/name: motor name '{m.Name}' is used by more than one motor; motor names must be unique.");
+            if (demands.Contains(m.Name))
+                problems.Add($"{at}/name: motor '{m.Name}' has the name of a demand; a placed motor is a study device, not static demand, so the pre-start network must not also count it as a demand row (rename one, or remove the demand if it is this motor).");
+        }
     }
 
     // ---------------------------------------------------------------------------------------------------------------

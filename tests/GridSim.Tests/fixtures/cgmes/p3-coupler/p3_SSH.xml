@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RC3 P3 fixture, constructed for GridSim: the steady-state hypothesis of p3_EQ.xml. CGMES load sign: a generating
+     machine's p and q are negative. The coupler is closed; the SVC regulates B to 111.1 kV. -->
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:cim="http://iec.ch/TC57/2013/CIM-schema-cim16#" xmlns:md="http://iec.ch/TC57/61970-552/ModelDescription/1#">
+  <md:FullModel rdf:about="urn:uuid:c0a80001-0000-4000-8000-0000000000a1">
+    <md:Model.scenarioTime>2026-01-15T10:30:00Z</md:Model.scenarioTime>
+    <md:Model.created>2026-11-16T00:00:00Z</md:Model.created>
+    <md:Model.description>GridSim RC3 P3 coupler fixture, steady-state hypothesis</md:Model.description>
+    <md:Model.version>1</md:Model.version>
+    <md:Model.DependentOn rdf:resource="urn:uuid:c0a80001-0000-4000-8000-0000000000e1"/>
+    <md:Model.profile>http://entsoe.eu/CIM/SteadyStateHypothesis/1/1</md:Model.profile>
+    <md:Model.modelingAuthoritySet>http://gridsim.invalid/rc3/p3</md:Model.modelingAuthoritySet>
+  </md:FullModel>
+  <cim:Breaker rdf:about="#_BRK_A"><cim:Switch.open>false</cim:Switch.open></cim:Breaker>
+  <cim:Terminal rdf:about="#_T_BRK_A_1"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_BRK_A_2"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L1_1"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L1_2"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L2_1"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L2_2"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L3_1"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_L3_2"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_G1"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_G2"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_LD_A2"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_LD_B"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_LD_C"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:Terminal rdf:about="#_T_SVC_B"><cim:ACDCTerminal.connected>true</cim:ACDCTerminal.connected></cim:Terminal>
+  <cim:SynchronousMachine rdf:about="#_G1"><cim:RotatingMachine.p>-90</cim:RotatingMachine.p><cim:RotatingMachine.q>-20</cim:RotatingMachine.q><cim:RegulatingCondEq.controlEnabled>true</cim:RegulatingCondEq.controlEnabled><cim:SynchronousMachine.referencePriority>1</cim:SynchronousMachine.referencePriority></cim:SynchronousMachine>
+  <cim:RegulatingControl rdf:about="#_RC_G1"><cim:RegulatingControl.enabled>true</cim:RegulatingControl.enabled><cim:RegulatingControl.targetValue>112.2</cim:RegulatingControl.targetValue><cim:RegulatingControl.targetDeadband>0</cim:RegulatingControl.targetDeadband><cim:RegulatingControl.discrete>false</cim:RegulatingControl.discrete></cim:RegulatingControl>
+  <cim:SynchronousMachine rdf:about="#_G2"><cim:RotatingMachine.p>-40</cim:RotatingMachine.p><cim:RotatingMachine.q>-10</cim:RotatingMachine.q><cim:RegulatingCondEq.controlEnabled>true</cim:RegulatingCondEq.controlEnabled><cim:SynchronousMachine.referencePriority>0</cim:SynchronousMachine.referencePriority></cim:SynchronousMachine>
+  <cim:RegulatingControl rdf:about="#_RC_G2"><cim:RegulatingControl.enabled>true</cim:RegulatingControl.enabled><cim:RegulatingControl.targetValue>110</cim:RegulatingControl.targetValue><cim:RegulatingControl.targetDeadband>0</cim:RegulatingControl.targetDeadband><cim:RegulatingControl.discrete>false</cim:RegulatingControl.discrete></cim:RegulatingControl>
+  <cim:EnergyConsumer rdf:about="#_LD_A2"><cim:EnergyConsumer.p>30</cim:EnergyConsumer.p><cim:EnergyConsumer.q>5</cim:EnergyConsumer.q></cim:EnergyConsumer>
+  <cim:ConformLoad rdf:about="#_LD_B"><cim:EnergyConsumer.p>50</cim:EnergyConsumer.p><cim:EnergyConsumer.q>15</cim:EnergyConsumer.q></cim:ConformLoad>
+  <cim:NonConformLoad rdf:about="#_LD_C"><cim:EnergyConsumer.p>60</cim:EnergyConsumer.p><cim:EnergyConsumer.q>20</cim:EnergyConsumer.q></cim:NonConformLoad>
+  <cim:StaticVarCompensator rdf:about="#_SVC_B"><cim:RegulatingCondEq.controlEnabled>true</cim:RegulatingCondEq.controlEnabled><cim:StaticVarCompensator.q>0</cim:StaticVarCompensator.q><cim:StaticVarCompensator.sVCControlMode rdf:resource="http://iec.ch/TC57/2013/CIM-schema-cim16#SVCControlMode.voltage"/><cim:StaticVarCompensator.voltageSetPoint>111.1</cim:StaticVarCompensator.voltageSetPoint></cim:StaticVarCompensator>
+</rdf:RDF>

@@ -229,7 +229,7 @@ are optional `templateRef` members.
 ### The network file
 
 `network.schema.json` requires `schema` and holds any of the arrays `buses`, `generators`, `demands`, `lines`,
-`transformers`, `oltcs`, `boundaries`, `protections`. The case's network is the union of the files its manifest lists.
+`transformers`, `oltcs`, `boundaries`, `protections` and (RC3 P8, optional) `motors`. The case's network is the union of the files its manifest lists.
 Values are bare numbers on network elements; the object form `{ v, unit, prov }` belongs to template values. The
 required members are:
 
@@ -243,9 +243,50 @@ required members are:
 | oltc | `transformer`, `controlsBus` | `targetVpu`, `minTap`, `maxTap`, `stepPu` > 0; `deadbandPu` >= 0 |
 | boundary | `name`, `limitMw` | `branches` entries need `branch`; `direction` is `1` or `-1` |
 | protection | `name`, `template`, `monitorBus` | `capacityMw` >= 0 |
+| motor | `name`, `bus`, `ratedMva`, `ratedKv`, `raPu`, `xaPu`, `xmPu`, `r1Pu`, `x1Pu`, `inertiaH`, `loadTorque` | `ratedMva`, `ratedKv`, `xmPu`, `r1Pu`, `inertiaH` > 0; `raPu`, `xaPu`, `x1Pu` >= 0; `loadTorque` members `constantPu`, `linearPu`, `quadraticPu` (each optional, absent 0); `description` optional |
 
 Every element name except a bus name holds at least one non-blank character; a bus `name` is any string. The winding connection names are exactly the member names of
 `GridSim.Core.Model.WindingConnection`.
+
+### Placed motors (RC3 P8)
+
+A network file may hold a `motors` array: induction motors placed at a bus for the motor acceleration study
+(`gridsim motor-start`, CLI reference). The array is optional. Absent, the case loads exactly as before: the same
+model, the same notes, the same solve. Present, the rows are checked and carried beside the model in
+`V2CaseLoadResult.Motors` (network-file order), with the note `motors: <n> placed motor row(s) carried beside the
+model ...`. They never enter `GridModel`: no steady-state solve or existing study sees them, and only the motor study
+connects one.
+
+A row describes the machine and its shaft; the run setup (which motor, initial speed and connection, start time, starting
+method, timestep, termination) belongs to the study request, not the network file. Every member except `description`
+is required: a missing motor parameter has no safe default.
+
+| Member | Unit and base | Meaning |
+|---|---|---|
+| `name` | text | Unique among motors; must not equal a demand name (the motor is a study device, not static demand). |
+| `bus` | bus id | Must be a bus of the case. |
+| `ratedMva` | MVA | Motor base apparent power: the impedance and inertia base. |
+| `ratedKv` | kV line to line | Motor rated voltage: the impedance base. The terminal voltage in motor pu is the bus voltage times `baseKv / ratedKv`. |
+| `raPu`, `xaPu` | pu on the motor base | Stator resistance and leakage reactance. |
+| `xmPu` | pu on the motor base | Magnetising reactance. |
+| `r1Pu`, `x1Pu` | pu on the motor base | Rotor resistance and leakage reactance referred to the stator. |
+| `inertiaH` | s on `ratedMva` | Stored energy at synchronous speed of the rotor and the coupled load, over `ratedMva`. |
+| `loadTorque` | pu of the torque base | Tl(w) = `constantPu` + `linearPu` w + `quadraticPu` w^2, w in pu of synchronous speed. |
+
+The circuit is the single-cage circuit of `GridSim.Core.Model.InductionMachine` (the PSS/E induction machine record):
+stator `raPu` + j`xaPu`, magnetising j`xmPu` in parallel with the rotor `r1Pu`/s + j`x1Pu`. The torque base is
+`ratedMva` over the synchronous mechanical speed, so the electrical torque in pu is the air-gap power in pu and the swing
+equation is 2 H dw/dt = Te - Tl in pu. With pole count p and frequency f the SI inertia is J = 2 H S / w_m^2, w_m = 4 pi
+f / p. Templates and overrides do not apply to motor rows in this revision; the values are written on the row.
+
+The loader checks what the schema cannot: the bus exists, names are unique and do not clash with a demand, and every
+value is finite and in range (again after the schema). The v2 writer carries the rows when given them
+(`V2CaseWriter.Write(model, path, motors)`, written last so a case without motors is byte-unchanged), and the case
+editor keeps them as text through an edit and save (they are not an editor section yet). `convert` writes from the
+model and does not carry them; the load note says so.
+
+Minimum reader: a file with a `motors` member needs a GridSim build that includes RC3 P8 motor acceleration. Earlier
+readers (2.1.067 and before) refuse it as an unknown member, as the schema's closed shapes require.
 
 ### Asset overlay (gridsim-assets/2)
 
@@ -757,6 +798,9 @@ own text: a manifest that does not parse gives `<file>: <reason>`, and the model
 | Kind not modelled | `<at>: template <ref> is kind '<kind>'; an element or binding can be bound only to a template of a kind GridSim's asset classes model today (gridFollowingInverter, gridFormingInverter, oltc, lineType, protection).` |
 | Duplicate bus id | `<manifest>: bus id <id> is used by <n> buses; ids must be unique across every network file.` |
 | Duplicate boundary | `<manifest>: <n> boundaries are named '<name>'; boundary names must be unique.` |
+| Motor bus | `<file>: /motors/<i>/bus: motor '<name>' is placed at bus <id>, which no network file defines.` |
+| Motor name | `<file>: /motors/<i>/name: motor name '<name>' is used by more than one motor; motor names must be unique.` and `... motor '<name>' has the name of a demand; a placed motor is a study device, not static demand, ...` |
+| Motor value | `<file>: /motors/<i>/<member>: <value> is not a finite positive value (<unit>).` (or `non-negative`); `<file>: /motors/<i>: motor '<name>' has no <member> (<unit>); every motor parameter is required.` |
 | Content refused | `<file>: <pointer>: <what> is valid JSON v2, but GridSim's model does not carry it yet (<reason>); remove it to load this case today.` with `<what>` one of `a line type`, `a transformer type` (reason `the v2 loader does not bind line or transformer types yet`), `an out-of-service line`, `an out-of-service transformer` (reason `of the network fields v1 cannot hold, the v2 loader reads only fault sequence data so far`) |
 | Sequence data refused | `<file>: <pointer>: ...` naming the element and the rule: X''d / X2 on a converter-interfaced unit, `r0Pu` / `x0Pu` / `neutralXPu` without `windings`, one-sided `windings`, `r0Pu` without `x0Pu`, `x0Pu` not positive, `r0Pu` negative, `neutralXPu` on a side that is not `WyeGrounded` |
 | Controllers on a class | `<where>: template <ref> has controller references; an asset class cannot carry them, so they would be dropped.` |
@@ -1103,7 +1147,8 @@ validate: 0 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0
 | `src/GridSim.Core/IO/Json/Schema/KindSpecRegistry.cs` | `KindSpecRegistry`, `KindSpec`, `KindParamSpec`, `KindCodeDefault`, `KindParamType` | kind spec load and semantic rules; `CheckParams` |
 | `src/GridSim.Core/IO/Json/Schema/V2LibraryChecker.cs` | `V2LibraryChecker` | library set checks: schema, kind params, unique `id@rev`, provenance keys, controller targets |
 | `src/GridSim.Core/IO/Json/Schema/V2DocumentValidator.cs` | `V2DocumentValidator`, `V2DocumentReport` | routes documents by tag; the engine of `validate` |
-| `src/GridSim.Core/IO/Json/V2CaseLoader.cs` | `V2CaseLoader`, `V2CaseLoadResult` | manifest to `GridModel`: imports, templates, overrides, element mapping, asset classes |
+| `src/GridSim.Core/IO/Json/V2CaseLoader.cs` | `V2CaseLoader`, `V2CaseLoadResult` | manifest to `GridModel`: imports, templates, overrides, element mapping, asset classes; placed motors beside the model (`Motors`) |
+| `src/GridSim.Core/Model/PlacedMotor.cs` | `PlacedMotor`, `MotorLoadTorque` | a placed motor row (RC3 P8) |
 | `src/GridSim.Core/IO/Json/JsonGridLoader.cs` | `JsonGridLoader.Build`, `CaseDtos` | the model builder shared by v1 and v2 |
 | `src/GridSim.Core/IO/Json/CaseEditing/BundledSchemas.cs` | `BundledSchemas` | embedded v1 and v2 schema sets for the case editor |
 | `src/GridSim.Core/IO/Json/CaseEditing/V2CaseChecks.cs` | `V2CaseChecks` | the editor's v2 semantic checks |

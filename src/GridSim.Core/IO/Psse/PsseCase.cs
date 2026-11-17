@@ -55,6 +55,28 @@ public sealed record PsseBusMeta(int Area, int Zone, int Owner);
 /// <summary>Which RAW record a model generator came from: its bus and its machine ID (the key DYR records use).</summary>
 public sealed record PsseMachineKey(int Bus, string Id);
 
+/// <summary>A load's native RAW key: bus number and load identifier.</summary>
+public sealed record PsseLoadKey(int Bus, string Id);
+
+/// <summary>The original load row, retained independently of the legacy bus-level load aggregation.</summary>
+public sealed record PsseLoadSource(PsseLoadKey Key, bool InService, bool BusRetained, int SourceLine,
+    IReadOnlyList<string?> Fields);
+
+public enum PsseShuntKind { Fixed, Switched }
+public sealed record PsseShuntKey(int Bus, string Id);
+public sealed record PsseShuntSource(PsseShuntKind Kind, PsseShuntKey Key, bool InService, bool BusRetained,
+    int SourceLine, IReadOnlyList<string?> Fields);
+
+/// <summary>A supported equipment source row retained for substation terminal inventory and projection mapping.</summary>
+public sealed record PsseEquipmentSource(string Kind, string EquipmentType, int Bus, int? ToBus, int? ThirdBus,
+    string Id, bool InService, bool LegacyModelRetained, int SourceLine, IReadOnlyList<string?> Fields)
+{
+    /// <summary>The original records that make up a multi-row source item, including their individual line numbers.</summary>
+    public IReadOnlyList<PsseEquipmentSourceRow> SourceRows { get; init; } = Array.Empty<PsseEquipmentSourceRow>();
+}
+
+public sealed record PsseEquipmentSourceRow(int SourceLine, IReadOnlyList<string?> Fields);
+
 /// <summary>Which RAW record a model branch came from.</summary>
 /// <param name="Kind">"branch", "switching device", "transformer" or "transformer3" (one winding of a three-winding unit).</param>
 /// <param name="FromBus">Bus I of the record.</param>
@@ -69,6 +91,16 @@ public sealed record PsseBranchKey(string Kind, int FromBus, int ToBus, int Thir
 /// the file carries that the model has no place for (Tranche A, October 2026). Notes are informational: a case that
 /// produced notes is still a valid, solvable model; anything that would make it wrong is refused instead.
 /// </summary>
+public sealed record PsseSubstationBlock(
+    IReadOnlyList<string?> Header,
+    int HeaderLine,
+    IReadOnlyList<IReadOnlyList<string?>> Nodes,
+    IReadOnlyList<int> NodeLines,
+    IReadOnlyList<IReadOnlyList<string?>> SwitchingDevices,
+    IReadOnlyList<int> SwitchingDeviceLines,
+    IReadOnlyList<IReadOnlyList<string?>> Terminals,
+    IReadOnlyList<int> TerminalLines);
+
 public sealed record PsseParseResult(GridModel Model, IReadOnlyList<string> Notes)
 {
     /// <summary>The PSS/E revision the file was read as (30, 33, 34 or 35).</summary>
@@ -80,6 +112,9 @@ public sealed record PsseParseResult(GridModel Model, IReadOnlyList<string> Note
     /// <summary>Area, zone and owner of every bus of the file, dropped isolated buses included, and of every star point
     /// (which takes winding 1's), keyed by bus id.</summary>
     public IReadOnlyDictionary<int, PsseBusMeta> BusMeta { get; init; } = new Dictionary<int, PsseBusMeta>();
+
+    /// <summary>Native RAW bus IDs in file order, excluding synthetic star buses added for three-winding transformers.</summary>
+    public IReadOnlyList<int> RawBusIds { get; init; } = Array.Empty<int>();
 
     /// <summary>Area names from the area interchange data, keyed by area number.</summary>
     public IReadOnlyDictionary<int, string> AreaNames { get; init; } = new Dictionary<int, string>();
@@ -93,16 +128,28 @@ public sealed record PsseParseResult(GridModel Model, IReadOnlyList<string> Note
     /// <summary>The RAW record of each generator, position k for <see cref="GridModel.AllGenerators"/>[k].</summary>
     public IReadOnlyList<PsseMachineKey> MachineKeys { get; init; } = Array.Empty<PsseMachineKey>();
 
+    /// <summary>Native load rows, including out-of-service loads and loads on buses omitted from the legacy model.</summary>
+    public IReadOnlyList<PsseLoadSource> LoadSources { get; init; } = Array.Empty<PsseLoadSource>();
+
+    /// <summary>Native fixed and switched shunt rows, including rows omitted from the legacy model.</summary>
+    public IReadOnlyList<PsseShuntSource> ShuntSources { get; init; } = Array.Empty<PsseShuntSource>();
+
+    /// <summary>Native source rows for equipment types that can occur in the v35 terminal inventory.</summary>
+    public IReadOnlyList<PsseEquipmentSource> EquipmentSources { get; init; } = Array.Empty<PsseEquipmentSource>();
+
     /// <summary>The RAW record of each branch, position k for <see cref="GridModel.Branches"/>[k].</summary>
     public IReadOnlyList<PsseBranchKey> BranchKeys { get; init; } = Array.Empty<PsseBranchKey>();
 
-    /// <summary>The branch and transformer records the file holds that are NOT in the model (out of service, or connected
-    /// to a dropped isolated bus), in file order; a whole skipped three-winding unit has winding 0. A sequence (SEQ) file
-    /// may name them, and is not refused for doing so.</summary>
+    /// <summary>The branch, system switching device and transformer records the file holds that are NOT in the model
+    /// (out of service, or connected to a dropped isolated bus), in file order; a whole skipped three-winding unit has
+    /// winding 0. A sequence (SEQ) file may name them, and is not refused for doing so.</summary>
     public IReadOnlyList<PsseBranchKey> SkippedBranchKeys { get; init; } = Array.Empty<PsseBranchKey>();
 
     /// <summary>The bus ids added as the star points of three-winding transformers, in file order.</summary>
     public IReadOnlyList<int> StarPointBuses { get; init; } = Array.Empty<int>();
+
+    /// <summary>Revision 35 substation records retained in source order. They do not affect the legacy bus-branch model.</summary>
+    public IReadOnlyList<PsseSubstationBlock> Substations { get; init; } = Array.Empty<PsseSubstationBlock>();
 
     /// <summary>The switched shunts that regulate (<see cref="PsseReadOptions.ApplyShuntControl"/>), in file order; empty
     /// without the option. Steps count blocks switched from BINIT, which the model's bus shunt already holds.</summary>

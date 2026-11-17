@@ -1,0 +1,1 @@
+{ "name": "Motor start pre-start fixture", "baseMva": 100, "frequencyHz": 50, "dispatch": false }

@@ -42,6 +42,9 @@ public sealed class PsseRecord
     /// <summary>How many fields the line holds (an empty field between two commas counts; trailing ones left off do not).</summary>
     public int Count => _fields.Count;
 
+    /// <summary>A defensive copy of the parsed field values for additive record-preservation workflows.</summary>
+    public IReadOnlyList<string?> Values => Array.AsReadOnly(_fields.ToArray());
+
     /// <summary>The raw field text, or null when the field is left off or empty.</summary>
     public string? Raw(int index) => index < _fields.Count && !string.IsNullOrEmpty(_fields[index]) ? _fields[index] : null;
 

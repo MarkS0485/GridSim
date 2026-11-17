@@ -1,0 +1,43 @@
+{
+  "schema": "gridsim-network/2",
+  "description": "RC3 P8 motor acceleration pre-start fixture. Hand-written, not a real network. A 33 kV ring (buses 1-3) feeds an 11 kV motor bus (4) through a 33/11 kV transformer. The generator schedule is explicit and deliberately NOT merit order: the peaking unit G2 (ocgt) runs at 20 MW while the combined-cycle unit G3 (ccgt) runs at 6 MW of its 40 MW. The grid infeed at the slack bus is scheduled at 8 MW. Motor M1 (5 MVA, 11 kV, fan load) is placed at bus 4 and is NOT part of the pre-start demand.",
+  "buses": [
+    { "id": 1, "name": "Grid 33kV", "baseKv": 33, "type": "slack", "vm": 1.0 },
+    { "id": 2, "name": "Peaker 33kV", "baseKv": 33, "type": "pv", "vm": 1.0 },
+    { "id": 3, "name": "Works 33kV", "baseKv": 33, "type": "pv", "vm": 1.0 },
+    { "id": 4, "name": "Motor 11kV", "baseKv": 11, "type": "pq" }
+  ],
+  "generators": [
+    { "name": "Grid", "bus": 1, "type": "interconnector", "role": "slack", "capacityMva": 200, "outputMw": 8, "pMinMw": 0, "pMaxMw": 200, "qMinMvar": -100, "qMaxMvar": 100, "voltageSetpoint": 1.0, "converter": { "interfaced": false } },
+    { "name": "G2", "bus": 2, "type": "ocgt", "role": "pv", "capacityMva": 35, "outputMw": 20, "pMinMw": 5, "pMaxMw": 30, "qMinMvar": -20, "qMaxMvar": 20, "voltageSetpoint": 1.0 },
+    { "name": "G3", "bus": 3, "type": "ccgt", "role": "pv", "capacityMva": 50, "outputMw": 6, "pMinMw": 0, "pMaxMw": 40, "qMinMvar": -30, "qMaxMvar": 30, "voltageSetpoint": 1.0 }
+  ],
+  "demands": [
+    { "name": "Works load", "bus": 3, "pMw": 30, "powerFactor": 0.95 },
+    { "name": "Motor board load", "bus": 4, "pMw": 4, "powerFactor": 0.9 }
+  ],
+  "lines": [
+    { "name": "L12", "from": 1, "to": 2, "rPu": 0.01, "xPu": 0.05, "ratingMva": 60 },
+    { "name": "L23", "from": 2, "to": 3, "rPu": 0.01, "xPu": 0.05, "ratingMva": 60 },
+    { "name": "L13", "from": 1, "to": 3, "rPu": 0.02, "xPu": 0.08, "ratingMva": 60 }
+  ],
+  "transformers": [
+    { "name": "T34", "from": 3, "to": 4, "rPu": 0.005, "xPu": 0.4, "ratingMva": 12 }
+  ],
+  "motors": [
+    {
+      "name": "M1",
+      "bus": 4,
+      "description": "5 MVA 11 kV induction motor driving a fan; single-cage circuit on the motor base; H covers rotor and fan.",
+      "ratedMva": 5,
+      "ratedKv": 11,
+      "raPu": 0.01,
+      "xaPu": 0.1,
+      "xmPu": 3.0,
+      "r1Pu": 0.012,
+      "x1Pu": 0.08,
+      "inertiaH": 0.6,
+      "loadTorque": { "quadraticPu": 0.7 }
+    }
+  ]
+}

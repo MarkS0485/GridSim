@@ -1,0 +1,7 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Motor start loader-default control",
+  "description": "RC3 P8 control: the same network file as prestart.case.json with system.dispatch left to the loader default (balancing enabled), to show how a default load moves the authored slack schedule.",
+  "system": { "baseMva": 100, "frequencyHz": 50 },
+  "network": ["prestart.network.json"]
+}

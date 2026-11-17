@@ -213,7 +213,7 @@ public sealed class TabsTests
             string[] headers = w.TabStrip.Items.OfType<TabItem>().Select(t => (string)t.Header!).ToArray();
             Assert.Equal(new[]
             {
-                "NETWORK", "GENERATION & INERTIA", "THE MACHINE", "SCADA", "OPERATOR", "MARKET", "NESO RP1", "MECHANICAL",
+                "NETWORK", "GENERATION & INERTIA", "THE MACHINE", "SCADA", "OPERATOR", "MARKET", "FREQUENCY SECURITY", "MECHANICAL",
                 "HUMAN SCALE", "SPEED DOMAINS", "INVERTER FLEET", "EXPERIMENTAL", "HARMONICS", "CYCLE", "ASSETS",
             }, headers);
             Assert.False(w.ViewModel.Tabs.Assets.Active);
@@ -221,7 +221,7 @@ public sealed class TabsTests
             Assert.True(w.ViewModel.Tabs.Assets.Active);   // its explorer refreshes only while its tab shows (WPF D-DOC-073)
             Assert.Same(w.ViewModel.Dashboard, Show<GenerationView>(w, "GENERATION & INERTIA", "GenerationTab").DataContext);
             Assert.Same(w.ViewModel.Tabs.Machine, Show<MachineView>(w, "THE MACHINE", "MachineTab").DataContext);
-            Assert.Same(w.ViewModel.Tabs.NesoRp1, Show<NesoRp1View>(w, "NESO RP1", "NesoRp1Tab").DataContext);
+            Assert.Same(w.ViewModel.Tabs.NesoRp1, Show<NesoRp1View>(w, "FREQUENCY SECURITY", "NesoRp1Tab").DataContext);
             Assert.Same(w.ViewModel.Tabs.Mechanical, Show<MachineEngineerView>(w, "MECHANICAL", "MechanicalTab").DataContext);
             Assert.Same(w.ViewModel.Tabs.HumanScale, Show<HumanScaleView>(w, "HUMAN SCALE", "HumanScaleTab").DataContext);
             Assert.Same(w.ViewModel.Tabs.InverterFleet, Show<InverterFleetView>(w, "INVERTER FLEET", "InverterFleetTab").DataContext);

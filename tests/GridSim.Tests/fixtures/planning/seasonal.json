@@ -1,0 +1,56 @@
+{
+  "manifestVersion": "gridsim-planning/1",
+  "master": {
+    "case": { "path": "master", "sha256": "8a6e86d2fd32b6d0899e28176e9e0778c2f9a555e69e761d6fefee00725bfa93" },
+    "interpretation": { "loader": "native-json", "dispatch": false }
+  },
+  "projects": [
+    {
+      "id": "winter-2026-27",
+      "description": "Winter season: higher East demand and scheduled South output, winter emergency ratings on the East circuits.",
+      "operations": [
+        { "id": "east-demand", "target": { "element": "load", "bus": 2, "name": "East" }, "field": "pdMw",
+          "expectedPrior": 150, "value": 190, "effectiveFrom": "2026-11-01T00:00:00Z", "effectiveTo": "2027-03-01T00:00:00Z" },
+        { "id": "south-schedule", "target": { "element": "generator", "index": 1, "bus": 3, "name": "G2 South" }, "field": "pgMw",
+          "expectedPrior": 100, "value": 150, "effectiveFrom": "2026-11-01T00:00:00Z", "effectiveTo": "2027-03-01T00:00:00Z" },
+        { "id": "l12-winter-b", "target": { "element": "branch", "index": 0, "from": 1, "to": 2 }, "field": "rateBMva",
+          "expectedPrior": 180, "value": 210, "effectiveFrom": "2026-11-01T00:00:00Z", "effectiveTo": "2027-03-01T00:00:00Z" },
+        { "id": "l23-winter-b", "target": { "element": "branch", "index": 1, "from": 2, "to": 3 }, "field": "rateBMva",
+          "expectedPrior": 180, "value": 210, "effectiveFrom": "2026-11-01T00:00:00Z", "effectiveTo": "2027-03-01T00:00:00Z" }
+      ]
+    },
+    {
+      "id": "diagonal-maintenance",
+      "description": "Planned outage of the North-South diagonal for one week from 1 June 2027 00:00 UTC.",
+      "operations": [
+        { "id": "open-l13", "target": { "element": "branch", "index": 4, "from": 1, "to": 3, "name": "L1-3 diagonal" }, "field": "inService",
+          "expectedPrior": true, "value": false, "effectiveFrom": "2027-06-01T00:00:00Z", "effectiveTo": "2027-06-08T00:00:00Z" }
+      ]
+    }
+  ],
+  "projectOrder": [ "winter-2026-27", "diagonal-maintenance" ],
+  "snapshots": [
+    { "id": "winter-peak", "instant": "2027-01-15T18:00:00Z" },
+    { "id": "outage-before", "description": "One tick (100 ns) before the outage starts.", "instant": "2027-05-31T23:59:59.9999999Z" },
+    { "id": "outage-at", "description": "The outage start, written in UK summer time.", "instant": "2027-06-01T01:00:00+01:00" },
+    { "id": "outage-after", "description": "One tick after the outage starts.", "instant": "2027-06-01T00:00:00.0000001Z" },
+    { "id": "summer", "description": "Every change has expired: the master returns.", "instant": "2027-07-15T12:00:00Z" }
+  ],
+  "studies": [
+    {
+      "id": "n-1",
+      "mode": "transmission-security",
+      "parameters": {
+        "outages": [
+          { "index": 0, "from": 1, "to": 2 },
+          { "index": 1, "from": 2, "to": 3 },
+          { "index": 2, "from": 3, "to": 4 },
+          { "index": 3, "from": 4, "to": 1 },
+          { "index": 4, "from": 1, "to": 3 }
+        ],
+        "voltage": { "minPu": 0.9, "maxPu": 1.1 },
+        "postFaultRating": "B"
+      }
+    }
+  ]
+}

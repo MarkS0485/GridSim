@@ -240,7 +240,7 @@ public static class FrequencyRiskPresenter
     /// Plain ASCII, invariant culture (the nominal is printed with <see cref="FrequencyBands.Label"/>, e.g. "60.0").
     /// </summary>
     public static string Rp1NotApplicableReason(double nominalHz) =>
-        $"NESO RP1 is a GB 50 Hz product page (purchased time to 49.2 Hz, GB RoCoF and MIF); this case runs at "
+        $"Frequency Security uses GB 50 Hz criteria (purchased time to 49.2 Hz, GB RoCoF and MIF); this case runs at "
         + $"{FrequencyBands.Label(nominalHz)} Hz, so the page is not shown.";
 
     // ---------------- falling-trend trace ----------------

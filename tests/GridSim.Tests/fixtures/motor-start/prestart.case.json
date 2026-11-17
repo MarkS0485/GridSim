@@ -1,0 +1,7 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Motor start pre-start fixture",
+  "description": "RC3 P8: the authored pre-start operating point with loader balancing disabled (system.dispatch false).",
+  "system": { "baseMva": 100, "frequencyHz": 50, "dispatch": false },
+  "network": ["prestart.network.json"]
+}

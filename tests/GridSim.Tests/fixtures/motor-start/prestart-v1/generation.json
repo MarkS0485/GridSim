@@ -1,0 +1,5 @@
+[
+  { "name": "Grid", "bus": 1, "type": "interconnector", "role": "slack", "capacityMva": 200, "outputMw": 8, "pMinMw": 0, "pMaxMw": 200, "qMinMvar": -100, "qMaxMvar": 100, "voltageSetpoint": 1.0, "converterInterfaced": false },
+  { "name": "G2", "bus": 2, "type": "ocgt", "role": "pv", "capacityMva": 35, "outputMw": 20, "pMinMw": 5, "pMaxMw": 30, "qMinMvar": -20, "qMaxMvar": 20, "voltageSetpoint": 1.0 },
+  { "name": "G3", "bus": 3, "type": "ccgt", "role": "pv", "capacityMva": 50, "outputMw": 6, "pMinMw": 0, "pMaxMw": 40, "qMinMvar": -30, "qMaxMvar": 30, "voltageSetpoint": 1.0 }
+]

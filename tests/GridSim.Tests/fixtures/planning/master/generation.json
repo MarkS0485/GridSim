@@ -1,0 +1,4 @@
+[
+  { "name": "G1 North", "bus": 1, "type": "ccgt", "role": "slack", "capacityMva": 400, "outputMw": 170, "pMinMw": 0, "pMaxMw": 400, "qMinMvar": -200, "qMaxMvar": 200, "voltageSetpoint": 1.02 },
+  { "name": "G2 South", "bus": 3, "type": "ccgt", "role": "pv", "capacityMva": 300, "outputMw": 100, "pMinMw": 0, "pMaxMw": 300, "qMinMvar": -150, "qMaxMvar": 150, "voltageSetpoint": 1.01 }
+]

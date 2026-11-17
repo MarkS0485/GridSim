@@ -1,0 +1,6 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Motor start weak feeder",
+  "system": { "baseMva": 100, "frequencyHz": 50, "dispatch": false },
+  "network": ["weak.network.json"]
+}

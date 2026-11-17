@@ -1,0 +1,18 @@
+{
+  "schema": "gridsim-network/2",
+  "description": "RC3 P8 weak-feeder voltage-dip case: a 1.0 pu slack source feeds the motor bus through one feeder of 0.3 + j1.2 pu on 100 MVA, with no other load and no charging, so the motor-bus voltage at any slip is the closed-form divider |Zm / (Zf + Zm)|. Motor M1 has a fan load; motor M2 (same machine) a constant 0.4 pu load torque above its locked-rotor torque at the dipped voltage, so it stalls at standstill. Hand-written, not a real network.",
+  "buses": [
+    { "id": 1, "name": "Source 11kV", "baseKv": 11, "type": "slack", "vm": 1.0 },
+    { "id": 2, "name": "Motor 11kV", "baseKv": 11, "type": "pq" }
+  ],
+  "generators": [
+    { "name": "Source", "bus": 1, "type": "interconnector", "role": "slack", "capacityMva": 1000, "outputMw": 0, "pMinMw": 0, "pMaxMw": 1000, "qMinMvar": -1000, "qMaxMvar": 1000, "voltageSetpoint": 1.0, "converter": { "interfaced": false } }
+  ],
+  "lines": [
+    { "name": "Feeder", "from": 1, "to": 2, "rPu": 0.3, "xPu": 1.2 }
+  ],
+  "motors": [
+    { "name": "M1", "bus": 2, "ratedMva": 5, "ratedKv": 11, "raPu": 0.01, "xaPu": 0.1, "xmPu": 3.0, "r1Pu": 0.012, "x1Pu": 0.08, "inertiaH": 0.6, "loadTorque": { "quadraticPu": 0.7 } },
+    { "name": "M2", "bus": 2, "ratedMva": 5, "ratedKv": 11, "raPu": 0.01, "xaPu": 0.1, "xmPu": 3.0, "r1Pu": 0.012, "x1Pu": 0.08, "inertiaH": 0.6, "loadTorque": { "constantPu": 0.4 } }
+  ]
+}

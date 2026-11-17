@@ -941,6 +941,11 @@ and values carry units and provenance. The schemas are in `schemas/v2`, and tech
 - **`convert` writes v2.** An output ending in `.json` is written as a v2 case (the manifest and its network file
   beside it), with the fault sequence data and the asset and protection bundles, and proved by reading it back
   ([ch. 19](<0019 CLI reference.md#convert>)). Out-of-service branches and cost curves are not written, and a note says so.
+- **Placed motors ride beside the model.** A network file may hold an optional `motors` array (RC3 P8): induction
+  motors with their equivalent circuit, inertia and shaft load torque, for the motor acceleration study
+  ([`motor-start`](<0019 CLI reference.md#motor-start>)). Every verb loads such a case exactly as without the array (the
+  rows never enter the power-flow model; a load note says they are carried), `convert` does not carry them, and builds
+  before RC3 P8 refuse the member. Technical ch. 28 lists each member, its unit and base.
 - **The template library is the placeholder file.** `data/library` holds `placeholders/unmodelled-sites.json` and
   nothing else, so a manifest has no shipped template to import beyond those placeholders.
 

@@ -422,7 +422,7 @@ public sealed class PageClippingTests
     public void NESO_RP1_cards_show_whole_and_the_body_scrolls_only_on_a_short_window(double width, double height, bool scrolls)
     {
         using var temp = new TempFolder();
-        MainWindow w = Open(temp, width, height, "NESO RP1");
+        MainWindow w = Open(temp, width, height, "FREQUENCY SECURITY");   // RC3 P0 rename
         try
         {
             var scroll = w.GetVisualDescendants().OfType<ScrollViewer>().Single(v => v.Name == "PageBodyScroll");

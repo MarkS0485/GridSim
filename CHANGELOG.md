@@ -8989,3 +8989,393 @@ Release candidate 1.0.
 
 ### Added
 - Published the PEGASE AC power-flow comparison with a reproducible benchmark harness and downloadable evidence.
+
+## [2.1.033]
+
+### Changed
+- Renamed the frequency-security panel to Frequency Security in WPF, Avalonia and web, including navigation, panel headers, in-app help and the non-50 Hz explanation.
+
+## [2.1.034]
+
+### Added
+- Preventive transmission-security study with explicit branch outages, a DC dispatch candidate and independent absolute AC voltage, terminal MVA and generator-bound checks. Reports incomplete coverage separately from violations and candidate failures.
+- Strict versioned study input, case fingerprints, native dispatch suppression and new-path-only JSON output.
+
+## [2.1.035]
+
+### Added
+- PSS/E v35 parse results retain substation headers, node records, switching-device records and equipment-terminal records with source line numbers, while preserving the existing bus-branch model behavior.
+
+## [2.1.036]
+
+### Added
+- Typed PSS/E v35 substation topology view validates node-to-bus assignments, switch endpoints and terminal references with source-line diagnostics. It preserves two- and three-winding terminal keys and recognizes native isolated-bus IDs retained in parse metadata.
+
+## [2.1.037]
+
+### Added
+- PSS/E substation connectivity projection groups nodes reachable through explicitly closed switches, produces deterministic group and terminal maps, and requires a state for every native switch. This is a reachability result, not a solved bus model; switch reactance remains finite equipment data.
+
+## [2.1.038]
+
+### Fixed
+- PSS/E substation validation checks coordinate ranges and prohibits a native bus from being assigned to nodes in multiple substations.
+
+## [2.1.039]
+
+### Added
+- PSS/E terminal identity binder matches branch and machine terminals through the incumbent parser's full source keys and reports source equipment omitted from the legacy electrical model.
+
+## [2.1.040]
+
+### Added
+- Hash-bound PSS/E v35 substation case reader validates source bytes before parsing the native topology and identity report.
+
+## [2.1.041]
+
+### Changed
+- Named the PSS/E switch projection as connectivity reachability so it cannot be mistaken for a GridModel bus contraction that drops the switch reactance.
+
+## [2.1.042]
+
+### Fixed
+- PSS/E substation validation retains a switch when its referenced node is out of service, keeping the native switch and node states available for later disposition.
+
+## [2.1.043]
+
+### Fixed
+- PSS/E terminal identity binding recognises system switching-device terminals and retains source keys for switching devices omitted from the legacy electrical model.
+
+## [2.1.044]
+
+### Fixed
+- PSS/E substation validation rejects duplicate switching-device identities even when the duplicated endpoint order is reversed.
+
+## [2.1.045]
+
+### Fixed
+- PSS/E topology validation uses native RAW bus IDs without admitting generated transformer star buses. Connectivity reachability does not pass through out-of-service nodes, and switched-shunt terminals no longer receive a fabricated device ID.
+
+## [2.1.046]
+
+### Fixed
+- Hash-bound PSS/E input decoding follows the legacy file reader's UTF-8 default and UTF-8/16/32 byte-order mark detection.
+
+## [2.1.047]
+
+### Added
+- PSS/E parse results retain native load rows and source identities independently of bus-level aggregation. The topology binder can now map load terminals by bus and load ID and report loads omitted from the legacy model.
+
+## [2.1.048]
+
+### Added
+- PSS/E terminal identity binding resolves three-winding transformer terminals to the matching winding key using the complete bus set and circuit ID.
+
+## [2.1.049]
+
+### Fixed
+- PSS/E terminal identity binding reports duplicate rows for the same equipment end as ambiguous rather than treating them as separate valid associations.
+
+## [2.1.050]
+
+### Added
+- PSS/E terminal identity metadata now retains native fixed and switched shunt records and binds fixed-shunt terminals by bus and identifier, and switched-shunt terminals by a unique bus.
+
+## [2.1.051]
+
+### Added
+- PSS/E terminal reports now flag partial multi-terminal equipment sets before the native identities are used by a study.
+
+### Fixed
+- PSS/E substation parsing now refuses a terminal whose local bus is not owned by that substation, including terminals with node 0.
+
+## [2.1.052]
+
+### Fixed
+- PSS/E substation topology accepts zero-reactance switches as ideal connections. The connectivity projection remains reachability-only; non-zero switch reactance remains attached to the native switch record.
+
+## [2.1.053]
+
+### Added
+- PSS/E parse results now retain native source rows, keys, status, source line and raw fields for branches, transformers, machines, loads and shunts used in substation terminal inventory.
+- PSS/E terminal-set audits now compare captured terminal rows with the supported source equipment inventory, including equipment with no terminal row.
+
+## [2.1.054]
+
+### Added
+- PSS/E topology projection now creates deterministic electrical bus identities, contracts only fully ideal closed switches, and reports finite or unsupported switch equipment without silently dropping it.
+
+## [2.1.055]
+
+### Fixed
+- PSS/E topology projection now labels finite switches as retained equipment, and its completeness flag describes switch dispositions only rather than implying an electrical model can be built.
+
+## [2.1.056]
+
+### Added
+- PSS/E transformer source metadata retains each continuation row and line number separately for provenance.
+
+### Fixed
+- PSS/E topology projection reports unsupported switch dispositions separately from terminal mapping completeness.
+
+## [2.1.057]
+
+### Fixed
+- Transmission-security realised generator accounting is explicitly verified with bus shunts; the solved Y-bus injection already includes their effect, so demand is added once.
+
+## [2.1.058]
+
+### Fixed
+- PSS/E substation topology validation requires the non-zero switching-device reactance specified by the RAW format. The ideal-switch contraction remains available on an explicitly normalized topology graph.
+
+## [2.1.059]
+
+### Fixed
+- Tests: pin every intact and post-outage observable of the analytical two-bus transmission-security case against its closed form (bus voltage, slack P and Q, per-circuit terminal MVA, open-circuit zero row, exact signed voltage margin), and pin post-fault rating source, B-to-A fallback for absent or non-positive B, and the zero-margin boundary.
+
+## [2.1.060]
+
+### Changed
+- Transmission security: an outage that islands the network is left out of the DC candidate and reported as ISLANDED, while the remaining outages are still secured and AC-verified, so their evidence is reported. The study stays NOT SECURE (Incomplete).
+
+### Fixed
+- Transmission security: a unit at exactly its P or Q bound is no longer reported as a violation because of solver residual. Unit outputs recovered from converged bus injections carry a declared tolerance of the Newton bus mismatch times base MVA; margins remain unrounded.
+- Transmission security: a refusal by the DC optimiser on a valid study is a candidate failure (NOT SECURE, exit 3, one row per outage) instead of an input error.
+- transmission-security is listed by `--help`, documented in the CLI reference (which now supplies its help topic and accepted flags), and its result names the input unit setpoints `inputGenerators`.
+- Transmission security branch MVA uses only deterministic maths.
+- Tests: islanding, PV-to-PQ reactive limit, resistive slack excess against Pmax, shared-bus units with distinct costs and ranges, an outage with no AC solution, bound-exact units, DC refusal, and failed CLI invocations that must leave no result.
+
+## [2.1.061]
+
+### Fixed
+- Frequency Security: the Avalonia tab's update notifications carry the new label, and a desktop `--tab` value that opened the panel under its former NESO RP1 label (for example `rp1` or `neso`) still opens it, so existing shortcuts and scripts keep working.
+- Tests: desktop tab-strip, integration and page-clipping tests select the panel by its new label; new checks pin the legacy `--tab` values.
+
+## [2.1.062]
+
+### Added
+- PSS/E v35 node-breaker topology: a supported-subset model builder (`PsseTopologyModelBuilder`) turns the native
+  substation graph and an explicit state for every switch into a solvable `GridModel`. Closed switches are contracted
+  into one electrical bus only under a declared zero-impedance policy (R and shunts zero, |X| at or below a threshold the
+  caller states, for example PSS/E's 0.0001 pu); the native graph keeps each switch's finite X and ratings unchanged.
+  The occupied sections of a split bus become separate buses (the first keeps the native number, the rest are numbered
+  above every native bus), each attached record is placed through its own terminal row, and the incumbent RAW reader
+  builds the model, so every per-record conversion and bus sum is the established one in file order. Forward and
+  reverse maps name each model branch, machine and bus section's native record. With every switch closed the model and
+  its AC solve are bit-identical to the legacy RAW loader's.
+- The builder refuses, with the source line, every class and control it cannot map exactly: HVDC (two-terminal, VSC,
+  multi-terminal), FACTS, GNE and induction machine records in or out of service, D/V/N/A/I terminals, missing or
+  ambiguous terminals, transformer tap or phase control (COD not 0), switched shunt control (MODSW not 0), remote or
+  node voltage regulation, a closed switch outside the declared policy, an equipment end on a split bus with no
+  terminal row, a split swing bus without exactly one energised section holding a machine, a bus merge across two
+  native buses, and three-winding transformers, multi-section lines or area swing buses affected by a split.
+- A bus section with no in-service node, or (when its bus is split) no in-service branch end, is reported as
+  de-energised: its equipment is listed per terminal as absent from the solve and is not counted as served.
+- `PsseTopologyTransition` reports the old and new electrical buses and every terminal's old and new bus for a switch
+  action; each state is rebuilt from the native graph and its full switch overlay.
+- Topology-aware v35 RAW writer (`PsseTopologyRawWriter`), separate from the existing RAW writer: it regenerates the
+  substation data from the native graph, optionally with a switch-state overlay, carries every other source line
+  verbatim, lists source fields it cannot carry and refuses a requested lossless write when there are any.
+  `PsseTopologyEquivalence` compares two cases' graphs, terminals, bindings, equipment rows and model records before
+  any solved value.
+- Two-section bus coupler fixture (`substation-coupler-v35.raw`) with finite 0.0001 pu switches, explicit terminals,
+  two parallel circuits with distinct circuit identifiers and a load bay behind an open disconnector.
+
+### Fixed
+- PSS/E v35 substation switching device rows are read as NI, NJ, CKT, NAME, TYPE, STATUS, NSTAT, X, RATE1, RATE2,
+  RATE3, as the PSS/E data format defines them. The three values after X were previously read as resistance, charging
+  and end shunts; they are now the switch's ratings, and a switch read from RAW has no resistance or shunts.
+- A substation switch between nodes assigned to two different bus-branch buses is accepted when it is open in the file
+  (for example an open coupler between two buses); closed in the file it is still refused, with its line, because a
+  node's bus is defined as the bus of every node joined to it by closed switches.
+- Reading a large PSS/E RAW case no longer spends time quadratic in its branch and machine counts recording which
+  source rows the model retained; the flags and their order are unchanged.
+
+## [2.1.063]
+
+### Added
+- `gridsim corrective-sequence <study.json> [--out <result.json>]`: ordered corrective N-1-1 study (RC3 P5). Each
+  requested sequence runs as nine recorded steps in a fixed order (intact base, first outage, first AC solve, action
+  proposal, eligibility and ramp validation, action application, intermediate AC verification, second outage, final AC
+  verification). A failed step keeps its evidence and every later step is reported `Blocked`, so a final solve can
+  never hide a failed intermediate state. Every AC state is checked by the `transmission-security` verifier.
+- The permitted action set is explicit: per-unit direction, final setpoint bounds, MW cap, ramp rate and window, with
+  simultaneous independent ramps over a declared common window. A rejected action reports its exact MW shortfall, and
+  a proposal is applied whole or not at all. Separate first-stage, intermediate and final ratings; loading above the
+  intermediate rating but within the first-stage rating is reported as temporary emergency loading.
+- Proposals are `None`, `Prescribed` (an action replay) or `PlannedRedispatch` (the incumbent DC corrective redispatch
+  as a candidate only, validated against the policy). Strict versioned JSON with the same case SHA-256 binding and
+  no-overwrite result writing as `transmission-security`. Breaker and switching actions are not yet supported.
+- `TransmissionSecurityRunner.VerifyState` and `EnvelopeRefusal`: public access to the preventive study's AC verifier
+  and supported-envelope check, unchanged in behaviour.
+
+## [2.1.064]
+
+### Added
+- `gridsim transfer-capability <study.json> [--out <result.json>]`: AC-verified directional transfer capability
+  (RC3 P4). Source and sink units are bound by index and expected bus to the exact case identity, with positive
+  weights; a trial changes only their scheduled P, and the intact network and every listed branch outage are verified
+  with the same absolute AC checks as `transmission-security`. A bounded coarse walk from zero, probes above the first
+  violation and bisection to a declared MW tolerance report the lower feasible MW, the re-solved upper endpoint and its
+  first observed limit (state, element, criterion, observed value, limit and signed margin). A violated zero-transfer
+  reference is reported as `NoAdmissibleStart`, never as zero headroom; an unknown upper trial gives a verified lower
+  bound but no limit; non-monotone feasibility, reactive-limit switching, a change of binding limit, an unfinished
+  bisection or a disagreeing endpoint re-solve qualify the result. Optional monitored interfaces report their signed
+  MW change separately from the requested transfer. A separate verb, so the `transmission-security` schema, flags and
+  exit codes are unchanged. Exit 0 `VERIFIED`, 3 `QUALIFIED`, `INCOMPLETE` or `NOT SECURE`, 1 bad input, 2 usage.
+- The transfer result carries a paid-tool comparison record (frozen inputs, model parity, engineering verdict and
+  runtime tables) with only the GridSim side filled; it is always `UNVERIFIED` until a comparator is actually run.
+
+## [2.1.065]
+
+### Added
+
+- `gridsim cgmes-study <study.json> [--out <result.json>] [--export <model.xml>]` runs a CGMES profile bundle as a normal study job (RC3 P3). A strict v1 study file lists each profile (EQ, TP, SSH, SV, EQ_BD, TP_BD, DY, DL or GL) with its declared version, path and SHA-256, and binds the bundle with a SHA-256 over the ordered manifest. The job runs in a fixed order over the existing CIM code: bundle inspection, import, topology, control application (remote voltage control, static var compensators, regulating shunts) and the AC solve with reactive limits enforced, absolute intact limits, an optional preventive N-1 verification (the `transmission-security` study over the imported model, outages named by source mRID), and export with a read-back.
+- The bundle is refused before import, naming the profile and the record, for a digest mismatch, a missing required profile, a profile type listed twice, a header that contradicts the declared type, an unresolved `Model.DependentOn`, a reference to an object no profile defines, or two profiles giving one property different values. Absent optional profiles are listed, not refused.
+- The result records the consumed and omitted profiles, the importer and bridge notes, the source identity of every solved bus, branch (with its rating source) and generator, switch actions with the equipment terminals that changed bus, every represented control with its realised value, and the automatic controls that are not represented (automatic tap control).
+- The exchange output is one RDF/XML document written from the realised model and read back; equipment identity, topology, permanent ratings and the controlled AC output (voltage, angle and terminal flows within declared tolerances, the same limit disposition) are compared and every model-data difference is reported with its exact values. No conformity to an external CGMES profile specification is claimed; split-bundle export, temporary limits and a licensed-comparator check are listed as deferred.
+
+## [2.1.066]
+
+### Added
+- `gridsim planning-study <manifest.json> --out <dir>`: versioned planning snapshots and repeatable studies (RC3 P7).
+  A strict `gridsim-planning/1` manifest names one immutable master (a native JSON case directory or v2 case manifest,
+  bound by its exact consumed-file digest and its interpretation, loaded with dispatch suppressed), projects of dated,
+  ordered operations (branch availability, normal and emergency ratings, unit P and Q setpoints, bus demand), each
+  with a stable target identity, an expected prior value and a replacement value, an explicit project order, snapshot
+  instants and study definitions. Times need an explicit UTC offset; an operation is active from its start inclusive
+  to its end exclusive, so a seasonal change ends by expiring. Each snapshot is resolved on a copy of the master with
+  an audit entry for every operation (original, prior and effective value); two active projects changing one field
+  without a declared order, or a change whose expected prior has been shadowed, are refused before any job runs,
+  naming both operations. Resolved cases are checked for connectivity and ratings before a study sees them.
+- Planning study modes `transmission-security` (preventive N-1), `transfer` (AC-verified transfer capability) and
+  `corrective-n-1-1` (ordered corrective N-1-1 sequences) run each snapshot through the existing engines, with each
+  mode taking the fields of its own verb's study file. An outage or sequence that needs a branch already out of service
+  in the snapshot keeps an explicit NOT APPLICABLE row. A job passes on its engine's own passing status (SECURE, or
+  VERIFIED for transfer).
+- Planning run folders: one result file per job in its own folder, an ordered `run-manifest.json` with every job's
+  state, verdict, result digest and case identities, `summary.txt`, and timings and reuse decisions kept apart in
+  `evidence.json`. `--parallel` runs independent jobs at once without changing any output byte; `--max-jobs` (or
+  Ctrl+C) stops a batch with every completed job kept. A rerun reuses a job's result only when the build, the job's
+  request and input fingerprints and the result file's recorded length and SHA-256 all match; otherwise the earlier
+  files are removed first, so a failed job is never represented by an older result.
+
+## [2.1.067]
+
+### Added
+
+- `dynamics-study <study.json> [--out <result.json>]` (RC3 P6): a native RMS dynamics study over a PSS/E RAW case and
+  its DYR file, bound by the SHA-256 of both files, with exact initialisation options, timestep, duration, an event list
+  resolved by equipment identity (machine bus and ID, branch from, to and circuit), monitored channels and stability
+  criteria. A model coverage report comes before any verdict: every DYR record with its native identity and status
+  (SUPPORTED, APPROXIMATED, SKIPPED, UNMATCHED, OUT OF SERVICE, OUT OF SCOPE), the exact derivations it relies on and the
+  traces it drives, and every in-service unit as BOUND, APPROXIMATED or UNBOUND. A skipped or approximated required model
+  blocks a like-for-like verdict; machine data is never synthesised. A no-event interval checks the initial residuals and
+  drift against limits derived from the Newton tolerance before any disturbance is judged. Event rows record requested
+  and applied event times, processing order and the post-event network checked by its own power flow; CCT rows keep both
+  bracket endpoints (re-verified) and, with a refined step, the bracket shift reported on its own. The batch runs in
+  request order, serially or on bounded workers with independent state, bit for bit the same either way. The existing
+  `stability` verb and its `--dyn-data` refusal and `--allow-unmodelled` paths are unchanged.
+
+## [2.1.068]
+
+### Added
+
+- `restoration-study <study.json> [--out <result.json>]` (RC3 P8): a restoration switching-sequence study. Up to 12
+  candidate branches, bound by index and expected end buses to the case's SHA-256, start open and are closed one per
+  action, each with its own duration in minutes, under optional explicit precedence constraints. A deterministic finite
+  enumeration (depth-first in input order, each switching state solved once, a branch-and-bound cut from the exact
+  optimum without the AC constraints) finds the admissible order with the least unserved energy during restoration
+  (MWh). Every state is checked by the same absolute AC verifier as `transmission-security`: voltage band on every live
+  bus, branch MVA at both ends against RATE_A, and each unit's realised P and Q. The result reports the actions in
+  order with start and end minutes, unserved load before and after each step, the objective, lower and upper bounds,
+  every evaluated state and the search counts. A proven optimum (`OPTIMAL`), a verified sequence whose optimality is not
+  proven (`FEASIBLE`, for example when the node budget runs out), a proven absence of any admissible sequence
+  (`INFEASIBLE`) and an unresolved search (`UNRESOLVED`) are distinct outcomes. The existing `restore` verb is
+  unchanged.
+- `reliability-study <study.json> [--out <result.json>]` (RC3 P8): analytical reliability indices for a radial feeder,
+  with failure rates (failures/yr), repair and switching times (h), customers, average load (MW), protection (fused
+  components, disconnectors) and the dependency assumptions (independent failures, first-order, no alternate supply,
+  the year length) all stated in the study file before any index is computed. Each load point lists every failure mode
+  affecting it, with the device that clears it and whether the supply returns after repair or after switching, and its
+  failure rate, annual outage time, average outage duration and energy not supplied. System indices SAIFI, SAIDI,
+  CAIDI, ASAI, ENS and AENS are given with their units. Missing rate data is reported with the load points it affects
+  and the indices it withholds, never assumed, and the study scope is listed in the result. It reads no case and runs
+  no power flow.
+
+## [2.1.069]
+
+### Added
+
+- `gridsim emt-line <study.json> [--out <result.json>]` (RC3 P8, EMT): a lossy travelling-wave line impulse study. A
+  constant-parameter line (R', L', C', G' per metre) between a Thevenin source and an open, short, resistive or
+  capacitive termination runs on the existing EMT engine as a cascade of Bergeron sections with the EMTP
+  lumped-resistance split, built from the engine's own lossless line, resistor and conductance elements. The result
+  reports Zc, velocity, travel time, front attenuation and reflection coefficients beside the measured delay, front and
+  reflection, the traces, the error against the closed-form solution where one exists (a distortionless or lossless
+  line with a matched source) and the observed convergence order under timestep and section refinement. A delay that
+  is not a whole number of steps is refused rather than rounded. Frequency-dependent and multi-phase lines are not
+  implemented, and PSCAD or EMTP cross-validation is deferred (`comparator: unverified`). The `emt` verb, its lossless
+  line model and its fixtures are unchanged.
+- `gridsim arc-flash <study.json> [--out <result.json>]` (RC3 P8, industrial arc flash): incident energy and arc-flash
+  boundary to IEEE 1584-2018 (equations 1 to 25, Tables 1 to 7), three-phase, 0.208 kV to 15 kV. It reports the
+  intermediate and final arcing currents, VarCf, the enclosure correction, the full and reduced arcing-current
+  scenarios with their declared clearing times and source, incident energy in J/cm2 and cal/cm2, the boundary in mm,
+  and the governing scenario. An input outside the model's envelope (voltage, bolted current, gap, working distance,
+  enclosure, frequency, phases) gives `OUT OF SCOPE` with every breach and exit 3. The bolted fault current is declared
+  or read from the IEC 60909 three-phase Ik'' of a case bus bound to the case SHA-256; the IEC 60909 duties themselves
+  are unchanged. Checked against the IEEE 1584-2018 Annex D.1 and D.2 worked examples as transcribed by a third-party
+  library (the coefficients come from the same source and were not checked against a copy of the standard here).
+- `gridsim cable-rating <study.json> [--out <result.json>]` (RC3 P8, cable thermal sizing): the IEC 60287 steady-state
+  rating of one single-core unarmoured cable laid direct in the ground, with every intermediate quantity (AC
+  resistance, skin effect, dielectric loss, T1, T3, T4) reported. The nameplate rating is kept as separate evidence and a
+  rating is selected only when the study asks (`Calculated`, `Nameplate` or `Lower`). Groups, ducts, soil drying,
+  bonding-derived screen losses and transient ratings are not implemented; a published ampacity reference check is
+  deferred.
+
+## [2.1.070]
+
+### Added
+
+- `motor-start <study.json> [--out <result.json>]` (RC3 P8): a motor acceleration study from a native JSON operating
+  point. It starts one placed induction motor of a gridsim-case/2 case direct-on-line and integrates 2 H dw/dt = Te - Tl
+  with the network solved at every step, the slip derived from rotor speed (1 at standstill) and the single-cage
+  equivalent circuit evaluated at that slip; the steady-state induction machine solve is never called. The case is bound
+  by the digest of every consumed file and loaded with loader balancing suppressed, and the result keeps the authored
+  schedule, the resolved model and the realised pre-start AC solution (motor disconnected) apart: a moved unit, a
+  scheduled unit off its schedule, a voltage-controlled bus released at a reactive limit or a slack movement beyond its
+  tolerance stops the study before any event. It reports terminal current (pu and kA), P and Q, speed, slip, electrical,
+  load and accelerating torque, the voltage dip at the motor bus and the deepest at any bus, the acceleration time and
+  the termination criterion, and tells RUNNING, STALLED, NO SOLUTION (with the solver's exact status) and HORIZON ENDED
+  apart. A coasting restart starts from its declared speed; a motor connected before the start event is refused.
+- Placed motor rows in JSON v2 network files: an optional `motors` array (name, bus, rated MVA and kV, single-cage
+  circuit, inertia constant and a polynomial shaft load torque, every member except the description required). The
+  rows are checked (bus reference, units, unique names, no clash with a demand) and carried beside the model, never in
+  it, so every existing verb loads and solves a case exactly as without them. The v2 writer can write them back and the
+  case editor keeps them through an edit and save. Builds before this change refuse a file with the new member.
+- `InductionMachines.AtSlip`: the incumbent single-cage arithmetic at a specified slip (powers, air-gap torque, current
+  and input admittance), a separate entry point beside the unchanged steady-state solve.
+
+## [2.1.071]
+
+Release candidate RC-3 of GridSim 2.1 (versions 2.1.032 to 2.1.071). Windows x64, Linux x64 and macOS arm64,
+self-contained, no .NET install needed. Every RC-2 command, flag, default, exit code and output is unchanged; the new
+work is in new commands. Requirements, verification and known limits: RC3.md.
+
+### Added
+- `transmission-security`: preventive branch N-1 study. A DC candidate dispatch is verified with full AC power flow on
+  the intact network and every listed outage, against absolute voltage, branch MVA and unit limits.
+- `transfer-capability`: AC-verified directional transfer capability with the first limiting element and outage.
+- `corrective-sequence`: ordered corrective N-1-1 with an explicit permitted-action policy and ramp and time budgets.
+- `cgmes-study`: a CGMES profile bundle as a study job, from import to controlled AC solve, export and read-back.
+- `planning-study`: dated planning snapshots on an immutable master with reproducible, resumable study runs.
+- `dynamics-study`: native RMS dynamics with a DYR model coverage report before any verdict, and CCT brackets.
+- `restoration-study`, `reliability-study`, `emt-line`, `arc-flash`, `cable-rating` and `motor-start`: specialist study
+  packages, each with its own entry point and stated scope.
+- PSS/E v35 node-breaker topology: substation switching, terminal identity and a topology-aware RAW writer.
+
+### Changed
+- The NESO RP1 panel is now Frequency Security in every client; existing `--tab` values still open it.
+
+Known limits: the new jobs are tested on small analytical and constructed cases; no commercial-tool comparison has been
+made and no parity is claimed. Bugs to gdatooling@proton.me.
