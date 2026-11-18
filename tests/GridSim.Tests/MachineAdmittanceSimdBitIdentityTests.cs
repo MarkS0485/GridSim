@@ -159,9 +159,9 @@ public class MachineAdmittanceSimdBitIdentityTests
     // deterministic fdlibm sin / cos / atan2 instead of the Windows C runtime. Before -> after: 118/no battery 256B6130... ->
     // AB8F39EF..., 118/battery 3BA9F372... -> E846BB1C..., 300/no battery BB764EAA... -> 21EBA8DC...
     // (hashes abbreviated). The SIMD-vs-scalar theory above still proves the kernel.
-    [InlineData("118", false, "AB8F39EFFA60F7A514ED30A4FCD4E0BAD9781DE5319F543321D91FD895870E81")]
-    [InlineData("118", true, "E846BB1CC3F725C7608CDF96E927159FE0EA4452BCC582F4AC316190170FC2CF")]
-    [InlineData("300", false, "21EBA8DC9DC4FD342CDB62B1FAAE8F6E73FBD10640C2278A945BF33336026869")]
+    [InlineData("118", false, "3C0846CF039B6C858E5BF9252B3CED853B918DC78921C374DFED793C5DEF483B")]
+    [InlineData("118", true, "75D2647AACC6DDA9A37E9C5C438502A4FDEEDB3BE37E2F78B392557685329E51")]
+    [InlineData("300", false, "7976B27AECAA13292463EE10D737D27E40602BBADA442C1FDBF57562C60E1856")]
     public void Dense_rms_runs_are_bit_identical_to_the_scalar_kernel(string name, bool battery, string recordedBefore)
     {
         GridModel b = name == "118" ? IeeeCases.Case118() : IeeeCases.Case300();

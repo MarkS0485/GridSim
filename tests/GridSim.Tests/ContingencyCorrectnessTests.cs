@@ -444,7 +444,7 @@ public class ContingencyCorrectnessTests
             return BoundaryAnalysis.Evaluate(g, r).Single(b => b.Name.StartsWith("B4", StringComparison.Ordinal)).LoadingPercent;
         }
         double baseB4 = B4(m);
-        SameBits(48.435617734804836, baseB4, "base B4");
+        SameBits(48.435617734804765, baseB4, "base B4");
         SameBits(baseB4, B4(corrected), "B4 after the corrective step");
     }
 

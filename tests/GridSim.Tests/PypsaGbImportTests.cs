@@ -180,18 +180,18 @@ public class PypsaGbImportTests
         // 2066.1979255895526 -> 2066.1979255895403; loss MVAr 19056.015442012864 -> 19056.015442012897; Vmin 0.8731466354519171 ->
         // 0.8731466354519183; boundary flows 2058.9468105179208 -> 2058.9468105179226, 5786.771814384412 -> 5786.771814384755,
         // 6584.428789242157 -> 6584.428789242498 (iterations, slack and the fourth boundary unchanged).
-        Assert.Equal(1.4708234630234074E-12, s.MaxMismatch);
-        Assert.Equal(2066.1979255895403, s.TotalLossMw);
-        Assert.Equal(19056.015442012897, s.TotalLossMvar);
+        Assert.Equal(1.5303314171433158E-12, s.MaxMismatch);
+        Assert.Equal(2066.1979255894589, s.TotalLossMw);
+        Assert.Equal(19056.015442012947, s.TotalLossMvar);
         Assert.Equal(-15779.082074410593, s.PInjMw[26]);           // slack (Sellindge) net injection
         int lo = Array.IndexOf(s.Vm, s.Vm.Min());
         Assert.Equal(25, s.BusIds[lo]);
-        Assert.Equal(0.8731466354519183, s.Vm[lo]);
+        Assert.Equal(0.87314663545191928, s.Vm[lo]);
         IReadOnlyList<BoundaryFlow> f = BoundaryAnalysis.Evaluate(m, s);
-        Assert.Equal(2058.9468105179226, f[0].FlowMw);
-        Assert.Equal(5786.771814384755, f[1].FlowMw);
-        Assert.Equal(6584.428789242498, f[2].FlowMw);
-        Assert.Equal(12640.347217652652, f[3].FlowMw);
+        Assert.Equal(2058.9468105179221, f[0].FlowMw);
+        Assert.Equal(5786.771814384666, f[1].FlowMw);
+        Assert.Equal(6584.4287892424109, f[2].FlowMw);
+        Assert.Equal(12640.347217652628, f[3].FlowMw);
         Assert.All(f, x => Assert.False(x.Overloaded));             // limit 0 = no limit authored, never an overload
         // The contingency study solver starts from the same state (no OLTCs).
         S10TestSupport.AssertBitIdentical("pypsa-gb-reduced study vs pf", s, ContingencyAnalysis.CreateStudySolver(m).Solve(m, ContingencyAnalysis.StudyOptions));
@@ -335,7 +335,7 @@ public class PypsaGbImportTests
         Assert.Contains("Power flow - pypsa-gb-reduced (29 buses)", r.StdOut, StringComparison.Ordinal);
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): the printed
         // mismatch follows the pinned solve above. Before -> after: 3.24E-012 -> 1.47E-012 (losses print unchanged).
-        Assert.Contains("converged in 21 iteration(s), mismatch 1.47E-012 pu   losses 2066.198 MW / 19056.015 MVAr", r.StdOut, StringComparison.Ordinal);
+        Assert.Contains("converged in 21 iteration(s), mismatch 1.53E-012 pu   losses 2066.198 MW / 19056.015 MVAr", r.StdOut, StringComparison.Ordinal);
         Assert.Contains("note: pypsa-gb-reduced: 96 of 99 line(s) equal a branch of 'GBreducednetwork'", r.StdErr, StringComparison.Ordinal);
         Assert.DoesNotContain("note:", r.StdOut, StringComparison.Ordinal);   // notes go to stderr; stdout is the report
     }

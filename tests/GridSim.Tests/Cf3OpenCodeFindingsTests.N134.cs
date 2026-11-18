@@ -66,9 +66,9 @@ public sealed partial class Cf3OpenCodeFindingsTests
         // the steady basis, still Method B's per the CF4 notes) were not reached in those runs: confirm at the validation run.
         long idcBits = bus switch
         {
-            1 => 4614453194012349616L,
-            5 => 4589372673170672915L,
-            7 => 4601484151419645541L,
+            1 => 4614453194012349614L,
+            5 => 4589372673170672912L,
+            7 => 4601484151419645535L,
             _ => throw new ArgumentOutOfRangeException(nameof(bus)),
         };
         SameBits(BitConverter.Int64BitsToDouble(idcBits), c.DcComponentKa);

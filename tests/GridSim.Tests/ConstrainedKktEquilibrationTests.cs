@@ -62,10 +62,10 @@ public class ConstrainedKktEquilibrationTests
     // GridSim's deterministic fdlibm sin / cos / atan2 / log instead of the Windows C runtime. Before -> after:
     // 57/0 8.866349637239787E-20 -> 8.882245439379705E-20; 57/1 388.9259565332666 -> 388.92595653326845;
     // 118/0 1.207657143242615E-22 -> 1.2314429581710474E-22; 118/1 873.9071335437395 -> 873.9071335437176.
-    [InlineData("57", 0.0, 15, 5, 8.882245439379705E-20)]
-    [InlineData("57", 1.0, 15, 6, 388.92595653326845)]
-    [InlineData("118", 0.0, 10, 5, 1.2314429581710474E-22)]
-    [InlineData("118", 1.0, 10, 6, 873.9071335437176)]
+    [InlineData("57", 0.0, 15, 5, 8.8885603596966258E-20)]
+    [InlineData("57", 1.0, 15, 6, 388.92595653326129)]
+    [InlineData("118", 0.0, 10, 5, 1.7404987378956381E-22)]
+    [InlineData("118", 1.0, 10, 6, 873.90713354371803)]
     public void Hard_zero_injections_on_larger_cases_now_converge(string name, double noise, int ziBuses, int iterations, double j)
     {
         (GridModel m, MeasurementSet set, int nZi) = WithHardZeroInjections(name, noise);
@@ -101,10 +101,10 @@ public class ConstrainedKktEquilibrationTests
     // 3.0931116976745245E-22; 118/1 877.8012390625307 -> 877.8012390625249.
     [InlineData("14", 0.0, 5, 9.489482721436637E-25)]
     [InlineData("14", 1.0, 5, 80.01052231478428)]
-    [InlineData("57", 0.0, 5, 1.0915633400202937E-23)]
-    [InlineData("57", 1.0, 5, 407.14427112449533)]
-    [InlineData("118", 0.0, 5, 3.0931116976745245E-22)]
-    [InlineData("118", 1.0, 6, 877.8012390625249)]
+    [InlineData("57", 0.0, 5, 1.227220855151324E-23)]
+    [InlineData("57", 1.0, 5, 407.14427112448556)]
+    [InlineData("118", 0.0, 5, 1.5161066382863668E-22)]
+    [InlineData("118", 1.0, 6, 877.80123906249139)]
     public void Without_constraint_rows_nothing_changes(string name, double noise, int iterations, double j)
     {
         GridModel m = name switch { "14" => IeeeCases.Case14(), "57" => IeeeCases.Case57(), _ => IeeeCases.Case118() };

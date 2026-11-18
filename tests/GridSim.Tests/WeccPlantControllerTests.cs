@@ -288,7 +288,7 @@ public class WeccPlantControllerTests
         (GridModel m, PowerFlowResult pf, List<SubtransientInit.MachineData> data) = Case9(PoiControl() with { Fflag = 1 });
         MultiMachineSubtransient.Result r = RmsTransientStability.Study(m, pf, data, 7, 0.1, 0.08, stepSeconds: 0.005, durationSeconds: 1.5);
         string d = WeccRenewableDigestTests.Digest(r);
-        Assert.True(d == "CBD00D2ED73EDC5ECBE33904877D6571B571F53595C0CBE16C7CCBAA3FF0A657", "digest " + d);
+        Assert.True(d == "1F7C65E78D80F0882301A907F6239FD9C0E2FF8794A81476976170C07979E5D5", "digest " + d);
     }
 
     [Fact]

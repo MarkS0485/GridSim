@@ -65,8 +65,8 @@ public class GbReferenceCrossCheckTests
         // fdlibm sin / cos in the Newton solve. Before -> after: generation 58231.686081460124 -> 58231.68608146015; side-cut
         // flows 2039.86113179131, 5747.547961074001, 6490.237991534751, 12464.200294955155 -> 2039.86113179131, 5747.54796107399,
         // 6490.237991534737, 12464.200294955164.
-        Assert.Equal(58231.68608146015, SolvedGeneration(m, r));
-        Assert.Equal(new[] { 2039.86113179131, 5747.54796107399, 6490.237991534737, 12464.200294955164 }, SideCutFlows(m, r));
+        Assert.Equal(58231.686081460117, SolvedGeneration(m, r));
+        Assert.Equal(new[] { 2039.8611317913114, 5747.5479610739976, 6490.2379915347337, 12464.200294955172 }, SideCutFlows(m, r));
     }
 
     [Fact]
@@ -87,10 +87,10 @@ public class GbReferenceCrossCheckTests
         // -> 66.36695254816104; side-cut flows 1140.7169505839834, 3003.932414253936, 2988.1789189807632, 4745.373223631851 ->
         // 1140.7169505839834, 3003.9324142538417, 2988.1789189806705, 4745.373223631759 (passes unchanged).
         Assert.Equal(-18316.547328220688, dense.LastImbalanceMw);
-        Assert.Equal(369.7326044177099, r.TotalLossMw);
-        Assert.Equal(56695.59260441771, SolvedGeneration(m, r));
-        Assert.Equal(66.36695254816104, r.LineFlows.Max(f => f.LoadingPercent));
-        Assert.Equal(new[] { 1140.7169505839834, 3003.9324142538417, 2988.1789189806705, 4745.373223631759 }, SideCutFlows(m, r));
+        Assert.Equal(369.7326044177729, r.TotalLossMw);
+        Assert.Equal(56695.592604417776, SolvedGeneration(m, r));
+        Assert.Equal(66.366952548161279, r.LineFlows.Max(f => f.LoadingPercent));
+        Assert.Equal(new[] { 1140.7169505839843, 3003.9324142539313, 2988.1789189807614, 4745.3732236318465 }, SideCutFlows(m, r));
     }
 
     [Fact]
@@ -108,14 +108,14 @@ public class GbReferenceCrossCheckTests
         // 56667.275312489684 -> 56667.27531248971; max loading 90.20653128976625 -> 90.20653128976627; boundary flows
         // 1147.338345604764, 3013.3707364550805, 3009.5283892811663, 4785.358216398061 -> 1147.3383456047648, 3013.3707364550364,
         // 3009.5283892811212, 4785.358216398061; as-shipped generation 58392.05792558953 -> 58392.05792558954.
-        Assert.Equal(341.4153124897141, r.TotalLossMw);
-        Assert.Equal(56667.27531248971, SolvedGeneration(m, r));
-        Assert.Equal(90.20653128976627, r.LineFlows.Max(f => f.LoadingPercent));
-        Assert.Equal(new[] { 1147.3383456047648, 3013.3707364550364, 3009.5283892811212, 4785.358216398061 },
+        Assert.Equal(341.41531248967067, r.TotalLossMw);
+        Assert.Equal(56667.275312489677, SolvedGeneration(m, r));
+        Assert.Equal(90.20653128976609, r.LineFlows.Max(f => f.LoadingPercent));
+        Assert.Equal(new[] { 1147.3383456047636, 3013.3707364550924, 3009.5283892811749, 4785.3582163980536 },
             BoundaryAnalysis.Evaluate(m, r).Select(f => f.FlowMw));
         // As shipped (the slack sinks the surplus), the same solve the P02 pin covers: generation as solved.
         PowerFlowResult shipped = new NewtonRaphsonPowerFlow().Solve(m, PfOptions);
-        Assert.Equal(58392.05792558954, SolvedGeneration(m, shipped));
+        Assert.Equal(58392.05792558947, SolvedGeneration(m, shipped));
     }
 
     [Fact]
@@ -127,8 +127,8 @@ public class GbReferenceCrossCheckTests
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): deterministic
         // fdlibm sin / cos in the Newton solve. Before -> after: generation 61302.46991104913 -> 61302.46991104905; loss
         // 1224.9099110491472 -> 1224.9099110490408.
-        Assert.Equal(61302.46991104905, SolvedGeneration(m, r));
-        Assert.Equal(1224.9099110490408, r.TotalLossMw);
+        Assert.Equal(61302.469911049426, SolvedGeneration(m, r));
+        Assert.Equal(1224.9099110494324, r.TotalLossMw);
     }
 
     [Fact]
@@ -154,19 +154,19 @@ public class GbReferenceCrossCheckTests
         // 1670.778746136451, 3779.6267234181432, 3340.5799117624165, 8535.77075152322, -2534.800088688238 ->
         // 1670.7787461431967, 3779.6267222159936, 3340.579881911521, 8536.11076202345, -2534.8009995851994 (B8 FLOWSTH
         // +0.340 MW, the others under 0.001 MW); demand and the uk case unchanged.
-        Assert.Equal(53807.79521405717, SolvedGeneration(full, rf));
-        Assert.Equal(522.7976418426257, rf.TotalLossMw);
+        Assert.Equal(53807.795214056321, SolvedGeneration(full, rf));
+        Assert.Equal(522.79764184173212, rf.TotalLossMw);
         IReadOnlyList<BoundaryFlow> bf = BoundaryAnalysis.Evaluate(full, rf);
         Assert.Equal(new[] { "B4 SHETL-SPT (SSE-SP)", "B6 Scotland-England (SCOTEX)", "B7 Upper North England (HARSPNBLY)", "B8 North to Midlands (FLOWSTH)", "SEIMP South East import (SEIMPPR2)" },
             bf.Select(f => f.Name));
-        Assert.Equal(new[] { 1670.7787461431967, 3779.6267222159936, 3340.579881911521, 8536.11076202345, -2534.8009995851994 }, bf.Select(f => f.FlowMw));
+        Assert.Equal(new[] { 1670.7787461431976, 3779.6267222159681, 3340.579881911478, 8536.1107620234543, -2534.8009995853622 }, bf.Select(f => f.FlowMw));
 
         GridModel uk = JsonGridLoader.LoadDirectory(Path.Combine(Data, "uk"));
         PowerFlowResult ru = ContingencyAnalysis.CreateStudySolver(uk).Solve(uk, ContingencyAnalysis.StudyOptions);
         Assert.True(ru.Converged);
-        Assert.Equal(39555.56867258789, SolvedGeneration(uk, ru));
-        Assert.Equal(55.56867258789316, ru.TotalLossMw);
-        Assert.Equal(new[] { 1549.9351574107684, 2321.819157158176, 1247.0267937336664, 3050.5350893032605 },
+        Assert.Equal(39555.568672587906, SolvedGeneration(uk, ru));
+        Assert.Equal(55.568672587907031, ru.TotalLossMw);
+        Assert.Equal(new[] { 1549.9351574107684, 2321.819157158176, 1247.0267937336621, 3050.5350893032582 },
             BoundaryAnalysis.Evaluate(uk, ru).Select(f => f.FlowMw));
     }
 }

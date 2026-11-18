@@ -31,15 +31,15 @@ public class Iec60909PartialAgreementTests
     // fault-network engine the single-fed sum (before) moves by one ulp at buses 5, 6 and 9 (bus 4 does not move), as
     // DOC-16 left to confirm. Before -> after: bus 5 1.4690796589338537 -> 1.4690796589338535; bus 6 1.708607252464341
     // -> 1.7086072524643408; bus 9 1.5455388627348547 -> 1.5455388627348545. The after values are unchanged.
-    [InlineData(1, 2.35285127770572, 2.3509284626333975)]
-    [InlineData(2, 2.0424547080946116, 2.0413041587855694)]
-    [InlineData(3, 1.6389680410617713, 1.6375154270367709)]
-    [InlineData(4, 1.9953536674616223, 2.0600168548926727)]
-    [InlineData(5, 1.4690796589338535, 1.4683989584292985)]
-    [InlineData(6, 1.7086072524643408, 1.748214268989648)]
-    [InlineData(7, 1.6083616402122431, 1.630308759669193)]
-    [InlineData(8, 1.9128790957363628, 1.9706884701977745)]
-    [InlineData(9, 1.5455388627348545, 1.5444853448525933)]
+    [InlineData(1, 2.35285127770572, 2.350928462633397)]
+    [InlineData(2, 2.0424547080946125, 2.0413041587855694)]
+    [InlineData(3, 1.6389680410617715, 1.6375154270367709)]
+    [InlineData(4, 1.9953536674616228, 2.060016854892672)]
+    [InlineData(5, 1.4690796589338537, 1.4683989584292976)]
+    [InlineData(6, 1.7086072524643414, 1.748214268989648)]
+    [InlineData(7, 1.6083616402122436, 1.630308759669193)]
+    [InlineData(8, 1.9128790957363633, 1.9706884701977745)]
+    [InlineData(9, 1.5455388627348547, 1.5444853448525928)]
     public void Case9_partial_total_breaking_current_equals_ThreePhase(int bus, double before, double after)
     {
         GridModel m = IeeeCases.Case9();

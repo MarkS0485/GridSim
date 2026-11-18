@@ -142,9 +142,9 @@ public sealed partial class Fb1FinalBatchFollowUpsTests
     /// <summary>EmtUntappedBitIdentityTests' trajectory digest (DC source at the first generator bus, loads on, 20 us,
     /// 40 ms; lumped, travelling-wave lines, and a bus fault 10-20 ms) on case9 at its own 60 Hz.</summary>
     [Theory]
-    [InlineData("lumped", "EE340378AF0F941BD04EFA8B5775803B059173DCD5E1C032268FE023EC856552")]
-    [InlineData("lines", "E62C4E60DFAD1488773AD9FEB86FB396D56DF151B0E81ACAAB2093915286AA5C")]
-    [InlineData("fault", "C726F916DFE3BAE79E6D51B248B921F590AC4CDEE7607ED8FD3F887E6A11E298")]
+    [InlineData("lumped", "21542A010BEF85DD696FF387B2B65123264CCCB3C39938BAE35B3C61F9BBBA79")]
+    [InlineData("lines", "B69D286E42BF2BD4C46391A1D69C8C2F1BB0E719C5DACFC907C33B96D9963C4F")]
+    [InlineData("fault", "D744F4B3FEE7A05B0CF7F646FFD204128D450383EC250C5E1B216A09B1BD9E08")]
     public void Pin_case9_at_60_hz_emt_digest(string mode, string expected)
     {
         GridModel model = IeeeCases.Case9();

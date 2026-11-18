@@ -2,7 +2,7 @@ namespace GridSim.Core.Numerics;
 
 /// <summary>
 /// A sparse direct linear solver  -  Gilbert-Peierls left-looking LU with partial
-/// pivoting, over a fill-reducing reverse Cuthill-McKee column ordering. Unlike an
+/// pivoting, over a fill-reducing minimum-degree column ordering (see <see cref="MinimumDegreeOrdering"/>; reverse Cuthill-McKee is kept as a comparison). Unlike an
 /// iterative method it solves Jx = b exactly in one pass regardless of how stiff the
 /// power-flow Jacobian is (short cables -> huge admittances -> ill-conditioning), which
 /// is what the full node-level GDA replica needs.
@@ -30,7 +30,7 @@ public static class SparseLu
     internal static SparseLuFactorization? Factor(CsrMatrix a)
     {
         if (a.N == 0) return null;
-        return FactorWithOrdering(a, ReverseCuthillMcKee(a));
+        return FactorWithOrdering(a, Ordering(a));
     }
 
     /// <summary><see cref="Factor(CsrMatrix)"/> under the OPT-IN diagonal-preference pivot rule
@@ -39,7 +39,7 @@ public static class SparseLu
     {
         if (a.N == 0) return null;
         (int[] ap, int[] ai, double[] ax) = ToCsc(a);
-        return SparseLuFactorization.Factor(a.N, ap, ai, ax, ReverseCuthillMcKee(a), diagonalPreference: diagonalPreference);
+        return SparseLuFactorization.Factor(a.N, ap, ai, ax, Ordering(a), diagonalPreference: diagonalPreference);
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public static class SparseLu
     /// <summary>The fill-reducing column ordering alone - for callers whose matrix STRUCTURE is
     /// fixed across many numeric factorizations (the estimator's gain matrix per pass): compute
     /// once, then refactor values with <see cref="FactorPrepared"/> each iteration.</summary>
-    internal static int[] Ordering(CsrMatrix a) => ReverseCuthillMcKee(a);
+    internal static int[] Ordering(CsrMatrix a) => MinimumDegreeOrdering.Order(a);
 
     /// <summary>Numeric factorization of an already-prepared CSC matrix with a precomputed
     /// ordering - skips the CSR->CSC conversion and RCM that <see cref="Factor"/> redoes per call.
@@ -163,7 +163,7 @@ public static class SparseLu
     }
 
     /// <summary>Reverse Cuthill-McKee ordering of the (structurally symmetrised) matrix graph  -  shrinks fill.</summary>
-    private static int[] ReverseCuthillMcKee(CsrMatrix a)
+    internal static int[] ReverseCuthillMcKee(CsrMatrix a)
     {
         int n = a.N;
         int[] rowPtr = a.RowPtr, colIdx = a.ColIdx;

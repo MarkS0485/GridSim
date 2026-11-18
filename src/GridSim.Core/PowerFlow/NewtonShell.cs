@@ -39,8 +39,13 @@ internal static class NewtonShell
 
     /// <summary>Floor (p.u.) on a PQ bus voltage magnitude after a Newton update. A magnitude at or below zero
     /// has no physical meaning and makes the polar equations degenerate (dP/dV terms divide by Vm), so an
-    /// overshooting iterate is held here and the next step corrects it. Never active at a converged point.</summary>
-    public const double VmFloorPu = 0.2;
+    /// overshooting iterate is held here and the next step corrects it. Never active at a converged point.
+    /// <para>The floor must sit below every physical root. It was 0.2 pu, but true roots can lie below that:
+    /// case2848rte has a bus at 0.0215 pu, so the old floor excluded the real solution and the iterate sat on the
+    /// floor with a growing mismatch (no convergence from flat start). At 0.01 pu that case converges. Across the
+    /// 66-case MATPOWER suite no previously converging case ever tripped the old floor, so every such case is
+    /// bit-identical to the 0.2 pu build.</para></summary>
+    public const double VmFloorPu = 0.01;
 
     /// <summary>
     /// THE canonical Newton step, shared by the dense and sparse engines so they are bit-identical

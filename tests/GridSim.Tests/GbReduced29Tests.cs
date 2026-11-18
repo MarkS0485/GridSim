@@ -87,22 +87,22 @@ public class GbReduced29Tests
 
         Assert.True(s.Converged);
         Assert.Equal(16, s.Iterations);
-        Assert.Equal(1.673328142715036E-12, s.MaxMismatch);
+        Assert.Equal(1.6768808563938364E-12, s.MaxMismatch);
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): deterministic
         // fdlibm sin / cos in the Newton solve. Before -> after: loss MW 1905.8260814601151 -> 1905.826081460152; loss MVAr
         // 17914.637126061392 -> 17914.637126061352; slack -15939.453918539923 -> -15939.453918539908; Vmin 0.9000084138578155 ->
         // 0.9000084138578154; max angle 106.38418899424208 -> 106.38418899424201; max loading 191.31067949531095 ->
         // 191.31067949531086 (iterations and mismatch unchanged).
-        Assert.Equal(1905.826081460152, s.TotalLossMw);
-        Assert.Equal(17914.637126061352, s.TotalLossMvar);
+        Assert.Equal(1905.8260814601394, s.TotalLossMw);
+        Assert.Equal(17914.637126061414, s.TotalLossMvar);
         int slack = m.Buses.ToList().FindIndex(b => b.Type == BusType.Slack);
         // The slack absorbs the stated surplus: its net injection is -15,939.45 MW (its units at -15,482.45 MW).
-        Assert.Equal(-15939.453918539908, s.PInjMw[slack]);
+        Assert.Equal(-15939.453918539897, s.PInjMw[slack]);
         int lo = Array.IndexOf(s.Vm, s.Vm.Min());
         Assert.Equal(25, s.BusIds[lo]);
-        Assert.Equal(0.9000084138578154, s.Vm[lo]);
-        Assert.Equal(106.38418899424201, s.VaDeg.Max());
-        Assert.Equal(191.31067949531086, s.LineFlows.Max(f => f.LoadingPercent));
+        Assert.Equal(0.90000841385781583, s.Vm[lo]);
+        Assert.Equal(106.38418899424197, s.VaDeg.Max());
+        Assert.Equal(191.31067949531069, s.LineFlows.Max(f => f.LoadingPercent));
         Assert.Equal(14, s.LineFlows.Count(f => f.LoadingPercent > 100));
     }
 
@@ -119,14 +119,14 @@ public class GbReduced29Tests
         // fdlibm sin / cos in the Newton solve. Before -> after: mismatch 4.4431125445498765E-13 -> 7.153722059172196E-13; loss MW
         // 1724.35396606217 -> 1724.3539660621514; loss MVAr 15633.362986203494 -> 15633.362986203523; slack -16120.926033937878 ->
         // -16120.926033937883 (Vmin unchanged).
-        Assert.Equal(7.153722059172196E-13, s.MaxMismatch);
-        Assert.Equal(1724.3539660621514, s.TotalLossMw);
-        Assert.Equal(15633.362986203523, s.TotalLossMvar);
+        Assert.Equal(8.8107299234252423E-13, s.MaxMismatch);
+        Assert.Equal(1724.3539660620931, s.TotalLossMw);
+        Assert.Equal(15633.362986203312, s.TotalLossMvar);
         int slack = m.Buses.ToList().FindIndex(b => b.Type == BusType.Slack);
-        Assert.Equal(-16120.926033937883, s.PInjMw[slack]);
+        Assert.Equal(-16120.926033937818, s.PInjMw[slack]);
         int lo = Array.IndexOf(s.Vm, s.Vm.Min());
         Assert.Equal(24, s.BusIds[lo]);
-        Assert.Equal(0.984503345696812, s.Vm[lo]);
+        Assert.Equal(0.98450334569681208, s.Vm[lo]);
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public class GbReduced29Tests
         CliProcess.Result r = CliProcess.RunBuilt("pf", "gb-reduced-29", "--top", "1");
         Assert.True(r.ExitCode == 0, r.ToString());
         Assert.Contains("Power flow - GBreducednetwork (29 buses)", r.StdOut, StringComparison.Ordinal);
-        Assert.Contains("converged in 16 iteration(s), mismatch 1.67E-012 pu   losses 1905.826 MW / 17914.637 MVAr", r.StdOut, StringComparison.Ordinal);
+        Assert.Contains("converged in 16 iteration(s), mismatch 1.68E-012 pu   losses 1905.826 MW / 17914.637 MVAr", r.StdOut, StringComparison.Ordinal);
         Assert.Contains("bus 25     0.9000 pu", r.StdOut, StringComparison.Ordinal);
     }
 }

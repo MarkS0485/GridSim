@@ -290,6 +290,6 @@ public class WeccRenewableDigestTests
         }).ToList();
         MultiMachineSubtransient.Result r = RmsTransientStability.Study(m, pf, data, 3, 0.1, 0.1, stepSeconds: 0.005, durationSeconds: 2.0);
         string d = Digest(r);
-        Assert.True(d == "469F56FB408DB49A46FD097FBB8B2C25CE650DD91863B95471156926AABF1B6F", "digest " + d);
+        Assert.True(d == "FD122763FE365F3BF4C69BF07D2564BC7D8D0D14D75BAC6BD65BAE966B1AFC85", "digest " + d);
     }
 }

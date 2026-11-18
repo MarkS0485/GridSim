@@ -24,9 +24,9 @@ public class PowerFlowStepConstantsPinTests
     }
 
     [Fact]
-    public void Newton_pq_voltage_floor_is_0_2_pu()
+    public void Newton_pq_voltage_floor_is_0_01_pu()
     {
-        AssertExactly(0.2, NewtonShell.VmFloorPu, nameof(NewtonShell.VmFloorPu));
+        AssertExactly(0.01, NewtonShell.VmFloorPu, nameof(NewtonShell.VmFloorPu));
     }
 
     [Fact]
@@ -50,11 +50,11 @@ public class PowerFlowStepConstantsPinTests
         int[] pPos = { -1, 0 };   // bus 0 slack (no angle unknown), bus 1 angle at position 0
         int[] qPos = { -1, 1 };   // bus 1 magnitude at position 1
         double[] dx = { 0.8, -2.0 };   // largest |component| 2.0 > 0.4, so damp = 0.4 / 2.0 = 0.2
-        double[] vm = { 1.0, 0.5 };
+        double[] vm = { 1.0, 0.3 };
         double[] va = { 0.0, 0.0 };
         NewtonShell.ApplyStep(2, pPos, qPos, dx, maxAbs: 2.0, vm, va);
         AssertExactly(0.2 * 0.8, va[1], "damped angle step");
-        // 0.5 + 0.2 * -2.0 = 0.1 < 0.2, so the magnitude is held at the floor.
+        // 0.3 + 0.2 * -2.0 = -0.1 < 0.01, so the magnitude is held at the floor.
         AssertExactly(NewtonShell.VmFloorPu, vm[1], "floored magnitude");
         AssertExactly(1.0, vm[0], "slack magnitude untouched");
     }

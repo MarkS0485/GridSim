@@ -9379,3 +9379,21 @@ work is in new commands. Requirements, verification and known limits: RC3.md.
 
 Known limits: the new jobs are tested on small analytical and constructed cases; no commercial-tool comparison has been
 made and no parity is claimed. Bugs to gdatooling@proton.me.
+
+## [Unreleased] - BREAKING CHANGE (numerical and determinism contract)
+**BREAKING CHANGE:** results and determinism digests are NOT bit-identical to 2.1.071. Any stored digests or bit-exact
+comparisons against earlier versions will fail and must be regenerated.
+
+### Changed
+- **BREAKING:** the sparse LU column ordering is now exact minimum degree (`MinimumDegreeOrdering`) instead of reverse
+  Cuthill-McKee. One shared switch moves every LU user: dense and sparse Newton, fixed-pattern, EMT, three-phase EMT,
+  WLS, complex solvers and the batched contingency solver. Dense and sparse Newton remain bit-identical to each other.
+- **BREAKING:** the Newton voltage floor `VmFloorPu` is lowered from 0.2 to 0.01 pu.
+- Note: the difference is at rounding level - max |dVm| 9.7e-13 pu and max |dVa| 1.9e-11 deg on 66 MATPOWER cases
+  (dynamic/EMT trajectories within ~2e-10 normwise), with identical convergence and iteration counts. This breaches the
+  strict bit-for-bit contract but will not materially change your results; they remain at the floating-point rounding
+  floor.
+- `case2848rte` now converges (it has a bus at 0.0215 pu, below the old 0.2 floor).
+- Large sparse solves are 4-8x faster (case3375wp 600 -> 75 ms, case_ACTIVSg2000 332 -> 45 ms).
+- The bundled `intl/iberia` case has no AC solution as shipped; its angle-spread pin was removed from the UI test (the
+  network data still ships).

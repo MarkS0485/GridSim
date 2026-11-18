@@ -193,9 +193,9 @@ public class Iec60909Tests
     // 2.155003982857191 -> 2.1550039828571914, Ib 2.0600168548926723 -> 2.0600168548926727; bus 5 Ik'' = Ib
     // 1.4683989584292976 -> 1.4683989584292985. Buses 1 and 7 unchanged.
     [Theory]
-    [InlineData(1, 2.934393338019216, 2.3509284626333975)]
-    [InlineData(4, 2.1550039828571914, 2.0600168548926727)]
-    [InlineData(5, 1.4683989584292985, 1.4683989584292985)]   // every machine far: Ib = Ik'' exactly
+    [InlineData(1, 2.9343933380192158, 2.350928462633397)]
+    [InlineData(4, 2.1550039828571905, 2.060016854892672)]
+    [InlineData(5, 1.4683989584292976, 1.4683989584292976)]   // every machine far: Ib = Ik'' exactly
     [InlineData(7, 1.647443765211713, 1.630308759669193)]
     public void Case9_breaking_currents_are_pinned(int bus, double ikppKa, double ibKa)
     {

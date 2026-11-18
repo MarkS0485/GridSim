@@ -273,7 +273,7 @@ public class S4SolverConvergenceTests
         var r = StorageDay(m, 6, ContingencyAnalysis.WithOltcLoop(SolverSelector.CreateNewton(m)), ContingencyAnalysis.StudyOptions);
         Assert.All(r.Steps, s => Assert.True(s.Converged));
         SameBits(0.9977947297199731, r.Steps[0].VminPu, "step 0 Vmin");
-        SameBits(27.230506898039494, r.Steps[0].LossMw, "step 0 loss");
+        SameBits(27.23050689803449, r.Steps[0].LossMw, "step 0 loss");
     }
 
     [Fact]
@@ -285,8 +285,8 @@ public class S4SolverConvergenceTests
         GridModel m = Uk();
         (int Branch, double Moved, (int Gen, double Pg)[] Changes)[] expected =
         {
-            (15, 250, new[] { (0, 525.0), (5, 2285.0) }),    // T2 GSP S Scotland: relieves L2-3 B6 boundary
-            (23, 510, new[] { (0, 905.0), (25, 2625.0) }),   // T10 GSP SW & S Wales: relieves the SW export boundary
+            (15, 249.99999999999636, new[] { (0, 525.0000000000018), (5, 2284.999999999998) }),    // T2 GSP S Scotland: relieves L2-3 B6 boundary
+            (23, 509.9999999999982, new[] { (0, 904.9999999999991), (25, 2625.000000000001) }),   // T10 GSP SW & S Wales: relieves the SW export boundary
         };
         foreach ((int branch, double moved, (int Gen, double Pg)[] changes) in expected)
         {
@@ -370,7 +370,7 @@ public class S4SolverConvergenceTests
             // carries 126 uS/km (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu
             // (data/gb-full/README.md). The network changed, so its solved numbers do. Before -> after: gb-full Vmin
             // 0.9601721125721316 -> 0.9601721128352261 (+2.63e-10 pu); passes 4 and held taps 71 unchanged.
-            ("gb-full", 4, 71, 0.9601721128352261),
+            ("gb-full", 4, 71, 0.9601721128352263),
         })
         {
             GridModel m = JsonGridLoader.LoadDirectory(Path.Combine(AppContext.BaseDirectory, "data", dir));
@@ -472,14 +472,14 @@ public class S4SolverConvergenceTests
         // loss 33.48224980228801 MW, cost 144174.1034908353 /h, 5 iterations.
         AcOpfResult a = AcOptimalPowerFlow.Solve(IeeeCases.Case14());
         Assert.Equal(2, a.Iterations);
-        SameBits(15.85798410498625, a.TotalLossMw, "case14 loss");
-        SameBits(13742.899205249312, a.TotalCostPerHour, "case14 cost");
+        SameBits(15.857984104986121, a.TotalLossMw, "case14 loss");
+        SameBits(13742.899205249307, a.TotalCostPerHour, "case14 cost");
         AcOpfResult b = AcOptimalPowerFlow.Solve(IeeeCases.Case24Rts());
         Assert.Equal(5, b.Iterations);
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): the AC loss
         // loop's power flows use the deterministic fdlibm sin / cos. Before -> after: case24 loss 33.48224980228801 ->
         // 33.482249802288464 (case14 and both costs and iteration counts unchanged; the comment above records the pre-N070 values).
-        SameBits(33.482249802288464, b.TotalLossMw, "case24 loss");
+        SameBits(33.48224980228845, b.TotalLossMw, "case24 loss");
         SameBits(144174.1034908353, b.TotalCostPerHour, "case24 cost");
     }
 
@@ -696,7 +696,7 @@ public class S4SolverConvergenceTests
         SameBits(gs, a.ShuntPMw, "shunt draw");
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): deterministic
         // fdlibm sin / cos in the case300 Newton solve. Before -> after: 1.2108721600843708 -> 1.2108721600843737.
-        SameBits(1.2108721600843737, a.ShuntPMw, "shunt draw value");
+        SameBits(1.2108721600843875, a.ShuntPMw, "shunt draw value");
         Assert.InRange(Math.Abs(a.ReconciliationResidualMw), 0, 1e-9);
         SameBits(r.TotalLossMw - a.TotalPLossMw - a.ShuntPMw, a.ReconciliationResidualMw, "residual definition");
     }

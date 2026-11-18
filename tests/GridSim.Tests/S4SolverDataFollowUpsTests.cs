@@ -81,8 +81,8 @@ public class S4SolverDataFollowUpsTests
         Assert.Equal(AcOpfFailure.None, r.Failure);
         Assert.Null(r.AcFailure);
         Assert.Equal(2, r.Iterations);
-        Assert.Equal(BitConverter.DoubleToInt64Bits(15.85798410498625), BitConverter.DoubleToInt64Bits(r.TotalLossMw));
-        Assert.Equal(BitConverter.DoubleToInt64Bits(13742.899205249312), BitConverter.DoubleToInt64Bits(r.TotalCostPerHour));
+        Assert.Equal(BitConverter.DoubleToInt64Bits(15.857984104986121), BitConverter.DoubleToInt64Bits(r.TotalLossMw));
+        Assert.Equal(BitConverter.DoubleToInt64Bits(13742.899205249307), BitConverter.DoubleToInt64Bits(r.TotalCostPerHour));
     }
 
     [Fact]

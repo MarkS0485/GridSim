@@ -266,7 +266,7 @@ public sealed class QstsEngineTests
     // The day on DayFeeder (load profile, volt-var PV, a timed bank, timed OLTC), digested over every number. Pinned so the
     // same bits are required in every SIMD mode the slices run in (default, DOTNET_EnableHWIntrinsic=0,
     // DOTNET_EnableAVX2=0): the digest is SHA-256 over the raw bits, so one ulp anywhere changes it.
-    internal const string PinnedDayDigestNewton = "6115e66b9be103c2fcf4f64cfd8778cd587c89a482570a8828c7b2fdabebf274";
+    internal const string PinnedDayDigestNewton = "e861289401c9e18fc70c6c8246f7ff9f5f02cb19c18f2e8e71cd815e453dc6a5";
     internal const string PinnedDayDigestSweep = "42a25d41872eb552736a621d4b8eea856598fbce4665d89af9a8314bcecf0092";
 
     [Theory]

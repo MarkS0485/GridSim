@@ -110,9 +110,9 @@ public class DcOpfSecuritySimplexParityTests
 
     [Theory]
     [InlineData("matpower/lib/case9.m", "Optimal", true, false, "40CEC30000000000", "4073B00000000000", 3, 0,
-        "A5F99B94454CFECB3F06DE9CD197715E583A25C8D408F4D064A0E6A1484570D8", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
+        "8F3E18DD1AE4109E634012FC8B3359169E4006B24B2F3B0EF7EE561C29F1CC5C", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     [InlineData("matpower/lib/case24_ieee_rts.m", "Optimal", true, true, "4101652000000000", "40A6440000000001", 33, 1,
-        "4584CA3159627BDCB67967405B4E19C5234C1FA9F21B30B344DBE10783ED4A09", "6AF0F781BA0C8D34C787B5B321E34D5EFB43512DDCF5DE8724CFD175BD389A44")]
+        "4584CA3159627BDCB67967405B4E19C5234C1FA9F21B30B344DBE10783ED4A09", "D0109DE18956B515DF4668AFF98BE6872A185DC32F56C664B4850CD871FAADDF")]
     [InlineData("matpower/lib/case30.m", "Optimal", true, false, "40C279FFFFFFFFFF", "4067A66666666665", 6, 0,
         "4D52D51556E87A44C892D1BDEE9545241DC5570BEF422970EB512C75D18C9AE8", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a duplicated
@@ -121,31 +121,31 @@ public class DcOpfSecuritySimplexParityTests
     // costBits and genBits unchanged; 3 of 50 units move, by at most 1.2483951650210656E-09 MW; same 3 binding lines, flows
     // within 5.491074261954054E-11 MW. dispatchHash 75F630A4... -> 89DE3748...; bindingHash 7550D2AF... -> 29BF1C9D...
     [InlineData("matpower/lib/case145.m", "Optimal", true, true, "416AFE6DB0000000", "411146AC9999999A", 50, 3,
-        "89DE3748C931896E756257A4981B3FE2AA5DA0664DC281BFC7B80344D9D3BDE9", "29BF1C9DA929ACCFD8FD268D05AFF1B78E94E04D7EDCABC3DDE0151899178DB5")]
+        "06036F94615716104E9105989FEA342C7EF4D47584FA36AE0B1C8DF5E0BBE108", "46B04EA6787259C5A19B9030F73027054B9879C1FB1251D228FB21C305B6C14A")]
     [InlineData("matpower/rts/pglib_opf_case73_ieee_rts.m", "Optimal", true, true, "411A17B000000000", "40C0B30000000000", 99, 2,
-        "5CEDBAF86CEABB6AEFB1D9D1F5761AC9540B413FEFDECAA8EC980972B1B916BF", "907B359C5A5D8D6F8B38F60D09631A774959A0AC13F761CA8E10A8CC8F6CF769")]
+        "5CEDBAF86CEABB6AEFB1D9D1F5761AC9540B413FEFDECAA8EC980972B1B916BF", "100A7FE21E193A7B63016693425540837B9A40C97D3A20408A11F7807ADEC967")]
     [InlineData("matpower/nesta/pglib_opf_case3_lmbd.m", "Optimal", true, false, "40CEC30000000000", "4073B00000000000", 3, 0,
         "50AE1EADFE31FA104AD694E56F57A511C526F189A95D30A693B56A681D5517D7", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     [InlineData("matpower/nesta/pglib_opf_case5_pjm.m", "Optimal", true, false, "40E86A0000000000", "408F400000000000", 5, 0,
         "8BEB6985283406BC367707D28B61EE909696A3F08A88A7EFF4054557762D8A7E", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
-    [InlineData("matpower/nesta/pglib_opf_case30_as.m", "Optimal", true, true, "40CBAD0000000000", "4071B66666666666", 6, 1,
-        "8ECF3ED079DADE076303DFDB49303F1B4DBFA94C859DC365534496EF3EDC16A9", "A47B3DFE9ADEBC44E8E742ACBB567E1A5F83C98B9713A584CE14235F763C1683")]
+    [InlineData("matpower/nesta/pglib_opf_case30_as.m", "Optimal", true, true, "40CBACFFFFFFFFFF", "4071B66666666666", 6, 1,
+        "2C9795F809D95501FC1567A26F33F3423612144B70B9FD4796A7A84C7CA19C10", "64142C39A1D3DF996DB4005CFEBFEBE3007C5C7ABB205B99DB11875C13BA0225")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a duplicated
     // cell in insertion order (the PTDF matrix's diagonals were summed in the introsort's arbitrary order), so the PTDFs move in
     // their last bits and the LP result with them.
     // costBits "4116178400000001" (361953.00000000006) -> "4116178400000000" (361953); genBits "40BC470F5C28F5C3" (7239.06)
     // -> "40BC470F5C28F5C2" (7239.0599999999995); 8 of 12 units move, by at most 1.5575096767861396E-11 MW; same 7 binding
     // lines, flows within 3.865352482534945E-12 MW. dispatchHash AB7F2B72... -> 3D8F8F0F...; bindingHash A8974D24... -> C83E4DA6...
-    [InlineData("matpower/nesta/pglib_opf_case162_ieee_dtc.m", "Optimal", true, true, "4116178400000000", "40BC470F5C28F5C2", 12, 7,
-        "3D8F8F0F5B8BA0BC5F2842D1E11CED3AE57DF4269EC8C96DB58970B727E3AF0D", "C83E4DA69F3DAD0500208CFF5253E5B09975B68875E29C196ED3EEDB0B23F0E2")]
+    [InlineData("matpower/nesta/pglib_opf_case162_ieee_dtc.m", "Optimal", true, true, "4116178400000001", "40BC470F5C28F5C3", 12, 7,
+        "9721BCBE4FC2C44C1D66D1394AA756D7983A098E63151EC38BB970D8B0E96A84", "DF60E6E326B4F5862701759A95207D3744B7C015E0F1B3966F66C80B25107047")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a duplicated
     // cell in insertion order (the PTDF matrix's diagonals were summed in the introsort's arbitrary order), so the PTDFs move in
     // their last bits and the LP result with them.
     // costBits "415B80069A3D70A5" (7208986.410000001) -> "415B80069A3D70A4" (7208986.41); genBits unchanged; 11 of 143 units
     // move, by at most 6.575646693818271E-10 MW; same 12 binding lines, flows within 8.776623872108757E-11 MW. dispatchHash
     // E4E7D2FE... -> F44B3728...; bindingHash 1D8F5D43... -> 55F84CE7...
-    [InlineData("matpower/nesta/pglib_opf_case240_pserc.m", "Optimal", true, true, "415B80069A3D70A4", "4101999DD35A8589", 143, 12,
-        "F44B37283BC7400A558965900EA31970AB8D238F7E9DF351378E752BB0C33829", "55F84CE76ACD52D11DBC055755E209E78BAEEEBA24041AB32AD4BA769F63E89A")]
+    [InlineData("matpower/nesta/pglib_opf_case240_pserc.m", "Optimal", true, true, "415B80069A3D70A2", "4101999DD35A8586", 143, 12,
+        "DF268753BFF89F9FD2670C5CC7FA919E8695082AC66292D122C98B44D80E1DD9", "D593059CFBAC5A47558B38AEAD0027A9CD98A13F0F65BBF698692709798BE28F")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a duplicated
     // cell in insertion order (the PTDF matrix's diagonals were summed in the introsort's arbitrary order), so the PTDFs move in
     // their last bits and the LP result with them.
@@ -167,8 +167,8 @@ public class DcOpfSecuritySimplexParityTests
     // 713.8564781392051, gen 18 (bus 75) 221.79 -> 78.08, gen 1 (bus 10) 221.79 -> 97.5, gen 70 (bus 414)
     // 331.5003641607268 -> 431.17, gen 64 (bus 366) 131.27 -> 196.9 (full list in the DOC-11 notes). dispatchHash
     // F48099EF... -> 6FD2F333...; bindingHash 26413F0C... -> FB9FE466...
-    [InlineData("matpower/nesta/pglib_opf_case588_sdet.m", "Optimal", true, true, "4120447EFFFFFFFD", "40C4D28E147AE145", 95, 8,
-        "6FD2F333919AE31B05C4F3BF9451FAC9429C7FD03EF33391A45F1517919FDAD9", "FB9FE466364C9FD22CA1C6EE2F949A965512324ED8BBB4FA7B48BE330D29A389")]
+    [InlineData("matpower/nesta/pglib_opf_case588_sdet.m", "Optimal", true, true, "4120447EFFFFFFFD", "40C4D28E147AE144", 95, 8,
+        "CB95AC1B9BD03E83991325EFA25D56FEBF3F7D305E98520BC3DBFAEF732B0FE3", "0FB84DCB45FA56EC41DC6E61FDAA24792E7D0C7353A747FF19A2915AA6D0E7EE")]
     [InlineData("matpower/dist/case533mt_hi.m", "Optimal", true, false, "40873D6ABBECAABC", "402DBF40F08B17FB", 1, 0,
         "6BB190107FCD0FC61AC245BCE0A587A0CFD96DFEAC4F1B0D90F0ED671D7A2098", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     [InlineData("matpower/benchmarks/cigre_mv.m", "Optimal", true, false, "40A17A370A3D70A8", "40465EFEC56D5D00", 1, 0,
@@ -195,8 +195,8 @@ public class DcOpfSecuritySimplexParityTests
     // move, by at most 3.410605131648481E-12 MW (gen 246, bus 8872). costBits unchanged "414BDEBBC0000004"; genBits
     // "40F1D63AB851EB87" (73059.67000000003) -> "40F1D63AB851EB88" (73059.67000000004); the same 10 binding lines (flows in
     // their last bits). dispatchHash C50533FB... -> 9DF1077E...; bindingHash 54FEA9E8... -> 7B475CA2...
-    [InlineData("matpower/pegase/case1354pegase.m", "Optimal", true, true, "414BDEBBC0000004", "40F1D63AB851EB88", 260, 10,
-        "9DF1077EE91F00E871DE7EE6CB3A8BA2475A445099107C12BC54B5EB80747FD3", "7B475CA20401270F899BFCB11CADE6797F03FFFA38755415F2F2912201DEEC67")]
+    [InlineData("matpower/pegase/case1354pegase.m", "Optimal", true, true, "414BDEBBC0000004", "40F1D63AB851EB87", 260, 10,
+        "9413A8D784CD3FF22008D623876005DE405D4539642EBCBDB918B3688908BF1C", "5E6BA53331B1431517C7234AFA4D0DE6EF379C0ED880FC9A11768BE5A6D7FCC5")]
     // Moved 2026-10 (R305 / N020, authorised by Mark's 2026-10-02 best-judgement ruling): this row priced gb-synthetic's
     // onshore / offshore wind (types "onshore", "offshore") at the 50 GBP/MWh unknown-fuel default, because the old
     // substring cost table knew wind only as "wind". With the one fuel taxonomy they cost 1, like every other wind type.
@@ -221,8 +221,8 @@ public class DcOpfSecuritySimplexParityTests
     // move: gen 7 (bus 12) 1400 -> 0, gen 20 (bus 50) 0 -> 1000, gen 19 (bus 49) 415.50550535473485 -> 1000, gen 12 (bus 29)
     // 500 -> 315.50550535473417, gen 0 and gen 9 in their last bits (4.5e-13 and 1.6e-12 MW); still 4 binding lines.
     // dispatchHash 89A6C8DD... -> 21F9FCD4...; bindingHash D8B84BEF... -> 54CB6707...
-    [InlineData("gb-synthetic", "Optimal", true, true, "41226681E4468722", "40E32F5E6241BEA7", 74, 4,
-        "21F9FCD4FA80F7472D5CD781683E43B965BF14DDA3949B28694C94BC4A917E49", "54CB67079C69543D7D0E2B3D5A2E59B0CE70EBEFDD14103E694FB3AB7E1D37F9")]
+    [InlineData("gb-synthetic", "Optimal", true, true, "41226681E4468732", "40E32F5E6241BEA7", 74, 4,
+        "40B45BBFB853B119032F40D9D3C623C606E0929822D66A678EC1FFDA4DCD4568", "8EFFE16E6CA1ADF2B158752D2F8A995E92BEB7C0116FA09E5C848493527D87F3")]
     public void Structured_security_dispatch_reproduces_the_recorded_original_results(
         string rel, string status, bool feasible, bool constrained, string costBits, string genBits,
         int generators, int binding, string dispatchHash, string bindingHash)

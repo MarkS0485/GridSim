@@ -322,7 +322,8 @@ public sealed class UiAssetFixesTests(ITestOutputHelper output)
     [InlineData("gb-full", "60.4 deg", "51.3 deg")]
     [InlineData("intl/continental-europe", "187.7 deg", "187.5 deg")]
     [InlineData("intl/france", "192.7 deg", "192.7 deg")]
-    [InlineData("intl/iberia", "102.7 deg", "99.6 deg")]
+    // intl/iberia removed from this theory (2026-11): it has no AC solution as shipped (data/intl/README.md), so the pinned
+    // spread was a non-converged iterate and moved with the solver ordering. Network data still ships.
     [InlineData("intl/ireland-all-island", "8.9 deg", "8.8 deg")]
     public void S5_home_phasor_card_spread_equals_the_phasor_pages_spread_on_every_bundled_case(
         string name, string before, string after)

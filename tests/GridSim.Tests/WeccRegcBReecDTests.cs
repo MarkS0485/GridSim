@@ -264,7 +264,7 @@ public class WeccRegcBReecDTests
         string d = WeccRenewableDigestTests.Digest(r);
         // Re-pinned with D36 (exact network solution, terminal-voltage frame), from 3921F2C5...F3EF of the start-of-step frame hold
         // (D32), whose off-nominal frequency error the new frame removes: the same run's P at 3 s moved 0.829680 -> 0.846687.
-        Assert.True(d == "8D9FA62B66AA0CECAB011434C4F7AEC8300BF79E9F2BCCE3F664BDD68C505DEB", "digest " + d);
+        Assert.True(d == "5EF6DCA67C60C131A04983063452F5C30492DD16FE0E1F86D92ABFC2D99710F5", "digest " + d);
     }
 
     // ---------------------------------------------------------------- DYR

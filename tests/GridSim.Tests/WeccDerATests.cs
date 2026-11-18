@@ -206,7 +206,7 @@ public class WeccDerATests
         (GridModel m, PowerFlowResult pf, List<SubtransientInit.MachineData> data) = Case9(p);
         MultiMachineSubtransient.Result r = RmsTransientStability.Study(m, pf, data, 3, 0.1, 0.1, stepSeconds: 0.005, durationSeconds: 2.0);
         string d = WeccRenewableDigestTests.Digest(r);
-        Assert.True(d == "99B68C5ED387D18FB2C8F922D7DF84C8FDF737D34FDC89E0472AA036A6B7FD4F", "digest " + d);
+        Assert.True(d == "0B0D3D85CE9E74EF25FD78A11D289F9E710DF1BE499A91DCEEC3214B62B85559", "digest " + d);
     }
 
     // ---------------------------------------------------------------- DYR

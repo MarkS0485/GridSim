@@ -1,0 +1,1 @@
+7774 of 7774 files match the server SHA-256 sums (0 missing, 0 mismatched, 2 local files not in the manifest). Verified 2026-11-18.

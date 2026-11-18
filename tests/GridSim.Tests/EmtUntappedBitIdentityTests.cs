@@ -95,7 +95,7 @@ public class EmtUntappedBitIdentityTests
     // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
     // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
     // through both engines); only the network moved. Before 429D50FDF0B03D0F..., after 39376F24789CCCC4....
-    [InlineData("gb-full", "lumped", "39376F24789CCCC4C799416B8AECC2E044722E2507C715C3C0D987D552435596")]
+    [InlineData("gb-full", "lumped", "232AA652DCDF9DECF45F6920D6E8B605F75DB98E2ECE4A6F08B1F99165C8FB06")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
@@ -105,7 +105,7 @@ public class EmtUntappedBitIdentityTests
     // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
     // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
     // through both engines); only the network moved. Before F963983E884043B4..., after 618B0F32C4A8207B....
-    [InlineData("gb-full", "lines", "618B0F32C4A8207B96B932566185454AEF9B74B10605ED4D95FF7E2EB8E4244D")]
+    [InlineData("gb-full", "lines", "03334BF15CE25754061D18963A61E837F5A35489BF5654D6FAA3BB1FC965F89B")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
@@ -115,33 +115,33 @@ public class EmtUntappedBitIdentityTests
     // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
     // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
     // through both engines); only the network moved. Before 5735D48C27A4BFEF..., after 36C2A9D05C1F60BF....
-    [InlineData("gb-full", "fault", "36C2A9D05C1F60BFC3C15FA0C17C446ABE1814DF16BB935A0E8301904C111E1F")]
+    [InlineData("gb-full", "fault", "1C6C93CBEF54215423360AF2975389502035FAF36357315756DD85F7A04C4809")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // 7909948DF1462332..., after 106FCEDC89DA5A43...; 69317 of 82041 differ, max |diff| 1.2656542480726785E-14, max relative 2.4438490876708074E-12.
-    [InlineData("uk", "lumped", "106FCEDC89DA5A4312CBBA1C5B4AAEED09A8CA17A59ED9A4693D974E2F64B10D")]
-    [InlineData("uk", "lines", "2E32DE669F7F29E9A05CD7DBF00AA3335CD61C3872D22490E9BD9FABAB7FF472")]
+    [InlineData("uk", "lumped", "FBEB359BFF6794B76B54864CD3F2AC088D453E32BD4FC13E8CDBA27741A5829F")]
+    [InlineData("uk", "lines", "5457D946469D15A8270667820F7C5214526CB546227E2550069B5FAEC514ECE8")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // 13CDA28E8C45C6CC..., after 772541A290AD5184...; 69626 of 82041 differ, max |diff| 1.4210854715202004E-14, max relative 2.105197329703632E-12.
-    [InlineData("uk", "fault", "772541A290AD51847760CCB007DE9D7023A89A629AF91913F29A8F44F6E886F3")]
-    [InlineData("case9", "lumped", "54EE694E45D3F09472C022A9494A20A77CCF36D08E80904F29EA4D7808112ED6")]
-    [InlineData("case9", "lines", "810618C2D31FE242207E5A563161EBBD26D7C79BF134C489AE359335CD06EE58")]
-    [InlineData("case9", "fault", "816748BC0EF6C1D54E55107188C4768B4BBCC726F80C27E53EDA1EF10440B5EE")]
+    [InlineData("uk", "fault", "A8B696F41C933A68BCCF3C8328459DA561B7D377567D81340D36E257297D818A")]
+    [InlineData("case9", "lumped", "9BC6117306D21537061BE2F17A1E34B51FDC3272CD165E0FDD6038BEF4DB3204")]
+    [InlineData("case9", "lines", "F32E4DA9B163A33AC51702DAE9C5B6A245B6F143A4F83070CD5F05060693BD32")]
+    [InlineData("case9", "fault", "1A3944618F2367CCD4B53181C77EEF087D3E5E6DEEFE1BEF3B2D5D97D3BE84A4")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // A0AE80CACE01B3CD..., after 25ABA1F1E4153FD5...; 92851 of 102051 differ, max |diff| 3.2799318816501E-12 (a relative difference up to 2 only on values at rounding noise around 0).
-    [InlineData("case30", "lumped", "25ABA1F1E4153FD57424A9B85E3112C1F18A9A9CA62428142400FA94632AA23E")]
-    [InlineData("case30", "lines", "28D2B0D5A67553910A1B15AF7F03A68E0CB7DBA732569E1073462E2F7A3981C0")]
+    [InlineData("case30", "lumped", "EA777A4FAFC6E837794FD1175C576E5FF4414D4D177A421700F80C0B29087CA1")]
+    [InlineData("case30", "lines", "A9BDB0132C7CF25D181540AFBECE4F1B68D1048EA14417207B25CBB9B9A7B296")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
     // 51537BEDE1C8D0F4..., after D264882A7724ABC3...; 92099 of 102051 differ, max |diff| 2.5867086250741522E-12 (a relative difference up to 2 only on values at rounding noise around 0).
-    [InlineData("case30", "fault", "D264882A7724ABC3076B87D21251110CF70BA999A26C0CA7239348850391D98A")]
-    [InlineData("case33bw", "lumped", "82DB6CB9E427E1D238F133F7633A2873EEED88EC76D71EE43D20E020D3AB7CDB")]
+    [InlineData("case30", "fault", "D2D0F0589C86FA6EFAEE1148478132A266AE09CCAD9E79A70CB0D56F9DB1768B")]
+    [InlineData("case33bw", "lumped", "E057A46399CD52BBBB738F7FA00E93DFA4484981E221D1C66670195D10DBFA5C")]
     public void Untapped_case_emt_trajectory_is_bit_identical_to_the_pre_R078_engine(string caseName, string mode, string expected)
     {
         string actual = TrajectoryDigest(Load(caseName), mode);

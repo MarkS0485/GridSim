@@ -275,6 +275,6 @@ public class WeccWindTests
         (GridModel m, PowerFlowResult pf, List<SubtransientInit.MachineData> data) = Case9(Type3());
         MultiMachineSubtransient.Result r = RmsTransientStability.Study(m, pf, data, 3, 0.1, 0.1, stepSeconds: 0.005, durationSeconds: 2.0);
         string d = WeccRenewableDigestTests.Digest(r);
-        Assert.True(d == "9696976608807220DAC0EAFAF7A1AE069C5E2DFD9C23688D36F61C553C250EB7", "digest " + d);
+        Assert.True(d == "8C73715C89E0DD66E22DE3E63A113F5349384D7F3512A203AA820594A59D7B8F", "digest " + d);
     }
 }

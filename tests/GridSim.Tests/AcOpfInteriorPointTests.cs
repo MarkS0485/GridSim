@@ -77,8 +77,8 @@ public class AcOpfInteriorPointTests
         // leg against the same pins.
         AcOpfIpmResult r = AcOpfInteriorPoint.Solve(Case("lib/case9.m"));
         Assert.Equal(11, r.Iterations);
-        Assert.Equal("5296.68652362981", r.ObjectivePerHour.ToString("R", CultureInfo.InvariantCulture));
-        Assert.Equal(new[] { "89.79861381248718", "134.32065247283484", "94.18743862777458" },
+        Assert.Equal("5296.686523629809", r.ObjectivePerHour.ToString("R", CultureInfo.InvariantCulture));
+        Assert.Equal(new[] { "89.79861381248725", "134.3206524728348", "94.18743862777448" },
             r.Generators.Select(g => g.PgMw.ToString("R", CultureInfo.InvariantCulture)));
     }
 

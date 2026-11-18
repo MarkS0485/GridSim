@@ -127,7 +127,7 @@ public sealed class QstsCoupledInverterSettleTests
     // path; the last bits differ.
     // Before: Newton 621221dbe30460a9f2c195efe8b8dddfe3488bfe1084abcbf4b00e6957d8df53,
     //         sweep  026dda68bb76cd6d28745d189325f1ba5276b9076ff469c0fd7d330d108919f4.
-    internal const string PinnedCoupledDigestNewton = "d085a0b775303ccbc143c8631be2971723beca9d68d7660d831493835ab80995";
+    internal const string PinnedCoupledDigestNewton = "272a660439ba4472937a5fe5efd00cd6fe41a608b02cfca3e5825aa0ecba0040";
     internal const string PinnedCoupledDigestSweep = "e1ee5527deb2abc23f9070c6627d1c6b7cba77ff18e7ff7c587d08199cf5e3a0";
 
     [Theory]

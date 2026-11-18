@@ -205,8 +205,8 @@ public class N173AcopfEarlyStopTests
         Assert.True(a.Converged);
         Assert.False(a.StoppedAtInfeasibleFirstPass);
         Assert.Equal(2, a.Iterations);
-        Assert.Equal(Bits(15.85798410498625), Bits(a.TotalLossMw));
-        Assert.Equal(Bits(13742.899205249312), Bits(a.TotalCostPerHour));
+        Assert.Equal(Bits(15.857984104986121), Bits(a.TotalLossMw));
+        Assert.Equal(Bits(13742.899205249307), Bits(a.TotalCostPerHour));
         AcOpfResult b = AcOptimalPowerFlow.Solve(TwoIslandCase9(1.0));
         Assert.True(b.Converged);
         Assert.False(b.StoppedAtInfeasibleFirstPass);

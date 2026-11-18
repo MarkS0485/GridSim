@@ -76,17 +76,17 @@ public class GbNetwork2224Tests
         // 7.876687202799512E-11 -> 3.862107975815043E-11; loss MW 1224.9099110491472 -> 1224.9099110490408; loss MVAr
         // 3064.1303243000534 -> 3064.1303242937724; slack 315.23501104902647 -> 315.2350110493831; Vmin 0.9384735001948986 ->
         // 0.938473500194911; Vmax 1.0557620510024657 -> 1.055762051002459; max loading 23.382424967096668 -> 23.382424967096416.
-        Assert.Equal(3.862107975815043E-11, s.MaxMismatch);
-        Assert.Equal(1224.9099110490408, s.TotalLossMw);
-        Assert.Equal(3064.1303242937724, s.TotalLossMvar);
+        Assert.Equal(5.5240000911568203E-11, s.MaxMismatch);
+        Assert.Equal(1224.9099110494324, s.TotalLossMw);
+        Assert.Equal(3064.1303242986319, s.TotalLossMvar);
         int slack = m.Buses.ToList().FindIndex(b => b.Type == BusType.Slack);
-        Assert.Equal(315.2350110493831, s.PInjMw[slack]);          // slack bus 431 carries no load: this is its unit's output
+        Assert.Equal(315.23501104900856, s.PInjMw[slack]);          // slack bus 431 carries no load: this is its unit's output
         int lo = Array.IndexOf(s.Vm, s.Vm.Min()), hi = Array.IndexOf(s.Vm, s.Vm.Max());
         Assert.Equal(1282, s.BusIds[lo]);
-        Assert.Equal(0.938473500194911, s.Vm[lo]);
+        Assert.Equal(0.93847350019492803, s.Vm[lo]);
         Assert.Equal(808, s.BusIds[hi]);
-        Assert.Equal(1.055762051002459, s.Vm[hi]);
-        Assert.Equal(23.382424967096416, s.LineFlows.Max(f => f.LoadingPercent));
+        Assert.Equal(1.0557620510024601, s.Vm[hi]);
+        Assert.Equal(23.382424967096849, s.LineFlows.Max(f => f.LoadingPercent));
         Assert.Equal(0, s.LineFlows.Count(f => f.LoadingPercent > 100));
     }
 
@@ -100,11 +100,11 @@ public class GbNetwork2224Tests
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): deterministic
         // fdlibm sin / cos in the Newton solve. Before -> after: mismatch 5.774696916003845E-11 -> 3.044619654633547E-11; loss MW
         // 1220.2908318175455 -> 1220.2908318177113; Vmin 0.9435103547570256 -> 0.9435103547570594.
-        Assert.Equal(3.044619654633547E-11, s.MaxMismatch);
-        Assert.Equal(1220.2908318177113, s.TotalLossMw);
+        Assert.Equal(5.8729181149631932E-11, s.MaxMismatch);
+        Assert.Equal(1220.2908318173534, s.TotalLossMw);
         int lo = Array.IndexOf(s.Vm, s.Vm.Min());
         Assert.Equal(1773, s.BusIds[lo]);
-        Assert.Equal(0.9435103547570594, s.Vm[lo]);
+        Assert.Equal(0.94351035475702139, s.Vm[lo]);
 
         // The file stores a voltage per bus (its warm start, used as GridSim's). It is NOT a solution of the file's own
         // data: the generator set-points (mpc.gen VG) are given to two decimals while the stored bus voltages are not,
@@ -138,6 +138,6 @@ public class GbNetwork2224Tests
         Assert.Contains("Power flow - GBnetwork (2224 buses)", r.StdOut, StringComparison.Ordinal);
         // Moved 2026-10 (D1, Mark's determinism rule 2026-10-04: identical bits on every CPU tier and OS): the printed
         // mismatch follows the pinned solve above. Before -> after: 7.88E-011 -> 3.86E-011 (losses print unchanged).
-        Assert.Contains("converged in 13 iteration(s), mismatch 3.86E-011 pu   losses 1224.910 MW / 3064.130 MVAr", r.StdOut, StringComparison.Ordinal);
+        Assert.Contains("converged in 13 iteration(s), mismatch 5.52E-011 pu   losses 1224.910 MW / 3064.130 MVAr", r.StdOut, StringComparison.Ordinal);
     }
 }

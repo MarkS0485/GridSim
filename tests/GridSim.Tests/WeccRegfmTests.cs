@@ -113,7 +113,7 @@ public class WeccRegfmTests
         PowerFlowResult pf = new NewtonRaphsonPowerFlow().Solve(m);
         MultiMachineSubtransient.Result r = RmsTransientStability.Study(m, pf, WeccRegcBReecDTests.Case9Data(m, WeccPlant.RegfmA1(Gfm())), 9, 0.1, 0.1, stepSeconds: Dt, durationSeconds: 2.0);
         string d = WeccRenewableDigestTests.Digest(r);
-        Assert.True(d == "8334B452AEB348494135E4CDF00CB678B2FE0C38E244CB6C8804B870512B5E27", "digest " + d);
+        Assert.True(d == "776123D58999565FCE463FDFABF23B1EB0B00DE3B512B30AE6F26E88FD5E09A9", "digest " + d);
     }
 
     internal const string GfmRecord = "     2 'REGFM_A1' 1  0.15 0.05 0.0 5.86 1.15 0.0 0.01 1.0 0.0 0.01 0.1 376.99111843077515 0.01 0.01 0.01 0.6 -0.6 1 1 3.0 20.0 2.0 /";

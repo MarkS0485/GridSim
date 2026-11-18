@@ -95,12 +95,12 @@ public class SubtransientSolveIntoBitIdentityTests
     // B0E17941... -> 53163F4F..., A3AB9C05... -> 2D35A7C2..., B81C2D16... -> A26160E5..., 9FA727CF... -> D0E5E11C...,
     // 82ACBD92... -> 0A57D46A... (hashes abbreviated). The dense-vs-sparse
     // SolveInto identity tests below are unchanged.
-    [InlineData(false, false, false, "683C75728106D49C0A5F8E026D97670AEEF82578E5A5A5E148A61B7754CBF5F1")]
-    [InlineData(false, true, false, "53163F4FEEF55393E1E890103E8153CAFA50DC04EA6C52CCC2267AD63DA46C0F")]
-    [InlineData(false, false, true, "2D35A7C248FCD29A18535033B438B6BB3FDB597F8A7608D822477EF682963E56")]
-    [InlineData(true, false, false, "A26160E537E339C40FEF47ADEE05A839B1F5E871E707F6C2460F06AE52F00A7A")]
-    [InlineData(true, true, false, "D0E5E11C1F43DFBDEE3194DBD2FF011E404E8B76E2C527B62D6F623D04587B6B")]
-    [InlineData(true, true, true, "0A57D46A2F14747169156924DA2380FFE39F40A8E2BEBE64754593E815A3A37B")]
+    [InlineData(false, false, false, "A0168CC5D860C5F6356E484BB58CCB3F8D8390543B049F007A77AFE74C16AEED")]
+    [InlineData(false, true, false, "6103EE19CFF07E6F2C736FB7F5314DB5091D5BF3B4ED0DAF64769D843501B7DC")]
+    [InlineData(false, false, true, "B51BF0ADFED0580237CADD24C3943BF5B45002906FA23F046B047840F430E5C0")]
+    [InlineData(true, false, false, "5FEDA9D1EC6D3866311BAA9049C8EEC2B7462052546DDEF9DAAEDB6BCD685464")]
+    [InlineData(true, true, false, "C98CA028EE156108DAF6B7D8AEE4171F1070FC022031ADDED162257A3910CBDB")]
+    [InlineData(true, true, true, "E60C4736F329D18EF4F54AF0DE3C599F9B8CDDCD23F2F206D2DE915002A5D674")]
     public void Trajectories_are_bit_identical_to_the_allocating_kernel(bool sparse, bool battery, bool avr, string digest)
     {
         MultiMachineSubtransient.Result r = Run(sparse, battery, avr);
