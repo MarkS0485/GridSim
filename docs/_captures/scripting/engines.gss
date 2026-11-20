@@ -1,0 +1,11 @@
+GRAMMAR 1
+# A three-phase fault at bus 7 of the WSCC 9-bus case, cleared after 100 ms, stepped as an RMS run.
+LOAD CASE "data/matpower/lib/case9.m" FREQUENCY 60 HZ
+SOLVE POWERFLOW
+SELECT ENGINE RMS CLASSICAL STEP 5 MS WITH INERTIA 5 S
+AT 100 MS FAULT BUS "7"
+AT 200 MS CLEAR FAULT BUS "7"
+STEP SIM 500 MS
+REPORT SIM
+STEP SIM 500 MS
+REPORT SIM

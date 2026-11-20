@@ -20,7 +20,7 @@
         cannot push until it is done).
       * Create or rename Discussions categories (there is no API for categories; GitHub seeds Announcements,
         General, Ideas, Polls, Q&A and Show and tell when Discussions is enabled).
-      * Upload the social preview image (Settings > General > Social preview; 1280 x 640 PNG, from brand/).
+      * Upload the social preview image (Settings > General > Social preview; 1280 x 640 PNG, from docs/brand/).
 
     Idempotent: running it twice leaves the same state.
 
@@ -307,7 +307,7 @@ Write-Step 'Manual steps (no API for these)'
 Write-Host "  1. Wiki: open https://github.com/$Repo/wiki and create the first page (any text; the wiki-sync"
 Write-Host '     workflow replaces it). Then run the "Wiki sync" workflow once from the Actions tab.'
 Write-Host "  2. Discussions categories: review https://github.com/$Repo/discussions/categories (defaults are fine)."
-Write-Host '  3. Social preview: Settings > General > Social preview, upload a 1280 x 640 PNG exported from brand/.'
+Write-Host '  3. Social preview: Settings > General > Social preview, upload a 1280 x 640 PNG exported from docs/brand/.'
 Write-Host '  4. Pages: the first deploy happens on the next push to main, or run the "Docs site" workflow by hand.'
 
 if ($script:Failures.Count -gt 0) {

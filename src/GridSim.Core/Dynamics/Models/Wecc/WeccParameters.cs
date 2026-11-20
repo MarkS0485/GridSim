@@ -295,6 +295,11 @@ public sealed record ReecParameters
         {
             WeccCheck.Table(p, m, "Vq", Vq, "Iq", Iq);
             WeccCheck.Table(p, m, "Vp", Vp, "Ip", Ip);
+            // DP-22: Evaluate clamps to [-limit, limit] and [0, limit], which throws for a negative table current; refuse it here.
+            for (int i = 0; i < Iq.Count; i++)
+                if (double.IsFinite(Iq[i]) && Iq[i] < 0.0) p.Add($"{m} iq{i + 1} = {WeccCheck.N(Iq[i])}: the VDL1 currents must be 0 or positive");
+            for (int i = 0; i < Ip.Count; i++)
+                if (double.IsFinite(Ip[i]) && Ip[i] < 0.0) p.Add($"{m} ip{i + 1} = {WeccCheck.N(Ip[i])}: the VDL2 currents must be 0 or positive");
         }
         if (Variant == ReecVariant.C)
         {

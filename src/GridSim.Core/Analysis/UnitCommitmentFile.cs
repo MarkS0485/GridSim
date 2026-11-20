@@ -34,7 +34,7 @@ public static class UnitCommitmentFile
         ArgumentNullException.ThrowIfNull(json);
         ArgumentNullException.ThrowIfNull(model);
         JsonDocument doc;
-        try { doc = JsonDocument.Parse(json); }
+        try { doc = JsonDocument.Parse(json, new JsonDocumentOptions { AllowDuplicateProperties = false }); }
         catch (JsonException ex) { throw new InvalidDataException($"unit commitment file {label}: not valid JSON ({ex.Message})."); }
         using (doc)
         {

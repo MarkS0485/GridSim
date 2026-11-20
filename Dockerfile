@@ -32,6 +32,7 @@ COPY Directory.Build.props GridSim.slnx .editorconfig ./
 COPY global.json ./
 COPY Directory.Build.targets ./
 COPY src/GridSim.Core/GridSim.Core.csproj src/GridSim.Core/packages.lock.json src/GridSim.Core/
+COPY src/GridSim.Scripting/GridSim.Scripting.csproj src/GridSim.Scripting/packages.lock.json src/GridSim.Scripting/
 COPY src/GridSim.Web/GridSim.Web.csproj   src/GridSim.Web/packages.lock.json  src/GridSim.Web/
 # The SDK detects Razor components during restore and adds the ASP.NET Core assets package.
 # Copy them before locked restore so it uses the same dependencies as a full checkout.
@@ -45,6 +46,7 @@ COPY LICENSE.md THIRD-PARTY-NOTICES.md ./
 COPY data/ data/
 COPY schemas/ schemas/
 COPY src/GridSim.Core/ src/GridSim.Core/
+COPY src/GridSim.Scripting/ src/GridSim.Scripting/
 COPY src/GridSim.Web/  src/GridSim.Web/
 
 ARG SOURCE_REVISION=

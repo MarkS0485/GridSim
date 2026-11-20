@@ -10,5 +10,5 @@ IEC 60909 sweep - IEEE 9-bus (WSCC), every bus, three-phase, Maximum (60 Hz, tb 
        7   345.0        1.6474       4.6597       1.6303       1.6865
        8   345.0        2.0685       5.8507       1.9707       2.1454
        9   345.0        1.5445       4.3685       1.5445       1.5716
-  9 bus(es) studied, 0 not studied; largest Ik'' 2.934393338019216 kA at bus 1
+  9 bus(es) studied, 0 not studied; largest Ik'' 2.9343933380192158 kA at bus 1
 [exit 0]

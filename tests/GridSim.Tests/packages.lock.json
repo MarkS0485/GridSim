@@ -448,14 +448,14 @@
       "gridsim.gda": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[1.95.478, )",
+          "GridSim.Core": "[2.1.73, )",
           "Parquet.Net": "[6.1.0, )"
         }
       },
       "gridsim.gpu": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[1.95.478, )",
+          "GridSim.Core": "[2.1.73, )",
           "ILGPU": "[1.5.3, )",
           "ILGPU.Algorithms": "[1.5.3, )"
         }
@@ -463,19 +463,26 @@
       "gridsim.schemaeditor": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[1.95.478, )"
+          "GridSim.Core": "[2.1.73, )"
+        }
+      },
+      "gridsim.scripting": {
+        "type": "Project",
+        "dependencies": {
+          "GridSim.Core": "[2.1.73, )"
         }
       },
       "gridsim.ui": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[1.95.478, )"
+          "GridSim.Core": "[2.1.73, )"
         }
       },
       "gridsim.web": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[1.95.478, )"
+          "GridSim.Core": "[2.1.73, )",
+          "GridSim.Scripting": "[2.1.73, )"
         }
       }
     }

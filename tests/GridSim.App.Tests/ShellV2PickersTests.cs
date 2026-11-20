@@ -160,10 +160,10 @@ public sealed class ShellV2PickersTests
             MenuItem file = bar.Items.OfType<MenuItem>().First();
             Assert.Equal("_File", (string?)file.Header);
             List<MenuItem> items = file.Items.OfType<MenuItem>().ToList();
-            Assert.Equal(new[] { "Open case...", "Open run folder...", "Open case folder...", "Open v2 case...", "Audit log...", "Exit" },
+            Assert.Equal(new[] { "Open case...", "Open run folder...", "Open case folder...", "Open v2 case...", "Audit log...", "Workbench...", "Script console...", "Exit" },
                 items.Select(i => (string?)i.Header));
             Assert.Equal(new[] { ShellCommands.OpenCase, ShellCommands.OpenRunFolder, CaseFileCommands.OpenCaseFolder, CaseFileCommands.OpenV2Case,
-                GridSim.App.Tabs.AuditLogWindow.CommandId, ShellCommands.Exit }, items.Select(i => (string?)i.Tag));
+                GridSim.App.Tabs.AuditLogWindow.CommandId, GridSim.App.Workbench.WorkbenchWindow.CommandId, GridSim.App.Scripting.ScriptConsoleWindow.CommandId, ShellCommands.Exit }, items.Select(i => (string?)i.Tag));
             Assert.Null(items[2].InputGesture);
             Assert.Null(items[3].InputGesture);
             Assert.Equal(3, w.KeyBindings.Count);   // the shortcuts are exactly the three shell ones, as before

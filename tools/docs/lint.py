@@ -1,6 +1,6 @@
 """Lint the GridSim documentation against docs/developer/STYLE.md.
 
-Usage:  python tools/docs/lint.py [paths...]      (default: docs/, README.md and PAYWALLS.md)
+Usage:  python tools/docs/lint.py [paths...]      (default: docs/ and README.md)
         python tools/docs/lint.py --strict ...     (hedge/history findings also fail)
 
 Checks, each reported as  file:line: CODE message
@@ -40,6 +40,9 @@ LINK = re.compile(r"\[[^\]]*\]\((<[^>\n]+>|[^)\s]+)\)")
 CHAPTER_NAME = re.compile(r'^\d{4} [^/\\:*?"<>|]+\.md$')
 CHAPTER_DIRS = ("docs/manual", "docs/technical")
 NAME_EXEMPT = {"0019 CLI reference.md", "0000 Contents.md"}
+# Archived 2.1.030 assessments (7 November 2026), kept unedited as a record: no spelling check. ASCII and links still apply.
+SPELL_EXEMPT = {"docs/archive/GRIDSIM_TECHNICAL_REFERENCE.md", "docs/archive/GRIDSIM_COMPREHENSIVE_REPORT.md",
+                "docs/archive/GRIDSIM_EXECUTIVE_OVERVIEW.md"}
 
 
 def slug(heading):
@@ -98,7 +101,7 @@ def lint_file(path, strict, findings, anchors19):
             continue
         prose = strip_code(raw)
         low = prose.lower()
-        for stem in US_SPELLINGS:
+        for stem in ([] if rel in SPELL_EXEMPT else US_SPELLINGS):
             m = re.search(r"\b" + stem, low)
             if m and not re.search(r"https?://\S*" + stem, low):
                 findings.append((rel, i, "SPELL", "US spelling '%s'" % prose[m.start():m.start() + len(stem) + 3], True))
@@ -130,7 +133,7 @@ def main(argv):
     sys.stdout.reconfigure(encoding="ascii", errors="backslashreplace")
     strict = "--strict" in argv
     args = [a for a in argv if not a.startswith("--")]
-    targets = args or [os.path.join(ROOT, "docs"), os.path.join(ROOT, "README.md"), os.path.join(ROOT, "PAYWALLS.md")]
+    targets = args or [os.path.join(ROOT, "docs"), os.path.join(ROOT, "README.md")]
     files = []
     for t in targets:
         t = os.path.abspath(t)

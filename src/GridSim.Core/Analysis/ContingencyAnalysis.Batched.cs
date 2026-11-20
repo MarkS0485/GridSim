@@ -61,11 +61,12 @@ public static partial class ContingencyAnalysis
 
         // Which branches to outage: all of them, or a caller-supplied subset (as ScreenBranchesParallel). A subset
         // index outside the branch list is refused by name here, before any lane starts.
-        int[] idx = branchIndices?.ToArray() ?? Enumerable.Range(0, model.Branches.Count).ToArray();
+        int[] idx = branchIndices?.ToArray() ?? InServiceBranchIndices(model);   // AN-02
         foreach (int i in idx)
             if (i < 0 || i >= model.Branches.Count)
                 throw new ArgumentOutOfRangeException(nameof(branchIndices), i,
                     $"branch index {i} is outside the model's {model.Branches.Count} branches.");
+        if (branchIndices is not null) RequireInServiceOutages(model, idx, nameof(branchIndices));
         var results = new ContingencyResult[idx.Length];
         if (idx.Length == 0) return results;
 

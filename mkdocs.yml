@@ -2,7 +2,7 @@
 #
 # Build locally (from the repository root):
 #   python -m venv .venv-docs
-#   .venv-docs/bin/pip install -r requirements-docs.txt     (Scripts/ on Windows)
+#   .venv-docs/bin/pip install -r docs/requirements.txt     (Scripts/ on Windows)
 #   .venv-docs/bin/python -m mkdocs build --strict -d site
 #
 # The pages are the Markdown files under docs/, untouched. Anything the site
@@ -102,6 +102,10 @@ exclude_docs: |
   # Third-party PDFs and their catalogue (hundreds of MB; the PDFs are not
   # tracked in git). Links into this folder go to GitHub instead.
   reference/
+  # The pinned Python toolchain for building this site (see the top of this file).
+  requirements.txt
+  # Brand kit sources (SVGs and an HTML sheet), not site pages.
+  brand/
 
 # Navigation. Chapter titles are written without their NNNN file prefix; the
 # order follows the parts listed in each Contents page.
@@ -146,6 +150,7 @@ nav:
           - "Audit log, deployment and assurance": "manual/0026 Audit log, deployment and assurance.md"
           - Validation tools: "manual/0027 Validation tools.md"
           - Benchmarking and GPU: "manual/0028 Benchmarking and GPU.md"
+          - Scripting: "manual/0035 Scripting.md"
       - Reference:
           - CLI reference: "manual/0019 CLI reference.md"
           - Extending GridSim: "manual/0029 Extending GridSim.md"
@@ -217,17 +222,27 @@ nav:
       - Documentation style guide: developer/STYLE.md
       - Case libraries: developer/case-libraries.md
       - Solve export format: developer/solve-export.md
+      - Deterministic maths overview: developer/deterministic-maths.md
+      - Performance optimisations: developer/performance-optimisations.md
+      - Why .NET: developer/why-dotnet.md
+      - Submodules: developer/submodules.md
       - Deployment examples: developer/deploy/README.md
       - Benchmarks:
-          - Free AC power-flow comparison: developer/benchmarks/free-ac-power-flow.md
-          - AC power-flow suite rehearsal: developer/benchmarks/free-ac-power-flow-suite.md
-          - AC power-flow comparison criteria: developer/benchmarks/free-ac-power-flow-criteria.md
-          - Performance baseline: developer/benchmarks/perf-baseline.md
-          - Performance after tuning: developer/benchmarks/perf-after.md
-          - Server results overview: developer/benchmarks/server-results/README-section.md
-          - "GPU or CPU: A100 and H100 results": developer/benchmarks/server-results/a100-results.md
-          - A100 benchmark: developer/benchmarks/server-results/a100/bench.md
-          - A100 CUDA run: developer/benchmarks/server-results/a100/cuda-p1/bench.md
-          - H100 benchmark: developer/benchmarks/server-results/h100/h100-p1/bench.md
-          - CPU benchmark: developer/benchmarks/server-results/cpu/bench.md
-          - MI300 notes: developer/benchmarks/server-results/mi300/README.md
+          - Overview: developer/benchmarks/index.md
+          - "Current results: RC4 (2.1.073)": developer/benchmarks/rc4-2.1.073/index.md
+          - Benchmark criteria: developer/benchmarks/criteria.md
+          - Harness: https://github.com/MarkS0485/GridSim/tree/main/benchmarks/free-ac-power-flow
+          - History:
+              - Cloud servers, November 2026: developer/benchmarks/history/hyperstack-2026-11/index.md
+              - Suite rehearsal: developer/benchmarks/history/suite-rehearsal/index.md
+              - Free AC power-flow comparison: developer/benchmarks/history/free-ac-pegase-1354/index.md
+              - Server results, July 2026: developer/benchmarks/history/server-results-2026-07/index.md
+              - "GPU or CPU: A100 and H100 results": developer/benchmarks/history/server-results-2026-07/a100-results.md
+              - A100 benchmark: developer/benchmarks/history/server-results-2026-07/a100/bench.md
+              - A100 CUDA run: developer/benchmarks/history/server-results-2026-07/a100/cuda-p1/bench.md
+              - H100 benchmark: developer/benchmarks/history/server-results-2026-07/h100/h100-p1/bench.md
+              - CPU benchmark: developer/benchmarks/history/server-results-2026-07/cpu/bench.md
+              - MI300 notes: developer/benchmarks/history/server-results-2026-07/mi300/README.md
+              - Bench matrix and yardsticks: developer/benchmarks/history/bench-and-perf-yardsticks/index.md
+              - Performance baseline: developer/benchmarks/history/bench-and-perf-yardsticks/perf-baseline.md
+              - Performance after tuning: developer/benchmarks/history/bench-and-perf-yardsticks/perf-after.md

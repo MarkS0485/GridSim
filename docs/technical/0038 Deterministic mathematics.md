@@ -10,7 +10,7 @@ register. It then states how the rules are enforced (an IL-level analyser test) 
 
 What the solvers do with these pieces is in [ch. 4, Sparse and GPU numerics](<0004 Sparse and GPU numerics.md>);
 the invariants that rest on them are listed in [ch. 8, Provenance and invariants](<0008 Provenance and invariants.md>).
-A short overview for readers new to the repository is [MATH.md](../../MATH.md).
+A short overview for readers new to the repository is [the deterministic maths overview](../developer/deterministic-maths.md).
 
 ## Model
 
@@ -173,8 +173,9 @@ LINQ's `Enumerable.Sum` over doubles is used in places. It is deterministic only
 
 An introspective sort is not stable: when the comparer calls two elements equal (two nodes of the same degree in the
 reverse Cuthill-McKee ordering) the order between them comes from the algorithm's internals, and those belong to the
-runtime. A .NET release that tuned them would change the RCM permutation, hence the pivot order of every sparse LU,
-hence the last bits of every sparse result, with no GridSim change at all. `FrozenIntroSort` (`FrozenIntroSort.cs`) is
+runtime. A .NET release that tuned them would change the RCM permutation, and while RCM was the default ordering (until
+2.1.072) that meant the pivot order of every sparse LU, hence the last bits of every sparse result, with no GridSim
+change at all. The minimum-degree ordering that replaced it sorts nothing; its tie-break is fixed in its own code. `FrozenIntroSort` (`FrozenIntroSort.cs`) is
 GridSim's own copy of the .NET 10 `ArraySortHelper<T>` introsort, step for step: insertion sort at or below 16
 elements (`IntrosortSizeThreshold`), median-of-three quicksort, heapsort past the depth limit
 `2 * (Log2(length) + 1)`. On .NET 10 it gives exactly the order `Array.Sort` gives today, so no result moved when it
@@ -346,8 +347,11 @@ The same suite, with the same pinned bits, passes in all three.
   vectorised it would fail that test rather than silently move numbers.
 - `FrozenIntroSort` freezes the .NET 10 order; it does not make an unstable sort stable. Ties still land where that
   algorithm puts them.
-- GPU results are outside the bit-identity contract: device reductions and elimination order differ from the CPU's
-  ([ch. 4](<0004 Sparse and GPU numerics.md>), Limits).
+- GPU results are deterministic but outside the bit-identity contract: the device runs different algorithms
+  (natural-order dense elimination, Jacobi-preconditioned BiCGSTAB at `1e-10`), a different reduction order, and the
+  device fuses multiply-add, which this contract forbids. Measured envelope (RTX A4000, 27 MATPOWER cases):
+  1.45e-12 pu / 5.2e-11 deg at most; the 4096-epsilon cross-check gate does not apply to GPU paths
+  ([ch. 4](<0004 Sparse and GPU numerics.md>), "GPU accuracy").
 - The cross-tier proof in one process covers the kernels and paths named above; every other path relies on the CI
   matrix legs, which need GitHub Actions to run.
 - Bit-identity across CPU and OS holds for one build of GridSim on .NET 10. A different .NET major version is a
@@ -355,7 +359,7 @@ The same suite, with the same pinned bits, passes in all three.
 
 ## See also
 
-- [MATH.md](../../MATH.md) - the short overview.
+- [the deterministic maths overview](../developer/deterministic-maths.md) - the short overview.
 - [ch. 4, Sparse and GPU numerics](<0004 Sparse and GPU numerics.md>) - the solvers that use these kernels, and the GPU paths outside the contract.
 - [ch. 8, Provenance and invariants](<0008 Provenance and invariants.md>) - the invariants that rest on bit-identity.
 - [ch. 11, Validation](<0011 Validation.md>) - agreement with independent tools at machine epsilon.

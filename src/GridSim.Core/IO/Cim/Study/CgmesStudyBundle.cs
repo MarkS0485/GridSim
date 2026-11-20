@@ -296,7 +296,7 @@ public static class CgmesBundleInspector
             if (!cls.EndsWith("TapChanger", StringComparison.Ordinal) && !cls.Contains("TapChanger", StringComparison.Ordinal)) continue;
             if (cls.EndsWith("Table", StringComparison.Ordinal) || cls.EndsWith("TablePoint", StringComparison.Ordinal) || cls == "TapChangerControl") continue;
             Dictionary<string, string> bag = props[mrid];
-            bool enabled = bag.TryGetValue("TapChanger.controlEnabled", out string? ce) && ce == "true";
+            bool enabled = bag.TryGetValue("TapChanger.controlEnabled", out string? ce) && ParseBoolean(ce) == true;
             bool hasControl = bag.ContainsKey("TapChanger.TapChangerControl");
             if (enabled || hasControl)
                 unrepresented.Add(new CgmesUnrepresentedControl(mrid, cls,
@@ -351,6 +351,17 @@ public static class CgmesBundleInspector
     }
 
     internal static string Who(CgmesProfileInput p) => $"{p.Profile} ({p.Path})";
+
+    /// <summary>An XML Schema boolean as the importer reads it ("true"/"false" in any letter case, "1", "0");
+    /// null for anything else or for nothing.</summary>
+    internal static bool? ParseBoolean(string? value)
+    {
+        string? s = value?.Trim();
+        if (s is null) return null;
+        if (s == "1" || string.Equals(s, "true", StringComparison.OrdinalIgnoreCase)) return true;
+        if (s == "0" || string.Equals(s, "false", StringComparison.OrdinalIgnoreCase)) return false;
+        return null;
+    }
 
     /// <summary>The mRID an identifier reduces to, by the importer's rule: one leading '#', then a 'urn:uuid:' prefix or
     /// one leading '_'.</summary>

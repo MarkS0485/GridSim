@@ -71,7 +71,7 @@ public sealed class ExperimentalVm : Notify
     public string Status { get => _status; set => Set(ref _status, value); }
 
     private string _provenance =
-        "Experimental models are opt-in, provenance-tagged and OFF the validated solver path. Conformance is an independent per-branch recompute.";
+        "Experimental models are opt-in, provenance-tagged and kept separate from the standard solver path. Conformance is an independent per-branch recompute.";
     public string Provenance { get => _provenance; set => Set(ref _provenance, value); }
 
     // ---- named thresholds (R204/R213: were literals; the same values and names as the web

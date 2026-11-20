@@ -1,0 +1,23 @@
+{
+  "schema": "gridsim-emt3/1",
+  "time_step_s": 5e-5,
+  "duration_s": 0.1,
+  "sample_every": 10,
+  "frequency_hz": 50,
+  "buses": [],
+  "hvdc": [
+    {
+      "name": "M", "kind": "vsc",
+      "grid_v_ll_rms": 9797.958971132712, "frequency_hz": 50, "grid_angle_deg": 0, "grid_r_ohm": 0.05, "grid_l_h": 1e-3,
+      "filter_r_ohm": 0.02, "filter_l_h": 5e-3, "dc_nominal_v": 20000, "dc_cap_f": 1e-3,
+      "converter": "mmc-average",
+      "mmc": { "submodules_per_arm": 20, "submodule_cap_f": 0.02, "arm_resistance_ohm": 0.1, "arm_inductance_h": 6e-3 },
+      "mode": "power", "set_point": 4e6, "current_bandwidth_rad_s": 1000, "outer_bandwidth_rad_s": 60, "control_every": 2,
+      "dc_supply_v": 20000, "dc_supply_ohm": 1e-3
+    }
+  ],
+  "outputs": [
+    { "name": "ia", "kind": "current", "target": "M", "phase": "a" },
+    { "name": "dc_supply_current_a", "kind": "dc-current", "target": "M" }
+  ]
+}

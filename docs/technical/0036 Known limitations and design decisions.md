@@ -4,9 +4,10 @@ This chapter lists behaviour that a full adversarial review of the code (October
 kept as it is on purpose. For each entry it says what happens, when it shows, and why the behaviour stays. Two reasons
 recur:
 
-- **Validated numbers.** GridSim's results are pinned bit for bit across runs, engines and CPUs. A change that would
-  move pinned numbers, verdicts or exit codes is made only together with a re-validation of those pins on the full
-  test machine; until then the present behaviour is the validated one, and its limit is stated here.
+- **Pinned numbers.** GridSim's results are pinned bit for bit across runs, engines and CPUs. A change that would
+  move pinned numbers, verdicts or exit codes is made only together with a re-check of those pins on the full test
+  machine, and is labelled BREAKING CHANGE; until then the present behaviour is the pinned one, and its limit is
+  stated here.
 - **Design.** Some entries are choices (an interface, a file format, a protocol contract) where the alternative is a
   different product decision, not a fix.
 
@@ -80,7 +81,7 @@ lives, so a later release can lift it deliberately.
   feeder solved by Newton. With the sweep the OLTC hold rule falls back to the model's bus types (the sweep reports no
   solved types), so a PV bus clamped at its limit still holds its tap. (`BackwardForwardSweep`, `SteadyStateSolver`.)
 - **Solver constants are engineering choices.** The Newton step damping (`MaxUndampedStep` 0.4), the voltage floor
-  (`VmFloorPu` 0.2), the Q-limit and revert tolerances (1e-3 MVA, 1e-4 pu), the loop cap (6), the distributed-slack
+  (`VmFloorPu` 0.01), the Q-limit and revert tolerances (1e-3 MVA, 1e-4 pu), the loop cap (6), the distributed-slack
   tolerance (1e-4 MW) and the experimental wave field's speed and spans are set from experience on the bundled cases,
   not taken from a cited source; each is a named constant in the solver tables.
 - **Engine efficiency.** The dense Newton engine still builds its dense arrays on the CPU path although the CPU step

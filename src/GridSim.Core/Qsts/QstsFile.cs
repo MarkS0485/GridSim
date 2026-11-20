@@ -29,7 +29,7 @@ public static class QstsFile
     public static QstsStudy Parse(string json, string label, string baseDir, GridModel model)
     {
         JsonDocument doc;
-        try { doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = false }); }
+        try { doc = JsonDocument.Parse(json, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = false, AllowDuplicateProperties = false }); }
         catch (JsonException ex) { throw new InvalidDataException($"QSTS file {label}: not valid JSON ({ex.Message})."); }
         using (doc)
         {

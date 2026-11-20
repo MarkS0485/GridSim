@@ -28,5 +28,5 @@ truncated key: False (licence key too short)
 not a key: False (licence key is not valid base64)
 fits a 1.x build: True
 fits a 2.x build: False
-reason: this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: gdatooling@proton.me
+reason: this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: mark@gridsimdigitaltwin.co.uk
 [exit 0]

@@ -49,8 +49,8 @@ internal static class NewtonShell
 
     /// <summary>
     /// THE canonical Newton step, shared by the dense and sparse engines so they are bit-identical
-    /// (Mark's ruling 2, October 2026). Solves <c>J dx = f</c> with the CPU direct sparse LU (reverse
-    /// Cuthill-McKee column order, partial pivoting); if that reports the Jacobian singular, retries with
+    /// (Mark's ruling 2, October 2026). Solves <c>J dx = f</c> with the CPU direct sparse LU (minimum-degree
+    /// column order, partial pivoting); if that reports the Jacobian singular, retries with
     /// ILU(0)-preconditioned BiCGSTAB. Returns <c>false</c> - stop, report non-convergence - when neither
     /// produces a step or the step is not finite: a NaN/Inf step must never be applied.
     ///
@@ -133,6 +133,141 @@ internal static class NewtonShell
             if (pPos[i] >= 0) va[i] += damp * dx[pPos[i]];
             if (qPos[i] >= 0) { vm[i] += damp * dx[qPos[i]]; if (vm[i] < VmFloorPu) vm[i] = VmFloorPu; }
         }
+    }
+
+    /// <summary>Largest angle (degrees) across any in-service branch's series element, net of its phase shift, that a
+    /// state found by the DC-angle-start retry may have and still be reported. A root with a larger angle lies past the
+    /// branch's maximum-transfer point (the far side of its P-delta curve): it satisfies the power-flow equations, but it
+    /// is not a usable operating point, so the retry does not report it.</summary>
+    public const double MaxRetryBranchAngleDeg = 90.0;
+
+    /// <summary>The stall factor of <see cref="Stalled"/>: a failed Newton run whose final mismatch is at or below this
+    /// fraction of the mismatch at its own start point was still converging when the iteration cap stopped it.</summary>
+    public const double RetryStallFactor = 1e-3;
+
+    /// <summary>
+    /// Whether a Newton run that did not converge failed by stalling or diverging, rather than by reaching the iteration
+    /// cap while still converging: true unless its final mismatch <paramref name="finalMismatch"/> is at or below
+    /// <see cref="RetryStallFactor"/> times the mismatch at its start point <paramref name="startMismatch"/> (a NaN on
+    /// either side counts as stalled). Only a stalled run is retried, because <see cref="PowerFlowOptions.MaxIterations"/>
+    /// is the caller's budget: a run that has cut its mismatch a thousandfold and been stopped by the cap would converge
+    /// with more steps, and solving it again from another start would spend a second budget the caller never gave.
+    /// <para>The factor separates the two kinds of failure by orders of magnitude. A Newton run stopped short of a root it
+    /// is converging to has cut its mismatch from the start by far more than a thousandfold: on the cases where one fewer
+    /// step than convergence needs is allowed (case9, case14, case118 from flat start) the ratio is 2.1e-7, 6.5e-8 and
+    /// 3.4e-9. The failed solves the retry is for stay within a few times of where they began: case13659pegase from flat
+    /// start ends at 0.31 of its start mismatch after 50 steps, pglib case162_ieee_dtc at 0.30, case240_pserc at 0.63 and
+    /// case3_lmbd at 0.76. The line sits more than two orders of magnitude from both groups.</para>
+    /// </summary>
+    public static bool Stalled(double startMismatch, double finalMismatch) => !(finalMismatch <= RetryStallFactor * startMismatch);
+
+    /// <summary>
+    /// The automatic retry shared by both engines. <paramref name="attempt"/> runs one complete solve (Q-limit loop
+    /// included) with the given options, from the ordinary start (<c>false</c>) or from the DC-angle start
+    /// (<c>true</c>, see <see cref="TrySeedDcAngles"/>), and returns its result (null when the DC-angle start cannot be
+    /// formed), whether its last Newton run failed to converge, that run's mismatch at its own start point (for
+    /// <see cref="Stalled"/>), and the engine's per-solve state to restore.
+    ///
+    /// <para>The ordinary solve runs first, exactly as before, and is returned untouched whenever it converges, so every
+    /// case that converged before gives the same bits. Only when its Newton iteration did not converge (not when the
+    /// Q-limit pass cap stopped it), and only when that run stalled or diverged (<see cref="Stalled"/>: not when the
+    /// iteration cap stopped a run that was still converging) and <see cref="PowerFlowOptions.RetryFromDcStart"/> is on,
+    /// is the case solved again: the same Newton iteration and step rule, the same options
+    /// and voltage magnitudes, with the bus angles started from the DC power flow instead, and without a trace. A
+    /// converged retry whose largest branch angle is within <see cref="MaxRetryBranchAngleDeg"/> is returned; otherwise
+    /// the ordinary solve's result is returned, its numbers unchanged, with a note saying what the retry did.</para>
+    /// </summary>
+    public static PowerFlowResult SolveWithRetry(PowerFlowOptions opt, GridModel model, Func<int, int> indexOf,
+        Func<PowerFlowOptions, bool, (PowerFlowResult? Result, bool NewtonFailed, double RunStartMismatch, object? State)> attempt,
+        Action<object?> restoreFirst)
+    {
+        (PowerFlowResult? first, bool newtonFailed, double runStartMismatch, object? firstState) = attempt(opt, false);
+        if (first!.Converged || !newtonFailed || !opt.RetryFromDcStart || !Stalled(runStartMismatch, first.MaxMismatch))
+            return first;
+
+        (PowerFlowResult? retry, _, _, _) = attempt(opt with { Trace = null }, true);
+        string firstText = FormattableString.Invariant($"{first.Iterations} iteration(s), mismatch {first.MaxMismatch:E2} pu");
+        const string what = "the automatic retry from a DC power-flow angle start";
+        if (retry is null)
+        {
+            restoreFirst(firstState);
+            first.NewtonRetry = NewtonRetryOutcome.Unavailable;
+            first.NewtonRetryNote = "Newton did not converge; " + what + " was not run (it needs one slack bus and a DC "
+                + "model that forms a single island).";
+            return first;
+        }
+        if (retry.Converged)
+        {
+            (double angle, int from, int to) = MaxBranchAngleDeg(model, indexOf, retry.VaDeg);
+            if (angle <= MaxRetryBranchAngleDeg)
+            {
+                retry.NewtonRetry = NewtonRetryOutcome.Converged;
+                retry.NewtonRetryNote = "Newton from the ordinary start did not converge (" + firstText + "); converged on "
+                    + what + FormattableString.Invariant($" (largest branch angle {angle:F1} deg).");
+                return retry;
+            }
+            restoreFirst(firstState);
+            first.NewtonRetry = NewtonRetryOutcome.Rejected;
+            first.NewtonRetryNote = "Newton did not converge; " + what + FormattableString.Invariant(
+                $" reached a root with {angle:F1} deg across branch {from}-{to}, beyond the {MaxRetryBranchAngleDeg:F0} deg ")
+                + "maximum-transfer angle, which is not a usable operating point, so it is not reported.";
+            return first;
+        }
+        restoreFirst(firstState);
+        first.NewtonRetry = NewtonRetryOutcome.DidNotConverge;
+        first.NewtonRetryNote = "Newton did not converge; " + what + FormattableString.Invariant(
+            $" was also tried and did not converge ({retry.Iterations} iteration(s), mismatch {retry.MaxMismatch:E2} pu).");
+        return first;
+    }
+
+    /// <summary>
+    /// Replaces the start angles of every non-slack bus in <paramref name="spec"/> with the DC power flow's
+    /// (<see cref="Analysis.DcPowerFlow"/>: series reactance only, the one DC model GridSim has), offset by the slack
+    /// bus's own start angle. Each DC angle is first reduced to [-180, 180] degrees: the AC equations depend on angles
+    /// only through their sines and cosines, so this is the same start point, and a lossless DC model that must push a
+    /// large imbalance through the slack's connection (case13659pegase: about 720 degrees) does not leave the reported
+    /// angles whole turns away from their usual range. Voltage magnitudes are left as the ordinary start set them. Returns false, changing
+    /// nothing, unless the case has exactly one slack bus and its DC model is a single island referenced at that bus,
+    /// or when the DC model cannot be formed (singular B').
+    /// </summary>
+    public static bool TrySeedDcAngles(GridModel model, BusSpec spec, Func<int, int> indexOf)
+    {
+        int n = spec.Type0.Length, slack = -1, slacks = 0;
+        for (int i = 0; i < n; i++) if (spec.Type0[i] == BusType.Slack) { slack = i; slacks++; }
+        if (slacks != 1) return false;
+        Analysis.DcPowerFlowResult dc;
+        try { dc = Analysis.DcPowerFlow.Solve(model); }
+        catch (InvalidOperationException) { return false; }
+        if (dc.Islands.Count != 1 || indexOf(dc.Islands[0].ReferenceBusId) != slack) return false;
+        double va0 = spec.Va[slack];
+        for (int k = 0; k < dc.BusIds.Count; k++)
+        {
+            int i = indexOf(dc.BusIds[k]);
+            if (i != slack) spec.Va[i] = va0 + Math.IEEERemainder(dc.VaDeg[k], 360.0) * Math.PI / 180.0;
+        }
+        return true;
+    }
+
+    /// <summary>Bus id to solver index: model order, as both engines number buses.</summary>
+    public static Func<int, int> ModelIndex(GridModel model)
+    {
+        var index = new Dictionary<int, int>(model.BusCount);
+        for (int i = 0; i < model.BusCount; i++) index[model.Buses[i].Id] = i;
+        return id => index[id];
+    }
+
+    /// <summary>Largest angle (degrees, wrapped to [-180, 180]) across the series element of any in-service branch,
+    /// net of its phase shift (<c>theta_from - shift - theta_to</c>), with that branch's end bus ids.</summary>
+    public static (double AngleDeg, int From, int To) MaxBranchAngleDeg(GridModel model, Func<int, int> indexOf, double[] vaDeg)
+    {
+        double worst = 0; int from = 0, to = 0;
+        foreach (Branch br in model.Branches)
+        {
+            if (!br.InService) continue;
+            double d = Math.Abs(Math.IEEERemainder(vaDeg[indexOf(br.From)] - br.PhaseShiftDeg - vaDeg[indexOf(br.To)], 360.0));
+            if (d > worst) { worst = d; from = br.From; to = br.To; }
+        }
+        return (worst, from, to);
     }
 
     /// <summary>Equation/unknown positions for one Q-limit pass: the P equation (angle unknown) of every

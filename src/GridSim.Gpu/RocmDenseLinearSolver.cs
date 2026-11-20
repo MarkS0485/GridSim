@@ -29,6 +29,7 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
         if (!RocmContext.IsAvailable)
         {
             // No ROCm on this machine - use the CPU direct solver.
+            GpuSolveCounters.OnHost();
             new DenseLuSolver().SolveInPlace(a, b);
             return;
         }
@@ -130,6 +131,7 @@ public sealed class RocmDenseLinearSolver : ILinearSolver
 
                 // Copy the solution back into b.
                 CheckHip(RocmInterop.hipMemcpy(b, dB, vecBytes, RocmInterop.HipMemcpyKind.DeviceToHost), "D2H x");
+                GpuSolveCounters.OnDevice();
             }
             finally
             {

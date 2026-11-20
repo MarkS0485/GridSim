@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using GridSim.Core.Diagnostics;
 using GridSim.Core.Dynamics;
 
@@ -114,7 +116,7 @@ public sealed record RecordedOutcome(
 public sealed record GridEvent(
     string Id,
     string Title,
-    DateTime WhenUtc,
+    [property: JsonConverter(typeof(UtcInstantJsonConverter))] DateTime WhenUtc,
     double PreEventInertiaMwS,
     double PreEventDemandMw,
     IReadOnlyList<PowerStep> Losses,
@@ -157,9 +159,9 @@ public sealed record GridEvent(
     {
         if (DemandEffect is not { } de) return null;
         if (!double.IsFinite(de.MwPerHz) || !(de.MwPerHz > 0.0))
-            return $"Event '{Id}': demandEffect.mwPerHz = {de.MwPerHz:R} must be a finite number of MW per Hz above 0.";
+            return FormattableString.Invariant($"Event '{Id}': demandEffect.mwPerHz = {de.MwPerHz:R} must be a finite number of MW per Hz above 0.");
         if (!double.IsFinite(PreEventDemandMw) || !(PreEventDemandMw > 0.0))
-            return $"Event '{Id}': a demandEffect needs a preEventDemandMw that is a finite number of MW above 0 (got {PreEventDemandMw:R}), " +
+            return FormattableString.Invariant($"Event '{Id}': a demandEffect needs a preEventDemandMw that is a finite number of MW above 0 (got {PreEventDemandMw:R}), ") +
                    "because the swing model carries the damping as a percentage of that demand.";
         return null;
     }
@@ -297,4 +299,26 @@ public sealed record GridEvent(
         }
         return applied;
     }
+}
+
+/// <summary>
+/// AN-22: reads an event instant as an ISO 8601 string and lands it in UTC by the stamp's own offset
+/// (<see cref="UtcTime.TryParseIso8601"/>; a stamp with no designator is UTC, as everywhere in GridSim). The default
+/// System.Text.Json DateTime reader turned an offset stamp into machine-LOCAL time, so replay timing depended on the
+/// host's time zone (and an hour was ambiguous at a daylight-saving change). Always writes the UTC instant.
+/// </summary>
+internal sealed class UtcInstantJsonConverter : JsonConverter<DateTime>
+{
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType != JsonTokenType.String)
+            throw new JsonException("An event time must be a JSON string in ISO 8601 form, for example \"2019-08-09T15:52:33Z\".");
+        string? text = reader.GetString();
+        if (!UtcTime.TryParseIso8601(text, out DateTime utc))
+            throw new JsonException($"The event time '{text}' is not ISO 8601 (for example 2019-08-09T15:52:33Z or 2019-08-09T16:52:33+01:00).");
+        return utc;
+    }
+
+    public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
+        => writer.WriteStringValue(UtcTime.Normalise(value));
 }

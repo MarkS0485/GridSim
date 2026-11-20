@@ -2,7 +2,7 @@ $ gridsim case9
 GridSim  -  IEEE 9-bus (WSCC)
 9 buses  9 branches  3 generators  base 100 MVA  60 Hz
 ========================================================================
-Converged (4 NR iters, 0 OLTC passes, max mismatch 1.65E-014 p.u.)
+Converged (4 NR iters, 0 OLTC passes, max mismatch 1.64E-014 p.u.)
 Generator output 0.32 GW  Demand 0.32 GW  Losses 4.6 MW  Inertia 7.5 GVAs
 
 Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)

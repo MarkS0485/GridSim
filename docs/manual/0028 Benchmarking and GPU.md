@@ -7,7 +7,7 @@ preflights that say which backend and which vector width a machine will use. `--
 they choose the backend for any verb that solves a power flow. `cycle`, `nminus1-sweep` and `stress` double as soak and
 scale drivers (see [Soak and scale drivers](#soak-and-scale-drivers)). You need this chapter to compare two machines, to
 prove a build has not slowed down, to decide whether a GPU is worth renting, and to rent one without wasting the meter.
-The numbers GridSim must reproduce bit for bit are validated by the verbs in
+The numbers GridSim must reproduce bit for bit are checked by the verbs in
 [ch. 27, Validation tools](<0027 Validation tools.md>); this chapter is the performance side.
 
 ## Before you start
@@ -604,7 +604,7 @@ and sparse engines. These are outside it:
   `GpuDeviceKernelTests` repeats the device checks (the batched dense LU included) for CUDA and for OpenCL and runs only
   where that accelerator is present; elsewhere each is reported skipped with the reason, so a passed row there means the
   kernels ran on the device.
-  `docs/developer/benchmarks/server-results/a100-results.md` says that exported converged voltages from the A100 match the CPU's; that is
+  `docs/developer/benchmarks/history/server-results-2026-07/a100-results.md` says that exported converged voltages from the A100 match the CPU's; that is
   prose, with no export file in the repository, and its heading "bit-for-bit" is not supported by any test. A GPU
   result is correct to the solver tolerance, not identical to the last bit.
 - **The opt-in diagonal-preference pivot rule.** `DcPowerFlow.Solve(model, diagonalPreference)`, `SolveBatch` with a
@@ -615,7 +615,7 @@ and sparse engines. These are outside it:
   even at 0.
 - **Timings.** They differ by machine and by run.
 
-The CPU path is the validated reference: it does not change with `--gpu` absent, and every number in this chapter that
+The CPU path is the reference: it does not change with `--gpu` absent, and every number in this chapter that
 GridSim promises to reproduce comes from it.
 
 ## Published reference results
@@ -627,7 +627,7 @@ engine. The 1 July server sweep labels its sparse engine `ILU0/BiCGSTAB`; the 2 
 `direct LU / ILU0-BiCGSTAB`, which is the current label, so the 1 July sparse column may describe a different algorithm
 from the current engine.
 
-**Desktop CPU matrix.** Machine `DESKTOP-S5V62MR` (Windows, X64, 8 logical cores, 8 GB), commit `aa40db5b-dirty`,
+**Desktop CPU matrix.** Machine `desktop` (Windows, X64, 8 logical cores, 8 GB), commit `aa40db5b-dirty`,
 2026-07-08, `bench --runs 10 --parallel 8`, mean ms per solve. Source: `benchmark-results.csv` and `run-metadata.json`.
 The `benchmark-results.md` beside them is a stub.
 
@@ -659,7 +659,7 @@ these are throughput figures, not single-solve latency.
 | Machine | Date | Run | sparse case118 | sparse case300 | fault case300 | OLTC case118 | harmonic case118 |
 |---|---|---|---:|---:|---:|---:|---:|
 | `quick-curie` (EPYC 7763, 28 logical cores, 57 GB, Ubuntu 24.04.3, .NET 10.0.10) | 2026-08-11 | `--runs 40`, Release, under other load | 1.770 | 8.334 | 8.640 | 8.468 | 8.012 |
-| `DESKTOP-S5V62MR` (8 logical cores, 8 GB) | 2026-07-19 | `--runs 20`, Debug | 1.388 | 8.150 | 26.570 | 13.950 | 6.293 |
+| `desktop` (8 logical cores, 8 GB) | 2026-07-19 | `--runs 20`, Debug | 1.388 | 8.150 | 26.570 | 13.950 | 6.293 |
 
 **State estimation.** `bench --estimate --runs 5`, mean ms, dense and sparse backend. Source: `bench-estimate.csv`
 (the file records commit `unknown` and no machine).
@@ -923,7 +923,7 @@ writes under `results-gpu/<stamp>/`.
 ## Limits
 
 - The ROCm backend is complete against the ROCm 6.x headers and covered by tests that need no hardware, but it has never
-  run on an AMD GPU, so no ROCm timing exists (`docs/developer/benchmarks/server-results/mi300/README.md`).
+  run on an AMD GPU, so no ROCm timing exists (`docs/developer/benchmarks/history/server-results-2026-07/mi300/README.md`).
 - The captured runs in this chapter predate the warm-up solve, so their first case per engine includes first-call
   compilation.
 - `batchsolve` has no ROCm batched kernel; on ROCm it times the CPU reference.
@@ -957,5 +957,5 @@ writes under `results-gpu/<stamp>/`.
   [`simdcheck`](<0019 CLI reference.md#simdcheck>), [`batchsolve`](<0019 CLI reference.md#batchsolve>) and
   [global switches](<0019 CLI reference.md#global-switches>)
 - [Ch. 11, Contingency analysis](<0011 Contingency analysis.md>) - the sweeps `bench` stands in front of
-- `docs/developer/benchmarks/perf-baseline.md`, `docs/developer/benchmarks/perf-after.md`, `docs/developer/benchmarks/bench-estimate.csv`, `docs/developer/benchmarks/benchmark-results.csv` and
-  `docs/developer/benchmarks/server-results/` - the data files this chapter quotes
+- `docs/developer/benchmarks/history/bench-and-perf-yardsticks/perf-baseline.md`, `docs/developer/benchmarks/history/bench-and-perf-yardsticks/perf-after.md`, `docs/developer/benchmarks/history/bench-and-perf-yardsticks/bench-estimate.csv`, `docs/developer/benchmarks/history/bench-and-perf-yardsticks/benchmark-results.csv` and
+  `docs/developer/benchmarks/history/server-results-2026-07/` - the data files this chapter quotes

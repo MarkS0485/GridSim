@@ -88,7 +88,7 @@ public sealed class ProvenanceManifest
     public static ProvenanceManifest Parse(string json, string where = "provenance manifest")
     {
         JsonDocument doc;
-        try { doc = JsonDocument.Parse(json); }
+        try { doc = JsonDocument.Parse(json, new JsonDocumentOptions { AllowDuplicateProperties = false }); }
         catch (JsonException ex) { throw new InvalidDataException($"{where}: not JSON: {ex.Message}"); }
         using (doc)
         {

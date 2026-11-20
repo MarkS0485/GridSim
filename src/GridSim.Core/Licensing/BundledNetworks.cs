@@ -114,6 +114,61 @@ public static class BundledNetworks
     public static bool IsBundledPath(string? path) => IsBundledByContent(path, DataRoots);
 
     /// <summary>
+    /// APP-25: the bundled test for a model source that may be a v2 case manifest (<c>*.case.json</c>). A path that is not a
+    /// v2 manifest is judged exactly as <see cref="IsBundledPath(string?)"/>. A v2 manifest is bundled only when the manifest
+    /// AND every file it lists (<c>network</c> and <c>assets</c>, relative to the manifest's folder; <c>imports</c> libraries,
+    /// relative to the data root that holds the manifest) pass the same location-and-content check: the loader reads those
+    /// files, and they carry every bus, so hashing the manifest alone let a shipped manifest front a tampered network
+    /// (the N229 route). Anything unreadable or malformed is not bundled (the licence check then runs).
+    /// </summary>
+    public static bool IsBundledV2Case(string? path) => IsBundledV2Case(path, DataRoots);
+
+    /// <summary>APP-25: <see cref="IsBundledV2Case(string?)"/> against explicit <paramref name="dataRoots"/> (tests).</summary>
+    public static bool IsBundledV2Case(string? path, IReadOnlyList<string> dataRoots)
+    {
+        ArgumentNullException.ThrowIfNull(dataRoots);
+        if (string.IsNullOrWhiteSpace(path)) return false;
+        if (!IsBundledByContent(path, dataRoots)) return false;
+        string full;
+        try { full = Path.GetFullPath(path); } catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+        if (!File.Exists(full) || !full.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return true;   // not a manifest: the plain rule
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(full));
+            System.Text.Json.JsonElement root = doc.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object
+                || !(root.TryGetProperty("network", out _) || root.TryGetProperty("assets", out _) || root.TryGetProperty("imports", out _)))
+                return true;   // a JSON file that is not a v2 manifest: the plain rule already passed
+            string dir = Path.GetDirectoryName(full)!;
+            foreach (string kind in new[] { "network", "assets" })
+                if (root.TryGetProperty(kind, out System.Text.Json.JsonElement list))
+                {
+                    if (list.ValueKind != System.Text.Json.JsonValueKind.Array) return false;
+                    foreach (System.Text.Json.JsonElement item in list.EnumerateArray())
+                        if (item.ValueKind != System.Text.Json.JsonValueKind.String
+                            || !IsBundledByContent(Path.GetFullPath(item.GetString()!, dir), dataRoots)) return false;
+                }
+            if (root.TryGetProperty("imports", out System.Text.Json.JsonElement imports))
+            {
+                if (imports.ValueKind != System.Text.Json.JsonValueKind.Array) return false;
+                foreach (System.Text.Json.JsonElement item in imports.EnumerateArray())
+                {
+                    if (item.ValueKind != System.Text.Json.JsonValueKind.Object
+                        || !item.TryGetProperty("library", out System.Text.Json.JsonElement lib)
+                        || lib.ValueKind != System.Text.Json.JsonValueKind.String) return false;
+                    if (Locate(full, dataRoots) is not (string _, string dataRoot)
+                        || !IsBundledByContent(Path.GetFullPath(lib.GetString()!, dataRoot), dataRoots)) return false;
+                }
+            }
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or ArgumentException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// N229: the full rule of <see cref="IsBundledPath(string?)"/> (location AND content) against explicit
     /// <paramref name="dataRoots"/>, each read with its own <see cref="ManifestFileName"/> (tests build a root of their
     /// own rather than writing into a real install). A root's manifest is read once per process.

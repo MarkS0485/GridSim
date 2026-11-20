@@ -18,7 +18,7 @@ name: Release
 #     Production settings are replay-only, so the solve API and the simulation socket are not served);
 #   * GA-5 (owner decision, 2026-11-01): the desktop apps as RC-1 shipped them, the WPF app (GridSim.Wpf) for win-x64
 #     and the Avalonia app (GridSim.App.Desktop) for win-x64 and linux-x64, each with its own SBOM (job desktop).
-# Not shipped: a macOS desktop build and Unity; GridSim.Gda and the GDA data are not release
+# Not shipped: a macOS desktop build; GridSim.Gda and the GDA data are not release
 # artefacts (GDA is a model the author uses, not a product: the `gda` verbs stay in the CLI and need a GDA data lake).
 # WorkflowContractTests pins this scope, so an artefact cannot be added or dropped here without a test failing.
 #

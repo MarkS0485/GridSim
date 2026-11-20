@@ -541,6 +541,22 @@ public sealed class RunViewModel : ObservableObject, IRunActions
     public async Task<string?> LoadAsync(ModelSource source)
     {
         ArgumentNullException.ThrowIfNull(source);
+        // APP-01: one load at a time. A second load started while the first awaits the old loop used to start a second
+        // play loop that nothing could cancel. Loads now queue and run in the order they were asked for, so the last
+        // choice wins and exactly one loop is left.
+        Task previous = _loadTail;
+        var mine = new TaskCompletionSource();
+        _loadTail = mine.Task;
+        await previous.ConfigureAwait(true);
+        try { return await LoadCoreAsync(source).ConfigureAwait(true); }
+        finally { mine.SetResult(); }
+    }
+
+    private Task _loadTail = Task.CompletedTask;   // the end of the queue of loads (UI thread only)
+
+    private async Task<string?> LoadCoreAsync(ModelSource source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
         if (source.Bridge is not null)
         {
             // Slice 1.8: WPF SwitchTo sends a bridge source to LoadBridge before anything else. A run view model made

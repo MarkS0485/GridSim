@@ -81,6 +81,10 @@ public sealed class AccessControl
     /// listing, so a caller who may not see a model listed may not read it either.</summary>
     public const string TopologyPrivateOperation = "api.topology.private";
 
+    /// <summary>APP-03: the operation name for <c>POST /api/solve</c> of a model found under <c>results/</c> or <c>gda-out/</c>.
+    /// Same band as <see cref="TopologyPrivateOperation"/>: a caller who may not read the topology may not solve it either.</summary>
+    public const string SolvePrivateOperation = "api.solve.private";
+
     /// <summary>The operation name for opening a model found under <c>results/</c> or <c>gda-out/</c> on the Blazor dashboard
     /// (<c>/dashboard/&lt;id&gt;</c>). Same band as <see cref="TopologyPrivateOperation"/>: <see cref="GridSim.Web.Model.CaseCatalog.PrivateListingRole"/>.</summary>
     public const string DashboardPrivateOperation = "dashboard.private";
@@ -93,6 +97,15 @@ public sealed class AccessControl
     /// <param name="isPrivate">The case id names a model under <c>results/</c> or <c>gda-out/</c>.</param>
     /// <param name="isInteractive">The component is running in the interactive circuit (not the prerender).</param>
     public static bool MustWaitForInteractive(bool isPrivate, bool isInteractive) => isPrivate && !isInteractive;
+
+    /// <summary>
+    /// The workbench page's rule for a load failure it shows on the "NOT AVAILABLE" card instead of letting it reach the
+    /// circuit: a licence refusal, a bad case or file, and a denied private model (<see cref="GridSim.Core.Security.AccessDeniedException"/>,
+    /// recorded as one AccessDenied audit entry before it is thrown). Pure, so it is tested without a circuit.
+    /// </summary>
+    public static bool IsPageLoadRefusal(Exception ex) =>
+        ex is GridSim.Core.Licensing.LicenceException or GridSim.Core.Security.AccessDeniedException or InvalidOperationException
+            or ArgumentException or IOException or UnauthorizedAccessException;
 
     /// <summary>The prefix of a <c>/ws/sim</c> control's operation name (<c>ws.sim.start</c>, <c>ws.sim.trip</c>, ...).</summary>
     public const string SimOperationPrefix = "ws.sim.";

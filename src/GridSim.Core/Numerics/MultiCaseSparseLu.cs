@@ -289,7 +289,7 @@ internal static class MultiCaseSparseLu
 /// SIMD lanes of <see cref="MultiCaseSparseLu"/>.
 ///
 /// <para><b>What each lane equals.</b> The single-case path for a matrix <c>a</c> of the family is
-/// <see cref="SparseLu.Factor(CsrMatrix)"/>: the reverse Cuthill-McKee ordering of <c>a</c>'s CSR structure, then
+/// <see cref="SparseLu.Factor(CsrMatrix)"/>: the minimum-degree ordering of <c>a</c>'s CSR structure, then
 /// <see cref="SparseLu.FactorWithOrdering"/>. The ordering depends on the CSR structure alone, so every member of the
 /// family has the same ordering, computed here once from the template. Each lane is then the full factorisation with that
 /// ordering, bit for bit (replayed on the template's plan, or factored alone when it cannot share it), so a lane's L, U
@@ -309,7 +309,7 @@ internal sealed class SparseLuFamily
     /// <summary>The order of every matrix in the family.</summary>
     internal int N { get; }
 
-    /// <summary>The family's column ordering (reverse Cuthill-McKee of the template's structure).</summary>
+    /// <summary>The family's column ordering (minimum-degree ordering of the template's structure).</summary>
     internal int[] Ordering { get; }
 
     /// <summary>The plan recorded from the template's factorisation, or null when the template is singular (then every

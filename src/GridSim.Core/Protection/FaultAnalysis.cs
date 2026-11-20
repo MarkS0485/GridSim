@@ -129,7 +129,7 @@ public sealed record ConverterFaultInfeed(
 /// The fault admittance is factored on the sparse engine (<see cref="FaultNetworkSystem"/>) at every size, so a small
 /// case and gb-full run the same arithmetic (N233, October 2026: the old dense path up to 1,500 buses is gone).
 /// </summary>
-public static class FaultAnalysis
+public static partial class FaultAnalysis
 {
     /// <summary>The default synthesised generator subtransient reactance (pu on the machine base) used when
     /// the model carries no machine reactance - a typical X"d for a large synchronous machine.</summary>
@@ -149,7 +149,7 @@ public static class FaultAnalysis
     /// isolated bus adds nothing (unchanged, bit for bit). A fault ON an isolated bus has no source and is refused by name.
     /// </summary>
     private static void GroundIsolatedBuses(GridModel model, Dictionary<int, int> index, List<(int Index, Complex Y)> shunts,
-        int faultIndex, int faultBusId)
+        int faultIndex, int faultBusId, bool[]? dead = null)
     {
         int n = model.BusCount;
         var touched = new bool[n];
@@ -165,8 +165,14 @@ public static class FaultAnalysis
         if (!touched[faultIndex])
             throw new InvalidOperationException(
                 $"Fault bus {faultBusId} is isolated (no in-service branch, load, shunt or machine), so no current can flow into a fault there.");
+        // PR-03: a de-energised bus (whole dead islands, checked by PrefaultVoltages) is decoupled from the live network
+        // and carries no load or machine, so its block of the admittance can be singular: it is grounded like an isolated
+        // bus. The live buses' numbers are unchanged.
         for (int i = 0; i < n; i++)
-            if (!touched[i]) shunts.Add((i, Complex.One));
+        {
+            bool isDead = dead is not null && dead[i];
+            if (!touched[i] || isDead) shunts.Add((i, Complex.One));
+        }
     }
 
     /// <summary>
@@ -193,6 +199,19 @@ public static class FaultAnalysis
                 v0[i] = Complex.Zero;
                 dead[i] = true;
             }
+        }
+        // PR-03: a de-energised part must be whole islands. A bus the result lacks that an in-service branch still joins to a
+        // live bus would run the superposition with an inconsistent V0 (a large injection no source supplies): refused by name.
+        var rowOfId = new Dictionary<int, int>(n);
+        for (int i = 0; i < n; i++) rowOfId.TryAdd(model.Buses[i].Id, i);
+        foreach (Branch br in model.Branches)
+        {
+            if (!br.InService) continue;
+            if (!rowOfId.TryGetValue(br.From, out int fi) || !rowOfId.TryGetValue(br.To, out int ti)) continue;
+            if (dead[fi] == dead[ti]) continue;
+            int deadBus = dead[fi] ? br.From : br.To, liveBus = dead[fi] ? br.To : br.From;
+            throw new InvalidOperationException(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"Fault study: bus {deadBus} is missing from the prefault result (de-energised) but the in-service branch {br.From}-{br.To} joins it to the live bus {liveBus}; the prefault result must carry every bus of a connected part of the model (give the result of this model, or take the branch out of service)."));
         }
         if (dead[faultIndex])
         {
@@ -278,7 +297,7 @@ public static class FaultAnalysis
             if (xdSys <= 0) continue;
             shunts.Add((i, Complex.One / new Complex(0, xdSys)));
         }
-        GroundIsolatedBuses(model, index, shunts, k, faultBusId);   // GR-135
+        GroundIsolatedBuses(model, index, shunts, k, faultBusId, dead);   // GR-135, PR-03
         FaultNetworkSystem lu = FaultNetworkSystem.ForModel(model, shunts);
 
         // One column of Zbus: solve y . x = e_k.
@@ -467,7 +486,7 @@ public static class FaultAnalysis
                 if (xSys <= 0) continue;
                 shunts.Add((i, Complex.One / new Complex(0, xSys)));
             }
-            GroundIsolatedBuses(model, index, shunts, k, faultBusId);   // GR-135
+            GroundIsolatedBuses(model, index, shunts, k, faultBusId, dead);   // GR-135, PR-03
             return shunts;
         }
         var e = new Complex[n];
@@ -751,7 +770,28 @@ public static class FaultAnalysis
         foreach (Bus b in model.Buses) if (b.Id == g.Bus) { type = b.Type; break; }
         if (type != BusType.Slack && type != BusType.Pv) return (g.Pg, g.Qg);
         // Fail loud: UnitOutput throws if the prefault result is not a converged solve of this model.
-        (double pSolved, double qSolved) = SolvedGeneration.UnitOutput(model, prefault, generatorIndex);
+        double pSolved, qSolved;
+        if (prefault.BusIds.Count == model.BusCount)
+            (pSolved, qSolved) = SolvedGeneration.UnitOutput(model, prefault, generatorIndex);
+        else
+        {
+            // PR-03: a result that omits de-energised buses is read by bus id, through the model restricted to the buses the
+            // result carries (the unit's own bus is live: units on dead buses are skipped before this call).
+            var inResult = new HashSet<int>(prefault.BusIds);
+            var liveBuses = model.Buses.Where(b => inResult.Contains(b.Id)).ToList();
+            var liveGens = new List<Generator>();
+            int mapped = -1;
+            for (int gi = 0; gi < model.Generators.Count; gi++)
+            {
+                if (!inResult.Contains(model.Generators[gi].Bus)) continue;
+                if (gi == generatorIndex) mapped = liveGens.Count;
+                liveGens.Add(model.Generators[gi]);
+            }
+            if (mapped < 0)
+                throw new ArgumentException($"generator bus {g.Bus} is not in the prefault result.", nameof(prefault));
+            GridModel restricted = model.CopyWith(buses: liveBuses, generators: liveGens, branches: Array.Empty<Branch>());
+            (pSolved, qSolved) = SolvedGeneration.UnitOutput(restricted, prefault, mapped);
+        }
         return type == BusType.Slack ? (pSolved, qSolved) : (g.Pg, qSolved);
     }
 

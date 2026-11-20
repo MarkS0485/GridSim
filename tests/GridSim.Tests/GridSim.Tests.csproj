@@ -43,6 +43,7 @@
          CliOutput's own), so VerbHelpTests and CliResultWriterTests drive the real code directly. -->
     <Compile Include="..\..\src\GridSim.Cli\VerbHelp.cs" Link="Linked\VerbHelp.cs" />
     <Compile Include="..\..\src\GridSim.Cli\CliResultWriter.cs" Link="Linked\CliResultWriter.cs" />
+    <Compile Include="..\..\src\GridSim.Cli\CliResultFromJson.cs" Link="Linked\CliResultFromJson.cs" />
     <!-- N103: the per-verb flag check reads the same chapter; VerbFlagsTests drive it directly. -->
     <Compile Include="..\..\src\GridSim.Cli\VerbFlags.cs" Link="Linked\VerbFlags.cs" />
     <!-- GR-195: the global-switch warning table is pure; Gr195GlobalSwitchWarningTests drive it directly. -->

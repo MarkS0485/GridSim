@@ -1,0 +1,144 @@
+@page "/console"
+@using GridSim.Core.Security
+@using GridSim.Scripting
+@using GridSim.Web.Site
+@inject WebScriptConsole Scripts
+@inject AccessControl Access
+@rendermode InteractiveServer
+
+@* RC4: the GridSim.Scripting console as a page. The same Runner and InteractiveConsole as the gridsim-script executable (no second
+   interpreter). Read-only verbs are open to every caller; every state-changing verb needs the Operator role, checked before it runs
+   (Site/WebScriptConsole.cs). Models are loaded from the catalogue only, under the licence gate. *@
+
+<PageTitle>GridSim script console</PageTitle>
+
+<div class="tabpage console">
+    <div class="rp1-hero g-amber">
+        <div class="hero-main">
+            <span class="hero-v">SCRIPT CONSOLE</span>
+            <span class="hero-l">grammar @Grammar.VersionText | you hold @_who.Role | state-changing verbs need @WebScriptConsole.ChangeRole</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h">MODELS YOU MAY LOAD</div>
+        <p class="note">@Scripts.LimitsText</p>
+        <div class="runbar">
+            @foreach (var (entry, statement) in _loadable)
+            {
+                <button class="tab" title="@statement" @onclick="() => UseLoad(statement)">@entry.Id</button>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-h">SCRIPT</div>
+        <textarea class="busselect" style="width:100%;min-height:12em;font-family:monospace" spellcheck="false" @bind="_script" @bind:event="oninput"></textarea>
+        <div class="runbar">
+            <button class="tab" disabled="@_busy" @onclick="RunScript">RUN</button>
+            <button class="tab" disabled="@_busy" @onclick="CheckScript">CHECK ONLY</button>
+            @if (_busy) { <span class="prompt"><span class="spinner"></span> Running...</span> }
+        </div>
+        @if (_result is not null)
+        {
+            <p class="note console-status" data-status="@_result.Status">@_result.Status: @_result.Message</p>
+            @if (_result.Error is { } e)
+            {
+                <p class="note console-error">line @e.Pos.Line, column @e.Pos.Column (@e.Phase.ToString().ToLowerInvariant() error): @e.Message</p>
+            }
+            @if (_result.Output.Length > 0) { <pre class="note console-output">@_result.Output</pre> }
+            @if (_result.RunRecordJson is not null)
+            {
+                <a class="tab" download="script.run.json" href="data:application/json;charset=utf-8,@Uri.EscapeDataString(_result.RunRecordJson)">DOWNLOAD RUN RECORD</a>
+            }
+        }
+    </div>
+
+    <div class="card">
+        <div class="card-h">INTERACTIVE SESSION (recorded)</div>
+        <pre class="note console-output" style="max-height:20em;overflow:auto">@_transcript</pre>
+        <div class="runbar">
+            <span>@(_session?.InBlock == true ? "...>" : "gss>")</span>
+            <input class="busselect" style="width:32em;font-family:monospace" @bind="_line" @bind:event="oninput" @onkeydown="OnKey" disabled="@_busy" />
+            <button class="tab" disabled="@_busy" @onclick="Send">ENTER</button>
+            <button class="tab" disabled="@(_busy || _session is null)" @onclick="EndSession">END AND RECORD</button>
+        </div>
+        @if (_recording is not null)
+        {
+            <p class="note">Session recorded (the same .gss and .run.json that gridsim-script writes):
+                <a class="tab" download="session.gss" href="data:text/plain;charset=utf-8,@Uri.EscapeDataString(_recording.GssText)">DOWNLOAD .gss</a>
+                <a class="tab" download="session.run.json" href="data:application/json;charset=utf-8,@Uri.EscapeDataString(_recording.RunRecordJson)">DOWNLOAD .run.json</a></p>
+        }
+    </div>
+    <a href="/">&lt;- back to models</a>
+</div>
+
+@code {
+    [CascadingParameter] public Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+
+    private IdentityContext _who = new("anonymous", OperationRole.Viewer, "");
+    private IReadOnlyList<(GridSim.Web.Model.CaseEntry Entry, string Statement)> _loadable = [];
+    private string _script = "GRAMMAR 1\n# Load a model from the list above, then PRINT or REPORT.\n";
+    private string _line = "";
+    private string _transcript = "Type a statement. Block verbs (FOR, IF, PROC) are closed by END.\n";
+    private WebScriptConsole.WebConsoleSession? _session;
+    private ConsoleRecording? _recording;
+    private WebScriptResult? _result;
+    private bool _busy;
+    private readonly List<string> _history = [];
+    private int _historyAt;
+
+    protected override async Task OnInitializedAsync()
+    {
+        System.Security.Claims.ClaimsPrincipal? user = AuthState is not null ? (await AuthState).User : null;
+        _who = Access.IdentityFor(user, null);
+        _loadable = Scripts.LoadableCases(_who.Role);
+    }
+
+    private void UseLoad(string statement) => _line = statement;
+
+    private async Task RunScript()
+    {
+        if (_busy) return;
+        _busy = true;
+        try { _result = await Scripts.RunAsync(_script, _who); }
+        finally { _busy = false; }
+    }
+
+    private void CheckScript() => _result = Scripts.Check(_script);
+
+    private async Task OnKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Send();
+        else if (e.Key == "ArrowUp" && _history.Count > 0) { if (_historyAt > 0) _historyAt--; _line = _history[_historyAt]; }
+        else if (e.Key == "ArrowDown") { if (_historyAt < _history.Count - 1) { _historyAt++; _line = _history[_historyAt]; } else { _historyAt = _history.Count; _line = ""; } }
+    }
+
+    private async Task Send()
+    {
+        if (_busy) return;
+        string line = _line;
+        _line = "";
+        if (line.Trim().Length > 0) { _history.Add(line); _historyAt = _history.Count; }
+        _session ??= Scripts.NewSession(_who);
+        _recording = null;
+        _transcript += (_session.InBlock ? "...> " : "gss> ") + line + "\n";
+        _busy = true;
+        try
+        {
+            WebScriptResult r = await _session.SubmitAsync(line);
+            if (r.Output.Length > 0) _transcript += r.Output.TrimEnd('\n') + "\n";
+            if (r.Status is not ScriptRunStatus.Completed) _transcript += r.Message + "\n";
+            else if (r.Message != "ok") _transcript += r.Message + "\n";
+        }
+        finally { _busy = false; }
+    }
+
+    private void EndSession()
+    {
+        if (_session is null) return;
+        _recording = _session.Finish();
+        _session = null;
+        _transcript += "session recorded; download the .gss and the .run.json below.\n";
+    }
+}

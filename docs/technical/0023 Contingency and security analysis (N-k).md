@@ -550,7 +550,7 @@ The parallel paths give the same answer as a sequential run, by these mechanisms
    or race the output.
 4. **Stable ordering on a pure key.** The candidate set and the final tables use LINQ `OrderByDescending` on `StressScore`,
    which is stable, so ties fall back to the fixed enumeration order.
-5. **No cross-solve state that depends on the thread.** The one cache an engine keeps across solves is the RCM ordering
+5. **No cross-solve state that depends on the thread.** The one cache an engine keeps across solves is the ordering
    of `CpuSparseLuSolver`, a pure function of the Jacobian pattern, so which thread solved which outage cannot change a bit.
 6. **Sequential redispatch.** The corrective LP of each first outage runs in a sequential loop, and is deterministic.
 

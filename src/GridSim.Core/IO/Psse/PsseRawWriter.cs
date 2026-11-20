@@ -173,6 +173,14 @@ public static class PsseRawWriter
             sb.Append(", 1, 1, 0, 1, 0, 1, 0, 1, 0, 1\n");
         }
         if (dynamics > 0) notes.Add($"{dynamics} generator(s) carry dynamics or fault data (inertia, type, X''d, a dynamics class); RAW holds the power-flow record only.");
+        // Post-RC3 audit IO-02: fields RAW has no place for are counted and listed, in MatpowerWriter's wording.
+        int genExtras = model.AllGenerators.Count(g => g.Name is not null || g.NegativeSeqXPu != 0 || g.ConverterInterfaced is not null
+            || g.ConverterFaultCurrentPu is not null || g.PowerFlowOnly || g.UnitTransformerXPu != 0 || g.GridForming);
+        if (genExtras > 0) notes.Add($"{genExtras} generator(s) carry a name, negative-sequence reactance, unit transformer reactance or converter / grid-forming data that RAW cannot hold; not written.");
+        int genCosts = model.AllGenerators.Count(g => g.Cost is not null || g.ReactiveCost is not null);
+        if (genCosts > 0) notes.Add($"{genCosts} generator(s) carry a cost curve (gencost), which RAW cannot hold; not written.");
+        int layoutBuses = model.Buses.Count(x => x.X != 0 || x.Y != 0);
+        if (layoutBuses > 0) notes.Add($"{layoutBuses} bus(es) carry layout coordinates, which RAW cannot hold; not written.");
         Terminator(sb, "GENERATOR", "BRANCH");
 
         // --- Branches: lines (and ratio-1 transformers with charging), then transformers --------------------------------
@@ -249,6 +257,12 @@ public static class PsseRawWriter
             sb.Append("1, 0\n");
         }
         if (open > 0) notes.Add($"{open} out-of-service branch(es) written with status 0; the reader skips them.");
+        int seqBranches = model.Branches.Count(br => br.R0 != 0 || br.X0 != 0 || br.FromWinding is not null || br.ToWinding is not null
+            || br.FromNeutralXPu != 0 || br.ToNeutralXPu != 0);
+        if (seqBranches > 0)
+            notes.Add($"{seqBranches} branch(es) carry zero-sequence impedances, winding connections or neutral reactances; RAW has no sequence data (it belongs in a SEQ file), so earth-fault studies of the written case differ.");
+        int branchExtras = model.Branches.Count(br => br.LengthKm != 0 || br.Equipment is not null || br.DynamicsClass is not null);
+        if (branchExtras > 0) notes.Add($"{branchExtras} branch(es) carry a length, equipment type or dynamics class that RAW cannot hold; not written.");
         Terminator(sb, "TRANSFORMER", "AREA");
         Terminator(sb, "AREA", "TWO-TERMINAL DC");
 

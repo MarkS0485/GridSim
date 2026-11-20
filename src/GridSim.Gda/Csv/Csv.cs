@@ -273,3 +273,28 @@ internal static class GdaNumber
         return false;
     }
 }
+
+/// <summary>
+/// APP-27: the GR-289 column check for the readers that work on a <see cref="DataSourceTable"/> or another header list
+/// (NPg, UKPN; both CSV and Parquet). A column that does not exist reads as blank or 0 on every row, so a publication that
+/// renamed one used to build a replica with every transformer skipped or every circuit unrated, without a word.
+/// </summary>
+internal static class RequiredColumns
+{
+    /// <summary>Refuse a table whose headers lack any group. Each group lists the accepted spellings of ONE column (the
+    /// alias lists the reader already tries); one spelling of each group must be present (case-insensitive, trimmed).</summary>
+    public static void Require(IReadOnlyList<string> headers, string what, params string[][] groups)
+    {
+        ArgumentNullException.ThrowIfNull(headers);
+        var have = new HashSet<string>(headers.Select(CsvTable.Normalize), StringComparer.OrdinalIgnoreCase);
+        var missing = groups.Where(g => !g.Any(n => have.Contains(CsvTable.Normalize(n)))).ToList();
+        if (missing.Count == 0) return;
+        throw new InvalidDataException(
+            $"{what}: the table has no column {string.Join(", ", missing.Select(g => string.Join(" or ", g.Select(n => "'" + n + "'"))))}, " +
+            "which the reader needs (a column that is absent would read as blank or 0 on every row). Headers found: " +
+            string.Join(", ", headers.Select(h => "'" + h + "'")) + ".");
+    }
+
+    /// <summary>One group of one spelling.</summary>
+    public static string[] Col(string name) => [name];
+}

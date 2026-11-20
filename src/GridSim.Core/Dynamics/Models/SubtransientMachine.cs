@@ -73,6 +73,10 @@ public static class SubtransientMachine
             if (satAt12Pu < 0.0) throw new ArgumentOutOfRangeException(nameof(satAt12Pu), "Se(1.2) must be >= 0.");
             SatAt1Pu = satAt1Pu;
             SatAt12Pu = satAt12Pu;
+            // DP-04: Se(1.0) = 0 with Se(1.2) > 0 is not an unsaturated machine; it used to read as one and drop the 1.2 point.
+            if (satAt1Pu == 0.0 && satAt12Pu > 0.0)
+                throw new ArgumentOutOfRangeException(nameof(satAt12Pu),
+                    $"Se(1.0) is 0 but Se(1.2) is {satAt12Pu.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}; give both points above 0 for a saturated machine, or both 0 for an unsaturated one.");
             if (satAt1Pu <= 0.0) return;   // unsaturated: A = B = 0, Se == 0
             if (satAt12Pu <= satAt1Pu)
                 throw new ArgumentOutOfRangeException(nameof(satAt12Pu), "Se(1.2) must exceed Se(1.0) for a rising saturation curve.");

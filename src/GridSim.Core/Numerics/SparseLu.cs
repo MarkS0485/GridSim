@@ -23,7 +23,7 @@ public static class SparseLu
     }
 
     /// <summary>
-    /// Factor A once (CSR->CSC conversion + RCM ordering + Gilbert-Peierls LU) for repeated
+    /// Factor A once (CSR->CSC conversion + minimum-degree ordering + Gilbert-Peierls LU) for repeated
     /// right-hand sides - the state estimator's residual-covariance path solves the same gain
     /// matrix against one column per measurement. Returns null when singular.
     /// </summary>
@@ -43,12 +43,12 @@ public static class SparseLu
     }
 
     /// <summary>
-    /// Numeric factorisation reusing a PRECOMPUTED column ordering. The reverse Cuthill-McKee
+    /// Numeric factorisation reusing a PRECOMPUTED column ordering. The minimum-degree
     /// ordering depends only on the sparsity PATTERN, which is fixed across the Newton iterations of
     /// one power-flow pass (same topology, same bus types) - so a caller that solves the same
     /// structure repeatedly (the NR loop) computes <see cref="Ordering"/> once and calls this each
-    /// iteration, skipping the RCM re-derivation. The result is bit-identical to <see cref="Factor"/>
-    /// because RCM is a pure function of the structure. Returns null when singular.
+    /// iteration, skipping the ordering re-derivation. The result is bit-identical to <see cref="Factor"/>
+    /// because the ordering is a pure function of the structure. Returns null when singular.
     /// </summary>
     internal static SparseLuFactorization? FactorWithOrdering(CsrMatrix a, int[] q)
     {
@@ -122,7 +122,7 @@ public static class SparseLu
     internal static int[] Ordering(CsrMatrix a) => MinimumDegreeOrdering.Order(a);
 
     /// <summary>Numeric factorization of an already-prepared CSC matrix with a precomputed
-    /// ordering - skips the CSR->CSC conversion and RCM that <see cref="Factor"/> redoes per call.
+    /// ordering - skips the CSR->CSC conversion and ordering that <see cref="Factor"/> redoes per call.
     /// Returns null when singular.</summary>
     internal static SparseLuFactorization? FactorPrepared(int n, int[] ap, int[] ai, double[] ax, int[] q)
     {

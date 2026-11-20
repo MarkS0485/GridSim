@@ -639,6 +639,158 @@ you want to keep.
   events and switches are in the `parameters` object of `run-metadata.json`.
 - **One output directory per run.** Re-using `--out` overwrites the earlier files without a warning.
 
+## Three-phase studies with frequency-dependent lines, saturation and arresters (`emt3`)
+
+RC4 adds a second EMT path beside `emt`, for studies the case-file verb cannot describe: `gridsim emt3 <study.json>`. It runs on a
+new nodal solver in SI units (volts, amps, ohms, henries, farads; `GridSim.Core.Dynamics.Emt.Nodal`), with a fixed time step and
+the trapezoidal rule. The `emt` verb, `EmtEngine` and `ThreePhaseEmtEngine` are not changed. The single-phase engine has a closed
+element list with no nonlinear element and no convolution line, so adding them there would have meant editing the numerical core;
+the new solver is a separate set of files that reuses only the companion-model formulas.
+
+What a study can hold (strict `gridsim-emt3/1`; see the [CLI reference](<0019 CLI reference.md#emt3>) for every key):
+
+- **Three-phase buses**, each three nodes `<bus>.a`, `<bus>.b`, `<bus>.c`; balanced wye sources with a series resistance and
+  inductance; series branches given by their positive and zero sequence impedance (stamped as coupled phase matrices); wye shunts.
+- **Lines from the line constants** (R4-04). Model `bergeron` is a constant-parameter travelling-wave line: the surge impedance
+  and travel time of each mode (zero sequence, positive sequence twice) from the geometry at its stated frequency, lossless apart from
+  an attenuation `exp(-R l / Zc)` that is exact only for a distortionless line (`R/L = G/C`). Model `fd` fits the characteristic
+  admittance and the propagation function of each mode over a stated band, from the geometry solved at every band frequency
+  (so the earth-return integral supplies the frequency dependence), with real-pole vector fitting; the line then runs by recursive
+  convolution. The result reports the fit error of every mode, the delay removed from the propagation function, and any
+  passivity correction.
+- **Faults and switching**: shunt faults on any phases, to ground or to an isolated star point, applied and cleared at stated
+  times; three-phase breakers with scheduled events. Events act at the first step boundary at or after their time (quantised up
+  to the step grid, an error of at most one step; there is no interpolation back to the exact instant). `event_rule` chooses a
+  normal trapezoidal step or one backward-Euler step at each event.
+- **Nonlinear devices**: surge arresters (power law `i = Iref (|v|/Vref)^alpha`, or a piecewise-linear V-I table), saturable
+  shunt inductors (a piecewise-linear current-flux curve, with an initial flux) and saturable transformer banks (three
+  single-phase T-model units, secondary referred to the primary). Each step solves the nonlinear elements by Newton iteration with
+  a fixed iteration limit, fixed tolerances and a fixed number of step-halvings; a run that does not converge stops with the
+  status `NewtonNotConverged` and the time of the failure. The traces end at the last good step; the last value is never repeated.
+- **Rotating machines** (optional `machines`, the R4-17 Core models): a synchronous machine in dq coordinates with field and damper
+  windings and the swing equation, started from a no-load or a phasor operating point, with mechanical-torque and field-voltage
+  steps; a single-cage induction machine in the stationary frame with a speed-dependent shaft load, started from standstill or a
+  stated speed. Outputs add `speed`, `torque`, `rotor-angle` and `field-current`. The synchronous machine uses the RMS parameter set
+  (`xd`, `xdp`, `xdpp`, `tdop` and so on), so the same machine data run in both the RMS and the EMT studies.
+- **Converters and DC buses** (optional `dc_buses`, `converters`, the R4-17 Core models): a split DC link with an optional supply, and
+  three-phase two-level voltage-source converters on it, either the average-value model or the switched bridge with sine PWM, driven by
+  an open-loop modulation or by the sampled dq current controller behind a filter. Each result names the model class of every converter
+  and the switching-timing contract. Grid-forming and grid-following inverters exist only in the older phase-domain engine and are not
+  offered here.
+- **HVDC** (optional `hvdc`, the R4-19 Core models): VSC stations (two-level average-value, MMC arm-average or MMC sub-module level, with
+  the dq current controller and an outer power or DC-voltage loop), line-commutated 6- and 12-pulse bridge groups into an R-L load, and two-pole
+  DC lines (Bergeron) between stations that start in a steady state carrying a stated current. Each station and bridge has its own AC
+  source. The partitioned parallel run, the RMS-EMT co-simulation interface and the DC fault cases of the Core remain library APIs.
+- **Outputs**: node voltages, element currents (a line end, a branch phase, an arrester, a source, a machine, a converter filter), flux
+  linkages, machine quantities, DC rail voltages and DC currents, with a sample interval.
+
+Every result states the step, the method, the Newton tolerances, how many times the linear matrix was factored, the Newton iteration
+counts and the fit errors. A run is bit-identical on every repeat and at every thread count: the solver is single-threaded, with
+fixed element order and fixed summation order.
+
+**Order of work in a step**: apply due events; history terms and source values at `t + dt`, in element order; Newton iterations (if
+any nonlinear element); accept and update every history, in element order. A run starts from rest. A source that is not zero at
+`t = 0` switches on at the first step, which shifts the trapezoidal response by half a step; the validated cases start their
+sources at zero.
+
+**What is validated, and against what.** All oracles are derived in the tests, not read from a tool:
+
+- the series RLC response to a sinusoid from rest, and a switched RLC, against their closed forms, with observed order 2 when the
+  step is halved;
+- lossless line reflections against a reflection-coefficient lattice, the open-end voltage doubling, matched-end absorption, and the
+  travel time;
+- a distortionless line (`R/L = G/C`): a step arrives attenuated by `exp(-(R/Z0) x)`, and the vector fit of that data is exact;
+- the open-ended frequency-dependent line: the simulated sending-end impedance against the analytic `Z0 coth(gamma l)` computed from
+  the R4-04 line constants at the test frequency, with the fit error and the simulation error reported separately;
+- the arrester operating point of a DC source through a resistance against an independent bisection, and the V-I characteristic
+  traced by a ramp against the defined curves;
+- the saturable inductor: the peak flux linkage `lambda_residual + 2 Vpk / w` on energisation at voltage zero, and the current on the
+  piecewise curve at every step;
+- a three-phase bolted fault against the positive-sequence R-L closed form, including the d.c. offset;
+- the converters through a study document: the average-value converter's phase current against the closed form `(m Vdc / 2) / (R + Rs + j w L)`
+  within 0.1 per cent, the switched converter's fundamental within 1 per cent of it and of the average model, no carrier-frequency
+  voltage from the average model, and the current-controlled switched converter with a DC link against the sampled-loop step response
+  (within 6 per cent of the reference) and the power-balance link voltage (within 1 per cent). These are the R4-17 Core tests reached through
+  `gridsim emt3`, with a grounded star-point load because a study cannot describe a floating one. An example document is
+  `docs/examples/emt3/converter-current-control.json`;
+- HVDC through a study document: the LCC bridge group's mean DC voltage and current against the closed form
+  `Vd = N [Vd0 cos(alpha) - (3 w Lc / pi) Id - 2 (Ron + Rs) Id]` for 6 and 12 pulses (within 0.6 per cent); the two-station VSC link
+  against the load-flow solution of the same link (the start within 0.2 per cent, the steady state within 0.5 per cent) and the DC
+  closed form `P = Vd1 (Vd1 - Vd2) / R`; and the MMC station, arm-average against sub-module level (AC current within 1.5 per cent,
+  DC current within 2 per cent) with the DC power balance. These are the R4-19 Core tests reached through `gridsim emt3`; the MMC
+  arm-voltage equations and the circulating-current closed form of the Core tests need arm internals the document does not expose, so
+  they stay Core-level. Example documents are `docs/examples/emt3/hvdc-lcc-bridge.json` and `docs/examples/emt3/hvdc-vsc-mmc-station.json`;
+- the synchronous machine through a study document: a phasor start on a stiff bus holds the phasor steady state (current, torque, field
+  current, load angle, speed), the sudden three-phase short circuit follows the classical `X''d`, `X'd`, `Xd` envelope and the d.c.
+  time constant, and a mechanical-torque step accelerates the rotor at `delta T / 2H`; the induction machine's direct start ends at the
+  slip of the equivalent-circuit torque balance with the locked-rotor inrush above three times the running current. These are the
+  R4-17 Core tests reached through `gridsim emt3`; the short-circuit traces are bit-identical to the Core call. An example document is
+  `docs/examples/emt3/machine-short-circuit.json`.
+
+**What is not validated.** The machine, converter and HVDC models are checked against closed forms and the load-flow link solution only. Nothing has been compared
+with PSCAD, EMTP or any other tool (no comparator was available; the status is COMPARATOR-UNVERIFIED, and the result summary of a study that uses them
+says so). The saturable transformer inrush waveform is checked only qualitatively (one-sided pulses, once per cycle).
+Not modelled: hysteresis and remanence at zero current (the current-flux curve is single valued), core-limb coupling and a
+zero-sequence flux path in the transformer, delta windings and a general ideal-transformer ratio (the secondary is referred to the
+primary), the universal line model, cables with sheath and armour modes beyond what the line constants give, skin effect in the
+conductor resistance (it is an input), ferroresonance studies, stochastic switching, and the arrester's frequency-dependent
+(dynamic) behaviour. A frequency-dependent line is fitted over its stated band and is not validated outside it; its poles are real, and
+a transient that needs a lightly damped resonance of the line itself is represented only as well as the fit allows. Passivity is
+enforced on the fitted line alone (a real characteristic admittance and a propagation function of magnitude at most one, on a dense
+grid a decade beyond the band each way); it does not prove the stability of the whole network. The step must not exceed the shortest
+travel time of any line mode.
+
+## Partitioned runs, HVDC and MMC models, and RMS-EMT co-simulation (library API)
+
+These are typed Core APIs on the three-phase nodal solver (`Dynamics/Emt/Nodal`). The VSC and LCC HVDC stations and the MMC models also run from a study document through the `hvdc` key of `gridsim emt3` (described above); the
+partitioned run and the co-simulation interface have no CLI verb. Nothing here was compared
+with PSCAD, EMTP or the CIGRE benchmark waveforms (the benchmark parameter sets are public; its expected waveforms are tool output).
+Every check below is against a closed form or the load-flow solution, written out in the test that runs it.
+
+**Partitioned parallel run** (`Dynamics/Emt/Partition`). A network is described as named partitions joined by Bergeron lines
+(`PartitionedModel`). A partition may be cut only at a line whose travel time is at least one step, so each end reads a wave that an
+earlier step wrote; the partitions then run `floor(travel / step)` steps (the smallest over the cut lines) between exchanges, in
+parallel, and wait at a barrier. `PartitionedEngine.Run` is bit-identical to the single-partition run (the same model built as one
+network and run on `NodalSolver`) and to itself at every thread count: no sum crosses a partition, and each partition factorises its
+own block of the block-diagonal nodal matrix in the same order. The test runs four partitions (a thyristor bridge, a VSC station, a
+line whose travel time is 8.2 steps, scheduled faults) at 1, 2, 3, 4 and 16 threads and compares every probe sample bit by bit.
+A partitioned run refuses networks with nonlinear (Newton) elements, because the Newton convergence test covers every node and so
+is not separable, and the backward-Euler event rule, because the incumbent applies it to every element when any element switches.
+Use the single-partition form for those.
+
+**MMC** (`Dynamics/Emt/Hvdc`). Each leg has two arms of `N` half-bridge sub-modules, an arm resistance and an arm inductance. Insertion
+is `n_u = 1/2 - m/2 + z`, `n_l = 1/2 + m/2 + z`; the arm sum-capacitor voltage obeys `C_arm dV/dt = n i` with `C_arm = C_sm / N`. Two
+forms: the arm-average model, and a sub-module-level model with nearest-level insertion and balancing by a sort of the capacitor voltages
+with the sub-module index as the tie-break (the choice does not depend on the sort algorithm). A circulating-current suppression control
+works on the negative-sequence second harmonic in a frame rotating at twice the grid frequency. Checked: the DC current
+`Idc = 3/4 m I cos(phi)` from the energy balance (200.693 A against 200.707 A), the DC loop law for the mean arm voltage, the pole-voltage
+fundamental from the arm voltage law including the capacitor ripple (rel. 1.8e-3), the arm energy ripple at the fundamental, and the
+second-harmonic circulating current (19.76 A against 19.42 A from the average-value equations, which include the feedback of the
+circulating current into the ripple); with suppression it falls to 0.01 A. The sub-module-level and arm-average models agree on the AC
+current to 0.14 %.
+
+**DC fault.** A pole-to-pole fault at the converter DC bus behind a DC reactor: the current rises at `V/L` from the first step
+(5.994e6 A/s against 6.000e6 A/s: the reactor branch plus three legs of `V_dc / 2 L_arm`) and follows the series R-L-C response of the arms.
+
+**VSC HVDC link.** `VscHvdcStation` builds a station (grid source, phase reactor, two-level average-value or MMC converter, DC link, dq current
+loop, and a power or DC-voltage outer loop). Two stations joined by a DC line cut into two partitions reproduce the load-flow `VscDcLink`
+solution (I = 385.19 A against 385.16 A, Vd1 = 20770.3 V against 20770.3 V) and the closed form `P = Vd1 (Vd1 - Vd2) / R`; the run starts from
+the load-flow state (the line takes an initial steady state through `NodalBergeronLine` end `SetInitialState`).
+
+**LCC.** `LccBridgeEmt` is a six- or twelve-pulse thyristor group with floating transformer neutrals and a firing delay read at every step.
+Closed forms: `Vd = N (Vd0 cos(alpha) - 3 w Lc Id / pi - 2 (Ron + Rs) Id)`; six pulse 402.1 A against 402.8 A, twelve pulse 767.4 A against 768.9 A.
+
+**RMS-EMT co-simulation** (`Dynamics/CoSim`). `RmsEmtInterface` places the equivalent of the RMS side at a three-phase boundary: a Thevenin
+(EMF behind a series R-L) or a Norton (current source with a shunt R and L) equivalent, fitted at the fundamental. At a fixed exchange interval
+the EMT side measures the positive-sequence phasor over one fundamental cycle, the RMS side returns its equivalent, and the EMT source holds that
+phasor with continuous phase until the next exchange; an RMS event reaches the EMT side after at most one interval plus one step. The impedance is
+fixed for the run. The RMS side here is a phasor model built alongside (`PhasorSide`): the RMS transient kernel runs a whole case and has no
+entry that advances it to a time and exchanges a boundary quantity. Steady state agrees at the interface to 2e-5 between the all-EMT network, the
+RMS+EMT network and the phasor closed form. At a load step the two differ in what the RMS equivalent cannot represent: the line is a surge
+impedance for two travel times (the instant after the step follows `v0 (Gc + Gp) / (Gc + Gp + Gx)` on the line and `v0 Gp / (Gp + Gx)` in the
+equivalent), the difference is 369 V rms in the first 3 ms and 0.2 V from 20 ms on, and the fundamentals agree. The co-simulation is bit-repeatable
+with itself and is not bit-comparable with either parent run.
+
 ## Limits
 
 - The `emt` verb is single-phase (one node per bus, positive sequence). The three-phase engine (`ThreePhaseEmtEngine`),
@@ -656,6 +808,9 @@ you want to keep.
 - A run starts from rest, not from a power-flow operating point, so a study that needs the network loaded to a power-flow
   state before the event cannot be started from the CLI.
 - The `t = 0` row of voltage probes is zero by construction, not the initial state.
+- The limits of the `emt3` verb are listed in its own section above (nothing compared with a commercial tool; no hysteresis).
+- HVDC and MMC models are reachable through the `hvdc` key of `emt3` (stations, bridge groups, DC lines). The partitioned run and the co-simulation
+  API have no verb. Not built: multi-terminal DC grid dynamics, DC breaker models, wide-band HVDC control replicas, converter dead time and device-level MMC sub-modules (IGBT switching), a PLL, and an RMS side that is the full RMS kernel.
 
 ## See also
 

@@ -21,7 +21,7 @@ Report it privately. Do not open a public issue, pull request or discussion for 
 - **Preferred:** GitHub private vulnerability reporting, from this repository's **Security** tab,
   **Report a vulnerability** (<https://github.com/MarkS0485/GridSim/security/advisories/new>). The report stays
   private between you and the maintainer and becomes the draft security advisory.
-- **Alternative:** email **gdatooling@proton.me**.
+- **Alternative:** email **mark@gridsimdigitaltwin.co.uk**.
 
 Please include the GridSim version (`gridsim --version`), the operating system, the steps or input that show the
 problem, and what an attacker could do with it. If you would like to be credited in the advisory, say how.

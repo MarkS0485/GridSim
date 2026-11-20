@@ -1,7 +1,7 @@
 # gridsim (Python)
 
 GridSim from Python: a small, pure-Python package that runs the `gridsim` command-line program and reads its result
-document. There is no in-process interop and no network service, so every number is the CLI's own, bit for bit. It
+document. There is no embedded runtime and no network service by default, so every number is the CLI's own, bit for bit. It
 uses the Python standard library only (tested on Python 3.12).
 
 ```python
@@ -32,6 +32,24 @@ the strings).
 
 A run that writes no result (a usage error, a case that does not load, a solve that does not converge) raises
 `GridSimError`, with `exit_code`, `stdout`, `stderr` and the CLI's last stderr line in the message.
+
+## Sessions (many calls, one process)
+
+`gridsim.Session` starts `gridsim rpc` once (protocol `gridsim-rpc/1`; a pipe, no network) and keeps it, so a case is
+loaded once and solved many times:
+
+```python
+with gridsim.Session() as sess:
+    h = sess.load("case9")              # CaseHandle: handle id, sha256, size
+    s = h.solve()                       # SolveResult: converged, iterations, loss_mw, vm_pu, va_deg, ... (lists)
+    s.array("vm_pu")                    # numpy array when numpy is installed
+    r = sess.run_verb("pf", "case14")   # the same Result as GridSim.run; the host runs the verb as the CLI would
+    lc = sess.line_constants(geometry)  # gridsim-lineconstants/1 geometry dict -> Result
+    sess.stats()                        # loads, solves, verb_runs, handles held
+```
+
+Solves are bit-identical to `gs.pf(...)`. A host that ends raises `SessionError` (with its exit code); earlier responses
+are unaffected. `GridSim.run` is unchanged. See manual chapter 19, "rpc".
 
 ## Finding the CLI
 

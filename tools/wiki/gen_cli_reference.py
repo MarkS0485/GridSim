@@ -33,7 +33,7 @@ from urllib.parse import quote
 # ---------------------------------------------------------------------------
 SITE_BASE = "https://marks0485.github.io/GridSim/"   # single place for the site URL
 REPO_URL = "https://github.com/MarkS0485/GridSim"
-RELEASE_URL = REPO_URL + "/releases/tag/v2.1.000-RC-1"   # as used by README.md
+RELEASE_URL = REPO_URL + "/releases/tag/v2.1.073-RC-4"   # as used by README.md
 
 CLI_CHAPTER_REL = "docs/manual/0019 CLI reference.md"
 CLI_PAGE_NAME = "CLI-quick-reference.md"
@@ -179,6 +179,8 @@ def section_summary(slug, body):
             continue                                   # usage line(s)
         if first.startswith(("|", "-", "#", ">", "!")):
             continue                                   # table, list, quote
+        if first.startswith("Result files:"):
+            continue                                   # shared --json/--csv boilerplate, not the verb summary
         return first_sentence(" ".join(p.strip() for p in para))
     fail(f"section '{slug}' has no prose paragraph to summarise")
 

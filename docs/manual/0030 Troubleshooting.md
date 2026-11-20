@@ -265,12 +265,12 @@ in `GRIDSIM_LICENCE` (a key that is present but rejected leaves the run on the f
 
 ```
 $ gridsim results/trouble-tmp/mycase9241.m --once
-error: This network has 9,241 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+error: This network has 9,241 buses; your Personal licence allows 1,500. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 [exit 2]
 ```
 
-Fix. Check the active tier with `gridsim licence status`. A larger or commercial licence is installed with
-`gridsim --importLicence <file>` ([ch. 4, Licensing and activation](<0004 Licensing and activation.md>)). An
+Fix. Check the active tier with `gridsim licence status`. At present licences are issued gratis: email
+`mark@gridsimdigitaltwin.co.uk` for one, then install it with `gridsim --importLicence <file>` ([ch. 4, Licensing and activation](<0004 Licensing and activation.md>)). An
 expired licence falls back to the Personal tier and the message names the expiry date.
 
 ## Power flow does not converge

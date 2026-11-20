@@ -26,7 +26,7 @@ and 8.
 **Named owner.** Mark Shirley, Chief Technology Officer, Twin Scroll Grid Balancer (TSGB), is the accountable
 owner for the security posture of the estimator and its services: for accepting residual risk, for deciding
 when a control's status changes, and for the change control of the security-critical values in section 4. The
-security and licensing contact of record is `gdatooling@proton.me`. The project also publishes an RFC 9116
+security and licensing contact of record is `mark@gridsimdigitaltwin.co.uk`. The project also publishes an RFC 9116
 `.well-known/security.txt` for vulnerability disclosure, and the vulnerability policy in
 [`SECURITY.md`](../../SECURITY.md): private reporting, objective CVSS assessment, a 48-hour remediation target at a
 base score of 7.0 or above, and automatic notice to subscribers (run by `incident-response.md` section 9).

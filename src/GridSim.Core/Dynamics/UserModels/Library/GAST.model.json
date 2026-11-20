@@ -1,0 +1,47 @@
+{
+  "format": "gridsim-model/1",
+  "id": "GAST",
+  "title": "GAST gas turbine governor",
+  "role": "governor",
+  "source": "PSS/E GAST simple gas turbine governor (CGMES GovGAST); block structure as implemented in GridSim.Core.Dynamics.Models.Gast (droop, exhaust temperature load limit through a low-value gate, three lags). Public-source citation as given in that class documentation; not independently re-verified in R4-08.",
+  "parameters": [
+    { "name": "R",     "unit": "pu", "value": 0.05, "min": 0, "minExclusive": true, "description": "droop" },
+    { "name": "T1",    "unit": "s",  "value": 0.4,  "min": 0, "description": "fuel valve time constant" },
+    { "name": "T2",    "unit": "s",  "value": 0.1,  "min": 0, "description": "turbine time constant" },
+    { "name": "T3",    "unit": "s",  "value": 3.0,  "min": 0, "description": "exhaust temperature measurement time constant" },
+    { "name": "AT",    "unit": "pu", "value": 1.0,  "description": "ambient temperature load limit" },
+    { "name": "KT",    "unit": "pu", "value": 2.0,  "min": 0, "description": "temperature limiter gain" },
+    { "name": "Vmin",  "unit": "pu", "value": 0.0,  "allowInfinite": true },
+    { "name": "Vmax",  "unit": "pu", "value": 1.2,  "allowInfinite": true },
+    { "name": "Dturb", "unit": "pu", "value": 0.0,  "description": "turbine damping" }
+  ],
+  "ports": {
+    "inputs": [ { "name": "speed", "unit": "pu" } ],
+    "outputs": [ { "name": "pm", "unit": "pu", "from": "pmech" } ]
+  },
+  "blocks": [
+    { "id": "pref",  "type": "hold" },
+    { "id": "droop", "type": "div", "inputs": ["speed"], "params": { "d": "@R" } },
+    { "id": "pd",    "type": "sum", "inputs": ["pref", "droop"], "signs": "+-" },
+    { "id": "dtemp", "type": "sum", "inputs": ["@AT", "exh.prev"], "signs": "+-" },
+    { "id": "kt",    "type": "product", "inputs": ["@KT", "dtemp"] },
+    { "id": "limit", "type": "sum", "inputs": ["@AT", "kt"], "signs": "++" },
+    { "id": "u",     "type": "min", "inputs": ["pd", "limit"] },
+    { "id": "valve", "type": "lag", "inputs": ["u"], "params": { "gain": 1.0, "time": "@T1", "min": "@Vmin", "max": "@Vmax" } },
+    { "id": "turb",  "type": "lag", "inputs": ["valve"], "params": { "gain": 1.0, "time": "@T2" } },
+    { "id": "exh",   "type": "lag", "inputs": ["turb"], "params": { "gain": 1.0, "time": "@T3" } },
+    { "id": "damp",  "type": "gain", "inputs": ["speed"], "params": { "k": "@Dturb" } },
+    { "id": "pmech", "type": "sum", "inputs": ["turb", "damp"], "signs": "+-" }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "pm0", "unit": "pu" } ],
+    "steps": [
+      { "action": "require", "value": "pm0", "min": "@Vmin", "max": "@Vmax", "model": "GAST", "quantity": "valve position", "argument": "mechanicalPowerPu" },
+      { "action": "require", "value": "pm0", "max": "@AT", "model": "GAST", "quantity": "mechanical power against the ambient temperature load limit AT", "argument": "mechanicalPowerPu" },
+      { "action": "initialise", "block": "pref",  "values": ["pm0"] },
+      { "action": "initialise", "block": "valve", "values": ["pm0"] },
+      { "action": "initialise", "block": "turb",  "values": ["pm0"] },
+      { "action": "initialise", "block": "exh",   "values": ["pm0"] }
+    ]
+  }
+}

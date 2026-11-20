@@ -34,8 +34,8 @@ theta     = B'^-1 * (P / BaseMva)                      (reference angles are 0; 
 f_l       = b_l * (theta_from(l) - theta_to(l)) * BaseMva                  (MW, positive from -> to)
 ```
 
-Parallel branches add. B' is stamped in branch order into a `CsrMatrix` and factored once by `SparseLu.Factor` (reverse
-Cuthill-McKee ordering, partial pivoting; [ch. 3](<0003 Power flow.md>)). If the factorisation finds B' singular even with
+Parallel branches add. B' is stamped in branch order into a `CsrMatrix` and factored once by `SparseLu.Factor` (minimum-degree
+ordering, partial pivoting; [ch. 3](<0003 Power flow.md>)). If the factorisation finds B' singular even with
 one reference per island, `Build` throws `InvalidOperationException` (`DC susceptance is singular even with one reference bus per
 island ...`). `DcFlows` is one solve of the equation above for any injection set; an injection at a reference bus or at an unknown
 bus id is dropped, which is the reference absorbing it.

@@ -566,6 +566,21 @@ public sealed class GridBridgeClient : IAsyncDisposable
             throw;                          // and the receive loop's guard reports the message (R275)
         }
 
+        // APP-04: a dated answer is held to the same exact 169 h horizon as a 'state' tick (R276), against this client's
+        // clock. Message-fatal for the paired query (it fails with the guard's exception) and reported as a rejected
+        // message; the stream itself carries on. An answer with no 'at' (a legacy server) has no timestamp to check and
+        // is accepted as before: the guard cannot vouch for undated data, and the protocol never required the field.
+        if (result.At != DateTime.MinValue)
+        {
+            try { ForwardInferenceGuard.RejectFuture(result.At, utcNow: DateTime.UtcNow, what: "bridge result"); }
+            catch (ForwardInferenceException ex)
+            {
+                pq?.Tcs.TrySetException(ex);
+                ReportRejected(ex.Message);
+                return result;
+            }
+        }
+
         if (pq is not null) pq.Tcs.TrySetResult(result);
         else if (refusal is not null) ReportRejected(refusal);
         return result;

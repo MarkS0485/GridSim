@@ -7,9 +7,9 @@ namespace GridSim.Core.Numerics;
 /// the depth limit), reproduced step for step.
 ///
 /// <para><b>Why it exists.</b> An introsort is not stable: when the comparer calls two elements equal (two nodes of the
-/// same degree in the reverse Cuthill-McKee ordering), which one comes first is decided by the algorithm's internals and
+/// same degree in the retained reverse Cuthill-McKee comparison ordering, or two equal values in a sort), which one comes first is decided by the algorithm's internals and
 /// the input order. Those internals belong to the runtime, not to GridSim, so a .NET servicing or major release that
-/// tuned them (a different insertion-sort threshold, a different pivot rule) would change the RCM permutation, hence the
+/// tuned them (a different insertion-sort threshold, a different pivot rule) would change such a permutation, hence the
 /// pivot order of every sparse LU, hence the last bits of every sparse result, with no GridSim change at all. Copying the
 /// algorithm freezes it: the order is now GridSim's, the same on every runtime and OS, and on .NET 10 it is exactly the
 /// order <c>Array.Sort</c> gives today, so no result moves (<c>FrozenIntroSortTests</c> checks it against the runtime's

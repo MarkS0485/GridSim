@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GridSim.Core.Model;
@@ -56,11 +57,11 @@ public static class SolveImport
         // One model reader for both the bridge topology and the solve-export (R031): the branch state, ZIP,
         // pmin, zero-sequence/winding data, OLTCs and boundaries all round-trip.
         GridModel model = BridgeProtocol.BuildModel(root.Model, defaultName: "replay");
-        PowerFlowResult result = BuildResult(root.Result, root.Solve);
+        PowerFlowResult result = BuildResult(root.Result, root.Solve, model);
         return new SolveSnapshot(model, result, root.Meta?.Case ?? model.Name, root.Meta?.TimestampUtc ?? "");
     }
 
-    private static PowerFlowResult BuildResult(ResultDto r, SolveDto? solve)
+    private static PowerFlowResult BuildResult(ResultDto r, SolveDto? solve, GridModel model)
     {
         var rb = r.Buses ?? new();
         var flows = (r.LineFlows ?? new()).Select(l => new LineFlow(
@@ -91,6 +92,28 @@ public static class SolveImport
                     $"Solve-export solve.status '{st}' is not a power-flow status (expected one of {string.Join(", ", Enum.GetNames<PowerFlowStatus>())}).");
         }
 
+        // IO-03: the result block must hold a row for every bus of the model it came with, in the model's order, each
+        // with a voltage magnitude and angle; a converged document must not carry non-finite values there.
+        if (r.Buses is null)
+            throw new InvalidDataException("Solve export result has no 'buses' list, so there is no state to read.");
+        // An empty list is read as before, converged or not (SolveImportTests GR180, Doc8 D067 and BugHunt1029 BH40 pin it);
+        // any rows given must match the model.
+        if (rb.Count > 0 && rb.Count != model.Buses.Count)
+            throw new InvalidDataException($"Solve export result has {rb.Count.ToString(CultureInfo.InvariantCulture)} bus row(s) but its model has {model.Buses.Count.ToString(CultureInfo.InvariantCulture)} bus(es).");
+        for (int i = 0; i < rb.Count; i++)
+        {
+            if (rb[i].Id != model.Buses[i].Id)
+                throw new InvalidDataException($"Solve export result bus row {i.ToString(CultureInfo.InvariantCulture)} is bus {rb[i].Id.ToString(CultureInfo.InvariantCulture)}, but the model's bus {i.ToString(CultureInfo.InvariantCulture)} is {model.Buses[i].Id.ToString(CultureInfo.InvariantCulture)}; the result rows must follow the model's bus order.");
+            if (rb[i].Vm is null || rb[i].VaDeg is null)
+                throw new InvalidDataException($"Solve export result bus {rb[i].Id.ToString(CultureInfo.InvariantCulture)} has no '{(rb[i].Vm is null ? "vm" : "vaDeg")}'; a missing value is not read as a default.");
+        }
+        if (solve.Converged.Value)
+        {
+            foreach (ResBusDto row in rb)
+                if (!double.IsFinite(row.Vm!.Value) || !double.IsFinite(row.VaDeg!.Value))
+                    throw new InvalidDataException($"Solve export is marked converged but result bus {row.Id.ToString(CultureInfo.InvariantCulture)} has a non-finite voltage.");
+        }
+
         return new PowerFlowResult
         {
             Converged = solve.Converged.Value,
@@ -100,8 +123,8 @@ public static class SolveImport
             MaxMismatch = isEstimate ? solve.MaxStateUpdate!.Value : solve.MaxMismatch ?? 0,
             Status = status,
             BusIds = rb.Select(x => x.Id).ToArray(),
-            Vm = rb.Select(x => x.Vm).ToArray(),
-            VaDeg = rb.Select(x => x.VaDeg).ToArray(),
+            Vm = rb.Select(x => x.Vm!.Value).ToArray(),
+            VaDeg = rb.Select(x => x.VaDeg!.Value).ToArray(),
             PInjMw = rb.Select(x => x.PInjMw).ToArray(),
             QInjMvar = rb.Select(x => x.QInjMvar).ToArray(),
             TotalLossMw = r.TotalLossMw,
@@ -144,8 +167,8 @@ public static class SolveImport
     internal sealed class ResBusDto
     {
         public int Id { get; set; }
-        public double Vm { get; set; } = 1.0;
-        public double VaDeg { get; set; }
+        public double? Vm { get; set; }       // IO-03: required (a missing one is refused, not read as 1.0 pu)
+        public double? VaDeg { get; set; }    // IO-03: required
         public double PInjMw { get; set; }
         public double QInjMvar { get; set; }
     }

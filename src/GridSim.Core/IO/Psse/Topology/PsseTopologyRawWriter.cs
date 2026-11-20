@@ -43,6 +43,12 @@ public static class PsseTopologyRawWriter
             foreach (PsseSwitchKey key in known)
                 if (!switchStates.ContainsKey(key))
                     throw new InvalidDataException($"An explicit state is required for PSS/E switch in substation {key.Substation}, nodes {key.FromNode}-{key.ToNode}, circuit '{key.CircuitId}'.");
+            // IO-23: the reader refuses a closed switch between nodes of different bus-branch buses, so do not write one.
+            var busByNode = topology.Nodes.ToDictionary(n => (n.Substation, n.Number), n => n.Bus);
+            foreach (PsseTopologySwitch sw in topology.Switches)
+                if (switchStates[PsseSubstationProjection.Key(sw)] &&
+                    busByNode.TryGetValue((sw.Substation, sw.FromNode), out int fromBus) && busByNode.TryGetValue((sw.Substation, sw.ToNode), out int toBus) && fromBus != toBus)
+                    throw new InvalidDataException($"A switch closed in the file must connect nodes assigned to the same bus-branch bus (substation {sw.Substation}, nodes {sw.FromNode} and {sw.ToNode}, circuit '{sw.CircuitId}' are on buses {fromBus} and {toBus}).");
         }
 
         PsseRawLayout layout = PsseRawLayout.Read(source.SourceText, source.Parsed.Revision);

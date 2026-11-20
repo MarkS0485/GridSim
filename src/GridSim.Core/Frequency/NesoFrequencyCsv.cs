@@ -69,9 +69,13 @@ public static class NesoFrequencyCsv
         // DateTimeStyles.None), and a naive row is assumed UTC. Otherwise the RMSE anchor in ReplayValidator,
         // which compares recorded times to the UTC event instant by raw ticks, drifts by the local offset in
         // BST - enough to demote a Reproduced baseline to Marginal on a UK machine.
-        if (!DateTime.TryParse(tsSpan, CultureInfo.InvariantCulture,
-                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out t))
-        { why = "the timestamp does not parse"; return false; }
+        // AN-09: ISO 8601 only (UtcTime.TryParseIso8601, as every other GridSim instant). The published form is
+        // "yyyy-MM-dd HH:mm:ss" (a space for the T, accepted here); the lenient DateTime.TryParse read a slash date
+        // such as 09/08/2019 month-first (8 September) and accepted any shape the invariant culture knows.
+        string tsText = tsSpan.ToString();
+        if (tsText.Length > 10 && tsText[10] == ' ') tsText = string.Concat(tsText.AsSpan(0, 10), "T", tsText.AsSpan(11));
+        if (!UtcTime.TryParseIso8601(tsText, out t))
+        { why = "the timestamp does not parse (ISO 8601 yyyy-MM-dd HH:mm:ss expected)"; return false; }
         if (!double.TryParse(fSpan, NumberStyles.Float, CultureInfo.InvariantCulture, out hz))
         { why = "the frequency does not parse as a number"; return false; }
         // A frequency that is NaN, infinite, zero or negative is not a measurement of a running system.

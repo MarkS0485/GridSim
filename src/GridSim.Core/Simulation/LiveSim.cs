@@ -43,7 +43,7 @@ public sealed record SimFrame(
 /// </summary>
 public sealed class LiveSim
 {
-    private readonly GridModel _base;
+    private GridModel _base;   // only ReplaceNetwork assigns it after construction
     private readonly SteadyStateSolver _solver;
     private readonly bool _big;
     private readonly bool _holdSteady;
@@ -272,6 +272,37 @@ public sealed class LiveSim
         if (!double.IsFinite(lostMw))
             throw new ArgumentOutOfRangeException(nameof(lostMw), lostMw, "A trip must be a finite number of MW.");
         lock (_tripGate) _pendingTripMw -= lostMw;
+    }
+
+    /// <summary>
+    /// Replace the network the loop re-solves from the next <see cref="Step(int, double)"/> on: a topology or dispatch change
+    /// (a branch or generator in or out of service, a load or set-point changed) made between steps. Purely additive: nothing
+    /// calls it unless a caller wants it, and a loop that never does behaves, bit for bit, as before. Call it between steps,
+    /// from the thread that steps the loop (it is not guarded against a concurrent Step).
+    /// <para>The new network must be the same case with edits: the same bus ids in the same order, the same number of branches
+    /// and of generators (in service or not), and the same nominal frequency, so the frequency integrator, the warm start and
+    /// the solver choice made at construction still describe it. When an authored asset fleet is running it binds units by
+    /// position among the in-service generators, so the in-service generator count must not change either (a generator trip
+    /// or close needs the loop built without asset dynamics); a branch trip, a load change or a set-point change always
+    /// can. Refused with <see cref="ArgumentException"/> (a different case) or <see cref="InvalidOperationException"/>
+    /// (the asset fleet), and the loop is left as it was.</para>
+    /// </summary>
+    public void ReplaceNetwork(GridModel network)
+    {
+        ArgumentNullException.ThrowIfNull(network);
+        if (network.Buses.Count != _base.Buses.Count || network.Branches.Count != _base.Branches.Count
+            || network.AllGenerators.Count != _base.AllGenerators.Count)
+            throw new ArgumentException("LiveSim.ReplaceNetwork: the network must be the loop's own case with edits (the same number of buses, branches and generators).", nameof(network));
+        for (int i = 0; i < _base.Buses.Count; i++)
+            if (network.Buses[i].Id != _base.Buses[i].Id)
+                throw new ArgumentException($"LiveSim.ReplaceNetwork: bus {i} is {network.Buses[i].Id}, but the loop's case has {_base.Buses[i].Id} there; the bus order cannot change.", nameof(network));
+        if (network.FrequencyHz != _base.FrequencyHz)
+            throw new ArgumentException($"LiveSim.ReplaceNetwork: the network runs at {network.FrequencyHz:R} Hz, the loop at {_base.FrequencyHz:R} Hz.", nameof(network));
+        if (_assetFleet is not null && network.Generators.Count != _base.Generators.Count)
+            throw new InvalidOperationException(
+                "LiveSim.ReplaceNetwork: the authored asset fleet binds units by position among the in-service generators, so the number "
+                + "of in-service generators cannot change while it runs; build the loop without asset dynamics to trip or close a generator.");
+        _base = network;
     }
 
     /// <summary>The engine actually running (Auto resolved to a concrete solver), for the UI.</summary>

@@ -34,7 +34,8 @@ public static class DyrRecordStatus
 /// <param name="Role">machine, exciter, pss, governor, a renewable role, or unknown.</param>
 /// <param name="GeneratorIndex">Index into <c>model.Generators</c> of the in-service unit it names, or null.</param>
 /// <param name="Status">One of <see cref="DyrRecordStatus"/>.</param>
-/// <param name="Semantics">How the values map ("exact", "exact with derivations", "values left out", "not used").</param>
+/// <param name="Semantics">How the values map ("exact", "exact with derivations", "mapped, governor structure differs",
+/// "values left out", "not used").</param>
 /// <param name="Derived">Each derived GridSim parameter and its derivation, as the reader tagged it.</param>
 /// <param name="Reasons">Why a record is not SUPPORTED (the reader's own words where it gave them).</param>
 /// <param name="AffectedTraces">The machine trace channels this record's unit drives (its rotor angle, speed and
@@ -112,6 +113,15 @@ public static partial class DynamicsModelCoverage
     private static partial Regex TemplateLine();
 
     /// <summary>Build the coverage report and the bound machine data.</summary>
+    /// <summary>Semantics of a HYGOV record that maps every value (post-RC3 DP-06).</summary>
+    public const string HygovSemantics = "mapped, governor structure differs";
+
+    /// <summary>The structural difference stated on every mapped HYGOV record (post-RC3 DP-06).</summary>
+    public const string HygovStructureNote =
+        "structure: GridSim's hydro governor takes the transient-droop feedback from the actual gate with the servo lag Tg inside " +
+        "the loop, where PSS/E HYGOV feeds back the desired gate and lags after it (the two agree only for Tg = 0), and it uses a " +
+        "linear penstock where HYGOV's is nonlinear; values map one to one but trajectories are not like for like";
+
     public static DynamicsModelBinding Build(PsseParseResult raw, string dyrText, string dyrName, string schemasDir,
         DynamicsUnmodelledPolicy policy)
     {
@@ -139,6 +149,14 @@ public static partial class DynamicsModelCoverage
             PsseDyrRecord r = records[i];
             string refusedKey = r.Model == "USRMDL" && r.Values.Count > 0 ? r.Values[0].Trim().Trim('\'').ToUpperInvariant() : r.Model;
             string? wecc = PsseDyrRenewables.ModelOf(r);
+            // A record naming a machine the case does not hold is UNMATCHED whatever its model: identity first.
+            if (!units.ContainsKey((r.Bus, r.Id)))
+            {
+                string unmatchedRole = PsseDyrReader.MappedModels.TryGetValue(r.Model, out string? mapped) ? mapped
+                    : wecc is not null ? PsseDyrRenewables.Roles[wecc] : "unknown";
+                pre[i] = (DyrRecordStatus.Unmatched, unmatchedRole, $"{r.Model} names machine '{r.Id}' at bus {r.Bus}, which the RAW case does not hold");
+                continue;
+            }
             if (PsseDyrRenewables.RefusedOrder.TryGetValue(refusedKey, out string? modelled))
             {
                 pre[i] = (DyrRecordStatus.Skipped, "unknown", $"{refusedKey}: GridSim models {modelled}, but the order of the PSS/E record is not in any public source, so it is not read with a guessed order");
@@ -268,10 +286,16 @@ public static partial class DynamicsModelCoverage
             if (usedLines.Contains(r.Line))
             {
                 bool approx = issues.Count > 0;
+                string semantics = approx ? "values left out" : derived.Count > 0 ? "exact with derivations" : "exact";
+                // Post-RC3 DP-06: every HYGOV value maps one to one, but GridSim's hydro governor is not HYGOV's structure, so
+                // the record must not read "exact". The status stays SUPPORTED (not blocking); the difference is stated.
+                if (!approx && r.Model == "HYGOV")
+                {
+                    semantics = HygovSemantics;
+                    derived = derived.Append(HygovStructureNote).ToList();
+                }
                 rows.Add(new DyrRecordCoverage(r.Line, r.Bus, r.Model, r.Id, role, gi,
-                    approx ? DyrRecordStatus.Approximated : DyrRecordStatus.Supported,
-                    approx ? "values left out" : derived.Count > 0 ? "exact with derivations" : "exact",
-                    derived, issues, traces));
+                    approx ? DyrRecordStatus.Approximated : DyrRecordStatus.Supported, semantics, derived, issues, traces));
             }
             else
             {

@@ -140,7 +140,8 @@
           "Avalonia.Skia": "[11.3.22, )",
           "Avalonia.Themes.Fluent": "[11.3.22, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
-          "GridSim.Ui": "[2.0.80, )",
+          "GridSim.Scripting": "[2.1.73, )",
+          "GridSim.Ui": "[2.1.73, )",
           "HarfBuzzSharp": "[8.3.1.1, )",
           "SkiaSharp": "[2.88.9, )"
         }
@@ -148,10 +149,16 @@
       "gridsim.core": {
         "type": "Project"
       },
+      "gridsim.scripting": {
+        "type": "Project",
+        "dependencies": {
+          "GridSim.Core": "[2.1.73, )"
+        }
+      },
       "gridsim.ui": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[2.0.80, )"
+          "GridSim.Core": "[2.1.73, )"
         }
       }
     }

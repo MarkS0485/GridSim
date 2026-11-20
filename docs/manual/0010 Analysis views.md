@@ -3,7 +3,7 @@
 The desktop app solves one network per tick and every tab after NETWORK reads that one solved frame. This chapter
 covers the analysis tabs: what question each answers, what every panel computes and from which Core type, the
 thresholds and colours it uses, the provenance of each number, and where the web dashboard differs. The tabs are
-SCADA, OPERATOR, MARKET, NESO RP1, MECHANICAL, THE MACHINE, CYCLE, ASSETS, GENERATION & INERTIA, HUMAN SCALE, SPEED
+SCADA, OPERATOR, MARKET, FREQUENCY SECURITY, MECHANICAL, THE MACHINE, CYCLE, ASSETS, GENERATION & INERTIA, HUMAN SCALE, SPEED
 DOMAINS, INVERTER FLEET and EXPERIMENTAL. Starting the app, the transport bar, the model and source pickers, the
 NETWORK tab and ABOUT are in [the desktop app](<0008 The desktop app.md>). HARMONICS is in
 [harmonic studies](<0017 Harmonic studies.md>).
@@ -162,7 +162,7 @@ single-unit loss, and the lake's own 1,800 MW figure is not shown here.
 The operator block also carries a response figure, a net interconnector figure and a warnings list. The model holds
 them, and this view does not display them. The voltage band the model computes is not displayed either.
 
-OPERATOR, MARKET and NESO RP1 clear their bridge state on every model or source switch and on every replay restart (entering
+OPERATOR, MARKET and FREQUENCY SECURITY clear their bridge state on every model or source switch and on every replay restart (entering
 replay, a restart, a scrub to frame 0 and a replay loop), so a GB-scale acceptance list cannot sit over
 an unrelated case. Nothing on this tab is clickable.
 
@@ -241,16 +241,17 @@ price sparkline sit below it. It adds a BALANCING panel (BM cost estimated as El
 bid or offer price, BSAD cost, volume and units instructed) and a BALANCING ACTIONS log of individual acceptances. Its
 interconnector table keeps only named GB links and falls back to the model's interconnector units.
 
-## NESO RP1
+## FREQUENCY SECURITY
 
-**Question: how long do I have?** The tab (`NesoRp1Vm`) is a situational-awareness page built on one quantity, the
+**Question: how long do I have?** The tab (`NesoRp1Vm`; labelled NESO RP1 before RC-3, and a desktop `--tab rp1` or
+`--tab neso` still opens it) is a situational-awareness page built on one quantity, the
 purchased time, in seconds of frequency ride-through on the system's real stored energy. The physics is
 `StabilityMetrics` (`src/GridSim.Core/Dynamics/StabilityMetrics.cs`). The credible loss and the grade ladder come from
 one presenter, `FrequencyRiskPresenter`, which the web calls too.
 
-RP1 is a GB 50 Hz product: its purchased time is graded to the absolute 49.2 Hz limit and its RoCoF and MIF use the
+The page applies GB 50 Hz criteria: its purchased time is graded to the absolute 49.2 Hz limit and its RoCoF and MIF use the
 GB nominal. On a case whose nominal is not exactly 50 Hz (`case9`, 60 Hz) both shells hide the page and show one line
-in its place: `NESO RP1 is a GB 50 Hz product page (purchased time to 49.2 Hz, GB RoCoF and MIF); this case runs at
+in its place: `Frequency Security uses GB 50 Hz criteria (purchased time to 49.2 Hz, GB RoCoF and MIF); this case runs at
 60.0 Hz, so the page is not shown.`
 
 ### The quantities
@@ -324,7 +325,7 @@ described under [The Inspector](#the-inspector).
 
 ### On the web
 
-The web NESO RP1 tab (`TabProjections.Rp1`) has the hero with the grade, the purchased-time gauge, the three
+The web FREQUENCY SECURITY tab (`TabProjections.Rp1`) has the hero with the grade, the purchased-time gauge, the three
 inertia gauges, the credible-loss card, inertia by source, the interconnector fleet with corridor flags, the narrative,
 and an **N-1 RoCoF screen** that the desktop tab lacks: each online generator as a single loss, worst RoCoF first, top
 10, flagged against 0.125 Hz/s and 1.0 Hz/s. Differences:
@@ -849,7 +850,7 @@ a raw public-data replay.
 
 ## The Inspector
 
-NESO RP1 and MECHANICAL share a drill-down overlay (`InspectorVm`). Click an aggregate and the Inspector shows how it is
+FREQUENCY SECURITY and MECHANICAL share a drill-down overlay (`InspectorVm`). Click an aggregate and the Inspector shows how it is
 made up for the displayed frame. It has a title and subtitle, a row of stat tiles, and constituent rows. A row that can
 drill further shows a chevron. Every hop pushes the previous page on a back stack, BACK retraces it and the close button
 clears it.

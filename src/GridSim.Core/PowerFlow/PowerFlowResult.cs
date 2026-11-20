@@ -15,6 +15,26 @@ public enum PowerFlowStatus
     NonFinite,
 }
 
+/// <summary>Whether the Newton engines' automatic retry ran, and how it ended (<see cref="PowerFlowResult.NewtonRetry"/>).</summary>
+public enum NewtonRetryOutcome
+{
+    /// <summary>Not tried: the ordinary solve converged (so every case that converged before the retry existed), the
+    /// solver has no retry (the backward/forward sweep), or the ordinary solve was stopped by the Q-limit pass cap rather
+    /// than by its Newton iteration.</summary>
+    NotTried,
+    /// <summary>The ordinary solve did not converge and the retry from the DC-angle start did: the reported state is the
+    /// retry's.</summary>
+    Converged,
+    /// <summary>Neither converged: the reported state is the ordinary solve's, unchanged.</summary>
+    DidNotConverge,
+    /// <summary>The retry converged to a root with a branch angle beyond the maximum-transfer angle, which is not
+    /// reported: the reported state is the ordinary solve's, unchanged.</summary>
+    Rejected,
+    /// <summary>The retry could not be run (no single slack bus, or a DC model that is not one island): the reported
+    /// state is the ordinary solve's, unchanged.</summary>
+    Unavailable,
+}
+
 /// <summary>Real/reactive power flowing into each end of a branch, the loss across it, and how loaded it is vs its rating.</summary>
 public sealed record LineFlow(
     int From, int To,
@@ -80,6 +100,18 @@ public sealed class PowerFlowResult
     /// from disk), and a caller must then fall back to the model's own types. Informational: it changes no solved number.
     /// </summary>
     public IReadOnlyList<GridSim.Core.Model.BusType>? SolvedBusTypes { get; init; }
+
+    /// <summary>
+    /// Whether the Newton engines' automatic retry ran (<see cref="NewtonShell.SolveWithRetry"/>). It runs only when the
+    /// ordinary Newton solve did not converge, so for every solve that converges ordinarily this is
+    /// <see cref="NewtonRetryOutcome.NotTried"/> and the numbers are exactly those of the ordinary solve.
+    /// <see cref="Iterations"/> and <see cref="MaxMismatch"/> belong to the attempt whose state is reported.
+    /// </summary>
+    public NewtonRetryOutcome NewtonRetry { get; internal set; }
+
+    /// <summary>A sentence describing the retry when it ran (see <see cref="NewtonRetry"/>), with the iterations and
+    /// mismatch of the attempt not reported; null when it did not run.</summary>
+    public string? NewtonRetryNote { get; internal set; }
 
     /// <summary>
     /// D-DOC-150 (October 2026): the largest bus-voltage update of the backward/forward sweep's last iteration (pu), the

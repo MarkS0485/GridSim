@@ -7,7 +7,7 @@ using Xunit;
 namespace GridSim.Tests;
 
 /// <summary>
-/// Pins the <see cref="SparseWlsStep"/> structure-once / refill-per-iteration claim (PerformanceOpts.md
+/// Pins the <see cref="SparseWlsStep"/> structure-once / refill-per-iteration claim (docs/developer/performance-optimisations.md
 /// §4.1): the gain sparsity pattern, ordering and slot map are built once in <c>Begin</c> and only values
 /// are refilled each iteration. That is safe ONLY while the measurement structure is genuinely fixed across
 /// a pass and re-derived when the measurement SET changes. This test changes the measurement set between

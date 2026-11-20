@@ -8,6 +8,7 @@
 #                        (F06: Gpu, Web and Wpf were missing, so the ILGPU packages were never updated).
 #                        UI programme 0.4 (2026-10-20): the Avalonia app (App, App.Desktop, App.Tests) too.
 #                        tools/UiSmoke (the headless page capture; Avalonia.Headless) moves with them.
+#                        RC4: the scripting projects (Scripting, Scripting.Console, Scripting.Tests) too.
 #                        Avalonia, SkiaSharp and HarfBuzzSharp move together: SkiaSharp and HarfBuzzSharp stay
 #                        at the versions the chosen Avalonia.Skia names, so merge those bumps as one change.
 #   * github-actions  -  the action versions pinned in .github/workflows/*.
@@ -26,8 +27,11 @@ updates:
       - "/src/GridSim.Wpf"
       - "/src/GridSim.App"
       - "/src/GridSim.App.Desktop"
+      - "/src/GridSim.Scripting"
+      - "/src/GridSim.Scripting.Console"
       - "/tests/GridSim.Tests"
       - "/tests/GridSim.App.Tests"
+      - "/tests/GridSim.Scripting.Tests"
       - "/tools/UiSmoke"
     schedule:
       interval: "monthly"           # N176: monthly, merged by hand after a local batch run

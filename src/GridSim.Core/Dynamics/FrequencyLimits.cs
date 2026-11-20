@@ -20,7 +20,11 @@ public sealed record FrequencyTraceReport(
     double RocofLimitAppliedHzPerS = FrequencyLimits.RocofLimitModernHzPerS,
     // ---- over-frequency (R081, October 2026 review, stream B1; defaulted so the older constructors still compile) ----
     int SamplesAboveOperational = 0,
-    int SamplesAboveStatutory = 0);
+    int SamplesAboveStatutory = 0,
+    // ---- DP-26: samples whose frequency is NaN or infinite (a gap in recorded data). A NaN satisfies none of the comparisons
+    // below, so they are left out of the extremes, band counts and RoCoF above (an infinite one is not skipped by the extremes but is just as
+    // wrong); this count says how many were not finite. 0 for a finite trace. ----
+    int SamplesNonFinite = 0);
 
 /// <summary>How a frequency excursion sits against the GB limits  -  the headline numbers plus flags.</summary>
 /// <param name="InitialRocofHzPerS">The response's PEAK RoCoF (Hz/s, sign kept), copied from
@@ -227,10 +231,12 @@ public static class FrequencyLimits
         int belowOper = 0, belowStat = 0;
         int aboveOper = 0, aboveStat = 0;   // R081: the high side, same strict comparison as the low side
         bool lfdd = false;
+        int nonFinite = 0;   // DP-26: NaN or infinite samples, which every comparison below silently skips
 
         for (int i = 0; i < samples.Count; i++)
         {
             double f = samples[i].Hz;
+            if (!double.IsFinite(f)) nonFinite++;
             if (f < min) min = f;
             if (f > max) max = f;
             if (f < bands.OperationalLowHz) belowOper++;
@@ -259,6 +265,6 @@ public static class FrequencyLimits
             samples.Count, min, max, belowOper, belowStat, lfdd,
             maxRocof, legacy, // retained flag: legacy semantics, unchanged behaviour
             legacy, modern, active, activeRocofLimitHzPerS,
-            SamplesAboveOperational: aboveOper, SamplesAboveStatutory: aboveStat);
+            SamplesAboveOperational: aboveOper, SamplesAboveStatutory: aboveStat, SamplesNonFinite: nonFinite);
     }
 }

@@ -12,6 +12,11 @@ instruments diff GridSim against named industry tools (MATPOWER's published solu
 tools converge. A third layer lives inside the test suite: alternative numerical paths (dense and sparse, method and
 method) must produce the same physics, and in the power flow the same bits.
 
+What these instruments establish is agreement: that GridSim solves the stated equations the same way as an independent
+implementation, or that its answer satisfies them. None of them validates a GridSim model against a real power system,
+no commercial tool has been compared, and GridSim claims no accuracy beyond the agreement measured here. The chapter
+keeps the name Validation because the instruments and the manual chapter that runs them use it.
+
 The instruments are run from the command line. [Ch. 27, Validation tools](<../manual/0027 Validation tools.md>)
 shows how; the physics-law audit is specified in [ch. 16](<0016 Physics conformance and the constrained estimator.md>); the solver being checked
 is [ch. 3, Power flow](<0003 Power flow.md>) and the estimator is [ch. 6](<0006 State estimation.md>). The

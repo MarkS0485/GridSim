@@ -38,8 +38,10 @@ public sealed partial class Cf3OpenCodeFindingsTests
     {
         var all = AllCodeDefaults().ToList();
         // The entry total is unchanged by N345 (591 then, pinned in V2KindSpecCodeDefaultTests); issue #12 (2026-10-31)
-        // added GAST's three param: entries (no source: reference), 591 -> 594.
-        Assert.Equal(594, all.Count);
+        // added GAST's three param: entries (no source: reference), 591 -> 594. RC4 (2026-11-19) added
+        // solverProfile.retryFromDcStart (an instance: reference to PowerFlowOptions.RetryFromDcStart, no source:
+        // reference), 594 -> 595; the same total is pinned in V2KindSpecCodeDefaultTests.
+        Assert.Equal(595, all.Count);
         var quoted = all.Where(e => e.Ref.StartsWith("source:", StringComparison.Ordinal)).Select(e => $"{e.Kind}.{e.Param}: {e.Ref}").ToList();
         Assert.True(quoted.Count == 0, "still quoting source lines:\n" + string.Join("\n", quoted));
     }

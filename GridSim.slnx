@@ -7,12 +7,15 @@
     <Project Path="src/GridSim.Gda/GridSim.Gda.csproj" />
     <Project Path="src/GridSim.Gpu/GridSim.Gpu.csproj" />
     <Project Path="src/GridSim.SchemaEditor/GridSim.SchemaEditor.csproj" />
+    <Project Path="src/GridSim.Scripting/GridSim.Scripting.csproj" />
+    <Project Path="src/GridSim.Scripting.Console/GridSim.Scripting.Console.csproj" />
     <Project Path="src/GridSim.Ui/GridSim.Ui.csproj" />
     <Project Path="src/GridSim.Web/GridSim.Web.csproj" />
     <Project Path="src/GridSim.Wpf/GridSim.Wpf.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GridSim.App.Tests/GridSim.App.Tests.csproj" />
+    <Project Path="tests/GridSim.Scripting.Tests/GridSim.Scripting.Tests.csproj" />
     <Project Path="tests/GridSim.Tests/GridSim.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">

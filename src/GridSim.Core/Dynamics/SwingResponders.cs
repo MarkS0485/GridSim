@@ -133,6 +133,9 @@ public sealed class SwingResponders
         Check(cfg.FastResponseTimeConstantS, positive: false, nameof(cfg.FastResponseTimeConstantS));
         Check(cfg.FastResponseDeadbandHz, positive: false, nameof(cfg.FastResponseDeadbandHz));
         Check(cfg.FormingDampingMwPerHz, positive: false, nameof(cfg.FormingDampingMwPerHz));
+        // DP-25: the forming set point enters every forming step as a forcing term; it may be negative, never NaN or infinite.
+        if (!double.IsFinite(cfg.FormingSetpointMw))
+            throw new ArgumentOutOfRangeException(nameof(cfg), cfg.FormingSetpointMw, "DynamicsConfig.FormingSetpointMw must be a finite number.");
 
         _f0 = cfg.NominalHz;
         _droopPu = cfg.DroopPu;

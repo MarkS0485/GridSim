@@ -1,0 +1,33 @@
+{
+  "format": "gridsim-model/1",
+  "id": "SEXS",
+  "title": "SEXS simplified excitation system",
+  "role": "exciter",
+  "source": "PSS/E SEXS simplified excitation system; block structure as implemented in GridSim.Core.Dynamics.Models.Sexs (lead-lag shaping then a gain-lag with field limits). Public-source citation as given in that class documentation; not independently re-verified in R4-08.",
+  "parameters": [
+    { "name": "K",    "unit": "pu", "value": 100.0, "min": 0, "minExclusive": true, "description": "regulator gain" },
+    { "name": "Ta",   "unit": "s",  "value": 0.1,   "min": 0, "description": "lead" },
+    { "name": "Tb",   "unit": "s",  "value": 1.0,   "min": 0, "minExclusive": true, "description": "lag" },
+    { "name": "Te",   "unit": "s",  "value": 0.05,  "min": 0, "description": "exciter time constant" },
+    { "name": "Emin", "unit": "pu", "value": -5.0,  "allowInfinite": true, "description": "field voltage lower limit" },
+    { "name": "Emax", "unit": "pu", "value": 5.0,   "allowInfinite": true, "description": "field voltage upper limit" }
+  ],
+  "ports": {
+    "inputs": [ { "name": "verr", "unit": "pu" }, { "name": "speed", "unit": "pu" } ],
+    "outputs": [ { "name": "efd", "unit": "pu", "from": "exc" } ]
+  },
+  "blocks": [
+    { "id": "shape", "type": "leadlag", "inputs": ["verr"], "params": { "lead": "@Ta", "lag": "@Tb" } },
+    { "id": "exc",   "type": "lag", "inputs": ["shape"], "params": { "gain": "@K", "time": "@Te", "min": "@Emin", "max": "@Emax" } }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "efd0", "unit": "pu" } ],
+    "equilibriumError": "verr0",
+    "steps": [
+      { "action": "require", "value": "efd0", "min": "@Emin", "max": "@Emax", "model": "SEXS", "quantity": "field voltage Efd", "argument": "fieldVoltagePu" },
+      { "id": "verr0", "type": "div", "inputs": ["efd0"], "params": { "d": "@K" } },
+      { "action": "initialise", "block": "shape", "values": ["verr0"] },
+      { "action": "initialise", "block": "exc",   "values": ["efd0"] }
+    ]
+  }
+}

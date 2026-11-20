@@ -102,6 +102,8 @@ public static class TransferSearch
             return trial;
         }
         int K = options.CoarsePoints;
+        // The last coarse point is the cap itself: k * step can round a unit below it.
+        double CoarseMw(int k) => k == K ? options.MaxMw : Math.Min(k * options.StepMw, options.MaxMw);
 
         TransferSearchTrial reference = Eval("reference", 0);
         if (reference.Evaluation.Class != TransferClass.Feasible)
@@ -121,7 +123,7 @@ public static class TransferSearch
         for (int k = 1; k <= K; k++)
         {
             if (trials.Count >= options.MaxTrials) break;
-            TransferSearchTrial t = Eval("coarse", Math.Min(k * options.StepMw, options.MaxMw));
+            TransferSearchTrial t = Eval("coarse", CoarseMw(k));
             coarseEvaluated++;
             if (t.Evaluation.Class == TransferClass.Feasible) lo = t;
             else { hi = t; break; }
@@ -131,7 +133,7 @@ public static class TransferSearch
         int probesEvaluated = 0, probesUnevaluated = 0, refinement = 0, refinementUnevaluated = 0;
         string outcome;
         if (hi is null)
-            outcome = lo.TransferMw == options.MaxMw ? "AtLeastMax" : "BudgetExhausted";
+            outcome = coarseEvaluated == K ? "AtLeastMax" : "BudgetExhausted";
         else if (hi.Evaluation.Class == TransferClass.Unknown)
             outcome = "UnknownAbove";
         else
@@ -144,7 +146,7 @@ public static class TransferSearch
                 int k = firstK + p;
                 if (k > K) break;
                 if (trials.Count >= options.MaxTrials) { probesUnevaluated = Math.Min(options.Probes, K - firstK) - (p - 1); break; }
-                TransferSearchTrial probe = Eval("probe", Math.Min(k * options.StepMw, options.MaxMw));
+                TransferSearchTrial probe = Eval("probe", CoarseMw(k));
                 probesEvaluated++;
                 if (probe.Evaluation.Class == TransferClass.Feasible)
                     qualifications.Add(new("NonMonotone", string.Create(CultureInfo.InvariantCulture,

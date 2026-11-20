@@ -10,6 +10,12 @@
       },
       "gridsim.core": {
         "type": "Project"
+      },
+      "gridsim.scripting": {
+        "type": "Project",
+        "dependencies": {
+          "GridSim.Core": "[2.1.73, )"
+        }
       }
     }
   }

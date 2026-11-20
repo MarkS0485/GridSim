@@ -20,7 +20,7 @@ public enum LicenceTier
     /// <summary>§6 Commercial Deployment Licence, signed agreement, no bus limit.</summary>
     CommercialDeployment,
 
-    /// <summary>§7 Network Operator (TSO/ESO/DNO), nominal site-wide fee, no bus limit.</summary>
+    /// <summary>§7 Network Operator (TSO/ESO/DNO), site-wide, no bus limit.</summary>
     NetworkOperator,
 }
 

@@ -1,3 +1,4 @@
+using GridSim.Core.Diagnostics;
 using GridSim.Core.Dynamics;
 using GridSim.Core.Events;
 using GridSim.Core.Frequency;
@@ -330,7 +331,7 @@ public static class ReplayValidator
         // same points, in the same order, as upsampling the reader directly, so the RMSE is bit-identical.
         List<FrequencySample> raw = NesoFrequencyCsv.Read(path).ToList();
         // GR-832: the upsampling factor is the integrator steps per second; a step of more than 2 s rounded it to 0.
-        int upsample = (int)Math.Round(1.0 / cfg.StepSeconds);
+        int upsample = (int)Math.Round(1.0 / cfg.StepSeconds, MidpointRounding.AwayFromZero);
         if (upsample < 1)
             throw new ArgumentOutOfRangeException(nameof(cfg), cfg.StepSeconds,
                 "The replay step must be at most 2 s so the 1 s trace can be upsampled to it (at least one step per second).");
@@ -345,16 +346,18 @@ public static class ReplayValidator
 
         // Half a sample of slack at each end of the trace: a time within it is "on" the first or last sample, not
         // outside the trace. (The trace has been upsampled to the simulation step, so a sample is StepSeconds long.)
+        // AN-22: compare in UTC whatever Kind the event time was built with (DateTime subtraction ignores Kind).
+        DateTime whenUtc = UtcTime.Normalise(ev.WhenUtc);
         double halfStepS = 0.5 * cfg.StepSeconds;
         DateTime traceFirst = recorded[0].Time, traceLast = recorded[^1].Time;
 
         // The event instant must lie inside the trace. NearestIndex clamps, so an event outside the trace used to
         // anchor on the first or last sample and produce an RMSE against frequency that was never recorded at that
         // time. Now no RMSE is computed and the note says why (fail loud: reported, never silently scored).
-        if ((ev.WhenUtc - traceFirst).TotalSeconds < -halfStepS || (ev.WhenUtc - traceLast).TotalSeconds > halfStepS)
+        if ((whenUtc - traceFirst).TotalSeconds < -halfStepS || (whenUtc - traceLast).TotalSeconds > halfStepS)
             return new TraceComparison(null, 0, 0,
                 System.FormattableString.Invariant($"trace {traceFirst:yyyy-MM-dd HH:mm:ss} to {traceLast:yyyy-MM-dd HH:mm:ss} does not contain the event instant ") +
-                System.FormattableString.Invariant($"{ev.WhenUtc:yyyy-MM-dd HH:mm:ss}; no RMSE"));
+                System.FormattableString.Invariant($"{whenUtc:yyyy-MM-dd HH:mm:ss}; no RMSE"));
 
         // Align the recorded loss instant (nearest sample to WhenUtc) to the sim's first event time.
         double firstLossAt = ev.ToFrequencyEvents().FirstOrDefault()?.AtSeconds ?? 0.0;
@@ -373,7 +376,7 @@ public static class ReplayValidator
                     "a trace must be strictly increasing in time.");
         bool sortedTrace = IsNonDecreasing(recorded);
         int Nearest(DateTime t) => sortedTrace ? NearestIndexSorted(recorded, t) : NearestIndex(recorded, t);
-        int recAnchor = Nearest(ev.WhenUtc);
+        int recAnchor = Nearest(whenUtc);
 
         double sumSq = 0; int n = 0, pastEnd = 0;
         foreach (FrequencyPoint p in sim.Points)

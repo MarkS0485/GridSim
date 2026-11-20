@@ -55,8 +55,11 @@ public sealed class PsseRecord
     /// A data line that merely starts with 0 (a transformer impedance line with R written as 0) has more fields and is data.</summary>
     public bool IsTerminator => _fields.Count == 1 && _fields[0] == "0";
 
+    /// <summary>True when the first field was written in quotes (a name such as 'Q' is not the end-of-data record).</summary>
+    internal bool FirstFieldQuoted { get; init; }
+
     /// <summary>True when this is the end-of-data record (Q).</summary>
-    public bool IsEndOfData => _fields.Count >= 1 && string.Equals(_fields[0], "Q", StringComparison.OrdinalIgnoreCase);
+    public bool IsEndOfData => _fields.Count >= 1 && !FirstFieldQuoted && string.Equals(_fields[0], "Q", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>A real field. Left off or empty: <paramref name="dflt"/>, or refused when no default is given.</summary>
     public double Real(int index, string name, double? dflt = null)
@@ -207,7 +210,7 @@ internal sealed class PsseLineCursor
             if (line.Trim().Length == 0 || PsseText.IsHeading(line)) continue;
             (List<string?> fields, string? comment) = PsseText.Split(line, _next, section, _file);
             if (fields.Count == 0) continue;   // a comment-only line
-            return new PsseRecord(fields, _next, section, comment, _file);
+            return new PsseRecord(fields, _next, section, comment, _file) { FirstFieldQuoted = line.TrimStart() is ['\'' or '"', ..] };
         }
         return null;
     }

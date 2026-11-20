@@ -188,7 +188,7 @@ A standalone document, given to the RMS study with `gridsim stability <case> --r
    parallel circuits need distinct names); every bus reference must resolve; every boundary branch name must match
    exactly one branch.
 9. **Plain data, no code.** Files hold data only. Nothing a producer writes can change GridSim's maths (see
-   `SUBMODULES.md`): data is ordinary input through the same loaders and checks as any user file.
+   `docs/developer/submodules.md`): data is ordinary input through the same loaders and checks as any user file.
 10. **Dated data passes the no-forward-inference guard.** Anything time-stamped from the real grid (measurement sets,
     event traces, replays) must carry its date and is refused if it is newer than GridSim's horizon (now minus 169 h)
     or undated where a date is required. Assumed, typical or library values (for example a typical spectrum) may be
@@ -232,5 +232,5 @@ A standalone document, given to the RMS study with `gridsim stability <case> --r
   `common.schema.json`), kinds in `schemas/v2/kinds/`.
 - Examples: the bundled v1 folders under `data/` (`data/uk` is small); v2 test fixtures under
   `tests/GridSim.Tests/fixtures/v2/`; library placeholders under `data/library/placeholders/`.
-- Docs: the GridSim technical chapters on file formats and the v2 schema (`docs/technical/`), and `SUBMODULES.md`.
+- Docs: the GridSim technical chapters on file formats and the v2 schema (`docs/technical/`), and `docs/developer/submodules.md`.
 - Questions about units or ranges: the kind file's `params` block is the contract.

@@ -1,0 +1,10 @@
+{
+  "schema": "gridsim-cable-tables/1",
+  "id": "iec60364-5-52-empty",
+  "provenance": {"source": "", "edition": "", "filledBy": "", "date": ""},
+  "ampacity": [],
+  "factors": [],
+  "voltDrop": [],
+  "impedance": [],
+  "adiabaticK": []
+}

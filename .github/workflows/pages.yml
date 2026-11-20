@@ -16,7 +16,7 @@ name: Docs site
 # repository has no Pages site and keeps its free Actions allowance, so on it this workflow is a no-op.
 #
 # Supply chain: every action is pinned to a full commit SHA (the tag it was taken from is in the comment), and the
-# Python packages come from requirements-docs.txt with exact versions. Dependabot's github-actions ecosystem
+# Python packages come from docs/requirements.txt with exact versions. Dependabot's github-actions ecosystem
 # proposes SHA bumps. Permissions are least privilege per job.
 #
 # One-time repository setting this needs: Settings > Pages > Source = "GitHub Actions"
@@ -58,7 +58,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install the pinned docs toolchain
-        run: python -m pip install --disable-pip-version-check --no-cache-dir -r requirements-docs.txt
+        run: python -m pip install --disable-pip-version-check --no-cache-dir -r docs/requirements.txt
 
       # docs/reference/ is left out on purpose: its README catalogues PDFs that are kept out of git (fetched
       # locally), so in a clean checkout every catalogue link is missing by design. Everything else is linted.

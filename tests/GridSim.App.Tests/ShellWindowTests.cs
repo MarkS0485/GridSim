@@ -51,17 +51,19 @@ public sealed class ShellWindowTests
             // the full list is still pinned exactly, item by item with its id and shortcut, in order; the two new items
             // are checked too (their ids and no shortcut), and the Audit log and Exit checks move with their items.
             List<MenuItem> file = menus[0].Items.OfType<MenuItem>().ToList();
-            Assert.Equal(new[] { "Open case...", "Open run folder...", "Open case folder...", "Open v2 case...", "Audit log...", "Exit" },
+            Assert.Equal(new[] { "Open case...", "Open run folder...", "Open case folder...", "Open v2 case...", "Audit log...", "Workbench...", "Script console...", "Exit" },
                 file.Select(i => (string?)i.Header));
             Assert.Equal(new[] { ShellCommands.OpenCase, ShellCommands.OpenRunFolder, CaseFileCommands.OpenCaseFolder, CaseFileCommands.OpenV2Case,
-                    GridSim.App.Tabs.AuditLogWindow.CommandId, ShellCommands.Exit },
+                    GridSim.App.Tabs.AuditLogWindow.CommandId, GridSim.App.Workbench.WorkbenchWindow.CommandId, GridSim.App.Scripting.ScriptConsoleWindow.CommandId, ShellCommands.Exit },
                 file.Select(i => (string?)i.Tag));
             Assert.Equal(new KeyGesture(Key.O, w.CommandModifier), file[0].InputGesture);
             Assert.Equal(new KeyGesture(Key.O, w.CommandModifier | KeyModifiers.Shift), file[1].InputGesture);
             Assert.Null(file[2].InputGesture);
             Assert.Null(file[3].InputGesture);
             Assert.Null(file[4].InputGesture);
-            Assert.Equal(new KeyGesture(Key.Q, w.CommandModifier), file[5].InputGesture);
+            Assert.Null(file[5].InputGesture);   // Workbench...: its Ctrl+Shift+B is the window's key handler, not a menu gesture
+            Assert.Null(file[6].InputGesture);   // Script console...: no shortcut
+            Assert.Equal(new KeyGesture(Key.Q, w.CommandModifier), file[7].InputGesture);
 
             List<MenuItem> help = menus[1].Items.OfType<MenuItem>().ToList();
             Assert.Equal(new[] { "Licence", "Third-party notices", "About GridSim" }, help.Select(i => (string?)i.Header));

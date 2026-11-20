@@ -59,6 +59,14 @@
          bundled, so appending a line to the data/bundled.sha256 beside the data (which anyone who can drop a network
          there can also edit) grants nothing. -->
     <EmbeddedResource Include="..\..\data\bundled.sha256" LogicalName="GridSim.Core.bundled.sha256" />
+    <!-- R4-20e: the connection-rule sets (gridsim-connection-rules/1), shipped with every limit empty and flagged. -->
+    <EmbeddedResource Include="Harmonics\Planning\Rules\*.json" LogicalName="GridSim.Core.connection-rules.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- R4-08: the shipped declarative dynamic models (gridsim-model/1 documents), embedded so a model loads from bytes compiled
+       into the program (no file read at run time). Resource id: GridSim.Core.usermodels.<ID>.model.json. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Dynamics\UserModels\Library\*.model.json" LogicalName="GridSim.Core.usermodels.%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- Case editor (SCHEMA-EDITOR-PLAN.md, slice E2): the v1 and v2 schema files embedded, because schemas/ is not

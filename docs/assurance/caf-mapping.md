@@ -454,7 +454,7 @@ workflow is written to publish five (section 4.3), not yet exercised by a releas
 - **Support, including updates and patches.** [`SECURITY.md`](../../SECURITY.md) (owner policy, 2026-11-01)
   states the support period (the latest release; earlier releases are not patched, and a .NET runtime fix arrives in
   a new GridSim build because the builds are self-contained), private reporting through GitHub private vulnerability
-  reporting or `gdatooling@proton.me` (the RFC 9116 `security.txt` is unchanged), an objective CVSS v4.0 and v3.1
+  reporting or `mark@gridsimdigitaltwin.co.uk` (the RFC 9116 `security.txt` is unchanged), an objective CVSS v4.0 and v3.1
   base-score assessment recorded in the advisory, a remediation target of 48 hours from the recorded assessment for
   a base score of 7.0 or above (remediation meaning a fixed release and the published advisory), and the update
   channel: the security advisory, with a CVE requested through GitHub, and an automatic notice to subscribers
@@ -1147,7 +1147,7 @@ what closed them.
     machine), and signed tags.
 14. **Support and update policy (A4.b) - closed 2026-11-01 (owner policy).** [`SECURITY.md`](../../SECURITY.md)
     states the support period (latest release only), how to report (GitHub private vulnerability reporting, or
-    `gdatooling@proton.me`), the objective CVSS v4.0 and v3.1 base-score assessment recorded in the advisory, the
+    `mark@gridsimdigitaltwin.co.uk`), the objective CVSS v4.0 and v3.1 base-score assessment recorded in the advisory, the
     remediation target (48 hours from the recorded assessment for a base score of 7.0 or above, meaning a fixed
     release and the published advisory), how fixes ship (advisory, CVE requested through GitHub, CHANGELOG
     `Security` entry) and how runtime fixes are delivered (a new self-contained build). Deployers learn of a fix

@@ -449,13 +449,13 @@ Versions are listed oldest first and are undated.
 - GDA: `NetworkModel/build_asset_classes.py` generates the gb-full class library, bindings and passive-plant classes
   from the assembler's fuel types; on gb-full it binds 1,995 inverter units.
 - Data-grounded class parameters, including RoCoF trip settings with the 500 ms delay (`rocofTripConfirmS`), OLTC tap
-  step (about 1.25%) and span (±15%), summer cable derating (about 0.89 of winter) and per-fuel dispatch ramps.
+  step (about 1.25%) and span (+/-15%), summer cable derating (about 0.89 of winter) and per-fuel dispatch ramps.
   Documented in `docs/technical/13-asset-dynamics-data-grounding.md`.
 - `GbResponseServices`: DC/DM/DR response at NESO-cleared volumes (about 950, 520 and 490 MW each direction) on their
   published delivery curves.
 - `localRocofUpliftFactor` (default 1.0; GDA emits 1.16): scales the RoCoF seen by loss-of-mains relays above the 1 s
   centre-of-inertia value.
-- `Asset2019EventTests`: with only the Hornsea and Little Barford losses at 215 GVA·s, a legacy DG fleet trips on
+- `Asset2019EventTests`: with only the Hornsea and Little Barford losses at 215 GVA.s, a legacy DG fleet trips on
   RoCoF and an upgraded fleet rides through. The recorded 48.787 Hz nadir lies within the envelope band; depth is not
   predicted.
 - Documentation: `docs/technical/14-cascade-validation-and-blind-prediction.md` and `BlindPredictionTests`. The cascade
@@ -544,7 +544,7 @@ Versions are listed oldest first and are undated.
   `DcFlows`, `OutageIslands`).
 - `DcOptimalPowerFlow` solves security-constrained economic dispatch as an exact LP (generator bounds and two-sided
   line limits) to a global optimum with the new `BoundedSimplex`, replacing one-line-at-a-time redispatch. Merit order
-  when limits are off; fuel-defaulted linear costs. On the GB spine: about 53 GW met at about £257k/h.
+  when limits are off; fuel-defaulted linear costs. On the GB spine: about 53 GW met at about GBP 257k/h.
 - `GridSim.Core.Numerics.BoundedSimplex`: dense two-phase primal simplex for `min c.x s.t. Ax=b, lo<=x<=hi` with native
   bounds; reports `Optimal`, `Infeasible`, `Unbounded` or `IterationLimit`.
 - `PowerFlowTracing` (Bialek proportional sharing): allocates each load's supply and each branch flow to generators;
@@ -937,7 +937,7 @@ Versions are listed oldest first and are undated.
 ## [1.12.0]
 ### Added
 - `Iec60909.BreakingFactorMu`, `MotorBreakingFactorQ` and `SynchronousBreakingCurrentKa` give near-to-generator
-  breaking factors at the IEC break times. The steady-state factor `λ` is not offered.
+  breaking factors at the IEC break times. The steady-state factor `lambda` is not offered.
 
 ## [1.13.0]
 ### Added
@@ -952,19 +952,19 @@ Versions are listed oldest first and are undated.
 
 ## [1.15.0]
 ### Added
-- `Generator.SubtransientXdPu` gives each machine its own `X″d` for `Iec60909` and `FaultAnalysis`; the default
+- `Generator.SubtransientXdPu` gives each machine its own `X''d` for `Iec60909` and `FaultAnalysis`; the default
   stays 0.20 pu, and cases without it are bit-identical.
 
 ## [1.16.0]
 ### Added
 - `Generator.NegativeSeqXPu` and `Iec60909.NegativeSequenceThevenin`: `LineToLine` uses a real `Z2`. It
-  defaults to `X″d`, so existing cases are bit-identical.
+  defaults to `X''d`, so existing cases are bit-identical.
 
 ## [1.17.0]
 ### Added
 - `WindingConnection` and grounding fields on `Branch` build the zero-sequence network;
   `Iec60909.ZeroSequenceThevenin`, `SingleLineToGround` and `DoubleLineToGround` work from the model.
-- An ungrounded bus gives `Z0 = ∞` and zero earth-fault duty. Existing cases are unchanged.
+- An ungrounded bus gives `Z0 = inf` and zero earth-fault duty. Existing cases are unchanged.
 
 ## [1.18.0]
 ### Added
@@ -986,8 +986,8 @@ Versions are listed oldest first and are undated.
 ## [1.21.0]
 ### Added
 - Two-axis synchronous machine (`Core/Dynamics/Models/TwoAxisMachine`): adds the q-axis transient EMF `E'd` as a
-  fourth state (`T'qo·dE'd/dt = −E'd + (Xq−X'q)·Iq`), transient reactances on both stator axes, and air-gap power
-  `Pe = E'd·Id + E'q·Iq + (X'q−X'd)·Id·Iq`. Flux states use the exact zero-order-hold `FirstOrderLag`; the rotor
+  fourth state (`T'qo*dE'd/dt = -E'd + (Xq-X'q)*Iq`), transient reactances on both stator axes, and air-gap power
+  `Pe = E'd*Id + E'q*Iq + (X'q-X'd)*Id*Iq`. Flux states use the exact zero-order-hold `FirstOrderLag`; the rotor
   swing is RK4. Reduces exactly to `OneAxisMachine` when `X'q = Xq`.
 - Tests: added `TwoAxisMachineTests` (one-axis reduction, q-axis decay, equilibrium, determinism).
 - Documentation: technical manual ch. 24.
@@ -996,14 +996,14 @@ Versions are listed oldest first and are undated.
 ### Added
 - Subtransient synchronous machine (`Core/Dynamics/Models/SubtransientMachine`), the GENROU/GENSAL-class model:
   adds the subtransient EMFs `E''q`, `E''d` behind `X''d`, `X''q`, cascaded off the transient EMFs, with
-  `Pe = E''d·Id + E''q·Iq + (X''q−X''d)·Id·Iq`. Reduces exactly to `TwoAxisMachine` when `X'' = X'`.
+  `Pe = E''d*Id + E''q*Iq + (X''q-X''d)*Id*Iq`. Reduces exactly to `TwoAxisMachine` when `X'' = X'`.
 - Tests: added `SubtransientMachineTests` (two-axis reduction, subtransient decay, equilibrium, determinism).
 - Documentation: technical manual ch. 24.
 
 ## [1.23.0]
 ### Added
 - Optional magnetic saturation on the subtransient machine (`SubtransientMachine.SaturationCurve`; null =
-  unsaturated, unchanged). The scaled-quadratic curve `Se(x) = B·(x−A)²/x` is fitted to `Se(1.0)` and `Se(1.2)`
+  unsaturated, unchanged). The scaled-quadratic curve `Se(x) = B*(x-A)^2/x` is fitted to `Se(1.0)` and `Se(1.2)`
   and adds `Se(E'q)` to the field balance, so a saturated machine needs exactly `Se(E'q)` more `Efd` at equilibrium.
 - Tests: added saturation cases to `SubtransientMachineTests`.
 - Documentation: technical manual ch. 24.
@@ -1029,7 +1029,7 @@ Versions are listed oldest first and are undated.
 ## [1.26.0]
 ### Added
 - Multi-machine AVR for the subtransient fleet: `SubtransientNetworkInterface.TerminalVoltageMagnitudes` recovers
-  terminal voltage as `V_t = E'' − jX''·I`, and `MultiMachineSubtransient.Simulate` takes optional per-machine
+  terminal voltage as `V_t = E'' - jX''*I`, and `MultiMachineSubtransient.Simulate` takes optional per-machine
   `Sexs` exciters. Omitting them keeps the held-field behaviour unchanged.
 - Documentation: technical manual ch. 24.
 
@@ -1046,8 +1046,8 @@ Versions are listed oldest first and are undated.
 ### Added
 - Standard control models (`Core/Dynamics/Models/Ieeet1`, `Ieeeg1`, `HydroGovernor`, `Pss1a`):
   - `Ieeet1`: IEEE Type-1 DC exciter with self-excitation, exponential saturation and rate feedback.
-  - `Ieeeg1`: tandem-compound steam governor with a four-stage steam train; steady droop `−1/R`.
-  - `HydroGovernor`: transient-droop hydro governor with the ideal water column `(1−sTw)/(1+0.5sTw)`.
+  - `Ieeeg1`: tandem-compound steam governor with a four-stage steam train; steady droop `-1/R`.
+  - `HydroGovernor`: transient-droop hydro governor with the ideal water column `(1-sTw)/(1+0.5sTw)`.
   - `Pss1a`: single-input power-system stabiliser with washout, two lead-lags and output limits.
 - Tests: added `ControlModelFamiliesTests`.
 - Documentation: technical manual ch. 24.
@@ -4663,7 +4663,7 @@ Versions are listed oldest first and are undated.
 - Documentation: audit-log examples use a neutral actor (`analyst@workstation`), with every hash, anchor and chain
   link recomputed so each example still verifies.
 - The licence states no prices; commercial and network-operator terms are on application. The licensing contact is
-  `gdatooling@proton.me`, in the licence, the documentation and every licence message.
+  `mark@gridsimdigitaltwin.co.uk`, in the licence, the documentation and every licence message.
 - Dependabot version-update pull requests are paused for the release (`open-pull-requests-limit: 0`); security
   alerts are unaffected.
 ### Removed
@@ -8239,7 +8239,7 @@ Release candidate 1.0.
 ### Added
 - `RC1.md`: the release notes of release candidate 1.0: the builds (Windows x64 and Linux x64), their SHA-256 hashes,
   system requirements for running and for building from source, how to build for macOS, and where to report bugs.
-- README: bugs are reported to gdatooling@proton.me.
+- README: bugs are reported to mark@gridsimdigitaltwin.co.uk.
 
 ## [2.0.196]
 
@@ -9378,22 +9378,356 @@ work is in new commands. Requirements, verification and known limits: RC3.md.
 - The NESO RP1 panel is now Frequency Security in every client; existing `--tab` values still open it.
 
 Known limits: the new jobs are tested on small analytical and constructed cases; no commercial-tool comparison has been
-made and no parity is claimed. Bugs to gdatooling@proton.me.
+made and no parity is claimed. Bugs to mark@gridsimdigitaltwin.co.uk.
 
-## [Unreleased] - BREAKING CHANGE (numerical and determinism contract)
-**BREAKING CHANGE:** results and determinism digests are NOT bit-identical to 2.1.071. Any stored digests or bit-exact
-comparisons against earlier versions will fail and must be regenerated.
+## [2.1.072]
+
+### Fixed
+
+- Desktop app (Avalonia): choosing several cases in quick succession no longer leaves two simulation loops running
+  (double clock rate, wrong case named); loads now run one after another.
+- Desktop app (Avalonia): closing the window, or File > Exit, while AUTHOR holds unsaved edits now asks Save / Discard
+  / Cancel instead of losing the edits.
+- Desktop app (Avalonia): an unhandled error now writes a crash log (GRIDSIM_CRASH_DIR applies) and names its path, as
+  the Windows app does.
+- Desktop settings (settings.json) are now written atomically, so a failed write can no longer leave an empty file and
+  lose hand-set values such as the bridge endpoint.
+- Save As of a version 2 case now copies the case's geography.json, so the map keeps the case's own geography.
+- cgmes-study no longer reports SECURE when live branches have no rating; the intact state is INCOMPLETE and the study
+  NOT SECURE (exit 3), as in transmission-security.
+- transfer-capability and planning-study transfer mode: a fully feasible walk now ends at the cap itself and reports
+  AtLeastMax, instead of BudgetExhausted when step x count rounded just below the cap.
+- A slack bus with no in-service unit is reported as INCOMPLETE by the security checks instead of being left
+  unchecked.
+- planning-study reports an unreadable earlier completion or result file as a refused reuse or a failed write instead
+  of crashing.
+- cgmes-study, transmission-security and transfer-capability refuse an explicit null for a required field (exit 1)
+  instead of crashing or ignoring it.
+- dynamics-study reports a DYR record that names a machine the case does not hold as UNMATCHED whatever its model, and
+  refuses an unusable angle reference or channel before the power flow.
+- dynamics-study now names a refused RAW reading switch (--allow-unmodelled, --seq-data, --tap-control,
+  --shunt-control, --psse-revision, --frequency-hz) instead of printing the generic usage line.
+- cgmes-study resolves security outages before the solve, and reads boolean values ("1", "0", any letter case) as the
+  importer does.
+- dynamics-study: a row whose post-event network power flow does not converge is INCOMPLETE with the reason stated
+  instead of STABLE; islanding after clearing remains information only.
+- A PSS/E RAW or SEQ file that ends inside a section (a truncated copy) is now refused, naming the section and line,
+  instead of being read as complete. A file that ends straight after a section terminator still reads, with the "no Q"
+  note.
+- A PSS/E RAW file that defines the same branch, system switching device or transformer (same buses and circuit id)
+  twice is now refused, naming both lines.
+- A PSS/E record whose first field is the quoted name 'Q' (for example a DC link) no longer ends the file; only a bare
+  Q does.
+- PSS/E revision 30, 33 and 34 switched shunts now carry the identifier "1" in their source keys (field 2 is the
+  control mode in those revisions, not an identifier).
+- Bridge topology messages and solve-export documents with an incomplete, non-finite or non-unit-sum ZIP load are now
+  refused, naming the bus, as the JSON case loaders already do.
+- Solve-export import now refuses result rows with a missing voltage magnitude or angle, a missing bus list or one
+  whose length or bus ids do not follow the model, and non-finite voltages in a document marked converged. A document
+  with an empty bus list still reads, as before.
+- Provenance manifests, QSTS study files and unit-commitment files with a repeated JSON key are now refused instead of
+  keeping the last copy.
+- A harmonic source set with "sources": null is now refused with a clear message.
+- A non-finite grid-forming set point in the frequency dynamics configuration is now refused.
+- REEC_A and REEC_C parameter checks now refuse negative VDL current limits instead of failing mid-run.
+- A generator saturation curve with S(1.0) = 0 and S(1.2) above 0 is now refused instead of being run unsaturated.
+- Node-breaker topology: a bus cut by an open switch is no longer treated as unsplit when terminal rows exist in only
+  one part of it; equipment ends with no terminal row are now refused instead of silently kept or dropped.
+- Substation overlay topology: a transformer bayed from sections at both of its voltage levels no longer joins those
+  sections or raises a false coupling warning.
+- PSS/E topology writer: it now refuses a switch closure between nodes of two different buses, which its own reader
+  would reject.
+- The PSS/E RAW writer now lists in its notes what RAW cannot hold: branch zero-sequence data, winding connections and
+  neutral reactances, branch length, equipment and dynamics class, generator fault and converter fields, cost curves
+  and bus layout.
+- The solve export now names, in an optional model.notCarried list, the DC links, FACTS devices, static var
+  compensators, induction machines, flow controls, zero-sequence mutuals, machine zero-sequence impedances and OLTC
+  impedance-correction tables it does not carry. The list is omitted when empty, so existing exports are unchanged.
+- Reverse-power protection (32) now reads a slack-bus generator's solved output instead of its scheduled output, so a
+  slack unit that motors in the solve is reported as absorbing power.
+- Reading a PSS/E DYR file with unmodelled dynamics allowed now also leaves out a stabiliser whose exciter was left
+  out, so the generated dynamics file loads and the model coverage report is produced.
+- `nminus1 --dispatch droop` and `--dispatch inertia` now share lost generation only among the units of the island
+  that lost it, not across every island that has a reference bus.
+- Contingency screens (N-1, N-2, N-1-1, loss sweep) no longer treat branches that are already out of service as
+  outages; the footer says how many were left out.
+- Corrective redispatch no longer reports "Applied" when every overload is on an element no generator can relieve.
+- A contingency row now carries a note when the tap-changer loop stopped at its pass cap without settling.
+- The tap schedule no longer recommends taps for out-of-service transformers.
+- Dynamic initialisation of a slack bus carrying units of both signs (for example generation beside pumping) now
+  splits only the solve's change between the units, instead of scaling both shares by a ratio that grows as the
+  schedules cancel.
+- The operating-point fault study refuses a prefault result that omits a bus still joined to a live bus, and grounds
+  whole de-energised islands so a fault elsewhere in the model no longer fails with a singular matrix.
+- The watch-list now attributes a thermal time-to-trip to the circuit that is actually operating (by branch index),
+  not to every circuit that shares its display name, so parallel or unnamed circuits no longer share one verdict.
+- A QSTS or hosting-capacity study that monitors a branch name held by more than one branch (a peak-shave unit, a
+  var-controlled capacitor, a monitored branch, a reverse-flow branch) is now refused with the count, instead of
+  silently reading the first namesake.
+- `dist3ph to-v2` of a positive-sequence case with two generators at one bus, or branches sharing a name, now writes
+  unique element ids and the file reads back. Ids that were already unique keep their spelling.
+- An event-catalogue time written with a UTC offset (for example `2019-08-09T16:52:33+01:00`) is now read as that UTC
+  instant on every host, so replay timing, the credibility gate and the RMSE no longer depend on the machine's time
+  zone. Event times must be ISO 8601 strings.
+- The NESO frequency reader now accepts ISO 8601 stamps only (the published `yyyy-MM-dd HH:mm:ss` form included) and
+  refuses slash dates, which were read month-first.
+- A 2.0 s replay step is now accepted, as the "at most 2 s" message says (it was refused by banker's rounding).
+- Refusal messages and notes from the PSS/E RAW, UCTE-DEF and MATPOWER readers, the watch list, QSTS failure and
+  hosting-capacity text, and event-catalogue refusals now write numbers with a decimal point on every machine,
+  whatever the regional settings.
+- `estimate`, `crossval`, `replay-event`, `serve` and `interpose` now refuse a second case or event argument (exit 2)
+  instead of ignoring it.
+- `estimate` now refuses a repeated `--phaseangle` (exit 2); give every tuple after one `--phaseangle`.
+- `scuc --periods 0` is now refused (exit 2) instead of running one period.
+- Web: `POST /api/solve` now applies the same private-model rule as `GET /api/topology`: a model found under
+  `results/` or `gda-out/` is solved only by a caller who is shown it in a listing, with the same 403 and audit entry.
+- Web: the container health probe (`Host: localhost` from inside the container) is answered when `AllowedHosts` names
+  only the public host; a loopback Host from a loopback peer with no proxy header is let through, and no other Host
+  is.
+- Web: the map trip refuses a second loss of the same unit, as the desktop apps do.
+- Web: `/ws/sim` now sends an error frame when a live or replay play loop fails, and for each later distinct bridge
+  error.
+- Compose: the header no longer says the solve surface has no authorisation, and the anonymous role, allowed origins
+  and per-client session cap can be set through `GRIDSIM_ANONYMOUS_ROLE`, `GRIDSIM_ALLOWED_ORIGINS` and
+  `GRIDSIM_MAX_SESSIONS_PER_CLIENT`.
+- Bridge: a query result dated inside the 169 h forward-inference horizon is refused and fails its query; an answer to
+  a query sent before a stream restart is discarded instead of painted onto the restarted stream.
+- Licensing: a v2 case counts as a bundled network only when its manifest and every file it lists are shipped content.
+- GDA: the NPg readers refuse a table whose voltage columns have been renamed, naming the column.
+- GPU: start-up no longer enters the CUDA driver after its probe timed out; the OpenCL backend is used alone.
+- `freq`: non-finite samples in a frequency trace are counted and reported instead of being skipped silently.
+- dynamics-study: the DYR coverage report no longer calls a HYGOV mapping exact. HYGOV stays supported and its results
+  are unchanged, but the report now states that the mapped governor structure differs from the library model (a
+  different penstock loop).
+
+## [2.1.073]
+
+Release candidate RC-4 of GridSim 2.1 (versions 2.1.072 to 2.1.073), built on the 2.1.072 post-RC-3 fixes. Windows x64,
+Linux x64 and macOS arm64, self-contained, no .NET install needed. Every RC-3 command, flag, default and exit code is
+unchanged, and so is its output except as listed under Changed (first of all the BREAKING CHANGEs: one at rounding level, one to solves that did not converge);
+the new work is in new commands and new library entry points. Requirements, verification and known limits: RC4.md.
+
+### Added
+- Study cases: `study-case` runs one immutable master with dated variations, named operation scenarios and a groups
+  sidecar (`gridsim-groups/1`: area, zone, owner, feeder and free groups, bound to the case by SHA-256 and to elements by
+  stable identity) as one ordered, resumable batch, with a `group-summary` mode. `case-diff` and `result-diff` compare two
+  cases or two result documents by identity, reporting each change with its old value, new value and unit.
+- Analysis verbs: `sensitivity` (OTDF, PSDF, tap, dV/dQ and dV/dP, control effectiveness), `qv-curve`, `pv-contingency`,
+  `dc-contingency` and `fault-level-n1`. AC sensitivities are refused as OUT OF SCOPE for cases with tap changers, DC
+  links, FACTS devices, static var compensators, induction machines or flow-controlling transformers.
+- Seeded random foundation (`gridsim-rng/1`): a counter-based generator keyed by seed, domain and stream, Gaussian
+  deviates, a Sobol sequence of up to 64 dimensions and a thread-count-invariant reduction. Every stochastic result is
+  bit-repeatable from its seed; there is no default seed.
+- `probabilistic`: probabilistic load flow (DC or AC, correlated inputs) and static generation adequacy (LOLP, LOLE, EENS)
+  by Monte Carlo, quasi-Monte Carlo or convolution, each result stating its sampling error.
+- `reliability-network`: reliability and restoration on the real network, binding failure data to groups, isolating
+  faults with placed devices and switches, and reporting load-point indices, SAIFI, SAIDI, CAIDI, ASAI, ENS and AENS with
+  AC-verified restoration paths, by enumeration or seeded Monte Carlo.
+- `line-constants`: overhead line constants from conductor geometry (perfect earth or the exact earth-return integral,
+  Kron reduction, transposition, sequence constants, optional per-unit values).
+- `rpc`: a resident endpoint (`gridsim-rpc/1`, JSON lines on standard input and output, or TCP on loopback) that holds
+  loaded cases by handle and runs any verb exactly as the command line does. The Python package gains `gridsim.Session`.
+  The endpoint has no authentication; it is a local tool and refuses a non-loopback listener unless `--allow-non-loopback`
+  is given.
+- Short-circuit duty: `g74` (ENA ER G74 style, with decay of machine contributions), `ansi-sc` (ANSI/IEEE C37.010 style
+  E/X breaker duty), `sc-61363` (ship systems), `sc-dc` (DC auxiliary systems) and series and simultaneous fault models in
+  Core. `iec60909` is unchanged. Items that depend on paid standard text are labelled AWAITING STANDARD TEXT in the output.
+- Protection: a `gridsim-devices/1` file places relays (ANSI 50, 51), fuses, reclosers and breakers on branches, with IEC
+  60255-151 and IEEE C37.112 curve families or tabulated curves. New verbs `devices-check`, `fault-line`, `sc-trace` and
+  `protection-audit` (pair margins, sensitivity, instantaneous overreach, breaker rating margins).
+- Declarative dynamic models: user controllers as `gridsim-model/1` block diagrams, validated and compiled by
+  `user-model list` and `user-model check`, and bindable to a machine in a dynamics study. Each shipped library model that the
+  block catalogue can express matches its coded model bit for bit; the others (AcExciter, Esst4b, IEEEG1 with rate
+  limits, HydroGovernor) are not expressible.
+- Small-signal analysis of the full model: `modal-full` linearises machines, exciters, governors and stabilisers, with
+  dense and Arnoldi eigen-solvers, residual-checked eigenpairs, participation, damping and frequency. Controllers the
+  block catalogue cannot express are reported NOT LINEARISED.
+- `dynamics-study` adaptive integration: an optional `adaptive` member runs every row a second time with a
+  variable-step Dormand-Prince kernel, locating events exactly and bracketing critical clearing times without a step grid.
+  Overcurrent relays and fuses act inside the run, and a recloser acts for its first shot only. The adaptive rows use the reduced electromechanical swing
+  model, and the fixed-step rows and `status` are unchanged.
+- Node-breaker topology: a native substation model with a topology processor, switching scenarios and
+  `substation-state`; `cgmes-export` (CGMES 2.4.15 and 3.0 EQ, TP, SSH, SV), `cgmes-conform` (a named subset of the profile
+  rules (eleven checks), not a conformity certificate) and `cgmes-study --archive`; and `dgs-import` for ASCII PowerFactory DGS
+  files, built from public descriptions, with unconfirmed attribute mappings refused unless `--accept-unconfirmed`.
+- `dist3ph-mesh`: meshed unbalanced load flow in an explicit phase frame (named wires, full primitive impedance matrices,
+  wye, delta and line-line loads, solid, impedance and shared-grid earthing, split-phase services, SWER), three-phase
+  transformer banks, step-voltage regulators with line-drop compensation and quasi-static series. The shipped IEEE
+  4-node cases and the IEEE 123-node feeder run through the Core solver. `dist3ph` is unchanged.
+- `emt3`: three-phase electromagnetic transients on a new nodal solver, with lines from line constants (constant or
+  frequency dependent), faults, breakers, surge arresters, saturable inductors and transformers, and a named status
+  instead of a last value when Newton fails. Core entry points add power electronics (valves, two-level bridge, PWM,
+  average-value converter, dq controller), synchronous and induction machines, MMC and VSC HVDC stations, LCC bridges, a
+  partitioned parallel run bit-identical at any thread count, and an RMS-EMT co-simulation interface. `emt` and `emt-line`
+  are unchanged.
+- `emt3` documents (`gridsim-emt3/1`, now with a JSON schema file and an example document) take optional `machines`
+  (synchronous and induction machines: no-load or phasor start, torque and field-voltage steps, induction start speed and
+  shaft load), `dc_buses` and `converters` (the average-value converter and the two-level bridge with sine PWM, open-loop
+  modulation or the dq current controller behind a filter) and `hvdc` (VSC stations with two-level average, MMC
+  arm-average or MMC sub-module converters, LCC bridges of 6 or 12 pulses, and Bergeron DC lines) keys, all through the
+  existing Core classes. New output kinds: `speed`, `torque`, `rotor-angle`, `field-current`, `dc-voltage-positive`,
+  `dc-voltage-negative` and `dc-current`; the result gains `machines` and `converters` tables. A document without these
+  keys gives identical output. Partitioned runs are not offered through the document (CLI reference).
+- Workbench on the Avalonia app (Ctrl+Shift+B, and File > Workbench...) and the web client (`/workbench/{case}`): model
+  browser, plot kit (time-current, R-X, harmonic spectrum, eigenvalue plane, Bode, QV, PV, time series), reports and a
+  single-line diagram with an undoable editor whose every edit passes the case loader. Open reads v2 cases, PSS/E RAW,
+  UCTE and CGMES through the readers the app and the command line use; Add generator, Add load and Add branch take
+  typed, validated entries. `report` renders any result through a `gridsim-report-template/1` template.
+- Script console panels: File > Script console... in the Avalonia app and `/console` in the web app run
+  `GridSim.Scripting` statements line by line, with history, check-only and run-file modes and the session recorded as
+  `.gss` and `.run.json`. On the web the console loads catalogue cases only, under the licence and private-model rules,
+  refuses `EXPORT`, enforces tick, size, output and time limits, needs the Analyst role for `SOLVE POWERFLOW` (as
+  `POST /api/solve` does) and the Operator role for other state-changing statements. Manual chapters 8, 9 and 35.
+- `--json` and `--csv` through the shared result writer on ten study verbs: `probabilistic`, `reliability-network`,
+  `flicker`, `filter-design`, `harmonic-assess`, `connection-assess`, `study-case`, `case-diff`, `result-diff` and
+  `report` (their own `--out` is unchanged; also in the Python wrapper and `rpc`).
+- `corrective-sequence`: the plan names the elements still over their limit after redispatch
+  (`CorrectiveRedispatch.UnrelievedAfter`), only when there are any; otherwise the output is unchanged.
+- GPU backends report where each Newton linear solve ran: after the convergence line a `GPU:` line gives the solves on
+  the device and on the CPU (given up to the CPU LU, or run on the host), and the `gpucheck` probe lines end with the
+  same counts; the run metadata carries them as `gpuSolves`. Counting only, no arithmetic change; the CPU backend's
+  output is unchanged.
+- UK power quality: `harmonic-assess` (ENA ER G5 Issue 5 stages), `flicker` (ENA ER P28 Issue 2) and `filter-design`
+  (single-tuned, high-pass and C-type filters). A missing background is reported INCOMPLETE, never a pass; the
+  IEC 61000-4-15 filter coefficients are AWAITING STANDARD TEXT.
+- `cable-size` (IEC 60364-5-52 and BS 7671 design rule) and `connection-assess` (VDE-AR-N 4105, 4110, 4120, 4130 and BDEW
+  rule sets). No standard table or limit is shipped: a quantity without its table is OUT OF SCOPE and every limit is
+  AWAITING STANDARD TEXT until the owner supplies a rule file with provenance.
+- Scripting: the `GridSim.Scripting` library (references `GridSim.Core` only) and the `gridsim-script` console. Grammar
+  version 1 is a verb-first, line-oriented language in `.gss` files, frozen for all of 2.x: `LOAD CASE`, `SOLVE POWERFLOW`,
+  `TRIP`, `CLOSE` and `SET` on generators, lines and loads, `FAULT` and `CLEAR FAULT`, `REPORT`, `EXPORT RESULT`, `PRINT`,
+  `SELECT ENGINE`, `STEP SIM` and `AT`; `FOR EACH <noun> [WHERE ...]` over the elements of a case in model order;
+  `IF / ELSE / END` on state, results and time; named values (`LET`, `SET name =`) with unit-checked arithmetic (`MW +
+  MVAR` is refused at validation); and named procedures (`PROC`, `CALL`) that may not recurse, directly or indirectly. There
+  is no `WHILE` and no unbounded loop, so every script terminates. Five engines can be stepped: `LIVE` (now with trips and
+  closes of lines and generators and set-point changes reaching its network), `FREQUENCY LUMPED`, `PROTECTION FREQUENCY`, `RMS CLASSICAL` (classical
+  multi-machine) and `EMT SINGLE_PHASE`, plus `RMS SUBTRANSIENT` and `RMS GOVERNED` (six-state machines, with governors and exciters, from a `gridsim-dynamics/2` file) and `EMT THREE_PHASE` (each requires its model word; `PROTECTION FREQUENCY` refuses cases with voltage or loading stages); the last four run over a whole time range and are stepped by deterministic re-run from t = 0,
+  with a bit-for-bit check of the part already shown, and each takes a typed `WITH` settings clause. Names are checked
+  against the loaded case and every number carries a unit (`MW`, `MVAR`, `MVA`, `PU`, `KV`, `HZ`, `MS`, `S`, `DEG`); an
+  error names its line and column and leaves the session as it was. A step must be a whole multiple of the integration step
+  and events land on step boundaries in script order. Every console session is recorded as a `.gss` file, and every run
+  writes a record (`gridsim-script-run/1`) with the GridSim and grammar versions, the SHA-256 of the script (and of its
+  canonical form), the model and every output, the solver and engine settings, the step and event sequence, every `IF`
+  decision, every loop and the named values. The same script gives the same record and bytes. Manual chapter 35.
+- `LiveSim.ReplaceNetwork(GridModel)`: replaces the network the live loop re-solves, between steps, for a topology or
+  dispatch change on the same case. Nothing calls it except the scripting layer; a loop that never calls it, or calls it with
+  the network it has, gives the same bits as before (`LiveSimReplaceNetworkTests`).
+- `fault-series` (one or two conductors open in a branch's series element) and `fault-simultaneous` (solid shunt faults at
+  several buses at once): two verbs over the sequence networks `fault --type` uses, with `--json` and `--csv`. Core adds
+  `FaultAnalysis.SequencePorts` and `FaultAnalysis.SeriesBreak` (the transfer impedances and the break Thevenin impedances;
+  `SeriesFault` and `SimultaneousFault` are unchanged). Purely additive: the existing short-circuit, IEC 60909, sequence and
+  `dist3ph` test classes give identical results before and after. Not offered: a shunt and a series fault together, and a break
+  whose zero-sequence network is not earthed on both sides (an infinite zero-sequence impedance). Manual chapters 12 and 19.
+- `dist3ph-mesh` takes `regulators` (wye, open delta and closed delta, fixed taps or a line-drop-compensator tap search),
+  `banks` (three-phase transformer banks) and `capacitors` (shunt banks, switched by a step's `capacitors` member), and a
+  `--hold-taps` switch. A case without them is read and solved as before. Manual chapters 7 and 19.
+- `substation-state` reads a CGMES exchange (a `.zip` or a folder of EQ, TP, SSH and SV files) as a node-breaker model through
+  Core's `CgmesSubstationReader`, with the SSH switch states as the starting states, and takes `--base-mva` for such an input.
+  A `.json` input is read and projected as before. Manual chapter 19.
+- `convert` takes a CIM / CGMES input (a `.xml` document, a `.zip` exchange or a folder of profile files) through the importers
+  the desktop app uses, and proves the conversion as for any input. Other inputs are unchanged. Manual chapter 19.
+- `dist3ph-mesh --from-dist3ph <feeder.json>` lifts a `dist3ph` feeder, transformers and regulators included, into the phase frame
+  through Core's `MultiPhaseFeederAdapter` (`--switch-z-pu` gives a closed switch its impedance). Mesh case files and every other
+  option are unchanged. Manual chapters 7 and 19.
+- `dist3ph-mesh` case files take `split_phase_sources` and `centre_tap_transformers` (Core's 120/240 V split-phase builders) and a
+  `swer` member (a single-wire earth-return feeder, with its line given as an impedance or from conductor data). A case without
+  them is read and solved as before. Manual chapters 7 and 19.
+- `substation-state --sequence <steps.json>` runs Core's `SwitchingScenario` (ordered open and close steps) from the starting state and
+  reports every step. Without the flag the verb is unchanged. Manual chapter 19.
+- Network models: the 36 national and regional network models (GridSim-Models, ODbL 1.0, each labelled
+  `UnvalidatedAtScale`) are linked as the optional `models` submodule. Fetch them with
+  `git submodule update --init models` or clone with `--recurse-submodules`; open a case as
+  `gridsim pf models/<case>`. They are not bundled data and are not in the release archives, so the licence bus limit
+  applies: the eight cases above 1,500 buses need a licence (issued free of charge at present, on request).
 
 ### Changed
-- **BREAKING:** the sparse LU column ordering is now exact minimum degree (`MinimumDegreeOrdering`) instead of reverse
-  Cuthill-McKee. One shared switch moves every LU user: dense and sparse Newton, fixed-pattern, EMT, three-phase EMT,
-  WLS, complex solvers and the batched contingency solver. Dense and sparse Newton remain bit-identical to each other.
-- **BREAKING:** the Newton voltage floor `VmFloorPu` is lowered from 0.2 to 0.01 pu.
-- Note: the difference is at rounding level - max |dVm| 9.7e-13 pu and max |dVa| 1.9e-11 deg on 66 MATPOWER cases
-  (dynamic/EMT trajectories within ~2e-10 normwise), with identical convergence and iteration counts. This breaches the
-  strict bit-for-bit contract but will not materially change your results; they remain at the floating-point rounding
-  floor.
+- **BREAKING CHANGE:** results and determinism digests are NOT bit-identical to 2.1.071 or 2.1.072. The difference is
+  at rounding level: max |dVm| 9.7e-13 pu and max |dVa| 1.9e-11 deg on 66 MATPOWER cases (dynamic and EMT trajectories
+  within about 2e-10 normwise), with identical convergence and iteration counts, and dense and sparse Newton remain
+  bit-identical to each other. Any stored digests or bit-exact comparisons against those releases will fail and must be
+  regenerated. Two numerical changes cause this: the sparse LU column ordering is now exact minimum degree
+  (`MinimumDegreeOrdering`) instead of reverse Cuthill-McKee (one shared switch moves every LU user), and the Newton
+  power flow voltage floor (`NewtonShell.VmFloorPu`) is lowered from 0.2 to 0.01 pu. This breaches the strict
+  bit-for-bit contract but will not materially change your results; they remain at the floating-point rounding floor.
+  The determinism digests and numeric pins in this repository were re-baselined accordingly.
 - `case2848rte` now converges (it has a bus at 0.0215 pu, below the old 0.2 floor).
-- Large sparse solves are 4-8x faster (case3375wp 600 -> 75 ms, case_ACTIVSg2000 332 -> 45 ms).
-- The bundled `intl/iberia` case has no AC solution as shipped; its angle-spread pin was removed from the UI test (the
-  network data still ships).
+- **BREAKING CHANGE:** a Newton power flow (dense or sparse) that does not converge is now retried automatically, so the
+  outcome of a solve that used to fail can change. The magnitude: every solve that converged before gives bit-identical
+  results (the retry is never reached), checked on 15 MATPOWER and PGLib cases dense and sparse up to case9241pegase.
+  The retry repeats the same Newton iteration with the same options and voltage magnitudes, starting the bus angles
+  from the DC power flow; it needs one slack bus and a DC model that forms a single island. A converged retry is
+  reported unless a branch carries more than 90 deg (net of any phase shift), which is not a usable operating point;
+  otherwise the original non-converged result is reported unchanged. `PowerFlowResult.NewtonRetry` and
+  `NewtonRetryNote` say whether the retry ran and how it ended, and `pf` and `export` print the note.
+  `case13659pegase` now converges from flat start (10 iterations; it used to stop at a mismatch of 63.157 pu).
+  The retry runs only when the failed solve stalled or diverged: its final mismatch is above 1e-3 of its mismatch at
+  the start (`NewtonShell.RetryStallFactor`). A solve stopped by `MaxIterations` while still converging is not
+  retried and is reported `MaxIterations` exactly as before, so the iteration cap is never exceeded by a second
+  attempt. `PowerFlowOptions.RetryFromDcStart` (default `true`, also in the `solverProfile` kind and the script run
+  record) turns the retry off.
+- Large sparse solves are 4 to 7 times faster, measured on an EPYC 7763 server (case_ACTIVSg2000 306 -> 46 ms,
+  case3375wp 560 -> 83 ms). The cloud benchmark results for RC-3 and for this change are in
+  `docs/developer/benchmarks/server-results/hyperstack-2026-11/`.
+- GPU paths are documented as deterministic run to run but not bit-identical to the CPU contract (different algorithms
+  and reduction order), with the measured envelope; they are held to solver tolerance, not to the CPU cross-check gate.
+  `gpucheck` now calls workstation NVIDIA parts (Quadro, RTX A-series, RTX Ada and RTX PRO) workstation GPUs in its FP64
+  note instead of consumer GPUs.
+- Licensing text: GridSim is source-available and requires a licence; at present licences are issued free of charge,
+  and a request receives a Network Operator (DNO) licence. The contact address in the licence, the documentation and
+  every licence message is mark@gridsimdigitaltwin.co.uk.
+- Wording: program output, help and user-facing strings no longer claim that an engine, path or model is validated (the
+  RMS footer, the experimental help and the experimental-models view say "checked against" or "standard").
+- `emt3`: an output name must be lower-case snake_case (it becomes a trace column and a summary key); any other name, and
+  `time_s`, is refused as bad input (exit 1) naming the output, instead of failing after the run. Output kinds are
+  hyphenated words. Output for valid documents is unchanged.
+- `ProvenanceTag` is unchanged; imports that follow public format descriptions carry the separate output-only
+  `ImportProvenanceTag.FormatFromPublicDescription`.
+- The writer-verb registries (C# and Python) list the new verbs; existing entries are unchanged.
+- Machine-independent paths: the Unity viewer launcher (`unity/GridSimViz/Launch-GridSimViz.ps1`) takes the editor
+  from `-Editor` or `GRIDSIM_UNITY_EDITOR`, its scratch folder from `-Scratch`, `GRIDSIM_VIZ_SCRATCH` or the system
+  temporary folder, and an optional default world file from `GRIDSIM_VIZ_WORLD`; the benchmark chart scripts read
+  their run folders from `GRIDSIM_BENCH_ROOT` (and `GRIDSIM_BENCH_REHEARSAL_ROOT`).
+- Tests: the `intl/iberia` row of the home phasor-card spread test was removed (it pinned a non-converged iterate); the
+  Iberia network data still ships.
+- Tests: the Newton retry is covered on case9 (never entered on a converging solve; a retry that also fails; a case
+  the retry cannot run on), on a stalled 8-bus chain (converging on the retry to the same root, dense and sparse
+  bit-identical), on case9, case14 and case118 capped one step short of convergence (never retried, bit-identical to the
+  retry switched off), on `RetryFromDcStart = false`, and on case13659pegase when its file is supplied
+  (`GRIDSIM_CASE13659PEGASE`). The earlier case9 test that expected a 3-iteration cap to converge on the retry was
+  replaced: it contradicted the iteration-cap test on identical inputs.
+- Documentation: benchmark results are reorganised under one landing page (`docs/developer/benchmarks/index.md`) with one folder
+  per run and a dated history; the RC4 large-case results are added.
+
+### Removed
+- The Unity viewer (`unity/GridSimViz`, its launcher script and README) is no longer in the repository; it was never
+  a release artefact. `gridsim export` still writes `gridviz.json` for any external visualiser.
+
+### Fixed
+- Workbench: opening a case applies the same licence and bus-limit check as the app and the command line.
+- Workbench: studies and Colour by result run off the UI thread, one at a time, and an error is shown in the status line
+  instead of reaching the crash handler; a run always returns to the caller before it completes.
+- Workbench: after a single-line diagram edit the project is rebuilt on the edited network (studies kept, stale results
+  cleared), so tables, studies, reports and the diagram describe the same network.
+- Web workbench: a private model the viewer may not open shows a NOT AVAILABLE card.
+- Web console: a `LOAD CASE` of a model the licence does not cover is reported as a refusal, not as an error, when a
+  whole script is run (the typed console already did so).
+- `substation-state` goes through the licence gate like every other case-loading verb.
+- Builds are stamped from v2 release tags only, not from the RC-2 checkpoint tag.
+- On a GPU backend the `GPU:` line is printed after a non-convergence message, which keeps that message next to its exit
+  code 3.
+- MATPOWER import: a generator row with PMIN above PMAX (as in the PGLib-OPF `__api` cases) loads as written with a
+  warning note instead of refusing the whole case; a power flow does not use those OPF limits. QMIN above QMAX loads
+  with a warning on an out-of-service unit and is still refused on an in-service one, whose reactive limits the power
+  flow uses. Studies that use the active-power range refuse a crossed one themselves: DC-OPF, AC-OPF, corrective
+  redispatch, unit commitment and the security and transfer studies as before, and now also the distributed slack
+  and governor / inertia outage sharing in contingency screening.
+
+Not in RC-4, by design: PSS/E v35 node-breaker records (incomplete), coupled harmonic power flow, harmonic state
+estimation and the RoCoF filter (experimental), DNP3 and GOOSE, partitioned `emt3` runs and grid-forming and
+grid-following inverters (they need new numerics), `PROTECTION FULL` in scripting, web studies beyond `POST /solve`, and
+any LLM integration.
+
+Known limits: the new work is tested on small analytical, constructed and synthetic cases. Items that need paid standard
+text are labelled AWAITING STANDARD TEXT, and DGS acceptance on real PowerFactory exports and the ENTSO-E conformity
+bundle are awaiting files. No commercial-tool comparison has been made and no parity is claimed. Bugs to
+mark@gridsimdigitaltwin.co.uk.

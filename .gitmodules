@@ -2,3 +2,7 @@
 	path = docs/Public/GB
 	url = https://github.com/MarkS0485/GridSim-GB-Documents.git
 	branch = main
+[submodule "models"]
+	path = models
+	url = https://github.com/MarkS0485/GridSim-Models.git
+	branch = main

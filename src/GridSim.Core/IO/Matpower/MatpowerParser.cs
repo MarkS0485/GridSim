@@ -138,7 +138,7 @@ public static class MatpowerParser
         // to load on 100 MVA with no word).
         double? baseGiven = ExtractScalar(clean, "baseMVA");
         if (baseGiven is double bg && !(bg > 0 && double.IsFinite(bg)))
-            throw new InvalidDataException($"MATPOWER case '{caseName}': mpc.baseMVA is {bg}; it must be a finite number above 0.");
+            throw new InvalidDataException(FormattableString.Invariant($"MATPOWER case '{caseName}': mpc.baseMVA is {bg}; it must be a finite number above 0."));
         double baseMva = baseGiven ?? 100.0;
         if (baseGiven is null) notes.Add("mpc.baseMVA not given; assumed 100 MVA (the MATPOWER default).");
 
@@ -214,14 +214,14 @@ public static class MatpowerParser
             liveIds.Add(id);
         }
         if (unusableLimits > 0)
-            notes.Add($"{unusableLimits} bus(es) carry VMAX/VMIN columns that are not usable as voltage limits (non-finite, not above 0, or VMIN above VMAX); the global band applies to them.");
+            notes.Add(FormattableString.Invariant($"{unusableLimits} bus(es) carry VMAX/VMIN columns that are not usable as voltage limits (non-finite, not above 0, or VMIN above VMAX); the global band applies to them."));
 
         if (slackCount == 0)
             throw new InvalidDataException($"MATPOWER case '{caseName}' has no reference (type 3) bus  -  the power flow would be singular.");
         if (slackCount > 1)
-            notes.Add($"{slackCount} reference (slack) buses  -  treating as a multi-island system.");
+            notes.Add(FormattableString.Invariant($"{slackCount} reference (slack) buses  -  treating as a multi-island system."));
         if (isolated.Count > 0)
-            notes.Add($"dropped {isolated.Count} isolated (type 4) bus(es) and any incident elements.");
+            notes.Add(FormattableString.Invariant($"dropped {isolated.Count} isolated (type 4) bus(es) and any incident elements."));
 
         // --- Generator costs (mpc.gencost, F24): parsed first so each unit can carry its own rows ------------------
         // Row i is the active-power cost of mpc.gen row i; when the matrix has 2 x ng rows, row ng + i is that unit's
@@ -237,6 +237,8 @@ public static class MatpowerParser
         // still skipped (there is no bus to keep it on), in service or not.
         var gens = new List<Generator>(genRows.Length);
         int genOffKept = 0, genOffSkipped = 0, genDropped = 0, genUnknownBus = 0, genZeroMbase = 0;
+        var pInverted = new List<int>();   // 1-based mpc.gen rows with PMIN above PMAX (loaded, reported)
+        var qInverted = new List<int>();   // 1-based rows of OUT-OF-SERVICE units with QMIN above QMAX (loaded, reported)
         for (int gi = 0; gi < genRows.Length; gi++)
         {
             double[] r = genRows[gi];
@@ -256,13 +258,28 @@ public static class MatpowerParser
             double mBase = At(r, 6);
             // A negative machine base is not data; 0 means "the system base" in MATPOWER files and is replaced, counted.
             if (mBase < 0 || double.IsNaN(mBase))
-                throw new InvalidDataException($"MATPOWER case '{caseName}': mpc.gen row {gi + 1} has mBase {mBase}; it must be 0 (use the system base) or above.");
+                throw new InvalidDataException(FormattableString.Invariant($"MATPOWER case '{caseName}': mpc.gen row {gi + 1} has mBase {mBase}; it must be 0 (use the system base) or above."));
             if (mBase == 0) genZeroMbase++;
-            // GR-651: limits the wrong way round are not limits (QMIN above QMAX, PMIN above PMAX).
-            if (At(r, 4, double.NegativeInfinity) > At(r, 3, double.PositiveInfinity) || At(r, 9) > At(r, 8, double.PositiveInfinity))
-                throw new InvalidDataException(
-                    $"MATPOWER case '{caseName}': mpc.gen row {gi + 1} has QMIN above QMAX or PMIN above PMAX " +
-                    $"(Q {At(r, 4)} / {At(r, 3)}, P {At(r, 9)} / {At(r, 8)}).");
+            // GR-651 refused any row whose limits are the wrong way round. RC4 fix (2.1.073): only the case that matters to
+            // a power flow is still refused. PMIN / PMAX are OPF limits a power flow never reads (MATPOWER, pandapower,
+            // VeraGrid and powsybl all load and solve such rows; the PGLib-OPF __api cases ship hundreds of them), so an
+            // inverted pair is loaded as written and reported in the notes; every study that does use the range
+            // (DC-OPF, AC-OPF, corrective redispatch, distributed slack, governor / inertia outage sharing, unit
+            // commitment, the transmission-security and transfer studies) refuses it there, naming the unit. QMIN / QMAX
+            // feed the power flow's reactive-limit enforcement, so an inverted pair on an IN-SERVICE unit is still
+            // refused here (GridModel.Validate refuses it too); on an out-of-service unit nothing solves it, so it is
+            // loaded and reported, and is refused if the unit is ever put back in service (Validate).
+            double qMin = At(r, 4, double.NegativeInfinity), qMax = At(r, 3, double.PositiveInfinity);
+            double pMin = At(r, 9), pMax = At(r, 8, double.PositiveInfinity);
+            if (qMin > qMax)
+            {
+                if (inService)
+                    throw new InvalidDataException(
+                        $"MATPOWER case '{caseName}': mpc.gen row {gi + 1} is in service and has QMIN above QMAX " +
+                        FormattableString.Invariant($"(Q {qMin} / {qMax}); its reactive limits are used by the power flow, so they must not cross."));
+                qInverted.Add(gi + 1);
+            }
+            if (pMin > pMax) pInverted.Add(gi + 1);
             gens.Add(new Generator(
                 Bus: bus,
                 Pg: At(r, 1),
@@ -279,18 +296,26 @@ public static class MatpowerParser
                 Cost: costs.Length > 0 ? costs[gi].P : null,
                 ReactiveCost: costs.Length > 0 ? costs[gi].Q : null));
         }
-        if (genOffKept > 0) notes.Add($"kept {genOffKept} out-of-service generator(s) in the model, marked out of service (not solved).");
-        if (genOffSkipped > 0) notes.Add($"skipped {genOffSkipped} out-of-service generator(s) on a dropped or undefined bus.");
-        if (genZeroMbase > 0) notes.Add($"{genZeroMbase} generator(s) give mBase 0; their machine base is the system base ({baseMva} MVA).");
-        if (genDropped > 0) notes.Add($"skipped {genDropped} in-service generator(s) on dropped isolated (type 4) bus(es).");
-        if (genUnknownBus > 0) notes.Add($"skipped {genUnknownBus} in-service generator(s) whose bus id is not defined in mpc.bus.");
+        if (genOffKept > 0) notes.Add(FormattableString.Invariant($"kept {genOffKept} out-of-service generator(s) in the model, marked out of service (not solved)."));
+        if (genOffSkipped > 0) notes.Add(FormattableString.Invariant($"skipped {genOffSkipped} out-of-service generator(s) on a dropped or undefined bus."));
+        if (genZeroMbase > 0) notes.Add(FormattableString.Invariant($"{genZeroMbase} generator(s) give mBase 0; their machine base is the system base ({baseMva.ToString("R", CultureInfo.InvariantCulture)} MVA)."));
+        if (genDropped > 0) notes.Add(FormattableString.Invariant($"skipped {genDropped} in-service generator(s) on dropped isolated (type 4) bus(es)."));
+        if (genUnknownBus > 0) notes.Add(FormattableString.Invariant($"skipped {genUnknownBus} in-service generator(s) whose bus id is not defined in mpc.bus."));
+        if (pInverted.Count > 0)
+            notes.Add(FormattableString.Invariant($"warning: {pInverted.Count} generator row(s) have PMIN above PMAX (mpc.gen row(s) {RowList(pInverted)}); ") +
+                      "these are OPF limits a power flow does not use, so the case loads as written, but any study that uses the " +
+                      "active-power range (OPF, corrective redispatch, distributed slack, outage sharing, unit commitment, " +
+                      "security and transfer studies) refuses those units.");
+        if (qInverted.Count > 0)
+            notes.Add(FormattableString.Invariant($"warning: {qInverted.Count} out-of-service generator row(s) have QMIN above QMAX (mpc.gen row(s) {RowList(qInverted)}); ") +
+                      "nothing solves an out-of-service unit, so the case loads, but the unit is refused if it is put back in service.");
         if (costs.Length > 0)
-            notes.Add($"read mpc.gencost ({costRows!.Length} row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.");
+            notes.Add(FormattableString.Invariant($"read mpc.gencost ({costRows!.Length} row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order."));
 
         // --- DC lines (mpc.dcline, F24): parsed and carried, NOT modelled ------------------------------------------
         IReadOnlyList<MatpowerDcLine> dcLines = ParseDcLines(ExtractMatrix(clean, "dcline"), caseName);
         if (dcLines.Count > 0)
-            notes.Add($"read {dcLines.Count} DC line(s) (mpc.dcline); they are carried in the parse result but NOT modelled by any solver (MATPOWER adds their flows as injections at both ends), so this power flow differs from MATPOWER's for this case.");
+            notes.Add(FormattableString.Invariant($"read {dcLines.Count} DC line(s) (mpc.dcline); they are carried in the parse result but NOT modelled by any solver (MATPOWER adds their flows as injections at both ends), so this power flow differs from MATPOWER's for this case."));
 
         // A type-2 (PV) bus whose generators are ALL out of service has nothing to hold its voltage. MATPOWER's
         // bustypes() solves such a bus as PQ, and so must we (R030, October 2026): left as PV it was held at its
@@ -307,9 +332,9 @@ public static class MatpowerParser
             Bus b = buses[i];
             if (b.Type == BusType.Pv && !genBuses.Contains(b.Id)) { buses[i] = b with { Type = BusType.Pq }; demoted++; }
             else if (b.Type == BusType.Slack && !genBuses.Contains(b.Id))
-                notes.Add($"reference (type 3) bus {b.Id} has no in-service generator (MATPOWER would promote the first PV bus to reference); it is kept as the reference.");
+                notes.Add(FormattableString.Invariant($"reference (type 3) bus {b.Id} has no in-service generator (MATPOWER would promote the first PV bus to reference); it is kept as the reference."));
         }
-        if (demoted > 0) notes.Add($"solved {demoted} PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does.");
+        if (demoted > 0) notes.Add(FormattableString.Invariant($"solved {demoted} PV (type 2) bus(es) with no in-service generator as PQ, as MATPOWER does."));
 
         // --- Branches (skip out-of-service and those touching dropped buses) -------------------
         var branches = new List<Branch>(branchRows.Length);
@@ -328,7 +353,7 @@ public static class MatpowerParser
             double ratio = At(r, 8);
             // TAP 0 is MATPOWER's "a line, not a transformer"; a negative ratio is not data.
             if (ratio < 0)
-                throw new InvalidDataException($"MATPOWER case '{caseName}': mpc.branch row {ri + 1} has TAP {ratio}; it must be 0 (a line) or above.");
+                throw new InvalidDataException(FormattableString.Invariant($"MATPOWER case '{caseName}': mpc.branch row {ri + 1} has TAP {ratio}; it must be 0 (a line) or above."));
             bool isXfmr = ratio != 0.0;
             branches.Add(new Branch(
                 From: from,
@@ -344,9 +369,9 @@ public static class MatpowerParser
                 RateBMva: At(r, 6),     // F20: RATE_B (short-term); carried, used only by an opt-in post-fault check
                 RateCMva: At(r, 7)));   // F20: RATE_C (emergency); likewise
         }
-        if (brOff > 0) notes.Add($"skipped {brOff} out-of-service branch(es).");
-        if (brDangling > 0) notes.Add($"skipped {brDangling} branch(es) incident to a dropped bus.");
-        if (brAngleLimits > 0) notes.Add($"{brAngleLimits} in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them.");
+        if (brOff > 0) notes.Add(FormattableString.Invariant($"skipped {brOff} out-of-service branch(es)."));
+        if (brDangling > 0) notes.Add(FormattableString.Invariant($"skipped {brDangling} branch(es) incident to a dropped bus."));
+        if (brAngleLimits > 0) notes.Add(FormattableString.Invariant($"{brAngleLimits} in-service branch(es) carry angle-difference limits (ANGMIN / ANGMAX); they are not read, and no study here enforces them."));
 
         var model = new GridModel
         {
@@ -378,6 +403,11 @@ public static class MatpowerParser
     private static double At(double[] row, int i, double dflt = 0.0)
         => i >= 0 && i < row.Length ? row[i] : dflt;
 
+    /// <summary>Up to the first ten 1-based row numbers, comma separated, with a count of any more.</summary>
+    private static string RowList(List<int> rows)
+        => string.Join(", ", rows.Take(10).Select(x => x.ToString(CultureInfo.InvariantCulture))) +
+           (rows.Count > 10 ? FormattableString.Invariant($" and {rows.Count - 10} more") : "");
+
     /// <summary>Refuse a row shorter than the columns the parser reads, and any NaN in the matrix (Inf stays legal:
     /// it is MATPOWER's open generator limit).</summary>
     private static void CheckRows(double[][] rows, string matrix, int minColumns, string columns, string caseName)
@@ -397,7 +427,7 @@ public static class MatpowerParser
     private static int WholeNumber(double v, string matrix, int row, string column, string caseName)
     {
         if (!double.IsFinite(v) || v != Math.Floor(v) || v < int.MinValue || v > int.MaxValue)
-            throw new InvalidDataException($"MATPOWER case '{caseName}': mpc.{matrix} row {row + 1} has {column} {v}; it must be a whole number.");
+            throw new InvalidDataException(FormattableString.Invariant($"MATPOWER case '{caseName}': mpc.{matrix} row {row + 1} has {column} {v}; it must be a whole number."));
         return (int)v;
     }
 
@@ -406,7 +436,7 @@ public static class MatpowerParser
     private static bool Status(double v, string matrix, int row, string column, string caseName)
     {
         if (!double.IsFinite(v) || v < 0)
-            throw new InvalidDataException($"MATPOWER case '{caseName}': mpc.{matrix} row {row + 1} has {column} {v}; it must be 0 (out of service) or above.");
+            throw new InvalidDataException(FormattableString.Invariant($"MATPOWER case '{caseName}': mpc.{matrix} row {row + 1} has {column} {v}; it must be 0 (out of service) or above."));
         return v > 0;
     }
 

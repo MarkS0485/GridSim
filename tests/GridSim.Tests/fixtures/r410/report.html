@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo report</title>
+<style>
+body{font-family:sans-serif;margin:2rem auto;max-width:60rem;padding:0 1rem;color:#222;background:#fff}
+table{border-collapse:collapse;margin:0.5rem 0 1.5rem}th,td{border:1px solid #bbb;padding:0.2rem 0.5rem;text-align:right}th{background:#f0f0f0}td:first-child,th:first-child{text-align:left}
+.gap{color:#b00020;font-style:italic}footer{margin-top:2rem;border-top:1px solid #bbb;padding-top:0.5rem;font-size:0.85rem;color:#555}code{word-break:break-all}
+</style>
+</head>
+<body>
+<h1>Demo report</h1>
+<section>
+<h2>Summary</h2>
+<p>Fixed result for the golden files.</p>
+<ul>
+<li><strong>Status:</strong> <span>CONVERGED</span></li>
+<li><strong>Reason:</strong> <span class="gap">n/a</span></li>
+<li><strong>Buses:</strong> <span>3</span></li>
+<li><strong>Absent:</strong> <span class="gap">n/a</span></li>
+</ul>
+</section>
+<section>
+<h2>Buses</h2>
+<h3>Bus results</h3>
+<table>
+<thead><tr><th>Bus</th><th>Voltage (pu)</th><th>Note</th><th>Rate (MVA)</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>1.0000</td><td>slack | ref</td><td>100.5</td></tr>
+<tr><td>2</td><td>0.9871</td><td>load</td><td class="gap">n/a</td></tr>
+<tr><td>3</td><td>0.9500</td><td>a,b &quot;c&quot;</td><td>7.0</td></tr>
+</tbody>
+</table>
+<h3>Missing table</h3>
+<p class="gap">No table data at /tables/none/rows.</p>
+</section>
+<section>
+<h2>Plots</h2>
+<h3>Voltage profile</h3>
+<figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640.00 400.00" width="640.00" height="400.00" role="img" font-family="sans-serif" font-size="11"><title>Voltage profile</title><rect width="640.00" height="400.00" fill="#ffffff"/><text x="320.00" y="18" text-anchor="middle" font-size="13" font-weight="bold" fill="#333333">Voltage profile</text><line x1="64.00" y1="36.00" x2="64.00" y2="348.00" stroke="#d9d9d9" stroke-width="1"/><text x="64.00" y="362.00" text-anchor="middle" fill="#333333">0</text><line x1="203.00" y1="36.00" x2="203.00" y2="348.00" stroke="#d9d9d9" stroke-width="1"/><text x="203.00" y="362.00" text-anchor="middle" fill="#333333">0.5</text><line x1="342.00" y1="36.00" x2="342.00" y2="348.00" stroke="#d9d9d9" stroke-width="1"/><text x="342.00" y="362.00" text-anchor="middle" fill="#333333">1</text><line x1="481.00" y1="36.00" x2="481.00" y2="348.00" stroke="#d9d9d9" stroke-width="1"/><text x="481.00" y="362.00" text-anchor="middle" fill="#333333">1.5</text><line x1="620.00" y1="36.00" x2="620.00" y2="348.00" stroke="#d9d9d9" stroke-width="1"/><text x="620.00" y="362.00" text-anchor="middle" fill="#333333">2</text><line x1="64.00" y1="348.00" x2="620.00" y2="348.00" stroke="#d9d9d9" stroke-width="1"/><text x="58.00" y="352.00" text-anchor="end" fill="#333333">0.94</text><line x1="64.00" y1="244.00" x2="620.00" y2="244.00" stroke="#d9d9d9" stroke-width="1"/><text x="58.00" y="248.00" text-anchor="end" fill="#333333">0.96</text><line x1="64.00" y1="140.00" x2="620.00" y2="140.00" stroke="#d9d9d9" stroke-width="1"/><text x="58.00" y="144.00" text-anchor="end" fill="#333333">0.98</text><line x1="64.00" y1="36.00" x2="620.00" y2="36.00" stroke="#d9d9d9" stroke-width="1"/><text x="58.00" y="40.00" text-anchor="end" fill="#333333">1</text><rect x="64.00" y="36.00" width="556.00" height="312.00" fill="none" stroke="#888888"/><text x="342.00" y="380.00" text-anchor="middle" fill="#333333">Bus</text><text transform="rotate(-90 14 192.00)" x="14" y="192.00" text-anchor="middle" fill="#333333">Voltage (pu)</text><circle cx="64.00" cy="36.00" r="2" fill="#0072B2"/><circle cx="620.00" cy="296.00" r="2" fill="#0072B2"/><line x1="342.00" y1="36.00" x2="342.00" y2="348.00" stroke="#b00020" stroke-width="1" stroke-dasharray="2 3"><title>Voltage profile: no value</title></line></svg><figcaption>Plot SHA-256 <code>a903dc3f38a9f4cbca062e75d59fce0882d5ceeadc7b55f84069351a3cdd0a90</code></figcaption></figure>
+<h3>Missing plot</h3>
+<p class="gap">Not drawn: No plot data at /plots/none/x.</p>
+</section>
+<footer>
+<div>Template SHA-256: <code>efb542df3715f3b3c0369d38a4de24e18a3621cd0e98a045258e951d4ce12aac</code></div>
+<div>Result SHA-256: <code>5d4a248690a67e46234f42befbea9c568ce3b8c6f3196b447713b71b086b5b8c</code></div>
+<div>Generator: gridsim-report/1</div>
+</footer>
+</body>
+</html>

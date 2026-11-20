@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="GridSim.App.Scripting.ScriptConsoleWindow"
+        Title="GridSim Script Console"
+        Width="980" Height="640" MinWidth="560" MinHeight="360"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg}">
+  <!-- RC4: the GridSim.Scripting console as a panel. The same grammar as gridsim-script: an input line with history, an output
+       pane, a script file to run or check, and a recording of the session (.gss and .run.json). No second interpreter. -->
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <TextBox x:Name="PathBox" Width="460" Watermark="script file (.gss)" />
+      <Button x:Name="RunButton" Classes="FlatBtn" Content="Run file" Click="Run_Click" />
+      <Button x:Name="CheckButton" Classes="FlatBtn" Content="Check only" Click="Check_Click" />
+      <Button x:Name="LoadCaseButton" Classes="FlatBtn" Content="Load open case" Click="LoadCase_Click" />
+      <Button x:Name="EndButton" Classes="FlatBtn" Content="End session" Click="End_Click" />
+      <Button x:Name="ClearButton" Classes="FlatBtn" Content="Clear" Click="Clear_Click" />
+    </StackPanel>
+    <TextBlock x:Name="StatusLine" DockPanel.Dock="Bottom" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource Text}" />
+    <DockPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+      <TextBlock x:Name="PromptText" Text="gss&gt;" VerticalAlignment="Center" Margin="0,0,8,0" FontFamily="{StaticResource MonoFont}" />
+      <Button x:Name="SendButton" DockPanel.Dock="Right" Classes="FlatBtn" Content="Enter" Margin="8,0,0,0" Click="Send_Click" />
+      <TextBox x:Name="InputBox" FontFamily="{StaticResource MonoFont}" Watermark="statement, 'help' or 'exit' (Up and Down walk the history)" />
+    </DockPanel>
+    <TextBox x:Name="OutputBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" FontFamily="{StaticResource MonoFont}" />
+  </DockPanel>
+</Window>

@@ -117,9 +117,19 @@ public sealed class DirectionalPowerRelay : IProtectionRelay
         var c = new VerdictCollector();
         double thr = ctx.Settings.ReversePowerMw;
         IReadOnlyList<Generator> gens = ctx.Model.Generators;
+        // DP-02: a unit on a Slack bus produces what the solve decides, not its schedule. Other units keep Generator.Pg
+        // (the two agree there, and the verdicts stay bit for bit). A non-converged or mismatched result (a fault state)
+        // keeps the schedule.
+        PowerFlowResult res = ctx.Result;
+        bool solved = res.Converged && res.BusIds.Count == ctx.Model.BusCount && res.PInjMw.Length == ctx.Model.BusCount
+            && res.QInjMvar.Length == ctx.Model.BusCount && res.Vm.Length == ctx.Model.BusCount;
+        var slackBuses = new HashSet<int>();
+        if (solved) foreach (Bus b in ctx.Model.Buses) if (b.Type == BusType.Slack) slackBuses.Add(b.Id);
         for (int g = 0; g < gens.Count; g++)
         {
             double pg = gens[g].Pg;
+            if (solved && slackBuses.Contains(gens[g].Bus))
+                pg = SolvedGeneration.UnitOutput(ctx.Model, res, g).PMw;
             double margin = -pg - thr; // reverse (pg negative) beyond threshold => margin>0
             bool op = pg < -thr;
             string nm = gens[g].Name ?? $"gen@bus {gens[g].Bus}";

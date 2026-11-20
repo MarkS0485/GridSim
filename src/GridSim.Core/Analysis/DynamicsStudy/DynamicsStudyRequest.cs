@@ -125,6 +125,8 @@ public sealed record DynamicsCriteria(double SlipLimitRad, double MaxAngleSpread
 /// <param name="AngleReference">The machine rotor angles are reported relative to.</param>
 /// <param name="Channels">Monitored channels, in output order.</param>
 /// <param name="Cases">The batch rows, in canonical result order.</param>
+/// <param name="Adaptive">RC4 R4-14: when set, every row is also run by the variable-step kernel and reported beside the fixed-step
+/// rows (see <see cref="DynamicsAdaptiveRequest"/>); null leaves the study exactly as it was.</param>
 /// <param name="MaxParallelism">1 = serial; above 1, rows run on up to that many workers, each with its own mutable
 /// simulation state, results kept in request order.</param>
 public sealed record DynamicsStudyRequest(
@@ -132,4 +134,6 @@ public sealed record DynamicsStudyRequest(
     DynamicsInitialisation Initialisation, double StepSeconds, double DurationSeconds,
     DynamicsCriteria Criteria, DynamicsMachineId AngleReference,
     IReadOnlyList<DynamicsChannelRequest> Channels, IReadOnlyList<DynamicsCaseRequest> Cases,
-    int MaxParallelism = 1);
+    int MaxParallelism = 1,
+    IReadOnlyList<UserModelAssignment>? UserModels = null,
+    DynamicsAdaptiveRequest? Adaptive = null);   // RC4 R4-14: opt-in variable-step companion run; null = the incumbent study, unchanged

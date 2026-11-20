@@ -9,7 +9,7 @@ namespace GridSim.Core.PowerFlow;
 /// The same polar Newton-Raphson power flow as <see cref="NewtonRaphsonPowerFlow"/>,
 /// but assembled entirely sparsely: a sparse complex Y-bus and a sparse Jacobian built by
 /// walking each bus's neighbours. Each Newton step is solved by the direct sparse LU
-/// (reverse Cuthill-McKee ordering, partial pivoting; ILU(0)/BiCGSTAB only if the LU reports
+/// (minimum-degree ordering, partial pivoting; ILU(0)/BiCGSTAB only if the LU reports
 /// singular). Memory is O(nnz), which is what lets the full node-level GDA replica  -  tens
 /// of thousands of buses  -  reach steady state, where the dense O(n^2)-memory path cannot.
 ///
@@ -23,7 +23,7 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
     private readonly ISparseLinearSolver _sparse;
 
     /// <summary>The CPU direct LU a non-CPU backend falls back to when it returns null (R038); null when the
-    /// primary backend already is the CPU direct LU. One instance per engine, so its RCM-ordering cache works.</summary>
+    /// primary backend already is the CPU direct LU. One instance per engine, so its ordering cache works.</summary>
     private readonly CpuSparseLuSolver? _directFallback;
 
     /// <summary>The sparse linear backend defaults to the CPU direct LU; pass a GPU implementation
@@ -53,9 +53,23 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         return SolveAc(model, options);
     }
 
+    /// <summary>The ordinary solve, then (only if its Newton iteration did not converge) the automatic retry from a DC
+    /// power-flow angle start (<see cref="NewtonShell.SolveWithRetry"/>).</summary>
     private PowerFlowResult SolveAc(GridModel model, PowerFlowOptions? options)
+        => NewtonShell.SolveWithRetry(options ?? new PowerFlowOptions(), model, NewtonShell.ModelIndex(model),
+            (o, dcStart) => { PowerFlowResult? r = SolveAcAttempt(model, o, dcStart, out bool failed, out double startMis); return (r, failed, startMis, SlackQNote); },
+            state => SlackQNote = (string?)state);
+
+    /// <summary>One complete solve. With <paramref name="dcStart"/> the start angles come from the DC power flow
+    /// (<see cref="NewtonShell.TrySeedDcAngles"/>), and null is returned when that start cannot be formed.
+    /// <paramref name="newtonFailed"/> says whether the last Newton run failed to converge (the retry trigger; the
+    /// Q-limit pass cap is not), and <paramref name="runStartMismatch"/> is that run's mismatch at its own start point,
+    /// before its first step (with the result's final mismatch, the stall test of <see cref="NewtonShell.Stalled"/>).</summary>
+    private PowerFlowResult? SolveAcAttempt(GridModel model, PowerFlowOptions opt, bool dcStart, out bool newtonFailed,
+        out double runStartMismatch)
     {
-        var opt = options ?? new PowerFlowOptions();
+        newtonFailed = false;
+        runStartMismatch = double.NaN;
         int n = model.BusCount;
         var index = new Dictionary<int, int>(n);
         for (int i = 0; i < n; i++) index[model.Buses[i].Id] = i;
@@ -65,6 +79,7 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         // Per-bus aggregates and start point (shared with the dense solver).
         double @base = model.BaseMva;
         NewtonShell.BusSpec spec = NewtonShell.BuildBusSpec(model, n, id => index[id], opt);
+        if (dcStart && !NewtonShell.TrySeedDcAngles(model, spec, id => index[id])) return null;
         BusType[] type0 = spec.Type0;
         double[] Vm = spec.Vm;
         double[] Va = spec.Va;
@@ -104,8 +119,9 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         for (int qp = 0; qp < qPasses; qp++)
         {
             switchPending = false;
-            (converged, int iters, maxMis) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qp, spec, @base);
+            (converged, int iters, maxMis, runStartMismatch) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qp, spec, @base);
             totalIters += iters;
+            newtonFailed = !converged;
             if (!opt.EnforceQLimits) break;
 
             // Only switch bus types after a CONVERGED sub-solve (MATPOWER convention): the Q[] of
@@ -136,8 +152,9 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         // to be reported converged on the previous types' voltages.
         if (switchPending)
         {
-            (converged, int capIters, maxMis) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qPasses, spec, @base);
+            (converged, int capIters, maxMis, runStartMismatch) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qPasses, spec, @base);
             totalIters += capIters;
+            newtonFailed = !converged;
             converged = false;
         }
 
@@ -147,7 +164,7 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         return NewtonShell.AssembleResult(model, n, Vm, Va, P, Q, @base, converged, totalIters, maxMis, id => index[id], effType);
     }
 
-    private static (bool, int, double) RunNewton(
+    private static (bool, int, double, double) RunNewton(
         ISparseLinearSolver sparse,
         CpuSparseLuSolver? directFallback,
         ComplexCsr y, BusType[] type, double[] Vm, double[] Va,
@@ -177,12 +194,12 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         // and the per-Y-entry value slots ONCE, then refill values in place each Newton iteration instead
         // of rebuilding, re-sorting and re-allocating the CSR from triplets every iteration. The same
         // instance is handed to the solver each iteration, so CpuSparseLuSolver's ordering cache hits and
-        // the RCM is computed once.
+        // the ordering is computed once.
         var slots = new int[4 * y.RowPtr[n]];
         CsrMatrix jac = BuildJacobianStructure(y, pPos, qPos, m, slots);
 
         bool converged = false;
-        double maxMis = double.PositiveInfinity;
+        double maxMis = double.PositiveInfinity, startMis = double.NaN;
         // Iteration cap (October 2026 docs-programme finding): the loop used to be 'for (; iter < MaxIterations; iter++)'
         // with the mismatch test at the TOP of the body, so after the last allowed step the loop ended without ever
         // evaluating the new state: a solve that the final step had converged was reported MaxIterations, with the
@@ -213,6 +230,7 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
                 }
             maxMis = 0;
             for (int k = 0; k < m; k++) maxMis = Math.Max(maxMis, Math.Abs(f[k]));
+            if (iter == 0) startMis = maxMis;   // the retry's stall test (NewtonShell.Stalled); read only after the run
             if (maxMis < opt.Tolerance) { converged = true; break; }
             if (iter >= opt.MaxIterations) break;   // cap reached: the final state's mismatch has just been evaluated
 
@@ -238,7 +256,7 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
 
             NewtonShell.ApplyStep(n, pPos, qPos, dx, maxAbs, Vm, Va);
         }
-        return (converged, iter, maxMis);
+        return (converged, iter, maxMis, startMis);
     }
 
     /// <summary>Bus power injections P/Q (pu) over the nonzero cells of Y. Internal so the estimate projection

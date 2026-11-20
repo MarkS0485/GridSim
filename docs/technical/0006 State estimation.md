@@ -306,7 +306,7 @@ rows exist, not on the operating point. `Begin` therefore does all structural wo
 1. `StructuralColumns` gives each row's distinct, sorted column list.
 2. The pattern of `G = H^T W H` is built once as the union of each row's column-pair outer product. `G` is symmetric, so
    the CSR arrays double as the CSC arrays.
-3. The fill-reducing ordering (`SparseLu.Ordering`, reverse Cuthill-McKee) is computed once.
+3. The fill-reducing ordering (`SparseLu.Ordering`, minimum degree) is computed once.
 4. Each row gets a slot map: the value-array index of every column pair, by binary search once.
 
 Each iteration clears and refills values (`G[c_i, c_j] += w * h_ci * h_cj` over both triangles, `g` likewise) and
@@ -323,8 +323,8 @@ backend, so free directions are named. Above it only the island sweep runs (`Ana
 On the CPU a `Wls` or robust estimate takes the same sparse arithmetic at every size, so a case just below and a case
 just above `SparseBusThreshold` come from the same arithmetic; `CanonicalWlsParityTests` pins that. The dense step
 (`DenseWlsStep`, used to solve an estimate only with a non-CPU linear solver) and the sparse step are still not
-bit-identical to each other: the dense backend factors with dense LU, the sparse backend with Gilbert-Peierls under an
-RCM ordering, so the operation order differs. Both fills use a separate multiply and add (no fused multiply-add).
+bit-identical to each other: the dense backend factors with dense LU, the sparse backend with Gilbert-Peierls under a
+minimum-degree ordering, so the operation order differs. Both fills use a separate multiply and add (no fused multiply-add).
 
 What is pinned:
 
@@ -410,7 +410,7 @@ interpolates some rows exactly, their weights hit the `1 / LavResidualFloor` cei
 passes, so it usually runs to the cap with `IrlsCapReached` set; `Lav` gives the exact optimum.
 
 Between outer passes only the weights change, so the loop calls `RebindWeights`, not `Begin`. The sparse backend keeps
-its gain pattern, RCM ordering and slot map, and the dense backends keep their buffers; every per-iteration buffer is
+its gain pattern, ordering and slot map, and the dense backends keep their buffers; every per-iteration buffer is
 cleared and refilled before use, so this equals a fresh `Begin`. The Constrained and Feasible backends derive a
 pseudo-weight from the weights and re-run `Begin`; the robust methods never select them.
 

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gridsim-groups/1",
+  "title": "GridSim groups document (gridsim-groups/1)",
+  "description": "RC4 R4-01. A sidecar that groups the elements of one case (areas, zones, owners, feeders, free groups). It is bound to the case by the bundle SHA-256 that every study verb takes, and is never stored in the case itself. Members are named by stable identity: a bus by ID, a generator by index into the whole fleet plus its expected bus, a branch by index plus its expected from and to bus IDs. Area, zone and owner are exclusive kinds: one element belongs to at most one group of each. A feeder is ordered and has a head. The GridSim reader is strict and refuses unknown or duplicated members; this schema describes the shape, the reader enforces identity and exclusivity against the case.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifestVersion", "case", "groups"],
+  "properties": {
+    "manifestVersion": { "const": "gridsim-groups/1" },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256"],
+      "properties": { "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$", "description": "The master bundle digest (consumed-file lines: path, TAB, file SHA-256, LF, in load order)." } }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+          "kind": { "enum": ["area", "zone", "owner", "feeder", "free"] },
+          "description": { "type": "string" },
+          "buses": { "type": "array", "items": { "type": "integer" } },
+          "generators": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["index", "bus"], "properties": { "index": { "type": "integer", "minimum": 0 }, "bus": { "type": "integer" } } } },
+          "branches": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["index", "from", "to"], "properties": { "index": { "type": "integer", "minimum": 0 }, "from": { "type": "integer" }, "to": { "type": "integer" } } } },
+          "head": { "type": "object", "additionalProperties": false, "required": ["element"], "properties": { "element": { "enum": ["bus", "branch", "generator"] }, "bus": { "type": "integer" }, "index": { "type": "integer", "minimum": 0 } }, "description": "Feeder only: the head element, which must be one of the group's members." }
+        }
+      }
+    }
+  }
+}

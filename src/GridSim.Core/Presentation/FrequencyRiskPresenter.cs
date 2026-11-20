@@ -10,8 +10,7 @@ namespace GridSim.Core.Presentation;
 /// largest single unit, the WPF the larger of that unit and the largest correlated interconnector group.
 /// <para><b>The rule, grounded in the GB documents (Q1 ruling: "ground it in the real rules").</b> Source: NESO,
 /// <i>Frequency Risk and Control Report 2025</i>, "The Report - For Consultation", March 2025 (the FRCR the NETS SQSS
-/// requires NESO to produce; file <c>W:\Code\TSGB-2026V2\Official Policy Files\0006 - Frequency Risk and Control
-/// Report 2025.pdf</c>):</para>
+/// requires NESO to produce):</para>
 /// <list type="bullet">
 /// <item>Executive summary (p.4), recommendation 2: "Secure all Balancing Mechanism Unit (BMU) only risks and do not
 /// apply additional actions to mitigate all BMU plus Vector Shift (BMU+VS) and simultaneous events".</item>

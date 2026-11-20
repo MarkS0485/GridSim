@@ -11,7 +11,19 @@ internal static class Program
 {
     // Avalonia is not ready for use until Main has built the AppBuilder: nothing may touch Avalonia before this line.
     [STAThread]
-    public static void Main(string[] args) => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    public static int Main(string[] args)
+    {
+        // APP-07: crash handling first, so a failure while starting is logged too (CrashLog, GRIDSIM_CRASH_DIR).
+        GridSim.App.AppCrashHandling.InstallProcessHandlers();
+        try { return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }
+#pragma warning disable CA1031 // Rethrown: logged, then the process ends as it would have.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            GridSim.App.AppCrashHandling.ReportCrash(ex);
+            throw;
+        }
+    }
 
     /// <summary>The app builder; also the entry the Avalonia previewer in an IDE looks for, so keep the name.</summary>
     public static AppBuilder BuildAvaloniaApp()

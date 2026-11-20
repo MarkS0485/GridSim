@@ -138,7 +138,19 @@ public sealed class AppSettings
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(p)!);
-            File.WriteAllText(p, JsonSerializer.Serialize(this, SerializerOptions));
+            // APP-23: write beside the file and move it over, so a failed write (disk full, file held, process killed)
+            // leaves the previous settings.json exactly as it was instead of an empty or truncated one.
+            string tmp = p + ".tmp";
+            try
+            {
+                File.WriteAllText(tmp, JsonSerializer.Serialize(this, SerializerOptions));
+                File.Move(tmp, p, overwrite: true);
+            }
+            catch
+            {
+                try { File.Delete(tmp); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* best effort */ }
+                throw;
+            }
             SaveProblem = null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

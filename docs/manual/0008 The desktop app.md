@@ -315,7 +315,7 @@ also a chapter 10 view is marked, and that chapter explains how to read it.
 | SCADA | A telemetry-style points list with navigation to the asset explorer. See [ch. 10, Analysis views](<0010 Analysis views.md>). |
 | OPERATOR | The generation stack, boundary transfers and the dispatch view. See ch. 10. |
 | MARKET | Wholesale and balancing prices: imbalance price, market index, BSUoS, constraint cost, carbon, demand and interconnector flows. The price fields fill only from a bridge stream; on other feeds only demand, renewable share and an indicative carbon intensity (computed from the dispatch) are live. See ch. 10. |
-| NESO RP1 | The stability panel: purchased time, inertia split, credible-loss and correlated-trip risk. See ch. 10. |
+| FREQUENCY SECURITY | The stability panel (labelled NESO RP1 before RC-3): purchased time, inertia split, credible-loss and correlated-trip risk. See ch. 10. |
 | MECHANICAL | The per-machine plant view: stored kinetic energy per unit, P-Q capability and RoCoF relay margins. See ch. 10. |
 | HUMAN SCALE | The same quantities in everyday units. Presentation only. |
 | SPEED DOMAINS | The distributed-inertia view: coherent speed domains and dominance. Experimental. |
@@ -451,7 +451,7 @@ stream stopped`, `BRIDGE FAULT  *  disconnected`, or a connect or restart failur
 while a what-if state is on the map; after a scalars-only or failed query the pill returns to `LIVE` with the next
 frame, and a failed query also raises an alarm. When the stream stops (a fault or a horizon rejection) nothing on
 screen is live any more: the header lamp reads `STREAM LOST`, an alarm says the map shows the last frame received, the
-HUD is hidden, the OPERATOR, MARKET and NESO RP1 bridge blocks are cleared, and a right-click on the map offers
+HUD is hidden, the OPERATOR, MARKET and FREQUENCY SECURITY bridge blocks are cleared, and a right-click on the map offers
 **Reconnect to the bridge**. Changes of ZONE, FROM or SRC in quick succession restart the stream one at a time, and
 a burst of changes ends on the newest selection. A HUD at the
 bottom right shows INERTIA in GVA.s, FRAGILITY (a condition index with a trend cue) and RoCoF HEADROOM in Hz/s.
@@ -505,6 +505,30 @@ The licence is resolved separately, offline: the `GRIDSIM_LICENCE` environment v
 `%LOCALAPPDATA%\GridSim\licence.gridsim`, then the free Personal tier. See
 [ch. 3, Configuration](<0003 Configuration.md>) and [ch. 4, Licensing and activation](<0004 Licensing and activation.md>).
 
+## The workbench
+
+The workbench is a second window for looking at a network as tables, running a study on it and reading the result as a plot or a report, with a single-line diagram that can be edited. Open it from **File > Workbench...** or with `Ctrl+Shift+B` (`Command+Shift+B` on macOS). It starts on the model the main window has loaded, or empty when none is loaded.
+
+**Open.** Type a path in the box at the top and press **Open**. The workbench reads the same cases as the main window and the command line: a GridSim case folder (one holding `buses.json`), a v2 case (`*.case.json`), a MATPOWER `.m` file, a PSS/E RAW file (`.raw`), a UCTE-DEF file (`.uct`), a CGMES exchange (a `.zip` or a folder of `.xml` profile files) and a node-breaker file (`gridsim-substations/1`). The licence check is the main window's: the free tier's bus cap applies to every format except the bundled networks. Notes the reader gives (for example a PSS/E device it ignored) are counted in the status line. Only a case folder and a node-breaker file can be edited in the diagram; the other formats show a read-only diagram.
+
+**Editing the diagram.** On the Diagram tab, select a busbar and use **Add generator**, **Add load** or **Add branch**. Each opens a small form with typed fields; a value that is not a number, or is out of range, is refused in the form with the reason and nothing is changed.
+
+| Button | Fields |
+|---|---|
+| Add generator | Capacity (MVA), output P (MW), voltage setpoint (pu, 0.5 to 1.5). |
+| Add load | P (MW, not negative), Q (MVAr). |
+| Add branch | Kind (`line` or `transformer`), from bus, to bus (both must exist and differ), R and X (pu), B (pu, a line's line charging), rating (MVA, 0 for none), tap ratio (a transformer's, 0.5 to 2). |
+
+Every edit goes through the diagram's one undo history, so **Undo** and **Redo** apply, and the tables and studies are rebuilt on the edited network. The earlier study results, which were of the previous network, are cleared and the status line says so. **Save case** writes the edits back to the case files.
+
+## The script console
+
+**File > Script console...** opens the scripting console of [ch. 35](<0035 Scripting.md>) as a window of its own. There is no shortcut key. Type a statement in the line at the bottom and press `Enter`; `Up` and `Down` bring back earlier lines. The output pane shows what each statement printed. A statement that is refused is shown as `refused: line 4, column 1: ...` and the session goes on. A block (`FOR EACH`, `IF`, `PROC`) is read over several lines, with the prompt `...>`, until its `END`.
+
+The box at the top takes the path of a `.gss` script. **Run file** runs it (relative paths are taken from the script's folder) and shows its output, or its first error as `file:line:column: phase error: message`; **Check only** parses it and checks its procedures and runs nothing. **Load open case** types `LOAD CASE` for the MATPOWER file or case folder the main window has open (a replay run, a v2 case or a bridge cannot be loaded by a script, and the button stays off). **Clear** empties the pane, and **End session** closes the recording.
+
+Every typed session is recorded as `session-<UTC time>.gss` and `.run.json` in `Documents\GridSim\sessions`, as `gridsim-script` records it, with refused lines kept as comments. The recording is written when the session ends: with `exit`, **End session**, or closing the window. A file run writes `NAME.run.json` to the same folder. Statements run on a worker thread, one at a time, so the window stays responsive while a long step runs. The console is local, like `gridsim-script`; it has no role gate.
+
 ## Keyboard shortcuts
 
 The shortcuts are window-wide and act on the map. They are ignored when keyboard focus is in a text box, a password
@@ -525,6 +549,7 @@ return keyboard focus to it.
 | `.` | A finer STEP. |
 | `,` | A coarser STEP. |
 | `Esc` | Clear the selection. |
+| `Ctrl+Shift+B` | Open the workbench (also File > Workbench...). Unlike the keys above, it acts from any control. |
 
 ## Performance
 

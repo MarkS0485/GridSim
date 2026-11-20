@@ -21,8 +21,10 @@ The RAM gate (`tests/CONDITIONAL-TESTING.md`) is not a loosening: a large-case t
 cannot hold is reported Skipped by installed RAM, with its assertions unchanged; releases run it (`GRIDSIM_TEST_MAX_BUSES=all`).
 
 - Deterministic: identical results across runs, including parallel paths.
-- Machine-epsilon validated: orchestration-only refactors leave every number bit-for-bit unchanged
-  (prove with exact `Assert.Equal`); new numerics on a validated path need re-validation.
+- Machine-epsilon pinned: orchestration-only refactors leave every number bit-for-bit unchanged
+  (prove with exact `Assert.Equal`); new numerics on a cross-checked path need the cross-checks re-run.
+- A deliberate change to pinned numbers is recorded in CHANGELOG.md and the commit as **BREAKING CHANGE**, followed by
+  the size of the difference (2.1.073 is the example).
 - `dotnet build GridSim.slnx -c Release` gives 0 warnings (TreatWarningsAsErrors), and
   `dotnet test GridSim.slnx -c Release --no-build` stays green.
 - Fail loud: non-converged or invalid results must never be reported as success.
@@ -40,8 +42,8 @@ shell as well if you build Avalonia projects outside this repository. Do not rem
 - CHANGELOG entries are a user-facing changelog (Keep a Changelog: Added / Changed / Deprecated / Removed / Fixed /
   Security). Short, impersonal bullets that say what changed for users. A test change is recorded as a brief
   "Tests: ..." bullet.
-- Version: 2.1.N. 2.1.000 is the RC-1 release (2026-10-31); the RC label appears only in the git tag and the release
-  title. Each commit bumps N with a new CHANGELOG heading `## [2.1.N]`. The single `<Version>` lives in
+- Version: 2.1.N. 2.1.000 was RC-1 (2026-10-31), 2.1.031 RC-2 and 2.1.071 RC-3; the RC label appears only in the git
+  tag and the release title. Each commit bumps N with a new CHANGELOG heading `## [2.1.N]`. The single `<Version>` lives in
   `Directory.Build.props` (no csproj sets its own; `VersionContractTests` checks it and the CHANGELOG heading).
 - Commit subjects in plain English.
 - Only `main` exists. Any other branch is merged or discarded and then deleted.

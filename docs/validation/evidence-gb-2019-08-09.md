@@ -3,6 +3,9 @@
 *GridSim + GDA evidence artefact, assembled 2026-07-14. Every figure carries its
 source inline; nothing here is a placeholder.*
 
+*This dossier compares one GridSim reconstruction with the published figures for one event. It is not a
+validation of GridSim; nothing in GridSim is validated, at any scale.*
+
 ---
 
 ## 1. What this document is
@@ -258,13 +261,13 @@ richer dynamic model to clear the RMSE bar.
 ## 8. Reproduce this dossier
 
 ```bash
-# GDA side (W:\Code\GDA\v1) - rebuild the lake products
+# GDA side (from the GDA v1 checkout) - rebuild the lake products
 python NetworkModel/build_gsp_measurements.py --date 2019-08-09
 python NetworkModel/build_estimated_state.py  --date 2019-08-09
 python NetworkModel/report_estimation_closure.py --date 2019-08-09
 python NetworkModel/build_event_catalog.py    # emits the measured catalog
 
-# GridSim side (W:\Code\GridSim) - run the gate
+# GridSim side (from the GridSim repository root) - run the gate
 dotnet run --project src/GridSim.Cli -c Release -- replay-event gb-2019-08-09
 dotnet run --project src/GridSim.Cli -c Release -- replay-event gb-2019-08-09 \
     --catalog data/events/gb-2019-08-09-estimated.json

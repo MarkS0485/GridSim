@@ -41,7 +41,7 @@ forward-inference guard. Recorded so that, if that posture ever changes, the req
 ### 2.2 FAIR data principles
 
 Findable, Accessible, Interoperable, Reusable, applied to the planned per-asset profile library and to the planned
-network models submodule (`SUBMODULES.md`: per-model case files, geography, model card, attribution and provenance,
+network models submodule (`docs/developer/submodules.md`: per-model case files, geography, model card, attribution and provenance,
 under ODbL). This is a data-asset framework, not a security one, and it attaches to those data sets when they are
 published, not to the engine. Parked until they are, since there is nothing to apply it to before then.
 

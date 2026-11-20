@@ -154,6 +154,8 @@ public sealed class GA7E3Batch7Tests
         ("data/library/", "the v2 template library (placeholders for unmodelled sites), not a network"),
         ("data/neso/", "NESO reference series (frequency recordings) used for comparison, not a network"),
         ("data/qsts/", "quasi-static time-series profiles and the feeder reference series, not a network"),
+        ("data/protection-curves/", "protection time-current curve data with named public sources (R4-07), not a network"),
+        ("data/cable-tables/", "cable-sizing table files, shipped EMPTY and flagged until the owner of IEC 60364-5-52 / BS 7671 fills them with provenance (R4-20d), not a network"),
     };
 
     /// <summary>Extensions the apps ship from data/ (the Content globs of the Cli, App.Desktop and Wpf projects: json and

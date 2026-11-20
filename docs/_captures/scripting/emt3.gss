@@ -1,0 +1,8 @@
+GRAMMAR 1
+# A bolted three-phase fault at bus 5 of the WSCC 9-bus case for 10 ms, watched on all three phases of bus 5.
+LOAD CASE "data/matpower/lib/case9.m" FREQUENCY 60 HZ
+SELECT ENGINE EMT THREE_PHASE WITH PROBE "5"
+AT 10 MS FAULT BUS "5"
+AT 20 MS CLEAR FAULT BUS "5"
+STEP SIM 30 MS
+REPORT SIM

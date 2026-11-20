@@ -257,13 +257,12 @@ resistors, switches and pure-R arms do not.
    Bergeron line adds `Yc` at `(K,K)` and `(M,M)` only.
 3. `Builder.Build()` sorts each row by column with `Array.Sort` keyed on the column alone, sums the entries of a
    duplicated cell in insertion order (the row key is column then insertion index, so the order holds at every row length), drops added values equal to zero, and inserts an explicit diagonal entry in every row.
-4. The ordering is `SparseLu.Ordering(G)`, reverse Cuthill-McKee on the structurally symmetrised graph: components
-   start from a minimum-degree node, each node's unvisited neighbours are queued in ascending degree, and the
-   visit order is reversed. It is a pure function of the sparsity pattern. The engine caches the ordering with
+4. The ordering is `SparseLu.Ordering(G)`, exact minimum degree on the structurally symmetrised graph
+   ([ch. 4](<0004 Sparse and GPU numerics.md>); reverse Cuthill-McKee before 2.1.073). It is a pure function of the sparsity pattern. The engine caches the ordering with
    the `RowPtr` and `ColIdx` arrays it was computed for and reuses it whenever a later `Refactor()` produces
    identical arrays (compared by content).
 5. `SparseLu.FactorWithOrdering(G, ordering)` converts to column form (exact zeros are dropped) and runs
-   Gilbert-Peierls left-looking LU with partial pivoting: the column permutation is the RCM ordering, the row
+   Gilbert-Peierls left-looking LU with partial pivoting: the column permutation is that ordering, the row
    pivot of each column is the largest `|x_i|` over the rows that are still unpivoted. A pivot at or below
    `NumericTolerances.RelativePivotFloor * max|G_ij|` (`1e-12` times the largest entry) returns null and the
    engine throws `InvalidOperationException("EMT nodal matrix G is singular ...")`. A non-finite companion conductance is
@@ -699,8 +698,8 @@ Each invariant is pinned by a test in `tests/GridSim.Tests/`.
 ### Determinism and bit-identity
 
 The single-phase engine is a deterministic sequential program. The element tables are built in element order and
-iterated in that order every step; the right-hand side is accumulated in a fixed order; the ordering (reverse
-Cuthill-McKee with comparer-driven sorts of deterministic keys) is a function of the pattern; the factorisation
+iterated in that order every step; the right-hand side is accumulated in a fixed order; the ordering (minimum
+degree with a fixed tie-break) is a function of the pattern; the factorisation
 and `SolveInto` are scalar double-precision loops with no explicit fused multiply-add and no parallelism; `t` is
 `step * dt` so no rounding accumulates in the time axis. The guarantees that follow:
 
@@ -846,7 +845,7 @@ without it.
 | `src/GridSim.Core/Dynamics/Emt/EmtTypes.cs` | `IntegrationRule`, `EmtProbe`, `EmtPoint`, `EmtRunStats`, `EmtResult`, `EmtOptions`, `EmtConstants` | Rule, probes, results, options, named constants |
 | `src/GridSim.Core/Dynamics/Emt/ThreePhaseEmt.cs` | `ThreePhaseEmtEngine`, `ThreePhaseNetwork`, `ThreePhaseBranch`, `ThreePhaseFault`, `ThreePhaseConverter`, `EmtConverterTrace` | Three-phase engine and average-value converters |
 | `src/GridSim.Core/Numerics/Sparse.cs` | `CsrMatrix.Builder` | Pattern assembly, duplicate summing |
-| `src/GridSim.Core/Numerics/SparseLu.cs` | `SparseLu` | Reverse Cuthill-McKee ordering, `FactorWithOrdering` |
+| `src/GridSim.Core/Numerics/SparseLu.cs` | `SparseLu` | `Ordering` (minimum degree), `FactorWithOrdering` |
 | `src/GridSim.Core/Numerics/SparseLuFactorization.cs` | `SparseLuFactorization` | Gilbert-Peierls LU, `SolveInto` |
 | `src/GridSim.Core/Numerics/NumericTolerances.cs` | `NumericTolerances` | Relative pivot floor |
 | `src/GridSim.Cli/Program.cs` | `RunEmt` | The `emt` verb |

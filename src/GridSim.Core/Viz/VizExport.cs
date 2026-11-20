@@ -8,7 +8,7 @@ namespace GridSim.Core.Viz;
 
 /// <summary>
 /// Exports a grid plus a time-series of solved snapshots over a simulated day, as
-/// a single JSON document a visualiser (the Unity front-end) can load. The network
+/// a single JSON document an external visualiser can load. The network
 /// (buses with layout coordinates, branches) is static; each frame carries the
 /// solved per-bus voltages/angles/injections and the system totals, so the viewer
 /// can animate the grid through the day and let the user scrub/play/inspect.

@@ -55,11 +55,33 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
 
     public double[]? Solve(CsrMatrix a, double[] b)
     {
+        // RC4: count where the solve ran (GpuSolveCounters), without touching the arithmetic.
+        _hostSolve = false;
+        double[]? x = SolveCore(a, b);
+        if (!_hostSolve)
+        {
+            if (x is null) GpuSolveCounters.GaveUp();
+            else GpuSolveCounters.OnDevice();
+        }
+        return x;
+    }
+
+    [ThreadStatic] private static bool _hostSolve;
+
+    private static double[]? HostSolve(CsrMatrix a, double[] b)
+    {
+        _hostSolve = true;
+        GpuSolveCounters.OnHost();
+        return new CpuSparseLuSolver().Solve(a, b);
+    }
+
+    private double[]? SolveCore(CsrMatrix a, double[] b)
+    {
         int n = a.N;
         if (b.Length != n) throw new ArgumentException("b length must equal A.N.");
 
         if (!RocmContext.IsAvailable)
-            return new CpuSparseLuSolver().Solve(a, b);
+            return HostSolve(a, b);
 
         int nnz = a.Val.Length;
         int maxIter = NumericTolerances.DefaultKrylovMaxIterations(n);
@@ -70,7 +92,7 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
         {
             int dp = a.DiagPtr[i];
             double d = dp >= 0 ? a.Val[dp] : 0.0;
-            if (d == 0.0 || double.IsNaN(d)) return new CpuSparseLuSolver().Solve(a, b);
+            if (d == 0.0 || double.IsNaN(d)) return HostSolve(a, b);
             invDiag[i] = 1.0 / d;
         }
 
@@ -250,7 +272,7 @@ public sealed class RocmSparseLinearSolver : ISparseLinearSolver
         }
 
         RecordOutOfMemoryFallback(outOfMemory ?? throw new InvalidOperationException("ROCm sparse solve: left the device block with no result and no out-of-memory fault."));
-        return new CpuSparseLuSolver().Solve(a, b);
+        return HostSolve(a, b);
     }
 
     /// <summary>GR-475: count the out-of-memory fallback, keep its text and say so on stderr.</summary>

@@ -97,6 +97,19 @@ public static class GpuContext
     /// <summary>OpenCL device name plus an FP64 note.</summary>
     public static string OpenClDescription => DescriptionFor(AcceleratorType.OpenCL);
 
+    /// <summary>APP-08: true when the direct driver probe's text says it timed out (see <see cref="ProbeWithTimeout"/>).</summary>
+    internal static bool DriverProbeTimedOut(string probeText) =>
+        probeText.StartsWith("driver probe timed out", StringComparison.Ordinal);
+
+    /// <summary>
+    /// APP-08: the ILGPU context to enumerate with. After a timed-out probe the CUDA driver is wedged, and ILGPU's default
+    /// context would enter the very same driver entry point under <c>InitLock</c> and never return, hanging every thread that
+    /// touches the GPU surface; so the context is then built with the OpenCL backend alone and the CUDA entry keeps the
+    /// probe's text. Test seam: replaceable, host plumbing only.
+    /// </summary>
+    internal static Func<bool, Context> ContextFactory { get; set; } = includeCuda =>
+        includeCuda ? Context.CreateDefault() : Context.Create(builder => ILGPU.Runtime.OpenCL.CLContextExtensions.OpenCL(builder));
+
     private static void EnsureInitialised()
     {
         if (_initialised) return;
@@ -114,13 +127,15 @@ public static class GpuContext
             try
             {
 
-                _context = Context.CreateDefault();
+                bool cudaWedged = DriverProbeTimedOut(drv);
+                _context = ContextFactory(!cudaWedged);
 
                 // Enumerate everything ILGPU found, so a missing device is visible, not silent.
                 var devs = _context.Devices;
                 string seen = !devs.Any() ? "none" : string.Join(", ", devs.Select(d => d.AcceleratorType.ToString()));
 
-                InitCuda(seen, drv);
+                if (cudaWedged) _backends[AcceleratorType.Cuda].Description = $"CUDA not initialised: {drv}";
+                else InitCuda(seen, drv);
                 InitOpenCl(seen);
 
                 // If neither accelerator came up, drop the context - nothing will touch the device.
@@ -239,21 +254,35 @@ public static class GpuContext
     }
 
     /// <summary>
-    /// Best-effort note on CUDA FP64 speed. Consumer GeForce parts throttle double precision
-    /// heavily (commonly 1/32-1/64 of FP32); data-centre parts (Tesla/A100/H100) run it fast.
+    /// Best-effort note on CUDA FP64 speed, by device name. Consumer GeForce parts throttle double precision
+    /// heavily (commonly 1/32-1/64 of FP32); data-centre parts (Tesla/A100/H100) and the Quadro GP100/GV100 run it
+    /// fast. Workstation parts (Quadro, RTX A-series, RTX Ada Generation, RTX PRO) are labelled as workstation GPUs:
+    /// apart from the GP100/GV100 they throttle FP64 like the consumer parts of the same generation.
     /// We can only report a heuristic without launching a benchmark.
     /// </summary>
-    private static string Fp64Note(string? name)
+    internal static string Fp64Note(string? name)
     {
         name ??= string.Empty;
+        // Checked first: "Quadro GV100" also contains "V100".
+        if (name.Contains("GP100", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("GV100", StringComparison.OrdinalIgnoreCase))
+            return "FP64 is fast (workstation GPU)";
         bool dataCentre =
             name.Contains("A100", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("H100", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("V100", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("Tesla", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("GH200", StringComparison.OrdinalIgnoreCase);
-        return dataCentre
-            ? "FP64 is fast (data-centre GPU)"
+        if (dataCentre)
+            return "FP64 is fast (data-centre GPU)";
+        bool workstation =
+            name.Contains("Quadro", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("RTX PRO", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("Ada Generation", StringComparison.OrdinalIgnoreCase) ||
+            System.Text.RegularExpressions.Regex.IsMatch(name, @"\bRTX\s+A\d{3,4}\b",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        return workstation
+            ? "FP64 is likely rate-limited (workstation GPU)"
             : "FP64 is likely rate-limited (consumer GPU)";
     }
 

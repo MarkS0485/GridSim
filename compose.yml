@@ -11,7 +11,14 @@
 #   GRIDSIM_KEYS_DIR          data-protection key ring: a host folder, or the named volume "gridsim-keys" (default)
 #   GRIDSIM_KEYS_MODE         rw (default) or ro, for a shared key ring owned by another app
 #   GRIDSIM_REPLAY_ONLY       true (default): only the public-data replay; false exposes /api and /ws/sim, which
-#                             have no authorisation yet (F14), so only on a trusted network
+#                             are gated by role: POST /api/solve needs Analyst and every /ws/sim control needs
+#                             Operator, and an anonymous caller is a Viewer on an instance that answers a
+#                             non-loopback name, so set GRIDSIM_ANONYMOUS_ROLE (below) or sign callers in
+#   GRIDSIM_ANONYMOUS_ROLE    role an anonymous caller holds: Viewer, Analyst, Operator or Administrator (empty = Operator when
+#                             only loopback names are answered, Viewer otherwise); the widest band to grant only
+#                             on a trusted network
+#   GRIDSIM_ALLOWED_ORIGINS   extra page origins allowed to open /ws/sim (empty = the page's own host only)
+#   GRIDSIM_MAX_SESSIONS_PER_CLIENT  most /ws/sim sessions one client may hold (empty = 16)
 #   GRIDSIM_BRIDGE_ENDPOINT   wss:// address of a GDA bridge (empty = the live bridge source is unavailable)
 #   GRIDSIM_BRIDGE_ALLOW_UNENCRYPTED  true to allow a ws:// bridge address, for a bridge on a private network only
 #                             (default false: a ws:// address stops start-up, naming this setting)
@@ -34,6 +41,8 @@
 #                             only (localhost;127.0.0.1;[::1]). Behind a proxy that forwards Host (the nginx example
 #                             does), set the public name, e.g. gridsim.example.com, or every request gets a 400
 #                             naming this setting. * answers any name and removes the DNS-rebinding protection
+#                             The container health probe (Host: localhost, from inside the container) is still
+#                             answered under a custom list: the app lets a loopback Host through from a loopback peer
 #   GRIDSIM_FRAME_ANCESTORS   who may frame the pages (CSP frame-ancestors, bug #179): 'none' by default; e.g.
 #                             'self' https://portal.example.com
 #   GRIDSIM_HSTS              true (default): the app sends HSTS on HTTPS requests; false leaves it to the proxy
@@ -83,6 +92,9 @@ services:
       Auth__KeyCertificatePath: "${GRIDSIM_KEY_CERT:-}"
       Sso__PublicOrigin: "${GRIDSIM_SSO_PUBLIC_ORIGIN:-}"
       GridSim__MaxSessions: "${GRIDSIM_MAX_SESSIONS:-}"
+      GridSim__AnonymousRole: "${GRIDSIM_ANONYMOUS_ROLE:-}"
+      GridSim__AllowedOrigins: "${GRIDSIM_ALLOWED_ORIGINS:-}"
+      GridSim__MaxSessionsPerClient: "${GRIDSIM_MAX_SESSIONS_PER_CLIENT:-}"
       GridSim__TrustedProxies: "${GRIDSIM_TRUSTED_PROXIES:-loopback,private}"
       Site__GoogleTagId: "${GRIDSIM_GOOGLE_TAG_ID:-}"
       Site__AnalyticsScriptUrl: "${GRIDSIM_ANALYTICS_SCRIPT_URL:-}"

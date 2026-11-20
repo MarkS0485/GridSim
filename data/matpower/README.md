@@ -2,7 +2,7 @@
 
 Standard power-system test cases in MATPOWER `.m` format, parsed by
 `GridSim.Core.IO.Matpower.MatpowerParser`. Small classic cases are also embedded in
-`GridSim.Core` and exposed through `IeeeCases` (Case14 … Case300, Case24Rts, CigreMv);
+`GridSim.Core` and exposed through `IeeeCases` (Case14 ... Case300, Case24Rts, CigreMv);
 the larger libraries are discovered from this folder by the CLI (`gridsim <file>.m`,
 `gridsim bench`) and the WPF source picker.
 
@@ -14,7 +14,7 @@ the larger libraries are discovered from this folder by the CLI (`gridsim <file>
 | `pegase/` | `case1354pegase`, `case2869pegase`, `case9241pegase` | MATPOWER 8.0 `data/` | 8.0 | MATPOWER case file, not covered by the BSD-3-Clause code licence; citation (below) |
 | `rts/` | `pglib_opf_case73_ieee_rts` (RTS-96, 73-bus 3-area) | [PGLib-OPF](https://github.com/power-grid-lib/pglib-opf) | master | CC BY 4.0 |
 | `nesta/` | `pglib_opf_case{3_lmbd,5_pjm,30_as,162_ieee_dtc,240_pserc,588_sdet}` | PGLib-OPF | master | CC BY 4.0 |
-| `benchmarks/` | `cigre_mv` (authored, not upstream) | CIGRE TF C6.04.02 report / pandapower reference | — | see below |
+| `benchmarks/` | `cigre_mv` (authored, not upstream) | CIGRE TF C6.04.02 report / pandapower reference | - | see below |
 | `gb/` | `GBreducednetwork` (29 bus), `GBnetwork` (2,224 bus), and the PyPSA-GB reduced and zonal CSV networks | Strathclyde / Edinburgh test case archive, PyPSA-GB @ 8e084af | 2012-2013 | MIT (PyPSA-GB) and the Edinburgh archive's terms: see `gb/README.md` |
 
 ### NESTA note
@@ -52,7 +52,7 @@ Hand-authored to the CIGRE Task Force C6.04.02 European MV distribution benchmar
 ## Required citations
 
 - **PEGASE**: S. Fliscounakis et al., "Contingency Ranking with Respect to Overloads in
-  Very Large Power Systems…", IEEE Trans. Power Syst., 2013; and C. Josz et al., "AC Power
+  Very Large Power Systems...", IEEE Trans. Power Syst., 2013; and C. Josz et al., "AC Power
   Flow Data in MATPOWER and QCQP Format: iTesla, RTE Snapshots, and PEGASE", 2016.
 - **PGLib-OPF / RTS-96 / NESTA-lineage**: S. Babaeinejadsarookolaee et al., "The Power Grid
   Library for Benchmarking AC Optimal Power Flow Algorithms", arXiv:1908.02788.

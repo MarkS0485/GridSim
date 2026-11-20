@@ -1,0 +1,38 @@
+{
+  "format": "gridsim-model/1",
+  "id": "TGOV1",
+  "title": "TGOV1 steam turbine-governor",
+  "role": "governor",
+  "source": "PSS/E TGOV1 simple steam turbine-governor; block structure as implemented in GridSim.Core.Dynamics.Models.Tgov1 (droop, valve lag with limits, reheat lead-lag, damping). Public-source citation as given in that class documentation; not independently re-verified in R4-08.",
+  "parameters": [
+    { "name": "R",    "unit": "pu", "value": 0.05, "min": 0, "minExclusive": true, "description": "permanent droop" },
+    { "name": "T1",   "unit": "s",  "value": 0.5,  "min": 0, "description": "valve time constant" },
+    { "name": "T2",   "unit": "s",  "value": 1.0,  "min": 0, "description": "reheat lead" },
+    { "name": "T3",   "unit": "s",  "value": 5.0,  "min": 0, "minExclusive": true, "description": "reheat lag" },
+    { "name": "Dt",   "unit": "pu", "value": 0.0,  "description": "turbine damping" },
+    { "name": "Vmin", "unit": "pu", "value": 0.0,  "allowInfinite": true, "description": "valve lower limit" },
+    { "name": "Vmax", "unit": "pu", "value": 1.2,  "allowInfinite": true, "description": "valve upper limit" }
+  ],
+  "ports": {
+    "inputs": [ { "name": "speed", "unit": "pu" } ],
+    "outputs": [ { "name": "pm", "unit": "pu", "from": "pmech" } ]
+  },
+  "blocks": [
+    { "id": "pref",   "type": "hold" },
+    { "id": "droop",  "type": "div", "inputs": ["speed"], "params": { "d": "@R" } },
+    { "id": "cmd",    "type": "sum", "inputs": ["pref", "droop"], "signs": "+-" },
+    { "id": "valve",  "type": "lag", "inputs": ["cmd"], "params": { "gain": 1.0, "time": "@T1", "min": "@Vmin", "max": "@Vmax" } },
+    { "id": "reheat", "type": "leadlag", "inputs": ["valve"], "params": { "lead": "@T2", "lag": "@T3" } },
+    { "id": "damp",   "type": "gain", "inputs": ["speed"], "params": { "k": "@Dt" } },
+    { "id": "pmech",  "type": "sum", "inputs": ["reheat", "damp"], "signs": "+-" }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "pm0", "unit": "pu" } ],
+    "steps": [
+      { "action": "require", "value": "pm0", "min": "@Vmin", "max": "@Vmax", "model": "TGOV1", "quantity": "valve position Pgv", "argument": "mechanicalPowerPu" },
+      { "action": "initialise", "block": "pref",   "values": ["pm0"] },
+      { "action": "initialise", "block": "valve",  "values": ["pm0"] },
+      { "action": "initialise", "block": "reheat", "values": ["pm0"] }
+    ]
+  }
+}

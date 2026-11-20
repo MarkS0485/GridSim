@@ -641,6 +641,8 @@ public sealed class BridgeSession : ObservableModel
 
     // ======================================== restart (WPF ApplyBridgeStream) ========================================
 
+    private int _streamGeneration;   // APP-26: bumped by every stream restart (ApplyStreamAsync)
+
     /// <summary>
     /// Re-anchor the live stream on the currently selected zone and historical start, without reconnecting: stop the
     /// current stream and start the new one on the same socket (WPF ApplyBridgeStream). Any what-if is cleared first.
@@ -651,6 +653,7 @@ public sealed class BridgeSession : ObservableModel
     public async Task ApplyStreamAsync()
     {
         if (_bridge is not GridBridgeClient b) return;
+        _streamGeneration++;   // APP-26: a query sent before this restart must not be painted onto the restarted stream
         _whatIf = false; Feed?.ClearQueryResult();
         _bridgeLive = false;
         // A new stream plays (D-DOC-141): a held display of the old stream has nothing left to show.
@@ -878,6 +881,7 @@ public sealed class BridgeSession : ObservableModel
         if (_bridge is not GridBridgeClient b) return;
         Feed?.SetBridgeStatus($"QUERY  *  {op} ...", BridgeChoices.WarnColour);
         if (Feed is not null) Feed.Log(Feed.Clock, $"Bridge query: {title} ...");
+        int generation = _streamGeneration;   // APP-26
         QueryResult qr;
         try { qr = await b.Query(op, _bridgeQueryAt, @params).ConfigureAwait(true); }   // the continuation resumes on the UI thread
 #pragma warning disable CA1031 // Not swallowed: shown on the pill, as an alarm and in the event log, as WPF shows it.
@@ -895,6 +899,13 @@ public sealed class BridgeSession : ObservableModel
             return;
         }
         if (!ReferenceEquals(_bridge, b)) return;   // switched away while the query was in flight
+        if (generation != _streamGeneration)
+        {
+            // APP-26: the stream was restarted (zone, start or source changed) while the query was in flight; the answer
+            // describes the previous stream, so it is dropped rather than painted onto the restarted one.
+            if (Feed is not null) Feed.Log(Feed.Clock, $"Query '{op}' answer for the previous stream discarded");
+            return;
+        }
 
         bool hasOverlay = false, notConverged = false;
         if (qr.Solve is SolveSnapshot snap)

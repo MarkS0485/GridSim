@@ -1,0 +1,12 @@
+# Buses: Bus results
+Bus,Voltage (pu),Note,Rate (MVA)
+1,1.0000,slack | ref,100.5
+2,0.9871,load,
+3,0.9500,"a,b ""c""",7.0
+
+# Buses: Missing table
+# no data: No table data at /tables/none/rows.
+
+# template-sha256 efb542df3715f3b3c0369d38a4de24e18a3621cd0e98a045258e951d4ce12aac
+# result-sha256 5d4a248690a67e46234f42befbea9c568ce3b8c6f3196b447713b71b086b5b8c
+# generator gridsim-report/1

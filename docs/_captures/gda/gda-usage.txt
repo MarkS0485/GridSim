@@ -1,5 +1,5 @@
 $ gridsim gda
-GridSim  -  GDA ingestion from W:\GDA\DataSources  (NGED)
+GridSim  -  GDA ingestion from <gda-root>  (NGED)
 ==========================================================================
 Built in 1841 ms  -  GB/NGED ex-GDA
 

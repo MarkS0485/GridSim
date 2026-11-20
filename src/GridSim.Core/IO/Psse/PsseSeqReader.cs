@@ -128,6 +128,8 @@ public static class PsseSeqReader
             while (true)
             {
                 PsseRecord? r = cur.Next(Sections[si]);
+                if (r is null && records[Sections[si]].Count > 0)
+                    throw records[Sections[si]][^1].Error($"the file ends inside the {Sections[si]} data with no terminating 0 record; the file is truncated");
                 if (r is null || r.IsEndOfData) { ended = true; break; }
                 if (r.IsTerminator) { read = si + 1; break; }
                 records[Sections[si]].Add(r);

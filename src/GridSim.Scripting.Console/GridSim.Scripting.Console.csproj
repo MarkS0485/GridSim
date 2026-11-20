@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- gridsim-script (RC4): the console front end of GridSim.Scripting. Runs a .gss file (run), checks one (check), or
+       opens an interactive session that is recorded as a .gss file. Version: set once in Directory.Build.props. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>GridSim.Scripting.Console</RootNamespace>
+    <AssemblyName>gridsim-script</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GridSim.Scripting\GridSim.Scripting.csproj" />
+  </ItemGroup>
+
+</Project>

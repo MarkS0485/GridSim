@@ -48,11 +48,33 @@ public sealed class GpuSparseLinearSolver : ISparseLinearSolver
 
     public double[]? Solve(CsrMatrix a, double[] b)
     {
+        // RC4: count where the solve ran (GpuSolveCounters), without touching the arithmetic.
+        _hostSolve = false;
+        double[]? x = SolveCore(a, b);
+        if (!_hostSolve)
+        {
+            if (x is null) GpuSolveCounters.GaveUp();
+            else GpuSolveCounters.OnDevice();
+        }
+        return x;
+    }
+
+    [ThreadStatic] private static bool _hostSolve;
+
+    private static double[]? HostSolve(CsrMatrix a, double[] b)
+    {
+        _hostSolve = true;
+        GpuSolveCounters.OnHost();
+        return new CpuSparseLuSolver().Solve(a, b);
+    }
+
+    private double[]? SolveCore(CsrMatrix a, double[] b)
+    {
         int n = a.N;
         if (b.Length != n) throw new ArgumentException("b length must equal A.N.");
 
         if (!GpuContext.IsAvailableFor(_accel))
-            return new CpuSparseLuSolver().Solve(a, b);
+            return HostSolve(a, b);
 
         // Bug #40: a NaN or infinite right-hand side is refused, as the CPU sparse LU refuses it, instead of returning null
         // (which sent it to a fallback that could only give a non-finite answer too). A read-only pre-check: on finite
@@ -70,7 +92,7 @@ public sealed class GpuSparseLinearSolver : ISparseLinearSolver
         {
             int dp = a.DiagPtr[i];
             double d = dp >= 0 ? a.Val[dp] : 0.0;
-            if (d == 0.0 || double.IsNaN(d)) return new CpuSparseLuSolver().Solve(a, b);
+            if (d == 0.0 || double.IsNaN(d)) return HostSolve(a, b);
             invDiag[i] = 1.0 / d;
         }
 

@@ -225,18 +225,19 @@ fails loud instead of dropping a term.
 
 1. **Direct sparse LU.** `CpuSparseLuSolver.Solve` factors `J` and solves. The factorisation
    (`src/GridSim.Core/Numerics/SparseLu.cs`, `SparseLuFactorization.cs`) is Gilbert-Peierls left-looking LU
-   with partial pivoting over a reverse Cuthill-McKee (RCM) column ordering.
+   with partial pivoting over an exact minimum-degree column ordering (from 2.1.073; reverse Cuthill-McKee before).
    - CSR is converted to CSC; explicit zeros are dropped.
-   - RCM works on the symmetrised pattern with duplicate neighbours removed. Each connected component starts from
-     a minimum-degree node, a node's unvisited neighbours are queued in ascending degree, and the visiting order
-     is reversed at the end. The ordering depends only on the pattern.
-   - For each column in RCM order the factorisation does one sparse triangular solve (pattern found by
+   - The minimum-degree ordering works on the symmetrised pattern (`A + A^T`, diagonal ignored) and eliminates, one
+     at a time, a node of smallest current degree, joining its remaining neighbours into a clique; ties go to the most
+     recently inserted node, and the first ties to the lowest index. The ordering depends only on the pattern
+     ([ch. 4](<0004 Sparse and GPU numerics.md>)).
+   - For each column in that order the factorisation does one sparse triangular solve (pattern found by
      depth-first reach) and picks the pivot as the largest `|x[i]|` among rows that are still unpivoted (strict `>`, so the
      first maximum in reach order wins). There is no diagonal preference.
    - The matrix is singular when no pivot candidate exists or when the best candidate satisfies
      `|pivot| <= NumericTolerances.RelativePivotFloor * max|J|` with `RelativePivotFloor = 1e-12`. A NaN in `J`
      throws `ArgumentException` from the factorisation.
-   - `CpuSparseLuSolver` caches the RCM ordering and recomputes it only when the CSR structure changes (compared
+   - `CpuSparseLuSolver` caches the ordering and recomputes it only when the CSR structure changes (compared
      by content on every call), so inside a pass only the numeric factorisation repeats; a reactive-limit
      bus-type switch changes the pattern and triggers a new ordering.
    - All arithmetic in the factorisation and the solve is scalar double-precision multiply, subtract and divide.
@@ -267,7 +268,7 @@ calls that solver's `SolveInPlace` as given, applies the same finite-step guard,
 damp = maxAbs > MaxUndampedStep ? MaxUndampedStep / maxAbs : 1.0          MaxUndampedStep = 0.4
 for i = 0 .. n-1, ascending:
     if pPos[i] >= 0:  Va[i] += damp * dx[pPos[i]]
-    if qPos[i] >= 0:  Vm[i] += damp * dx[qPos[i]];  if Vm[i] < VmFloorPu: Vm[i] = VmFloorPu     VmFloorPu = 0.2
+    if qPos[i] >= 0:  Vm[i] += damp * dx[qPos[i]];  if Vm[i] < VmFloorPu: Vm[i] = VmFloorPu     VmFloorPu = 0.01
 ```
 
 If the largest correction component exceeds 0.4 (radians for an angle, per-unit for a magnitude) the whole step
@@ -290,6 +291,18 @@ The engines fail loud:
 - A Newton step that cannot be solved, or the iteration cap, gives `converged = false` and status `MaxIterations`
   (or `NonFinite` if the mismatch or state is non-finite).
 - `MaxQLimitPasses < 1` with `EnforceQLimits` on throws `ArgumentOutOfRangeException`.
+- Retry from a DC-angle start (`NewtonShell.SolveWithRetry`, since 2.1.073). When the last Newton pass did not
+  converge and it stalled or diverged, the case is solved once more with the same options and voltage magnitudes,
+  the bus angles started from the DC power flow (one slack bus and one DC island needed). A pass counts as stalled
+  unless its final mismatch is at or below `RetryStallFactor` (`1e-3`) times the mismatch at its own start point
+  (`NewtonShell.Stalled`; a NaN counts as stalled). A pass stopped by `MaxIterations` while still converging has cut
+  its mismatch far below that line (2.1e-7, 6.5e-8 and 3.4e-9 of the start on case9, case14 and case118 one step
+  short of convergence from flat start), so it is not retried and is reported `MaxIterations`, exactly as without the
+  retry: the iteration cap is the caller's budget. The failures the retry is for end within a few times of their
+  start (case13659pegase from flat start 0.31, pglib case162_ieee_dtc 0.30, case240_pserc 0.63). A converged retry
+  is reported unless a branch carries more than 90 deg net of its phase shift; otherwise the ordinary result is
+  reported unchanged with a note. `PowerFlowResult.NewtonRetry` and `NewtonRetryNote` say what happened, and
+  `RetryFromDcStart = false` turns the retry off.
 - Studies that start from a solved state call `ConvergenceContract.RequireConverged`
   (`src/GridSim.Core/PowerFlow/ConvergenceContract.cs`), which throws `NonConvergedStateException` naming the
   study, the status, the mismatch and the iteration count. Fault analysis, protection assessment and cascade,
@@ -305,7 +318,7 @@ by one of these mechanisms, each verified in code:
 1. **One equation numbering.** Both call `NewtonShell.EquationPositions`.
 2. **One Jacobian sparsity pattern.** The dense engine builds the sparse engine's Y pattern
    (`SparseNewtonRaphsonPowerFlow.BuildY`) and its Jacobian pattern (`BuildJacobianStructure`), then copies its
-   values into it. The pattern fixes the RCM ordering and so the rounding of the LU.
+   values into it. The pattern fixes the ordering and so the rounding of the LU.
 3. **One linear solver.** Both call `NewtonShell.SolveStep` with a `CpuSparseLuSolver`; the dense engine's own
    dense LU is not used on the CPU path.
 4. **One update rule.** Both call `NewtonShell.ApplyStep`; bus order and arithmetic are part of the contract.
@@ -351,7 +364,7 @@ With `EnforceQLimits` on (the default) each Newton engine runs up to `MaxQLimitP
    one solved state. All violating buses switch in the same pass.
 3. If no bus switched, stop; the converged result stands. Otherwise run the next pass on the new types, starting
    from the solved voltages (a reverted bus restarts at `Vm = Vg`). The unknown numbering changes, so the
-   Jacobian pattern and the RCM ordering are rebuilt.
+   Jacobian pattern and the ordering are rebuilt.
 
 **Forward rule.** For a bus that is still `Pv`, the generators' reactive output is
 `qGen = Q_i * BaseMva + QloadAt(V)` in MVAr, where the load is the load actually drawn at the solved voltage
@@ -680,6 +693,7 @@ lightly loaded line.
 | Enforce Q limits | `true` | - | Run the PV to PQ outer loop. | `PowerFlowOptions.EnforceQLimits` |
 | Q-limit pass cap | `12` | passes | Outer-loop cap; below 1 throws when `EnforceQLimits` is on. | `PowerFlowOptions.MaxQLimitPasses` |
 | Revert Q limits | `false` | - | Opt-in PQ to PV revert (MATPOWER `enforce_q_lims` style). | `PowerFlowOptions.RevertQLimits` |
+| Retry from DC start | `true` | - | Retry a stalled or diverged Newton solve once from DC-power-flow angles; `false` reports the ordinary solve as it ended. | `PowerFlowOptions.RetryFromDcStart` |
 | Trace | `null` | - | Opt-in `SolveTrace` capture of Y, spec, per-step mismatch, correction, Jacobian and Q-limit events; `null` has no overhead. | `PowerFlowOptions.Trace` |
 | Cancellation | `None` | - | Checked at the top of every Newton iteration and every sweep; `None` never throws, so results are bit-identical with or without it. | `PowerFlowOptions.Cancellation` |
 
@@ -690,7 +704,9 @@ Constants:
 | Q-limit slack | `1e-3` | MVA | Margin when comparing generator Q to the aggregate limits. | `NewtonShell.QLimitTolMva` |
 | Revert deadband | `1e-4` | pu | Voltage margin for a PQ to PV revert. | `NewtonShell.RevertVoltTolPu` |
 | Largest undamped step | `0.4` | rad or pu | Cap on the largest correction component. | `NewtonShell.MaxUndampedStep` |
-| Voltage floor | `0.2` | pu | Floor on `Vm` of a PQ bus after an update. | `NewtonShell.VmFloorPu` |
+| Voltage floor | `0.01` (was `0.2` before 2.1.073) | pu | Floor on `Vm` of a PQ bus after an update. | `NewtonShell.VmFloorPu` |
+| Retry stall factor | `1e-3` | ratio | A failed pass is retried only if its final mismatch is above this fraction of its start mismatch. | `NewtonShell.RetryStallFactor` |
+| Retry branch angle | `90` | deg | Largest branch angle (net of phase shift) a converged retry may report. | `NewtonShell.MaxRetryBranchAngleDeg` |
 | Singular-pivot floor | `1e-12` x `max|A_ij|` | relative | A pivot at or below it is singular. | `NumericTolerances.RelativePivotFloor` |
 | BiCGSTAB tolerance | `min(1e-10, Tolerance*1e-3)` | relative residual | Fallback solve convergence. | `NewtonShell.SolveStep` |
 | BiCGSTAB cap | `4m + 200` | iterations | Fallback iteration cap. | `NumericTolerances.DefaultKrylovMaxIterations(m)` (a method) |
@@ -714,7 +730,7 @@ Constants:
 |---|---|
 | Dense and sparse results are bit-identical on the eight built-in cases, 24 named `.m` files and three JSON folders the test lists, under four option sets (not listed: `gb/GBnetwork.m`, `gb/GBreducednetwork.m`, the `data/intl` maps and `data/dist3ph`; `case9241pegase` is left out for memory) | `DenseSparseParityTests.Built_in_case_is_bit_identical_dense_vs_sparse`, `Matpower_file_is_bit_identical_dense_vs_sparse`, `Json_case_is_bit_identical_dense_vs_sparse` |
 | `MaxUndampedStep`, `VmFloorPu`, `RevertVoltTolPu` and the sweep's `SafetyFloor` equal their values, and the floor's effect is isolated | `PowerFlowStepConstantsPinTests` |
-| A cached RCM ordering gives the same bits as a fresh one, across structure changes | `DenseSparseParityTests.Repeated_solves_on_one_sparse_instance_stay_bit_identical` |
+| A cached ordering gives the same bits as a fresh one, across structure changes | `DenseSparseParityTests.Repeated_solves_on_one_sparse_instance_stay_bit_identical` |
 | A non-finite input stops both engines on the first iteration with status `NonFinite`, identically | `DenseSparseParityTests.A_non_finite_input_stops_both_engines_at_once_with_the_same_failure` |
 | A matrix singular to working precision returns `null` from the sparse LU at any scale, and the sparse and dense LU reject the same matrix | `NumericTolerancesTests.Sparse_LU_returns_null_for_a_matrix_singular_to_working_precision_at_any_scale`, `Sparse_and_dense_LU_reject_the_same_near_singular_matrix`, `The_shared_pivot_floor_is_relative_1e_minus_12` |
 | Reaching the iteration cap reports `MaxIterations`, never a stale `Converged`; a solve that converges on the last allowed step is converged; dense and sparse still agree to the bit on a capped solve | `PowerFlowTests.Hitting_the_iteration_cap_reports_MaxIterations_not_converged`, `IterationCapTests.A_solve_that_converges_on_the_last_allowed_step_is_converged`, `Dense_and_sparse_still_agree_to_the_bit_on_a_capped_non_converged_solve` |
@@ -812,8 +828,8 @@ permitted passes. `Iterations = 3 + 3 = 6`; total loss is `132.48074930437622` M
 | `src/GridSim.Core/PowerFlow/NewtonRaphsonPowerFlow.cs` | `NewtonRaphsonPowerFlow` | Dense assembly (`ComputeInjections`, `BuildJacobianInto`, `CopyIntoPattern`), pass loop, reactive-limit loop. |
 | `src/GridSim.Core/PowerFlow/SparseNewtonRaphsonPowerFlow.cs` | `SparseNewtonRaphsonPowerFlow` | CSR Y (`BuildY`), Jacobian pattern, slot map and refill, pass loop, reactive-limit loop. |
 | `src/GridSim.Core/PowerFlow/NewtonShell.cs` | `NewtonShell` | Shared pure functions: bus spec, equation numbering, `SolveStep`, `ApplyStep`, ZIP terms, `ApplyQLimits`, `DiagnoseSlackQ`, `AssembleResult`, `ComputeLineFlows`; the damping, floor and Q-limit constants. |
-| `src/GridSim.Core/PowerFlow/CpuSparseLuSolver.cs` | `CpuSparseLuSolver` | Canonical CPU linear solve with cached RCM ordering. |
-| `src/GridSim.Core/Numerics/SparseLu.cs`, `SparseLuFactorization.cs` | `SparseLu`, `SparseLuFactorization` | RCM ordering and Gilbert-Peierls LU with partial pivoting. |
+| `src/GridSim.Core/PowerFlow/CpuSparseLuSolver.cs` | `CpuSparseLuSolver` | Canonical CPU linear solve with cached minimum-degree ordering. |
+| `src/GridSim.Core/Numerics/SparseLu.cs`, `SparseLuFactorization.cs` | `SparseLu`, `SparseLuFactorization` | Ordering entry points and Gilbert-Peierls LU with partial pivoting. |
 | `src/GridSim.Core/Numerics/Sparse.cs` | `CsrMatrix`, `ComplexCsr`, `Ilu0`, `BiCgStab` | Sparse structures, fallback preconditioner and Krylov solver. |
 | `src/GridSim.Core/Numerics/NumericTolerances.cs` | `NumericTolerances` | Singular-pivot floor, Krylov cap and tolerance. |
 | `src/GridSim.Core/PowerFlow/BackwardForwardSweep.cs` | `BackwardForwardSweep` | Radial and weakly meshed sweep, PV regulation, loop compensation. |

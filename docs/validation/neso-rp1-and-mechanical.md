@@ -3,7 +3,7 @@
 Two situational-awareness control-room tabs added to GridSim (2026-07-09), streamed frame-by-frame
 from the GDA lake over the bridge, plus a reusable drill-down inspector and a fix for the
 bridge/replay map geolocation. Both panels are grounded in the TSGB corpus
-(`W:\Code\TSGB-2026\Proposals\MIF`, `Policy/0021 - The 1,800 Megawatt Fiction.md`).
+(the TSGB-2026 corpus: `Proposals/MIF`, `Policy/0021 - The 1,800 Megawatt Fiction.md`).
 
 ## NESO RP1 - "where am I now / where am I going / how long do I have"
 
@@ -93,13 +93,13 @@ dead end (0% match) - the coords must ride in the stream.
 ## Run it
 
 ```
-python W:\Code\GDA\v1\Applications\GridSim-Bridge\bridge_server.py          # :8770; restart to reload topology
+python <gda-v1>/Applications/GridSim-Bridge/bridge_server.py              # :8770; restart to reload topology
 dotnet build src/GridSim.Wpf/GridSim.Wpf.csproj -c Release                  # close the app first (file locks)
 dotnet run --project src/GridSim.Wpf -c Release -- bridge --zone gb-full --back 30 --tab "NESO RP1"
 ```
 - `--zone` = gb-full or a DNO zone; `--back 30` lands in the presolved 2026-06-10 window; `--tab` boots a tab.
 - Tests: `dotnet test tests/GridSim.Tests` (451). Bridge acceptance:
-  `python W:\Code\GDA\v1\Applications\GridSim-Bridge\test_bridge_stream.py gb-full` (asserts the inertia
+  `python <gda-v1>/Applications/GridSim-Bridge/test_bridge_stream.py gb-full` (asserts the inertia
   split + BM fuel tags).
 - **Screenshot to iterate** - capture with PowerShell `PrintWindow` (flag 2, PW_RENDERFULLCONTENT); it
   grabs the app window without stealing focus. Do NOT script `mouse_event` *clicks* while the user is at

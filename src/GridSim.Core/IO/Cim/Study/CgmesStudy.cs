@@ -215,6 +215,8 @@ public static class CgmesStudyRunner
         GridModel model = bridge.Model;
         admit?.Invoke(model);
         CgmesModelIdentity identity = IdentityOf(bridge);
+        // Resolve the security outages now, so a mistyped mRID is refused before any solve.
+        BranchOutage[]? resolvedOutages = request.Security?.OutageMrids.Select(m => OutageOf(identity, m)).ToArray();
         var import = new CgmesImportReport(options, model.BaseMva,
             request.BaseMva == 100.0 ? "100 MVA (the bridge's default rule unless the study states another; CGMES carries no system base)" : "study file",
             model.FrequencyHz, request.FrequencyHz is null ? "50 Hz (the bridge's default rule; the profiles carry no system frequency)" : "study file",
@@ -272,7 +274,7 @@ public static class CgmesStudyRunner
             }
             else
             {
-                var outages = request.Security.OutageMrids.Select(m => OutageOf(identity, m)).ToArray();
+                BranchOutage[] outages = resolvedOutages!;
                 security = TransmissionSecurityRunner.Run(realised,
                     new TransmissionSecurityRequest(outages, request.MinPu, request.MaxPu, request.Security.PostFaultRating,
                         request.Security.MaxRounds));
@@ -373,7 +375,7 @@ public static class CgmesStudyRunner
             foreach (string prop in new[] { "Switch.open", "Switch.normalOpen" })
             {
                 string? v = descriptions.SelectMany(e => e.Elements()).FirstOrDefault(e => e.Name.LocalName == prop)?.Value.Trim();
-                if (v is "true" or "false") { asFound = v == "true"; break; }
+                if (CgmesBundleInspector.ParseBoolean(v) is bool open) { asFound = open; break; }
             }
             string ns = typed.Name.NamespaceName;
             sb.Append("<rdf:Description rdf:about=\"").Append(System.Security.SecurityElement.Escape(reference)).Append("\">")
@@ -617,7 +619,11 @@ public static class CgmesStudyRunner
             limits.Add(Limit("Voltage", bus.Id, "pu", solved.Vm[i], minPu, maxPu));
             int[] units = Enumerable.Range(0, accounting.Generators.Count).Where(g => accounting.Generators[g].Bus == bus.Id).ToArray();
             if (units.Length > 1) { missing.Add($"Bus {bus.Id}: individual realised generator allocation is unavailable."); continue; }
-            if (units.Length == 0) continue;
+            if (units.Length == 0)
+            {
+                if (bus.Type == BusType.Slack) missing.Add($"Bus {bus.Id}: the slack bus has no in-service unit, so its balancing output is not checked.");
+                continue;
+            }
             Generator g = accounting.Generators[units[0]];
             // As P1: the converged injection is generation minus modelled demand (shunts are in the admittance matrix).
             limits.Add(Limit("GeneratorP", units[0], "MW", solved.PInjMw[i] + bus.Pd, g.Pmin, g.Pmax) with { Tolerance = unitTolerance });
@@ -630,20 +636,23 @@ public static class CgmesStudyRunner
             LineFlow f = solved.LineFlows[i];
             if (f.From != br.From || f.To != br.To) { missing.Add($"Branch {i}: solved identity mismatch."); continue; }
             if (!br.InService) continue;
-            if (!(br.RateAMva > 0) || !double.IsFinite(br.RateAMva)) { unrated++; continue; }
+            if (!(br.RateAMva > 0) || !double.IsFinite(br.RateAMva))
+            {
+                unrated++;
+                continue;
+            }
             double from = Math.Sqrt(f.PFromMw * f.PFromMw + f.QFromMvar * f.QFromMvar);   // DetMath rule: no Hypot
             double to = Math.Sqrt(f.PToMw * f.PToMw + f.QToMvar * f.QToMvar);
             limits.Add(Limit("BranchFrom", i, "MVA", from, null, br.RateAMva) with { Source = "A" });
             limits.Add(Limit("BranchTo", i, "MVA", to, null, br.RateAMva) with { Source = "A" });
         }
+        if (unrated > 0) missing.Add($"{unrated} live branch(es) have no rating and are not thermally evaluated.");
         if (limits.Any(l => !double.IsFinite(l.Observed)))
             return new(null, "INCOMPLETE", "Non-finite realised measurement.", solved.Status, solved.MaxMismatch, solved.TotalLossMw,
                 limits.Where(l => double.IsFinite(l.Observed)).ToArray(), solved.SolvedBusTypes);
         string disposition = missing.Count > 0 ? "INCOMPLETE"
             : limits.Any(l => l.Violated) ? $"VIOLATIONx{limits.Count(l => l.Violated)}" : "SECURE";
         string? reason = missing.Count > 0 ? string.Join(" ", missing) : null;
-        if (unrated > 0)
-            reason = (reason is null ? "" : reason + " ") + $"{unrated} live branch(es) have no rating and are not thermally evaluated.";
         return new(null, disposition, reason, solved.Status, solved.MaxMismatch, solved.TotalLossMw, limits, solved.SolvedBusTypes);
     }
 

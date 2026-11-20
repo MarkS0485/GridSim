@@ -24,7 +24,7 @@
     <!-- ============ experimental attributions ============ -->
     <Border Grid.Row="1" Classes="Card" Padding="16,12" Margin="0,0,0,10">
       <StackPanel>
-        <TextBlock Text="EXPERIMENTAL MODELS  *  opt-in, off the validated path" Classes="PanelHeader" />
+        <TextBlock Text="EXPERIMENTAL MODELS  *  opt-in, separate from the standard solver path" Classes="PanelHeader" />
         <WrapPanel Orientation="Horizontal" Margin="0,10,0,0">
           <StackPanel Margin="0,0,44,8">
             <TextBlock Text="RECIPROCITY (Y = Y^T)" Classes="Label" />

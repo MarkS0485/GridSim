@@ -541,6 +541,131 @@ PROTECTION SIMULATION suggests 27 protection event(s) would occur. e.g. on branc
 The full table also lists the `46` negative-sequence element on every branch whose negative-sequence current is more
 than 0.2 times its rated current.
 
+### Simultaneous faults and open conductors
+
+`fault --type` studies one fault at one bus. Two verbs cover the rest of the short-circuit family on the same sequence
+networks: `fault-simultaneous` puts a solid fault at each of several buses at the same instant, and `fault-series` opens
+one or two conductors in the series element of a branch. Both start from the prefault power flow, as `fault` does.
+
+Two faults at once, on `case14`: a line-to-line fault at bus 4 and a bolted three-phase fault at bus 9.
+
+```bash
+gridsim fault-simultaneous case14 --at 4:ll,9:3ph
+```
+
+```
+$ gridsim fault-simultaneous case14 --at 4:ll,9:3ph
+Simultaneous faults  -  IEEE 14-bus  bus 4 line to line (b-c), bus 9 three-phase
+  bus 4: line to line (b-c)
+    phase currents: Ia 0.000 pu  Ib 8.979 pu  Ic 8.979 pu
+    earth current |3I0|: 0.000 pu   sequence |I1| 5.184  |I2| 5.184  |I0| 0.000 pu
+    phase voltages: Va 0.664  Vb 0.332  Vc 0.332 pu
+  bus 9: three-phase
+    phase currents: Ia 6.785 pu  Ib 4.472 pu  Ic 4.320 pu
+    earth current |3I0|: 0.000 pu   sequence |I1| 5.006  |I2| 1.780  |I0| 0.000 pu
+    phase voltages: Va 0.000  Vb 0.000  Vc 0.000 pu
+  (generator X''d synthesised at 0.20 pu where not supplied, X2 = X''d where not supplied; line Z0 = 3 x Z1 where not supplied; loads neglected in the zero sequence; converter units keep their prefault current; all faults solid)
+[exit 0]
+```
+
+The faults interact, which is the point of the study. Alone, the line-to-line fault at bus 4 carries 10.752 pu in phases b and c
+(the `fault case14 --bus 4 --type ll` figure above); with the second fault present it carries 8.979 pu, because the three-phase fault
+at bus 9 holds that bus at zero and takes current from the same sources. The three-phase fault at bus 9 would carry a balanced
+current on its own; beside the line-to-line fault it also draws negative-sequence current (`|I2|` 1.780 pu), so its three phase
+currents differ. The study assembles the transfer impedances between the fault buses in each sequence network and solves the
+boundary conditions of all the faults together. A single `--at` entry is the ordinary unbalanced fault and gives the same
+currents as `fault --type`. `case14` has no earthed neutral, so `slg` and `dlg` are refused there with exit 3; a JSON v2 case that
+carries winding connections takes them.
+
+An open conductor needs a case that carries windings, because the zero-sequence network must be earthed on both sides of the
+break. This small chain (a generator behind a delta / grounded-wye transformer, a line, a grounded-wye / delta transformer and a load)
+is a JSON v2 case; its network file is
+
+```json
+{
+  "schema": "gridsim-network/2",
+  "buses": [
+    { "id": 1, "name": "G", "baseKv": 20, "type": "slack", "vm": 1.0 },
+    { "id": 2, "name": "A", "baseKv": 132, "type": "pq" },
+    { "id": 3, "name": "B", "baseKv": 132, "type": "pq" },
+    { "id": 4, "name": "L", "baseKv": 20, "type": "pq" }
+  ],
+  "generators": [ { "name": "G1", "bus": 1, "type": "", "capacityMva": 100, "outputMw": 0, "voltageSetpoint": 1.0, "role": "slack", "subtransientXdPu": 0.2 } ],
+  "demands": [ { "name": "load", "bus": 4, "pMw": 60, "qMvar": 20 } ],
+  "lines": [ { "name": "L23", "from": 2, "to": 3, "rPu": 0.01, "xPu": 0.2, "ratingMva": 100 } ],
+  "transformers": [
+    { "name": "T1", "from": 1, "to": 2, "rPu": 0, "xPu": 0.1, "ratingMva": 100, "windings": { "from": "Delta", "to": "WyeGrounded" } },
+    { "name": "T2", "from": 3, "to": 4, "rPu": 0, "xPu": 0.15, "ratingMva": 100, "windings": { "from": "WyeGrounded", "to": "Delta" } }
+  ]
+}
+```
+
+with the manifest `{ "schema": "gridsim-case/2", "name": "chain4", "system": { "baseMva": 100, "frequencyHz": 50 }, "network": ["chain.network.json"] }`
+in `chain.case.json`. In that case the line is branch 0 (lines are read before transformers). One conductor open in the line:
+
+```bash
+gridsim fault-series chain.case.json --branch 0 --open 1
+```
+
+```
+$ gridsim fault-series chain.case.json --branch 0 --open 1
+Series fault, one conductor open (phase a)  -  chain4  branch 0 (2-3)
+  prefault current through the element: 0.7610 pu (0.333 kA)
+  impedances across the break (pu): Zs1 1.0460+j0.9953  Zs2 1.0460+j0.9953  Zs0 0.0300+j0.8500
+  phase a: current 0.0000 pu (0.000 kA)   voltage across the break 0.9624 pu
+  phase b: current 0.6707 pu (0.293 kA)   voltage across the break 0.0000 pu
+  phase c: current 1.0291 pu (0.450 kA)   voltage across the break 0.0000 pu
+  sequence currents |I1| 0.5580  |I2| 0.2222  |I0| 0.3772 pu
+  (generator X''d synthesised at 0.20 pu where not supplied, X2 = X''d where not supplied; line Z0 = 3 x Z1 where not supplied; loads constant impedance in the positive and negative sequence, neglected in the zero sequence; the break is in the series element, line charging stays at the buses)
+[exit 0]
+```
+
+- `prefault current through the element`: the positive-sequence current `(V_from - V_to) / Zb` the line carries before the break.
+- `impedances across the break`: the Thevenin impedance seen across the break in each sequence, including the line's own series
+  impedance. Here `Zs1` is the line (0.01 + j0.2) plus the source side (the generator j0.2 and the transformer j0.1 to earth), the load
+  side (the transformer j0.15 and the load's constant impedance to earth). `Zs0` is three times the line plus the two transformer
+  shunts j0.1 and j0.15, the only earth paths.
+- `phase a: current 0.0000 pu`: the open conductor carries nothing. Phases b and c carry the redistributed current, and phase a
+  shows the voltage across the break (0.9624 pu); the closed phases show none.
+- The sequence currents follow the textbook connection for one open conductor: the three sequence networks in parallel across the
+  break, `I1 = Zs1 I / (Zs1 + Zs2 || Zs0)`.
+
+`--open 2` opens phases b and c. The three sequence networks are then in series, `I1 = I2 = I0 = Zs1 I / (Zs0 + Zs1 + Zs2)`, so
+phase a carries `3 I1` and phases b and c carry nothing:
+
+```bash
+gridsim fault-series chain.case.json --branch 0 --open 2
+```
+
+```
+$ gridsim fault-series chain.case.json --branch 0 --open 2
+Series fault, two conductors open (phases b and c)  -  chain4  branch 0 (2-3)
+  prefault current through the element: 0.7610 pu (0.333 kA)
+  impedances across the break (pu): Zs1 1.0460+j0.9953  Zs2 1.0460+j0.9953  Zs0 0.0300+j0.8500
+  phase a: current 0.9297 pu (0.407 kA)   voltage across the break 0.0000 pu
+  phase b: current 0.0000 pu (0.000 kA)   voltage across the break 1.2209 pu
+  phase c: current 0.0000 pu (0.000 kA)   voltage across the break 0.7957 pu
+  sequence currents |I1| 0.3099  |I2| 0.3099  |I0| 0.3099 pu
+  (generator X''d synthesised at 0.20 pu where not supplied, X2 = X''d where not supplied; line Z0 = 3 x Z1 where not supplied; loads constant impedance in the positive and negative sequence, neglected in the zero sequence; the break is in the series element, line charging stays at the buses)
+[exit 0]
+```
+
+A break that has no defined zero-sequence impedance is refused by name rather than given a number (exit 1). On `case14`:
+
+```bash
+gridsim fault-series case14 --branch 3 --open 1
+```
+
+```
+$ gridsim fault-series case14 --branch 3 --open 1
+fault-series: series fault: with branch 3 (2-4) broken, the from-side (bus 2) of the zero-sequence network reaches no earthed neutral, so the zero-sequence impedance across the break is infinite and SeriesFault.OpenConductors (which needs it finite) does not apply.
+[exit 1]
+```
+
+The same refusal covers a radial feeder behind a delta transformer, a branch with a tap or phase shift, a delta or ungrounded
+winding and a break that leaves one side with no source or load (see [fault-series](<0019 CLI reference.md#fault-series>)).
+A shunt fault and a series fault at the same instant is not offered: Core has no combined solution of the two.
+
 ### The duty at every bus
 
 ```bash
@@ -943,6 +1068,9 @@ leaves at 49.6 Hz, the nadir is 49.595 Hz and the frequency settles at 49.951 Hz
 
 - Earth faults (`slg` and `dlg`) need a JSON v2 case that carries winding connections; on a MATPOWER case or a JSON v1
   folder the verbs exit 3.
+- `fault-series` needs a zero-sequence network earthed on both sides of the break, so it runs on a JSON v2 case with windings
+  only, and it refuses taps, phase shifters and delta or ungrounded windings. `fault-simultaneous` takes solid faults and runs no
+  relay overlay. Neither combines a shunt fault with a series fault.
 - The relay assessment is positive-sequence and phasor-based: 81R and 78 need a frequency trajectory and are not evaluated
   on a snapshot or a fault.
 - Relay settings are generic and are overridden per run only through the verb's flags; per-branch settings are reachable
@@ -966,6 +1094,8 @@ leaves at 49.6 Hz, the nadir is 49.595 Hz and the frequency settles at 49.951 Hz
 - [IEC 60909 short-circuit duty (technical 25)](<../technical/0025 IEC 60909 short-circuit duty study.md>) - the duty currents, factors and sequence networks
 - [Overcurrent coordination (technical 26)](<../technical/0026 Overcurrent coordination (IDMT grading).md>) - the curve library and grading
 - [ch. 19, CLI reference](<0019 CLI reference.md#fault>) - the `fault` verb
+- [ch. 19, CLI reference](<0019 CLI reference.md#fault-series>) - the `fault-series` verb
+- [ch. 19, CLI reference](<0019 CLI reference.md#fault-simultaneous>) - the `fault-simultaneous` verb
 - [ch. 19, CLI reference](<0019 CLI reference.md#iec60909>) - the `iec60909` verb
 - [ch. 19, CLI reference](<0019 CLI reference.md#protection-check>) - the `protection-check` verb
 - [ch. 19, CLI reference](<0019 CLI reference.md#grade>) - the `grade` verb

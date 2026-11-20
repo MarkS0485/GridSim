@@ -10,7 +10,7 @@ namespace GridSim.Core.PowerFlow;
 /// the dense row-major layout the dense seam takes, and the group is solved in one <c>SolveBatch</c> call.
 /// <para>
 /// <b>Not bit-identical to the canonical sweep, by design and on the record.</b> The dense LU pivots column by column
-/// in natural order, the canonical sparse LU in reverse Cuthill-McKee order, so the two solutions of the same system
+/// in natural order, the canonical sparse LU in minimum-degree order, so the two solutions of the same system
 /// agree to rounding, not to the bit. This adapter is therefore the GPU route into the sweep, held to the same
 /// standard as the single-system GPU solvers (which are outside the CPU bit-identity contract); the bit-identical
 /// batched route is <see cref="CpuBatchedSparseLuSolver"/>, the default of

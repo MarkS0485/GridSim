@@ -59,10 +59,18 @@ loads the case, solves it once with the on-load tap changer loop (at most 25 pas
   for a replay, the frame count. A live session shows a `SOLVER` picker (Auto, the dense and sparse Newton engines,
   Radial sweep); picking one reloads the page with `?solver=auto|dense|sparse|sweep`, which restarts the session on
   that engine. A raw replay reads `REPLAY | raw public data`.
-- **Tabs.** A solved session shows NETWORK, GENERATION & INERTIA, THE MACHINE, SCADA, OPERATOR, MARKET, NESO RP1,
-  MECHANICAL, HUMAN SCALE, SPEED DOMAINS, TRIP / DEVICE, INVERTER FLEET, CONFORMANCE, EXPERIMENTAL, HARMONICS, CYCLE,
+- **`/console`** is the scripting console of [ch. 35](<0035 Scripting.md>): a script box with **Run** and **Check only**, and an
+  interactive session with history that can be downloaded as the recorded `.gss` and `.run.json`. It lists the models it may
+  load, with the `LOAD CASE` line for each. The role gate is the host's (`GridSim:AnonymousRole` and the sign-in role claims,
+  as for `/ws/sim`): a Viewer may check a script and run the read-only verbs (`LOAD CASE`, `REPORT`, `PRINT`, `LET`); `SOLVE POWERFLOW` needs Analyst, as `POST /api/solve` does; `TRIP`, `CLOSE`, `SET`, `FAULT`, `CLEAR FAULT`, `SELECT ENGINE`, `STEP SIM`, `AT` and any block holding one need Operator. A script with
+  a refused statement runs nothing, and the page names the line and column and the role needed. The licence gate and the
+  private-model rule (`results/` and `gda-out/` need Operator) are the dashboard's, `EXPORT RESULT` is not offered, and a replay-only
+  instance answers 404. A run holds a solve slot, stops at the solve timeout, and is capped in script size, engine ticks and output
+  (the limits are printed on the page).
+- **Tabs.** A solved session shows NETWORK, GENERATION & INERTIA, THE MACHINE, SCADA, OPERATOR, MARKET, FREQUENCY
+  SECURITY, MECHANICAL, HUMAN SCALE, SPEED DOMAINS, TRIP / DEVICE, INVERTER FLEET, CONFORMANCE, EXPERIMENTAL, HARMONICS, CYCLE,
   ASSETS and AUDIT LOG. The raw replay runs no solve, so it shows NETWORK, CHARTS, GENERATION & INERTIA, THE MACHINE,
-  NESO RP1, HUMAN SCALE, OPERATOR, MARKET, LIVE and ABOUT. The tabs are read as in [ch. 10](<0010 Analysis views.md>);
+  FREQUENCY SECURITY, HUMAN SCALE, OPERATOR, MARKET, LIVE and ABOUT. The tabs are read as in [ch. 10](<0010 Analysis views.md>);
   the differences from the desktop app are listed in [ch. 8](<0008 The desktop app.md>).
 
 ### `GET /api/cases`

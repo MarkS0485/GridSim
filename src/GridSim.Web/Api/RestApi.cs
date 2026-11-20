@@ -117,6 +117,11 @@ public static class RestApi
             if (MissingCase(req?.Case) is { } bad) return bad;
             CaseEntry? e = catalog.Find(req!.Case!);
             if (e is null) return Results.NotFound(new { error = $"Unknown case '{req.Case}'." });
+            // APP-03: the same private-model rule as /topology (GR-715): a model under results/ or gda-out/ is solved only
+            // by a caller who is shown it in a listing, with the same 403 and AccessDenied audit entry.
+            if (catalog.IsPrivate(e.Id)
+                && Authorise(http, access, CaseCatalog.PrivateListingRole, AccessControl.SolvePrivateOperation) is { } refusedPrivate)
+                return refusedPrivate;
             if (e.Kind == CaseKind.Replay)
                 return Results.BadRequest(new { error = $"Case '{req.Case}' is a replay run - use /ws/sim." });
 

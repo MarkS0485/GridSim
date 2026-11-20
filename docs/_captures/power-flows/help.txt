@@ -1,18 +1,32 @@
 $ gridsim --help
 gridsim <verb> [args] - GridSim CLI. See docs/manual/0019 CLI reference.md (or the header of Program.cs) for the full flag list.
 run:        (none)=live UK model, <case|file.m>, --dir <path>, --mpc <file.m>, --once
+cases:      a built-in name, a JSON case folder, a MATPOWER .m file or a PSS/E .raw file (revisions 30, 33, 34, 35;
+            --allow-unmodelled reads one holding DC links, FACTS or induction machines GridSim does not model;
+            --psse-revision <n> for a file that does not say; --seq-data <file.seq> adds its sequence data;
+            --tap-control applies its automatic voltage-control taps, --shunt-control its switched shunts),
+            or a UCTE-DEF .uct file
 contingency: trip, screen, nminus1 (n-1), nminus2 (n-2), n-1-1 (nminus1minus1), nminus1-sweep, stress,
-            chain, cycle
+            chain, cycle, corrective-sequence
 dynamics:   transient, freq, replay, replay-event, scenario, h0-study, fleet, evidence, domains, stability,
-            modal, fit-frequency, emt, impedance-stability
-analysis:   harmonics, fault, iec60909, protection-check, physics-check, conformance, ptdf, lodf, dcpf, dcopf, acopf,
-            cpf, taps, restore, losses, grade, dist3ph, pf,
+            modal, modal-full, fit-frequency, emt, emt-line, emt3, impedance-stability, inertia-placement, dynamics-study,
+            motor-start, user-model
+analysis:   harmonics, fault, iec60909, g74, ansi-sc, sc-dc, sc-61363, protection-check, physics-check, conformance, ptdf, lodf, dcpf, dcopf, acopf,
+            acopf-full, scuc, scopf, transmission-security, cpf, taps, restore, losses, grade, dist3ph,
+            pf, qsts, hosting, transfer-capability, cgmes-study, planning-study,
+            study-case, case-diff, result-diff, report, probabilistic,
+            restoration-study, reliability-study, reliability-network, arc-flash, cable-rating, cable-size,
+            sensitivity, qv-curve, pv-contingency, dc-contingency, fault-level-n1, line-constants, dist3ph-mesh,
+            devices-check, fault-line, sc-trace, protection-audit, substation-state,
+            cgmes-export, cgmes-conform, dgs-import,
+            harmonic-assess, flicker, filter-design, connection-assess,
             experimental, estimate, estimate-noise-floor, crossval
-data:       gda, gda-replay, synth, export, serve, interpose, convert, validate, zonal, pmu-ingest, pmu-estimate
-tools:      bench, simdcheck, gpucheck, batchsolve, licence, audit, compliance, help
+data:       gda, gda-replay, synth, export, serve, rpc, interpose, convert, validate, zonal, pmu-ingest, pmu-estimate
+tools:      bench, simdcheck, gpucheck, batchsolve, licence, audit, compliance, ref, help
 verb help:  gridsim <verb> --help (or gridsim help <verb>) prints the verb's usage, flags, defaults and exit codes.
 results:    --json <file>, --csv <file> or --out <file.json|file.csv> write a verb's result to a file (see each verb's help).
-note:       acopf is a DC-OPF dispatch with an AC loss loop, not a full AC-OPF (no voltage or reactive limits).
+note:       acopf is a DC-OPF dispatch with an AC loss loop, not a full AC-OPF (no voltage or reactive limits);
+            acopf-full is the full AC optimal power flow (voltages, reactive power and branch MVA limits).
 global: --importLicence <file.gridsim> installs a software licence (see the licence verb).
 global: --version prints the release number and the git commit of this build.
 [exit 0]

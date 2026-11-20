@@ -196,7 +196,7 @@ Harmonic penetration is a complex linear solve, so the subsystem has its own int
 | Implementation | Method | Role |
 |---|---|---|
 | `DenseComplexLuSolver` | Dense complex LU with partial pivoting; singular when a pivot is at or below `NumericTolerances.RelativePivotFloor` (1e-12) times the largest `|A_ij|`; null on singular. | The oracle: exact reference for small cases. |
-| `RealExpandedComplexSolver` | The real `2n x 2n` expansion below, solved by the real `SparseLu` (Gilbert-Peierls with an RCM fill-reducing ordering). | The default. Scales to `gb-full` (3539 buses). |
+| `RealExpandedComplexSolver` | The real `2n x 2n` expansion below, solved by the real `SparseLu` (Gilbert-Peierls with a minimum-degree fill-reducing ordering). | The default. Scales to `gb-full` (3539 buses). |
 | `SparseComplexBiCgStabSolver` | Native complex Jacobi-preconditioned BiCGSTAB with Hermitian inner products; relative residual tolerance `1e-12`, iteration cap `4n + 200`; null on breakdown or stagnation. | A third independent path that cross-validates the other two. |
 
 The real expansion of `(G + jB)(Vr + jVi) = (Ir + jIi)` is
@@ -580,7 +580,7 @@ Harmonic results are bit-identical across runs and across execution order:
 - The scan reduces its peak after the parallel solves finish, sequentially, with a first-maximum tie-break.
 - Sweep grid points are `MinOrder + p * Step`, computed from the index and never accumulated. Each point is independent
   and written by index; the grid peak tie-break is the lowest point; the refinement is sequential with a fixed step count.
-- The cached RCM ordering is a pure function of the matrix pattern, so reusing it across orders gives the same bits as a
+- The cached ordering is a pure function of the matrix pattern, so reusing it across orders gives the same bits as a
   fresh ordering. Factoring once and back-substituting per right-hand side gives the same bits as one solve per
   right-hand side.
 - A singular order is reported for the lowest singular order, whatever order the workers finished in.

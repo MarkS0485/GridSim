@@ -825,6 +825,17 @@ public sealed class CaseAuthoring
                 WriteVerified(Path.Combine(target, other), File.ReadAllBytes(Path.Combine(_s.RootPath, other)), written);
                 notes.Add(other + " is not read by the loader; copied unchanged.");
             }
+            // Post-RC3 audit APP-22: a v2 case keeps no "other files" listing, but the map reads geography.json beside
+            // the manifest; without it the copy would draw the built-in GB layers under the case's own projection.
+            if (Format == AuthoringFormat.V2Case)
+            {
+                string geo = Path.Combine(_s.RootPath, GridSim.Ui.Geography.CaseGeography.FileName);
+                if (File.Exists(geo))
+                {
+                    WriteVerified(Path.Combine(target, GridSim.Ui.Geography.CaseGeography.FileName), File.ReadAllBytes(geo), written);
+                    notes.Add(GridSim.Ui.Geography.CaseGeography.FileName + " is read by the map, not the loader; copied unchanged.");
+                }
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

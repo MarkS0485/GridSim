@@ -1,7 +1,7 @@
 $ gridsim losses case30
 Loss allocation - IEEE 30-bus (30 buses, 41 branches)
   Total losses: 2.44 MW  (reactive: -6.56 MVAr)
-  Reconciliation residual: -4.93E-013 MW
+  Reconciliation residual: -4.55E-013 MW
 
   Zone losses:
   | Zone | P Loss MW | Q Loss MVAr | Branches |

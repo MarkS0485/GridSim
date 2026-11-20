@@ -1,0 +1,318 @@
+@page "/workbench/{CaseId}"
+@using System.Globalization
+@using GridSim.Core.Analysis.StudyCases
+@using GridSim.Core.Presentation.Workbench
+@using GridSim.Web.Projection
+@using GridSim.Web.Site
+@inject CaseCatalog Catalog
+@inject AccessControl Access
+@inject WebLimits Limits
+@rendermode InteractiveServer
+
+@* RC4 R4-10: the workbench core on the web client. The project tree, the model table (sort, filter, group by the R4-01
+   groups), the studies with their results and plots, and the report. Every table, plot and report is the Core workbench layer's
+   (GridSim.Core.Presentation.Workbench), projected unchanged through WorkbenchDtos, so this page and the Avalonia workbench
+   show the same cells and geometry. It is a route of its own: the dashboard's tab strip is not touched. *@
+
+<PageTitle>GridSim workbench - @CaseId</PageTitle>
+
+<div class="tabpage workbench">
+    <div class="rp1-hero g-amber">
+        <div class="hero-main">
+            <span class="hero-v">WORKBENCH</span>
+            <span class="hero-l">@CaseId | model browser | studies | plots | reports</span>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="card"><div class="card-h">NOT AVAILABLE</div><pre class="note">@_error</pre><a href="/">&lt;- back to models</a></div>
+    }
+    else if (_project is null)
+    {
+        <div class="card"><div class="prompt"><span class="spinner"></span> Loading the model...</div></div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-h">PROJECT</div>
+            <ul class="wb-tree" style="list-style:none;padding-left:0">
+                @foreach (FlatNode n in Flatten(_tree!, 0))
+                {
+                    <li style="padding-left:@(n.Depth * 1.2)em">
+                        @if (n.Node.Id.StartsWith("model/", StringComparison.Ordinal) || n.Node.Id.StartsWith("study/", StringComparison.Ordinal))
+                        {
+                            <button class="tab @(n.Node.Id == _selected ? "on" : "")" @onclick="() => Select(n.Node.Id)">@n.Node.Title</button>
+                        }
+                        else
+                        {
+                            <span>@n.Node.Title</span>
+                        }
+                        @if (n.Node.Detail is not null) { <span class="note"> (@n.Node.Detail)</span> }
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-h">MODEL BROWSER - @_kind.ToString().ToUpperInvariant()S</div>
+            <div class="runbar">
+                <label class="prov">sort
+                    <select class="busselect" @onchange="e => { _sortKey = Blank(e); Rebuild(); }">
+                        <option value="">(file order)</option>
+                        @foreach (WorkbenchColumnDto c in _table!.Columns) { <option value="@c.Key" selected="@(c.Key == _sortKey)">@c.Key</option> }
+                    </select>
+                </label>
+                <label class="prov"><input type="checkbox" checked="@_desc" @onchange="e => { _desc = (bool)(e.Value ?? false); Rebuild(); }" /> descending</label>
+                <label class="prov">filter
+                    <select class="busselect" @onchange="e => _filterColumn = Blank(e)">
+                        <option value="">(none)</option>
+                        @foreach (WorkbenchColumnDto c in _table!.Columns) { <option value="@c.Key" selected="@(c.Key == _filterColumn)">@c.Key</option> }
+                    </select>
+                </label>
+                <select class="busselect" @onchange="e => _filterOp = Enum.Parse<ModelFilterOp>(e.Value?.ToString() ?? nameof(ModelFilterOp.Contains))">
+                    @foreach (ModelFilterOp op in Enum.GetValues<ModelFilterOp>()) { <option value="@op" selected="@(op == _filterOp)">@op</option> }
+                </select>
+                <input class="busselect" style="width:8em" @bind="_filterValue" />
+                <label class="prov">group by
+                    <select class="busselect" @onchange="e => { _groupBy = Blank(e); Rebuild(); }" disabled="@(_groups is null)">
+                        <option value="">(none)</option>
+                        @foreach (GroupKind g in Enum.GetValues<GroupKind>()) { <option value="@g" selected="@(g.ToString() == _groupBy)">@g</option> }
+                    </select>
+                </label>
+                <button class="tab" @onclick="Rebuild">APPLY</button>
+                <label class="prov">groups document <InputFile OnChange="LoadGroups" /></label>
+            </div>
+            @if (_filterError is not null) { <p class="note">@_filterError</p> }
+            <p class="note">@_table!.ShownRows of @_table.TotalRows shown. A dash is a value the model does not give (never zero).</p>
+            <div style="overflow:auto;max-height:28em">
+            <table class="data wb-model">
+                <thead><tr>@foreach (WorkbenchColumnDto c in _table.Columns) { <th>@c.Title@(c.Unit.Length > 0 ? " [" + c.Unit + "]" : "")</th> }</tr></thead>
+                <tbody>
+                @foreach (WorkbenchSectionDto s in _table.Sections)
+                {
+                    @if (s.Title.Length > 0) { <tr class="wb-section"><th colspan="@_table.Columns.Count">@s.Title</th></tr> }
+                    @foreach (WorkbenchRowDto r in s.Rows)
+                    {
+                        <tr>@foreach (WorkbenchCellDto c in r.Cells) { <td class="@(c.Missing ? "gap" : "")">@c.Text</td> }</tr>
+                    }
+                    @if (s.Title.Length > 0 && s.Totals.Any(t => t is not null))
+                    {
+                        <tr class="wb-total">@for (int i = 0; i < _table.Columns.Count; i++) { <td>@(s.Totals[i] is double d ? d.ToString("0.###", CultureInfo.InvariantCulture) : (i == 0 ? "total" : ""))</td> }</tr>
+                    }
+                }
+                </tbody>
+            </table>
+            </div>
+        </div>
+
+        @* RC4 R4-18: the single-line diagram and its editor (Core Sld layer), beside the model browser. *@
+        <SldTab CaseName="@CaseId" Model="_project.Model" CaseFolder="@_folder" />
+
+        <div class="card">
+            <div class="card-h">STUDIES</div>
+            <div class="runbar">
+                @foreach (WorkbenchStudyDefinition st in _project.Studies)
+                {
+                    <button class="tab @(st.Id == _studyId ? "on" : "")" disabled="@_busy" @onclick="() => RunStudy(st.Id)">RUN @st.Id.ToUpperInvariant()</button>
+                }
+            </div>
+            @if (_busy) { <div class="prompt"><span class="spinner"></span> Running @_studyId...</div> }
+            @if (_result is not null)
+            {
+                <h3>@_result.StudyId (@_result.Kind): @_result.Status</h3>
+                <p class="note">Outcome: @_result.Outcome@(_result.Reason is null ? "" : " - " + _result.Reason)</p>
+                @foreach (WorkbenchResultTableDto t in _result.Tables)
+                {
+                    <h4>@t.Title</h4>
+                    <div style="overflow:auto;max-height:22em">
+                    <table class="data wb-result">
+                        <thead><tr>@foreach (WorkbenchColumnDto c in t.Columns) { <th>@c.Title@(c.Unit.Length > 0 ? " [" + c.Unit + "]" : "")</th> }</tr></thead>
+                        <tbody>@foreach (var row in t.Rows) { <tr>@foreach (WorkbenchCellDto c in row) { <td class="@(c.Missing ? "gap" : "")">@c.Text</td> }</tr> }</tbody>
+                    </table>
+                    </div>
+                }
+                @foreach (PlotDto p in _result.Plots)
+                {
+                    <figure class="wb-plot">@((MarkupString)p.Svg)<figcaption class="note">plot SHA-256 <code>@p.Sha256</code></figcaption></figure>
+                }
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-h">REPORT</div>
+            <div class="runbar">
+                <select class="busselect" @onchange="SetFormat">
+                    <option value="md" selected="@(_format == "md")">Markdown</option>
+                    <option value="html" selected="@(_format == "html")">HTML</option>
+                    <option value="csv" selected="@(_format == "csv")">CSV</option>
+                </select>
+                <button class="tab" disabled="@(_result is null)" @onclick="MakeReport">GENERATE REPORT</button>
+                @if (_report.Length > 0)
+                {
+                    <a class="tab" download="@ReportFileName" href="data:@ReportMime;charset=utf-8,@Uri.EscapeDataString(_report)">DOWNLOAD</a>
+                }
+            </div>
+            @if (_report.Length > 0) { <pre class="note wb-report" style="white-space:pre-wrap;max-height:30em;overflow:auto">@_report</pre> }
+            else { <p class="note">Run a study, then generate its report. The same report can be made headless with <code>gridsim report</code>.</p> }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string CaseId { get; set; } = "";
+    [CascadingParameter] public Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+
+    private WorkbenchProject? _project;
+    private BoundGroups? _groups;
+    private WorkbenchNodeDto? _tree;
+    private ModelTableDto? _table;
+    private WorkbenchResultDto? _result;
+    private string? _error;
+    private string? _folder;
+    private string? _loadedCaseId;
+    private string _selected = "model/bus";
+    private ModelElementKind _kind = ModelElementKind.Bus;
+    private string? _sortKey, _filterColumn, _groupBy, _filterError, _studyId;
+    private bool _desc, _busy;
+    private ModelFilterOp _filterOp = ModelFilterOp.Contains;
+    private string _filterValue = "";
+    private string _format = "md";
+    private string _report = "";
+
+    private string ReportFileName => "report-" + (_studyId ?? "study") + "." + _format;
+    private string ReportMime => _format switch { "html" => "text/html", "csv" => "text/csv", _ => "text/markdown" };
+
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(_loadedCaseId, CaseId, StringComparison.OrdinalIgnoreCase) && (_project is not null || _error is not null)) return;
+        // A private id (results/ or gda-out/) is decided on the interactive pass only, as the dashboard does.
+        if (AccessControl.MustWaitForInteractive(Catalog.IsPrivate(CaseId), RendererInfo.IsInteractive)) return;
+        _loadedCaseId = CaseId;
+        try
+        {
+            CaseEntry? entry = Catalog.Find(CaseId);
+            if (entry is null) { _error = $"Unknown case '{CaseId}'."; return; }
+            if (entry.IsReplay) { _error = $"'{CaseId}' is a replay run, not a model; the workbench needs a model."; return; }
+            if (Catalog.IsPrivate(CaseId))
+            {
+                System.Security.Claims.ClaimsPrincipal? user = AuthState is { IsCompletedSuccessfully: true } done ? done.Result.User : null;
+                Access.Require(Access.IdentityFor(user, null), CaseCatalog.PrivateListingRole, AccessControl.DashboardPrivateOperation);
+            }
+            _folder = entry.Kind == CaseKind.JsonDir ? entry.Path : null;
+            _project = WorkbenchProject.WithDefaultStudies(entry.Label, Catalog.LoadModel(entry.Id));
+            _studyId = _project.Studies.Count > 0 ? _project.Studies[0].Id : null;
+            Rebuild();
+        }
+        catch (Exception ex) when (AccessControl.IsPageLoadRefusal(ex))
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void SetFormat(ChangeEventArgs e) => _format = e.Value?.ToString() is { Length: > 0 } f ? f : "md";
+
+    private static string? Blank(ChangeEventArgs e) => string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString();
+
+    private sealed record FlatNode(WorkbenchNodeDto Node, int Depth);
+
+    private static IEnumerable<FlatNode> Flatten(WorkbenchNodeDto n, int depth)
+    {
+        yield return new FlatNode(n, depth);
+        foreach (WorkbenchNodeDto c in n.Children)
+            foreach (FlatNode f in Flatten(c, depth + 1)) yield return f;
+    }
+
+    private void Select(string id)
+    {
+        _selected = id;
+        if (id.StartsWith("model/", StringComparison.Ordinal) && Enum.TryParse(id[6..], true, out ModelElementKind k))
+        {
+            _kind = k; _sortKey = null; _filterColumn = null; Rebuild();
+        }
+        else if (id.StartsWith("study/", StringComparison.Ordinal))
+        {
+            _studyId = id[6..];
+            _result = _project!.Results.TryGetValue(_studyId, out WorkbenchResult? r) ? WorkbenchResultDto.From(r) : null;
+        }
+    }
+
+    private void Rebuild()
+    {
+        if (_project is null) return;
+        _filterError = null;
+        var filters = new List<ModelFilter>();
+        if (_filterColumn is not null && _filterValue.Length > 0) filters.Add(new ModelFilter(_filterColumn, _filterOp, _filterValue));
+        GroupKind? g = _groupBy is not null && Enum.TryParse(_groupBy, out GroupKind gk) ? gk : null;
+        try
+        {
+            _table = ModelTableDto.From(_project.Table(new ModelTableQuery(_kind, filters, _sortKey, _desc, g)));
+        }
+        catch (ArgumentException ex)
+        {
+            _filterError = "Filter not applied: " + ex.Message;
+            _table = ModelTableDto.From(_project.Table(new ModelTableQuery(_kind, null, _sortKey, _desc, g)));
+        }
+        _tree = WorkbenchNodeDto.From(_project.Tree());
+    }
+
+    private async Task LoadGroups(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e)
+    {
+        if (_project is null) return;
+        try
+        {
+            using var ms = new MemoryStream();
+            await using (Stream s = e.File.OpenReadStream(1_048_576)) await s.CopyToAsync(ms);
+            ModelGroupSet set = ModelGroupsDocument.Parse(ms.ToArray());
+            _groups = BoundGroups.Bind(set, _project.Model);
+            _project = WorkbenchProject.WithDefaultStudies(_project.Name, _project.Model, _groups);
+            _result = null; _report = "";
+            _studyId = _project.Studies.Count > 0 ? _project.Studies[0].Id : null;
+            _filterError = null;
+            Rebuild();
+        }
+        catch (Exception ex) when (ex is IOException or ArgumentException or StudyCaseException or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            _filterError = "The groups document was not used: " + ex.Message;
+        }
+    }
+
+    private async Task RunStudy(string id)
+    {
+        if (_project is null || _busy) return;
+        _busy = true;
+        _studyId = id;
+        _report = "";
+        StateHasChanged();
+        try
+        {
+            WorkbenchProject p = _project;
+            SolveRun<WorkbenchResult> run = await Limits.RunSolveAsync(() => p.Run(id));
+            _result = run.Status switch
+            {
+                SolveRunStatus.Completed => WorkbenchResultDto.From(run.Value!),
+                SolveRunStatus.Busy => new WorkbenchResultDto(id, "", "BUSY", "Busy", "Every solve slot on this host is in use; try again shortly.", [], []),
+                _ => new WorkbenchResultDto(id, "", "TIMED OUT", "TimedOut", "The study did not finish inside the host's solve timeout.", [], []),
+            };
+            _tree = WorkbenchNodeDto.From(_project.Tree());
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void MakeReport()
+    {
+        if (_project is null || _studyId is null || !_project.Results.ContainsKey(_studyId)) return;
+        byte[] result = System.Text.Encoding.UTF8.GetBytes(_project.ResultJson(_studyId));
+        byte[] template = System.Text.Encoding.UTF8.GetBytes(ReportTemplate.DefaultJson(result));
+        ReportDocument doc = ReportRenderer.Build(template, result);
+        _report = _format switch
+        {
+            "html" => ReportRenderer.ToHtml(doc),
+            "csv" => ReportRenderer.ToCsv(doc),
+            _ => ReportRenderer.ToMarkdown(doc),
+        };
+    }
+}

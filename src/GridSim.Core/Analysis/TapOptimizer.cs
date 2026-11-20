@@ -21,6 +21,10 @@ public sealed record TapSchedule(
     /// base case did not solve).</summary>
     public bool OptimizerConverged { get; init; } = true;
 
+    /// <summary>AN-24: the OLTC transformers left out because their branch is out of service (a de-energised tap changes
+    /// no voltage); they keep their current tap and carry no recommendation. Empty when none.</summary>
+    public IReadOnlyList<string> SkippedOutOfService { get; init; } = Array.Empty<string>();
+
     /// <summary>D-DOC-046: iterations the search made (0 when none ran).</summary>
     public int OptimizerIterations { get; init; }
 
@@ -98,12 +102,17 @@ public static class TapOptimizer
             if (model.Branches[i].Name is { } nm) idxByName.TryAdd(nm, i);
 
         var controls = new List<(int Branch, Oltc O)>();
+        var skipped = new List<string>();
         foreach (Oltc o in model.Oltcs)
-            if (idxByName.TryGetValue(o.Transformer, out int bi)) controls.Add((bi, o));
+            if (idxByName.TryGetValue(o.Transformer, out int bi))
+            {
+                if (!model.Branches[bi].InService) { skipped.Add(o.Transformer); continue; }   // AN-24
+                controls.Add((bi, o));
+            }
 
         double before = Objective(model, opt, targetVpu, out bool baseSolved, out PowerFlowResult baseResult);
         if (controls.Count == 0 || !baseSolved)
-            return new TapSchedule(Array.Empty<TapSetting>(), before, before, baseSolved);
+            return new TapSchedule(Array.Empty<TapSetting>(), before, before, baseSolved) { SkippedOutOfService = skipped };
 
         double[] seed = controls.Select(c => model.Branches[c.Branch].TapRatio <= 0 ? 1.0 : model.Branches[c.Branch].TapRatio).ToArray();
 
@@ -130,6 +139,7 @@ public static class TapOptimizer
             return new TapSchedule(keep, before, before, baseSolved)
             {
                 OptimizerConverged = r.Converged, OptimizerIterations = r.Iterations, Regulation = RegulationAt(controls, baseResult),
+                SkippedOutOfService = skipped,
             };
         }
 
@@ -139,6 +149,7 @@ public static class TapOptimizer
         return new TapSchedule(taps, before, after, true)
         {
             OptimizerConverged = r.Converged, OptimizerIterations = r.Iterations, Regulation = RegulationAt(controls, finalResult),
+            SkippedOutOfService = skipped,
         };
     }
 

@@ -86,7 +86,7 @@ public class WorkflowContractTests
     /// F25 (Ruling R1, 2026-10-04): the 1.0 ship scope is the CLI as self-contained binaries for three platforms,
     /// GridSim.Core as a NuGet package and the web app as the replay-only container image. GA-5 (owner decision,
     /// 2026-11-01) adds the two desktop apps as RC-1 shipped them: the WPF app for Windows x64 and the Avalonia app for
-    /// Windows x64 and Linux x64. Unity is not shipped; GridSim.Gda and the GDA data are not release artefacts. The
+    /// Windows x64 and Linux x64. GridSim.Gda and the GDA data are not release artefacts. The
     /// workflows must match exactly.
     /// </summary>
     [Fact]
@@ -129,7 +129,9 @@ public class WorkflowContractTests
         // 2.0.196: the README section that states the scope is now "Downloads (Release Candidate 1.0)"; it replaced
         // "What ships in 1.0" when RC 1.0 shipped, because the old table named a macOS build and signing RC 1.0 lacks.
         // 2.1.000 (2026-10-31): the heading follows the release, "Downloads (2.1.000 RC-1)", as it did in 2.0.196.
-        Assert.Contains("## Downloads (2.1.000 RC-1)", readme, StringComparison.Ordinal);
+        // 2.1.073 (RC-4 cleanup): the heading is plain "Downloads" and its text names the latest release, so the pin no
+        // longer has to follow every release.
+        Assert.Contains("\n## Downloads\n", readme.ReplaceLineEndings("\n"), StringComparison.Ordinal);
         Assert.Contains("`GridSim.Gda` and the GDA data are not release artefacts", readme, StringComparison.Ordinal);
     }
 

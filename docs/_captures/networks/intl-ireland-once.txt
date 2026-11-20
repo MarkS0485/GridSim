@@ -2,7 +2,7 @@ $ gridsim --dir data/intl/ireland-all-island --once
 GridSim  -  Ireland all-island (EirGrid + SONI) - open transmission model
 60 buses  82 branches  51 generators  base 100 MVA  50 Hz
 ========================================================================
-Converged (5 NR iters, 0 OLTC passes, max mismatch 6.45E-013 p.u.)
+Converged (5 NR iters, 0 OLTC passes, max mismatch 2.56E-013 p.u.)
 Generator output 2.38 GW  Demand 2.37 GW  Losses 12.5 MW  Inertia 27.7 GVAs
 
 Bus  Name                            kV    Vm(pu)  Va(deg)    P(MW)   Q(MVAr)

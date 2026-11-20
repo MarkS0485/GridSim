@@ -302,6 +302,12 @@ if (rest.Count > 0 && rest[0].Equals("cable-rating", StringComparison.OrdinalIgn
     Environment.ExitCode = CableRatingCommand.Run(rest);
     return;
 }
+// RC4 R4-20d: cable sizing by the IEC 60364-5-52 / BS 7671 design rule (tables are the owner's file; cable-rating is unchanged).
+if (rest.Count > 0 && rest[0].Equals("cable-size", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CableSizeCommand.Run(rest);
+    return;
+}
 // RC3 P4: AC-verified directional transfer capability (a separate verb; transmission-security is unchanged).
 if (rest.Count > 0 && rest[0].Equals("transfer-capability", StringComparison.OrdinalIgnoreCase))
 {
@@ -326,10 +332,86 @@ if (rest.Count > 0 && rest[0].Equals("reliability-study", StringComparison.Ordin
     Environment.ExitCode = ReliabilityStudyCommand.Run(rest);
     return;
 }
+// RC4 R4-09: probabilistic load flow and generation adequacy by Monte Carlo, quasi-Monte Carlo or convolution (seeded, strict study file).
+if (rest.Count > 0 && rest[0].Equals("probabilistic", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = ProbabilisticCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);
+    return;
+}
+// RC4 R4-13: reliability and restoration joined on the real network (groups, placed devices, ties, AC-verified back-feed).
+if (rest.Count > 0 && rest[0].Equals("reliability-network", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = ReliabilityNetworkCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);
+    return;
+}
+// RC4 R4-21: UK power quality and connection assessment (ENA EREC G5 harmonics, ENA EREC P28 flicker, harmonic filter design).
+if (rest.Count > 0 && rest[0].Equals("harmonic-assess", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = HarmonicPlanningCommands.RunAssess(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);
+    return;
+}
+// RC4 R4-20e: rule-set driven connection assessment (German connection rules ship empty and flagged; the standards are paid text).
+if (rest.Count > 0 && rest[0].Equals("connection-assess", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = ConnectionAssessCommand.Run(rest);
+    CliOutput.Finish(args);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("flicker", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = HarmonicPlanningCommands.RunFlicker(rest);
+    CliOutput.Finish(args);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("filter-design", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = HarmonicPlanningCommands.RunFilterDesign(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);
+    return;
+}
 // RC3 P7: versioned planning snapshots over the native gated loader; same pre-flag-gate placement as above.
 if (rest.Count > 0 && rest[0].Equals("planning-study", StringComparison.OrdinalIgnoreCase))
 {
     Environment.ExitCode = PlanningStudyCommand.Run(rest, baseDir);
+    return;
+}
+// RC4 R4-01: study cases (variations, scenarios, groups) over the RC3 planning machinery, and read-only case and result diffs.
+if (rest.Count > 0 && rest[0].Equals("study-case", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = StudyCaseCommand.Run(rest, baseDir);
+    CliOutput.Finish(args);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("case-diff", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = CaseDiffCommand.Run(rest);
+    CliOutput.Finish(args);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("result-diff", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = ResultDiffCommand.Run(rest);
+    CliOutput.Finish(args);
+    return;
+}
+// RC4 R4-10: the report generator over the workbench's report templates (reproducible headless).
+if (rest.Count > 0 && rest[0].Equals("report", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = ReportCommand.Run(rest);
+    CliOutput.Finish(args);
     return;
 }
 
@@ -406,6 +488,18 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--switched-shunts",   // F22: pf regulates discrete switched shunts from a gridsim-switched-shunts/1 file
     "--breaker",       // F21: iec60909 breaker ratings kV,making kA,breaking kA,withstand kA[,seconds[,asym kA]] (CheckBreaker)
     "--branches",      // F21: iec60909 per-branch fault currents (three-phase)
+    "--kind",          // R4-03: sensitivity --kind otdf|psdf|tap|dvdq|effectiveness
+    "--devices", "--curves", "--fractions", "--fraction", // R4-07: placed protection devices, curve data, fault-line positions
+    "--allow-non-loopback", // R4-05: rpc --listen beyond loopback, on purpose (no value)
+    "--length-km", "--base-kv", "--base-mva", // R4-04: line-constants per-unit output
+    "--pin-floating",  // R4-15: dist3ph-mesh pins a reference on an unreferenced component (a switch, no value)
+    "--at",            // fault-simultaneous: the fault buses and types, <bus>:<3ph|slg|ll|dlg>[,...]
+    "--from-dist3ph", "--switch-z-pu", // dist3ph-mesh: lift a dist3ph feeder file (and the per-unit impedance given to a closed switch) instead of reading a mesh case
+    "--hold-taps",     // dist3ph-mesh: report each compensated regulator phase against its band at the written taps, without searching (a switch, no value)
+    "--sequence", // substation-state: a gridsim-switching-sequence/1 file of ordered open and close steps
+    "--open", "--close", "--unspecified", "--numbering", "--emit", // R4-11: substation-state switch states, policy, numbering, projected case
+    "--cgmes-version", "--sv", "--archive", // R4-11b: cgmes-export edition and SV source; cgmes-study ZIP bundle
+    "--accept-unconfirmed", "--strict", // R4-11c: dgs-import uses UNCONFIRMED attribute mappings (no value); exits 3 when the import is incomplete (no value)
     "--all-buses",     // F21: iec60909 duty at every bus with a base kV
     "--corrections",   // F21: iec60909 applies the impedance-correction factors K_G / K_S / K_SO / K_T
     "--rated-pf",      // F21: iec60909 --corrections: the generators' rated power factor (required)
@@ -435,6 +529,18 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--afe",               // N354 (CF5): dist3ph harmonics --afe feeder stamps the feeder file's converter units
     "--afe-reactance",     // N149: harmonics stamps each active-front-end converter's internal reactance (pu on its rating)
     "--afe-resistance",    // N149: and the resistance in series with it (pu on its rating; default 0)
+    "--time",              // R4-06: g74 break times (s), comma list
+    "--g74-data",          // R4-06: g74 machine and motor decay data (gridsim-g74-data/1)
+    "--no-decay",          // R4-06: g74 switches machine and motor decay off
+    "--ansi-data",         // R4-20a: ansi-sc source data (gridsim-ansi-data/1)
+    "--parting-cycles",    // R4-20a: ansi-sc breaker contact parting time (cycles)
+    "--prefault",          // R4-20a: ansi-sc prefault voltage E (pu)
+    "--end-time",   // R4-20c: sc-dc end of the simulated window (s)
+    "--iec61363-data",   // R4-20b: sc-61363 machine and motor data (gridsim-iec61363-data/1)
+    "--models",            // R4-12: modal-full directory of machines.json and declarative model documents
+    "--region",            // R4-12: modal-full region of the s-plane, re,im,re,im
+    "--dense-limit",       // R4-12: modal-full state order up to which the dense solver is used
+    "--residual-gate",     // R4-12: modal-full relative residual gate
     "--peak-method",       // N134: iec60909 peak factor, IEC 60909-0 Method B (default) or C (equivalent frequency)
     "--coverage-flow",
     "--coverage-inj",
@@ -549,6 +655,8 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--oltc",
     "--once",
     "--out",
+    "--format",        // R4-10: report output format (md, html, csv)
+    "--template-for",  // R4-10: report writes the default template for a result
     "--ov",
     "--parallel",
     "--passive-plant",   // gda-replay: run the bound passive plant (R058)
@@ -695,14 +803,19 @@ if (rest.Contains("--help") || rest.Contains("-h"))
     Console.WriteLine("contingency: trip, screen, nminus1 (n-1), nminus2 (n-2), n-1-1 (nminus1minus1), nminus1-sweep, stress,");
     Console.WriteLine("            chain, cycle, corrective-sequence");
     Console.WriteLine("dynamics:   transient, freq, replay, replay-event, scenario, h0-study, fleet, evidence, domains, stability,");
-    Console.WriteLine("            modal, fit-frequency, emt, emt-line, impedance-stability, inertia-placement, dynamics-study,");
-    Console.WriteLine("            motor-start");
-    Console.WriteLine("analysis:   harmonics, fault, iec60909, protection-check, physics-check, conformance, ptdf, lodf, dcpf, dcopf, acopf,");
+    Console.WriteLine("            modal, modal-full, fit-frequency, emt, emt-line, emt3, impedance-stability, inertia-placement, dynamics-study,");
+    Console.WriteLine("            motor-start, user-model");
+    Console.WriteLine("analysis:   harmonics, fault, iec60909, g74, ansi-sc, sc-dc, sc-61363, protection-check, physics-check, conformance, ptdf, lodf, dcpf, dcopf, acopf,");
     Console.WriteLine("            acopf-full, scuc, scopf, transmission-security, cpf, taps, restore, losses, grade, dist3ph,");
     Console.WriteLine("            pf, qsts, hosting, transfer-capability, cgmes-study, planning-study,");
-    Console.WriteLine("            restoration-study, reliability-study, arc-flash, cable-rating,");
+    Console.WriteLine("            study-case, case-diff, result-diff, report, probabilistic,");
+    Console.WriteLine("            restoration-study, reliability-study, reliability-network, arc-flash, cable-rating, cable-size,");
+    Console.WriteLine("            sensitivity, qv-curve, pv-contingency, dc-contingency, fault-level-n1, line-constants, dist3ph-mesh,");
+    Console.WriteLine("            devices-check, fault-line, sc-trace, protection-audit, fault-series, fault-simultaneous, substation-state,");
+    Console.WriteLine("            cgmes-export, cgmes-conform, dgs-import,");
+    Console.WriteLine("            harmonic-assess, flicker, filter-design, connection-assess,");
     Console.WriteLine("            experimental, estimate, estimate-noise-floor, crossval");
-    Console.WriteLine("data:       gda, gda-replay, synth, export, serve, interpose, convert, validate, zonal, pmu-ingest, pmu-estimate");
+    Console.WriteLine("data:       gda, gda-replay, synth, export, serve, rpc, interpose, convert, validate, zonal, pmu-ingest, pmu-estimate");
     Console.WriteLine("tools:      bench, simdcheck, gpucheck, batchsolve, licence, audit, compliance, ref, help");
     // F09: every verb has its own help (its section of the CLI reference, compiled into the binary).
     Console.WriteLine("verb help:  gridsim <verb> --help (or gridsim help <verb>) prints the verb's usage, flags, defaults and exit codes.");
@@ -2145,6 +2258,109 @@ if (rest.Count > 0 && (rest[0].Equals("ptdf", StringComparison.OrdinalIgnoreCase
     return;
 }
 
+// RC4 R4-03: sensitivities, QV curves, per-contingency PV curves, the DC N-1 screen and the fault level under N-1.
+if (rest.Count > 0 && (rest[0].Equals("sensitivity", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("qv-curve", StringComparison.OrdinalIgnoreCase)
+    || rest[0].Equals("pv-contingency", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("dc-contingency", StringComparison.OrdinalIgnoreCase)
+    || rest[0].Equals("fault-level-n1", StringComparison.OrdinalIgnoreCase)))
+{
+    Environment.ExitCode = SensitivityCommands.Run(rest, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 (last candidate): the open-conductor (series) fault and simultaneous shunt faults, on the operating point (Core FaultAnalysis.SeriesBreak /
+// SequencePorts with SeriesFault / SimultaneousFault).
+if (rest.Count > 0 && (rest[0].Equals("fault-series", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("fault-simultaneous", StringComparison.OrdinalIgnoreCase)))
+{
+    Environment.ExitCode = SeriesFaultCommands.Run(rest, path => LoadCaseArgument(path, baseDir),
+        m => backend.Solver(m).Solve(m, new PowerFlowOptions { MaxIterations = 100, EnforceQLimits = true }));
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-07: placed protection devices, fault along a line, short-circuit trace and the coordination audit.
+if (rest.Count > 0 && (rest[0].Equals("devices-check", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("fault-line", StringComparison.OrdinalIgnoreCase)
+    || rest[0].Equals("sc-trace", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("protection-audit", StringComparison.OrdinalIgnoreCase)))
+{
+    Environment.ExitCode = ProtectionDevicesCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-12: full-model small-signal analysis (machine flux, exciter, governor and stabiliser states; dense or Arnoldi).
+if (rest.Count > 0 && rest[0].Equals("modal-full", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = ModalFullCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-11 part A: node-breaker substation file, switch states, projection to a bus-branch case.
+if (rest.Count > 0 && rest[0].Equals("substation-state", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = SubstationStateCommand.Run(rest);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-11 part B: CGMES per-profile export and the bundle conformity run (new verbs; cgmes-study is unchanged but for --archive).
+if (rest.Count > 0 && rest[0].Equals("cgmes-export", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CgmesExportCommand.Run(rest);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+// RC4 R4-11 part C: PowerFactory DGS (ASCII) importer through the node-breaker model. Not a writer verb: --out is the case folder.
+if (rest.Count > 0 && rest[0].Equals("dgs-import", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = DgsImportCommand.Run(rest);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("cgmes-conform", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CgmesExportCommand.RunConform(rest);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-04 (CLI part): line constants from a conductor geometry file (Core Lines, gridsim-lineconstants/1).
+if (rest.Count > 0 && rest[0].Equals("line-constants", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = LineConstantsCommand.Run(rest);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-15: meshed unbalanced load flow in the explicit phase frame (Core Distribution/Meshed, gridsim-dist3ph-mesh/1). dist3ph is unchanged.
+if (rest.Count > 0 && rest[0].Equals("dist3ph-mesh", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = Dist3phMeshCommand.Run(rest);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-16: three-phase EMT depth A on the nodal solver (Core Dynamics/Emt Nodal, Nonlinear, FrequencyDependent; gridsim-emt3/1).
+if (rest.Count > 0 && rest[0].Equals("emt3", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = Emt3Command.Run(rest);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC4 R4-08: declarative dynamic models (Core Dynamics/UserModels, gridsim-model/1): list the shipped library, check a document.
+if (rest.Count > 0 && rest[0].Equals("user-model", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = UserModelCommand.Run(rest);
+    return;
+}
+
+// RC4 R4-05: the in-process access endpoint (gridsim-rpc/1) the Python package drives.
+if (rest.Count > 0 && rest[0].Equals("rpc", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = RpcCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+
 // R075: verify a tamper-evident audit log file (gridsim-audit/1).
 if (rest.Count > 0 && rest[0].Equals("audit", StringComparison.OrdinalIgnoreCase))
 {
@@ -2271,6 +2487,34 @@ if (rest.Count > 0 && rest[0].Equals("qsts", StringComparison.OrdinalIgnoreCase)
 if (rest.Count > 0 && rest[0].Equals("inertia-placement", StringComparison.OrdinalIgnoreCase))
 {
     RunInertiaPlacement(rest, baseDir);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+// R4-20b: sc-61363 (the standard text is AWAITING, see the manual).
+if (rest.Count > 0 && rest[0].Equals("sc-61363", StringComparison.OrdinalIgnoreCase))
+{
+    RunSc61363(rest, baseDir);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+// R4-20c: sc-dc (the standard text is AWAITING, see the manual).
+if (rest.Count > 0 && rest[0].Equals("sc-dc", StringComparison.OrdinalIgnoreCase))
+{
+    RunScDc(rest, baseDir);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+// R4-20a: ANSI/IEEE C37-style (E/X method) breaker duty; the standard text is AWAITING, see the manual.
+if (rest.Count > 0 && rest[0].Equals("ansi-sc", StringComparison.OrdinalIgnoreCase))
+{
+    RunAnsiSc(rest, baseDir);
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+// R4-06: G74-style short circuit (ENA ER G74; the standard text is AWAITING, see the manual) over the IEC 60909 machinery.
+if (rest.Count > 0 && rest[0].Equals("g74", StringComparison.OrdinalIgnoreCase))
+{
+    RunG74(rest, baseDir);
     CliOutput.Finish(args);   // F10: write the result files, if asked for
     return;
 }
@@ -2721,6 +2965,7 @@ void RunExport(GridModel m, string caseLabel, string? outPath, bool jac, bool bf
         : raw.GetType().Name;
     Console.WriteLine($"[export] {solverLabel}: converged={r.Converged} iters={r.Iterations} " +
                       $"maxMis={r.MaxMismatch:E2}  ->  {Path.GetFullPath(path)}");
+    if (r.NewtonRetryNote is { } retryNote) Console.WriteLine($"[export] {retryNote}");
     if (!r.Converged)
     {
         Console.Error.WriteLine($"error: the {solverLabel} solve of {caseLabel} did not converge (status {r.Status}); the export holds the " +
@@ -3064,7 +3309,7 @@ void RunReplayEvent(List<string> a, string root)
         return;
     }
 
-    string? id = PositionalArg(a);   // not "the first non-flag token" - that grabs --catalog's value
+    string? id = OnePositional("replay-event", "event id", a);   // not "the first non-flag token" - that grabs --catalog's value
     if (id is null)
     {
         Console.Error.WriteLine("usage: gridsim replay-event <id> [--catalog <file.json>] [--trace <neso.csv>] [--out <dir>]");
@@ -3844,7 +4089,7 @@ void RunGdaReplay(List<string> a, string root)
 //   the full estimator pipeline exercised end to end with no external data.
 void RunServe(List<string> a, string root)
 {
-    string? caseName = PositionalArg(a);
+    string? caseName = OnePositional("serve", "case", a);
     string? measDir = FlagString(a, "--measurements-dir");
     if (caseName is null || measDir is null)
     {
@@ -4248,7 +4493,7 @@ void RunInterpose(List<string> a, string root)
     }
     var accessPolicy = new GridSim.Cli.Interpose.InterposeAccessPolicy(allowedClients, idleMs);
 
-    string caseName = PositionalArg(a) ?? (crosswalk.Case.Length > 0 ? crosswalk.Case : "rtu");
+    string caseName = OnePositional("interpose", "case", a) ?? (crosswalk.Case.Length > 0 ? crosswalk.Case : "rtu");
     int windowMs = FlagCount(a, "--window-ms", 1000, 1);   // GR-682: refused below 1, not raised to 1
     // GR-305 (November 2026), opt-in: the widest spread of device time tags one window may hold, in ms. Absent: no check
     // (the old behaviour). A window that spreads wider is discarded and counted, and the run exits 3.
@@ -5523,7 +5768,7 @@ void RunEstimate(List<string> a, string root)
         "--synth", "--no-bad-data", "--warm-start", "--lean", "--trace", "--backfill-removals", "--hti", "--hti-correct", "--fdia-screen",
         "--export-solve",
     };
-    string? caseName = PositionalArg(a.Where(t => !estimateBooleans.Contains(t)).ToList());
+    string? caseName = OnePositional("estimate", "case", a.Where(t => !estimateBooleans.Contains(t)).ToList());
     bool synth = a.Contains("--synth");
     string? measurementsPath = FlagString(a, "--measurements");
     if (caseName is null || (!synth && measurementsPath is null))
@@ -6318,7 +6563,7 @@ void RunEstimateNoiseFloor(List<string> a, string root)
 //   Solve a case, export the full math, and diff it against an independent pandapower solve of the same network.
 void RunCrossval(List<string> a, string root)
 {
-    string? arg = PositionalArg(a);   // skip flag values (e.g. --tol 9.09e-13) when picking the case
+    string? arg = OnePositional("crossval", "case", a);   // skip flag values (e.g. --tol 9.09e-13) when picking the case
     if (arg is null)
     {
         Console.Error.WriteLine("usage: gridsim crossval <case|solve-export.json> [--tool pandapower] [--tol 9.09e-13] [--out dir]");
@@ -6978,7 +7223,9 @@ void RenderLine(GridModel m, PowerFlowResult r, double hour, int tick)
 
 void PrintDetailed(GridModel m, SteadyStateSolver solver)
 {
+    GridSim.Gpu.GpuSolveCount gpuBefore = GridSim.Gpu.GpuSolveCounters.Snapshot();
     PowerFlowResult r = solver.Solve(m);
+    GridSim.Gpu.GpuSolveCount gpuSolve = GridSim.Gpu.GpuSolveCounters.Snapshot() - gpuBefore;
     var (gen, load) = Totals(m, r);
 
     Console.WriteLine($"GridSim  -  {m.Name}");
@@ -6991,6 +7238,9 @@ void PrintDetailed(GridModel m, SteadyStateSolver solver)
             : $"Converged on the voltage step ({r.Iterations} sweep iters, {solver.OltcPasses} OLTC passes, last |dV| {r.SweepVoltageStepPu:E2} p.u.; max mismatch {r.MaxMismatch:E2} p.u., which the sweep does not test)")
         : $"DID NOT CONVERGE ({r.Iterations} iters, max mismatch {r.MaxMismatch:E2} p.u.)");
     if (!r.Converged) Environment.ExitCode = 3;   // R022: a reported non-convergence is a failure, not exit 0
+    // RC4: on a GPU backend, say where the linear solves ran (a GPU solve can fall back to the CPU LU step by step, or
+    // run entirely on the CPU). Nothing is printed on the CPU backend.
+    if (RunInfo.IsGpuBackend) Console.WriteLine($"GPU: {gpuSolve.Describe()}");
     // Two-terminal LCC links (2026-10-25): why an AC/DC solve failed, and each link's solved DC state.
     if (r.LccNote is not null) Console.Error.WriteLine($"LCC HVDC: {r.LccNote}");
     if (r.LccLinks is { Count: > 0 } lccLinks)
@@ -7148,6 +7398,9 @@ void PrintFrequency(string path)
     if (rep.SamplesAboveOperational > 0)
         Console.WriteLine($"  over-frequency: operational 50.2 Hz: {rep.SamplesAboveOperational} s above" +
                           $"    statutory 50.5 Hz: {(rep.SamplesAboveStatutory > 0 ? $"{rep.SamplesAboveStatutory} s above" : "held")}");
+    // DP-26: printed only when the trace holds a non-finite sample, so every finite trace prints exactly as before.
+    if (rep.SamplesNonFinite > 0)
+        Console.WriteLine($"  WARNING: {rep.SamplesNonFinite} sample(s) were not finite and are left out of the statistics above.");
     Console.WriteLine();
     Console.WriteLine("Upsample demo  -  1 s frames expanded to 20 ms by RoCoF interpolation:");
     Console.WriteLine("  time            Hz         RoCoF (Hz/s)");
@@ -7515,6 +7768,12 @@ static string? GatherContiguousValues(List<string> a, string flag)
     var vals = new List<string>();
     while (j < a.Count && !a[j].StartsWith("--", StringComparison.Ordinal)) { vals.Add(a[j]); j++; }
     a.RemoveRange(i, j - i);
+    // CLI-22 (post-RC3): a second occurrence used to stay in the list, unread. Refuse it like any repeated value flag.
+    if (a.IndexOf(flag) >= 0)
+    {
+        Console.Error.WriteLine($"error: {flag} given more than once; give every tuple after one {flag}.");
+        Environment.Exit(CliExit.Usage);
+    }
     return string.Join(' ', vals);
 }
 
@@ -7575,6 +7834,20 @@ static string? SingleFilePositional(string verb, List<string> a)
 
 // The single positional argument of a verb (the case/event id), i.e. the first free arg after the verb token.
 static string? PositionalArg(List<string> a) => Positionals(a).Skip(1).FirstOrDefault();
+
+// CLI-21 (post-RC3): the one positional of estimate, crossval, replay-event, serve and interpose. They took the first free
+// token through PositionalArg and dropped any further one, so "estimate case14 case30" estimated case14 and exited 0.
+// A second free token is now refused (exit 2), as GR-676 does for the analysis verbs; the token returned is unchanged.
+static string? OnePositional(string verb, string noun, List<string> a)
+{
+    List<string> pos = Positionals(a).Skip(1).ToList();
+    if (pos.Count > 1)
+    {
+        Console.Error.WriteLine($"error: {verb} takes one {noun} argument but got: {string.Join(' ', pos)} (the extra one would be silently ignored).");
+        Environment.Exit(CliExit.Usage);
+    }
+    return pos.Count == 1 ? pos[0] : null;
+}
 
 // ---- Case selection shared by every verb that takes a positional <case> and/or --dir -------------------------------
 //
@@ -8701,6 +8974,8 @@ void RunPf(List<string> a, string root)
     // D-DOC-150: a converged sweep is labelled by its own test (the voltage step), not left to read as a mismatch test.
     Console.WriteLine($"  {(r.Converged ? r.ConvergedLabel() : $"NOT CONVERGED ({r.Status})")} in {r.Iterations} iteration(s), mismatch {r.MaxMismatch:E2} pu   "
         + $"losses {r.TotalLossMw:F3} MW / {r.TotalLossMvar:F3} MVAr");
+    // The Newton engines' automatic DC-angle-start retry (runs only after an ordinary solve failed): say that it ran.
+    if (r.NewtonRetryNote is { } retryNote) Console.WriteLine($"  {retryNote}");
     if (r.Vm.Length > 0) Console.WriteLine($"  voltage range {r.Vm.Min():F4} - {r.Vm.Max():F4} pu");
     if (dsp is not null)
     {
@@ -9025,6 +9300,7 @@ void RunConvert(List<string> a, string root)
         }
         else if (input.EndsWith(".raw", StringComparison.OrdinalIgnoreCase)) m = Gated.Psse(input);   // Tranche A
         else if (input.EndsWith(".uct", StringComparison.OrdinalIgnoreCase)) m = Gated.Ucte(input);   // Tranche A
+        else if (Gated.IsCimInput(input)) m = Gated.Cim(input);   // RC4 wiring: CIM / CGMES (.xml, .zip or a folder of profiles), the importers the desktop uses
         else m = LoadNamed(input, root);
     }
     catch (Exception ex) when (ex is IOException or InvalidDataException or ArgumentException or UnauthorizedAccessException)
@@ -9983,12 +10259,13 @@ static GridSim.Core.Dynamics.Models.SubtransientInit.MachineData InertiaPlacemen
 void RunScuc(List<string> a, string root)
 {
     string? dataFile = FlagString(a, "--uc-data");
+    bool periodsGiven = a.Contains("--periods");   // CLI-24: 0 is a value to refuse, not "absent"
     int periodsFlag = FlagInt(a, "--periods", 0);
     bool noLimits = a.Remove("--no-line-limits");
     int nodeCap = FlagInt(a, "--node-cap", 100_000);
     double gap = FlagDouble(a, "--gap", 1e-6);
     int top = FlagCount(a, "--top", 12, 0);
-    if (periodsFlag < 0) FailFlag<int>("--periods", periodsFlag.ToString(System.Globalization.CultureInfo.InvariantCulture), "at least 1");
+    if (periodsGiven && periodsFlag < 1) FailFlag<int>("--periods", periodsFlag.ToString(System.Globalization.CultureInfo.InvariantCulture), "at least 1");
     if (nodeCap < 1) FailFlag<int>("--node-cap", nodeCap.ToString(System.Globalization.CultureInfo.InvariantCulture), "at least 1");
     if (!(gap >= 0) || !double.IsFinite(gap)) FailFlag<double>("--gap", gap.ToString("R", System.Globalization.CultureInfo.InvariantCulture), "a finite number at or above 0");
     GridModel? m = LoadAnalysisCase(a, root, "scuc", "gridsim scuc <case> [--uc-data <file.json>] [--periods N] [--no-line-limits] [--node-cap 100000] [--gap 1e-6] [--top 12]");
@@ -9997,7 +10274,7 @@ void RunScuc(List<string> a, string root)
     GridSim.Core.Analysis.UcOptions o;
     try
     {
-        int? periods = periodsFlag > 0 ? periodsFlag : null;
+        int? periods = periodsGiven ? periodsFlag : null;
         if (dataFile is not null)
         {
             if (!File.Exists(dataFile)) { Console.Error.WriteLine($"[scuc] unit commitment file not found: {dataFile}"); Environment.ExitCode = CliExit.InputError; return; }
@@ -10576,6 +10853,383 @@ void RunIec60909(List<string> a, string root)
     irep?.Complete();
 }
 
+// R4-06: g74 <case> (--bus <id> | --all-buses) [--time 0.05,0.1] [--tb 0.10] [--tk 1.0] [--g74-data <file.json>] [--no-decay]
+// [--objective max|min] [--peak-method b|c] [--breaker kV,making,breaking,withstand[,s]]. A G74-style duty built over the
+// IEC 60909 machinery (Core: Protection/ShortCircuit/Ena). ENA ER G74 Issue 2:2021 was not obtainable when this was
+// written: every G74-specific clause, coefficient and example is AWAITING STANDARD TEXT and the output says so. Exit 0
+// done; 1 case or data file unreadable / study error; 2 usage; 3 INCOMPLETE data or an inadequate breaker.
+void RunG74(List<string> a, string root)
+{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    const string usage = "gridsim g74 <case> (--bus <id> | --all-buses) [--time <s>[,<s>...]] [--tb 0.10] [--tk 1.0] [--g74-data <file.json>] [--no-decay] "
+        + "[--objective max|min] [--peak-method b|c] [--breaker kV,making_kA,breaking_kA,withstand_kA[,seconds]]";
+    int bus = FlagInt(a, "--bus", int.MinValue);
+    bool allBuses = a.Remove("--all-buses");
+    bool noDecay = a.Remove("--no-decay");
+    string? dataPath = FlagString(a, "--g74-data");
+    string? timeText = FlagString(a, "--time");
+    double tb = FlagDouble(a, "--tb", 0.10);
+    double tk = FlagDouble(a, "--tk", 1.0);
+    GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective objective = (FlagString(a, "--objective") ?? "max").ToLowerInvariant() switch
+    {
+        "max" => GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective.Maximum,
+        "min" => GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective.Minimum,
+        var bad => FailFlag<GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective>("--objective", bad, "max or min"),
+    };
+    GridSim.Core.Protection.ShortCircuit.PeakFactorMethod peakMethod = (FlagString(a, "--peak-method") ?? "b").ToLowerInvariant() switch
+    {
+        "b" => GridSim.Core.Protection.ShortCircuit.PeakFactorMethod.MethodB,
+        "c" => GridSim.Core.Protection.ShortCircuit.PeakFactorMethod.MethodC,
+        var bad => FailFlag<GridSim.Core.Protection.ShortCircuit.PeakFactorMethod>("--peak-method", bad, "b or c"),
+    };
+    string? breakerSpec = FlagString(a, "--breaker");
+    if (!(tb > 0)) FailFlag<double>("--tb", tb.ToString(inv), "a breaker time above 0 s");
+    if (!(tk > 0)) FailFlag<double>("--tk", tk.ToString(inv), "a fault duration above 0 s");
+    var times = new List<double>();
+    if (timeText is null) times.Add(tb);
+    else
+        foreach (string part in timeText.Split(','))
+        {
+            if (!double.TryParse(part, System.Globalization.NumberStyles.Float, inv, out double tv) || !double.IsFinite(tv) || tv < 0)
+                FailFlag<string>("--time", timeText, "a comma list of times in seconds, each 0 or more");
+            else times.Add(tv);
+        }
+    GridSim.Core.Protection.ShortCircuit.Iec60909.BreakerRating? breaker = null;
+    if (breakerSpec is not null)
+    {
+        double[] parts = breakerSpec.Split(',').Select(s => double.TryParse(s, System.Globalization.NumberStyles.Float, inv, out double v) ? v : double.NaN).ToArray();
+        if (parts.Length is not (4 or 5) || parts.Any(v => !(v > 0) || !double.IsFinite(v)))
+            FailFlag<string>("--breaker", breakerSpec, "kV,making_kA,breaking_kA,withstand_kA[,seconds], every value above 0");
+        breaker = new GridSim.Core.Protection.ShortCircuit.Iec60909.BreakerRating(parts[0], parts[1], parts[2], parts[3], parts.Length >= 5 ? parts[4] : 1.0);
+    }
+    if (bus == int.MinValue && !allBuses) { Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
+    if (bus != int.MinValue && allBuses) { Console.Error.WriteLine("error: give --bus or --all-buses, not both."); Environment.ExitCode = 2; return; }
+    GridModel? m = LoadAnalysisCase(a, root, "g74", usage);
+    if (m is null) return;
+    if (!allBuses && !m.Buses.Any(b => b.Id == bus)) { Console.Error.WriteLine($"g74: bus {bus} is not in case '{m.Name}'."); Environment.ExitCode = 2; return; }
+    GridSim.Core.Protection.ShortCircuit.Ena.G74Data data = GridSim.Core.Protection.ShortCircuit.Ena.G74Data.Empty;
+    if (dataPath is not null)
+    {
+        try { data = GridSim.Core.Protection.ShortCircuit.Ena.G74Data.Parse(File.ReadAllText(dataPath)); }
+        catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+        { Console.Error.WriteLine($"g74: --g74-data {dataPath}: {ex.Message}"); Environment.ExitCode = 1; return; }
+    }
+    var opt = new GridSim.Core.Protection.ShortCircuit.Ena.G74Options(times, tb, tk, objective, !noDecay, peakMethod, breaker);
+    string R(double v) => double.IsNaN(v) ? "n/a" : v.ToString("R", inv);
+
+    var buses = allBuses ? m.Buses.Where(b => b.BaseKv > 0).Select(b => b.Id).ToList() : new List<int> { bus };
+    CliResult? rep = CliOutput.Report;
+    rep?.Set("case", m.Name).Set("method", "g74-style over iec60909 (G74 text AWAITING)").Set("objective", objective.ToString())
+        .Set("tb_s", tb).Set("tk_s", tk).Set("decay", !noDecay).Set("g74_text", "AWAITING STANDARD TEXT");
+    CliResultTable? summary = rep?.Table("buses", "bus", "status", "ikpp_ka", "ip_ka", "kappa", "break_tb_ka", "steady_ka", "iec_ib_ka", "breaker_adequate", "reasons");
+    CliResultTable? contrib = rep?.Table("contributions", "bus", "kind", "name", "source_bus", "ikpp_ka", "at_tb_ka", "steady_ka");
+    CliResultTable? atTimes = rep?.Table("break_times", "bus", "time_s", "break_ka");
+    bool incomplete = false, inadequate = false, failed = false;
+    Console.WriteLine($"G74-style short circuit (over IEC 60909) - {m.Name}, {objective}, tb {tb} s, Tk {tk} s, decay {(noDecay ? "off" : "on")}");
+    Console.WriteLine("  ENA ER G74 text not read: G74-specific clauses, coefficients and examples are AWAITING STANDARD TEXT.");
+    foreach (int b in buses)
+    {
+        GridSim.Core.Protection.ShortCircuit.Ena.G74BusResult r = GridSim.Core.Protection.ShortCircuit.Ena.G74Method.Compute(m, b, data, opt);
+        if (r.Status == GridSim.Core.Protection.ShortCircuit.Ena.G74Status.Ok)
+        {
+            Console.WriteLine($"  bus {b}: Ik'' = {R(r.IkppKa)} kA   ip = {R(r.PeakIpKa)} kA (kappa {R(r.Kappa)}, IEC 60909 peak)   steady = {R(r.SteadyKa)} kA   IEC Ib(tb) = {R(r.IecIbKa)} kA");
+            for (int i = 0; i < r.Times.Count; i++) Console.WriteLine($"    break at {R(r.Times[i])} s: {R(r.BreakKa[i])} kA");
+            Console.WriteLine($"    break at tb {R(tb)} s: {R(r.BreakAtTbKa)} kA");
+            foreach (GridSim.Core.Protection.ShortCircuit.Ena.G74Contribution c in r.Contributions)
+                Console.WriteLine($"    {c.Kind,-16} {c.Name,-24} bus {c.Bus,-6} Ik'' {R(c.IkppKa)} kA   at tb {R(c.AtBreakTimeKa)} kA   steady {R(c.SteadyKa)} kA");
+            Console.WriteLine($"    converter model: {r.ConverterModel}");
+            if (r.Breaker is not null)
+            {
+                Console.WriteLine($"    breaker: {(r.Breaker.Adequate ? "ADEQUATE" : "NOT ADEQUATE")}   making margin {R(r.Breaker.MakingMarginKa)} kA   breaking margin {R(r.Breaker.BreakingMarginKa)} kA   thermal margin {R(r.Breaker.ThermalMarginKa)} kA");
+                if (!r.Breaker.Adequate) inadequate = true;
+            }
+            for (int i = 0; i < r.Times.Count; i++) atTimes?.Row(b, r.Times[i], r.BreakKa[i]);
+            foreach (GridSim.Core.Protection.ShortCircuit.Ena.G74Contribution c in r.Contributions)
+                contrib?.Row(b, c.Kind, c.Name, c.Bus, c.IkppKa, c.AtBreakTimeKa, c.SteadyKa);
+            summary?.Row(b, r.Verdict, r.IkppKa, r.PeakIpKa, r.Kappa, r.BreakAtTbKa, r.SteadyKa, r.IecIbKa, r.Breaker?.Adequate, "");
+        }
+        else
+        {
+            if (r.Status == GridSim.Core.Protection.ShortCircuit.Ena.G74Status.Incomplete) incomplete = true; else failed = true;
+            Console.WriteLine($"  bus {b}: {r.Verdict}");
+            foreach (string why in r.Reasons) Console.WriteLine($"    {why}");
+            summary?.Row(b, r.Verdict, null, null, null, null, null, null, null, string.Join("; ", r.Reasons));
+        }
+    }
+    foreach (string w in GridSim.Core.Protection.ShortCircuit.Ena.G74Method.Awaiting) Console.WriteLine("  " + w);
+    rep?.Complete();
+    if (failed && !allBuses) Environment.ExitCode = 1;
+    else if (incomplete || inadequate) Environment.ExitCode = 3;
+    else if (failed) Environment.ExitCode = 1;
+}
+
+// R4-20b: sc-61363 <case> (--bus <id> | --all-buses) --iec61363-data <file.json> [--time <s>[,<s>...]] [--tb 0.10] [--objective max|min]
+// [--breaker making_peak_kA,breaking_rms_kA]. IEC 61363-1-style ship-system short circuit: generator AC decay plus DC component (Core:
+// Protection/ShortCircuit/Iec61363). The standard is paid and was not read: its constants, motor rules and example are AWAITING STANDARD TEXT and
+// the output says so. Exit 0 done; 1 case or data file unreadable / study error; 2 usage; 3 INCOMPLETE data or an inadequate breaker.
+void RunSc61363(List<string> a, string root)
+{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    const string usage = "gridsim sc-61363 <case> (--bus <id> | --all-buses) --iec61363-data <file.json> [--time <s>[,<s>...]] [--tb 0.10] "
+        + "[--objective max|min] [--breaker making_peak_kA,breaking_rms_kA]";
+    int bus = FlagInt(a, "--bus", int.MinValue);
+    bool allBuses = a.Remove("--all-buses");
+    string? dataPath = FlagString(a, "--iec61363-data");
+    string? timeText = FlagString(a, "--time");
+    double tb = FlagDouble(a, "--tb", 0.10);
+    GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective objective = (FlagString(a, "--objective") ?? "max").ToLowerInvariant() switch
+    {
+        "max" => GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective.Maximum,
+        "min" => GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective.Minimum,
+        var bad => FailFlag<GridSim.Core.Protection.ShortCircuit.ShortCircuitObjective>("--objective", bad, "max or min"),
+    };
+    string? breakerSpec = FlagString(a, "--breaker");
+    if (!(tb > 0)) FailFlag<double>("--tb", tb.ToString(inv), "a breaker time above 0 s");
+    var times = new List<double>();
+    if (timeText is null) times.Add(tb);
+    else
+        foreach (string part in timeText.Split(','))
+        {
+            if (!double.TryParse(part, System.Globalization.NumberStyles.Float, inv, out double tv) || !double.IsFinite(tv) || tv < 0)
+                FailFlag<string>("--time", timeText, "a comma list of times in seconds, each 0 or more");
+            else times.Add(tv);
+        }
+    GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Breaker? breaker = null;
+    if (breakerSpec is not null)
+    {
+        double[] parts = breakerSpec.Split(',').Select(s => double.TryParse(s, System.Globalization.NumberStyles.Float, inv, out double v) ? v : double.NaN).ToArray();
+        if (parts.Length != 2 || parts.Any(v => !(v > 0) || !double.IsFinite(v)))
+            FailFlag<string>("--breaker", breakerSpec, "making_peak_kA,breaking_rms_kA, every value above 0");
+        else breaker = new GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Breaker(parts[0], parts[1]);
+    }
+    if (bus == int.MinValue && !allBuses) { Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
+    if (bus != int.MinValue && allBuses) { Console.Error.WriteLine("error: give --bus or --all-buses, not both."); Environment.ExitCode = 2; return; }
+    if (dataPath is null) { Console.Error.WriteLine("error: --iec61363-data <file.json> is required (nothing is defaulted)."); Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
+    GridModel? m = LoadAnalysisCase(a, root, "sc-61363", usage);
+    if (m is null) return;
+    if (!allBuses && !m.Buses.Any(b => b.Id == bus)) { Console.Error.WriteLine($"sc-61363: bus {bus} is not in case '{m.Name}'."); Environment.ExitCode = 2; return; }
+    GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Data data;
+    try { data = GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Data.Parse(File.ReadAllText(dataPath)); }
+    catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+    { Console.Error.WriteLine($"sc-61363: --iec61363-data {dataPath}: {ex.Message}"); Environment.ExitCode = 1; return; }
+    var opt = new GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Options(times, tb, 0.20, objective, breaker);
+    string R(double v) => double.IsNaN(v) ? "n/a" : v.ToString("R", inv);
+
+    var buses = allBuses ? m.Buses.Where(b => b.BaseKv > 0).Select(b => b.Id).ToList() : new List<int> { bus };
+    CliResult? rep = CliOutput.Report;
+    rep?.Set("case", m.Name).Set("method", "iec 61363-1-style generator decay plus DC (standard text AWAITING)").Set("break_time_s", tb)
+        .Set("iec61363_text", "AWAITING STANDARD TEXT");
+    CliResultTable? summary = rep?.Table("buses", "bus", "status", "ikpp_ka", "peak_ka", "peak_time_s", "ac_at_break_ka", "dc_at_break_ka", "breaker_adequate", "reasons");
+    CliResultTable? steps = rep?.Table("times", "bus", "time_s", "ac_ka", "dc_ka", "asym_rms_ka");
+    CliResultTable? contrib = rep?.Table("contributions", "bus", "kind", "name", "source_bus", "ikpp_ka", "ac_at_break_ka", "dc_at_break_ka");
+    bool incomplete = false, inadequate = false, failed = false;
+    Console.WriteLine($"IEC 61363-1-style ship-system short circuit - {m.Name}, break time {R(tb)} s");
+    Console.WriteLine("  IEC 61363-1 text not read: method constants, motor rules, peak construction and the worked example are AWAITING STANDARD TEXT.");
+    foreach (int b in buses)
+    {
+        GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363BusResult r = GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Method.Compute(m, b, data, opt);
+        if (r.Status == GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Status.Ok)
+        {
+            Console.WriteLine($"  bus {b}: initial current = {R(r.IkppKa)} kA   peak = {R(r.PeakKa)} kA at {R(r.PeakTimeS)} s   at break: AC {R(r.AcAtBreakKa)} kA, DC {R(r.DcAtBreakKa)} kA");
+            for (int i = 0; i < r.Times.Count; i++)
+            {
+                Console.WriteLine($"    t = {R(r.Times[i])} s: AC {R(r.AcKa[i])} kA   DC {R(r.DcKa[i])} kA   asymmetrical rms {R(r.AsymRmsKa[i])} kA");
+                steps?.Row(b, r.Times[i], r.AcKa[i], r.DcKa[i], r.AsymRmsKa[i]);
+            }
+            foreach (var c in r.Contributions)
+            {
+                Console.WriteLine($"    {c.Kind,-16} {c.Name,-24} bus {c.Bus,-6} initial {R(c.IkppKa)} kA   AC at break {R(c.AcAtBreakKa)} kA   DC at break {R(c.DcAtBreakKa)} kA");
+                contrib?.Row(b, c.Kind, c.Name, c.Bus, c.IkppKa, c.AcAtBreakKa, c.DcAtBreakKa);
+            }
+            foreach (string note in r.Notes) Console.WriteLine("    note: " + note);
+            if (r.Breaker is not null)
+            {
+                Console.WriteLine($"    breaker: {(r.Breaker.Adequate ? "ADEQUATE" : "NOT ADEQUATE")}   making margin {R(r.Breaker.MakingMarginKa)} kA   breaking margin {R(r.Breaker.BreakingMarginKa)} kA");
+                if (!r.Breaker.Adequate) inadequate = true;
+            }
+            summary?.Row(b, r.Verdict, r.IkppKa, r.PeakKa, r.PeakTimeS, r.AcAtBreakKa, r.DcAtBreakKa, r.Breaker?.Adequate, "");
+        }
+        else
+        {
+            if (r.Status == GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Status.Incomplete) incomplete = true; else failed = true;
+            Console.WriteLine($"  bus {b}: {r.Verdict}");
+            foreach (string why in r.Reasons) Console.WriteLine($"    {why}");
+            summary?.Row(b, r.Verdict, null, null, null, null, null, null, string.Join("; ", r.Reasons));
+        }
+    }
+    foreach (string w in GridSim.Core.Protection.ShortCircuit.Iec61363.Iec61363Method.Awaiting) Console.WriteLine("  " + w);
+    rep?.Complete();
+    if (failed && !allBuses) Environment.ExitCode = 1;
+    else if (incomplete || inadequate) Environment.ExitCode = 3;
+    else if (failed) Environment.ExitCode = 1;
+}
+
+// R4-20c: sc-dc <network.json> [--time <s>[,<s>...]] [--step <s>] [--end-time <s>] [--breaker making_A]. IEC 61660-style DC auxiliary-installation
+// short circuit (Core: Protection/ShortCircuit/Dc): batteries, rectifiers, capacitors and DC motors behind R and L, solved as a circuit. The DC network
+// is its own file (gridsim-dc-network/1); the case format carries no DC data. The standard is paid and was not read: its equations and coefficients are
+// AWAITING STANDARD TEXT and the output says so. Exit 0 done; 1 unreadable or invalid network file; 2 usage; 3 INCOMPLETE (a step or end time cannot be
+// chosen, singular network) or a breaker whose making capacity is exceeded.
+void RunScDc(List<string> a, string root)
+{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    const string usage = "gridsim sc-dc <network.json> [--time <s>[,<s>...]] [--step <s>] [--end-time <s>] [--breaker making_A]";
+    string? timeText = FlagString(a, "--time");
+    double step = FlagDouble(a, "--step", double.NaN);
+    double endT = FlagDouble(a, "--end-time", double.NaN);
+    double breakerA = FlagDouble(a, "--breaker", double.NaN);
+    if (!double.IsNaN(step) && !(step > 0)) FailFlag<double>("--step", step.ToString(inv), "a step above 0 s");
+    if (!double.IsNaN(endT) && !(endT > 0)) FailFlag<double>("--end-time", endT.ToString(inv), "an end time above 0 s");
+    if (!double.IsNaN(breakerA) && !(breakerA > 0)) FailFlag<double>("--breaker", breakerA.ToString(inv), "a making capacity above 0 A");
+    var times = new List<double>();
+    if (timeText is not null)
+        foreach (string part in timeText.Split(','))
+        {
+            if (!double.TryParse(part, System.Globalization.NumberStyles.Float, inv, out double tv) || !double.IsFinite(tv) || tv < 0)
+                FailFlag<string>("--time", timeText, "a comma list of times in seconds, each 0 or more");
+            else times.Add(tv);
+        }
+    string? path = AnalysisCasePositional("sc-dc", a);
+    if (path is null) { Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
+    GridSim.Core.Protection.ShortCircuit.Dc.DcNetwork net;
+    try { net = GridSim.Core.Protection.ShortCircuit.Dc.DcNetwork.Parse(File.ReadAllText(path)); }
+    catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+    { Console.Error.WriteLine($"sc-dc: {path}: {ex.Message}"); Environment.ExitCode = 1; return; }
+    var opt = new GridSim.Core.Protection.ShortCircuit.Dc.DcOptions(times, double.IsNaN(step) ? null : step, double.IsNaN(endT) ? null : endT,
+        double.IsNaN(breakerA) ? null : breakerA);
+    string R(double v) => double.IsNaN(v) ? "n/a" : v.ToString("R", inv);
+    GridSim.Core.Protection.ShortCircuit.Dc.DcResult r = GridSim.Core.Protection.ShortCircuit.Dc.Iec61660.Compute(net, opt);
+
+    CliResult? rep = CliOutput.Report;
+    rep?.Set("network", Path.GetFileName(path)).Set("method", "iec 61660-style circuit solution (standard text AWAITING)").Set("status", r.Verdict)
+        .Set("iec61660_text", "AWAITING STANDARD TEXT").Set("peak_a", r.PeakA).Set("peak_time_s", r.PeakTimeS).Set("end_a", r.EndA).Set("step_s", r.StepS).Set("end_time_s", r.EndS);
+    Console.WriteLine($"IEC 61660-style DC short circuit - {Path.GetFileName(path)}, fault at node {net.Fault.Node} ({R(net.Fault.ROhm)} ohm): {r.Verdict}");
+    Console.WriteLine("  IEC 61660-1 text not read: equations, coefficients, rectifier and motor rules and the worked examples are AWAITING STANDARD TEXT.");
+    if (r.Status == GridSim.Core.Protection.ShortCircuit.Dc.DcStatus.Ok)
+    {
+        CliResultTable? sources = rep?.Table("sources", "name", "kind", "peak_a", "peak_time_s", "end_a");
+        CliResultTable? steps = rep?.Table("times", "time_s", "fault_a");
+        Console.WriteLine($"  prefault node voltage {R(r.PrefaultFaultNodeV)} V   step {R(r.StepS)} s   end {R(r.EndS)} s   ({r.StepCount} steps)");
+        Console.WriteLine($"  fault current: peak {R(r.PeakA)} A at {R(r.PeakTimeS)} s   at the end time {R(r.EndA)} A");
+        for (int i = 0; i < r.Times.Count; i++)
+        {
+            Console.WriteLine($"    t = {R(r.Times[i])} s: {R(r.AtTimesA[i])} A");
+            steps?.Row(r.Times[i], r.AtTimesA[i]);
+        }
+        foreach (var s in r.Sources)
+        {
+            Console.WriteLine($"    {s.Kind,-10} {s.Name,-24} peak {R(s.PeakA)} A at {R(s.PeakTimeS)} s   at the end {R(s.EndA)} A");
+            sources?.Row(s.Name, s.Kind, s.PeakA, s.PeakTimeS, s.EndA);
+        }
+        foreach (string note in r.Notes) Console.WriteLine("    note: " + note);
+        if (r.MakingOk is bool ok)
+        {
+            Console.WriteLine($"    breaker making capacity: {(ok ? "ADEQUATE" : "NOT ADEQUATE")}   margin {R(r.MakingMarginA)} A");
+            if (!ok) Environment.ExitCode = 3;
+        }
+    }
+    else
+    {
+        foreach (string why in r.Reasons) Console.WriteLine($"    {why}");
+        Environment.ExitCode = r.Status == GridSim.Core.Protection.ShortCircuit.Dc.DcStatus.Incomplete ? 3 : 1;
+    }
+    foreach (string w in GridSim.Core.Protection.ShortCircuit.Dc.Iec61660.Awaiting) Console.WriteLine("  " + w);
+    rep?.Complete();
+}
+
+// R4-20a: ansi-sc <case> (--bus <id> | --all-buses) --ansi-data <file.json> [--parting-cycles <n>] [--prefault 1.0]
+// [--breaker kV,closing_latch_kA,interrupting_kA]. ANSI/IEEE C37.010-style E/X duty (Core: Protection/ShortCircuit/Ansi). The standards are
+// paid and were not read: the multiplier table, local multiplying factors, clauses and examples are AWAITING STANDARD TEXT and the output says
+// so. Exit 0 done; 1 case or data file unreadable / study error; 2 usage; 3 INCOMPLETE data or an inadequate breaker. An interrupting duty
+// that is OUT OF SCOPE (local generation, no parting time, no multiplier) is stated in the output and is not an error.
+void RunAnsiSc(List<string> a, string root)
+{
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    const string usage = "gridsim ansi-sc <case> (--bus <id> | --all-buses) --ansi-data <file.json> [--parting-cycles <n>] [--prefault 1.0] "
+        + "[--breaker kV,closing_latch_kA,interrupting_kA]";
+    int bus = FlagInt(a, "--bus", int.MinValue);
+    bool allBuses = a.Remove("--all-buses");
+    string? dataPath = FlagString(a, "--ansi-data");
+    string? partingText = FlagString(a, "--parting-cycles");
+    double prefault = FlagDouble(a, "--prefault", 1.0);
+    string? breakerSpec = FlagString(a, "--breaker");
+    if (!(prefault > 0) || !double.IsFinite(prefault)) FailFlag<double>("--prefault", prefault.ToString(inv), "a prefault voltage above 0 pu");
+    double? parting = null;
+    if (partingText is not null)
+    {
+        if (!double.TryParse(partingText, System.Globalization.NumberStyles.Float, inv, out double pv) || !double.IsFinite(pv) || pv < 0)
+            FailFlag<string>("--parting-cycles", partingText, "a contact parting time in cycles, 0 or more");
+        else parting = pv;
+    }
+    GridSim.Core.Protection.ShortCircuit.Ansi.AnsiBreaker? breaker = null;
+    if (breakerSpec is not null)
+    {
+        double[] parts = breakerSpec.Split(',').Select(s => double.TryParse(s, System.Globalization.NumberStyles.Float, inv, out double v) ? v : double.NaN).ToArray();
+        if (parts.Length != 3 || parts.Any(v => !(v > 0) || !double.IsFinite(v)))
+            FailFlag<string>("--breaker", breakerSpec, "kV,closing_latch_kA,interrupting_kA, every value above 0");
+        else breaker = new GridSim.Core.Protection.ShortCircuit.Ansi.AnsiBreaker(parts[0], parts[1], parts[2]);
+    }
+    if (bus == int.MinValue && !allBuses) { Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
+    if (bus != int.MinValue && allBuses) { Console.Error.WriteLine("error: give --bus or --all-buses, not both."); Environment.ExitCode = 2; return; }
+    if (dataPath is null) { Console.Error.WriteLine("error: --ansi-data <file.json> is required (nothing is defaulted)."); Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
+    GridModel? m = LoadAnalysisCase(a, root, "ansi-sc", usage);
+    if (m is null) return;
+    if (!allBuses && !m.Buses.Any(b => b.Id == bus)) { Console.Error.WriteLine($"ansi-sc: bus {bus} is not in case '{m.Name}'."); Environment.ExitCode = 2; return; }
+    GridSim.Core.Protection.ShortCircuit.Ansi.AnsiData data;
+    try { data = GridSim.Core.Protection.ShortCircuit.Ansi.AnsiData.Parse(File.ReadAllText(dataPath)); }
+    catch (Exception ex) when (ex is FormatException or IOException or UnauthorizedAccessException)
+    { Console.Error.WriteLine($"ansi-sc: --ansi-data {dataPath}: {ex.Message}"); Environment.ExitCode = 1; return; }
+    var opt = new GridSim.Core.Protection.ShortCircuit.Ansi.AnsiOptions(prefault, parting, breaker);
+    string R(double v) => double.IsNaN(v) ? "n/a" : v.ToString("R", inv);
+
+    var buses = allBuses ? m.Buses.Where(b => b.BaseKv > 0).Select(b => b.Id).ToList() : new List<int> { bus };
+    CliResult? rep = CliOutput.Report;
+    rep?.Set("case", m.Name).Set("method", "ansi c37.010-style E/X (standard text AWAITING)").Set("prefault_pu", prefault)
+        .Set("parting_cycles", parting).Set("ansi_text", "AWAITING STANDARD TEXT");
+    CliResultTable? summary = rep?.Table("buses", "bus", "status", "x_mom_pu", "r_pu", "xr_mom", "sym_mom_ka", "mf_mom", "mom_rms_ka", "peak_ka",
+        "x_int_pu", "xr_int", "sym_int_ka", "nacd", "mf_int", "int_ka", "reference_int_ka", "interrupting_note", "breaker_adequate", "reasons");
+    CliResultTable? contrib = rep?.Table("contributions", "bus", "kind", "name", "source_bus", "class", "local", "momentary_ka", "interrupting_ka");
+    bool incomplete = false, inadequate = false, failed = false;
+    Console.WriteLine($"ANSI/IEEE C37-style E/X short circuit - {m.Name}, E = {R(prefault)} pu, contact parting {(parting is null ? "not given" : R(parting.Value) + " cycles")}");
+    Console.WriteLine("  IEEE C37.010 / C37.5 text not read: multiplier tables, local multiplying factors, clauses and examples are AWAITING STANDARD TEXT.");
+    foreach (int b in buses)
+    {
+        GridSim.Core.Protection.ShortCircuit.Ansi.AnsiBusResult r = GridSim.Core.Protection.ShortCircuit.Ansi.AnsiDuty.Compute(m, b, data, opt);
+        if (r.Status == GridSim.Core.Protection.ShortCircuit.Ansi.AnsiStatus.Ok)
+        {
+            Console.WriteLine($"  bus {b} ({R(r.NominalKv)} kV, base {R(r.BaseKa)} kA):");
+            Console.WriteLine($"    momentary: X = {R(r.MomentaryXPu)} pu  R = {R(r.RPu)} pu  X/R = {R(r.MomentaryXoverR)}   E/X = {R(r.MomentarySymKa)} kA   MF = {R(r.MomentaryMf)}   close and latch = {R(r.MomentaryRmsKa)} kA rms   crest = {R(r.PeakKa)} kA");
+            if (!double.IsNaN(r.InterruptingXPu))
+                Console.WriteLine($"    interrupting network: X = {R(r.InterruptingXPu)} pu  X/R = {R(r.InterruptingXoverR)}   E/X = {R(r.InterruptingSymKa)} kA   NACD = {R(r.Nacd)}");
+            if (r.InterruptingInScope) Console.WriteLine($"    interrupting duty = {R(r.InterruptingKa)} kA  (remote MF {R(r.InterruptingMf)})");
+            else Console.WriteLine($"    interrupting duty: {r.InterruptingNote}" + (double.IsNaN(r.ReferenceInterruptingKa) ? "" : $" (reference {R(r.ReferenceInterruptingKa)} kA)"));
+            foreach (GridSim.Core.Protection.ShortCircuit.Ansi.AnsiSourceCurrent c in r.Sources)
+                Console.WriteLine($"    {c.Kind,-8} {c.Name,-24} bus {c.Bus,-6} {c.Class,-20} {(c.Local ? "local " : "remote")}  momentary {R(c.MomentaryKa)} kA   interrupting {R(c.InterruptingKa)} kA");
+            foreach (string note in r.Notes) Console.WriteLine("    note: " + note);
+            if (r.Breaker is not null)
+            {
+                Console.WriteLine($"    breaker: {(r.Breaker.Adequate ? "ADEQUATE" : "NOT ADEQUATE")}   voltage {(r.Breaker.VoltageOk ? "ok" : "EXCEEDED")}   closing margin {R(r.Breaker.ClosingMarginKa)} kA   interrupting margin {(r.Breaker.InterruptingChecked ? R(r.Breaker.InterruptingMarginKa) + " kA" : "not checked (interrupting duty out of scope)")}");
+                if (!r.Breaker.Adequate) inadequate = true;
+            }
+            foreach (GridSim.Core.Protection.ShortCircuit.Ansi.AnsiSourceCurrent c in r.Sources) contrib?.Row(b, c.Kind, c.Name, c.Bus, c.Class, c.Local, c.MomentaryKa, c.InterruptingKa);
+            summary?.Row(b, r.Verdict, r.MomentaryXPu, r.RPu, r.MomentaryXoverR, r.MomentarySymKa, r.MomentaryMf, r.MomentaryRmsKa, r.PeakKa,
+                r.InterruptingXPu, r.InterruptingXoverR, r.InterruptingSymKa, r.Nacd, r.InterruptingMf, r.InterruptingKa, r.ReferenceInterruptingKa,
+                r.InterruptingNote, r.Breaker?.Adequate, "");
+        }
+        else
+        {
+            if (r.Status == GridSim.Core.Protection.ShortCircuit.Ansi.AnsiStatus.Incomplete) incomplete = true; else failed = true;
+            Console.WriteLine($"  bus {b}: {r.Verdict}");
+            foreach (string why in r.Reasons) Console.WriteLine($"    {why}");
+            summary?.Row(b, r.Verdict, null, null, null, null, null, null, null, null, null, null, null, null, null, null, "", null, string.Join("; ", r.Reasons));
+        }
+    }
+    foreach (string w in GridSim.Core.Protection.ShortCircuit.Ansi.AnsiDuty.Awaiting) Console.WriteLine("  " + w);
+    rep?.Complete();
+    if (failed && !allBuses) Environment.ExitCode = 1;
+    else if (incomplete || inadequate) Environment.ExitCode = 3;
+    else if (failed) Environment.ExitCode = 1;
+}
+
 // F21 (October 2026): iec60909 --all-buses: the duty at every bus with a base kV, in bus order. A bus the study cannot
 // form (no base kV, no source) is listed with the reason and makes the run exit 1 after the table; an inadequate breaker
 // at any bus (with --breaker, checked at each bus's own voltage) makes it exit 3.
@@ -10925,7 +11579,7 @@ void RunExperimental(List<string> a, string root)
     string? sub = a.Count > 1 ? a[1] : null;
 
     void Banner() => Console.Error.WriteLine(
-        "[experimental] opt-in, unvalidated-at-scale models. Not part of the validated solve/estimate paths.");
+        "[experimental] opt-in, unvalidated-at-scale models. Not part of the standard solve/estimate paths.");
 
     GridModel? Load(string? arg)
     {
@@ -13536,12 +14190,16 @@ void RunGpuCheck()
             Console.Write($"  {what}: build solver... "); Console.Out.Flush();
             IPowerFlowSolver s = make();
             Console.Write("solve case9... "); Console.Out.Flush();
+            GridSim.Gpu.GpuSolveCount gpuBefore = GridSim.Gpu.GpuSolveCounters.Snapshot();
             var sw = System.Diagnostics.Stopwatch.StartNew();
             PowerFlowResult r = s.Solve(IeeeCases.Case9(), new PowerFlowOptions { MaxIterations = 50, EnforceQLimits = false });
             sw.Stop();
-            Line(r.Converged
+            // RC4: on a GPU probe, where the linear solves ran (additive; the CPU probe's line is unchanged).
+            GridSim.Gpu.GpuSolveCount g = GridSim.Gpu.GpuSolveCounters.Snapshot() - gpuBefore;
+            string where = what.StartsWith("CPU ", StringComparison.Ordinal) ? "" : $"  [{g.Describe()}]";
+            Line((r.Converged
                 ? $"PASS  ({r.Iterations} it, {sw.Elapsed.TotalMilliseconds:F1} ms, |mis|={r.MaxMismatch:E1})"
-                : $"ran but NOT converged ({r.Iterations} it, |mis|={r.MaxMismatch:E1})");
+                : $"ran but NOT converged ({r.Iterations} it, |mis|={r.MaxMismatch:E1})") + where);
             if (!r.Converged) tally.RunFailed($"{what} did not converge on case9");
         }
         catch (Exception ex)
@@ -14076,10 +14734,11 @@ void RunNMinus1Sweep(List<string> a, int parallel, int sample, string? outPath, 
         int nb = m.Branches.Count;
         IReadOnlyList<int>? idx = null;
         bool sampled = false;
-        if (sample > 0 && nb > sample)
+        int[] liveBranches = ContingencyAnalysis.InServiceBranchIndices(m);   // AN-02: an out-of-service branch is no outage
+        if (sample > 0 && liveBranches.Length > sample)
         {
-            // Evenly-spaced sample across the branch list (logged, never silent).
-            idx = Enumerable.Range(0, sample).Select(k => (int)((long)k * nb / sample)).Distinct().ToList();
+            // Evenly-spaced sample across the in-service branch list (logged, never silent).
+            idx = Enumerable.Range(0, sample).Select(k => liveBranches[(int)((long)k * liveBranches.Length / sample)]).Distinct().ToList();
             sampled = true;
             Console.Error.WriteLine($"[n-1] {label}: SAMPLING {idx.Count}/{nb} branches (--sample {sample})");
         }
@@ -14837,6 +15496,9 @@ void RunNMinus1(GridModel model)
     Console.WriteLine(new string('-', 74));
     Console.WriteLine(ScreenedSummary(results.Count, insecure, islanded, notSolved));
     PrintBaseOnlyNote(results);
+    // AN-02: branches already out of service are not outages; said on stderr so the printed counts stay as the rows.
+    if (outBranch && model.Branches.Count(b => !b.InService) is int deadBranches and > 0)
+        Console.Error.WriteLine($"note: nminus1: {deadBranches} branch(es) already out of service were not screened as outages.");
     // F10: the result file (when asked for), rows in the printed order.
     var ordered = results.OrderByDescending(c => c.Converged ? 0 : 2).ThenByDescending(c => c.Violations.Count).ToList();
     ReportContingency(model.Name, typesDefault ? "every branch" : $"every {kinds}", baseCase, ordered, Array.Empty<ContingencyResult>(), insecure + islanded + notSolved,
@@ -15584,7 +16246,7 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
     Console.WriteLine();
     // N351 (CF5): the first footer word says what was studied (the default runs print exactly the old line).
     Console.WriteLine((rmsEvents is not null ? "Scheduled RMS events" : clearByTrip is not null ? "3-phase fault cleared by branch trips" : "Self-clearing 3-phase fault")
-        + "; the subtransient engine is validated (reduces to the classical CCT),");
+        + "; the subtransient engine is checked against the classical CCT it reduces to,");
     // F23: the INDICATIVE label goes only when every machine's data comes from the file AND every value there is tagged
     // Recorded or DerivedFromRecorded; synthetic defaults or placeholder / synthetic provenance keep it.
     if (dyn is null)

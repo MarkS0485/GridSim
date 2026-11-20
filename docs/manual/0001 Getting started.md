@@ -53,7 +53,7 @@ The other two artefacts are not on the release page:
 | `GridSim.Core` NuGet package | the repository's GitHub Packages NuGet feed | `dotnet add package GridSim.Core --version <version>` with that feed configured as a package source |
 | Web app container image | `ghcr.io/<owner>/gridsim-web:<version>` | `docker run --rm -p 127.0.0.1:5540:8080 ghcr.io/<owner>/gridsim-web:<version>`; replay-only (the solve API and the simulation socket are not served); deployment settings are in `docs/developer/deploy/README.md` |
 
-The Unity viewer and a macOS desktop app are not in a release: build them from source (below).
+A macOS desktop app is not in a release: build it from source (below).
 `GridSim.Gda` and the GDA data are not release artefacts either: the `gda` verbs are in the command line tool, but
 they need a GDA data lake (`GDA_DATA_ROOT`, see [ch. 3](<0003 Configuration.md>)), which no download includes.
 

@@ -1,4 +1,7 @@
 using System.IO;
+using GridSim.Core.IO.Cim;
+using GridSim.Core.IO.Cim.Profiles;
+using GridSim.Core.IO.Cim.Zip;
 using GridSim.Core.IO.Json;
 using GridSim.Core.IO.Matpower;
 using GridSim.Core.IO.Psse;
@@ -97,6 +100,56 @@ internal static class Gated
         bool bundled = profilePaths.All(IsBundledPath);
         GateResult r = _gate.Check(model.BusCount, bundled);
         if (!r.Allowed) throw new GateRefusedException(r.Message);
+    }
+
+    /// <summary>R4-11a: the licence check for a model that is DERIVED from a file rather than loaded by a loader here (the
+    /// bus-branch case that <c>substation-state</c> projects from a node-breaker file). The bus limit applies to the projected
+    /// bus count; the model counts as bundled only when its source file sits under the shipped data tree.</summary>
+    internal static void AdmitProjected(string sourcePath, GridModel projected)
+    {
+        GateResult r = _gate.Check(projected.BusCount, IsBundledPath(sourcePath));
+        if (!r.Allowed) throw new GateRefusedException(r.Message);
+    }
+
+    /// <summary>RC4 wiring: true when <paramref name="path"/> is a CIM / CGMES input for <c>convert</c>: a .xml document, a .zip
+    /// exchange, or a folder of .xml profile files that is not a GridSim case folder (no system.json, buses.json or .m file).</summary>
+    internal static bool IsCimInput(string path)
+    {
+        if (Directory.Exists(path))
+            return !File.Exists(Path.Combine(path, "system.json")) && !File.Exists(Path.Combine(path, "buses.json"))
+                && Directory.EnumerateFiles(path, "*.xml", SearchOption.AllDirectories).Any();
+        return File.Exists(path) && (path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// RC4 wiring: load a CIM / CGMES input (one RDF/XML document, a .zip exchange, or a folder of profile files) with the Core
+    /// importers the desktop app uses (<see cref="CimImporter"/> with <see cref="CimImportOptions.Default"/>, then
+    /// <see cref="CimGridModelBridge"/> on 100 MVA), and enforce the licence as for a CGMES study: bundled only when every file is
+    /// under the shipped data tree. The bridge's notes are printed on stderr, one <c>note: &lt;name&gt;: &lt;text&gt;</c> line each.
+    /// </summary>
+    internal static GridModel Cim(string path)
+    {
+        bool dir = Directory.Exists(path);
+        if (!dir) RequireFile(path, "CIM / CGMES input");
+        string full = Path.GetFullPath(path);
+        string name = dir ? Path.GetFileName(full.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)) : Path.GetFileNameWithoutExtension(full);
+        string[] docs;
+        if (dir || path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            CgmesArchive archive = dir ? CgmesArchiveReader.ReadDirectory(path) : CgmesArchiveReader.ReadFile(path);
+            docs = archive.Entries.Where(e => e.Kind is not (CgmesProfileKind.Unknown or CgmesProfileKind.DL or CgmesProfileKind.GL or CgmesProfileKind.SC))
+                .Select(e => e.Text).ToArray();
+            if (docs.Length == 0) throw new InvalidDataException("No CGMES profile documents (EQ, TP, SSH, SV) were found.");
+        }
+        else docs = [File.ReadAllText(path)];
+        var notes = new List<string>();
+        double? frequencyHz = _declaredFrequencyHz;
+        CimNetwork net = CimImporter.Parse(docs, CimImportOptions.Default);
+        GridModel model = CimGridModelBridge.ToGridModel(net, name: name, notes: notes, frequencyHz: frequencyHz);
+        AdmitCgmes(new[] { full }, model);
+        foreach (string n in notes) Console.Error.WriteLine($"note: {name}: {n}");
+        if (frequencyHz is not null) DeclaredFrequencyApplied = true;
+        return model;
     }
 
     public static GridModel Dir(string path)
@@ -588,7 +641,7 @@ internal static class Gated
     /// the free tier refused the shipped GB case here while the Web and WPF apps loaded it). User models loaded
     /// from anywhere else (a working dir, a <c>gda-out/</c> tree) are licensed.
     /// </summary>
-    internal static bool IsBundledPath(string path) => BundledNetworks.IsBundledPath(path);
+    internal static bool IsBundledPath(string path) => BundledNetworks.IsBundledV2Case(path);   // APP-25: a v2 manifest also needs every file it lists (any other path: the plain rule)
 }
 
 /// <summary>

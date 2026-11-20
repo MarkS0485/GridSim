@@ -34,7 +34,7 @@ public readonly record struct GateResult(bool Allowed, string Message)
 public sealed class LicenceGate
 {
     /// <summary>Licensing contact, per LICENSE.md.</summary>
-    public const string ContactEmail = "gdatooling@proton.me";
+    public const string ContactEmail = "mark@gridsimdigitaltwin.co.uk";
 
     /// <summary>The GridSim licence-file extension. A <c>.gridsim</c> file holds one <c>GSK1 …</c> key.</summary>
     public const string FileExtension = ".gridsim";
@@ -209,14 +209,14 @@ public sealed class LicenceGate
                 return GateResult.Deny(
                     $"Your {Entitlement.Tier.DisplayName()} licence expired on {Entitlement.Expires:yyyy-MM-dd}, so the " +
                     $"free {free.Tier.DisplayName()} tier applies: this network has {busCount:N0} buses and the free tier " +
-                    $"allows {free.BusLimit:N0}. Renew or ask about a new term: {ContactEmail}");
+                    $"allows {free.BusLimit:N0}. Licences are free at present: to renew or ask about a new term, contact {ContactEmail}");
             return GateResult.Ok();
         }
 
         if (!Entitlement.IsUnlimited && busCount > Entitlement.BusLimit)
             return GateResult.Deny(
                 $"This network has {busCount:N0} buses; your {Entitlement.Tier.DisplayName()} licence allows " +
-                $"{Entitlement.BusLimit:N0}. A larger or commercial licence removes the limit: {ContactEmail}");
+                $"{Entitlement.BusLimit:N0}. A larger licence removes the limit. Licences are free at present: ask {ContactEmail}");
 
         return GateResult.Ok();
     }

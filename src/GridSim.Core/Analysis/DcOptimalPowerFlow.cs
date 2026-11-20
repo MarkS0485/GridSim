@@ -338,10 +338,10 @@ public static class DcOptimalPowerFlow
             Generator gen = model.Generators[i];
             if (double.IsNaN(gen.Pmin) || double.IsInfinity(gen.Pmin))
                 throw new InvalidDataException(
-                    $"DC-OPF: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW; a dispatch floor must be finite.");
+                    FormattableString.Invariant($"DC-OPF: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW; a dispatch floor must be finite."));
             if (double.IsNaN(gen.Pmax) || gen.Pmin > gen.Pmax)
                 throw new InvalidDataException(
-                    $"DC-OPF: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW above Pmax {gen.Pmax} MW.");
+                    FormattableString.Invariant($"DC-OPF: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW above Pmax {gen.Pmax} MW."));
         }
     }
 

@@ -15,7 +15,7 @@ are being written.
 | 1 | [Getting started](<0001 Getting started.md>) | Install the .NET SDK, build, run the tests, first solve. |
 | 2 | [Loading networks](<0002 Loading networks.md>) | Built-in cases, MATPOWER files, JSON case folders, the GB models and the case library. |
 | 3 | [Configuration](<0003 Configuration.md>) | Environment variables, settings files and paths. |
-| 4 | [Licensing and activation](<0004 Licensing and activation.md>) | Tiers, bus limits, installing and checking a licence. |
+| 4 | [Licensing and activation](<0004 Licensing and activation.md>) | Licence tiers (issued gratis at present), bus limits, installing and checking a licence. |
 
 ## II. Steady state
 
@@ -32,7 +32,7 @@ are being written.
 |---|---|---|
 | 8 | [The desktop app](<0008 The desktop app.md>) | The WPF app (and how the web app differs): map, live view, pickers, replay. |
 | 9 | [The web app and REST/WebSocket API](<0009 The web app and REST and WebSocket API.md>) | `GridSim.Web`: the browser dashboard, `/api/cases`, `/api/topology`, `/api/solve`, `/api/realtime`, the `/ws/sim` stream, sessions and the replay-only mode. |
-| 10 | [Analysis views](<0010 Analysis views.md>) | SCADA, OPERATOR, MARKET, RP1, MECHANICAL, CYCLE and ASSETS tabs. |
+| 10 | [Analysis views](<0010 Analysis views.md>) | SCADA, OPERATOR, MARKET, FREQUENCY SECURITY, MECHANICAL, CYCLE and ASSETS tabs. |
 | 33 | [The case editor](<0033 The case editor.md>) | `GridSim.SchemaEditor`: browse, edit, add, delete and rename case records, checked and saved byte for byte; `--check`. |
 
 ## IV. Security and protection
@@ -76,6 +76,7 @@ are being written.
 | 26 | [Audit log, deployment and assurance](<0026 Audit log, deployment and assurance.md>) | `--audit-log` and its anchor, `audit verify` and `audit show`, the web host in Docker behind nginx, SSO, CI, and the assurance documents. |
 | 27 | [Validation tools](<0027 Validation tools.md>) | `crossval`, SE sidecars, `physics-check`, `conformance`, `simdcheck`. |
 | 28 | [Benchmarking and GPU](<0028 Benchmarking and GPU.md>) | `bench`, `batchsolve`, `gpucheck`, `simdcheck`, the GPU backends, published results, renting a GPU server. |
+| 35 | [Scripting](<0035 Scripting.md>) | `gridsim-script`: the `.gss` script language (grammar 1), the interactive recorded console, five stepping engines, loops, decisions, values and procedures, the run record and its hashes. |
 
 ## IX. Reference
 

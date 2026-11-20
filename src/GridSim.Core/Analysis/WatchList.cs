@@ -146,26 +146,27 @@ public static class WatchList
         foreach (LineFlow lf in r.LineFlows) maxFlow = Math.Max(maxFlow, Mva(lf));
         if (maxFlow <= 0) yield break;
 
-        // Thermal time-to-trip per branch name, if a protection assessment was supplied.
-        var timeToTrip = new Dictionary<string, double>(StringComparer.Ordinal);
+        // Thermal time-to-trip per branch INDEX (verdict LocationId indexes result.LineFlows), not display name: parallel or unnamed circuits share a name (AN-05).
+        var timeToTrip = new Dictionary<int, double>();
         if (protection is not null)
             foreach (RelayVerdict v in protection.Verdicts)
-                if (v.Device == "49" && v.Operate && v.TimeToTripS is { } t)
-                    timeToTrip[v.LocationName] = timeToTrip.TryGetValue(v.LocationName, out double e) ? Math.Min(e, t) : t;
+                if (v.Device == "49" && v.Operate && v.LocationKind == ProtectionLocation.Branch && v.TimeToTripS is { } t)
+                    timeToTrip[v.LocationId] = timeToTrip.TryGetValue(v.LocationId, out double e) ? Math.Min(e, t) : t;
 
-        foreach (LineFlow lf in r.LineFlows)
+        for (int li = 0; li < r.LineFlows.Count; li++)
         {
+            LineFlow lf = r.LineFlows[li];
             double loading = lf.RatingMva > 0 ? Mva(lf) / lf.RatingMva : 0.0;
             if (loading < opt.ThermalWatchFraction) continue;
 
             string name = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
             double proximity = Math.Clamp(loading, 0, 1);
             double consequence = Math.Clamp(Mva(lf) / maxFlow, 0, 1);
-            double? lead = timeToTrip.TryGetValue(name, out double tt) ? tt : (double?)null;
+            double? lead = timeToTrip.TryGetValue(li, out double tt) ? tt : (double?)null;
             if (lead is not null) proximity = Math.Max(proximity, 1.0); // an operating thermal element is at the limit
 
             yield return new WatchItem(WatchCategory.ThermalOverload, name,
-                $"{name} at {loading * 100:F0}% of rating" + (lead is not null ? $"; thermal replica trips in {lead:F0} s" : ""),
+                FormattableString.Invariant($"{name} at {loading * 100:F0}% of rating") + (lead is not null ? FormattableString.Invariant($"; thermal replica trips in {lead:F0} s") : ""),
                 consequence, proximity, lead);
         }
     }
@@ -202,9 +203,9 @@ public static class WatchList
             double consequence = Math.Clamp(VoltageConsequenceBase + VoltageConsequenceSlope * proximity, 0, 1);
             string nm = nameById.GetValueOrDefault(r.BusIds[i], $"bus {r.BusIds[i]}");
             bool low = r.Vm[i] < vRef;
-            string against = vRef == Analysis.VoltageLimits.NominalPu ? "" : $" against its {vRef:F3} pu setpoint";
+            string against = vRef == Analysis.VoltageLimits.NominalPu ? "" : FormattableString.Invariant($" against its {vRef:F3} pu setpoint");
             yield return new WatchItem(WatchCategory.VoltageLimit, nm,
-                $"{nm} at {r.Vm[i]:F3} pu ({(low ? "low" : "high")}{against})", consequence, proximity);
+                FormattableString.Invariant($"{nm} at {r.Vm[i]:F3} pu ({(low ? "low" : "high")}{against})"), consequence, proximity);
         }
     }
 
@@ -218,7 +219,7 @@ public static class WatchList
             if (proximity < BoundaryWatchFraction) continue;
             double consequence = Math.Clamp(b.LimitMw / BoundaryConsequenceScaleMw, BoundaryConsequenceFloor, 1); // bigger boundary = bigger transfer at risk
             yield return new WatchItem(WatchCategory.BoundaryTransfer, b.Name,
-                $"boundary {b.Name} at {b.LoadingPercent:F0}% of its {b.LimitMw:F0} MW limit", consequence, proximity);
+                FormattableString.Invariant($"boundary {b.Name} at {b.LoadingPercent:F0}% of its {b.LimitMw:F0} MW limit"), consequence, proximity);
         }
     }
 

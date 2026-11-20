@@ -1,0 +1,19 @@
+GRAMMAR 1
+# Lose line 4-5 of the WSCC 9-bus case, list the lines above 60 % loading, and take load off the weakest bus by procedure.
+LOAD CASE "data/matpower/lib/case9.m" FREQUENCY 60 HZ
+PROC shed(LOAD l, MW by)
+  SET LOAD l P P OF LOAD l - by
+END
+TRIP LINE "4-5"
+SOLVE POWERFLOW
+LET limit = 0.6 PU
+FOR EACH LINE ln WHERE LINE ln IS IN SERVICE AND LOADING OF LINE ln > limit
+  PRINT LOADING OF LINE ln
+END
+IF VM OF BUS "5" < 0.95 PU
+  CALL shed("L5", 10 MW)
+  SOLVE POWERFLOW
+  PRINT VM OF BUS "5"
+ELSE
+  PRINT VM OF BUS "5"
+END

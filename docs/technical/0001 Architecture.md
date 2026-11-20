@@ -75,7 +75,7 @@ Three things sit outside the solution:
    delivered torque, the Hz.s and regeneration accumulators and the illustrative BESS state of charge, in
    `Wpf/Views/MachineVm.cs` and `Web/Sessions/MachineService.cs`), the per-unit reactive estimate on the generator pages
    (bus injection shared by output), the per-end circuit currents `S / (sqrt(3) x V)`, and the intrinsic-inertia sum on
-   NESO RP1. The trip studies (`FrequencyDynamics.Simulate`, `TsgbSizer`, `InertiaEstimator`) are Core calls that the
+   FREQUENCY SECURITY (the former NESO RP1 tab). The trip studies (`FrequencyDynamics.Simulate`, `TsgbSizer`, `InertiaEstimator`) are Core calls that the
    shells invoke. Until that arithmetic moves into Core presenters, a desktop or web number of this kind is a display
    estimate, not a validated Core result.
 5. **Capability lives in Core and Cli.** A verb's arithmetic is a Core call; `Program.cs` parses, calls, formats and sets
@@ -184,7 +184,7 @@ takes a `CancellationToken` parameter and aborts between outages.
 | Implementation | File | Notes |
 |---|---|---|
 | `DenseLuSolver` | `src/GridSim.Core/PowerFlow/DenseLuSolver.cs` | Partial-pivot Gaussian elimination over a flat row-major copy with SIMD row updates (`DenseLuKernels.SubtractScaledRow`): a separate multiply then subtract, never FMA, so it equals the scalar textbook order bit for bit. Throws `InvalidOperationException` on a pivot at or below `NumericTolerances.RelativePivotFloor` (`1e-12`) times max abs of `A`. `Name` is `dense-lu (cpu)`. |
-| `CpuSparseLuSolver` | `src/GridSim.Core/PowerFlow/CpuSparseLuSolver.cs` | The canonical Newton step solver on the CPU. Gilbert-Peierls LU over a reverse Cuthill-McKee ordering, caching the ordering while the sparsity pattern is unchanged (a deterministic function of the pattern, so reuse is bit-identical). `Name` is `sparse-lu (cpu)`. |
+| `CpuSparseLuSolver` | `src/GridSim.Core/PowerFlow/CpuSparseLuSolver.cs` | The canonical Newton step solver on the CPU. Gilbert-Peierls LU over a minimum-degree ordering (reverse Cuthill-McKee before 2.1.073), caching the ordering while the sparsity pattern is unchanged (a deterministic function of the pattern, so reuse is bit-identical). `Name` is `sparse-lu (cpu)`. |
 | `CpuBatchedLuSolver` | `src/GridSim.Core/PowerFlow/CpuBatchedLuSolver.cs` | Loops `DenseLuSolver.FactorSolveInPlace` across the batch in parallel, each system on its own segment. The reference the GPU batched kernel is validated against. `Name` is `batched-dense-lu (cpu)`. |
 | `DenseComplexLuSolver`, `RealExpandedComplexSolver`, `SparseComplexBiCgStabSolver` | `src/GridSim.Core/Numerics/ComplexLinearSolvers.cs` | The complex backends that cross-validate. |
 | `GpuDenseLinearSolver` | `src/GridSim.Gpu/GpuDenseLinearSolver.cs` | ILGPU elimination over an augmented `[A|b]`, selectable by `AcceleratorType` (CUDA or OpenCL, same kernels); defers to `DenseLuSolver` when no such device exists. `EliminateKernel` runs one GPU thread per row; the pivot search (`PivotKernel`) is a one-block, 256-thread shared-memory argmax; a device flag records the first column whose pivot is at or below `NumericTolerances.PivotFloor(aNorm)` (`1e-12` times the matrix scale `aNorm`); the host synchronises exactly twice, once to read that flag and once to read the solution. |
@@ -229,7 +229,7 @@ correction; `false` means a singular gain) and `NormalizedResiduals`.
 |---|---|---|
 | `CanonicalWlsStep` | `EstimationMethod.Wls`, `Huber`, `LavIrls`, `SchweppeGm` on the CPU (the default `DenseLuSolver`), at every size | Solves with the `SparseWlsStep` arithmetic at every size, so the estimate does not depend on the bus count; at or below `EstimationOptions.SparseBusThreshold` (`200`) its observability report is the dense gain-rank proof of `DenseWlsStep`, above it the sparse diagnosis. |
 | `DenseWlsStep` | the same methods with a non-CPU `ILinearSolver` (a GPU dense backend) | Dense normal equations `G = H^T W H` on `ILinearSolver`; proves observability by gain-matrix rank. |
-| `SparseWlsStep` | inside `CanonicalWlsStep` | CSR gain and Gilbert-Peierls LU; builds the gain pattern, slot maps and RCM ordering once per `Begin`, then refills values. |
+| `SparseWlsStep` | inside `CanonicalWlsStep` | CSR gain and Gilbert-Peierls LU; builds the gain pattern, slot maps and ordering once per `Begin`, then refills values. |
 | `ConstrainedDenseWlsStep` | `EstimationMethod.Constrained` | Rows tagged `virtual-zero-injection` become hard equalities in a KKT system. Dense only. |
 | `FeasibleWlsStep` | `EstimationMethod.Feasible` | The constrained KKT plus an active set (generator Q capability on by default, angle difference, branch thermal rating opt-in) and an interior guard that keeps `Vm` above `FeasibilityConstraints.VmFloor` (`1e-6` pu). The voltage band is audited after convergence by `PhysicsFeasibility.Check`, not enforced during iteration. Dense only. |
 | `QrWlsStep` | `EstimationMethod.Qr` | Householder QR on the weighted Jacobian, without forming `G`. Dense only. |
@@ -711,7 +711,7 @@ Bit-identical results come from a short list of mechanisms, each in code:
 - **Bit-exact kernels.** `SimdKernels.SubtractScaledRow` and `AddScaledRow` with `fastFma=false` do a separate multiply
   and add per lane, matching the scalar loop at every vector width. `DenseLuKernels` uses only the bit-exact kernel.
   `SimdCapabilities.Tier` is chosen at run time from `Vector512`, `Vector256` and `Vector128` `IsHardwareAccelerated`.
-- **Cached structure, not cached numbers.** `CpuSparseLuSolver` reuses the RCM ordering because it is a deterministic
+- **Cached structure, not cached numbers.** `CpuSparseLuSolver` reuses the minimum-degree ordering because it is a deterministic
   function of the sparsity pattern. `SparseWlsStep` reuses the gain pattern and slot maps and refills every value.
 - **One tolerance table.** `NumericTolerances` holds the singular-pivot floor (`1e-12` relative), the Krylov cap and
   tolerance. A pivot floor decides only what is declared singular, never the arithmetic of a non-singular solve.
@@ -830,7 +830,7 @@ CLI copies the JSON, CSV and MATPOWER files under `data/` and the JSON files und
 | Newton iteration cap | `30` | iterations | Inner cap | `PowerFlowOptions.MaxIterations` |
 | Reactive-limit pass cap | `12` | passes | Outer Q-limit cap | `PowerFlowOptions.MaxQLimitPasses` |
 | Largest undamped Newton step | `0.4` | rad or pu | Larger steps are scaled down | `NewtonShell.MaxUndampedStep` |
-| Voltage floor after a step | `0.2` | pu | Floor on a PQ bus `Vm` | `NewtonShell.VmFloorPu` |
+| Voltage floor after a step | `0.01` (`0.2` before 2.1.073) | pu | Floor on a PQ bus `Vm` | `NewtonShell.VmFloorPu` |
 | Relative pivot floor | `1e-12` | relative | A pivot at or below it is singular | `NumericTolerances.RelativePivotFloor` |
 | Krylov iteration cap | `4n + 200` | iterations | BiCGSTAB cap for order `n` | `NumericTolerances.DefaultKrylovMaxIterations` |
 | Dense estimation methods cap | `3000` | buses | Constrained, Feasible and QR fail loud above it | `DenseEstimationLimits.DenseMethodMaxBuses` |

@@ -57,7 +57,7 @@ public sealed class ProtectionContext
     public double[] ZLineAngleDeg { get; }
     /// <summary>D-DOC-224 (October 2026): the signed real power into the from end of each branch, MW (in an unbalanced
     /// study, the from end's three-phase total). Diagnostic only: NO relay reads it. The reverse-power element (32) is a
-    /// generator element and reads <see cref="Generator.Pg"/>; this array is kept for callers that inspect a context (it
+    /// generator element and reads <see cref="Generator.Pg"/>, except that a unit on a Slack bus reads its solved output (DP-02); this array is kept for callers that inspect a context (it
     /// used to be described as the directional element's input, which it never was).</summary>
     public double[] PFromMw { get; }
     /// <summary>D-DOC-091 (October 2026): whether each branch is in service in the model (index-aligned with

@@ -31,10 +31,11 @@ public static class LossContingency
         baseCase.RequireConverged("Loss contingency");   // the convergence contract (October 2026, WS4)
         solver ??= SolverSelector.CreateNewton(model);   // shared dense/sparse rule (was always dense; R004)
         double baseLoss = baseCase.TotalLossMw;
-        var results = new LossContingencyResult[model.Branches.Count];
+        int[] live = ContingencyAnalysis.InServiceBranchIndices(model);   // AN-02: an out-of-service branch is not an outage
+        var results = new LossContingencyResult[live.Length];
 
-        for (int i = 0; i < model.Branches.Count; i++)
-            results[i] = ScreenOne(model, i, baseLoss, solver, options);
+        for (int k = 0; k < live.Length; k++)
+            results[k] = ScreenOne(model, live[k], baseLoss, solver, options);
 
         return results;
     }
@@ -47,15 +48,16 @@ public static class LossContingency
         baseCase.RequireConverged("Loss contingency");   // the convergence contract (October 2026, WS4)
         solverFactory ??= () => SolverSelector.CreateNewton(model);   // shared dense/sparse rule (R004)
         double baseLoss = baseCase.TotalLossMw;
-        var results = new LossContingencyResult[model.Branches.Count];
+        int[] live = ContingencyAnalysis.InServiceBranchIndices(model);   // AN-02
+        var results = new LossContingencyResult[live.Length];
         using var local = new ThreadLocal<IPowerFlowSolver>(solverFactory);
         var po = new ParallelOptions
         {
             MaxDegreeOfParallelism = maxDegreeOfParallelism <= 0 ? Environment.ProcessorCount : maxDegreeOfParallelism,
             CancellationToken = ct,
         };
-        Parallel.For(0, model.Branches.Count, po, i =>
-            results[i] = ScreenOne(model, i, baseLoss, local.Value!, options));
+        Parallel.For(0, live.Length, po, k =>
+            results[k] = ScreenOne(model, live[k], baseLoss, local.Value!, options));
         return results;
     }
 

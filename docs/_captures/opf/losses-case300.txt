@@ -2,7 +2,7 @@ $ gridsim losses case300
 Loss allocation - IEEE 300-bus (300 buses, 411 branches)
   Total losses: 408.33 MW  (reactive: -403.54 MVAr)
   Bus shunt conductance: 1.21 MW  (not a branch loss; in the injection total)
-  Reconciliation residual: -5.41E-011 MW
+  Reconciliation residual: -2.01E-012 MW
 
   Zone losses:
   | Zone | P Loss MW | Q Loss MVAr | Branches |

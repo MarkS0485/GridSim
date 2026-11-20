@@ -49,8 +49,8 @@
        fails the build's test run if one does, so the CLI, the web app, the desktop app and the NuGet
        packages can never disagree about which release they are.
 
-       Bump procedure (one file): change the <Version> below to 1.95.NNN and add the matching
-       "## [1.95.NNN]" heading to CHANGELOG.md in the same commit (VersionContractTests checks that the
+       Bump procedure (one file): change the <Version> below to 2.1.NNN and add the matching
+       "## [2.1.NNN]" heading to CHANGELOG.md in the same commit (VersionContractTests checks that the
        heading exists).
 
        What the SDK derives from it:
@@ -64,7 +64,7 @@
        the web OpenAPI document and the desktop app's About box all show it.
        =================================================================================================== -->
   <PropertyGroup Label="Version">
-    <Version>2.1.071</Version>
+    <Version>2.1.073</Version>
     <!-- Keep the "+<commit>" suffix on InformationalVersion (this is the SDK default; stated here so
          nobody turns it off by accident, because the CLI version flag relies on it to name the exact commit). -->
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>

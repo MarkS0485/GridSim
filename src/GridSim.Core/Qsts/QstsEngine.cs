@@ -243,7 +243,7 @@ public sealed class QstsEngine
                 if (!outcome.Result.Converged)
                 {
                     failedStep = k;
-                    failure = $"step {k} (t = {t} s): the power flow did not converge ({outcome.Result.Status}, mismatch {outcome.Result.MaxMismatch:E3} pu after {outcome.Result.Iterations} iterations)";
+                    failure = FormattableString.Invariant($"step {k} (t = {t} s): the power flow did not converge ({outcome.Result.Status}, mismatch {outcome.Result.MaxMismatch:E3} pu after {outcome.Result.Iterations} iterations)");
                     break;
                 }
                 PowerFlowResult r = outcome.Result;

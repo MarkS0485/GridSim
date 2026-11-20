@@ -122,7 +122,7 @@ public sealed class ThreePhaseEmtEngine
     private readonly double[] _faultG;             // current fault conductance per fault
     private SparseLuFactorization? _fact;
 
-    // R114 (as in EmtEngine): cache the RCM ordering with the CSR pattern it was computed for (refactors do not
+    // R114 (as in EmtEngine): cache the minimum-degree ordering with the CSR pattern it was computed for (refactors do not
     // change the pattern; compared by content, so bit-identical), and solve into reused per-step buffers.
     private int[]? _orderingRowPtr, _orderingColIdx, _ordering;
     private double[] _vFree = Array.Empty<double>(), _solveWork = Array.Empty<double>();

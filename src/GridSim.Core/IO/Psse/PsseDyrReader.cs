@@ -236,6 +236,7 @@ public static class PsseDyrReader
                 }
                 int before = issues.Count;
                 var controllers = new List<(string Slot, string Ref)>();
+                bool exciterMapped = false;   // DP-01: a stabiliser needs a MAPPED exciter, not just an exciter record
                 foreach (string slot in new[] { "exciter", "pss", "governor" })
                 {
                     if (!roles.TryGetValue(slot, out PsseDyrRecord? crec)) continue;
@@ -247,9 +248,15 @@ public static class PsseDyrReader
                         issues.Add($"PSS1A for {unitName} (line {crec.Line}) has no exciter record; the stabiliser's output joins the AVR summing junction");
                         continue;
                     }
+                    if (slot == "pss" && !exciterMapped)
+                    {
+                        issues.Add($"PSS1A for {unitName} (line {crec.Line}): its exciter record ({roles["exciter"].Model}, line {roles["exciter"].Line}) was left out, so the stabiliser has no AVR to act on");
+                        continue;
+                    }
                     string id = $"{idBase}.{slot}";
                     WriteTemplate(w, id, slot, $"{crec.Model}, {unitName}", p, derived, source, crec);
                     controllers.Add((slot, id + "@1"));
+                    if (slot == "exciter") exciterMapped = true;
                 }
                 var mp = new List<(string Name, object Value)>();
                 var mderived = new Dictionary<string, string>(StringComparer.Ordinal);

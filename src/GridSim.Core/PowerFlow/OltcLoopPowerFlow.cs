@@ -58,6 +58,10 @@ public sealed class OltcLoopPowerFlow : IPowerFlowSolver
     /// <summary>Whether the last <see cref="Solve"/> left every OLTC settled (see <see cref="SteadyStateSolver.TapsSettled"/>).</summary>
     public bool TapsSettled => _loop.TapsSettled;
 
+    /// <summary>AN-06: the transformers the last <see cref="Solve"/> left pinned at a tap limit with their bus out of band
+    /// (see <see cref="SteadyStateSolver.TapsAtLimit"/>); empty when none.</summary>
+    internal IReadOnlyList<string> TapsAtLimit => _loop.TapsAtLimit;
+
     /// <summary>Solve <paramref name="model"/> to its tap-regulated steady state with <paramref name="options"/>.</summary>
     public PowerFlowResult Solve(GridModel model, PowerFlowOptions? options = null)
         => _loop.Solve(model, options, _maxOltcPasses);

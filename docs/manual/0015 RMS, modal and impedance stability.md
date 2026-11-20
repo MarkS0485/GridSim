@@ -439,7 +439,7 @@ Two more lines appear when the case needs them.
 **Result lines.** For a single fault, `fault bus 7  *  critical clearing time = 554 ms`, then the bracket line (or the 0 ms
 or 1000 ms variants), then a `NON-MONOTONE` line if the search found a pocket, then the three `CCT = ...` lines. They mean
 exactly what they mean for the classical engine; the step is 2 ms, the window 1000 ms, and each trial runs for 5 s after
-clearing. The footer repeats that the engine is validated (with every reactance collapsed to X'd it matches the
+clearing. The footer repeats that the engine is checked (with every reactance collapsed to X'd it matches the
 classical CCT to within 20 ms on WSCC-9, the tolerance of its pinning test) and that these machine parameters are not.
 
 **With `--screen`** the lines are the ranked table described above, under the same header.
@@ -1132,7 +1132,9 @@ error: stability: No synchronous machines with inertia: the classical stability 
 - **A `--clear` verdict and a CCT can disagree at the boundary** on `--rms`, because the single run uses a 5 ms step and 3 s
   and the search uses 2 ms and 5 s past clearing. Classical `--clear` and the classical search use the same 2 ms grid and
   the case's own nominal frequency, so they agree exactly.
-- **`INDICATIVE` is a statement about data.** The engines are validated; the parameters are not. Every `--rms` result
+- **`INDICATIVE` is a statement about data.** The engines are cross-checked against reduced and independent references
+  (the footer's word "validated" means that check); the parameters are not checked at all, and nothing is validated
+  against a real machine. Every `--rms` result
   and every classical result with a synthetic X'd carries it.
 - **`--export` with `--rms` or `--screen` exits 2.** It writes the classical single-bus trajectory only.
 - **`modal` exit 1 is a result.** It means a right-half-plane eigenvalue, and the export is still written.

@@ -1014,8 +1014,8 @@ error: cannot load case folder 'docs/_captures/networks/inputs/v2-two-bus': buse
 ## Licence tiers and bundled folders
 
 The quantity a licence limits is the bus count of a network model. The free Personal tier and the Academic tier allow 1,500
-buses per user network, and the commercial and Network Operator tiers have no limit ([ch. 4, Licensing and
-activation](<0004 Licensing and activation.md>)). A **bundled network** never counts. The CLI, the desktop app and
+buses per user network, and the commercial and Network Operator tiers have no limit. At present licences are issued
+gratis ([ch. 4, Licensing and activation](<0004 Licensing and activation.md>)). A **bundled network** never counts. The CLI, the desktop app and
 the web app share one list, `BundledNetworks.DataFolders` (`src/GridSim.Core/Licensing/BundledNetworks.cs`):
 
 `matpower`, `uk`, `gb-synthetic`, `gb-full`, `intl`, `dist3ph`
@@ -1032,7 +1032,7 @@ This command runs `case9241pegase.m` copied out of `data/`, which makes it a use
 
 ```
 $ gridsim results/networks-tmp/mycase9241.m --once
-error: This network has 9,241 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+error: This network has 9,241 buses; your Personal licence allows 1,500. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 [exit 2]
 ```
 

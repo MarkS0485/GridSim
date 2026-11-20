@@ -1,7 +1,7 @@
 $ gridsim losses uk
 Loss allocation - GB reduced (10-zone) (20 buses, 24 branches)
   Total losses: 53.68 MW  (reactive: -5974.15 MVAr)
-  Reconciliation residual: 3.81E-012 MW
+  Reconciliation residual: -1.24E-011 MW
 
   Zone losses:
   | Zone | P Loss MW | Q Loss MVAr | Branches |

@@ -41,6 +41,7 @@ internal static class TransmissionSecurityCommand
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         WriteIndented = true,
         RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true,
         Converters = { new JsonStringEnumConverter() }
     };
 
@@ -196,50 +197,8 @@ internal static class TransmissionSecurityCommand
             foreach (JsonElement child in element.EnumerateArray()) CheckDuplicates(child);
     }
 
-    internal static List<InputFile> Inputs(string path, string root)
-    {
-        var files = new List<InputFile>();
-        void Add(string label, string full) => files.Add(new(label, Hash(File.ReadAllBytes(full))));
-        if (Directory.Exists(path))
-        {
-            string[] names = ["system.json", "buses.json", "generation.json", "demand.json", "transmission.json",
-                "transformer.json", "onloadtapchanger.json", "asset-classes.json", "asset-bindings.json",
-                "protections.json", "boundaries.json"];
-            foreach (string name in names)
-                if (File.Exists(System.IO.Path.Combine(path, name))) Add(name, System.IO.Path.Combine(path, name));
-        }
-        else
-        {
-            Add(System.IO.Path.GetFileName(path), path);
-            if (path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
-            {
-                using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(path));
-                string directory = System.IO.Path.GetDirectoryName(path)!;
-                foreach (string kind in new[] { "network", "assets" })
-                    if (manifest.RootElement.TryGetProperty(kind, out JsonElement list))
-                        foreach (JsonElement item in list.EnumerateArray())
-                            Add(kind + "/" + item.GetString(), Inside(directory, item.GetString()!));
-                if (manifest.RootElement.TryGetProperty("imports", out JsonElement imports))
-                    foreach (JsonElement item in imports.EnumerateArray())
-                    {
-                        string library = item.GetProperty("library").GetString()!;
-                        Add("imports/" + library, Inside(System.IO.Path.Combine(root, "data"), library));
-                    }
-                string schemas = Gated.FindV2Schemas(root) ?? throw new InvalidDataException("v2 schemas unavailable.");
-                foreach (string schema in Directory.GetFiles(schemas, "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-                    Add("schemas/" + System.IO.Path.GetRelativePath(schemas, schema).Replace('\\', '/'), schema);
-            }
-        }
-        return files;
-    }
-    private static string Inside(string root, string relative)
-    {
-        string full = System.IO.Path.GetFullPath(relative, System.IO.Path.GetFullPath(root));
-        string prefix = System.IO.Path.TrimEndingDirectorySeparator(System.IO.Path.GetFullPath(root)) + System.IO.Path.DirectorySeparatorChar;
-        if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Dependency is outside its declared root.");
-        return full;
-    }
+    internal static List<InputFile> Inputs(string path, string root) =>
+        CaseIdentity.Inputs(path, root, (label, sha) => new InputFile(label, sha));
     internal static string Hash(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
     internal static void RequireIdentity(string expected, string actual)
     {

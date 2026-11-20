@@ -1,7 +1,7 @@
 # 4. Sparse and GPU numerics
 
 This chapter specifies the linear algebra under every solver in GridSim: CSR storage and its builders, the
-reverse Cuthill-McKee (RCM) ordering, the sparse direct LU, the dense real and complex LUs, ILU(0) with BiCGSTAB,
+minimum-degree ordering (and reverse Cuthill-McKee, RCM, kept as a comparison), the sparse direct LU, the dense real and complex LUs, ILU(0) with BiCGSTAB,
 Householder QR, the eigen solvers behind modal analysis, the vector kernels (`SimdKernels`) that the dense paths
 share, the GPU backends, and the one table of numerical tolerances. It states the order in which each routine
 performs its arithmetic, because GridSim's contract is bit-identity: the same bits across runs, across parallel
@@ -60,8 +60,32 @@ follows from the keys and is shown in the worked example below; no test pins a r
 builder. It is what makes the sparse Y-bus bit-for-bit the dense Y-bus: the dense `YBus.Build` and `SparseNewtonRaphsonPowerFlow.BuildY` add
 the branch stamps, then the bus shunts, in model order, and the sparse build replays that order per cell.
 
-### Reverse Cuthill-McKee ordering
+### Minimum-degree ordering
 
+`SparseLu.Ordering` returns `MinimumDegreeOrdering.Order` (`src/GridSim.Core/Numerics/MinimumDegreeOrdering.cs`), the
+fill-reducing column ordering of every sparse LU in GridSim from 2.1.073. It is exact minimum degree on the symmetrised
+pattern (`A + A^T`, diagonal ignored), not an approximate (quotient-graph) variant:
+
+```
+1. adjacency(i) = de-duplicated { j != i : A(i,j) stored or A(j,i) stored }
+2. put every node in a bucket indexed by its degree, inserting in descending node index
+3. repeat n times:
+       v = the most recently inserted node of the lowest non-empty bucket (LIFO)
+       append v to order; remove v from the graph
+       join v's remaining neighbours into a clique; move each to the bucket of its new degree
+```
+
+The degree is exact. The tie-break (LIFO within a bucket, initial insertion in descending index, so the lowest index
+wins the first ties) uses no hashing, no randomness and no unordered collection, so the ordering is a pure function of
+the stored pattern (`RowPtr`, `ColIdx`), never of the values. On meshed grids it fills far less than RCM: on
+`case_ACTIVSg2000`, `nnz(L+U)` is 83k against 390k with RCM. Because any column permutation solves the same system,
+the change of ordering in 2.1.073 moved results at rounding level only; it is labelled BREAKING CHANGE in the
+changelog because results are no longer bit-identical to 2.1.072. The explicit cliques can cost time and memory on
+very large or very dense patterns.
+
+### Reverse Cuthill-McKee ordering (comparison)
+
+RCM was the default ordering until 2.1.072 and is kept as a comparison; no production path calls it.
 `SparseLu.ReverseCuthillMcKee` (`src/GridSim.Core/Numerics/SparseLu.cs`) orders the graph of the matrix made
 symmetric by taking the union of `A` and `A^T` off-diagonals. It depends on the structure only:
 
@@ -90,11 +114,11 @@ superset and does not change as values move.
 
 `SparseLu` (`SparseLu.cs`) is the entry point and `SparseLuFactorization`
 (`src/GridSim.Core/Numerics/SparseLuFactorization.cs`) holds the factors. The factorisation is left-looking
-Gilbert-Peierls with partial pivoting over the RCM column order:
+Gilbert-Peierls with partial pivoting over the minimum-degree column order:
 
 ```
 L U = P A Q
-Q : pivot step k -> original column q[k]            (RCM)
+Q : pivot step k -> original column q[k]            (minimum degree)
 P : original row i -> pivot step pinv[i]            (partial pivoting)
 L : unit lower triangular, CSC, unit diagonal stored FIRST in each column
 U : upper triangular, CSC, pivot stored LAST in each column
@@ -152,8 +176,8 @@ structure.
 | Entry point | Work done | Callers |
 |---|---|---|
 | `Solve(a, b)` | `Factor` and one solve | none in production; `SparseLuTests` |
-| `Factor(a)` | CSR to CSC (explicit zeros dropped), RCM, numeric factorisation; the result serves many right-hand sides | `DistributionFactors`; the EMT initial-condition solve (`EmtEngine`); `PowerFlowTracing` |
-| `Ordering(a)` then `FactorWithOrdering(a, q)` | RCM once; each call converts CSR to CSC (explicit zeros dropped) and factors with the given `q`. Bit-identical to `Factor`, because RCM is a pure function of the pattern | `CpuSparseLuSolver` (every Newton step); `RealExpandedComplexSolver`; the EMT nodal matrix in `EmtEngine` and `ThreePhaseEmt` |
+| `Factor(a)` | CSR to CSC (explicit zeros dropped), ordering, numeric factorisation; the result serves many right-hand sides | `DistributionFactors`; the EMT initial-condition solve (`EmtEngine`); `PowerFlowTracing` |
+| `Ordering(a)` then `FactorWithOrdering(a, q)` | the ordering once; each call converts CSR to CSC (explicit zeros dropped) and factors with the given `q`. Bit-identical to `Factor`, because the ordering is a pure function of the pattern | `CpuSparseLuSolver` (every Newton step); `RealExpandedComplexSolver`; the EMT nodal matrix in `EmtEngine` and `ThreePhaseEmt` |
 | `Ordering(a)` then `FactorPrepared(n, ap, ai, ax, q)` | numeric factorisation of an already prepared CSC matrix; no conversion, explicit zeros kept as structural entries | `SparseWlsStep` |
 
 `CpuSparseLuSolver` (`src/GridSim.Core/PowerFlow/CpuSparseLuSolver.cs`) caches `q` together with the `RowPtr` and
@@ -165,7 +189,7 @@ harmonic orders of a scan; the cache is per instance and is not thread-safe, so 
 worker.
 
 `SparseWlsStep.Begin` computes once per bad-data pass: the structural columns of each measurement row, the gain
-pattern `G = H^T W H` (through `CsrMatrix.Builder` with placeholder values), the RCM ordering of that pattern, and
+pattern `G = H^T W H` (through `CsrMatrix.Builder` with placeholder values), the ordering of that pattern, and
 for each measurement row the slot in the gain's value array of every column pair. Each Gauss-Newton iteration
 then refills `G` and the right-hand side through those slots, and calls `FactorPrepared`.
 
@@ -459,6 +483,11 @@ Three rules hold for every GPU solver:
 - **All device access is serialised** through one static `Lock` per context (`GpuContext.Lock`, `RocmContext.Lock`):
   every allocation, copy, kernel launch and synchronise takes it, because the CLI fans solves out over
   `Parallel.ForEach`.
+- **Where the solves ran is counted (RC4).** `GpuSolveCounters` records each linear solve a GPU solver was asked for as
+  on the device, given up to the caller's CPU LU (the sparse solvers return null; `NewtonShell.SolveStep` retries on
+  the exact CPU LU, R038), or solved on the host by the GPU solver itself (no device, a zero diagonal for the Jacobi
+  preconditioner, a ROCm out-of-memory). The CLI prints the counts after a GPU solve (`GPU: ...`), on each `gpucheck`
+  GPU probe line, and as `gpuSolves` in the run metadata; nothing is added on the CPU backend.
 
 **ILGPU dense LU (`GpuDenseLinearSolver`).** Gaussian elimination with partial pivoting over an augmented row-major
 `[A | b]` of `n x (n+1)` doubles. Per column `k`, three kernels are queued on the one stream, which executes in
@@ -539,12 +568,44 @@ dense LU, used as given). The GPU dense and sparse results are outside the bit-i
 the CPU path only ([`gpucheck`](<../manual/0019 CLI reference.md#gpucheck>) preflights a backend,
 [`bench`](<../manual/0019 CLI reference.md#bench>) compares engines).
 
+**GPU accuracy: deterministic, not bit-identical.** A GPU solve is deterministic: the same build on the same device
+gives the same bits run after run (5 of 5 repeats identical on every case of the RC4 sweep). It is not bit-identical
+with the CPU contract, and cannot be made so at a useful speed, because the GPU runs different algorithms:
+
+- the CPU contract solves every Newton step, dense engine and sparse engine alike, with one canonical sparse LU
+  (minimum-degree column order, left-looking elimination, partial pivoting; `NewtonShell.SolveStep`);
+- the GPU dense path is right-looking Gaussian elimination on `[A | b]` in natural order (no fill-reducing ordering);
+- the GPU sparse path is not a factorisation: Jacobi-preconditioned BiCGSTAB stopped at a relative residual of `1e-10`
+  (`DefaultKrylovTolerance`), with the CPU LU retry when it gives up;
+- device dot products sum 256 strided partials and fold them in a tree (a fixed order, no atomics, so deterministic,
+  but not the CPU's sequential order), and the device pivot tie-break differs once more than 256 rows remain;
+- the device fuses multiply-add: ILGPU emits plain `mul.f64` / `add.f64` / `sub.f64`, which PTX lets the device compiler
+  contract into one fused multiply-add (one rounding instead of two), and on an RTX A4000 it does (for `a*b + c` and the
+  elimination `x -= f*y`). The CPU contract never fuses. Forcing separate rounding (`.rn` instructions by inline PTX)
+  was tried in RC4 and dropped: on the A4000, where FP64 runs at 1/32 rate and these kernels are compute-bound, it
+  cost 12% to 53% and did not bring the results closer to the CPU.
+
+Bit-identity would need the canonical sparse LU itself on the device, column by column in the CPU's order, without
+fused multiply-add, which is sequential work that runs slower there than on the CPU.
+
+Measured envelope (RC4, RTX A4000, CUDA 12.8, all 27 MATPOWER files under `data/matpower`, against the CPU sparse
+contract, cases where both converge): the GPU dense path differs by at most 1.45e-12 pu in voltage magnitude and
+5.2e-11 deg in angle (GBnetwork), the GPU sparse path by at most 9.1e-14 pu and 3.3e-12 deg; convergence and the
+iteration count matched on every case. These are measurements on one device and case set, not a guaranteed bound.
+**The 4096-machine-epsilon gate used for the CPU power-flow cross-checks does not apply to the GPU paths** (the GPU
+dense difference on GBnetwork, 1.45e-12 pu, exceeds 4096 epsilons, about 9.1e-13); the GPU paths are held to solver
+tolerance (Vm 1e-8 pu, Va 1e-7 deg), which they meet by more than three orders of magnitude.
+
+A GPU sparse solve that falls back to the CPU LU on every step is the CPU result to the bit; on the RC4 sweep 87 of 309
+Newton steps fell back, and every step of case9241pegase and GBnetwork. The `GPU:` line and `gpuSolves` metadata say
+when this happened.
+
 **Placement of the workload.** Steady-state power flow runs on the CPU by the shape of the problem. The matrix is
 almost entirely zeros: `nnz(Y)` is at most `n + 2 * branches` (parallel branches share a cell and out-of-service branches
 are skipped), which grows linearly, while the dense footprint grows with `n^2`. The exact solve is the sparse direct
 LU, whose column `k` depends on the fill of columns `0 .. k-1` (sequential by data dependency) and whose pivoting and
 fill are data-dependent over irregular index structures; and Newton pays a fresh Jacobian transfer and a
-kernel launch on every iteration. The measurements in `docs/developer/benchmarks/server-results/a100-results.md` (each GPU compared with its
+kernel launch on every iteration. The measurements in `docs/developer/benchmarks/history/server-results-2026-07/a100-results.md` (each GPU compared with its
 own co-located EPYC, one solve at a time, a validated driver stack) confirm it:
 
 - `case2869pegase`: 68 ms `cpu-sparse` (A100 host), 65 ms (H100 host); `cuda-sparse` 4,851 ms and 4,320 ms;
@@ -604,7 +665,7 @@ sites are not covered by it.
 | `PowerFlowOptions.MaxIterations` | 30 | `PowerFlowOptions.cs` | Newton iteration cap |
 | `PowerFlowOptions.MaxQLimitPasses` | 12 | `PowerFlowOptions.cs` | Q-limit outer-loop passes |
 | `NewtonShell.MaxUndampedStep` | `0.4` (rad or pu) | `PowerFlow/NewtonShell.cs` | Largest component applied undamped; larger steps are scaled so the largest equals it |
-| `NewtonShell.VmFloorPu` | `0.2` pu | `NewtonShell.cs` | Floor on a PQ voltage magnitude after an update |
+| `NewtonShell.VmFloorPu` | `0.01` pu (`0.2` before 2.1.073) | `NewtonShell.cs` | Floor on a PQ voltage magnitude after an update |
 | `NewtonShell.QLimitTolMva`, `RevertVoltTolPu` | `1e-3` MVA, `1e-4` pu | `NewtonShell.cs` | Q-limit comparison slack; PQ to PV revert deadband |
 | `DistributedSlackPowerFlow.ToleranceMw`, `DefaultMaxPasses` | `1e-4` MW, 50 | `PowerFlow/DistributedSlackPowerFlow.cs` | Slack allocation stop and cap |
 | `SteadyStateSolver.TapChangeEpsilon`, `DefaultMaxOltcPasses` | `1e-12` pu ratio, 25 | `PowerFlow/SteadyStateSolver.cs` | OLTC settled; OLTC pass cap |
@@ -709,7 +770,8 @@ pattern the engines use (`SparseNewtonRaphsonPowerFlow.BuildJacobianStructure`),
 `CpuSparseLuSolver` makes. Timings and stamps in other captures differ by machine and run; every number here is
 deterministic except the SIMD line. The capture was taken on an earlier build: the `CsrMatrix.Builder` column and the
 `Dot` line near the end show the builder sort and the dot kernel as they were before the changes noted under those
-blocks.
+blocks. It also predates 2.1.073, so it shows the RCM ordering that was then the default; with the minimum-degree
+ordering the permutation, the pivot sequence and the fill differ, and the solution moves at rounding level only.
 
 ```
 $ scratch numdemo (calls the library directly; source in numdemo-source.txt)
@@ -817,7 +879,8 @@ re-captured.
 | File | Type | Responsibility |
 |---|---|---|
 | `src/GridSim.Core/Numerics/Sparse.cs` | `CsrMatrix`, `CsrMatrix.Builder`, `ComplexCsr`, `ComplexCsr.Builder`, `Ilu0`, `BiCgStab` | CSR storage and builders, ILU(0), preconditioned BiCGSTAB |
-| `src/GridSim.Core/Numerics/SparseLu.cs` | `SparseLu` | Entry points (`Factor`, `Ordering`, `FactorWithOrdering`, `FactorPrepared`) and `ReverseCuthillMcKee` |
+| `src/GridSim.Core/Numerics/SparseLu.cs` | `SparseLu` | Entry points (`Factor`, `Ordering`, `FactorWithOrdering`, `FactorPrepared`) and `ReverseCuthillMcKee` (comparison) |
+| `src/GridSim.Core/Numerics/MinimumDegreeOrdering.cs` | `MinimumDegreeOrdering` | The default fill-reducing ordering |
 | `src/GridSim.Core/Numerics/SparseLuFactorization.cs` | `SparseLuFactorization`, `InverseQuadraticForm` | Gilbert-Peierls factors, `Solve`, `SolveInto`, inverse quadratic forms |
 | `src/GridSim.Core/Numerics/NumericTolerances.cs` | `NumericTolerances` | The shared tolerance table |
 | `src/GridSim.Core/Numerics/ComplexLinearSolvers.cs` | `DenseComplexLuSolver`, `DenseComplexLu`, `RealExpandedComplexSolver`, `SparseComplexBiCgStabSolver` | Complex direct and iterative solvers |
@@ -848,12 +911,13 @@ re-captured.
   and the sparse step do not round in the same order, so a dense-only method's estimate is not the bits a sparse
   solve would give. A plain WLS or robust estimate on the CPU always takes the sparse step, so it does not depend on
   the bus count (`CanonicalWlsParityTests.The_estimate_is_bit_identical_across_the_dense_sparse_threshold`).
-- GPU results are outside the bit-identity contract: device reductions, the device elimination order differ from the
-  CPU's, and the device pivot tie-break differs from the CPU's first-maximum rule once more than 256 (dense) or 128
-  (batched) candidate rows remain.
+- GPU results are deterministic but outside the bit-identity contract: the GPU runs different algorithms (natural-order
+  dense elimination, Jacobi-preconditioned BiCGSTAB at `1e-10`) and a different reduction order, and the device pivot
+  tie-break differs from the CPU's first-maximum rule once more than 256 (dense) or 128 (batched) candidate rows remain.
+  Measured envelope and the cross-check gate: "GPU accuracy" in [The GPU backends](#the-gpu-backends).
 - The ROCm solvers are covered by hardware-free seam and signature tests (the near-singular check by one 3 x 3
   host-side imitation of `getrf`); no recorded run on an AMD Instinct device
-  exists in `docs/developer/benchmarks/server-results/mi300/`.
+  exists in `docs/developer/benchmarks/history/server-results-2026-07/mi300/`.
 - ROCm has no batched solver; the ILGPU batched solver has no memory chunking and no AC N-1 batching across Newton
   iterations that diverge in count.
 - The sparse LU has no threshold pivoting and no reuse of a symbolic factorisation across numeric factorisations; the

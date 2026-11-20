@@ -36,23 +36,23 @@ internal static class DynamicsStudyCommand
 
     public static int Run(List<string> arguments, string root, Func<string, GridModel> load)
     {
+        // The study file is the whole interpretation: a global RAW reading switch would change the case it binds.
+        // CLI-07 (post-RC3): this verb is dispatched before the global switches are parsed, so the earlier test of the
+        // Gated properties could never fire. The raw tokens are scanned here, before the argument-count check, so the
+        // specific message is printed instead of the generic usage line.
+        string[] rawSwitches = { "--allow-unmodelled", "--seq-data", "--tap-control", "--shunt-control", "--psse-revision", "--frequency-hz" };
+        var inherited = new List<string>();
+        foreach (string sw in rawSwitches)
+            if (arguments.Skip(1).Contains(sw, StringComparer.Ordinal)) inherited.Add(sw);
+        if (inherited.Count > 0)
+        {
+            Console.Error.WriteLine($"error: dynamics-study takes its interpretation options from the study file; {string.Join(", ", inherited)} would change how the RAW case is read, so it is refused (the unmodelled policy is initialisation.unmodelled).");
+            return CliExit.Usage;
+        }
         if (arguments.Count is not (2 or 4) || arguments[1].StartsWith('-') ||
             (arguments.Count == 4 && (arguments[2] != "--out" || arguments[3].StartsWith('-'))))
         {
             Console.Error.WriteLine("usage: gridsim dynamics-study <study.json> [--out <result.json>]");
-            return CliExit.Usage;
-        }
-        // The study file is the whole interpretation: a global RAW reading switch would change the case it binds.
-        var inherited = new List<string>();
-        if (Gated.AllowUnmodelled) inherited.Add("--allow-unmodelled");
-        if (Gated.SeqDataPath is not null) inherited.Add("--seq-data");
-        if (Gated.ApplyTapControl) inherited.Add("--tap-control");
-        if (Gated.ApplyShuntControl) inherited.Add("--shunt-control");
-        if (Gated.PsseRevision is not null) inherited.Add("--psse-revision");
-        if (Gated.DeclaredFrequencyHz is not null) inherited.Add("--frequency-hz");
-        if (inherited.Count > 0)
-        {
-            Console.Error.WriteLine($"error: dynamics-study takes its interpretation options from the study file; {string.Join(", ", inherited)} would change how the RAW case is read, so it is refused (the unmodelled policy is initialisation.unmodelled).");
             return CliExit.Usage;
         }
         string? temporary = null;
@@ -67,7 +67,7 @@ internal static class DynamicsStudyCommand
             JsonElement rootEl = document.RootElement;
             CheckDuplicates(rootEl);
             Obj(rootEl, "study", new[] { "schemaVersion", "raw", "dyr", "initialisation", "integration", "criteria", "angleReference", "channels", "cases" },
-                new[] { "execution", "seq" });
+                new[] { "execution", "seq", "adaptive" });
             if (Int(rootEl.GetProperty("schemaVersion"), "schemaVersion") != 1)
                 throw new InvalidDataException("schemaVersion must be 1.");
             if (rootEl.TryGetProperty("seq", out _))
@@ -112,6 +112,9 @@ internal static class DynamicsStudyCommand
                 parallelism = Int(exec.GetProperty("maxParallelism"), "execution.maxParallelism");
             }
 
+            // RC4 R4-14: the optional variable-step companion run (absent: the study is exactly the incumbent's).
+            DynamicsAdaptiveRequest? adaptive = rootEl.TryGetProperty("adaptive", out JsonElement adaptiveEl) ? Adaptive(adaptiveEl, baseDir) : null;
+
             // The incumbent loader (licence, notes), then the RAW parse with the same (default) options for the native keys.
             GridModel loaded = load(rawPath);
             PsseParseResult raw = PsseRawParser.ParseWithDiagnostics(Decode(rawBytes), Path.GetFileNameWithoutExtension(rawPath), new PsseReadOptions());
@@ -123,9 +126,9 @@ internal static class DynamicsStudyCommand
             string schemas = Gated.FindV2Schemas(root) ?? throw new InvalidDataException("dynamics-study needs the v2 schemas (schemas/v2 beside the program or above it), and none was found.");
 
             var request = new DynamicsStudyRequest(raw, Decode(dyrBytes), Path.GetFileName(dyrPath), schemas, initialisation, step, duration,
-                criteria, reference, channels, cases, parallelism);
+                criteria, reference, channels, cases, parallelism, Adaptive: adaptive);
             DynamicsStudyResult result = DynamicsStudyRunner.Run(request);
-            string json = JsonSerializer.Serialize(new
+            object resultDocument = new
             {
                 schemaVersion = 1,
                 provenance = new
@@ -148,7 +151,16 @@ internal static class DynamicsStudyCommand
                 status = result.Status,
                 likeForLike = result.LikeForLike,
                 reasons = result.Reasons,
-            }, OutputJson);
+            };
+            string json = JsonSerializer.Serialize(resultDocument, OutputJson);
+            if (result.Adaptive is not null)
+            {
+                // R4-14: the companion run is appended; a request without it is serialised exactly as before.
+                System.Text.Json.Nodes.JsonNode node = JsonSerializer.SerializeToNode(resultDocument, OutputJson)!;
+                node["effectiveOptions"]!["adaptive"] = JsonSerializer.SerializeToNode(new { adaptive!.Options, adaptive.CctToleranceSeconds, devices = adaptive.Devices?.Devices.Count, curves = adaptive.Curves is null ? "built-in families" : "directory" }, OutputJson);
+                node["adaptive"] = JsonSerializer.SerializeToNode(result.Adaptive, OutputJson);
+                json = node.ToJsonString(OutputJson);
+            }
             if (output is not null)
             {
                 temporary = output + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -220,6 +232,39 @@ internal static class DynamicsStudyCommand
         if (!full.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException($"{what}.path must name a PSS/E {extension} file.");
         return (full, sha);
+    }
+
+    private static DynamicsAdaptiveRequest Adaptive(JsonElement e, string baseDir)
+    {
+        const string what = "adaptive";
+        Obj(e, what, Array.Empty<string>(), new[] { "relativeTolerance", "absoluteTolerance", "initialStepSeconds", "minStepSeconds", "maxStepSeconds",
+            "eventToleranceSeconds", "cctToleranceSeconds", "devices", "curves" });
+        var d = new GridSim.Core.Dynamics.Models.Adaptive.AdaptiveOptions();
+        double Opt(string name, double fallback) => e.TryGetProperty(name, out JsonElement v) ? Num(v, what + "." + name) : fallback;
+        var options = new GridSim.Core.Dynamics.Models.Adaptive.AdaptiveOptions(Opt("relativeTolerance", d.RelativeTolerance), Opt("absoluteTolerance", d.AbsoluteTolerance),
+            Opt("initialStepSeconds", d.InitialStepSeconds), Opt("minStepSeconds", d.MinStepSeconds), Opt("maxStepSeconds", d.MaxStepSeconds),
+            Opt("eventToleranceSeconds", d.EventTimeToleranceSeconds));
+        try { options.Validate(); }
+        catch (ArgumentException ex) { throw new InvalidDataException(what + ": " + ex.Message); }
+        double cct = Opt("cctToleranceSeconds", 1e-4);
+        GridSim.Core.Protection.Devices.CurveLibrary? curves = null;
+        if (e.TryGetProperty("curves", out JsonElement cv))
+        {
+            string dir = Path.GetFullPath(Str(cv, what + ".curves"), baseDir);
+            if (!Directory.Exists(dir)) throw new InvalidDataException($"{what}.curves: directory '{dir}' does not exist.");
+            try { curves = GridSim.Core.Protection.Devices.CurveLibrary.LoadDirectory(dir); }
+            catch (GridSim.Core.Analysis.StudyCases.StudyCaseException ex) { throw new InvalidDataException($"{what}.curves: {ex.Message}"); }
+        }
+        GridSim.Core.Protection.Devices.DeviceSet? devices = null;
+        if (e.TryGetProperty("devices", out JsonElement dv))
+        {
+            (string path, string hash) = FileRef(dv, what + ".devices", baseDir, ".json");
+            byte[] bytes = File.ReadAllBytes(path);
+            RequireIdentity(what + ".devices", hash, Hash(bytes));
+            try { devices = GridSim.Core.Protection.Devices.DeviceSet.Parse(bytes); }
+            catch (GridSim.Core.Analysis.StudyCases.StudyCaseException ex) { throw new InvalidDataException($"{what}.devices: {ex.Message}"); }
+        }
+        return new DynamicsAdaptiveRequest(options, cct, devices, curves);
     }
 
     private static DynamicsMachineId Machine(JsonElement e, string what)

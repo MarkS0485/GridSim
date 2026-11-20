@@ -70,6 +70,18 @@
         }
       ]
     },
+    "retryFromDcStart": {
+      "type": "boolean",
+      "required": false,
+      "description": "Retry a stalled or diverged Newton solve once from DC power-flow angles.",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.RetryFromDcStart default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.RetryFromDcStart",
+          "value": true
+        }
+      ]
+    },
     "dispatchLossAllowance": {
       "type": "number",
       "unit": "1",

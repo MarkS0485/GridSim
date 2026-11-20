@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gridsim-studycase/1",
+  "title": "GridSim study case (gridsim-studycase/1)",
+  "description": "RC4 R4-01, read by 'gridsim study-case'. One immutable master case, an optional groups sidecar, named instants, dated variations (the operations of a gridsim-planning/1 project with an expansion-stage label), operation scenarios (group-scoped scale or set operations on load, generation and branch availability) and studies. The GridSim reader is strict and refuses unknown or duplicated members. Operations inside a variation take exactly the members of a gridsim-planning/1 operation (target, field, expectedPrior, value, effectiveFrom, effectiveTo); study parameters of the planning modes are those of gridsim-planning/1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["manifestVersion", "master", "instants", "studies"],
+  "properties": {
+    "manifestVersion": { "const": "gridsim-studycase/1" },
+    "master": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case", "interpretation"],
+      "properties": {
+        "case": { "type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": { "path": { "type": "string" }, "sha256": { "type": "string" } } },
+        "interpretation": { "type": "object", "additionalProperties": false, "required": ["loader", "dispatch"], "properties": { "loader": { "const": "native-json" }, "dispatch": { "const": false } } }
+      }
+    },
+    "groups": { "type": "object", "additionalProperties": false, "required": ["path", "sha256"], "properties": { "path": { "type": "string" }, "sha256": { "type": "string", "description": "SHA-256 of the groups file's exact bytes." } } },
+    "instants": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "instant"], "properties": { "id": { "$ref": "#/$defs/id" }, "description": { "type": "string" }, "instant": { "type": "string", "description": "ISO 8601 with an explicit UTC offset (Z or +hh:mm)." } } }
+    },
+    "variations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "operations"],
+        "properties": { "id": { "$ref": "#/$defs/id" }, "description": { "type": "string" }, "expansionStage": { "type": "string" }, "operations": { "type": "array", "items": { "type": "object", "description": "A gridsim-planning/1 operation." } } }
+      }
+    },
+    "variationOrder": { "type": "array", "items": { "$ref": "#/$defs/id" }, "description": "Variations whose operations may change one field at one instant, earliest applied first." },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "operations"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id", "not": { "const": "base" } },
+          "description": { "type": "string" },
+          "instants": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "field", "action", "value"],
+              "properties": {
+                "id": { "$ref": "#/$defs/id" },
+                "description": { "type": "string" },
+                "group": { "$ref": "#/$defs/id" },
+                "field": { "enum": ["load", "generation", "pdMw", "qdMvar", "pgMw", "qgMvar", "inService"] },
+                "action": { "enum": ["scale", "set"] },
+                "value": { "type": ["number", "boolean"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "studies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mode", "parameters"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "description": { "type": "string" },
+          "scenario": { "$ref": "#/$defs/id" },
+          "mode": { "enum": ["transmission-security", "transfer", "corrective-n-1-1", "group-summary"] },
+          "parameters": { "type": "object" }
+        }
+      }
+    }
+  },
+  "$defs": { "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" } }
+}

@@ -16,6 +16,30 @@ public static class RunInfo
     /// <summary>The active solver backend ("cpu" / "gpu (...)"), set by the CLI at startup.</summary>
     public static string Backend { get; set; } = "cpu";
 
+    /// <summary>True when a GPU backend is active (<see cref="Backend"/> starts "gpu/"); a requested GPU that fell back to
+    /// the CPU at selection reads "cpu (... requested but unavailable)" and is not one.</summary>
+    public static bool IsGpuBackend => Backend.StartsWith("gpu/", StringComparison.Ordinal);
+
+    /// <summary>
+    /// RC4: the additive <c>gpuSolves</c> object of the run metadata on a GPU backend - where this run's linear solves
+    /// ran (<see cref="GridSim.Gpu.GpuSolveCounters"/>), over the whole run so far. Null on the CPU backend, so a CPU
+    /// run's metadata is unchanged.
+    /// </summary>
+    public static object? GpuSolvesMetadata()
+    {
+        if (!IsGpuBackend) return null;
+        GridSim.Gpu.GpuSolveCount c = GridSim.Gpu.GpuSolveCounters.Snapshot();
+        return new
+        {
+            linearSolves = c.Total,
+            onDevice = c.OnDevice,
+            gaveUpToCpuLu = c.GaveUpToCpu,
+            onHost = c.OnHost,
+            onCpu = c.OnCpu,
+            ranEntirelyOnCpu = c.RanEntirelyOnCpu,
+        };
+    }
+
     /// <summary>Indented JSON options, shared so no call builds its own (CA1869).</summary>
     internal static readonly JsonSerializerOptions MetadataJson = new() { WriteIndented = true };
 
@@ -170,6 +194,14 @@ public static class RunInfo
             ramGb = Math.Round(RamGb(), 1),
             run = runDescription,
         };
+        if (GpuSolvesMetadata() is { } gpu)
+        {
+            // RC4: additive on a GPU backend only; the CPU sidecar is byte-for-byte what it was.
+            var node = JsonSerializer.SerializeToNode(meta, MetadataJson)!.AsObject();
+            node["gpuSolves"] = JsonSerializer.SerializeToNode(gpu, MetadataJson);
+            File.WriteAllText(path, node.ToJsonString(MetadataJson));
+            return;
+        }
         File.WriteAllText(path, JsonSerializer.Serialize(meta, MetadataJson));
     }
 

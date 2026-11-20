@@ -176,7 +176,7 @@ public static class BridgeProtocol
             ParseBusType(b),
             Pd: b.Pd, Qd: b.Qd, Gs: b.Gs, Bs: b.Bs, BaseKv: b.BaseKv, Vm: b.Vm, VaDeg: b.VaDeg, Name: b.Name,
             X: b.X, Y: b.Y,
-            Zip: b.Zip is ZipDto z ? new ZipLoad(z.Ap, z.Bp, z.Cp, z.Aq, z.Bq, z.Cq) : null,
+            Zip: b.Zip is ZipDto z ? GridSim.Core.IO.Json.JsonGridLoader.ParseZipValues($"model block: bus {b.Id}" + (b.Name is null ? "" : $" ('{b.Name}')"), z.Ap, z.Bp, z.Cp, z.Aq, z.Bq, z.Cq) : null,
             VminPu: b.VminPu, VmaxPu: b.VmaxPu)).ToList();
 
         // D-DOC-084: the bus's own voltage limits (read since D-DOC-067) must be usable when given, by the same rule as a
@@ -696,12 +696,13 @@ public static class BridgeProtocol
     /// <summary>A bus ZIP load model, mirroring <see cref="ZipLoad"/> (absent = constant power).</summary>
     public sealed class ZipDto
     {
-        public double Ap { get; set; }
-        public double Bp { get; set; }
-        public double Cp { get; set; } = 1.0;
-        public double Aq { get; set; }
-        public double Bq { get; set; }
-        public double Cq { get; set; } = 1.0;
+        // IO-24: all six are required (a missing one is refused, as the case loaders refuse it), so none has a default.
+        public double? Ap { get; set; }
+        public double? Bp { get; set; }
+        public double? Cp { get; set; }
+        public double? Aq { get; set; }
+        public double? Bq { get; set; }
+        public double? Cq { get; set; }
     }
 
     public sealed class BoundaryDto

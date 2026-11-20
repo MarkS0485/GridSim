@@ -1,0 +1,21 @@
+{
+  "format": "gridsim-protection-curve/1",
+  "note": "The built-in inverse-time families, restated as data so the constants and their source are on record. The loader checks every constant against the equation in code and refuses a mismatch. IEC form: t = TMS * k / ((I/Is)^alpha - 1). IEEE form: t = TD * (a / ((I/Is)^p - 1) + b). Verification against the IEC 60255-151 and IEEE C37.112 standard texts themselves: AWAITING STANDARD TEXT (the values below were confirmed from the secondary sources named in source.locator).",
+  "source": {
+    "kind": "standard",
+    "title": "Protective relay, Table 1 (IEC 60255 inverse-time constants) and Table 2 (IEEE C37.112 constants); IEC curves also in ABB Distribution Automation Handbook 1MRS757285 section 8.2 Table 8.2.1",
+    "publisher": "Wikipedia (citing Alstom, Network Protection and Automation Guide, 2002; and IEEE C37.112-1996); ABB",
+    "url": "https://en.wikipedia.org/wiki/Protective_relay",
+    "locator": "Tables 1 and 2 of the page; ABB 1MRS757285 Table 8.2.1 p.4",
+    "retrieved": "2026-11-17"
+  },
+  "families": [
+    { "id": "iec-si",  "k": 0.14,  "alpha": 0.02 },
+    { "id": "iec-vi",  "k": 13.5,  "alpha": 1.0 },
+    { "id": "iec-ei",  "k": 80.0,  "alpha": 2.0 },
+    { "id": "iec-lti", "k": 120.0, "alpha": 1.0 },
+    { "id": "ieee-mi", "a": 0.0515, "b": 0.114,  "p": 0.02 },
+    { "id": "ieee-vi", "a": 19.61,  "b": 0.491,  "p": 2.0 },
+    { "id": "ieee-ei", "a": 28.2,   "b": 0.1217, "p": 2.0 }
+  ]
+}

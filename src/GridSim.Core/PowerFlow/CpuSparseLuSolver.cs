@@ -4,13 +4,13 @@ using GridSim.Core.Numerics;
 namespace GridSim.Core.PowerFlow;
 
 /// <summary>
-/// The default CPU sparse linear solver: the direct sparse LU (reverse Cuthill-McKee ordering +
+/// The default CPU sparse linear solver: the direct sparse LU (minimum-degree ordering +
 /// partial pivoting). The reference the GPU sparse backend is validated against.
 ///
 /// It caches the fill-reducing ORDERING across calls whose matrix has the same sparsity pattern.
 /// A Newton-Raphson power flow solves the same-structured Jacobian once per iteration (only the
-/// values change as the voltages update); recomputing the RCM ordering - a sort/BFS over the graph
-/// - every iteration is pure repeated structural work. Because RCM is a deterministic function of
+/// values change as the voltages update); recomputing the ordering - a sort/BFS over the graph
+/// - every iteration is pure repeated structural work. Because the ordering is a deterministic function of
 /// the pattern, reusing it is bit-identical to recomputing it, so this is a speed-only change with
 /// no effect on the solution. The pattern is compared by content each call (O(n+nnz), cheap next to
 /// the ordering it saves); a changed structure (a Q-limit bus-type switch rebuilds the Jacobian

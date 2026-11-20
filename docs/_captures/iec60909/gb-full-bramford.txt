@@ -1,8 +1,8 @@
 $ gridsim iec60909 gb-full --bus 35
 IEC 60909 - GB full (3539-bus, 5918-branch), bus 35, three-phase, Maximum (50 Hz, tb 0.1 s, Tk 1 s)
-  Ik''  = 84.09928294166842 kA  (582.6569237403212 pu), of which converters 30.118521620765193 kA
-  ip    = 195.2746712892061 kA  (kappa 2, R/X 0.05410213284229936, meshed network: 1.15 x kappa(R/X), Method B)
-  Ib    = 83.40030747161788 kA    Ik = 84.09928294166842 kA  (near a generator, fed from several sources: IEC 60909-0 Ik = Ik''M, the initial current without motors; no motors are modelled)
-  Ith   = 85.18332836802406 kA  (m 0.06297697852586559)    idc(tb) = 13.950741635929859 kA
-  Zth   = 0.00015889593142083395 + j0.0029369624277844055 pu
+  Ik''  = 84.09928294167047 kA  (582.6569237403354 pu), of which converters 30.118521620768245 kA
+  ip    = 195.2746712892076 kA  (kappa 2, R/X 0.054102132842296285, meshed network: 1.15 x kappa(R/X), Method B)
+  Ib    = 83.69986838735588 kA    Ik = 84.09928294167047 kA  (near a generator, fed from several sources: IEC 60909-0 Ik = Ik''M, the initial current without motors; no motors are modelled)
+  Ith   = 85.18332836802611 kA  (m 0.0629769785258693)    idc(tb) = 13.950741635930948 kA
+  Zth   = 0.0001588959314208279 + j0.0029369624277844606 pu
 [exit 0]

@@ -1,0 +1,51 @@
+{
+  "format": "gridsim-model/1",
+  "id": "SEXS_PSS1A",
+  "title": "SEXS exciter with PSS1A on the speed deviation",
+  "role": "exciter",
+  "source": "Composition of the SEXS and PSS1A library models as RmsExciter.FromSexs wires them (the stabiliser output joins the AVR summing junction); same citations as those two models.",
+  "parameters": [
+    { "name": "K",     "unit": "pu", "value": 100.0, "min": 0, "minExclusive": true },
+    { "name": "Ta",    "unit": "s",  "value": 0.1,   "min": 0 },
+    { "name": "Tb",    "unit": "s",  "value": 1.0,   "min": 0, "minExclusive": true },
+    { "name": "Te",    "unit": "s",  "value": 0.05,  "min": 0 },
+    { "name": "Emin",  "unit": "pu", "value": -5.0,  "allowInfinite": true },
+    { "name": "Emax",  "unit": "pu", "value": 5.0,   "allowInfinite": true },
+    { "name": "Ks",    "unit": "pu", "value": 10.0 },
+    { "name": "Tw",    "unit": "s",  "value": 10.0,  "min": 0, "minExclusive": true },
+    { "name": "T1",    "unit": "s",  "value": 0.15,  "min": 0 },
+    { "name": "T2",    "unit": "s",  "value": 0.05,  "min": 0, "minExclusive": true },
+    { "name": "T3",    "unit": "s",  "value": 0.15,  "min": 0 },
+    { "name": "T4",    "unit": "s",  "value": 0.05,  "min": 0, "minExclusive": true },
+    { "name": "Vsmin", "unit": "pu", "value": -0.1,  "allowInfinite": true },
+    { "name": "Vsmax", "unit": "pu", "value": 0.1,   "allowInfinite": true }
+  ],
+  "ports": {
+    "inputs": [ { "name": "verr", "unit": "pu" }, { "name": "speed", "unit": "pu" } ],
+    "outputs": [ { "name": "efd", "unit": "pu", "from": "exc" } ]
+  },
+  "blocks": [
+    { "id": "g",     "type": "gain", "inputs": ["speed"], "params": { "k": "@Ks" } },
+    { "id": "wash",  "type": "washout", "inputs": ["g"], "params": { "time": "@Tw" } },
+    { "id": "st1",   "type": "leadlag", "inputs": ["wash"], "params": { "lead": "@T1", "lag": "@T2" } },
+    { "id": "st2",   "type": "leadlag", "inputs": ["st1"],  "params": { "lead": "@T3", "lag": "@T4" } },
+    { "id": "vs",    "type": "limit", "inputs": ["st2"], "params": { "min": "@Vsmin", "max": "@Vsmax" } },
+    { "id": "err",   "type": "sum", "inputs": ["verr", "vs"], "signs": "++" },
+    { "id": "shape", "type": "leadlag", "inputs": ["err"], "params": { "lead": "@Ta", "lag": "@Tb" } },
+    { "id": "exc",   "type": "lag", "inputs": ["shape"], "params": { "gain": "@K", "time": "@Te", "min": "@Emin", "max": "@Emax" } }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "efd0", "unit": "pu" } ],
+    "equilibriumError": "verr0",
+    "steps": [
+      { "action": "require", "value": "efd0", "min": "@Emin", "max": "@Emax", "model": "SEXS", "quantity": "field voltage Efd", "argument": "fieldVoltagePu" },
+      { "id": "verr0", "type": "div", "inputs": ["efd0"], "params": { "d": "@K" } },
+      { "id": "g0", "type": "gain", "inputs": [0.0], "params": { "k": "@Ks" } },
+      { "action": "initialise", "block": "shape", "values": ["verr0"] },
+      { "action": "initialise", "block": "exc",   "values": ["efd0"] },
+      { "action": "initialise", "block": "wash",  "values": ["g0"] },
+      { "action": "initialise", "block": "st1",   "values": [0.0] },
+      { "action": "initialise", "block": "st2",   "values": [0.0] }
+    ]
+  }
+}

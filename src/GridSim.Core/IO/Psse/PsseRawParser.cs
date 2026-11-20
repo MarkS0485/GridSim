@@ -246,7 +246,7 @@ public static class PsseRawParser
             if (rem != 0 && rem != bus && remoteWhy(rem) is string rw) return (null, rw);
             double hi = r.Real(hiIdx, "VSWHI", 1.0), lo = r.Real(hiIdx + 1, "VSWLO", 1.0);
             if (!(hi > lo) || !(lo > 0))
-                throw r.Error($"VSWHI {hi.ToString("R", CultureInfo.InvariantCulture)} and VSWLO {lo.ToString("R", CultureInfo.InvariantCulture)} cannot make voltage control: VSWHI must be above VSWLO, and VSWLO above 0");
+                throw r.Error(FormattableString.Invariant($"VSWHI {hi.ToString("R", CultureInfo.InvariantCulture)} and VSWLO {lo.ToString("R", CultureInfo.InvariantCulture)} cannot make voltage control: VSWHI must be above VSWLO, and VSWLO above 0"));
             int width = v35 ? 3 : 2, caps = 0, reactors = 0;
             double size = 0;
             bool mixed = false;
@@ -257,7 +257,7 @@ public static class PsseRawParser
                 if (v35 && r.Int(i, $"S{k + 1}", 1) == 0) continue;
                 int n = r.Int(v35 ? i + 1 : i, $"N{k + 1}", 0);
                 double b = r.Real(v35 ? i + 2 : i + 1, $"B{k + 1}", 0);
-                if (n < 0) throw r.Error($"N{k + 1} is {n}; a block count must be 0 or more");
+                if (n < 0) throw r.Error(FormattableString.Invariant($"N{k + 1} is {n}; a block count must be 0 or more"));
                 if (n == 0 || b == 0) continue;
                 if (size == 0) size = Math.Abs(b);
                 else if (Math.Abs(b) != size) mixed = true;
@@ -311,7 +311,7 @@ public static class PsseRawParser
             int hiIdx = V30 ? 2 : v35 ? 5 : 4, remIdx = V30 ? 4 : v35 ? 7 : 6, blockIdx = V30 ? 8 : v35 ? 12 : 10;
             double hi = r.Real(hiIdx, "VSWHI", 1.0), lo = r.Real(hiIdx + 1, "VSWLO", 1.0);
             if (!(hi >= lo) || !(lo > 0))
-                throw r.Error($"VSWHI {hi.ToString("R", CultureInfo.InvariantCulture)} and VSWLO {lo.ToString("R", CultureInfo.InvariantCulture)} cannot make continuous voltage control: VSWHI must be at or above VSWLO, and VSWLO above 0");
+                throw r.Error(FormattableString.Invariant($"VSWHI {hi.ToString("R", CultureInfo.InvariantCulture)} and VSWLO {lo.ToString("R", CultureInfo.InvariantCulture)} cannot make continuous voltage control: VSWHI must be at or above VSWLO, and VSWLO above 0"));
             int rem = r.Int(remIdx, v35 ? "SWREG" : "SWREM", 0);
             if (rem != 0 && rem != bus) return (null, "with continuous voltage control (MODSW 2) regulate a remote bus (SWREM)");
             int width = v35 ? 3 : 2;
@@ -321,7 +321,7 @@ public static class PsseRawParser
                 if (v35 && r.Int(i, $"S{k + 1}", 1) == 0) continue;
                 int n = r.Int(v35 ? i + 1 : i, $"N{k + 1}", 0);
                 double b = r.Real(v35 ? i + 2 : i + 1, $"B{k + 1}", 0);
-                if (n < 0) throw r.Error($"N{k + 1} is {n}; a block count must be 0 or more");
+                if (n < 0) throw r.Error(FormattableString.Invariant($"N{k + 1} is {n}; a block count must be 0 or more"));
                 if (b > 0) bmax += n * b; else bmin += n * b;
             }
             if (bmin == 0 && bmax == 0) return (null, "with continuous voltage control (MODSW 2) have no blocks");
@@ -364,11 +364,11 @@ public static class PsseRawParser
             double vma = wr.Real(tabIdx - 3, $"VMA{w}", 1.1);
             double vmi = wr.Real(tabIdx - 2, $"VMI{w}", 0.9);
             int ntp = wr.Int(tabIdx - 1, $"NTP{w}", 33);
-            if (ntp < 2) throw wr.Error($"NTP{w} is {ntp}; a tap changer needs at least 2 tap positions");
+            if (ntp < 2) throw wr.Error(FormattableString.Invariant($"NTP{w} is {ntp}; a tap changer needs at least 2 tap positions"));
             if (!(rma > rmi) || !(rmi > 0))
-                throw wr.Error($"RMA{w} and RMI{w} give the ratio range {R(rmi)}..{R(rma)} pu; a tap changer needs RMA above RMI, both above 0");
+                throw wr.Error(FormattableString.Invariant($"RMA{w} and RMI{w} give the ratio range {R(rmi)}..{R(rma)} pu; a tap changer needs RMA above RMI, both above 0"));
             if (!(vma > vmi) || !(vmi > 0))
-                throw wr.Error($"VMA{w} and VMI{w} give the voltage band {R(vmi)}..{R(vma)} pu; voltage control needs VMA above VMI, both above 0");
+                throw wr.Error(FormattableString.Invariant($"VMA{w} and VMI{w} give the voltage band {R(vmi)}..{R(vma)} pu; voltage control needs VMA above VMI, both above 0"));
             return new TapControl(wr, w, cont, rma, rmi, vma, vmi, ntp);
 
             static string R(double v) => v.ToString("R", CultureInfo.InvariantCulture);
@@ -390,11 +390,11 @@ public static class PsseRawParser
             double vma = wr.Real(tabIdx - 3, $"VMA{w}"), vmi = wr.Real(tabIdx - 2, $"VMI{w}");
             int ntp = wr.Int(tabIdx - 1, $"NTP{w}", 33);
             string what = cod == 3 ? "phase shift angle" : "ratio";
-            if (ntp < 2) throw wr.Error($"NTP{w} is {ntp}; a {(cod == 3 ? "phase shifter" : "tap changer")} needs at least 2 positions");
+            if (ntp < 2) throw wr.Error(FormattableString.Invariant($"NTP{w} is {ntp}; a {(cod == 3 ? "phase shifter" : "tap changer")} needs at least 2 positions"));
             if (!(rma > rmi) || (cod == 2 && !(rmi > 0)))
-                throw wr.Error($"RMA{w} and RMI{w} give the {what} range {R(rmi)}..{R(rma)}; flow control needs RMA above RMI{(cod == 2 ? ", both above 0" : "")}");
+                throw wr.Error(FormattableString.Invariant($"RMA{w} and RMI{w} give the {what} range {R(rmi)}..{R(rma)}; flow control needs RMA above RMI{(cod == 2 ? ", both above 0" : "")}"));
             if (!(vma > vmi))
-                throw wr.Error($"VMA{w} and VMI{w} give the {(cod == 3 ? "active" : "reactive")} power band {R(vmi)}..{R(vma)} {(cod == 3 ? "MW" : "Mvar")}; flow control needs VMA above VMI");
+                throw wr.Error(FormattableString.Invariant($"VMA{w} and VMI{w} give the {(cod == 3 ? "active" : "reactive")} power band {R(vmi)}..{R(vma)} {(cod == 3 ? "MW" : "Mvar")}; flow control needs VMA above VMI"));
             return new TapControl(wr, w, 0, rma, rmi, vma, vmi, ntp) { Cod = cod };
 
             static string R(double v) => v.ToString("R", CultureInfo.InvariantCulture);
@@ -434,7 +434,7 @@ public static class PsseRawParser
                     if (fb.Name is null || nameCount[fb.Name] > 1)
                     {
                         fname = fb.Name is null ? $"transformer {key}" : $"{fb.Name} ({key})";
-                        if (nameCount.ContainsKey(fname)) throw t.Record.Error($"this flow-controlling transformer needs a name of its own and '{fname}' is already a branch's name");
+                        if (nameCount.ContainsKey(fname)) throw t.Record.Error(FormattableString.Invariant($"this flow-controlling transformer needs a name of its own and '{fname}' is already a branch's name"));
                         nameCount[fname] = 1;
                         branches[index] = fb with { Name = fname };
                         renamed++;
@@ -450,22 +450,22 @@ public static class PsseRawParser
                 }
                 int bus = Math.Abs(t.Cont);
                 if (bus == 0) { noBus++; continue; }
-                if (!defined(bus)) throw t.Record.Error($"CONT{t.Winding} names bus {bus}, which the file does not define");
+                if (!defined(bus)) throw t.Record.Error(FormattableString.Invariant($"CONT{t.Winding} names bus {bus}, which the file does not define"));
                 if (!live(bus)) { deadBus++; continue; }
                 if (t.Cont < 0 && bus != ownBus)
-                    throw t.Record.Error($"CONT{t.Winding} is {t.Cont}, a remote controlled bus taken as on the winding 1 side; GridSim's tap loop steps a remote bus as one on the far side of the winding, so it cannot regulate this one. Read the case without tap control to keep the file's ratios");
+                    throw t.Record.Error(FormattableString.Invariant($"CONT{t.Winding} is {t.Cont}, a remote controlled bus taken as on the winding 1 side; GridSim's tap loop steps a remote bus as one on the far side of the winding, so it cannot regulate this one. Read the case without tap control to keep the file's ratios"));
                 // Bug hunt 2026-10-29, finding 46: the mirror case. A POSITIVE CONT is regulated by PSS/E as if on the
                 // winding 2 (far) side; naming the winding's own bus that way asks PSS/E to step the tap in the far-side
                 // sense, but GridSim's loop steps its own bus in the near-side sense, i.e. the opposite way. It used to
                 // be passed through unchecked; it is refused like the negative remote case above.
                 if (t.Cont > 0 && bus == ownBus)
-                    throw t.Record.Error($"CONT{t.Winding} is {t.Cont}, the winding's own bus given as positive, which PSS/E regulates as if on the winding 2 side; GridSim's tap loop steps its own bus as the near side, the opposite sense, so it cannot regulate it as the file means. Give CONT as -{bus} for near-side control, or read the case without tap control to keep the file's ratios");
+                    throw t.Record.Error(FormattableString.Invariant($"CONT{t.Winding} is {t.Cont}, the winding's own bus given as positive, which PSS/E regulates as if on the winding 2 side; GridSim's tap loop steps its own bus as the near side, the opposite sense, so it cannot regulate it as the file means. Give CONT as -{bus} for near-side control, or read the case without tap control to keep the file's ratios"));
                 Branch br = branches[index];
                 string name;
                 if (br.Name is null || nameCount[br.Name] > 1)
                 {
                     name = br.Name is null ? $"transformer {key}" : $"{br.Name} ({key})";
-                    if (nameCount.ContainsKey(name)) throw t.Record.Error($"this tap-changing transformer needs a name of its own and '{name}' is already a branch's name");
+                    if (nameCount.ContainsKey(name)) throw t.Record.Error(FormattableString.Invariant($"this tap-changing transformer needs a name of its own and '{name}' is already a branch's name"));
                     nameCount[name] = 1;
                     branches[index] = br with { Name = name };
                     renamed++;
@@ -477,14 +477,14 @@ public static class PsseRawParser
                     DeadbandPu: (t.VmaPu - t.VmiPu) / 2) { ImpedanceCorrection = t.Correction });
             }
             if (oltcs.Count > 0)
-                _notes.Add($"{oltcs.Count} transformer winding(s) regulate a bus voltage by tap (COD 1): applied as on-load tap changers that the solve's tap loop steps from the file's ratios (band VMI..VMA, limits RMI..RMA, step (RMA - RMI) / (NTP - 1)).");
+                _notes.Add(FormattableString.Invariant($"{oltcs.Count} transformer winding(s) regulate a bus voltage by tap (COD 1): applied as on-load tap changers that the solve's tap loop steps from the file's ratios (band VMI..VMA, limits RMI..RMA, step (RMA - RMI) / (NTP - 1))."));
             int nq = flows.Count(f => f.Kind == TransformerFlowKind.ReactivePower), np = flows.Count - nq;
             if (flows.Count > 0)
-                _notes.Add($"{flows.Count} transformer winding(s) regulate the power flowing through them ({nq} reactive power by tap, COD 2; {np} active power by phase shift, COD 3): applied in the solve's tap loop, one position per pass from the file's values until the flow into the transformer at the winding's bus is in VMI..VMA (limits RMI..RMA, step (RMA - RMI) / (NTP - 1)).");
-            if (renamed > 0) _notes.Add($"{renamed} tap-changing transformer(s) with no name, or a name another branch shares, were given a name of their own (a tap changer names its transformer): 'NAME (I-J CKT)' or 'transformer I-J CKT'.");
-            if (noBus > 0) _notes.Add($"{noBus} winding(s) have voltage control (COD 1) but no controlled bus (CONT 0); their taps stay at the file's ratios.");
-            if (deadBus > 0) _notes.Add($"{deadBus} winding(s) control the voltage of a dropped isolated (IDE 4) bus; their taps stay at the file's ratios.");
-            if (outside > 0) _notes.Add($"{outside} tap-changing winding(s) start outside their RMI..RMA range; the tap loop never steps such a tap further out, and reports it at its limit if its bus stays out of band.");
+                _notes.Add(FormattableString.Invariant($"{flows.Count} transformer winding(s) regulate the power flowing through them ({nq} reactive power by tap, COD 2; {np} active power by phase shift, COD 3): applied in the solve's tap loop, one position per pass from the file's values until the flow into the transformer at the winding's bus is in VMI..VMA (limits RMI..RMA, step (RMA - RMI) / (NTP - 1))."));
+            if (renamed > 0) _notes.Add(FormattableString.Invariant($"{renamed} tap-changing transformer(s) with no name, or a name another branch shares, were given a name of their own (a tap changer names its transformer): 'NAME (I-J CKT)' or 'transformer I-J CKT'."));
+            if (noBus > 0) _notes.Add(FormattableString.Invariant($"{noBus} winding(s) have voltage control (COD 1) but no controlled bus (CONT 0); their taps stay at the file's ratios."));
+            if (deadBus > 0) _notes.Add(FormattableString.Invariant($"{deadBus} winding(s) control the voltage of a dropped isolated (IDE 4) bus; their taps stay at the file's ratios."));
+            if (outside > 0) _notes.Add(FormattableString.Invariant($"{outside} tap-changing winding(s) start outside their RMI..RMA range; the tap loop never steps such a tap further out, and reports it at its limit if its bus stays out of band."));
             return oltcs;
         }
 
@@ -507,9 +507,9 @@ public static class PsseRawParser
 
             int ic = id.Int(0, "IC", 0);
             if (ic != 0)
-                throw id.Error($"IC is {ic}: this is a change case (data to add to a case already in memory), not a whole network; only IC 0 can be read");
+                throw id.Error(FormattableString.Invariant($"IC is {ic}: this is a change case (data to add to a case already in memory), not a whole network; only IC 0 can be read"));
             _sbase = id.Real(1, "SBASE", 100.0);
-            if (!(_sbase > 0)) throw id.Error($"SBASE is {_sbase}; the system base must be above 0 MVA");
+            if (!(_sbase > 0)) throw id.Error(FormattableString.Invariant($"SBASE is {_sbase}; the system base must be above 0 MVA"));
 
             // The revision: the REV field, else "PSS/E-NN" (or PSS(tm)E-NN, PSS(R)E-NN) in the comment, else the caller's.
             int? fileRev = id.Has(2) ? id.Int(2, "REV") : null;
@@ -520,19 +520,19 @@ public static class PsseRawParser
                 if (m.Success) fileRev = int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
             }
             if (fileRev is int fr && _options.Revision is int asked && fr != asked)
-                throw id.Error($"the file says revision {fr} but revision {asked} was asked for; remove one of the two");
+                throw id.Error(FormattableString.Invariant($"the file says revision {fr} but revision {asked} was asked for; remove one of the two"));
             _rev = fileRev ?? _options.Revision
                 ?? throw id.Error("the file does not say its PSS/E revision (no REV field and no PSS/E-NN in the comment); give the revision when reading it");
             if (!SupportedRevisions.Contains(_rev))
                 throw id.Error(NotSupported(_rev));
 
             double basfrq = id.Real(5, "BASFRQ", 0.0);
-            if (basfrq < 0) throw id.Error($"BASFRQ is {basfrq}; the base frequency must be 0 (not given) or above");
+            if (basfrq < 0) throw id.Error(FormattableString.Invariant($"BASFRQ is {basfrq}; the base frequency must be 0 (not given) or above"));
             double freq;
             if (basfrq > 0)
             {
                 if (_options.FrequencyHz is double given && given != basfrq)
-                    throw id.Error($"the file's base frequency is {basfrq.ToString("R", CultureInfo.InvariantCulture)} Hz but {given.ToString("R", CultureInfo.InvariantCulture)} Hz was asked for; remove one of the two");
+                    throw id.Error(FormattableString.Invariant($"the file's base frequency is {basfrq.ToString("R", CultureInfo.InvariantCulture)} Hz but {given.ToString("R", CultureInfo.InvariantCulture)} Hz was asked for; remove one of the two"));
                 freq = basfrq;
             }
             else if (_options.FrequencyHz is double given) freq = given;
@@ -567,10 +567,18 @@ public static class PsseRawParser
             {
                 string key = sections[si];
                 string? next = si + 1 < sections.Count ? sections[si + 1] : null;
+                PsseRecord? lastInSection = null;
                 while (true)
                 {
                     PsseRecord? r = cur.Next(key);
-                    if (r is null) { ended = true; break; }
+                    if (r is null)
+                    {
+                        // Records were read in this section and no terminator followed: a truncated file (a cut
+                        // copy), not one that merely omits the Q record.
+                        if (lastInSection is not null)
+                            throw lastInSection.Error(FormattableString.Invariant($"the file ends inside the {key} data with no terminating 0 record; the file is truncated"));
+                        ended = true; break;
+                    }
                     if (r.IsEndOfData) { ended = true; sawQ = true; break; }
                     if (r.IsTerminator) { CheckLabel(r, key, next); break; }
                     // Revision 35: the system-wide records are keyword lines. A file that starts its bus data straight
@@ -581,6 +589,7 @@ public static class PsseRawParser
                         break;
                     }
                     ReadRecord(key, r, cur);
+                    lastInSection = r;
                 }
             }
             if (!ended)
@@ -602,10 +611,10 @@ public static class PsseRawParser
             string c = r.Comment.ToUpperInvariant();
             Match end = Regex.Match(c, @"END OF (.+?) DATA");
             if (end.Success && SectionOfLabel(end.Groups[1].Value) is string named && named != key)
-                throw r.Error($"this terminator says it ends {end.Groups[1].Value.Trim()} data, but the {key} section was being read; the sections are not in the order of the file's revision");
+                throw r.Error(FormattableString.Invariant($"this terminator says it ends {end.Groups[1].Value.Trim()} data, but the {key} section was being read; the sections are not in the order of the file's revision"));
             Match begin = Regex.Match(c, @"BEGIN (.+?) DATA");
             if (begin.Success && SectionOfLabel(begin.Groups[1].Value) is string nextNamed && nextNamed != next)
-                throw r.Error($"this terminator says {begin.Groups[1].Value.Trim()} data comes next, but the file's revision puts {next ?? "the end of the file"} next");
+                throw r.Error(FormattableString.Invariant($"this terminator says {begin.Groups[1].Value.Trim()} data comes next, but the file's revision puts {next ?? "the end of the file"} next"));
         }
 
         private void ReadRecord(string key, PsseRecord r, PsseLineCursor cur)
@@ -641,8 +650,8 @@ public static class PsseRawParser
                 case ImpedanceS:
                 {
                     int number = r.Int(0, "I");
-                    if (number < 1) throw r.Error($"impedance correction table number {number} must be 1 or above");
-                    if (_impedanceTables.TryGetValue(number, out var prior)) throw r.Error($"impedance correction table {number} is defined twice (also at line {prior.Record.Line})");
+                    if (number < 1) throw r.Error(FormattableString.Invariant($"impedance correction table number {number} must be 1 or above"));
+                    if (_impedanceTables.TryGetValue(number, out var prior)) throw r.Error(FormattableString.Invariant($"impedance correction table {number} is defined twice (also at line {prior.Record.Line})"));
                     _impedanceTables[number] = (r, _rev >= 34 ? ReadComplexTable(r, cur) : ReadRealTable(r));
                     break;
                 }
@@ -698,7 +707,7 @@ public static class PsseRawParser
                         Array.AsReadOnly(groups[2].ToArray()), Array.AsReadOnly(sourceLines[2].ToArray())));
                     break;
                 default:
-                    throw r.Error($"internal error: no reader for section {key}");
+                    throw r.Error(FormattableString.Invariant($"internal error: no reader for section {key}"));
             }
         }
 
@@ -743,12 +752,12 @@ public static class PsseRawParser
 
         private static ImpedanceCorrectionPoint[] CheckTable(PsseRecord r, List<ImpedanceCorrectionPoint> pts)
         {
-            if (pts.Count < 2) throw r.Error($"impedance correction table has {pts.Count} point(s); it needs at least 2");
+            if (pts.Count < 2) throw r.Error(FormattableString.Invariant($"impedance correction table has {pts.Count} point(s); it needs at least 2"));
             for (int k = 0; k < pts.Count; k++)
             {
-                if (pts[k].ReF == 0 && pts[k].ImF == 0) throw r.Error($"impedance correction point {k + 1} (T {pts[k].T.ToString("R", CultureInfo.InvariantCulture)}) has a zero factor, which would give the transformer no impedance");
+                if (pts[k].ReF == 0 && pts[k].ImF == 0) throw r.Error(FormattableString.Invariant($"impedance correction point {k + 1} (T {pts[k].T.ToString("R", CultureInfo.InvariantCulture)}) has a zero factor, which would give the transformer no impedance"));
                 if (k > 0 && !(pts[k].T > pts[k - 1].T))
-                    throw r.Error($"impedance correction point {k + 1} has T {pts[k].T.ToString("R", CultureInfo.InvariantCulture)}, not above the previous point's {pts[k - 1].T.ToString("R", CultureInfo.InvariantCulture)}; T must increase");
+                    throw r.Error(FormattableString.Invariant($"impedance correction point {k + 1} has T {pts[k].T.ToString("R", CultureInfo.InvariantCulture)}, not above the previous point's {pts[k - 1].T.ToString("R", CultureInfo.InvariantCulture)}; T must increase"));
             }
             return pts.ToArray();
         }
@@ -764,19 +773,19 @@ public static class PsseRawParser
         private (LccConverter Converter, bool Ccc) Converter(PsseRecord c, string end, string amx, string amn)
         {
             int bus = c.Int(0, "IP");
-            if (bus < 1) throw c.Error($"the {end} bus {bus} must be 1 or above");
+            if (bus < 1) throw c.Error(FormattableString.Invariant($"the {end} bus {bus} must be 1 or above"));
             int nb = c.Int(1, "NB");
-            if (nb < 1) throw c.Error($"the {end} has {nb} bridges; it needs at least 1");
+            if (nb < 1) throw c.Error(FormattableString.Invariant($"the {end} has {nb} bridges; it needs at least 1"));
             double anmx = c.Real(2, amx), anmn = c.Real(3, amn);
             if (!(anmn >= 0) || !(anmx > anmn) || !(anmx < 90))
-                throw c.Error($"the {end} angle limits {amn} {anmn} .. {amx} {anmx} degrees must satisfy 0 <= min < max < 90");
+                throw c.Error(FormattableString.Invariant($"the {end} angle limits {amn} {anmn} .. {amx} {anmx} degrees must satisfy 0 <= min < max < 90"));
             double rcv = c.Real(4, "RC", 0), xcv = c.Real(5, "XC");
-            if (rcv < 0 || xcv < 0) throw c.Error($"the {end}'s commutating resistance and reactance must be 0 or above");
+            if (rcv < 0 || xcv < 0) throw c.Error(FormattableString.Invariant($"the {end}'s commutating resistance and reactance must be 0 or above"));
             double ebas = c.Real(6, "EBAS");
-            if (!(ebas > 0)) throw c.Error($"the {end}'s EBAS is {ebas} kV; it must be above 0");
+            if (!(ebas > 0)) throw c.Error(FormattableString.Invariant($"the {end}'s EBAS is {ebas} kV; it must be above 0"));
             double tr = c.Real(7, "TR", 1.0), tap = c.Real(8, "TAP", 1.0), tmx = c.Real(9, "TMX", 1.5), tmn = c.Real(10, "TMN", 0.51), stp = c.Real(11, "STP", 0.00625);
             if (!(tr > 0) || !(tap > 0) || !(tmn > 0) || !(tmx >= tmn) || stp < 0)
-                throw c.Error($"the {end}'s transformer ratio {tr}, tap {tap} and limits {tmn} .. {tmx} (step {stp}) must be positive with TMX at or above TMN");
+                throw c.Error(FormattableString.Invariant($"the {end}'s transformer ratio {tr}, tap {tap} and limits {tmn} .. {tmx} (step {stp}) must be positive with TMX at or above TMN"));
             int xcapIdx = _rev >= 35 ? 17 : 16;
             double xcap = c.Real(xcapIdx, "XCAP", 0);
             return (new LccConverter(bus, nb, anmx, anmn, rcv, xcv, ebas, tr, tap, tmx, tmn, stp), xcap != 0);
@@ -788,20 +797,20 @@ public static class PsseRawParser
         private static (VscConverter? Converter, bool Remote) Vsc(PsseRecord c, string link)
         {
             int bus = c.Int(0, "IBUS");
-            if (bus < 1) throw c.Error($"VSC link '{link}': converter bus {bus} must be 1 or above");
+            if (bus < 1) throw c.Error(FormattableString.Invariant($"VSC link '{link}': converter bus {bus} must be 1 or above"));
             int type = c.Code(1, "TYPE", 1, 1, 2), mode = c.Code(2, "MODE", 1, 1, 2);
             double dcset = c.Real(3, "DCSET"), acset = c.Real(4, "ACSET", 1.0);
             double aloss = c.Real(5, "ALOSS", 0), bloss = c.Real(6, "BLOSS", 0), minloss = c.Real(7, "MINLOSS", 0);
             double smax = c.Real(8, "SMAX", 0), imax = c.Real(9, "IMAX", 0), pwf = c.Real(10, "PWF", 1.0);
             double maxq = c.Real(11, "MAXQ", 9999), minq = c.Real(12, "MINQ", -9999);
             int remot = c.Int(13, "REMOT", 0);
-            if (type == 1 && !(dcset > 0)) throw c.Error($"DCSET is {dcset}; a DC voltage converter needs a scheduled DC voltage above 0 kV");
-            if (mode == 1 && !(acset > 0)) throw c.Error($"ACSET is {acset}; an AC voltage set-point must be above 0 pu");
-            if (mode == 2 && (!(Math.Abs(acset) > 0) || Math.Abs(acset) > 1)) throw c.Error($"ACSET is {acset}; a power factor must be in -1..1 and not 0");
+            if (type == 1 && !(dcset > 0)) throw c.Error(FormattableString.Invariant($"DCSET is {dcset}; a DC voltage converter needs a scheduled DC voltage above 0 kV"));
+            if (mode == 1 && !(acset > 0)) throw c.Error(FormattableString.Invariant($"ACSET is {acset}; an AC voltage set-point must be above 0 pu"));
+            if (mode == 2 && (!(Math.Abs(acset) > 0) || Math.Abs(acset) > 1)) throw c.Error(FormattableString.Invariant($"ACSET is {acset}; a power factor must be in -1..1 and not 0"));
             if (aloss < 0 || bloss < 0 || minloss < 0) throw c.Error("ALOSS, BLOSS and MINLOSS must be 0 or above");
             if (smax < 0 || imax < 0) throw c.Error("SMAX and IMAX must be 0 (no limit) or above");
-            if (pwf < 0 || pwf > 1) throw c.Error($"PWF is {pwf}; the power weighting fraction must be in 0..1");
-            if (maxq < minq) throw c.Error($"MAXQ {maxq} is below MINQ {minq}");
+            if (pwf < 0 || pwf > 1) throw c.Error(FormattableString.Invariant($"PWF is {pwf}; the power weighting fraction must be in 0..1"));
+            if (maxq < minq) throw c.Error(FormattableString.Invariant($"MAXQ {maxq} is below MINQ {minq}"));
             if (remot != 0 && remot != bus) return (null, true);
             return (new VscConverter(bus, type == 1 ? VscDcControl.DcVoltage : VscDcControl.Power, mode == 1 ? VscAcControl.Voltage : VscAcControl.PowerFactor,
                 dcset, acset, aloss, bloss, minloss, smax, imax, pwf, maxq, minq), false);
@@ -825,9 +834,9 @@ public static class PsseRawParser
             foreach (PsseRecord r in _buses)
             {
                 int id = r.Int(0, "I");
-                if (id < 1) throw r.Error($"bus number {id} must be 1 or above");
+                if (id < 1) throw r.Error(FormattableString.Invariant($"bus number {id} must be 1 or above"));
                 if (busRec.TryGetValue(id, out PsseRecord? prior))
-                    throw r.Error($"bus {id} is defined twice (also at line {prior.Line})");
+                    throw r.Error(FormattableString.Invariant($"bus {id} is defined twice (also at line {prior.Line})"));
                 busRec[id] = r;
                 int ide = r.Code(3, "IDE", 1, 1, 2, 3, 4);
                 if (ide == 4) isolated.Add(id);
@@ -836,7 +845,7 @@ public static class PsseRawParser
             if (busRec.Count == 0) throw new InvalidDataException("PSS/E RAW file has no bus data.");
             bool Live(int id) => busRec.ContainsKey(id) && !isolated.Contains(id);
             PsseRecord BusOf(PsseRecord r, int id, string field)
-                => busRec.TryGetValue(id, out PsseRecord? b) ? b : throw r.Error($"{field} {id} is not a bus of this file");
+                => busRec.TryGetValue(id, out PsseRecord? b) ? b : throw r.Error(FormattableString.Invariant($"{field} {id} is not a bus of this file"));
 
             var acc = new Dictionary<int, BusAcc>();
             BusAcc Acc(int id) => acc.TryGetValue(id, out BusAcc? a) ? a : acc[id] = new BusAcc();
@@ -854,7 +863,7 @@ public static class PsseRawParser
                     BusAcc.Add(ref a.Bs, bl);
                     busShunts++;
                 }
-            if (busShunts > 0) _notes.Add($"{busShunts} bus record(s) carry a shunt (GL, BL; revision 30); it is the bus shunt, as a fixed shunt is.");
+            if (busShunts > 0) _notes.Add(FormattableString.Invariant($"{busShunts} bus record(s) carry a shunt (GL, BL; revision 30); it is the bus shunt, as a fixed shunt is."));
 
             // --- Loads ---------------------------------------------------------------------------------------------
             int loadOff = 0, loadIsolated = 0, loadY = 0, loadI = 0, loadDgen = 0;
@@ -878,11 +887,11 @@ public static class PsseRawParser
                 if (ip != 0 || iq != 0) { BusAcc.Add(ref a.Ip, ip); BusAcc.Add(ref a.Iq, iq); loadI++; }
                 if (yp != 0 || yq != 0) { BusAcc.Add(ref a.Gs, yp); BusAcc.Add(ref a.Bs, yq); loadY++; }
             }
-            if (loadOff > 0) _notes.Add($"skipped {loadOff} out-of-service load(s).");
-            if (loadIsolated > 0) _notes.Add($"skipped {loadIsolated} load(s) on dropped isolated (IDE 4) bus(es).");
-            if (loadY > 0) _notes.Add($"{loadY} load(s) have a constant-admittance part (YP, YQ); it is modelled as a bus shunt (Gs += YP, Bs += YQ), which is exactly a constant-admittance load.");
-            if (loadI > 0) _notes.Add($"{loadI} load(s) have a constant-current part (IP, IQ); their buses are ZIP loads (P = (PL + IP)(Cp + Bp V), and likewise for Q).");
-            if (loadDgen > 0) _notes.Add($"{loadDgen} in-service load(s) carry distributed generation (DGENP, DGENQ with DGENF 1); it is netted off the load.");
+            if (loadOff > 0) _notes.Add(FormattableString.Invariant($"skipped {loadOff} out-of-service load(s)."));
+            if (loadIsolated > 0) _notes.Add(FormattableString.Invariant($"skipped {loadIsolated} load(s) on dropped isolated (IDE 4) bus(es)."));
+            if (loadY > 0) _notes.Add(FormattableString.Invariant($"{loadY} load(s) have a constant-admittance part (YP, YQ); it is modelled as a bus shunt (Gs += YP, Bs += YQ), which is exactly a constant-admittance load."));
+            if (loadI > 0) _notes.Add(FormattableString.Invariant($"{loadI} load(s) have a constant-current part (IP, IQ); their buses are ZIP loads (P = (PL + IP)(Cp + Bp V), and likewise for Q)."));
+            if (loadDgen > 0) _notes.Add(FormattableString.Invariant($"{loadDgen} in-service load(s) carry distributed generation (DGENP, DGENQ with DGENF 1); it is netted off the load."));
 
             // --- Fixed shunts --------------------------------------------------------------------------------------
             int shuntOff = 0;
@@ -896,7 +905,7 @@ public static class PsseRawParser
                 BusAcc.Add(ref a.Gs, r.Real(3, "GL", 0));
                 BusAcc.Add(ref a.Bs, r.Real(4, "BL", 0));
             }
-            if (shuntOff > 0) _notes.Add($"skipped {shuntOff} out-of-service fixed shunt(s).");
+            if (shuntOff > 0) _notes.Add(FormattableString.Invariant($"skipped {shuntOff} out-of-service fixed shunt(s)."));
 
             // A bus a generator holds: a swing bus, or a PV bus with an in-service unit on it (the generator records read raw).
             bool GeneratorHeld(int id)
@@ -937,7 +946,7 @@ public static class PsseRawParser
                     {
                         // A remote regulated bus: it must be in the file; a dropped isolated one, or one a generator holds
                         // (a swing bus, or a PV bus with an in-service unit), cannot be moved by switching.
-                        if (!busRec.ContainsKey(rem)) throw r.Error($"SWREM names bus {rem}, which the file does not define");
+                        if (!busRec.ContainsKey(rem)) throw r.Error(FormattableString.Invariant($"SWREM names bus {rem}, which the file does not define"));
                         if (isolated.Contains(rem)) return "regulate a remote bus (SWREM) that was dropped as isolated";
                         if (GeneratorHeld(rem)) return "regulate a remote bus (SWREM) that a generator holds, so switching cannot move it";
                         return null;
@@ -951,12 +960,12 @@ public static class PsseRawParser
                     ? $"{swOn - banks.Count - svcs.Count} switched shunt(s) are fixed at their initial susceptance BINIT; a solve that would have switched them differs from PSS/E's."
                     : $"{swOn} switched shunt(s) are fixed at their initial susceptance BINIT; GridSim does not switch shunt blocks, so a solve that would have switched them differs from PSS/E's.");
             if (banks.Count > 0)
-                _notes.Add($"{banks.Count} switched shunt(s) with discrete voltage control (MODSW 1) switch whole blocks from BINIT to hold their bus in VSWLO..VSWHI.");
+                _notes.Add(FormattableString.Invariant($"{banks.Count} switched shunt(s) with discrete voltage control (MODSW 1) switch whole blocks from BINIT to hold their bus in VSWLO..VSWHI."));
             if (svcs.Count > 0)
-                _notes.Add($"{svcs.Count} switched shunt(s) with continuous voltage control (MODSW 2) are static var compensators: the susceptance varies continuously between all reactor blocks and all capacitor blocks in, staying at BINIT while the bus is in VSWLO..VSWHI and otherwise holding the band edge the bus crossed.");
+                _notes.Add(FormattableString.Invariant($"{svcs.Count} switched shunt(s) with continuous voltage control (MODSW 2) are static var compensators: the susceptance varies continuously between all reactor blocks and all capacitor blocks in, staying at BINIT while the bus is in VSWLO..VSWHI and otherwise holding the band edge the bus crossed."));
             foreach (var kv in bankSkipped)
-                _notes.Add($"{kv.Value} switched shunt(s) {kv.Key}: they stay fixed at BINIT.");
-            if (swOff > 0) _notes.Add($"skipped {swOff} out-of-service switched shunt(s).");
+                _notes.Add(FormattableString.Invariant($"{kv.Value} switched shunt(s) {kv.Key}: they stay fixed at BINIT."));
+            if (swOff > 0) _notes.Add(FormattableString.Invariant($"skipped {swOff} out-of-service switched shunt(s)."));
 
             // --- Generators ----------------------------------------------------------------------------------------
             var gens = new List<Generator>();
@@ -969,17 +978,17 @@ public static class PsseRawParser
                 BusOf(r, bus, "generator bus");
                 string id = r.Str(1, "1");
                 if (machineSeen.TryGetValue((bus, id), out int prior))
-                    throw r.Error($"machine {id} at bus {bus} is defined twice (also at line {prior})");
+                    throw r.Error(FormattableString.Invariant($"machine {id} at bus {bus} is defined twice (also at line {prior})"));
                 machineSeen[(bus, id)] = r.Line;
                 bool v35 = _rev >= 35;
                 int mbIdx = v35 ? 9 : 8, statIdx = v35 ? 15 : 14, ptIdx = v35 ? 17 : 16, pbIdx = v35 ? 18 : 17;
                 bool inService = r.Code(statIdx, "STAT", 1, 0, 1) == 1;
                 if (isolated.Contains(bus)) { genIsolated++; continue; }
                 double qt = r.Real(4, "QT", 9999), qb = r.Real(5, "QB", -9999), pt = r.Real(ptIdx, "PT", 9999), pb = r.Real(pbIdx, "PB", -9999);
-                if (qb > qt) throw r.Error($"QB {qb} is above QT {qt}");
-                if (pb > pt) throw r.Error($"PB {pb} is above PT {pt}");
+                if (qb > qt) throw r.Error(FormattableString.Invariant($"QB {qb} is above QT {qt}"));
+                if (pb > pt) throw r.Error(FormattableString.Invariant($"PB {pb} is above PT {pt}"));
                 double mbase = r.Real(mbIdx, "MBASE", _sbase);
-                if (mbase < 0) throw r.Error($"MBASE is {mbase}; it must be 0 (the system base) or above");
+                if (mbase < 0) throw r.Error(FormattableString.Invariant($"MBASE is {mbase}; it must be 0 (the system base) or above"));
                 if (mbase == 0) { mbase = _sbase; genZeroMbase++; }
                 int ireg = r.Int(7, "IREG", 0);
                 if (ireg != 0 && ireg != bus) { BusOf(r, ireg, "IREG"); genRemote++; }
@@ -997,23 +1006,33 @@ public static class PsseRawParser
                     InService: inService));
                 machineKeys.Add(new PsseMachineKey(bus, id));
             }
-            if (genOffKept > 0) _notes.Add($"kept {genOffKept} out-of-service generator(s) in the model, marked out of service (not solved).");
-            if (genIsolated > 0) _notes.Add($"skipped {genIsolated} generator(s) on dropped isolated (IDE 4) bus(es).");
-            if (genZeroMbase > 0) _notes.Add($"{genZeroMbase} generator(s) give MBASE 0; their machine base is the system base ({_sbase.ToString("R", CultureInfo.InvariantCulture)} MVA).");
-            if (genRemote > 0) _notes.Add($"{genRemote} generator(s) regulate a remote bus (IREG); GridSim holds the set point VS at the unit's own bus instead, as MATPOWER does, so those voltages differ from PSS/E's.");
+            if (genOffKept > 0) _notes.Add(FormattableString.Invariant($"kept {genOffKept} out-of-service generator(s) in the model, marked out of service (not solved)."));
+            if (genIsolated > 0) _notes.Add(FormattableString.Invariant($"skipped {genIsolated} generator(s) on dropped isolated (IDE 4) bus(es)."));
+            if (genZeroMbase > 0) _notes.Add(FormattableString.Invariant($"{genZeroMbase} generator(s) give MBASE 0; their machine base is the system base ({_sbase.ToString("R", CultureInfo.InvariantCulture)} MVA)."));
+            if (genRemote > 0) _notes.Add(FormattableString.Invariant($"{genRemote} generator(s) regulate a remote bus (IREG); GridSim holds the set point VS at the unit's own bus instead, as MATPOWER does, so those voltages differ from PSS/E's."));
 
             // --- Branches ------------------------------------------------------------------------------------------
             var branches = new List<Branch>();
             var branchKeys = new List<PsseBranchKey>();
             var skippedKeys = new List<PsseBranchKey>();   // records read but not in the model (out of service, dangling)
             int brOff = 0, brDangling = 0, zeroZ = 0;
+            // PSS/E identifies a branch by its buses and circuit id; two records with one identity are refused whatever their status.
+            var seenCircuits = new Dictionary<string, int>(StringComparer.Ordinal);
+            void RefuseDuplicateCircuit(PsseRecord rec, string kind, int a, int b, int c, string circuit)
+            {
+                string id = kind + "|" + a.ToString(CultureInfo.InvariantCulture) + "|" + b.ToString(CultureInfo.InvariantCulture) + "|" + c.ToString(CultureInfo.InvariantCulture) + "|" + circuit.Trim().ToUpperInvariant();
+                if (seenCircuits.TryGetValue(id, out int prior))
+                    throw rec.Error($"{kind} {a}-{b}" + (c != 0 ? $"-{c}" : "") + $" circuit '{circuit.Trim()}' is defined twice (also at line {prior})");
+                seenCircuits[id] = rec.Line;
+            }
             foreach (PsseRecord r in _branches)
             {
                 int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));   // a negative J marks the metered end
                 BusOf(r, i, "bus I");
                 BusOf(r, j, "bus J");
-                if (i == j) throw r.Error($"both ends are bus {i}");
+                if (i == j) throw r.Error(FormattableString.Invariant($"both ends are bus {i}"));
                 string ckt = r.Str(2, "1");
+                RefuseDuplicateCircuit(r, "branch", Math.Min(i, j), Math.Max(i, j), 0, ckt);
                 bool v34 = _rev >= 34;
                 int rate = v34 ? 7 : 6, gi = v34 ? 19 : 9, st = v34 ? 23 : 13;
                 double rr = r.Real(3, "R", 0), x = r.Real(4, "X"), b = r.Real(5, "B", 0);
@@ -1037,8 +1056,9 @@ public static class PsseRawParser
                 int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
                 BusOf(r, i, "bus I");
                 BusOf(r, j, "bus J");
-                if (i == j) throw r.Error($"both ends are bus {i}");
+                if (i == j) throw r.Error(FormattableString.Invariant($"both ends are bus {i}"));
                 string ckt = r.Str(2, "1");
+                RefuseDuplicateCircuit(r, "switching device", Math.Min(i, j), Math.Max(i, j), 0, ckt);
                 double x = r.Real(3, "X", ZeroImpedanceXPu);
                 if (r.Code(16, "STAT", 1, 0, 1) == 0)
                 {
@@ -1058,7 +1078,7 @@ public static class PsseRawParser
                     RateCMva: r.Real(6, "RATE3", 0), Name: name.Length > 0 ? name : null));
                 branchKeys.Add(new PsseBranchKey("switching device", i, j, 0, ckt, 0));
             }
-            if (swDevOff > 0) _notes.Add($"skipped {swDevOff} open system switching device(s).");
+            if (swDevOff > 0) _notes.Add(FormattableString.Invariant($"skipped {swDevOff} open system switching device(s)."));
 
             // --- Transformers --------------------------------------------------------------------------------------
             var stars = new List<Bus>();
@@ -1081,6 +1101,8 @@ public static class PsseRawParser
                 if (three) BusOf(r1, k, "bus K");
                 if (i == j || (three && (i == k || j == k))) throw r1.Error("a transformer's windings must be on different buses");
                 string ckt = r1.Str(3, "1");
+                if (three) RefuseDuplicateCircuit(r1, "three-winding transformer", i, j, k, ckt);
+                else RefuseDuplicateCircuit(r1, "transformer", Math.Min(i, j), Math.Max(i, j), 0, ckt);
                 int cw = r1.Code(4, "CW", 1, 1, 2, 3), cz = r1.Code(5, "CZ", 1, 1, 2, 3), cm = r1.Code(6, "CM", 1, 1, 2);
                 double mag1 = r1.Real(7, "MAG1", 0), mag2 = r1.Real(8, "MAG2", 0);
                 string xname = r1.Str(10);
@@ -1103,13 +1125,13 @@ public static class PsseRawParser
                     PsseRecord wr = t[2 + n];
                     double busKv = BusOf(r1, wbus[n], "winding bus").Real(2, "BASKV", 0);
                     double nv = wr.Real(1, $"NOMV{n + 1}", 0);
-                    if (nv < 0) throw wr.Error($"NOMV{n + 1} is {nv}; it must be 0 (the bus base) or above");
+                    if (nv < 0) throw wr.Error(FormattableString.Invariant($"NOMV{n + 1} is {nv}; it must be 0 (the bus base) or above"));
                     nomv[n] = nv > 0 ? nv : busKv;
                     double windDefault = cw == 2 ? busKv : 1.0;
                     double windv = wr.Real(0, $"WINDV{n + 1}", windDefault);
-                    if (!(windv > 0)) throw wr.Error($"WINDV{n + 1} is {windv}; a winding voltage must be above 0");
+                    if (!(windv > 0)) throw wr.Error(FormattableString.Invariant($"WINDV{n + 1} is {windv}; a winding voltage must be above 0"));
                     if (cw != 1 && !(busKv > 0))
-                        throw wr.Error($"bus {wbus[n]} has no base voltage (BASKV {busKv}), so a winding voltage given with CW {cw} cannot be put in per unit");
+                        throw wr.Error(FormattableString.Invariant($"bus {wbus[n]} has no base voltage (BASKV {busKv}), so a winding voltage given with CW {cw} cannot be put in per unit"));
                     w[n] = cw switch
                     {
                         1 => windv,
@@ -1128,7 +1150,7 @@ public static class PsseRawParser
                     int tab = wr.Int(tabIdx, $"TAB{n + 1}", 0);
                     if (tab != 0)
                     {
-                        if (!_impedanceTables.TryGetValue(tab, out var table)) throw wr.Error($"TAB{n + 1} {tab} names an impedance correction table the file does not define");
+                        if (!_impedanceTables.TryGetValue(tab, out var table)) throw wr.Error(FormattableString.Invariant($"TAB{n + 1} {tab} names an impedance correction table the file does not define"));
                         // The abscissa, confirmed 2026-10-31 (GitHub issue #5; bug hunt 2026-10-29 finding 45) against the
                         // PSS/E-30.1 Program Operation Manual, Vol. I, s.4.1.1.11 "Transformer Impedance Correction Tables":
                         // "The Ti values for tables that are a function of tap ratio (rather than phase shift angle) are in
@@ -1146,7 +1168,7 @@ public static class PsseRawParser
                             // The tap loop moves the ratio (COD 1, 2) or the angle (COD 3) and re-evaluates the table on that
                             // quantity; a table on the other quantity cannot follow the loop. Refused, never guessed. A
                             // negative COD (control switched off) builds no tap control, so its table is read at the fixed setting.
-                            throw wr.Error($"TAB{n + 1} {tab} is a {(angleTable ? "phase shift angle" : "turns ratio")} table (PSS/E POM s.4.1.1.11: angle when the first T < 0.5 or the last T > 1.5) but COD{n + 1} {cod} adjusts the {(Math.Abs(cod) == 3 ? "phase shift angle" : "turns ratio")}; GridSim's tap loop cannot apply it (read with tap control off to use the table at the fixed setting)");
+                            throw wr.Error(FormattableString.Invariant($"TAB{n + 1} {tab} is a {(angleTable ? "phase shift angle" : "turns ratio")} table (PSS/E POM s.4.1.1.11: angle when the first T < 0.5 or the last T > 1.5) but COD{n + 1} {cod} adjusts the {(Math.Abs(cod) == 3 ? "phase shift angle" : "turns ratio")}; GridSim's tap loop cannot apply it (read with tap control off to use the table at the fixed setting)"));
                         double tv = angleTable ? ang[n] : w[n];
                         if (tv < table.Points[0].T || tv > table.Points[^1].T) xfImpOutside++;
                         tables[n] = table.Points;
@@ -1168,21 +1190,21 @@ public static class PsseRawParser
                     double sb = r2.Real(3 * p + 2, $"SBASE{pn}", _sbase);
                     if (cz != 1)
                     {
-                        if (!(sb > 0)) throw r2.Error($"SBASE{pn} is {sb}; it must be above 0 MVA for CZ {cz}");
+                        if (!(sb > 0)) throw r2.Error(FormattableString.Invariant($"SBASE{pn} is {sb}; it must be above 0 MVA for CZ {cz}"));
                         if (cz == 3)
                         {
                             double rw = 1e-6 * rv / sb;   // load loss (W) at rated current, as pu on the winding base
-                            if (xv < rw) throw r2.Error($"X{pn} (impedance magnitude {xv}) is below the resistance its load loss gives ({rw}); not a transformer");
+                            if (xv < rw) throw r2.Error(FormattableString.Invariant($"X{pn} (impedance magnitude {xv}) is below the resistance its load loss gives ({rw}); not a transformer"));
                             xv = Math.Sqrt(xv * xv - rw * rw);
                             rv = rw;
                         }
                         double busKv = BusOf(r1, wbus[p], "winding bus").Real(2, "BASKV", 0);
-                        if (!(busKv > 0)) throw r2.Error($"bus {wbus[p]} has no base voltage, so an impedance given with CZ {cz} cannot be put on the system base");
+                        if (!(busKv > 0)) throw r2.Error(FormattableString.Invariant($"bus {wbus[p]} has no base voltage, so an impedance given with CZ {cz} cannot be put on the system base"));
                         double zbw = nomv[p] * nomv[p] / sb, zbs = busKv * busKv / _sbase;
                         rv = rv * zbw / zbs;
                         xv = xv * zbw / zbs;
                     }
-                    if (rv == 0 && xv == 0) throw r2.Error($"R{pn} and X{pn} are both 0; a transformer must have an impedance");
+                    if (rv == 0 && xv == 0) throw r2.Error(FormattableString.Invariant($"R{pn} and X{pn} are both 0; a transformer must have an impedance"));
                     zr[p] = rv;
                     zx[p] = xv;
                 }
@@ -1196,12 +1218,12 @@ public static class PsseRawParser
                     else
                     {
                         double sb = r2.Real(2, "SBASE1-2", _sbase);
-                        if (!(sb > 0)) throw r2.Error($"SBASE1-2 is {sb}; it must be above 0 MVA for CM 2");
+                        if (!(sb > 0)) throw r2.Error(FormattableString.Invariant($"SBASE1-2 is {sb}; it must be above 0 MVA for CM 2"));
                         double gw = 1e-6 * mag1 / sb;   // no-load loss (W) as pu on the winding base
-                        if (mag2 < gw) throw r1.Error($"MAG2 (exciting current {mag2}) is below the conductance the no-load loss gives ({gw})");
+                        if (mag2 < gw) throw r1.Error(FormattableString.Invariant($"MAG2 (exciting current {mag2}) is below the conductance the no-load loss gives ({gw})"));
                         double bw = -Math.Sqrt(mag2 * mag2 - gw * gw);
                         double busKv = BusOf(r1, i, "bus I").Real(2, "BASKV", 0);
-                        if (!(busKv > 0)) throw r1.Error($"bus {i} has no base voltage, so a magnetising admittance given with CM 2 cannot be put on the system base");
+                        if (!(busKv > 0)) throw r1.Error(FormattableString.Invariant($"bus {i} has no base voltage, so a magnetising admittance given with CM 2 cannot be put on the system base"));
                         double scale = (busKv * busKv / _sbase) / (nomv[0] * nomv[0] / sb);
                         (g, bm) = (gw * scale, bw * scale);
                     }
@@ -1244,7 +1266,7 @@ public static class PsseRawParser
                 {
                     if (!on[n]) continue;
                     if (sr[n] == 0 && sx[n] == 0)
-                        throw r2.Error($"winding {n + 1}'s star impedance is 0 (the pair impedances cancel); not a transformer GridSim can represent");
+                        throw r2.Error(FormattableString.Invariant($"winding {n + 1}'s star impedance is 0 (the pair impedances cancel); not a transformer GridSim can represent"));
                     double rs = sr[n], xs = sx[n];
                     if (factors[n] is (double fr3, double fi3)) (rs, xs) = (sr[n] * fr3 - sx[n] * fi3, sr[n] * fi3 + sx[n] * fr3);
                     if (tapSpecs[n] is TapControl tc3w && tables[n] is { } t3)
@@ -1266,19 +1288,19 @@ public static class PsseRawParser
             }
             var flowControls = new List<TransformerFlowControl>();
             List<Oltc>? oltcs = _options.ApplyTapControl ? TapChangers(controlled, branches, busRec.ContainsKey, Live, flowControls) : null;
-            if (brOff > 0) _notes.Add($"skipped {brOff} out-of-service branch(es).");
-            if (xfOff > 0) _notes.Add($"skipped {xfOff} out-of-service transformer(s).");
-            if (brDangling > 0) _notes.Add($"skipped {brDangling} branch(es) or transformer(s) connected to a dropped isolated (IDE 4) bus.");
-            if (zeroZ > 0) _notes.Add($"{zeroZ} branch(es) or switching device(s) have R = X = 0; given X = {ZeroImpedanceXPu.ToString("R", CultureInfo.InvariantCulture)} pu (PSS/E's zero-impedance threshold).");
-            if (xfTapControl > 0 && !_options.ApplyTapControl) _notes.Add($"{xfTapControl} transformer(s) have automatic tap or phase control (COD); it is not applied: the taps stay at the file's ratios.");
-            if (xfOtherControl > 0) _notes.Add($"{xfOtherControl} transformer winding(s) have DC line or asymmetric control (COD 4 and 5); it is not applied: those taps and phase shifts stay at the file's values.");
-            if (xfMag > 0) _notes.Add($"{xfMag} transformer(s) have a magnetising admittance; it is a shunt at winding 1's bus (two windings) or at the star point (three windings).");
-            if (stars.Count > 0) _notes.Add($"added {stars.Count} star-point bus(es) ({starIds[0]}..{starIds[^1]}) for three-winding transformers.");
+            if (brOff > 0) _notes.Add(FormattableString.Invariant($"skipped {brOff} out-of-service branch(es)."));
+            if (xfOff > 0) _notes.Add(FormattableString.Invariant($"skipped {xfOff} out-of-service transformer(s)."));
+            if (brDangling > 0) _notes.Add(FormattableString.Invariant($"skipped {brDangling} branch(es) or transformer(s) connected to a dropped isolated (IDE 4) bus."));
+            if (zeroZ > 0) _notes.Add(FormattableString.Invariant($"{zeroZ} branch(es) or switching device(s) have R = X = 0; given X = {ZeroImpedanceXPu.ToString("R", CultureInfo.InvariantCulture)} pu (PSS/E's zero-impedance threshold)."));
+            if (xfTapControl > 0 && !_options.ApplyTapControl) _notes.Add(FormattableString.Invariant($"{xfTapControl} transformer(s) have automatic tap or phase control (COD); it is not applied: the taps stay at the file's ratios."));
+            if (xfOtherControl > 0) _notes.Add(FormattableString.Invariant($"{xfOtherControl} transformer winding(s) have DC line or asymmetric control (COD 4 and 5); it is not applied: those taps and phase shifts stay at the file's values."));
+            if (xfMag > 0) _notes.Add(FormattableString.Invariant($"{xfMag} transformer(s) have a magnetising admittance; it is a shunt at winding 1's bus (two windings) or at the star point (three windings)."));
+            if (stars.Count > 0) _notes.Add(FormattableString.Invariant($"added {stars.Count} star-point bus(es) ({starIds[0]}..{starIds[^1]}) for three-winding transformers."));
             if (xfImpTable > 0)
                 _notes.Add($"{xfImpTable} transformer winding(s) use an impedance correction table (TAB): the winding's impedance (Z1-2 for a two-winding unit, its star impedance for a three-winding one) is multiplied by the table's factor at the winding's ratio, or at its phase shift angle for a phase shifter (|COD| 3), interpolated linearly." +
                     (xfImpTapped > 0 ? $" {xfImpTapped} of them are tap-controlled: the factor is recomputed at every tap the tap loop steps." : ""));
             if (xfImpOutside > 0)
-                _notes.Add($"{xfImpOutside} winding(s) have a ratio or angle outside their impedance correction table; the table's end factor is used, as PSS/E does.");
+                _notes.Add(FormattableString.Invariant($"{xfImpOutside} winding(s) have a ratio or angle outside their impedance correction table; the table's end factor is used, as PSS/E does."));
 
             // --- Two-terminal DC links ---------------------------------------------------------------------------
             var lcc = new List<LccDcLink>();
@@ -1289,7 +1311,7 @@ public static class PsseRawParser
                 PsseRecord l = d[0];
                 string name = V30 ? $"DC {l.Int(0, "I")}" : l.Str(0, "");
                 if (name.Length == 0) throw l.Error("a two-terminal DC link needs a name");
-                if (!lccNames.Add(name)) throw l.Error($"two-terminal DC link '{name}' is defined twice");
+                if (!lccNames.Add(name)) throw l.Error(FormattableString.Invariant($"two-terminal DC link '{name}' is defined twice"));
                 int mdc = l.Code(1, "MDC", 0, 0, 1, 2);
                 if (mdc == 0) { lccBlocked++; continue; }
                 (LccConverter rect, bool ccr) = Converter(d[1], "rectifier", "ANMXR", "ANMNR");
@@ -1303,18 +1325,18 @@ public static class PsseRawParser
                 double setvl = l.Real(3, "SETVL");
                 double vschd = l.Real(4, "VSCHD");
                 double vcmod = l.Real(5, "VCMOD", 0), rcomp = l.Real(6, "RCOMP", 0), delti = l.Real(7, "DELTI", 0);
-                if (rdc < 0) throw l.Error($"RDC is {rdc}; a DC line resistance must be 0 or above");
+                if (rdc < 0) throw l.Error(FormattableString.Invariant($"RDC is {rdc}; a DC line resistance must be 0 or above"));
                 if (setvl == 0) throw l.Error("SETVL is 0; an in-service link needs a power or current order");
-                if (mdc == 2 && setvl < 0) throw l.Error($"SETVL is {setvl} A; a current order must be above 0");
-                if (!(vschd > 0)) throw l.Error($"VSCHD is {vschd} kV; the scheduled DC voltage must be above 0");
+                if (mdc == 2 && setvl < 0) throw l.Error(FormattableString.Invariant($"SETVL is {setvl} A; a current order must be above 0"));
+                if (!(vschd > 0)) throw l.Error(FormattableString.Invariant($"VSCHD is {vschd} kV; the scheduled DC voltage must be above 0"));
                 if (rcomp < 0 || vcmod < 0) throw l.Error("RCOMP and VCMOD must be 0 or above");
-                if (delti < 0 || delti >= 1) throw l.Error($"DELTI is {delti}; the current margin must be in 0 .. 1 (pu)");
+                if (delti < 0 || delti >= 1) throw l.Error(FormattableString.Invariant($"DELTI is {delti}; the current margin must be in 0 .. 1 (pu)"));
                 lcc.Add(new LccDcLink(name, mdc == 1 ? LccMode.Power : LccMode.Current, rdc, setvl, vschd, vcmod, rcomp, delti, rect, inv));
             }
             if (lcc.Count > 0)
-                _notes.Add($"{lcc.Count} two-terminal DC link(s) are solved with the AC power flow: each converter's DC voltage, firing or extinction angle, tap, active and reactive power from PSS/E's two-terminal model, the converters as constant-power loads alternating with the DC solve.");
-            if (lccBlocked > 0) _notes.Add($"skipped {lccBlocked} blocked two-terminal DC link(s) (MDC 0).");
-            if (lccDead > 0) _notes.Add($"skipped {lccDead} two-terminal DC link(s) with a converter on a dropped isolated (IDE 4) bus.");
+                _notes.Add(FormattableString.Invariant($"{lcc.Count} two-terminal DC link(s) are solved with the AC power flow: each converter's DC voltage, firing or extinction angle, tap, active and reactive power from PSS/E's two-terminal model, the converters as constant-power loads alternating with the DC solve."));
+            if (lccBlocked > 0) _notes.Add(FormattableString.Invariant($"skipped {lccBlocked} blocked two-terminal DC link(s) (MDC 0)."));
+            if (lccDead > 0) _notes.Add(FormattableString.Invariant($"skipped {lccDead} two-terminal DC link(s) with a converter on a dropped isolated (IDE 4) bus."));
 
             // --- VSC DC links ------------------------------------------------------------------------------------
             var vscLinks = new List<VscDcLink>();
@@ -1325,27 +1347,27 @@ public static class PsseRawParser
                 PsseRecord l = d[0];
                 string name = l.Str(0, "");
                 if (name.Length == 0) throw l.Error("a VSC DC link needs a name");
-                if (!vscNames.Add(name)) throw l.Error($"VSC DC link '{name}' is defined twice");
+                if (!vscNames.Add(name)) throw l.Error(FormattableString.Invariant($"VSC DC link '{name}' is defined twice"));
                 int mdc = l.Code(1, "MDC", 1, 0, 1);
                 double rdc = l.Real(2, "RDC");
-                if (rdc < 0) throw l.Error($"RDC is {rdc}; a DC line resistance must be 0 or above");
+                if (rdc < 0) throw l.Error(FormattableString.Invariant($"RDC is {rdc}; a DC line resistance must be 0 or above"));
                 int t1 = d[1].Code(1, "TYPE", 1, 0, 1, 2), t2 = d[2].Code(1, "TYPE", 1, 0, 1, 2);
                 if (mdc == 0 || t1 == 0 || t2 == 0) { vscOff++; continue; }
                 if (t1 == t2)
-                    throw l.Error($"both converters of VSC link '{name}' have TYPE {t1}; a link needs one DC voltage converter (TYPE 1) and one power converter (TYPE 2)");
+                    throw l.Error(FormattableString.Invariant($"both converters of VSC link '{name}' have TYPE {t1}; a link needs one DC voltage converter (TYPE 1) and one power converter (TYPE 2)"));
                 (VscConverter? c1, bool remote1) = Vsc(d[1], name);
                 (VscConverter? c2, bool remote2) = Vsc(d[2], name);
                 BusOf(d[1], d[1].Int(0, "IBUS"), "IBUS");
                 BusOf(d[2], d[2].Int(0, "IBUS"), "IBUS");
                 if (remote1 || remote2) { Count("VSC converter regulating a remote bus", l, true); continue; }
-                if (c1!.Bus == c2!.Bus) throw l.Error($"both converters of VSC link '{name}' are on bus {c1.Bus}");
+                if (c1!.Bus == c2!.Bus) throw l.Error(FormattableString.Invariant($"both converters of VSC link '{name}' are on bus {c1.Bus}"));
                 if (!Live(c1.Bus) || !Live(c2.Bus)) { vscDead++; continue; }
                 vscLinks.Add(new VscDcLink(name, rdc, c1, c2));
             }
             if (vscLinks.Count > 0)
-                _notes.Add($"{vscLinks.Count} VSC DC link(s) are solved with the AC power flow: PSS/E's VSC model, one converter holding the DC voltage and one an active power order, losses ALOSS + BLOSS x Idc (at least MINLOSS), each converter holding its AC voltage (MODE 1) or a power factor (MODE 2) within its MVA and current ratings (reduced by PWF when exceeded).");
-            if (vscOff > 0) _notes.Add($"skipped {vscOff} out-of-service VSC DC link(s) (MDC 0 or a converter of TYPE 0).");
-            if (vscDead > 0) _notes.Add($"skipped {vscDead} VSC DC link(s) with a converter on a dropped isolated (IDE 4) bus.");
+                _notes.Add(FormattableString.Invariant($"{vscLinks.Count} VSC DC link(s) are solved with the AC power flow: PSS/E's VSC model, one converter holding the DC voltage and one an active power order, losses ALOSS + BLOSS x Idc (at least MINLOSS), each converter holding its AC voltage (MODE 1) or a power factor (MODE 2) within its MVA and current ratings (reduced by PWF when exceeded)."));
+            if (vscOff > 0) _notes.Add(FormattableString.Invariant($"skipped {vscOff} out-of-service VSC DC link(s) (MDC 0 or a converter of TYPE 0)."));
+            if (vscDead > 0) _notes.Add(FormattableString.Invariant($"skipped {vscDead} VSC DC link(s) with a converter on a dropped isolated (IDE 4) bus."));
 
             // --- Multi-terminal DC links --------------------------------------------------------------------------
             var mtdcLinks = new List<MtdcLink>();
@@ -1359,7 +1381,7 @@ public static class PsseRawParser
                 int mdc = l.Code(4, "MDC", 0, 0, 1, 2);
                 int vconv = l.Int(5, "VCONV");
                 if (mdc == 0) { mtdcOff++; continue; }
-                if (ncv < 2 || ndb < 2 || ndl < 1) throw l.Error($"a multi-terminal DC link needs at least 2 converters, 2 DC buses and 1 DC line (has {ncv}, {ndb}, {ndl})");
+                if (ncv < 2 || ndb < 2 || ndl < 1) throw l.Error(FormattableString.Invariant($"a multi-terminal DC link needs at least 2 converters, 2 DC buses and 1 DC line (has {ncv}, {ndb}, {ndl})"));
                 var convRec = d.Skip(1).Take(ncv).ToArray();
                 var busRecs = d.Skip(1 + ncv).Take(ndb).ToArray();
                 var lineRecs = d.Skip(1 + ncv + ndb).Take(ndl).ToArray();
@@ -1368,11 +1390,11 @@ public static class PsseRawParser
                 foreach (PsseRecord b in busRecs)
                 {
                     int idc = b.Int(0, "IDC");
-                    if (dcBuses.Any(x => x.Number == idc)) throw b.Error($"DC bus {idc} is defined twice");
+                    if (dcBuses.Any(x => x.Number == idc)) throw b.Error(FormattableString.Invariant($"DC bus {idc} is defined twice"));
                     int ib = b.Int(1, "IB", 0);
                     if (b.Int(5, "IDC2", 0) != 0) twoBus = true;
                     double rg = b.Real(6, "RGRND", 0);
-                    if (rg < 0) throw b.Error($"RGRND is {rg}; a grounding resistance must be 0 or above");
+                    if (rg < 0) throw b.Error(FormattableString.Invariant($"RGRND is {rg}; a grounding resistance must be 0 or above"));
                     string dn = b.Str(4, "");
                     dcBuses.Add(new MtdcDcBus(idc, ib, rg, dn.Length > 0 ? dn : null));
                 }
@@ -1382,9 +1404,9 @@ public static class PsseRawParser
                 {
                     int i = dl.Int(0, "IDC"), j = dl.Int(1, "JDC");
                     double rdc = dl.Real(V30 ? 3 : 4, "RDC");
-                    if (!dcBuses.Any(x => x.Number == i) || !dcBuses.Any(x => x.Number == j)) throw dl.Error($"DC line {i}-{j} names a DC bus the link does not define");
+                    if (!dcBuses.Any(x => x.Number == i) || !dcBuses.Any(x => x.Number == j)) throw dl.Error(FormattableString.Invariant($"DC line {i}-{j} names a DC bus the link does not define"));
                     if (i == j) throw dl.Error("a DC line must join two different DC buses");
-                    if (!(rdc > 0)) throw dl.Error($"RDC is {rdc}; a DC line needs a resistance above 0 ohms");
+                    if (!(rdc > 0)) throw dl.Error(FormattableString.Invariant($"RDC is {rdc}; a DC line needs a resistance above 0 ohms"));
                     dcLines.Add(new MtdcDcLine(i, j, rdc));
                 }
                 var convs = new List<MtdcConverter>();
@@ -1395,29 +1417,29 @@ public static class PsseRawParser
                     BusOf(c, ib, "IB");
                     if (!Live(ib)) dead = true;
                     int n = c.Int(1, "N");
-                    if (n < 1) throw c.Error($"converter {ib} has {n} bridges; it needs at least 1");
+                    if (n < 1) throw c.Error(FormattableString.Invariant($"converter {ib} has {n} bridges; it needs at least 1"));
                     double amx = c.Real(2, "ANGMX"), amn = c.Real(3, "ANGMN");
-                    if (!(amn >= 0) || !(amx > amn) || !(amx < 90)) throw c.Error($"converter {ib}'s angle limits {amn} .. {amx} degrees must satisfy 0 <= min < max < 90");
+                    if (!(amn >= 0) || !(amx > amn) || !(amx < 90)) throw c.Error(FormattableString.Invariant($"converter {ib}'s angle limits {amn} .. {amx} degrees must satisfy 0 <= min < max < 90"));
                     double rcv = c.Real(4, "RC", 0), xcv = c.Real(5, "XC"), ebas = c.Real(6, "EBAS");
                     double tr = c.Real(7, "TR", 1.0), tap = c.Real(8, "TAP", 1.0), tmx = c.Real(9, "TPMX", 1.5), tmn = c.Real(10, "TPMN", 0.51), stp = c.Real(11, "TSTP", 0.00625);
                     double setvl = c.Real(12, "SETVL");
                     if (rcv < 0 || xcv < 0 || !(ebas > 0) || !(tr > 0) || !(tap > 0) || !(tmn > 0) || !(tmx >= tmn) || stp < 0)
-                        throw c.Error($"converter {ib}'s commutating impedance, EBAS, ratio, tap and limits must be valid (non-negative impedance, positive base, ratio and taps, TPMX at or above TPMN)");
-                    if (ib == vconv && !(setvl > 0)) throw c.Error($"the voltage converter's SETVL is {setvl}; its scheduled DC voltage must be above 0 kV");
-                    if (ib != vconv && setvl == 0) throw c.Error($"converter {ib} has SETVL 0; an order-holding converter needs a power or current order");
+                        throw c.Error(FormattableString.Invariant($"converter {ib}'s commutating impedance, EBAS, ratio, tap and limits must be valid (non-negative impedance, positive base, ratio and taps, TPMX at or above TPMN)"));
+                    if (ib == vconv && !(setvl > 0)) throw c.Error(FormattableString.Invariant($"the voltage converter's SETVL is {setvl}; its scheduled DC voltage must be above 0 kV"));
+                    if (ib != vconv && setvl == 0) throw c.Error(FormattableString.Invariant($"converter {ib} has SETVL 0; an order-holding converter needs a power or current order"));
                     var on = dcBuses.Where(x => x.AcBus == ib).ToList();
-                    if (on.Count != 1) throw c.Error($"converter {ib} is on {on.Count} DC buses (DC bus records naming IB {ib}); it must be on exactly one");
+                    if (on.Count != 1) throw c.Error(FormattableString.Invariant($"converter {ib} is on {on.Count} DC buses (DC bus records naming IB {ib}); it must be on exactly one"));
                     convs.Add(new MtdcConverter(ib, n, amx, amn, rcv, xcv, ebas, tr, tap, tmx, tmn, stp, setvl, on[0].Number));
                 }
-                if (convs.Count(c => c.Bus == vconv) != 1) throw l.Error($"VCONV {vconv} is not one of the link's converters");
+                if (convs.Count(c => c.Bus == vconv) != 1) throw l.Error(FormattableString.Invariant($"VCONV {vconv} is not one of the link's converters"));
                 if (convs.Select(c => c.Bus).Distinct().Count() != convs.Count) throw l.Error("two converters of the link are on the same AC bus");
                 if (dead) { mtdcDead++; continue; }
                 mtdcLinks.Add(new MtdcLink(name, mdc == 1 ? LccMode.Power : LccMode.Current, vconv, convs, dcBuses, dcLines));
             }
             if (mtdcLinks.Count > 0)
-                _notes.Add($"{mtdcLinks.Count} multi-terminal DC link(s) are solved with the AC power flow: line-commutated converters on a resistive DC network, the voltage converter (VCONV) at its minimum angle holding the DC voltage nearest its schedule by tap, the others holding their power or current orders; VCMOD, VCONVN, MARG and DCPF are not applied (a converter that would need them fails the solve, naming it).");
-            if (mtdcOff > 0) _notes.Add($"skipped {mtdcOff} blocked multi-terminal DC link(s) (MDC 0).");
-            if (mtdcDead > 0) _notes.Add($"skipped {mtdcDead} multi-terminal DC link(s) with a converter on a dropped isolated (IDE 4) bus.");
+                _notes.Add(FormattableString.Invariant($"{mtdcLinks.Count} multi-terminal DC link(s) are solved with the AC power flow: line-commutated converters on a resistive DC network, the voltage converter (VCONV) at its minimum angle holding the DC voltage nearest its schedule by tap, the others holding their power or current orders; VCMOD, VCONVN, MARG and DCPF are not applied (a converter that would need them fails the solve, naming it)."));
+            if (mtdcOff > 0) _notes.Add(FormattableString.Invariant($"skipped {mtdcOff} blocked multi-terminal DC link(s) (MDC 0)."));
+            if (mtdcDead > 0) _notes.Add(FormattableString.Invariant($"skipped {mtdcDead} multi-terminal DC link(s) with a converter on a dropped isolated (IDE 4) bus."));
 
             // --- FACTS devices ---------------------------------------------------------------------------------------
             var facts = new List<FactsDevice>();
@@ -1429,19 +1451,19 @@ public static class PsseRawParser
                 // OWNER, SET1, SET2, VSREF, then (revision 33 on) REMOT (FCREG in 34 and 35), ...
                 string name = V30 ? $"FACTS {r.Int(0, "N")}" : r.Str(0, "");
                 if (name.Length == 0) throw r.Error("a FACTS device needs a name");
-                if (!factsNames.Add(name)) throw r.Error($"FACTS device '{name}' is defined twice");
+                if (!factsNames.Add(name)) throw r.Error(FormattableString.Invariant($"FACTS device '{name}' is defined twice"));
                 int i = r.Int(1, "I"), j = r.Int(2, "J", 0);
                 int mode = r.Code(3, "MODE", 1, 0, 1, 2, 3, 4, 5, 6, 7, 8);
                 BusOf(r, i, "sending end bus I");
                 if (j != 0) BusOf(r, j, "terminal end bus J");
-                if (j == i) throw r.Error($"the terminal end bus J is the sending end bus {i}");
+                if (j == i) throw r.Error(FormattableString.Invariant($"the terminal end bus J is the sending end bus {i}"));
                 double pdes = r.Real(4, "PDES", 0), qdes = r.Real(5, "QDES", 0), vset = r.Real(6, "VSET", 1.0), shmx = r.Real(7, "SHMX", 9999);
                 double trmx = r.Real(8, "TRMX", 9999), vtmn = r.Real(9, "VTMN", 0.9), vtmx = r.Real(10, "VTMX", 1.1), vsmx = r.Real(11, "VSMX", 1.0);
                 double imx = r.Real(12, "IMX", 0), set1 = r.Real(16, "SET1", 0), set2 = r.Real(17, "SET2", 0);
                 int remot = V30 ? 0 : r.Int(19, _rev >= 34 ? "FCREG" : "REMOT", 0);
                 if (shmx < 0 || trmx < 0 || imx < 0 || vsmx < 0) throw r.Error("SHMX, TRMX, IMX and VSMX must be 0 or above");
-                if (shmx > 0 && !(vset > 0)) throw r.Error($"VSET is {vset}; the shunt element's voltage set-point must be above 0 pu");
-                if (!(vtmn > 0) || !(vtmx >= vtmn)) throw r.Error($"VTMN {vtmn} and VTMX {vtmx} must make a band above 0 pu");
+                if (shmx > 0 && !(vset > 0)) throw r.Error(FormattableString.Invariant($"VSET is {vset}; the shunt element's voltage set-point must be above 0 pu"));
+                if (!(vtmn > 0) || !(vtmx >= vtmn)) throw r.Error(FormattableString.Invariant($"VTMN {vtmn} and VTMX {vtmx} must make a band above 0 pu"));
                 if (mode >= 4) { Count("FACTS device in constant series voltage or IPFC mode (MODE 4 to 8)", r, true); continue; }
                 if (remot != 0 && remot != i) { Count("FACTS device regulating a remote bus", r, true); continue; }
                 if (j == 0 && mode == 3) throw r.Error("MODE 3 (constant series impedance) needs a terminal end bus J");
@@ -1464,10 +1486,10 @@ public static class PsseRawParser
                 facts.Add(new FactsDevice(name, fm, i, j, pdes, qdes, vset, shmx, trmx, vtmn, vtmx, vsmx, imx) { RmpctPercent = rmpct });
             }
             if (facts.Count > 0)
-                _notes.Add($"{facts.Count} FACTS device(s) are solved with the AC power flow: the shunt element holds its bus at VSET within its current rating SHMX; a UPFC (MODE 1 with a terminal end bus) delivers PDES + j QDES to its terminal end bus, its sending end bus giving up PDES; the terminal voltage band and the series voltage, series current and bridge ratings are checked.");
-            if (factsSeries > 0) _notes.Add($"{factsSeries} FACTS series element(s) bypassed (MODE 2) or at a constant impedance (MODE 3) are branches between their buses.");
-            if (factsNothing > 0) _notes.Add($"{factsNothing} FACTS device(s) have no shunt element (SHMX 0); only their series branch, if any, is modelled.");
-            if (factsDead > 0) _notes.Add($"skipped {factsDead} FACTS device(s) on a dropped isolated (IDE 4) bus.");
+                _notes.Add(FormattableString.Invariant($"{facts.Count} FACTS device(s) are solved with the AC power flow: the shunt element holds its bus at VSET within its current rating SHMX; a UPFC (MODE 1 with a terminal end bus) delivers PDES + j QDES to its terminal end bus, its sending end bus giving up PDES; the terminal voltage band and the series voltage, series current and bridge ratings are checked."));
+            if (factsSeries > 0) _notes.Add(FormattableString.Invariant($"{factsSeries} FACTS series element(s) bypassed (MODE 2) or at a constant impedance (MODE 3) are branches between their buses."));
+            if (factsNothing > 0) _notes.Add(FormattableString.Invariant($"{factsNothing} FACTS device(s) have no shunt element (SHMX 0); only their series branch, if any, is modelled."));
+            if (factsDead > 0) _notes.Add(FormattableString.Invariant($"skipped {factsDead} FACTS device(s) on a dropped isolated (IDE 4) bus."));
 
             // --- Induction machines ------------------------------------------------------------------------------
             // Fields: I, ID, STAT, SCODE, DCODE, AREA, ZONE, OWNER, TCODE, BCODE, MBASE, RATEKV, PCODE, PSET, H, A, B, D, E,
@@ -1481,7 +1503,7 @@ public static class PsseRawParser
                 int bus = r.Int(0, "I");
                 BusOf(r, bus, "induction machine bus");
                 string id = r.Str(1, "1");
-                if (imSeen.TryGetValue((bus, id), out int prior)) throw r.Error($"induction machine {id} at bus {bus} is defined twice (also at line {prior})");
+                if (imSeen.TryGetValue((bus, id), out int prior)) throw r.Error(FormattableString.Invariant($"induction machine {id} at bus {bus} is defined twice (also at line {prior})"));
                 imSeen[(bus, id)] = r.Line;
                 int dcode = r.Code(4, "DCODE", 2, 0, 1, 2, 3, 4, 5);
                 int pcode = r.Code(12, "PCODE", 1, 1, 2);
@@ -1489,21 +1511,21 @@ public static class PsseRawParser
                 double ra = r.Real(19, "RA", 0), xa = r.Real(20, "XA", 0), xm = r.Real(21, "XM", 2.5), r1 = r.Real(22, "R1", 999), x1 = r.Real(23, "X1", 999);
                 double r2 = r.Real(24, "R2", 999), x2 = r.Real(25, "X2", 999), x3 = r.Real(26, "X3", 0);
                 double se1 = r.Real(28, "SE1", 0), se2 = r.Real(30, "SE2", 0);
-                if (mbase <= 0) throw r.Error($"MBASE is {mbase}; the machine base must be above 0");
-                if (ratekv < 0) throw r.Error($"RATEKV is {ratekv}; it must be 0 (the bus base) or above");
+                if (mbase <= 0) throw r.Error(FormattableString.Invariant($"MBASE is {mbase}; the machine base must be above 0"));
+                if (ratekv < 0) throw r.Error(FormattableString.Invariant($"RATEKV is {ratekv}; it must be 0 (the bus base) or above"));
                 if (dcode != 0) { Count("induction machine with a standard design code (DCODE 1 to 5; its circuit comes from design tables)", r, true); continue; }
                 bool secondCage = !((r2 == 0 && x2 == 0) || (r2 >= 999 && x2 >= 999)) || x3 != 0;
                 if (secondCage) { Count("induction machine with a double cage (R2, X2, X3)", r, true); continue; }
                 if (se1 != 0 || se2 != 0) { Count("induction machine with magnetic saturation (SE1, SE2)", r, true); continue; }
                 if (ra < 0 || xa < 0 || !(xm > 0) || !(r1 > 0) || x1 < 0 || r1 >= 999 || x1 >= 999)
-                    throw r.Error($"the equivalent circuit RA {ra}, XA {xa}, XM {xm}, R1 {r1}, X1 {x1} must have RA, XA, X1 at or above 0 and XM, R1 above 0 (999 means not given)");
+                    throw r.Error(FormattableString.Invariant($"the equivalent circuit RA {ra}, XA {xa}, XM {xm}, R1 {r1}, X1 {x1} must have RA, XA, X1 at or above 0 and XM, R1 above 0 (999 means not given)"));
                 if (!Live(bus)) { imDead++; continue; }
                 machines.Add(new InductionMachine(bus, $"induction machine {bus} {id}", pcode == 1 ? InductionPowerCode.Mechanical : InductionPowerCode.Electrical,
                     pset, mbase, ratekv, ra, xa, xm, r1, x1));
             }
             if (machines.Count > 0)
-                _notes.Add($"{machines.Count} induction machine(s) are solved with the AC power flow: each at the slip on its stable branch that meets its schedule PSET (mechanical power out for PCODE 1, electrical power in for PCODE 2) at the solved voltage, from its single-cage equivalent circuit.");
-            if (imDead > 0) _notes.Add($"skipped {imDead} induction machine(s) on dropped isolated (IDE 4) bus(es).");
+                _notes.Add(FormattableString.Invariant($"{machines.Count} induction machine(s) are solved with the AC power flow: each at the slip on its stable branch that meets its schedule PSET (mechanical power out for PCODE 1, electrical power in for PCODE 2) at the solved voltage, from its single-cage equivalent circuit."));
+            if (imDead > 0) _notes.Add(FormattableString.Invariant($"skipped {imDead} induction machine(s) on dropped isolated (IDE 4) bus(es)."));
 
             // --- Devices read past -------------------------------------------------------------------------------
             var refused = _unmodelled.Where(kv => kv.Value.InService > 0).ToList();
@@ -1514,15 +1536,15 @@ public static class PsseRawParser
             foreach (var kv in _unmodelled)
             {
                 if (kv.Value.InService > 0)
-                    _notes.Add($"{kv.Value.InService} in-service {kv.Key}(s) read past and NOT modelled (unmodelled devices allowed); this power flow differs from the file's.");
+                    _notes.Add(FormattableString.Invariant($"{kv.Value.InService} in-service {kv.Key}(s) read past and NOT modelled (unmodelled devices allowed); this power flow differs from the file's."));
                 if (kv.Value.Out > 0)
-                    _notes.Add($"{kv.Value.Out} out-of-service {kv.Key}(s) read past.");
+                    _notes.Add(FormattableString.Invariant($"{kv.Value.Out} out-of-service {kv.Key}(s) read past."));
             }
-            if (_impedanceTables.Count > 0 && xfImpTable == 0) _notes.Add($"{_impedanceTables.Count} impedance correction table(s) read past; no in-service transformer uses one.");
-            if (_multiSection > 0) _notes.Add($"{_multiSection} multi-section line grouping(s) read past (their sections are ordinary branches).");
-            if (_interArea > 0) _notes.Add($"{_interArea} inter-area transfer(s) read past (scheduling data, not network).");
-            if (_systemWide > 0) _notes.Add($"{_systemWide} system-wide data record(s) read past (PSS/E solution settings, not network).");
-            if (_substations > 0) _notes.Add($"{_substations} node-breaker substation(s) read past; the bus-branch records are used.");
+            if (_impedanceTables.Count > 0 && xfImpTable == 0) _notes.Add(FormattableString.Invariant($"{_impedanceTables.Count} impedance correction table(s) read past; no in-service transformer uses one."));
+            if (_multiSection > 0) _notes.Add(FormattableString.Invariant($"{_multiSection} multi-section line grouping(s) read past (their sections are ordinary branches)."));
+            if (_interArea > 0) _notes.Add(FormattableString.Invariant($"{_interArea} inter-area transfer(s) read past (scheduling data, not network)."));
+            if (_systemWide > 0) _notes.Add(FormattableString.Invariant($"{_systemWide} system-wide data record(s) read past (PSS/E solution settings, not network)."));
+            if (_substations > 0) _notes.Add(FormattableString.Invariant($"{_substations} node-breaker substation(s) read past; the bus-branch records are used."));
 
             // --- Assemble buses ----------------------------------------------------------------------------------
             var genBuses = new HashSet<int>(gens.Where(g => g.InService).Select(g => g.Bus));
@@ -1539,10 +1561,10 @@ public static class PsseRawParser
                 if (type == BusType.Slack)
                 {
                     slack++;
-                    if (!genBuses.Contains(id)) _notes.Add($"swing (IDE 3) bus {id} has no in-service generator; it is kept as the reference.");
+                    if (!genBuses.Contains(id)) _notes.Add(FormattableString.Invariant($"swing (IDE 3) bus {id} has no in-service generator; it is kept as the reference."));
                 }
                 double baskv = r.Real(2, "BASKV", 0);
-                if (baskv < 0) throw r.Error($"BASKV is {baskv}; a base voltage must be 0 or above");
+                if (baskv < 0) throw r.Error(FormattableString.Invariant($"BASKV is {baskv}; a base voltage must be 0 or above"));
                 (double? vmin, double? vmax) = (null, null);
                 if (!V30 && r.Has(9) && r.Has(10))
                 {
@@ -1558,8 +1580,8 @@ public static class PsseRawParser
                 {
                     pd = pl + ip;
                     qd = ql + iq;
-                    if (ip != 0 && pd == 0) throw r.Error($"the loads' constant-current part (IP {ip}) cancels their constant-power part (PL {pl}), so the bus load cannot be written as a ZIP load");
-                    if (iq != 0 && qd == 0) throw r.Error($"the loads' constant-current part (IQ {iq}) cancels their constant-power part (QL {ql}), so the bus load cannot be written as a ZIP load");
+                    if (ip != 0 && pd == 0) throw r.Error(FormattableString.Invariant($"the loads' constant-current part (IP {ip}) cancels their constant-power part (PL {pl}), so the bus load cannot be written as a ZIP load"));
+                    if (iq != 0 && qd == 0) throw r.Error(FormattableString.Invariant($"the loads' constant-current part (IQ {iq}) cancels their constant-power part (QL {ql}), so the bus load cannot be written as a ZIP load"));
                     zip = new ZipLoad(
                         Ap: 0, Bp: ip != 0 ? ip / pd : 0, Cp: ip != 0 ? pl / pd : 1,
                         Aq: 0, Bq: iq != 0 ? iq / qd : 0, Cq: iq != 0 ? ql / qd : 1);
@@ -1572,11 +1594,11 @@ public static class PsseRawParser
             }
             buses.AddRange(stars);
             if (slack == 0) throw new InvalidDataException($"PSS/E RAW case '{caseName}' has no swing (IDE 3) bus; the power flow would be singular.");
-            if (slack > 1) _notes.Add($"{slack} swing (IDE 3) buses; treating as a multi-island system.");
-            if (isolated.Count > 0) _notes.Add($"dropped {isolated.Count} isolated (IDE 4) bus(es) and any connected elements.");
-            if (demoted > 0) _notes.Add($"solved {demoted} PV (IDE 2) bus(es) with no in-service generator as PQ, as PSS/E and MATPOWER do.");
-            if (unusableLimits > 0) _notes.Add($"{unusableLimits} bus(es) carry NVHI / NVLO that are not usable as voltage limits; the global band applies to them.");
-            if (zipBuses > 0) _notes.Add($"{zipBuses} bus(es) are ZIP loads (constant-current parts).");
+            if (slack > 1) _notes.Add(FormattableString.Invariant($"{slack} swing (IDE 3) buses; treating as a multi-island system."));
+            if (isolated.Count > 0) _notes.Add(FormattableString.Invariant($"dropped {isolated.Count} isolated (IDE 4) bus(es) and any connected elements."));
+            if (demoted > 0) _notes.Add(FormattableString.Invariant($"solved {demoted} PV (IDE 2) bus(es) with no in-service generator as PQ, as PSS/E and MATPOWER do."));
+            if (unusableLimits > 0) _notes.Add(FormattableString.Invariant($"{unusableLimits} bus(es) carry NVHI / NVLO that are not usable as voltage limits; the global band applies to them."));
+            if (zipBuses > 0) _notes.Add(FormattableString.Invariant($"{zipBuses} bus(es) are ZIP loads (constant-current parts)."));
 
             // --- Metadata ----------------------------------------------------------------------------------------
             var areaNames = new Dictionary<int, string>();
@@ -1665,7 +1687,7 @@ public static class PsseRawParser
             foreach (PsseRecord r in _switchedShunts)
             {
                 int bus = r.Int(0, "I");
-                string id = r.Str(1, "1");
+                string id = _rev >= 35 ? r.Str(1, "1") : "1";   // field 2 is MODSW before revision 35
                 bool inService = V30 || r.Code(_rev >= 35 ? 4 : 3, "STAT", 1, 0, 1) == 1;
                 bool retained = inService && !isolated.Contains(bus);
                 equipmentSources.Add(new("switched shunt", "S", bus, null, null, id, inService, retained, r.Line, r.Values));
@@ -1722,7 +1744,7 @@ public static class PsseRawParser
                     int statusIndex = _rev >= 35 ? 4 : 3;
                     bool inService = V30 || r.Code(statusIndex, "STAT", 1, 0, 1) == 1;
                     return new PsseShuntSource(PsseShuntKind.Switched,
-                        new PsseShuntKey(shuntBus, r.Str(1, "1")), inService,
+                        new PsseShuntKey(shuntBus, _rev >= 35 ? r.Str(1, "1") : "1"), inService,
                         !isolated.Contains(shuntBus), r.Line, r.Values);
                 })).ToArray()),
                 EquipmentSources = Array.AsReadOnly(equipmentSources.ToArray()),

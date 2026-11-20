@@ -71,9 +71,10 @@ expects.
 - Published benchmark results are reproduced: IEEE 14/30/57/118/300 bus cases, the IEEE 123-node and 4-node
   distribution feeders against their published voltages and currents, and the GB reduced and 2224-bus models with
   independent PYPOWER cross-checks.
-- Real measured grid data is validated: the 9 August 2019 GB frequency event is reconstructed from first principles
+- Real measured grid data is compared (a comparison, not a validation; nothing in GridSim is validated, at any scale):
+  the 9 August 2019 GB frequency event is reconstructed from first principles
   (`Asset2019EventTests`), scoped honestly as a mechanism-and-envelope reproduction rather than a point prediction,
-  because only one such GB cascade event exists to validate against (documented in
+  because only one such GB cascade event exists to compare against (documented in
   `docs/technical/0014 Cascade validation and blind prediction.md`).
 
 ## 4. Input pedigree (do the inputs have known provenance)
@@ -119,7 +120,7 @@ has passed since the history reset (the last, on 2.1.002, failed one desktop-app
 tests compare numerical results; they are not a reproducible-build check of the binaries (the release workflow's
 `reproducible` job, written 2026-11-01 and not yet run, is that check for the linux-x64 CLI). Robustness across
 input regimes is exercised by the benchmark corpus (transmission, distribution, GB models) and the hardware runs in
-`docs/developer/benchmarks/server-results/` (A100, H100, MI300, CPU).
+`docs/developer/benchmarks/history/server-results-2026-07/` (A100, H100, MI300, CPU).
 
 ## 7. Use history (has the model been used and checked over time)
 

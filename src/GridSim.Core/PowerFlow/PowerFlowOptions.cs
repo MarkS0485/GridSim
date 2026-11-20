@@ -83,6 +83,16 @@ public sealed record PowerFlowOptions
     public bool RevertQLimits { get; init; } = false;
 
     /// <summary>
+    /// The Newton engines' automatic retry from a DC power-flow angle start (<see cref="NewtonShell.SolveWithRetry"/>),
+    /// on by default. When the ordinary Newton solve stalls or diverges (<see cref="NewtonShell.Stalled"/>), the case is
+    /// solved once more with the same options, the bus angles started from the DC power flow. It never runs when the
+    /// ordinary solve converges, nor when the iteration cap stops a solve that is still converging, so
+    /// <see cref="MaxIterations"/> is honoured. <c>false</c> turns the retry off: a solve that does not converge is then
+    /// reported exactly as the ordinary solve ended.
+    /// </summary>
+    public bool RetryFromDcStart { get; init; } = true;
+
+    /// <summary>
     /// Opt-in diagnostic recorder. When non-null, the solver captures everything it computes
     /// (admittance matrix, bus spec, per-iteration mismatch/correction/Jacobian, Q-limit switching)
     /// into it for export. <c>null</c> (default) = no capture, zero overhead. See

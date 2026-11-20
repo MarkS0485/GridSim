@@ -27,7 +27,7 @@ def main():
         parser.error("The measurement has no MATPOWER comparison point.")
 
     args.destination.mkdir(parents=True)
-    assets = args.destination / "free-ac-power-flow-evidence"
+    assets = args.destination / "evidence"
     assets.mkdir()
     shutil.copyfile(args.bundle / "manifest.json", assets / "manifest.json")
     page = report(manifest)
@@ -76,7 +76,7 @@ build, hardware and relevant output.
 
 [Report a discrepancy]({args.feedback_url})
 """
-    (args.destination / "free-ac-power-flow.md").write_text(page, encoding="utf-8")
+    (args.destination / "index.md").write_text(page, encoding="utf-8")
     return 0
 
 

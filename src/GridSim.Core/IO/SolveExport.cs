@@ -41,7 +41,10 @@ public sealed record SolveExportEstimate(string Status, double MaxStateUpdate, s
 /// out of service; branches their service state, zero-sequence and winding data. Every one of these is read back by
 /// <see cref="SolveImport"/> (through <see cref="BridgeProtocol.BuildModel"/>), so an exported state re-imports as
 /// the same network: the same buses, generators and branches, field for field (R031; pinned by
-/// Doc8SolveExportRoundTripTests). What is NOT carried: the per-asset dynamics model and the protection bundle (the
+/// Doc8SolveExportRoundTripTests). What is NOT carried: the DC links, FACTS devices, static var compensators, induction machines, transformer flow
+/// controls, zero-sequence mutuals, machine zero-sequence impedances and OLTC impedance-correction tables (post-RC3
+/// audit IO-25: a model that has any of them lists them, counted, in <c>model.notCarried</c>, which is omitted when
+/// there are none, so the re-imported network is known to be incomplete); the per-asset dynamics model and the protection bundle (the
 /// asset-classes.json / protections.json content; a generator or branch keeps the NAME of its dynamics class). The
 /// schema stays <c>gridsim-solve-export/1</c>: the fields are additive and optional, and a reader of an older document
 /// gets the model defaults (in service, constant power, no limits, no OLTCs).</para>
@@ -82,6 +85,25 @@ public static class SolveExport
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         File.WriteAllText(path, ToJson(model, result, trace, meta, slackQNote, physics, estimate, tightenedTolerancePu));
+    }
+
+    /// <summary>Post-RC3 audit IO-25: the model content the export has no member for, one line per kind (null when there
+    /// is none). The result rows may reflect these devices, so a reader must know the written network is incomplete.</summary>
+    internal static IReadOnlyList<string>? NotCarried(GridModel model)
+    {
+        var list = new List<string>();
+        void Count(int n, string what) { if (n > 0) list.Add($"{n} {what}"); }
+        Count(model.LccLinks.Count, "two-terminal LCC DC link(s)");
+        Count(model.VscLinks.Count, "VSC DC link(s)");
+        Count(model.MtdcLinks.Count, "multi-terminal DC link(s)");
+        Count(model.FactsDevices.Count, "FACTS device(s)");
+        Count(model.StaticVarCompensators.Count, "static var compensator(s)");
+        Count(model.InductionMachines.Count, "induction machine(s)");
+        Count(model.TransformerFlowControls.Count, "transformer flow control(s)");
+        Count(model.ZeroSequenceMutuals.Count, "zero-sequence mutual coupling(s)");
+        Count(model.AllGenerators.Count(g => g.ZeroSequenceZPu is not null), "generator zero-sequence impedance(s)");
+        Count(model.Oltcs.Count(o => o.ImpedanceCorrection is not null), "OLTC impedance-correction table(s)");
+        return list.Count == 0 ? null : list;
     }
 
     public static string ToJson(
@@ -159,6 +181,7 @@ public static class SolveExport
                     name = bd.Name, limitMw = bd.LimitMw,
                     branches = bd.Branches.Select(bb => new BoundaryBranchRow { branch = bb.Branch, direction = bb.Direction }),
                 }),
+                notCarried = NotCarried(model),
             },
             solve = estimate is null ? SolveBlock(result, trace, slackQNote, tightenedTolerancePu) : EstimateBlock(result, estimate),
             result = new ResultRow
@@ -330,6 +353,9 @@ public static class SolveExport
         public required IEnumerable<BranchRow> branches { get; init; }
         public required IEnumerable<OltcRow> oltcs { get; init; }
         public required IEnumerable<BoundaryRow> boundaries { get; init; }
+        /// <summary>Post-RC3 audit IO-25: what the model has that this document does not carry. Null (omitted) when
+        /// nothing is lost, so such a document is byte-identical to before.</summary>
+        public IEnumerable<string>? notCarried { get; init; }
     }
 
     /// <summary>One bus.</summary>

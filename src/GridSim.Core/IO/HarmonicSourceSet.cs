@@ -90,6 +90,9 @@ public sealed record HarmonicSourceSet
         if (!string.Equals(s.Schema, SchemaId, StringComparison.Ordinal))
             throw new InvalidDataException(
                 $"'{path}' declares schema '{s.Schema}'; this build reads '{SchemaId}'.");
+        // A JSON null for "sources" replaces the non-nullable default; Validate and Save would then fail on it.
+        if ((object?)s.Sources is null)
+            throw new InvalidDataException($"'{path}': \"sources\" is null; it must be a list (it may be empty).");
         // D-DOC-061 (October 2026, best judgement recorded in the doc3 notes): the guard used to run only "when takenUtc
         // is present", so an undated set of MEASURED spectra loaded with no horizon check. A harmonic set has two kinds
         // of source, and the rule follows them:

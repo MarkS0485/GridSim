@@ -1,0 +1,70 @@
+{
+  "format": "gridsim-model/1",
+  "id": "IEEEG1",
+  "title": "IEEEG1 steam turbine-governor (position-limited valve)",
+  "role": "governor",
+  "source": "IEEE Committee Report, Dynamic Models for Steam and Hydro Turbines in Power System Studies, IEEE Trans. PAS-92, 1973 (as cited in GridSim.Core.Dynamics.Models.Ieeeg1); PSS/E IEEEG1. This library model omits the valve RATE limits (Uo, Uc): the rate-limited valve is a different primitive (an exact piecewise lag) and is refused here rather than approximated. Output is the HP shaft power plus the LP shaft power, as the coded study wiring returns it.",
+  "parameters": [
+    { "name": "R",    "unit": "pu", "value": 0.05, "min": 0, "minExclusive": true, "description": "droop" },
+    { "name": "T1",   "unit": "s",  "value": 0.2,  "min": 0, "minExclusive": true, "description": "governor lag" },
+    { "name": "T2",   "unit": "s",  "value": 0.0,  "min": 0, "description": "governor lead" },
+    { "name": "T3",   "unit": "s",  "value": 0.3,  "min": 0, "description": "valve servo time constant" },
+    { "name": "T4",   "unit": "s",  "value": 0.2,  "min": 0, "description": "steam chest" },
+    { "name": "T5",   "unit": "s",  "value": 7.0,  "min": 0, "description": "reheater" },
+    { "name": "T6",   "unit": "s",  "value": 0.4,  "min": 0, "description": "crossover" },
+    { "name": "T7",   "unit": "s",  "value": 0.4,  "min": 0, "description": "second crossover" },
+    { "name": "K1",   "unit": "pu", "value": 0.3,  "min": 0, "max": 1 },
+    { "name": "K2",   "unit": "pu", "value": 0.0,  "min": 0, "max": 1 },
+    { "name": "K3",   "unit": "pu", "value": 0.4,  "min": 0, "max": 1 },
+    { "name": "K4",   "unit": "pu", "value": 0.0,  "min": 0, "max": 1 },
+    { "name": "K5",   "unit": "pu", "value": 0.3,  "min": 0, "max": 1 },
+    { "name": "K6",   "unit": "pu", "value": 0.0,  "min": 0, "max": 1 },
+    { "name": "K7",   "unit": "pu", "value": 0.0,  "min": 0, "max": 1 },
+    { "name": "K8",   "unit": "pu", "value": 0.0,  "min": 0, "max": 1 },
+    { "name": "Pmin", "unit": "pu", "value": 0.0,  "allowInfinite": true },
+    { "name": "Pmax", "unit": "pu", "value": 3.0,  "allowInfinite": true }
+  ],
+  "constraints": [
+    { "sumOf": ["K1", "K2", "K3", "K4", "K5", "K6", "K7", "K8"], "equals": 1.0, "tolerance": 1e-6 }
+  ],
+  "ports": {
+    "inputs": [ { "name": "speed", "unit": "pu" } ],
+    "outputs": [ { "name": "pm", "unit": "pu", "from": "pmech" } ]
+  },
+  "blocks": [
+    { "id": "pref",   "type": "hold" },
+    { "id": "neg",    "type": "gain", "inputs": ["speed"], "params": { "k": -1.0 } },
+    { "id": "e",      "type": "div", "inputs": ["neg"], "params": { "d": "@R" } },
+    { "id": "gov",    "type": "leadlag", "inputs": ["e"], "params": { "lead": "@T2", "lag": "@T1" } },
+    { "id": "target", "type": "sum", "inputs": ["pref", "gov"], "signs": "++" },
+    { "id": "pgv",    "type": "lag", "inputs": ["target"], "params": { "gain": 1.0, "time": "@T3", "min": "@Pmin", "max": "@Pmax" } },
+    { "id": "y4",     "type": "lag", "inputs": ["pgv"], "params": { "gain": 1.0, "time": "@T4" } },
+    { "id": "y5",     "type": "lag", "inputs": ["y4"],  "params": { "gain": 1.0, "time": "@T5" } },
+    { "id": "y6",     "type": "lag", "inputs": ["y5"],  "params": { "gain": 1.0, "time": "@T6" } },
+    { "id": "y7",     "type": "lag", "inputs": ["y6"],  "params": { "gain": 1.0, "time": "@T7" } },
+    { "id": "h1",     "type": "gain", "inputs": ["y4"], "params": { "k": "@K1" } },
+    { "id": "h3",     "type": "gain", "inputs": ["y5"], "params": { "k": "@K3" } },
+    { "id": "h5",     "type": "gain", "inputs": ["y6"], "params": { "k": "@K5" } },
+    { "id": "h7",     "type": "gain", "inputs": ["y7"], "params": { "k": "@K7" } },
+    { "id": "hp",     "type": "sum", "inputs": ["h1", "h3", "h5", "h7"], "signs": "++++" },
+    { "id": "l2",     "type": "gain", "inputs": ["y4"], "params": { "k": "@K2" } },
+    { "id": "l4",     "type": "gain", "inputs": ["y5"], "params": { "k": "@K4" } },
+    { "id": "l6",     "type": "gain", "inputs": ["y6"], "params": { "k": "@K6" } },
+    { "id": "l8",     "type": "gain", "inputs": ["y7"], "params": { "k": "@K8" } },
+    { "id": "lp",     "type": "sum", "inputs": ["l2", "l4", "l6", "l8"], "signs": "++++" },
+    { "id": "pmech",  "type": "sum", "inputs": ["hp", "lp"], "signs": "++" }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "pm0", "unit": "pu" } ],
+    "steps": [
+      { "action": "require", "value": "pm0", "min": "@Pmin", "max": "@Pmax", "model": "IEEEG1", "quantity": "valve position Pgv", "argument": "mechanicalPowerPu" },
+      { "action": "initialise", "block": "pref", "values": ["pm0"] },
+      { "action": "initialise", "block": "gov",  "values": [0.0] },
+      { "action": "initialise", "block": "pgv",  "values": ["pm0"] },
+      { "action": "initialise", "block": "y4",   "values": ["pm0"] },
+      { "action": "initialise", "block": "y5",   "values": ["pm0"] },
+      { "action": "initialise", "block": "y6",   "values": ["pm0"] },
+      { "action": "initialise", "block": "y7",   "values": ["pm0"] }
+    ]
+  }
+}

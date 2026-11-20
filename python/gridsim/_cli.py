@@ -28,6 +28,33 @@ WRITER_VERBS = (
     "freq", "grade", "hosting", "iec60909", "inertia-placement", "lodf", "losses", "n-1-1", "nminus1", "nminus2", "pf",
     "physics-check", "pmu-estimate", "pmu-ingest", "protection-check", "ptdf", "qsts", "restore", "scopf", "scuc", "taps", "validate",
     "zonal",
+    "sensitivity", "qv-curve", "pv-contingency", "dc-contingency", "fault-level-n1",   # R4-03
+    "g74",   # R4-06
+    "ansi-sc",   # R4-20a
+    "sc-dc",   # R4-20c
+    "sc-61363",   # R4-20b
+    "modal-full",   # R4-12
+    "line-constants",   # R4-04
+    "dist3ph-mesh",   # R4-15
+    "emt3",   # R4-16
+    "devices-check",   # R4-07
+    "fault-line",   # R4-07
+    "sc-trace",   # R4-07
+    "protection-audit",   # R4-07
+    "fault-series", "fault-simultaneous",   # RC4 (last candidate)
+    "substation-state",   # R4-11a
+    "cgmes-export",   # R4-11b
+    "cgmes-conform",   # R4-11b
+    "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",   # RC4 study verbs
+    "study-case", "case-diff", "result-diff", "report",   # RC4 study verbs
+)
+
+#: The writer verbs whose own ``--out`` names the verb's own result file or folder (a study result, a diff, a report, an import
+#: folder) and is NOT the shared writer's: a caller passes it like any other argument, and the wrapper still names ``--json``.
+#: Several of them need it (``report``, ``study-case``). The CLI's CliOutput.VerbsWithoutOut without convert.
+OWN_OUT_VERBS = (
+    "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",
+    "study-case", "case-diff", "result-diff", "report",
 )
 
 #: The CLI's alternative spellings of writer verbs, mapped to the canonical name (the name in the result document).
@@ -163,12 +190,15 @@ class GridSim:
 
         ``args`` are passed as they are (each turned into a string), so a case name or file, flags and their values all
         go in order: ``run("dcopf", "case30", "--no-limits")``. ``--json``, ``--csv`` and ``--out`` are refused: the
-        wrapper names the result file. GridSimError when the run writes no result document; its message carries the
+        wrapper names the result file (``--out`` is passed through for the verbs in ``OWN_OUT_VERBS``, where it names the
+        verb's own output). GridSimError when the run writes no result document; its message carries the
         exit code and the CLI's last stderr line.
         """
         name = canonical(verb)
         argv = [str(a) for a in args]
         for flag in _RESULT_FLAGS:
+            if flag == "--out" and name in OWN_OUT_VERBS:
+                continue
             if flag in argv:
                 raise ValueError(f"{flag} is the wrapper's to give: it writes the result to a temporary file and reads it back")
         with tempfile.TemporaryDirectory(prefix="gridsim-py-") as tmp:

@@ -59,7 +59,7 @@ public static class BoundaryAnalysis
             // flagged it on every outage. A negative or non-finite limit is not a limit at all: fail loud.
             if (!double.IsFinite(b.LimitMw) || b.LimitMw < 0)
                 throw new InvalidDataException(
-                    $"Boundary '{b.Name}' has transfer limit {b.LimitMw} MW; a limit must be a finite non-negative MW value (0 = no limit set).");
+                    FormattableString.Invariant($"Boundary '{b.Name}' has transfer limit {b.LimitMw} MW; a limit must be a finite non-negative MW value (0 = no limit set)."));
             bool limited = b.LimitMw > 0;
             double loading = limited ? Math.Abs(flow) / b.LimitMw * 100.0 : 0.0;
             flows.Add(new BoundaryFlow(b.Name, flow, b.LimitMw, loading, limited && Math.Abs(flow) > b.LimitMw));

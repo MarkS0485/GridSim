@@ -178,7 +178,12 @@ public static class TransmissionSecurityRunner
                 missing.Add($"Bus {bus.Id}: individual realised generator allocation is unavailable.");
                 continue;
             }
-            if (units.Length == 0) continue;
+            if (units.Length == 0)
+            {
+                if (bus.Type == BusType.Slack)
+                    missing.Add($"Bus {bus.Id}: the slack bus has no in-service unit, so its balancing output is not checked.");
+                continue;
+            }
             int index = units[0];
             Generator generator = model.Generators[index];
             // At convergence, the returned Y-bus injection equals generation minus modeled demand.

@@ -249,7 +249,7 @@ vulnerability in GridSim, or in a component a GridSim build ships (the bundled .
 reported to the maintainer. The public policy is [`SECURITY.md`](../../SECURITY.md); this is how it is run.
 
 1. **Receive privately.** Reports arrive through GitHub private vulnerability reporting on the public repository
-   (enabled; `tools/github/apply-public-settings.ps1` verifies it) or by email to `gdatooling@proton.me`. Nothing is
+   (enabled; `tools/github/apply-public-settings.ps1` verifies it) or by email to `mark@gridsimdigitaltwin.co.uk`. Nothing is
    discussed in public issues, pull requests or discussions until the advisory is published.
 2. **Assess objectively and record it.** The maintainer reproduces the report and scores it with the CVSS v4.0 and
    CVSS v3.1 base metrics, from the facts of the vulnerability as it affects GridSim. The vector strings, the base

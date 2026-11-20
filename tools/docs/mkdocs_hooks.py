@@ -3,7 +3,7 @@
 The pages under docs/ are written to be read in the repository, so they link
 to things that the published site does not contain:
 
-  * files outside docs/ (../MATH.md, ../CHANGELOG.md, ../RC1.md, ../src/...),
+  * files outside docs/ (../CHANGELOG.md, ../RC1.md, ../src/...),
   * folders deliberately left off the site (docs/assurance, docs/Public,
     docs/reference; see exclude_docs in mkdocs.yml),
   * plain folders (technical/, validation/, ...), which have no web page.
@@ -213,7 +213,7 @@ def _rewrite(target, page_uri, files):
 
     docs = _STATE["docs_prefix"]
     page_dir = posixpath.dirname(page_uri)
-    # Repository-relative path of the target, e.g. "docs/technical/x.md" or "MATH.md".
+    # Repository-relative path of the target, e.g. "docs/technical/x.md" or "RC1.md".
     repo_path = posixpath.normpath(posixpath.join(docs, page_dir, path_part))
     is_dir_link = path_part.endswith("/") or os.path.isdir(os.path.join(_STATE["repo_root"], repo_path))
 

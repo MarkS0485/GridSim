@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.Scripting\GridSim.Scripting.csproj" />
+    <ProjectReference Include="..\..\src\GridSim.Core\GridSim.Core.csproj" />
+  </ItemGroup>
+
+  <!-- The two MATPOWER cases the execution tests load by path. -->
+  <ItemGroup>
+    <Content Include="..\..\data\matpower\lib\case9.m;..\..\data\matpower\lib\case14.m" Link="data\matpower\lib\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The one case that carries a protection bundle, for the PROTECTION engine tests. -->
+  <ItemGroup>
+    <Content Include="..\..\data\gb-synthetic\*.json" Link="data\gb-synthetic\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Machine dynamic data and the v2 schemas, for the RMS SUBTRANSIENT and GOVERNED tests. -->
+  <ItemGroup>
+    <Content Include="..\GridSim.Tests\fixtures\dynamics\wscc9-genrou.dynamics.json" Link="dynamics\wscc9-genrou.dynamics.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\schemas\v2\**\*.json" Link="schemas\v2\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

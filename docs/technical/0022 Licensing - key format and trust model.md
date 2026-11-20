@@ -369,7 +369,7 @@ truncated key: False (licence key too short)
 not a key: False (licence key is not valid base64)
 fits a 1.x build: True
 fits a 2.x build: False
-reason: this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: gdatooling@proton.me
+reason: this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: mark@gridsimdigitaltwin.co.uk
 ```
 
 The capture comes from a scratch program that calls the public Core API (`LicenceKey.Encode`, `TryParse`,
@@ -400,14 +400,14 @@ The gate's decisions for the same kinds of entitlement:
 ```
 free, 1500 buses : True
 free, 1501 buses : False
-This network has 1,501 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+This network has 1,501 buses; your Personal licence allows 1,500. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 free, 3539 buses, bundled: True
 lapsed status: Commercial Code * Example Ltd * unlimited buses * EXPIRED 2025-12-31 * for GridSim 1.x * id doc002
 lapsed, 1500 buses: True
 lapsed, 9000 buses: False
-Your Commercial Code licence expired on 2025-12-31, so the free Personal tier applies: this network has 9,000 buses and the free tier allows 1,500. Renew or ask about a new term: gdatooling@proton.me
+Your Commercial Code licence expired on 2025-12-31, so the free Personal tier applies: this network has 9,000 buses and the free tier allows 1,500. Licences are free at present: to renew or ask about a new term, contact mark@gridsimdigitaltwin.co.uk
 academic status: Academic * user@example.com * 5,000 buses * expires 2027-10-03 * for GridSim 1.x * id doc003
-This network has 5,001 buses; your Academic licence allows 5,000. A larger or commercial licence removes the limit: gdatooling@proton.me
+This network has 5,001 buses; your Academic licence allows 5,000. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 ```
 
 The first and third lines are check 1 and the free-tier rule; the lapsed key is allowed at 1,500 buses and refused at 9,000

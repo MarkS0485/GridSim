@@ -314,8 +314,8 @@ public sealed class RealExpandedComplexSolver : IComplexLinearSolver
 {
     // Cached fill-reducing ordering of the 2n system, reused across calls whose 2n pattern matches by
     // content. A harmonic scan builds Y(h) for many orders with the SAME topology, so the real-expanded
-    // pattern is identical across orders and only the values change; the RCM ordering is then computed once
-    // and reused for every order's factorization (bit-identical - RCM is a pure function of the pattern -
+    // pattern is identical across orders and only the values change; the minimum-degree ordering is then computed once
+    // and reused for every order's factorization (bit-identical - the ordering is a pure function of the pattern -
     // exactly as CpuSparseLuSolver does for the NR loop). Per-instance state: NOT thread-safe, so parallel
     // harmonic orders must use one solver per worker (see ContingencyAnalysis's ThreadLocal pattern).
     private int[]? _q;
@@ -349,7 +349,7 @@ public sealed class RealExpandedComplexSolver : IComplexLinearSolver
             }
 
         CsrMatrix m = builder.Build();
-        // SparseLu.Solve(m, rhs) == FactorWithOrdering(m, RCM(m)).Solve(rhs), so splitting the ordering +
+        // SparseLu.Solve(m, rhs) == FactorWithOrdering(m, Ordering(m)).Solve(rhs), so splitting the ordering +
         // factorization out here and reusing it across RHS is bit-identical to calling Solve per RHS. The
         // ordering is additionally cached across same-pattern matrices (successive harmonic orders).
         if (_q is null || !SamePattern(m)) { _q = SparseLu.Ordering(m); _rowPtr = m.RowPtr; _colIdx = m.ColIdx; }

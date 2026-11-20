@@ -9,7 +9,7 @@ namespace GridSim.Core.PowerFlow;
 /// bit-identical to the one-at-a-time sweep BY CONSTRUCTION: the very same function runs on the very same inputs.
 /// <para>
 /// Why a fresh <see cref="CpuSparseLuSolver"/> per system is still bit-identical: that solver only caches the
-/// reverse Cuthill-McKee ordering, and the ordering is a deterministic function of the sparsity pattern alone (no
+/// minimum-degree ordering, and the ordering is a deterministic function of the sparsity pattern alone (no
 /// random tie-break, no state). Recomputing it gives the same permutation the cache would have held, so the
 /// factorisation and the solution are the same bits. The cache is a speed device, never a numerical one.
 /// </para>

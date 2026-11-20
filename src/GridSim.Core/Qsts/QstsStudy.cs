@@ -393,8 +393,12 @@ public sealed record QstsStudy
         var busIds = new HashSet<int>();
         var busById = new Dictionary<int, Bus>();
         foreach (Bus b in model.Buses) { busIds.Add(b.Id); busById.TryAdd(b.Id, b); }
-        var branchNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (Branch br in model.Branches) if (br.Name is not null) branchNames.Add(br.Name);
+        // Count of branches per name: a monitored name must match exactly one (AN-08), since the engine resolves it by name.
+        var branchNames = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (Branch br in model.Branches) if (br.Name is not null) branchNames[br.Name] = branchNames.TryGetValue(br.Name, out int bn) ? bn + 1 : 1;
+        string? BranchNameProblem(string? name, string absent)
+            => name is null || !branchNames.TryGetValue(name, out int cnt) ? absent
+             : cnt > 1 ? $"{cnt} branches are named '{name}'; a monitored branch name must match exactly one." : null;
 
         var boundBuses = new HashSet<int>();
         bool allBound = false;
@@ -500,7 +504,7 @@ public sealed record QstsStudy
             {
                 case StorageMode.Schedule: NeedProfile(st.ScheduleProfile, who, true); break;
                 case StorageMode.PeakShave:
-                    if (st.MonitoredBranch is null || !branchNames.Contains(st.MonitoredBranch)) p.Add($"{who}: peak-shave needs a monitored branch name that is in the case (got '{st.MonitoredBranch}').");
+                    if (BranchNameProblem(st.MonitoredBranch, $"peak-shave needs a monitored branch name that is in the case (got '{st.MonitoredBranch}').") is { } bp) p.Add($"{who}: {bp}");
                     if (!(st.HighMw > st.LowMw) || !double.IsFinite(st.HighMw) || !double.IsFinite(st.LowMw)) p.Add($"{who}: peak-shave needs highMw above lowMw.");
                     if (Mode == QstsControlMode.Steady) p.Add($"{who}: peak-shave needs the timed control mode.");
                     break;
@@ -525,7 +529,7 @@ public sealed record QstsStudy
                     if (!(c.OnValue > 0 && c.OffValue > c.OnValue) || !double.IsFinite(c.OffValue)) p.Add($"{who}: voltage control needs 0 < onPu < offPu.");
                     break;
                 case CapacitorControl.Var:
-                    if (c.MonitoredBranch is null || !branchNames.Contains(c.MonitoredBranch)) p.Add($"{who}: var control needs a monitored branch name that is in the case.");
+                    if (BranchNameProblem(c.MonitoredBranch, "var control needs a monitored branch name that is in the case.") is { } bp) p.Add($"{who}: {bp}");
                     if (!(c.OnValue > c.OffValue) || !double.IsFinite(c.OnValue) || !double.IsFinite(c.OffValue)) p.Add($"{who}: var control needs onMvar above offMvar.");
                     break;
                 case CapacitorControl.Time:
@@ -560,7 +564,7 @@ public sealed record QstsStudy
                 if (c.Control != CapacitorControl.Voltage) p.Add($"capacitor '{c.Name}': {c.Control} control needs the timed mode (steady mode runs the existing voltage-band shunt loop).");
         }
         foreach (string mb in MonitorBranches)
-            if (!branchNames.Contains(mb)) p.Add($"monitored branch '{mb}' is not in the case.");
+            if (BranchNameProblem(mb, $"monitored branch '{mb}' is not in the case.") is { } bp) p.Add(bp);
         if (!(Limits.VminPu > 0 && Limits.VmaxPu > Limits.VminPu) || !double.IsFinite(Limits.VmaxPu)) p.Add("limits: need 0 < vminPu < vmaxPu.");
         if (!(Limits.LoadingPercent > 0) || !double.IsFinite(Limits.LoadingPercent)) p.Add("limits: loadingPercent must be above 0.");
 

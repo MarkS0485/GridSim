@@ -28,7 +28,7 @@ value is a bug, not a variant):
 | Bridge clock-skew allowance | none (exact 169 h horizon) | `Core/Net/GridBridgeClient.cs:HandleState` |
 | Solve tolerance / iteration cap | 1e-8 pu / 30 | `Core/PowerFlow/PowerFlowOptions.cs` |
 | Dense/sparse Newton threshold | always sparse on the CPU (0 buses); 200 buses is the estimator observability / GPU / solve-export crossover | `Core/PowerFlow/SolverSelector.cs:DefaultSparseThreshold`, `DenseSparseCrossoverBuses` |
-| Newton step damping / Vm floor | 0.4 / 0.2 pu | `Core/PowerFlow/NewtonShell.cs:MaxUndampedStep`, `VmFloorPu` |
+| Newton step damping / Vm floor | 0.4 / 0.01 pu | `Core/PowerFlow/NewtonShell.cs:MaxUndampedStep`, `VmFloorPu` |
 | Test suite | the count `dotnet test` reports (it changes with every release; not a canonical figure) | `dotnet test GridSim.slnx -c Release --no-build` |
 
 ## A
@@ -518,7 +518,7 @@ estimator's backend threshold all use it. The two Newton engines are
 bit-identical, so the choice changes speed and memory, never a number.
 
 **Sparse LU [PS].** Gilbert-Peierls left-looking sparse LU with partial
-pivoting over a reverse Cuthill-McKee column ordering (`Core/Numerics/SparseLu.cs`,
+pivoting over a minimum-degree column ordering (`Core/Numerics/SparseLu.cs`,
 `SparseLuFactorization.cs`; `CpuSparseLuSolver` in the power flow). The
 canonical linear solve of every CPU Newton step, dense engine included.
 Returns `null` (singular) when a pivot magnitude is at or below the shared

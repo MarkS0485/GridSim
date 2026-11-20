@@ -64,6 +64,10 @@ public sealed record CorrectiveStudyResult(string Status, string Outcome, string
 /// </summary>
 public static class CorrectiveSequenceRunner
 {
+    /// <summary>AN-03: the planner's one-line diagnostic. <see cref="CorrectiveRedispatch.UnrelievedAfter"/> is said only when there is something to say, so a plan with nothing unrelieved reads exactly as before.</summary>
+    internal static string PlanDiagnostic(CorrectiveRedispatch plan) => FormattableString.Invariant(
+        $"PlanCorrectiveRedispatch: {plan.Outcome}; moved {plan.MovedMw} MW; LP {plan.LpStatus?.ToString() ?? "not run"}; DC overloads before: {(plan.OverloadedBefore.Count == 0 ? "none" : string.Join(", ", plan.OverloadedBefore))}.{(plan.UnrelievedAfter.Count == 0 ? "" : " Still over the limit after the redispatch (no generator can relieve them): " + string.Join(", ", plan.UnrelievedAfter) + ".")}");
+
     public const string IntactBase = "IntactBase", FirstOutage = "FirstOutage", FirstAcSolve = "FirstAcSolve",
         ActionProposal = "ActionProposal", ActionValidation = "ActionValidation", ActionApplication = "ActionApplication",
         IntermediateAcVerification = "IntermediateAcVerification", SecondOutage = "SecondOutage",
@@ -167,8 +171,7 @@ public static class CorrectiveSequenceRunner
                     try
                     {
                         CorrectiveRedispatch plan = ContingencyAnalysis.PlanCorrectiveRedispatch(first!);
-                        diagnostic = FormattableString.Invariant(
-                            $"PlanCorrectiveRedispatch: {plan.Outcome}; moved {plan.MovedMw} MW; LP {plan.LpStatus?.ToString() ?? "not run"}; DC overloads before: {(plan.OverloadedBefore.Count == 0 ? "none" : string.Join(", ", plan.OverloadedBefore))}.");
+                        diagnostic = PlanDiagnostic(plan);
                         if (plan.Outcome is RedispatchOutcome.NoDcModel or RedispatchOutcome.Infeasible)
                             error = "The candidate generator produced no proposal: " + plan.Outcome + ".";
                         else

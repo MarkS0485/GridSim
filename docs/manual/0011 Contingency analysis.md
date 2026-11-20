@@ -319,6 +319,8 @@ second. When several redispatches move the same fewest MW, a fixed tie-break pic
 lowest-index entering column among those whose reduced costs agree within 1e-10 relative), so the plan does not depend on the order of floating-point
 sums; on `case145`, pglib case73 and `case30_as` it chooses between whole-unit moves of equal total.
 
+An overloaded element that no generator can move (a line that no unit's output changes the flow of) has no place in the redispatch and can stay over its limit. The plan says so: the corrective step's diagnostic ends with "Still over the limit after the redispatch (no generator can relieve them)" and the names of those elements. Nothing is added when every overload was relieved.
+
 ```bash
 gridsim n-1-1 --exhaustive --top 430
 ```

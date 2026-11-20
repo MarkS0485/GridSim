@@ -245,6 +245,7 @@ public static class PsseTopologyModelBuilder
         var buses = new List<PsseTopologyModelBus>();
         var groupToModelBus = new Dictionary<int, PsseTopologyModelBus>();
         var splitBuses = new HashSet<int>();
+        var cutButUnsplit = new HashSet<int>();   // IO-21: cut by an open switch, yet fewer than two groups hold terminal rows
         var nativeIdeChange = new Dictionary<int, int>();
         var addedBuses = new Dictionary<int, List<PsseTopologyModelBus>>();
         var nodeToBus = new Dictionary<PsseNodeKey, int?>();
@@ -256,6 +257,7 @@ public static class PsseTopologyModelBuilder
             int nativeIde = IntField(busRecordLine[native].Fields, BusIdeIndex, 1);
             if (occupied.Length <= 1)
             {
+                if (groups.Count(g => terminalsByGroup.ContainsKey(g.Id) || g.Nodes.Any(n => n.InService)) > 1) cutButUnsplit.Add(native);
                 PsseConnectivityGroup? only = occupied.Length == 1 ? occupied[0] : groups.FirstOrDefault(g => g.Nodes.Any(n => n.InService));
                 bool alive = only is not null && only.Nodes.Any(n => n.InService);
                 PsseSectionState state = alive ? PsseSectionState.Unsplit : PsseSectionState.DeEnergised;
@@ -360,9 +362,17 @@ public static class PsseTopologyModelBuilder
             else
                 terminalPlacements.Add(new(terminal, section.ModelBusId, PsseTerminalModelState.Connected, binding.Detail));
 
-            if (!splitBuses.Contains(terminal.Bus)) continue;
+            bool cutOnly = !splitBuses.Contains(terminal.Bus) && cutButUnsplit.Contains(terminal.Bus);
+            if (!splitBuses.Contains(terminal.Bus) && !cutOnly) continue;
             PsseEquipmentSource[] candidates = equipmentByEnds.TryGetValue(EndsKey(terminal.EquipmentType, TerminalBuses(terminal)), out var near)
                 ? near.Where(e => SameEquipment(e, terminal)).ToArray() : Array.Empty<PsseEquipmentSource>();
+            if (cutOnly)
+            {
+                // Placement is only recorded (no rewrite): the bus keeps its number, but every end must be named by a row.
+                if (candidates.Length == 1)
+                    foreach (int field in EndFields(candidates[0], terminal.Bus)) placed[(candidates[0].SourceLine, field)] = section.ModelBusId;
+                continue;
+            }
             if (candidates.Length != 1)
             {
                 refusals.Add(new(PsseTopologyRefusalKind.UnresolvedTerminal, terminal.SourceLine, PsseRawLayout.Substation,
@@ -386,7 +396,7 @@ public static class PsseTopologyModelBuilder
                 rewrites[equipment.SourceLine][GeneratorIregIndex] = section.ModelBusId;
         }
         foreach (PsseEquipmentSource equipment in parsed.EquipmentSources)
-            foreach (int bus in EquipmentBuses(equipment).Where(splitBuses.Contains).Distinct())
+            foreach (int bus in EquipmentBuses(equipment).Where(b => splitBuses.Contains(b) || cutButUnsplit.Contains(b)).Distinct())
                 foreach (int field in EndFields(equipment, bus))
                     if (!placed.ContainsKey((equipment.SourceLine, field)))
                         refusals.Add(new(PsseTopologyRefusalKind.UnplacedEquipmentEnd, equipment.SourceLine, equipment.Kind.ToUpperInvariant(),

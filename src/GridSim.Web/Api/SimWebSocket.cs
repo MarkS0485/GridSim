@@ -331,6 +331,7 @@ public static class SimWebSocket
             SimSession session = manager.Create(cmd.Case, SolverChoice.Parse(cmd.Solver), clientKey);
             slot.Current = session;   // held at once, so even a failure below leaves it to be disposed with the socket
             session.FrameProduced += onFrame;
+            WireErrorForwarding(session, outbound, generation);   // APP-06: every session kind, not only a bridge
             if (startFps is { } startFpsValue) session.SetSpeed(startFpsValue);
             if (session.TopologyReady)
                 outbound.SetTopology(session.Topology, generation);    // live/replay: topology known now
@@ -422,20 +423,33 @@ public static class SimWebSocket
     private static void WireTopologyOnArrival(SimSession session, SimOutbound outbound, long generation)
     {
         bool sent = false;
-        bool errored = false;
         void OnState()
         {
-            // Bridge connect failures / later faults only set session.Error and raise
-            // StateChanged - without forwarding them here an external /ws/sim consumer
-            // hung silently forever despite the GS-H6 error-frame design.
-            if (!errored && session.Error is { } err)
-            {
-                errored = true;
-                outbound.TryWriteError(new ErrorFrame("error", err), generation);
-            }
             if (sent || !session.TopologyReady) return;
             sent = true;
             outbound.SetTopology(session.Topology, generation);
+        }
+        session.StateChanged += OnState;
+    }
+
+    /// <summary>
+    /// APP-06: forward a session's <see cref="SimSession.Error"/> as an <c>error</c> frame whenever it changes to a new
+    /// non-null text, for EVERY session kind. Bridge connect failures and later faults, and a live or replay play loop that
+    /// stopped on a failed step (GR-222), only set <c>Error</c> and raise <c>StateChanged</c>; without this an external
+    /// /ws/sim consumer could not tell a failure from a pause. The last text forwarded is remembered (and forgotten when
+    /// the error clears, as a supervised reconnect clears it), so a later, different or renewed failure is forwarded too
+    /// and an unchanged one is not repeated. Tagged with the start's <paramref name="generation"/>.
+    /// </summary>
+    internal static void WireErrorForwarding(SimSession session, SimOutbound outbound, long generation)
+    {
+        string? lastForwarded = null;
+        void OnState()
+        {
+            string? err = session.Error;
+            if (err is null) { lastForwarded = null; return; }
+            if (string.Equals(err, lastForwarded, StringComparison.Ordinal)) return;
+            lastForwarded = err;
+            outbound.TryWriteError(new ErrorFrame("error", err), generation);
         }
         session.StateChanged += OnState;
     }

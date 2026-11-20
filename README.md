@@ -11,9 +11,9 @@
 developer notes, searchable). **Wiki:** <https://github.com/MarkS0485/GridSim/wiki> (getting started, install, CLI
 quick reference, FAQ). **Questions:** [Discussions](https://github.com/MarkS0485/GridSim/discussions).
 
-A grounded, physics-first **power-grid simulator** in C# / .NET 10. It starts from a small, correct core (a per-unit
-network model, the complex bus admittance matrix and a Newton-Raphson load flow) and grows it, deliberately and with
-every step validated, into a full grid stack:
+A physics-first **power-grid simulator** in C# / .NET 10. It starts from a small core (a per-unit network model, the
+complex bus admittance matrix and a Newton-Raphson load flow) and grows it, deliberately and with every step tested,
+into a broad grid stack:
 
 - steady state: AC power flow (sparse and dense Newton-Raphson, backward/forward sweep for radial feeders), reactive
   limits, tap changers, distributed slack and switched shunts, DC power flow, distribution factors, DC-OPF,
@@ -34,49 +34,48 @@ every step validated, into a full grid stack:
 - interfaces: MATPOWER, JSON v1/v2, CIM/CGMES, PyPSA, C37.118 synchrophasors, IEC 60870-5-104 and Modbus;
 - a web app, a desktop control room, a case editor, and a swappable CPU/GPU solve backend.
 
-**Downloads:** ready-built Windows and Linux binaries are on the [2.1.000 RC-1 page](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.000-RC-1); see [Downloads](#downloads-21000-rc-1).
+**Downloads:** the latest release is [2.1.073 RC-4](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.073-RC-4),
+with ready-built Windows, Linux and macOS (Apple silicon) binaries. See [Downloads](#downloads).
 
-Every numerical result is double precision end to end, deterministic to the bit, and cross-checked against independent
-tools (pandapower, `pandapower.estimation`, SciPy, published MATPOWER solutions). The power-flow, harmonic, impedance
-and small-signal cross-checks gate at 4096 machine epsilons; the state-estimation, swing-equation, classical-swing and
-lake-conformance checks compare different algorithms or stopping rules and gate at stated engineering tolerances
-(1e-6 pu for the estimator by default), with the measured agreement in [Validation](#validation).
+> **Status: unvalidated, and stated plainly.** Nothing in GridSim is validated, at any scale, for any purpose.
+> GridSim is written by Mark, an HPC engineer by trade. He has no electrical-engineering training and is not
+> qualified to validate power-system software or to model power systems; his role is the code. What the repository
+> does carry is evidence you can check for yourself: bit-deterministic results, a large test suite, cross-checks
+> against independent open-source tools and benchmark timings, each with its source. GridSim claims no accuracy, no
+> parity with any commercial tool and no fitness for production, planning or operational use.
+>
+> **Use it, and tell us what you find.** Results, comparisons with tools you trust, and bug reports are all wanted:
+> send them to **mark@gridsimdigitaltwin.co.uk** (see [Reporting bugs](#reporting-bugs)).
 
-> **What this is for.** GridSim is the core engine of a **self-made evidence apparatus** for the Twin Scroll Grid
-> Balancer (TSGB) case. Its endpoint is a **historical (offline, NON-live) GB grid state estimator**: feed *public
-> data* through *validated* solvers to reconstruct what the grid state actually was, then run **grounded
-> counterfactuals** on that reconstructed truth. That endpoint exists: per-settlement-period **WLS estimates of the
-> real GB grid** fitted to settlement metering, reaching back to **March 2016**, and the **9 August 2019 disturbance
-> reproduced** from them ([`docs/validation/evidence-gb-2019-08-09.md`](docs/validation/evidence-gb-2019-08-09.md)). It **never predicts
-> the future**: that "no forward inference" rule is a **hard code invariant**, not a policy.
-
-> **Guards & lifecycle.** GridSim and its data companion (GDA) demonstrate the *mosaic effect*: fusing thousands of
-> individually-harmless public sources reconstructs a near-operational picture of GB grid infrastructure with no
-> privileged or SCADA access. That is a demonstration of **capability, not an incident**. The guards in these tools
-> (the 169 h (7 d + 1 h) no-forward-inference horizon, data kept out of the repo, provenance on every figure) are a
-> deliberately constrained public build the author enforces **voluntarily**, as mitigation. Ofgem's **"Securing Open
-> Data"** consultation closed on **14 July 2026**. As proposed, it would not by itself remove what these tools depend
-> on. If a hybrid model advances with further changes in later rounds, the tools degrade: GDA breaks with no viable
-> fix, and GridSim is reduced to just another power-flow solver.
+Every numerical result is double precision end to end and deterministic to the bit. The core solvers are cross-checked
+against independent open-source tools (pandapower, `pandapower.estimation`, SciPy, published MATPOWER solutions): the
+power-flow, harmonic, impedance and small-signal cross-checks gate at 4096 machine epsilons; the state-estimation,
+swing-equation, classical-swing and lake-conformance checks compare different algorithms or stopping rules and gate at
+stated engineering tolerances (1e-6 pu for the estimator by default). The measured agreement is in
+[Cross-checks](#cross-checks). Agreement with another tool shows that the same equations were solved the same way; it
+is not validation against a real power system.
 
 > **Submodules.** This repo contains submodules. No submodule is ever needed for the work: submodules augment and add,
-> they cannot change the core maths. See [`SUBMODULES.md`](SUBMODULES.md) for more information.
+> they cannot change the core maths. The 36 national and regional network models are the `models` submodule: clone
+> with `git clone --recurse-submodules`, or run `git submodule update --init models` in an existing clone. See
+> [`docs/developer/submodules.md`](docs/developer/submodules.md) for more information.
 
 ---
 
 ## Contents
 
 - [What makes GridSim different](#what-makes-gridsim-different)
-- [Downloads](#downloads-21000-rc-1)
+- [Downloads](#downloads)
 - [Quick start](#quick-start)
 - [Feature tour](#feature-tour)
 - [The maths](#the-maths)
 - [Determinism and machine epsilon](#determinism-and-machine-epsilon)
-- [Validation](#validation)
+- [Cross-checks](#cross-checks)
 - [Performance and GPU](#performance-and-gpu)
 - [Networks and data](#networks-and-data)
 - [The apps](#the-apps)
 - [Architecture](#architecture)
+- [Repository layout](#repository-layout)
 - [Assurance and security](#assurance-and-security)
 - [Known limits](#known-limits)
 - [Roadmap](#roadmap)
@@ -102,12 +101,12 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
    matrix and the injections alone, so a grid with zero rotational inertia solves like any other. The swing equation is
    a separate, opt-in layer for transients.
 
-4. **A historical evidence engine.** A state estimator and counterfactual engine reconstruct what the grid did from public
+4. **A historical evidence engine.** A state estimator and counterfactual engine estimate what the grid did from public
    data. A counterfactual runs only after the baseline reproduces the recorded event. The 169-hour no-forward-inference
    horizon is enforced in code at every dated ingester.
 
 5. **Bit-identical results.** Results are identical across runs, parallel paths, CPU vector tiers and the dense and sparse
-   power-flow engines, using GridSim's own deterministic maths library ([`MATH.md`](MATH.md)). The tests are
+   power-flow engines, using GridSim's own deterministic maths library ([`docs/developer/deterministic-maths.md`](docs/developer/deterministic-maths.md)). The tests are
    constitutional: a change that breaks one is wrong ([`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 6. **Double precision throughout.** Power flow is `double` end to end. The GPU backend is AMD-first (ROCm), because the
@@ -115,30 +114,29 @@ lake-conformance checks compare different algorithms or stopping rules and gate 
 
 ---
 
-## Downloads (2.1.000 RC-1)
+## Downloads
 
 GridSim ships ready built for anyone who does not want to compile it. The latest release is
-[2.1.000 RC-1](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.000-RC-1), released 2026-10-31. The source on
-`main` is 2.1.005 and is not part of any release yet. All builds are self-contained: no .NET install is needed to run
-them.
+[2.1.073 RC-4](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.073-RC-4); its notes are in [RC4.md](RC4.md)
+(RC-3 is in [RC3.md](RC3.md)). All builds are self-contained: no .NET install
+is needed to run them.
 
-| What | Platform | Download |
+| What | Platform | File on the release page |
 |---|---|---|
-| Command line tool (`gridsim`) | Windows x64 | [gridsim-cli-2.1.000-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-cli-2.1.000-win-x64.zip) |
-| Command line tool (`gridsim`) | Linux x64 | [gridsim-cli-2.1.000-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-cli-2.1.000-linux-x64.tar.gz) |
-| Desktop app (Avalonia) | Windows x64 | [gridsim-app-2.1.000-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-app-2.1.000-win-x64.zip) |
-| Desktop app (Avalonia) | Linux x64 | [gridsim-app-2.1.000-linux-x64.tar.gz](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-app-2.1.000-linux-x64.tar.gz) |
-| Desktop app (WPF) | Windows x64 | [gridsim-wpf-2.1.000-win-x64.zip](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-wpf-2.1.000-win-x64.zip) |
-| `GridSim.Core` engine library (NuGet) | Any | [GridSim.Core.2.1.0.nupkg](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/GridSim.Core.2.1.0.nupkg) |
-| CycloneDX SBOM (CLI) | Any | [gridsim-2.1.000.sbom.json](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/gridsim-2.1.000.sbom.json) |
-| SHA-256 checksums of every file | Any | [SHA256SUMS.txt](https://github.com/MarkS0485/GridSim/releases/download/v2.1.000-RC-1/SHA256SUMS.txt) |
+| Command line tool (`gridsim`) | Windows x64 | `gridsim-<version>-win-x64.zip` |
+| Command line tool (`gridsim`) | Linux x64 | `gridsim-<version>-linux-x64.tar.gz` |
+| Command line tool (`gridsim`) | macOS arm64 (Apple silicon) | `gridsim-<version>-osx-arm64.tar.gz` |
+| Desktop app (Avalonia) | Windows x64 | `gridsim-app-<version>-win-x64.zip` |
+| Desktop app (Avalonia) | Linux x64 | `gridsim-app-<version>-linux-x64.tar.gz` |
+| Desktop app (WPF) | Windows x64 | `gridsim-wpf-<version>-win-x64.zip` |
+| CycloneDX SBOMs (tool, apps, core library, web image) | Any | `*.sbom.json` |
+| SHA-256 checksums of every file | Any | `SHA256SUMS.txt` |
 
-RC-1 is built for Windows and Linux only. There is no macOS build: the author has no Mac to compile and test one on,
-so Mac users build from source with Xcode and the .NET SDK (exact commands in [RC1.md](RC1.md)). The Windows
-executables and the NuGet package are signed with the GridSim certificate (self-signed, thumbprint
-`86DD43B7...EB721`, `signing/gridsim-signing.cer`); check every download against `SHA256SUMS.txt`. Full system
-requirements, the hashes and the build notes are in [RC1.md](RC1.md). The earlier
-[Release Candidate 1.0 (2.0.195)](https://github.com/MarkS0485/GridSim/releases/tag/v2.0.195-rc1.0) stays available.
+Check every download against `SHA256SUMS.txt`. The `GridSim.Core` NuGet package and the replay-only web container
+image are published outside the release page; [manual ch. 1](<docs/manual/0001 Getting started.md>) says where, and
+how to check signatures. There is no macOS desktop app build: Mac users build the desktop app from source with Xcode
+and the .NET SDK (exact commands in [RC1.md](RC1.md)). System requirements are in [RC1.md](RC1.md) and unchanged
+since. Earlier releases stay available on the [Releases](https://github.com/MarkS0485/GridSim/releases) page.
 
 `GridSim.Gda` and the GDA data are not release artefacts: there is no `GridSim.Gda` package and no GDA data in any
 download. The `gda` verbs stay in the CLI, but they read a GDA data lake (`GDA_DATA_ROOT`), which a release does not
@@ -217,7 +215,7 @@ gridsim crossval case14
 ```
 
 This solves the case, exports the state and re-solves it independently in pandapower (`pip install pandapower`; the
-verb exits 77 if it is missing). The measured agreement on every bundled case is in [Validation](#validation).
+verb exits 77 if it is missing). The measured agreement on the reference cases is in [Cross-checks](#cross-checks).
 
 ### Replay a recorded event
 
@@ -326,8 +324,8 @@ invariants and the tests that pin them.
 
 ### Power flow
 
-AC power flow by Newton-Raphson in polar form. The sparse engine (Gilbert-Peierls LU with reverse Cuthill-McKee
-ordering) runs every meshed network by default; the dense engine is selectable and gives the same bits. Radial
+AC power flow by Newton-Raphson in polar form. The sparse engine (Gilbert-Peierls LU over an exact minimum-degree
+column ordering, which replaced reverse Cuthill-McKee in 2.1.073) runs every meshed network by default; the dense engine is selectable and gives the same bits. Radial
 feeders use the backward/forward sweep (`--bfs`). Reactive limits switch PV buses to PQ, on-load tap changers
 regulate in an outer loop, and `pf` adds distributed slack and switched shunts. Every solve can be exported with its
 full trace (Y-bus, specification, every iteration and Jacobian) for independent checking.
@@ -499,6 +497,18 @@ Chapters: [manual 27](<docs/manual/0027 Validation tools.md>),
 [technical 11](<docs/technical/0011 Validation.md>),
 [technical 16](<docs/technical/0016 Physics conformance and the constrained estimator.md>).
 
+### Study jobs (RC-3 and RC-4)
+
+RC-3 added transmission study jobs as separate commands, each reading a strict JSON study file bound to its case by
+SHA-256: `transmission-security`, `cgmes-study`, `transfer-capability`, `corrective-sequence`, `dynamics-study`,
+`planning-study`, `restoration-study`, `reliability-study`, `emt-line`, `arc-flash`, `cable-rating` and `motor-start`
+([RC3.md](RC3.md)). RC-4 adds study-case management, sensitivity and contingency verbs, probabilistic
+and network reliability studies, line constants, a resident `rpc` endpoint, further short-circuit and protection duty
+verbs, declarative dynamic models, full-model small-signal analysis, node-breaker exchange, meshed unbalanced
+distribution, three-phase EMT, a workbench and UK power-quality checks ([RC4.md](RC4.md)). Each job reports what it
+could not establish as incomplete, never as a pass, and each is tested on small analytical, constructed or synthetic
+cases only. The [CLI reference](<docs/manual/0019 CLI reference.md>) documents every verb.
+
 ---
 
 ## The maths
@@ -581,14 +591,14 @@ a scheduling LP.
 
 ## Determinism and machine epsilon
 
-GridSim treats bit-identical results as a requirement, not an aspiration. The overview is [`MATH.md`](MATH.md) and the
+GridSim treats bit-identical results as a requirement, not an aspiration. The overview is [`docs/developer/deterministic-maths.md`](docs/developer/deterministic-maths.md) and the
 specification is [technical ch. 38, Deterministic mathematics](<docs/technical/0038 Deterministic mathematics.md>):
 
 - **Deterministic maths.** Transcendental functions come from `DetMath`, a C# port of FDLIBM 5.3 checked bit for bit
   against Java's `StrictMath`, so they round the same way on every operating system. No numerical path uses fused
   multiply-add. An IL-level analyser test (`DeterministicMathGuardTests`) fails the test run if numerical code calls the
   platform maths library, a fused multiply-add or a horizontal vector reduction. The one allowed exception is the fused
-  arm of `SimdKernels.AddScaledRow`, which no numerical path selects. The full rules are in [`MATH.md`](MATH.md).
+  arm of `SimdKernels.AddScaledRow`, which no numerical path selects. The full rules are in [`docs/developer/deterministic-maths.md`](docs/developer/deterministic-maths.md).
 - **SIMD tiers.** Dense kernels dispatch to AVX-512, AVX2, SSE or scalar at run time and give the same bits at every
   width; `gridsim simdcheck` reports the active tier. CI (`.github/workflows/ci.yml`) runs the suite on Linux and Windows
   x64 (normal, AVX2 off with FMA off, hardware intrinsics off, forced AVX-512 and forced 256-bit), on macOS (Apple
@@ -606,6 +616,11 @@ specification is [technical ch. 38, Deterministic mathematics](<docs/technical/0
 
 - **The state estimate does not depend on the bus count.** On the CPU every WLS and robust estimate takes the same
   sparse step at every size (`CanonicalWlsParityTests`: bit-identical across the old 200-bus dense / sparse threshold).
+- **BREAKING CHANGE in RC-4 (2.1.073).** Results and determinism digests are not bit-identical to
+  2.1.071 or 2.1.072, because the sparse LU ordering and the Newton voltage floor changed; within one version, bit
+  identity holds as above. The difference is at rounding level (on 66 MATPOWER cases at
+  most 9.7e-13 pu in voltage magnitude and 1.9e-11 deg in angle, with identical convergence and iteration counts);
+  stored digests must be regenerated. Details are in [RC4.md](RC4.md).
 
 Open items, stated plainly: the dense estimator step that a GPU linear solver uses agrees with the sparse step to
 solver tolerance (Vm 1e-8 pu, Va 1e-7 deg), not to the bit; GPU arithmetic is outside the bit-identity contract. Every
@@ -613,9 +628,12 @@ CI leg, Linux and macOS included, is a hard gate on the same pins.
 
 ---
 
-## Validation
+## Cross-checks
 
-Every claim below is a measured number with its source.
+Every figure below is a measured number with its source. Each one measures agreement with an independent tool, a
+published solution or a published event record; none of them validates GridSim against a real power system, and no
+comparison with a commercial tool (PSS/E, PowerWorld, PowerFactory, PSCAD/EMTP) has been made. The figures below were
+measured before the RC-4 ordering change, which moves results at rounding level only.
 
 **Power flow against pandapower** (pandapower 3.5.5, measured 2026-10-05; gb-full re-measured 2026-10-31 after the
 2.0.200 charging correction; worst |V| pu / angle rad; gate 4096 machine epsilons, 9.09e-13; [technical 11](<docs/technical/0011 Validation.md>)):
@@ -649,15 +667,21 @@ December 2023 event: verdict MARGINAL, RMSE 0.281 Hz against the 1-second trace,
 
 ## Performance and GPU
 
-`gridsim bench` runs a matrix of engines over the case library. On the largest meshed case, case9241pegase, the
-sparse engine takes 1,178 ms where the dense engine takes 199,934 ms, with the same iteration count and the same
-mismatch (6 iterations, 2.13E-009) ([manual 28](<docs/manual/0028 Benchmarking and GPU.md>)). Server sweeps reach the
-25,000-bus synthetic cases; [`docs/developer/benchmarks/benchmark-results.md`](docs/developer/benchmarks/benchmark-results.md) and
-[`docs/developer/benchmarks/server-results/`](docs/developer/benchmarks/server-results) hold the measured runs.
+Every timing here comes from a benchmark run recorded in the repository. `gridsim bench` runs a matrix of engines over
+the case library. On the largest meshed case, case9241pegase, the sparse engine took 1,178 ms where the dense engine
+took 199,934 ms, with the same iteration count and the same mismatch (6 iterations, 2.13E-009)
+([manual 28](<docs/manual/0028 Benchmarking and GPU.md>); measured before the RC-4 ordering change). With the
+minimum-degree ordering of RC-4, large sparse solves are 4 to 7 times faster on an EPYC 7763 server
+(case_ACTIVSg2000 306 to 46 ms, case3375wp 560 to 83 ms; [RC4.md](RC4.md)). Server sweeps reach the 25,000-bus
+synthetic cases; the [benchmark landing page](docs/developer/benchmarks/index.md) lists the measured runs, the latest first.
 
 The GPU backend sits behind the same linear-solver seam as the CPU: native ROCm (hipSOLVER, rocSPARSE) for AMD
 Instinct first, then OpenCL and CUDA through ILGPU, chosen automatically (`gridsim gpucheck` reports what is
-available). GPU arithmetic is outside the bit-identity contract.
+available). GPU results are deterministic but not bit-identical with the CPU contract: the device runs different
+algorithms (natural-order dense elimination, Jacobi-preconditioned BiCGSTAB to a 1e-10 residual), sums in a
+different order and fuses multiply-add. Measured on an RTX A4000 over 27 MATPOWER cases they differ from the CPU by at
+most 1.45e-12 pu and 5.2e-11 deg, with the same convergence and iteration counts; the 4096-epsilon cross-check gate does not apply to GPU
+paths. A GPU solve prints how many of its Newton steps fell back to the CPU LU.
 [Technical 4](<docs/technical/0004 Sparse and GPU numerics.md>), [`docs/developer/gpu-rental-runbook.md`](docs/developer/gpu-rental-runbook.md).
 
 ---
@@ -675,11 +699,12 @@ available). GPU arithmetic is outside the bit-identity contract.
 | International starter maps: Ireland, Iberia, France, continental Europe | 60 to 5,824 buses | `data/intl` |
 | Three-phase feeders: IEEE 123-node and the IEEE 4-node transformer tests | JSON | `data/dist3ph` |
 | Recorded events, NESO frequency samples | JSON, CSV | `data/events`, `data/neso` |
+| National and regional network models, 36 grids (`UnvalidatedAtScale`) | 36 to 5,771 buses | `models/<case>` (the `models` submodule, fetched with `git submodule update --init models`; list in `models/README.md`). Not bundled, so the licence bus limit applies: eight cases are above 1,500 buses and need a licence, issued free of charge at present on request (see [Licence](#licence)) |
 
 The estimated GB history is built on `gb-spine`, a 316-bus fold of the full model
 ([manual 22](<docs/manual/0022 Estimating GB history.md>)). Network models from the GDA lake are materialised at run
 time and never committed. The GB grid documents that GridSim's cited values come from are in the `docs/Public/GB`
-submodule; values whose settling document is paywalled are listed in [`PAYWALLS.md`](PAYWALLS.md), with what public
+submodule; values whose settling document is paywalled are listed in [`docs/reference/paywalls.md`](docs/reference/paywalls.md), with what public
 sources confirm and where you set each value yourself.
 
 ---
@@ -695,7 +720,8 @@ sources confirm and where you set each value yourself.
   The Avalonia app (`GridSim.App.Desktop`) runs on Windows and Linux; the WPF app (`GridSim.Wpf`) runs on Windows only.
   [Manual 8](<docs/manual/0008 The desktop app.md>), [manual 10](<docs/manual/0010 Analysis views.md>).
 - **Case editor** (`GridSim.SchemaEditor`): builds and edits v2 JSON cases. [Manual 33](<docs/manual/0033 The case editor.md>).
-- **Unity viewer** (`unity/GridSimViz`): a viewer for exported scenes.
+- **Workbench** (RC-4): a model browser, plot kit, reports and an undoable single-line editor, in the
+  Avalonia app (Ctrl+Shift+B) and the web client (`/workbench/{case}`).
 
 ![THE MACHINE - every generator locked together as one rotating mass; wind/solar/imports tagged "no inertia", 242 GVA.s of stored spin](<docs/screenshots/gb/the-machine-spinning-grid.png>)
 ![MECHANICAL - per-machine state, inertia-per-unit, and the RoCoF relay margin, most-stressed first](<docs/screenshots/gb/mechanical-per-machine-inertia.png>)
@@ -738,6 +764,37 @@ capability; the web, WPF and Avalonia front ends are presentation only. Full wal
 
 ---
 
+## Repository layout
+
+```
+.github/                      CI and release workflows, issue templates, Dependabot
+.well-known/                  security.txt (RFC 9116) served by the web app
+known_hosts/                  a second copy of security.txt
+benchmarks/                   the free AC power-flow comparison harness and its inputs
+data/                         bundled networks and data (hashed in data/bundled.sha256)
+docs/                         user manual, technical reference, validation, developer, assurance, archive, brand
+models/                       submodule: GridSim-Models, the national and regional grid snapshots
+python/                       the Python API package
+schemas/                      JSON schemas for the GridSim file formats
+signing/                      the code-signing certificate the release workflow checks
+src/                          the GridSim projects (see Architecture)
+tests/                        the test projects
+tools/                        cross-validation sidecars, docs tooling, benchmark and GPU scripts, smoke apps
+CHANGELOG.md                  every change, newest first; the release notes come from it
+CONTRIBUTING.md, SECURITY.md  how to contribute and how to report a vulnerability
+LICENSE.md                    the GridSim licence
+THIRD-PARTY-NOTICES.md        third-party licences and attributions
+README.md                     this file
+RC1.md, RC3.md, RC4.md        release-candidate records
+UnderstandingRestrictions.md  the governing no-forward-inference rule
+Directory.Build.*             MSBuild settings shared by every project
+GridSim.slnx, global.json     the solution and the pinned .NET SDK
+Dockerfile, compose.yml       the web app container build and example deployment
+mkdocs.yml                    the documentation site (requirements in docs/requirements.txt)
+```
+
+---
+
 ## Assurance and security
 
 - The forward-inference guard (169 h) at every dated ingestion seam is the foundational control: a full compromise of
@@ -769,6 +826,10 @@ capability; the web, WPF and Avalonia front ends are presentation only. Full wal
 
 ## Known limits
 
+- Nothing is validated (see the status note at the top). The cross-checks compare GridSim with other software and
+  published figures, not with a real power system, and no commercial tool has been compared.
+- The RC-3 and RC-4 study jobs are tested on small analytical, constructed and synthetic cases only; outputs that need
+  paid standard text are labelled AWAITING STANDARD TEXT ([RC4.md](RC4.md)).
 - `acopf` is a DC-OPF dispatch with an AC loss loop, not a full AC-OPF: no voltage or reactive limits (use `acopf-full`
   for the full AC optimal power flow).
 - In the IEC 60909 study, K_G / K_T exist as closed forms but are not yet applied unless `--corrections` is given.
@@ -804,7 +865,7 @@ capability; the web, WPF and Avalonia front ends are presentation only. Full wal
 7. **GPU backend** - done: ROCm/HIP for AMD Instinct, OpenCL and CUDA behind one seam.
 8. **Evidence engine** - done: historical state estimation, grounded counterfactuals, the 169 h horizon as a hard
    code invariant.
-9. **Cross-validation** - done: pandapower, `pandapower.estimation`, SciPy and NumPy sidecars; the power-flow,
+9. **Cross-checks** - done: pandapower, `pandapower.estimation`, SciPy and NumPy sidecars; the power-flow,
    harmonic, impedance and small-signal checks at 4096 machine epsilons, the others at stated engineering tolerances.
 10. **Measurement-based state estimation** - done: the WLS family fitted to the real GB grid per settlement period,
     history to March 2016, the 9 August 2019 record reproduced.
@@ -814,9 +875,14 @@ capability; the web, WPF and Avalonia front ends are presentation only. Full wal
     transient stability, small-signal and impedance stability, EMT.
 13. **Real-time estimation** - done: the resident `serve` estimator with EKF, UKF and EnKF, the RTU interposer and
     C37.118 ingest.
-14. **Next** - grid-forming inverter dynamics for the fully converter-led case; the full renewable and converter
+14. **Transmission study jobs** - done in RC-3: preventive N-1 with AC verification, transfer capability, corrective
+    sequences, CGMES and dynamics study jobs, planning snapshots, restoration and reliability.
+15. **RC-4** - done: study cases, probabilistic and network reliability, short-circuit and protection duty,
+    declarative models, full-model small-signal, three-phase EMT, the workbench, and a scripting interface
+    (`GridSim.Scripting`).
+16. **Next** - grid-forming inverter dynamics for the fully converter-led case; the full renewable and converter
     standard models (REEC/REPC, WT3/4, DER_A); broader GDA DNO coverage.
-15. **Per-asset profiles** - planned: the per-asset Parquet profile library (reference data per asset for cables,
+17. **Per-asset profiles** - planned: the per-asset Parquet profile library (reference data per asset for cables,
     transformers, generators, demands and interconnectors, each field with its unit and source).
 
 ---
@@ -830,7 +896,7 @@ from `docs/` on every push to main.
   reference ([`docs/manual/0019 CLI reference.md`](<docs/manual/0019 CLI reference.md>)), troubleshooting.
 - [Technical manual](<docs/technical/0000 Contents.md>): the architecture, the data model, every solver with its
   equations, invariants and tests, the file and wire formats, the glossary.
-- [`MATH.md`](MATH.md): the deterministic maths library that keeps results bit-identical across operating systems
+- [`docs/developer/deterministic-maths.md`](docs/developer/deterministic-maths.md): the deterministic maths library that keeps results bit-identical across operating systems
   and CPUs.
 - [`UnderstandingRestrictions.md`](UnderstandingRestrictions.md): the no-forward-inference rule and its five testable
   invariants.
@@ -839,16 +905,16 @@ from `docs/` on every push to main.
   [`docs/validation/evidence-gb-2023-12-22.md`](docs/validation/evidence-gb-2023-12-22.md): the event dossiers.
 - [`docs/developer/case-libraries.md`](docs/developer/case-libraries.md): the MATPOWER parser and case archive.
 - [`docs/validation/neso-rp1-and-mechanical.md`](docs/validation/neso-rp1-and-mechanical.md): the control-room panels.
-- [`PAYWALLS.md`](PAYWALLS.md): the `[VERIFY]` values whose settling document is paywalled.
-- [`SUBMODULES.md`](SUBMODULES.md), [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md),
+- [`docs/reference/paywalls.md`](docs/reference/paywalls.md): the `[VERIFY]` values whose settling document is paywalled.
+- [`docs/developer/submodules.md`](docs/developer/submodules.md), [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md),
   [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
 ## Licence
 
-GridSim is source-available, proprietary software; `LICENSE.md` governs. Licensing is measured on buses
-and nothing else.
+GridSim is source-available, not open source: the code is public on GitHub, but GridSim requires a licence and
+`LICENSE.md` governs. These are the licence terms, measured on buses and nothing else:
 
 | Use | Bus limit |
 |---|---|
@@ -858,16 +924,26 @@ and nothing else.
 | Commercial Deployment Licence | None |
 | Network Operator (TSO / ESO / DNO, site-wide, subject to regulatory approval) | None |
 
-Bundled networks never count toward a limit. Commercial and network-operator terms are available on application.
-Contact us: **gdatooling@proton.me**
+Bundled networks never count toward a limit.
+
+At present licences are issued gratis: no payment is required for any tier, and there is no present intention to charge.
+Anyone who asks today receives a Network Operator (DNO) licence, which has no restrictions. Ask by email:
+**mark@gridsimdigitaltwin.co.uk**. Issuing licences gratis today is not a promise that it will always be so. GridSim ships with a
+licence mechanism so that the terms above can be applied if that is ever needed, for example to support its development.
+
+The licence covers the software, not Mark's time. Help is given when he can; support, custom work or other commitments
+on your terms need a separate agreement and compensation. Nothing in GridSim is validated at any scale, and his role is
+the code. What helps most is use: run it, and send results and bug reports (see below).
 
 ---
 
 ## Reporting bugs
 
-Send every bug report to **gdatooling@proton.me**: the GridSim version (`gridsim --version`), the operating system,
-the command or steps, the case (or a small case that shows the problem) and what you expected to happen. Release
-candidate notes, with the builds and their hashes, are in [`RC1.md`](RC1.md).
+Send every bug report to **mark@gridsimdigitaltwin.co.uk**: the GridSim version (`gridsim --version`), the operating system,
+the command or steps, the case (or a small case that shows the problem) and what you expected to happen. Results
+are just as welcome as bugs: if you run GridSim against a case or a tool you trust, send what you found, agreement or
+not. Release candidate notes are in [`RC1.md`](RC1.md), [`RC3.md`](RC3.md) and
+[`RC4.md`](RC4.md).
 
 ---
 

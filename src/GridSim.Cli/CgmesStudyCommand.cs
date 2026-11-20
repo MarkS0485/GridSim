@@ -86,6 +86,7 @@ internal static class CgmesStudyCommand
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         WriteIndented = true,
         RespectRequiredConstructorParameters = true,
+        RespectNullableAnnotations = true,
         Converters = { new JsonStringEnumConverter() },
     };
     private static readonly JsonSerializerOptions OutputJson = CreateOutputOptions();
@@ -99,18 +100,19 @@ internal static class CgmesStudyCommand
 
     public static int Run(List<string> arguments)
     {
-        string? output = null, export = null;
+        string? output = null, export = null, archivePath = null;
         bool usage = arguments.Count < 2 || arguments[1].StartsWith('-');
         for (int i = 2; !usage && i < arguments.Count; i += 2)
         {
             if (i + 1 >= arguments.Count || arguments[i + 1].StartsWith('-')) { usage = true; break; }
             if (arguments[i] == "--out" && output is null) output = arguments[i + 1];
             else if (arguments[i] == "--export" && export is null) export = arguments[i + 1];
+            else if (arguments[i] == "--archive" && archivePath is null) archivePath = arguments[i + 1];   // R4-11b
             else usage = true;
         }
         if (usage)
         {
-            Console.Error.WriteLine("usage: gridsim cgmes-study <study.json> [--out <result.json>] [--export <model.xml>]");
+            Console.Error.WriteLine("usage: gridsim cgmes-study <study.json> [--out <result.json>] [--export <model.xml>] [--archive <bundle.zip>]");
             return CliExit.Usage;
         }
         var temporaries = new List<string>();
@@ -136,8 +138,22 @@ internal static class CgmesStudyCommand
             // Read each profile once; the study works on these bytes only.
             string directory = Path.GetDirectoryName(input)!;
             var profiles = new List<CgmesProfileInput>();
+            // R4-11b: with --archive the profile paths name entries of that ZIP (read in sorted order, path traversal and
+            // duplicate profiles refused) instead of files; hashes and everything after are unchanged.
+            Dictionary<string, byte[]>? archived = null;
+            if (archivePath is not null)
+                archived = GridSim.Core.IO.Cim.Zip.CgmesArchiveReader.ReadFile(Path.GetFullPath(archivePath)).Entries
+                    .ToDictionary(e => e.Path, e => e.Bytes, StringComparer.Ordinal);
             foreach (ProfileInput p in request.Bundle.Profiles)
             {
+                if (archived is not null)
+                {
+                    string entry = p.Path.Replace('\\', '/');
+                    if (!archived.TryGetValue(entry, out byte[]? entryBytes))
+                        throw new InvalidDataException($"Profile {p.Profile}: '{entry}' is not an entry of the archive '{archivePath}'.");
+                    profiles.Add(new CgmesProfileInput(p.Profile, p.Version, entry, p.Sha256, entryBytes));
+                    continue;
+                }
                 if (p.Path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"Profile {p.Profile} ({p.Path}): zipped bundles are not supported in v1; list each profile document.");
                 string full = Path.GetFullPath(p.Path, directory);
@@ -187,7 +203,7 @@ internal static class CgmesStudyCommand
                 request.SwitchActions?.Select(a => new CgmesSwitchAction(a.Mrid, a.Open)).ToArray(), security,
                 Path.GetFileNameWithoutExtension(input));
 
-            CgmesStudyRun run = CgmesStudyRunner.Run(studyRequest, model => Gated.AdmitCgmes(profiles.Select(p => Path.GetFullPath(p.Path, directory)), model));
+            CgmesStudyRun run = CgmesStudyRunner.Run(studyRequest, model => Gated.AdmitCgmes(archivePath is null ? profiles.Select(p => Path.GetFullPath(p.Path, directory)) : new[] { Path.GetFullPath(archivePath) }, model));
             CgmesStudyResult result = run.Result;
             string json = JsonSerializer.Serialize(new
             {

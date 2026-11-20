@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gridsim-emt3/1",
+  "title": "GridSim three-phase EMT study (gridsim-emt3/1)",
+  "description": "RC4 R4-16, read by 'gridsim emt3'. Three-phase electromagnetic transients on the nodal solver, in SI units. The GridSim reader is strict: an unknown key, a missing required key or a wrong type is refused (exit 1) naming the place. Every key after 'outputs' in this schema's property list (machines, dc_buses, converters, hvdc) is optional; a document without them gives the same result as before they existed. Angles follow the source convention: phase a is sin(w t + angle), phase b lags by 120 degrees. COMPARATOR-UNVERIFIED: nothing is compared with PSCAD or EMTP. Output names are trace columns and summary keys, so they are lower-case snake_case; output kinds that are several words are hyphenated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "time_step_s", "duration_s", "buses", "outputs"],
+  "$defs": {
+    "name": { "type": "string", "minLength": 1 },
+    "num": { "type": "number" },
+    "pos": { "type": "number", "exclusiveMinimum": 0 },
+    "phases": { "type": "string", "pattern": "^[abc]{1,3}$", "description": "Distinct letters of abc." },
+    "points": { "type": "array", "minItems": 1, "items": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } } },
+    "valueSteps": {
+      "type": "array",
+      "description": "From at_s the input is its initial balanced value plus delta_pu.",
+      "items": { "type": "object", "additionalProperties": false, "required": ["at_s", "delta_pu"], "properties": { "at_s": { "type": "number" }, "delta_pu": { "type": "number" } } }
+    }
+  },
+  "properties": {
+    "schema": { "const": "gridsim-emt3/1" },
+    "time_step_s": { "$ref": "#/$defs/pos" },
+    "duration_s": { "$ref": "#/$defs/pos" },
+    "sample_every": { "type": "integer", "minimum": 1, "default": 1 },
+    "frequency_hz": { "$ref": "#/$defs/pos", "default": 50 },
+    "integration": { "enum": ["trapezoidal", "backward-euler"], "default": "trapezoidal" },
+    "event_rule": { "enum": ["trapezoidal", "backward-euler-step"], "default": "trapezoidal" },
+    "newton": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "max_iterations": { "type": "integer" }, "voltage_abs_tol": { "type": "number" }, "voltage_rel_tol": { "type": "number" },
+        "residual_abs_tol": { "type": "number" }, "residual_rel_tol": { "type": "number" }, "max_backtracks": { "type": "integer" }
+      }
+    },
+    "buses": { "type": "array", "items": { "$ref": "#/$defs/name" } },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "bus", "v_ll_rms"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "bus": { "$ref": "#/$defs/name" }, "v_ll_rms": { "type": "number" }, "frequency_hz": { "type": "number" },
+                        "angle_deg": { "type": "number" }, "rs_ohm": { "type": "number" }, "ls_h": { "type": "number" } }
+      }
+    },
+    "branches": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "from", "to", "r1_ohm", "l1_h"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "from": { "$ref": "#/$defs/name" }, "to": { "$ref": "#/$defs/name" },
+                        "r1_ohm": { "type": "number" }, "l1_h": { "type": "number" }, "r0_ohm": { "type": "number" }, "l0_h": { "type": "number" } }
+      }
+    },
+    "shunts": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "bus"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "bus": { "$ref": "#/$defs/name" }, "r_ohm": { "type": "number" }, "c_f": { "type": "number" }, "l_h": { "type": "number" } }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "from", "to", "length_km", "model", "geometry"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" }, "from": { "$ref": "#/$defs/name" }, "to": { "$ref": "#/$defs/name" }, "length_km": { "type": "number" },
+          "model": { "enum": ["fd", "bergeron"] }, "geometry": { "type": "object", "description": "An inline gridsim-lineconstants/1 document." },
+          "band_hz": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } }, "order": { "type": "integer" },
+          "samples": { "type": "integer" }, "iterations": { "type": "integer" }, "enforce_passivity": { "type": "boolean" }
+        }
+      }
+    },
+    "transformers": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "primary_bus", "secondary_bus", "ll1_h", "ll2_h", "curve"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" }, "primary_bus": { "$ref": "#/$defs/name" }, "secondary_bus": { "$ref": "#/$defs/name" },
+          "r1_ohm": { "type": "number" }, "ll1_h": { "type": "number" }, "r2_ohm": { "type": "number" }, "ll2_h": { "type": "number" },
+          "core_loss_ohm": { "type": "number" }, "curve": { "$ref": "#/$defs/points" },
+          "residual_flux_wb": { "oneOf": [ { "type": "number" }, { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } } ] }
+        }
+      }
+    },
+    "saturable_inductors": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "bus", "curve"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "bus": { "$ref": "#/$defs/name" }, "phases": { "$ref": "#/$defs/phases" },
+                        "curve": { "$ref": "#/$defs/points" }, "initial_flux_wb": { "type": "number" } }
+      }
+    },
+    "arresters": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "bus", "model"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "bus": { "$ref": "#/$defs/name" }, "phases": { "$ref": "#/$defs/phases" },
+                        "model": { "enum": ["power-law", "piecewise"] }, "vref_v": { "type": "number" }, "iref_a": { "type": "number" },
+                        "alpha": { "type": "number" }, "points": { "$ref": "#/$defs/points" } }
+      }
+    },
+    "switches": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "from"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" }, "from": { "$ref": "#/$defs/name" }, "to": { "$ref": "#/$defs/name" }, "phases": { "$ref": "#/$defs/phases" },
+          "ron_ohm": { "type": "number" }, "roff_ohm": { "type": "number" }, "closed": { "type": "boolean" },
+          "events": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["at_s", "close"], "properties": { "at_s": { "type": "number" }, "close": { "type": "boolean" } } } }
+        }
+      }
+    },
+    "faults": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "bus", "r_ohm", "at_s"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "bus": { "$ref": "#/$defs/name" }, "phases": { "$ref": "#/$defs/phases" }, "r_ohm": { "type": "number" },
+                        "to_ground": { "type": "boolean" }, "at_s": { "type": "number" }, "clear_s": { "type": "number" } }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "kind", "target"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "not": { "const": "time_s" }, "description": "The trace column and, as max_abs_<name>, a summary key." },
+          "kind": { "enum": ["voltage", "current", "flux", "speed", "torque", "rotor-angle", "field-current", "dc-voltage-positive", "dc-voltage-negative", "dc-current"] },
+          "target": { "$ref": "#/$defs/name" },
+          "phase": { "enum": ["a", "b", "c"], "description": "Required for voltage, current and flux; refused for the kinds that name a machine, DC bus or converter quantity (speed, torque, rotor-angle, field-current, dc-voltage-positive, dc-voltage-negative, dc-current)." },
+          "end": { "enum": ["from", "to"], "description": "A line current, or the dc-current of a DC line." }
+        }
+      }
+    },
+    "machines": {
+      "type": "array",
+      "description": "Optional. Synchronous (dq, generator convention) and induction (alpha-beta, motor convention, three-wire) machines on a bus, from the Core R4-17 models. Output kinds: current (with a phase), speed (pu), torque (pu, generator-positive for synchronous), rotor-angle (load angle, rad, synchronous only) and field-current (pu, synchronous only).",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "kind", "bus", "rating_mva", "rated_kv_ll", "parameters"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" }, "kind": { "enum": ["synchronous", "induction"] }, "bus": { "$ref": "#/$defs/name" },
+          "neutral": { "enum": ["grounded", "isolated"], "default": "grounded", "description": "Synchronous only." },
+          "rating_mva": { "$ref": "#/$defs/pos" }, "rated_kv_ll": { "$ref": "#/$defs/pos" }, "frequency_hz": { "$ref": "#/$defs/pos", "description": "Default: the study frequency." },
+          "parameters": {
+            "type": "object", "additionalProperties": false,
+            "description": "Synchronous: inertia_s, xd_pu, xdp_pu, xdpp_pu, xq_pu, xqp_pu, xqpp_pu, tdop_s, tdopp_s, tqop_s, tqopp_s required; damping_pu, xl_pu (0 = default leakage), ra_pu, x0_pu optional. Induction: ra_pu, xa_pu, xm_pu, r1_pu, x1_pu, inertia_s required.",
+            "properties": {
+              "inertia_s": { "type": "number" }, "damping_pu": { "type": "number" }, "xd_pu": { "type": "number" }, "xdp_pu": { "type": "number" }, "xdpp_pu": { "type": "number" },
+              "xq_pu": { "type": "number" }, "xqp_pu": { "type": "number" }, "xqpp_pu": { "type": "number" }, "tdop_s": { "type": "number" }, "tdopp_s": { "type": "number" },
+              "tqop_s": { "type": "number" }, "tqopp_s": { "type": "number" }, "xl_pu": { "type": "number" }, "ra_pu": { "type": "number" }, "x0_pu": { "type": "number" },
+              "xa_pu": { "type": "number" }, "xm_pu": { "type": "number" }, "r1_pu": { "type": "number" }, "x1_pu": { "type": "number" }
+            }
+          },
+          "initial": {
+            "type": "object", "additionalProperties": false, "required": ["mode"], "description": "Synchronous only. Default: no-load at 1 pu, angle 0.",
+            "properties": { "mode": { "enum": ["no-load", "phasor"] }, "v_pu": { "type": "number", "default": 1 }, "angle_deg": { "type": "number", "default": 0 },
+                            "p_mw": { "type": "number", "description": "phasor mode: power delivered to the network." }, "q_mvar": { "type": "number" } }
+          },
+          "torque_steps": { "$ref": "#/$defs/valueSteps" },
+          "field_voltage_steps": { "$ref": "#/$defs/valueSteps" },
+          "start_speed_pu": { "type": "number", "default": 0, "description": "Induction only." },
+          "load_torque": {
+            "type": "object", "additionalProperties": false, "required": ["k_pu"], "description": "Induction only: Tl = k_pu * w^speed_exponent, in pu of rated torque.",
+            "properties": { "k_pu": { "type": "number" }, "speed_exponent": { "type": "number", "default": 2 } }
+          }
+        }
+      }
+    },
+    "dc_buses": {
+      "type": "array",
+      "description": "Optional. A split DC link (the Core DcLink): rails <name>.p and <name>.n either side of a grounded mid-point, two capacitors (series value capacitance_f) charged to initial_v pole to pole, and an optional Thevenin supply of supply_v pole to pole behind supply_ohm (0 is an ideal supply, supply_v 0 is none). Output kinds: dc-voltage-positive and dc-voltage-negative (each rail to the mid-point, V).",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "capacitance_f", "initial_v"],
+        "properties": { "name": { "$ref": "#/$defs/name" }, "capacitance_f": { "type": "number" }, "initial_v": { "type": "number" }, "supply_v": { "type": "number", "default": 0 }, "supply_ohm": { "type": "number", "default": 0 } }
+      }
+    },
+    "converters": {
+      "type": "array",
+      "description": "Optional. Three-phase two-level voltage-source converters between an AC bus and a DC bus: average (the Core AverageValueConverter) or switched (the Core TwoLevelBridge of gated diodes, sine PWM). Exactly one of modulation and control. A filter puts a series R-L between the converter terminals and the AC bus. Output kinds: current (with a phase: the filter current, or for an unfiltered average converter its leg current; not defined for an unfiltered switched converter) and, for an average converter, dc-current. The result gains a converters table and the switching_timing summary key.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "kind", "ac_bus", "dc_bus"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" }, "kind": { "enum": ["average", "switched"] }, "ac_bus": { "$ref": "#/$defs/name" }, "dc_bus": { "$ref": "#/$defs/name" },
+          "rs_ohm": { "type": "number", "default": 0.001, "description": "Average: series resistance of each leg. Switched: valve on resistance." },
+          "roff_ohm": { "type": "number", "default": 10000000, "description": "Switched only: valve off resistance." },
+          "nominal_vdc_v": { "type": "number", "description": "Default: the DC bus initial_v." },
+          "filter": { "type": "object", "additionalProperties": false, "required": ["l_h"], "properties": { "r_ohm": { "type": "number", "default": 0 }, "l_h": { "type": "number" } } },
+          "modulation": { "type": "object", "additionalProperties": false, "required": ["index"], "description": "Open loop: m sin(2 pi f t + phase - 120 deg k) per phase k.", "properties": { "index": { "type": "number" }, "frequency_hz": { "type": "number" }, "phase_deg": { "type": "number", "default": 0 } } },
+          "pwm": { "type": "object", "additionalProperties": false, "required": ["carrier_hz"], "description": "Switched only (required).", "properties": { "carrier_hz": { "type": "number" }, "carrier_phase": { "type": "number", "default": 0, "description": "Fraction of a carrier period." } } },
+          "control": {
+            "type": "object", "additionalProperties": false, "required": ["bandwidth_rad_s"], "description": "The Core sampled dq current controller (needs a filter): Kp = alpha L, Ki = alpha R on the filter, a control sample every control_every steps, d axis at the angle of a source with angle_deg phase_deg. References in amperes (peak).",
+            "properties": {
+              "bandwidth_rad_s": { "type": "number" }, "control_every": { "type": "integer", "default": 1 }, "frequency_hz": { "type": "number" }, "phase_deg": { "type": "number", "default": 0 },
+              "id_a": { "type": "number", "default": 0 }, "iq_a": { "type": "number", "default": 0 },
+              "steps": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["at_s", "id_a"], "properties": { "at_s": { "type": "number" }, "id_a": { "type": "number" }, "iq_a": { "type": "number", "default": 0 } } } }
+            }
+          }
+        }
+      }
+    },
+    "hvdc": {
+      "type": "array",
+      "description": "Optional. HVDC entries of three kinds. vsc: a VSC station (the Core VscHvdcStation: its own ideal grid source behind a grid impedance, reactor, converter, DC link, measurement, dq current controller and outer loop; nodes <name>/gen0.., <name>/pcc0.., <name>/dc.p, <name>/dc.n). lcc: a 6- or 12-pulse thyristor bridge group (the Core LccBridgeEmt, its own transformer secondary sources) into a series R-L load; nodes <name>.dcp and <name>.dcn. dc-line: two poles between two vsc stations (half the loop resistance in each pole at the from end, then a Bergeron line per pole). Output kinds: dc-voltage-positive and dc-voltage-negative (vsc, lcc), dc-current (lcc: the load; dc-line: at its end; vsc: its supply when dc_supply_ohm is above zero), and current with a phase (vsc: the filter current). Every converter is listed in the converters table.",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["name", "kind"],
+        "properties": {
+          "name": { "$ref": "#/$defs/name" }, "kind": { "enum": ["vsc", "lcc", "dc-line"] },
+          "grid_v_ll_rms": { "type": "number", "description": "vsc." }, "frequency_hz": { "type": "number", "description": "vsc, lcc. Default: the study frequency." },
+          "grid_angle_deg": { "type": "number", "default": 0 }, "grid_r_ohm": { "type": "number", "default": 0 }, "grid_l_h": { "type": "number", "default": 0 },
+          "filter_r_ohm": { "type": "number", "default": 0 }, "filter_l_h": { "type": "number" }, "converter_rs_ohm": { "type": "number", "default": 0.001 },
+          "dc_nominal_v": { "type": "number" }, "dc_cap_f": { "type": "number" },
+          "converter": { "enum": ["average", "mmc-average", "mmc-detailed"], "default": "average" },
+          "mmc": { "type": "object", "additionalProperties": false, "required": ["submodules_per_arm", "submodule_cap_f", "arm_resistance_ohm", "arm_inductance_h"],
+                   "properties": { "submodules_per_arm": { "type": "integer" }, "submodule_cap_f": { "type": "number" }, "arm_resistance_ohm": { "type": "number" }, "arm_inductance_h": { "type": "number" } } },
+          "mode": { "enum": ["power", "dc-voltage"], "description": "power: set_point is the active power injected into the grid at the PCC in watts (negative: drawn); dc-voltage: the pole-to-pole voltage in volts." },
+          "set_point": { "type": "number" }, "current_bandwidth_rad_s": { "type": "number", "default": 1000 }, "outer_bandwidth_rad_s": { "type": "number", "default": 60 },
+          "control_every": { "type": "integer", "default": 2 }, "reactive_current_a": { "type": "number", "default": 0 }, "current_limit_a": { "type": "number", "default": 1000000 },
+          "initial_dc_v": { "type": "number", "default": 0 }, "suppression_bandwidth_rad_s": { "type": "number", "default": 0 },
+          "dc_supply_v": { "type": "number", "description": "vsc: a stiff supply of this voltage pole to pole." },
+          "dc_supply_ohm": { "type": "number", "default": 0, "description": "vsc: the resistance each pole of the supply is behind. 0 is an ideal supply, whose current is not measured (dc-current is refused)." },
+          "v_ll_rms": { "type": "number", "description": "lcc: converter transformer secondary line-to-line voltage." }, "commutation_l_h": { "type": "number" },
+          "source_r_ohm": { "type": "number", "default": 0.001 }, "pulses": { "enum": [6, 12], "default": 6 },
+          "valve": { "type": "object", "additionalProperties": false, "properties": { "ron_ohm": { "type": "number", "default": 0.001 }, "roff_ohm": { "type": "number", "default": 10000000 } } },
+          "neutral_reference_ohm": { "type": "number", "default": 1000000 }, "alpha_deg": { "type": "number" },
+          "alpha_steps": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["at_s", "alpha_deg"], "properties": { "at_s": { "type": "number" }, "alpha_deg": { "type": "number" } } } },
+          "load": { "type": "object", "additionalProperties": false, "required": ["r_ohm", "l_h"], "properties": { "r_ohm": { "type": "number" }, "l_h": { "type": "number" } } },
+          "from": { "$ref": "#/$defs/name" }, "to": { "$ref": "#/$defs/name" }, "r_ohm": { "type": "number", "description": "dc-line: loop resistance." },
+          "surge_ohm": { "type": "number" }, "delay_s": { "type": "number" }, "initial_current_a": { "type": "number", "default": 0 }
+        }
+      }
+    }
+  }
+}

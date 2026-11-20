@@ -74,6 +74,13 @@ public static class DynamicsStudyRunner
                 resolvedTrips.Add(trips);
             }
         }
+        // R4-14: the device set of the adaptive companion run binds to the case before any work (absent for every incumbent request).
+        Protection.Devices.BoundDeviceSet? boundDevices = null;
+        if (request.Adaptive?.Devices is { } deviceSet)
+        {
+            try { boundDevices = Protection.Devices.DeviceSetValidator.Bind(deviceSet, model, request.Adaptive.Curves ?? new Protection.Devices.CurveLibrary()); }
+            catch (Protection.Devices.DeviceSetException ex) { throw new InvalidDataException("adaptive.devices: " + ex.Message); }
+        }
         int refGen = ResolveMachine(raw, request.AngleReference, "angleReference");
         var channelGen = new List<(DynamicsChannelRequest Channel, int? Gen, string Label)>();
         foreach (DynamicsChannelRequest ch in request.Channels)
@@ -111,6 +118,8 @@ public static class DynamicsStudyRunner
         // 2. Model coverage.
         DynamicsModelBinding binding = DynamicsModelCoverage.Build(raw, request.DyrText, request.DyrName, request.SchemasDir,
             request.Initialisation.Unmodelled);
+        // R4-08: declarative user models bound to machines (additive; absent for every existing request).
+        if (request.UserModels is { Count: > 0 } userModels) binding = UserModelOverlay.Apply(raw, binding, userModels);
         DynamicsModelCoverageReport coverage = binding.Report;
         if (!coverage.Simulable || binding.Set is null)
         {
@@ -121,17 +130,7 @@ public static class DynamicsStudyRunner
             return Stopped(request, coverage, engine, null, "model coverage: " + why);
         }
 
-        // 3. Power flow.
-        var pfOptions = new PowerFlowOptions { Tolerance = request.Initialisation.PowerFlowTolerancePu, MaxIterations = request.Initialisation.PowerFlowMaxIterations };
-        IPowerFlowSolver solver = SolverSelector.CreateNewton(model);
-        PowerFlowResult pf = solver.Solve(model, pfOptions);
-        var pfEvidence = new DynamicsPowerFlowEvidence(pf.Status.ToString(), pf.Converged, pf.Iterations, pf.MaxMismatch,
-            pfOptions.Tolerance, pfOptions.MaxIterations, solver.GetType().Name);
-        if (!pf.Converged)
-            return Stopped(request, coverage, engine, new DynamicsInitialisationEvidence(pfEvidence, Array.Empty<DynamicsInitialMachine>(), null),
-                "NO SOLUTION: the power flow did not converge, so there is no initial state");
-
-        // 4. Machines, slots and the no-event interval.
+        // 3. Machines and slots (from the bound data alone, so these refusals come before any solve).
         MachineDynamicsSet set = binding.Set;
         var data = new List<SubtransientInit.MachineData>(model.Generators.Count);
         for (int k = 0; k < model.Generators.Count; k++)
@@ -154,6 +153,16 @@ public static class DynamicsStudyRunner
                 throw new InvalidDataException($"channel {label}: the machine is not integrated as a synchronous machine.");
             channels.Add((ch, g is int gg ? slotOf[gg] : null, label));
         }
+        // 4. Power flow and the no-event interval.
+        var pfOptions = new PowerFlowOptions { Tolerance = request.Initialisation.PowerFlowTolerancePu, MaxIterations = request.Initialisation.PowerFlowMaxIterations };
+        IPowerFlowSolver solver = SolverSelector.CreateNewton(model);
+        PowerFlowResult pf = solver.Solve(model, pfOptions);
+        var pfEvidence = new DynamicsPowerFlowEvidence(pf.Status.ToString(), pf.Converged, pf.Iterations, pf.MaxMismatch,
+            pfOptions.Tolerance, pfOptions.MaxIterations, solver.GetType().Name);
+        if (!pf.Converged)
+            return Stopped(request, coverage, engine, new DynamicsInitialisationEvidence(pfEvidence, Array.Empty<DynamicsInitialMachine>(), null),
+                "NO SOLUTION: the power flow did not converge, so there is no initial state");
+
         var channelBuses = channelGen.Where(c => c.Channel.Kind == DynamicsChannelKind.BusVoltage).Select(c => c.Channel.Bus!.Value).ToList();
         bool indicative = !coverage.LikeForLike;
         var ctx = new Context(model, pf, data, set, slotOf, slotOf[refGen], nominalHz, request, indicative, channels, channelBuses);
@@ -198,7 +207,14 @@ public static class DynamicsStudyRunner
             Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = request.MaxParallelism }, RunRow);
 
         // 6. Aggregate.
-        return Aggregate(request, coverage, engine, init, results.Select(r => r!).ToList());
+        DynamicsStudyResult aggregated = Aggregate(request, coverage, engine, init, results.Select(r => r!).ToList());
+
+        // 7. R4-14: the opt-in variable-step companion run (never part of the incumbent path; absent leaves the result untouched).
+        if (request.Adaptive is null) return aggregated;
+        DynamicsAdaptiveEvidence adaptive = DynamicsAdaptiveRunner.Run(model, pf, data, request,
+            resolvedCases.Select(l => (IReadOnlyList<RmsEvent>?)l?.Select(e => e.Engine).ToList()).ToArray(), resolvedTrips.ToArray(),
+            channels, slotOf, slotOf[refGen], nominalHz, boundDevices, cancellation);
+        return aggregated with { Adaptive = adaptive };
     }
 
     private static void Validate(DynamicsStudyRequest r)
@@ -222,6 +238,13 @@ public static class DynamicsStudyRunner
         if (!(r.Criteria.MaxAngleSpreadDeg > 0.0) || !double.IsFinite(r.Criteria.MaxAngleSpreadDeg))
             throw new InvalidDataException("criteria.maxAngleSpreadDeg must be a positive, finite number.");
         if (r.MaxParallelism < 1) throw new InvalidDataException("execution.maxParallelism must be at least 1.");
+        if (r.Adaptive is { } ad)
+        {
+            try { ad.Options.Validate(); }
+            catch (ArgumentException ex) { throw new InvalidDataException("adaptive: " + ex.Message); }
+            if (!(ad.CctToleranceSeconds > 0.0) || !double.IsFinite(ad.CctToleranceSeconds))
+                throw new InvalidDataException("adaptive.cctToleranceSeconds must be a positive, finite number.");
+        }
         if (r.Cases.Count == 0) throw new InvalidDataException("cases must hold at least one row.");
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (DynamicsCaseRequest c in r.Cases)
@@ -346,10 +369,12 @@ public static class DynamicsStudyRunner
     /// no machine has one (the held-field path, as the RMS verb takes it).</summary>
     private static List<RmsExciter?>? Exciters(Context ctx)
     {
-        if (!ctx.Set.Entries.Any(e => e.Exciter is not null)) return null;
+        bool userExciters = ctx.Request.UserModels?.Any(a => a.Model.Role == "exciter") == true;   // R4-08
+        if (!ctx.Set.Entries.Any(e => e.Exciter is not null) && !userExciters) return null;
         var list = Enumerable.Repeat<RmsExciter?>(null, ctx.Model.Generators.Count).ToList();
         foreach (MachineDynamicsEntry e in ctx.Set.Entries)
             if (e.Exciter is not null) list[e.GeneratorIndex] = e.Exciter.Create();
+        if (userExciters) UserModelOverlay.ApplyExciters(ctx.Request.Raw, list, ctx.Request.UserModels!);
         return list;
     }
 
@@ -554,8 +579,24 @@ public static class DynamicsStudyRunner
         else if (!(spread <= ctx.Request.Criteria.MaxAngleSpreadDeg))
         { disposition = DynamicsDisposition.Unstable; reason = $"rotor angle spread {spread.ToString("R", CultureInfo.InvariantCulture)} deg at {spreadAt.ToString("R", CultureInfo.InvariantCulture)} s exceeds {ctx.Request.Criteria.MaxAngleSpreadDeg.ToString("R", CultureInfo.InvariantCulture)} deg"; }
         else { disposition = DynamicsDisposition.Stable; reason = null; }
+        // CLI-27: a pass cannot be claimed for a network whose post-event steady state could not be established. The
+        // post-event power flow ran and did not converge (it hit the iteration cap or went non-finite): the row is
+        // INCOMPLETE with that stated. An islanded post-event network is NOT a failure by itself (clearing by islanding can
+        // be a legitimate outcome): its "NOT SOLVED (islanded)" stays information only. Instability, a converter failure
+        // or an earlier INCOMPLETE keep their own, stronger, disposition.
+        if (disposition == DynamicsDisposition.Stable && PostEventNotConverged(post))
+        {
+            disposition = DynamicsDisposition.Incomplete;
+            reason = $"the post-event network's power flow did not converge ({post.PowerFlowStatus}); its steady state could not be established, so stability is not claimed";
+        }
         return new DynamicsCaseResult(index, c.Name, c.Kind, disposition, reason, ctx.Indicative, applied, evidence, post, null);
     }
+
+    /// <summary>CLI-27: true when the post-event check ran a power flow and it did not converge. The intact-network answer
+    /// ("Converged (...)") and the islanded answer ("NOT SOLVED (islanded)", information only) are not non-convergence.</summary>
+    internal static bool PostEventNotConverged(DynamicsPostEventTopology post) =>
+        !post.PowerFlowStatus.StartsWith("Converged", StringComparison.Ordinal)
+        && !string.Equals(post.PowerFlowStatus, "NOT SOLVED (islanded)", StringComparison.Ordinal);
 
     private static List<DynamicsChannelTrace> Channels(Context ctx, RmsTransientStability.ObservedStudy run)
     {

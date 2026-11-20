@@ -52,7 +52,7 @@ public sealed class GdaPaths
 
     // ---- NESO transmission overlay ----
     // N081 (October 2026): these four registers are read as the CSVs NESO publishes (NESO/RAWData/<register>). The full
-    // GDA lake (W:\GDA\DataSources at the time of writing) holds them only as Parquet conversions
+    // GDA lake holds them only as Parquet conversions
     // (NESO/Parquet/<dataset>), so `gda --fleet` used to stop with a bare "GDA dataset folder not found" naming the CSV
     // folder. GridSim does not read the Parquet copies (their columns are the converter's, not NESO's, and reading
     // them would be a new data path to validate). The lookup is unchanged; when the CSV folder is missing but the

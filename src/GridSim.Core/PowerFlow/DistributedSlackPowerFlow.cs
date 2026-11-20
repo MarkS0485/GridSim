@@ -359,6 +359,15 @@ public sealed class DistributedSlackPowerFlow : IPowerFlowSolver
                 };
             }
         }
+        // RC4 (2.1.073): a MATPOWER case may now load with PMIN above PMAX (an OPF limit a plain power flow does not use).
+        // The distributed slack moves each participating unit within [Pmin, Pmax], so a crossed range is refused here.
+        for (int i = 0; i < g; i++)
+        {
+            Generator gen = model.Generators[i];
+            if (a[i] > 0.0 && gen.Pmin > gen.Pmax)
+                throw new ArgumentException(FormattableString.Invariant(
+                    $"Distributed slack: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW above Pmax {gen.Pmax} MW, so it has no range to take a share within."));
+        }
         return a;
     }
 

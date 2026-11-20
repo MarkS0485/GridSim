@@ -87,10 +87,10 @@ public sealed class EmtEngine
     private double _dt;
     private SparseLuFactorization? _fact;
 
-    // R114: the reverse Cuthill-McKee ordering is a pure function of the sparsity PATTERN of G, which a refactor
+    // R114: the minimum-degree ordering is a pure function of the sparsity PATTERN of G, which a refactor
     // (a CDA burst, a switch event, a dt change) does not alter: the same branches are stamped every time. Cache the
     // ordering with the pattern it was computed for and reuse it while the pattern is identical (compared by
-    // content), exactly as CpuSparseLuSolver does for the Newton loop: bit-identical, without re-deriving RCM.
+    // content), exactly as CpuSparseLuSolver does for the Newton loop: bit-identical, without re-deriving the ordering.
     private int[]? _orderingRowPtr, _orderingColIdx, _ordering;
 
     // R114: per-step solve buffers (the solve used to allocate two fresh n-vectors every step).

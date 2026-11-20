@@ -218,7 +218,8 @@ internal static partial class PlanningStudyCommand
 
     // ---- Job execution and reuse -----------------------------------------------------------------------------------
 
-    private static (JobRecord, JobTiming) Execute(PlanningJob job, string outDir, PlanningMaster master, string build)
+    private static (JobRecord, JobTiming) Execute(PlanningJob job, string outDir, PlanningMaster master, string build,
+        Func<PlanningJob, PlanningJobResult>? runner = null)
     {
         string folder = Path.Combine(outDir, "jobs", job.Folder);
         string resultPath = Path.Combine(folder, ResultFile);
@@ -244,7 +245,7 @@ internal static partial class PlanningStudyCommand
                 new JobTiming(job.Id, false, false, watch.Elapsed.TotalMilliseconds, refusal));
         }
 
-        PlanningJobResult result = PlanningStudyModes.RunJob(job);
+        PlanningJobResult result = (runner ?? PlanningStudyModes.RunJob)(job);
         string json = JsonSerializer.Serialize(new
         {
             schemaVersion = PlanningManifestVersion.Result,
@@ -306,12 +307,15 @@ internal static partial class PlanningStudyCommand
         Completion? record;
         try { record = JsonSerializer.Deserialize<Completion>(File.ReadAllBytes(completePath), OutputJson); }
         catch (JsonException) { return "unreadable completion record"; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return "completion record unreadable: " + ex.Message; }
         if (record is null || record.SchemaVersion != "gridsim-planning-complete/1" || record.JobId != job.Id) return "completion record is for another job";
         if (record.Build != build) return "build fingerprint differs";
         if (record.RequestFingerprint != job.RequestFingerprint) return "request fingerprint differs";
         if (record.InputFingerprint != job.InputFingerprint) return "input fingerprint differs";
         if (!File.Exists(resultPath)) return "result file missing";
-        byte[] bytes = File.ReadAllBytes(resultPath);
+        byte[] bytes;
+        try { bytes = File.ReadAllBytes(resultPath); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return "result file unreadable: " + ex.Message; }
         if (bytes.Length != record.ResultBytes || PlanningFingerprints.Sha256(bytes) != record.ResultSha256) return "result file fails its write check";
         if (!PlanningStudyModes.IsVerdict(record.Status)) return "only study verdicts are reused";
         reusable = record;
@@ -406,46 +410,8 @@ internal static partial class PlanningStudyCommand
 
     /// <summary>The consumed-file manifest of a native case, in load order: the same list and encoding as
     /// transmission-security, so its case.sha256 and this master's bundle digest agree.</summary>
-    private static List<PlanningInputFile> Inputs(string path, string root)
-    {
-        var files = new List<PlanningInputFile>();
-        void Add(string label, string full) => files.Add(new(label, PlanningFingerprints.Sha256(File.ReadAllBytes(full))));
-        if (Directory.Exists(path))
-        {
-            string[] names = ["system.json", "buses.json", "generation.json", "demand.json", "transmission.json",
-                "transformer.json", "onloadtapchanger.json", "asset-classes.json", "asset-bindings.json",
-                "protections.json", "boundaries.json"];
-            foreach (string name in names)
-                if (File.Exists(Path.Combine(path, name))) Add(name, Path.Combine(path, name));
-            return files;
-        }
-        Add(Path.GetFileName(path), path);
-        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(path));
-        string directory = Path.GetDirectoryName(path)!;
-        foreach (string kind in new[] { "network", "assets" })
-            if (manifest.RootElement.TryGetProperty(kind, out JsonElement list))
-                foreach (JsonElement item in list.EnumerateArray())
-                    Add(kind + "/" + item.GetString(), Inside(directory, item.GetString()!));
-        if (manifest.RootElement.TryGetProperty("imports", out JsonElement imports))
-            foreach (JsonElement item in imports.EnumerateArray())
-            {
-                string library = item.GetProperty("library").GetString()!;
-                Add("imports/" + library, Inside(Path.Combine(root, "data"), library));
-            }
-        string schemas = Gated.FindV2Schemas(root) ?? throw new InvalidDataException("v2 schemas unavailable.");
-        foreach (string schema in Directory.GetFiles(schemas, "*.json", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
-            Add("schemas/" + Path.GetRelativePath(schemas, schema).Replace('\\', '/'), schema);
-        return files;
-    }
-
-    private static string Inside(string root, string relative)
-    {
-        string full = Path.GetFullPath(relative, Path.GetFullPath(root));
-        string prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
-        if (!full.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Dependency is outside its declared root.");
-        return full;
-    }
+    private static List<PlanningInputFile> Inputs(string path, string root) =>
+        CaseIdentity.Inputs(path, root, (label, sha) => new PlanningInputFile(label, sha), requireJsonExtension: false);
 
     // ---- Strict manifest parsing ---------------------------------------------------------------------------------
 

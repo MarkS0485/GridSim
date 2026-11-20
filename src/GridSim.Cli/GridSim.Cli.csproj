@@ -40,10 +40,12 @@
   </ItemGroup>
 
   <!-- Stamp the git commit + build config into the assembly so RunInfo can report the exact
-       code version at runtime (the server has no git checkout). Best-effort: "unknown" if git
+       code version at runtime (the server has no git checkout). Only release tags (v2.*) name a build: an older
+       checkpoint tag such as RC2-checkpoint must not label a later candidate, so with no reachable v2 tag the stamp is the
+       bare commit (plus -dirty). Best-effort: "unknown" if git
        is unavailable. Runs before compile so the AssemblyMetadata attributes are generated. -->
   <Target Name="StampGitCommit" BeforeTargets="CoreGenerateAssemblyInfo;GetAssemblyAttributes">
-    <Exec Command="git describe --always --dirty --abbrev=8"
+    <Exec Command="git describe --always --dirty --abbrev=8 --match &quot;v2.*&quot;"
           ConsoleToMSBuild="true" IgnoreExitCode="true" StandardOutputImportance="low">
       <Output TaskParameter="ConsoleOutput" PropertyName="GitDescribe" />
       <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />

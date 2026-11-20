@@ -48,6 +48,7 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
 
         if (!GpuContext.IsAvailableFor(_accel))
         {
+            GpuSolveCounters.OnHost();
             new DenseLuSolver().SolveInPlace(a, b);
             return;
         }
@@ -133,6 +134,7 @@ public sealed class GpuDenseLinearSolver : ILinearSolver
 
             acc.Synchronize();
             dX.CopyToCPU(b);
+            GpuSolveCounters.OnDevice();
         }
     }
 

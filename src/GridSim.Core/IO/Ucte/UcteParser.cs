@@ -120,24 +120,24 @@ public static class UcteParser
             string s = Col(from, to);
             if (s.Length == 0) return null;
             if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) || !double.IsFinite(v))
-                throw Error($"{field} (columns {from}-{to}) is '{s}'; it must be a finite number");
+                throw Error(FormattableString.Invariant($"{field} (columns {from}-{to}) is '{s}'; it must be a finite number"));
             return v;
         }
 
         public double Real(int from, int to, string field, double? dflt = null)
-            => OptReal(from, to, field) ?? dflt ?? throw Error($"{field} (columns {from}-{to}) is empty and has no default");
+            => OptReal(from, to, field) ?? dflt ?? throw Error(FormattableString.Invariant($"{field} (columns {from}-{to}) is empty and has no default"));
 
         public int? OptInt(int from, int to, string field)
         {
             string s = Col(from, to);
             if (s.Length == 0) return null;
             if (!int.TryParse(s, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int v))
-                throw Error($"{field} (columns {from}-{to}) is '{s}'; it must be a whole number");
+                throw Error(FormattableString.Invariant($"{field} (columns {from}-{to}) is '{s}'; it must be a whole number"));
             return v;
         }
 
         public int Int(int from, int to, string field)
-            => OptInt(from, to, field) ?? throw Error($"{field} (columns {from}-{to}) is empty");
+            => OptInt(from, to, field) ?? throw Error(FormattableString.Invariant($"{field} (columns {from}-{to}) is empty"));
     }
 
     private static readonly string[] BlockOrder = { "##C", "##N", "##L", "##T", "##R", "##TT", "##E" };
@@ -172,8 +172,8 @@ public static class UcteParser
                 }
                 string key = head.StartsWith("##C", StringComparison.Ordinal) ? "##C" : head;
                 int at = Array.IndexOf(BlockOrder, key);
-                if (at < 0) throw new Line(i + 1, cur ?? "header", raw).Error($"'{head}' is not a UCTE-DEF block (##C, ##N, ##L, ##T, ##R, ##TT, ##E)");
-                if (at <= order) throw new Line(i + 1, key, raw).Error($"block {key} comes after {BlockOrder[order]}; UCTE-DEF blocks come in the order {string.Join(", ", BlockOrder)}, each once");
+                if (at < 0) throw new Line(i + 1, cur ?? "header", raw).Error(FormattableString.Invariant($"'{head}' is not a UCTE-DEF block (##C, ##N, ##L, ##T, ##R, ##TT, ##E)"));
+                if (at <= order) throw new Line(i + 1, key, raw).Error(FormattableString.Invariant($"block {key} comes after {BlockOrder[order]}; UCTE-DEF blocks come in the order {string.Join(", ", BlockOrder)}, each once"));
                 order = at;
                 cur = key;
                 continue;
@@ -196,11 +196,11 @@ public static class UcteParser
             if (l.Text.Length < 8) throw l.Error("a node record must start with its 8-character node code");
             string code = l.Text[..8];
             if (code.Trim().Length == 0) throw l.Error("the node code is blank");
-            if (busOf.ContainsKey(code)) throw l.Error($"node '{code}' is defined twice");
+            if (busOf.ContainsKey(code)) throw l.Error(FormattableString.Invariant($"node '{code}' is defined twice"));
             if (!NominalKv.TryGetValue(code[6], out double kv))
-                throw l.Error($"node '{code}': voltage level code '{code[6]}' (the 7th character) is not one of 0-9");
+                throw l.Error(FormattableString.Invariant($"node '{code}': voltage level code '{code[6]}' (the 7th character) is not one of 0-9"));
             int status = l.Int(23, 23, "status");
-            if (status is not (0 or 1)) throw l.Error($"status is {status}; a node is 0 (real) or 1 (equivalent)");
+            if (status is not (0 or 1)) throw l.Error(FormattableString.Invariant($"status is {status}; a node is 0 (real) or 1 (equivalent)"));
             busOf[code] = busOf.Count + 1;
             baseKv.Add(kv);
             nodeLines.Add(l);
@@ -220,27 +220,27 @@ public static class UcteParser
         int off = 0, couplers = 0, zeroZ = 0;
         (int Bus, string Code) NodeOf(Line l, int from, string field)
         {
-            string code = l.Text.Length >= from + 7 ? l.Text.Substring(from - 1, 8) : throw l.Error($"{field} (columns {from}-{from + 7}) is missing");
-            return busOf.TryGetValue(code, out int b) ? (b, code) : throw l.Error($"{field} '{code}' is not a node of this file");
+            string code = l.Text.Length >= from + 7 ? l.Text.Substring(from - 1, 8) : throw l.Error(FormattableString.Invariant($"{field} (columns {from}-{from + 7}) is missing"));
+            return busOf.TryGetValue(code, out int b) ? (b, code) : throw l.Error(FormattableString.Invariant($"{field} '{code}' is not a node of this file"));
         }
         void Unique(Line l, string a, string b, string ord)
         {
             if (seen.TryGetValue((a, b, ord), out int prior) || seen.TryGetValue((b, a, ord), out prior))
-                throw l.Error($"element {a} - {b} order '{ord}' is defined twice (also at line {prior})");
+                throw l.Error(FormattableString.Invariant($"element {a} - {b} order '{ord}' is defined twice (also at line {prior})"));
             seen[(a, b, ord)] = l.Number;
         }
         foreach (Line l in blocks["##L"])
         {
             (int i, string ci) = NodeOf(l, 1, "node 1");
             (int j, string cj) = NodeOf(l, 10, "node 2");
-            if (i == j) throw l.Error($"both ends are node '{ci}'");
+            if (i == j) throw l.Error(FormattableString.Invariant($"both ends are node '{ci}'"));
             string ord = l.Col(19, 19);
             Unique(l, ci, cj, ord);
             int status = l.Int(21, 21, "status");
-            if (status is not (0 or 1 or 2 or 7 or 8 or 9)) throw l.Error($"status is {status}; a line is 0, 1, 2, 7, 8 or 9");
+            if (status is not (0 or 1 or 2 or 7 or 8 or 9)) throw l.Error(FormattableString.Invariant($"status is {status}; a line is 0, 1, 2, 7, 8 or 9"));
             if (status is 7 or 8 or 9) { off++; continue; }
             double kvi = baseKv[i - 1], kvj = baseKv[j - 1];
-            if (kvi != kvj) throw l.Error($"a line joins nodes of different nominal voltages ({kvi} kV and {kvj} kV); a transformer belongs in ##T");
+            if (kvi != kvj) throw l.Error(FormattableString.Invariant($"a line joins nodes of different nominal voltages ({kvi} kV and {kvj} kV); a transformer belongs in ##T"));
             double zb = kvi * kvi / BaseMva;
             double r = l.Real(23, 28, "R", 0), x = l.Real(30, 35, "X", 0), b = l.Real(37, 44, "B", 0);
             if (status == 0 && (r < 0 || x < 0)) throw l.Error("R and X of a real element must not be negative");
@@ -267,7 +267,7 @@ public static class UcteParser
             (_, string ci) = NodeOf(l, 1, "node 1");
             (_, string cj) = NodeOf(l, 10, "node 2");
             string ord = l.Col(19, 19);
-            if (!regulation.TryAdd((ci, cj, ord), l)) throw l.Error($"transformer {ci} - {cj} order '{ord}' has a second regulation record");
+            if (!regulation.TryAdd((ci, cj, ord), l)) throw l.Error(FormattableString.Invariant($"transformer {ci} - {cj} order '{ord}' has a second regulation record"));
         }
 
         // ---- Transformers -------------------------------------------------------------------------------------------
@@ -281,15 +281,15 @@ public static class UcteParser
         {
             (int n1, string c1) = NodeOf(l, 1, "node 1");
             (int n2, string c2) = NodeOf(l, 10, "node 2");
-            if (n1 == n2) throw l.Error($"both windings are on node '{c1}'");
+            if (n1 == n2) throw l.Error(FormattableString.Invariant($"both windings are on node '{c1}'"));
             string ord = l.Col(19, 19);
             Unique(l, c1, c2, ord);
             int status = l.Int(21, 21, "status");
-            if (status is not (0 or 1 or 8 or 9)) throw l.Error($"status is {status}; a transformer is 0, 1, 8 or 9");
+            if (status is not (0 or 1 or 8 or 9)) throw l.Error(FormattableString.Invariant($"status is {status}; a transformer is 0, 1, 8 or 9"));
             used.Add((c1, c2, ord));
             if (status is 8 or 9) { xfOff++; continue; }
             double u1 = l.Real(23, 27, "rated voltage 1"), u2 = l.Real(29, 33, "rated voltage 2");
-            if (!(u1 > 0) || !(u2 > 0)) throw l.Error($"rated voltages must be above 0 kV (U1 {u1}, U2 {u2})");
+            if (!(u1 > 0) || !(u2 > 0)) throw l.Error(FormattableString.Invariant($"rated voltages must be above 0 kV (U1 {u1}, U2 {u2})"));
             double r = l.Real(41, 46, "R", 0), x = l.Real(48, 53, "X", 0), b = l.Real(55, 62, "B", 0), g = l.Real(64, 69, "G", 0);
             if (status == 0 && (r < 0 || x < 0)) throw l.Error("R and X of a real element must not be negative");
             if (r == 0 && x == 0) throw l.Error("R and X are both 0; a transformer must have an impedance");
@@ -313,12 +313,12 @@ public static class UcteParser
             keys.Add(new UcteBranchKey("transformer", c1, c2, ord));
         }
         foreach ((string, string, string) k in regulation.Keys)
-            if (!used.Contains(k)) throw regulation[k].Error($"the regulation record names transformer {k.Item1} - {k.Item2} order '{k.Item3}', which ##T does not define");
+            if (!used.Contains(k)) throw regulation[k].Error(FormattableString.Invariant($"the regulation record names transformer {k.Item1} - {k.Item2} order '{k.Item3}', which ##T does not define"));
         if (tablesUsed > 0)
         {
             if (!options.AllowUnmodelled)
                 throw new InvalidDataException($"UCTE-DEF case '{caseName}' has {tablesUsed} transformer(s) in operation with special transformer tables (##TT, first at line {tablesFirst}); GridSim does not model tap-dependent impedances, so its power flow would differ from the file's. Read it with unmodelled devices allowed (gridsim: --allow-unmodelled) to use the transformers' own impedances.");
-            notes.Add($"{tablesUsed} transformer(s) have special transformer tables (##TT) that are read past and NOT modelled (unmodelled devices allowed); their own impedances are used.");
+            notes.Add(FormattableString.Invariant($"{tablesUsed} transformer(s) have special transformer tables (##TT) that are read past and NOT modelled (unmodelled devices allowed); their own impedances are used."));
         }
 
         // ---- Buses and generators -----------------------------------------------------------------------------------
@@ -328,7 +328,7 @@ public static class UcteParser
             int id = k + 1;
             int type = l.Int(25, 25, "node type");
             if (type == 1) throw l.Error("node type 1 (Q and angle held) has no GridSim equivalent; only 0 (PQ), 2 (PV) and 3 (slack) are read");
-            if (type is not (0 or 2 or 3)) throw l.Error($"node type is {type}; it must be 0, 1, 2 or 3");
+            if (type is not (0 or 2 or 3)) throw l.Error(FormattableString.Invariant($"node type is {type}; it must be 0, 1, 2 or 3"));
             double kv = baseKv[k];
             double pl = l.Real(34, 40, "active load", 0), ql = l.Real(42, 48, "reactive load", 0);
             double? pg = l.OptReal(50, 56, "active generation"), qg = l.OptReal(58, 64, "reactive generation");
@@ -342,7 +342,7 @@ public static class UcteParser
             double vm = 1.0;
             if (type != 0)
             {
-                if (vref is not double v || !(v > 0)) throw l.Error($"a type {type} node holds its voltage, so its voltage reference must be above 0 kV");
+                if (vref is not double v || !(v > 0)) throw l.Error(FormattableString.Invariant($"a type {type} node holds its voltage, so its voltage reference must be above 0 kV"));
                 vm = v / kv;
             }
             if (type == 3) slack++;
@@ -356,8 +356,8 @@ public static class UcteParser
                 // Bug hunt 2026-10-29, finding 54 (decided, documented): limits the wrong way round are refused, not swapped.
                 // Some TSO exports do invert the two (powsybl swaps them with a warning), but which value was meant as
                 // the minimum is a guess, so the case is refused naming both values and the remedy.
-                if (pmin > pmax) throw l.Error($"the permissible generation gives a minimum {pmin} MW above the maximum {pmax} MW (production is negative in UCTE-DEF); some exports invert the two columns, so swap them in the file if that is what was meant");
-                if (qmin > qmax) throw l.Error($"the permissible reactive generation gives a minimum {qmin} MVAr above the maximum {qmax} MVAr (production is negative in UCTE-DEF)");
+                if (pmin > pmax) throw l.Error(FormattableString.Invariant($"the permissible generation gives a minimum {pmin} MW above the maximum {pmax} MW (production is negative in UCTE-DEF); some exports invert the two columns, so swap them in the file if that is what was meant"));
+                if (qmin > qmax) throw l.Error(FormattableString.Invariant($"the permissible reactive generation gives a minimum {qmin} MVAr above the maximum {qmax} MVAr (production is negative in UCTE-DEF)"));
                 gens.Add(new Generator(id, Pg: 0.0 - (pg ?? 0), Qg: 0.0 - (qg ?? 0), Vg: vm, Qmin: qmin, Qmax: qmax, Pmin: pmin, Pmax: pmax,
                     MBase: BaseMva, Name: meta[id].Code.Trim()));
             }
@@ -365,14 +365,14 @@ public static class UcteParser
                 Name: meta[id].Code.Trim()));
         }
         if (slack == 0) throw new InvalidDataException($"UCTE-DEF case '{caseName}' has no slack (type 3) node; the power flow would be singular.");
-        if (slack > 1) notes.Add($"{slack} slack (type 3) nodes; treating as a multi-island system (the format allows one).");
-        if (xnodes > 0) notes.Add($"{xnodes} X-node(s) (boundary nodes) are buses with their written load and generation as fixed injections.");
-        if (equivalents > 0) notes.Add($"{equivalents} equivalent node(s) (status 1) are read as ordinary nodes.");
-        if (off > 0 || xfOff > 0) notes.Add($"skipped {off} line(s) or coupler(s) and {xfOff} transformer(s) out of operation.");
-        if (couplers > 0) notes.Add($"{couplers} busbar coupler(s) in operation are branches of X = {ZeroImpedanceXPu.ToString("R", CultureInfo.InvariantCulture)} pu.");
-        if (zeroZ > 0) notes.Add($"{zeroZ} line(s) have R = X = 0; given X = {ZeroImpedanceXPu.ToString("R", CultureInfo.InvariantCulture)} pu.");
-        if (regulated > 0) notes.Add($"{regulated} transformer(s) are at a tap off neutral (##R); the taps stay at n', and any regulated voltage or flow target is not applied.");
-        if (blocks["##E"].Count > 0) notes.Add($"{blocks["##E"].Count} exchange schedule record(s) (##E) read past (scheduling data, not network).");
+        if (slack > 1) notes.Add(FormattableString.Invariant($"{slack} slack (type 3) nodes; treating as a multi-island system (the format allows one)."));
+        if (xnodes > 0) notes.Add(FormattableString.Invariant($"{xnodes} X-node(s) (boundary nodes) are buses with their written load and generation as fixed injections."));
+        if (equivalents > 0) notes.Add(FormattableString.Invariant($"{equivalents} equivalent node(s) (status 1) are read as ordinary nodes."));
+        if (off > 0 || xfOff > 0) notes.Add(FormattableString.Invariant($"skipped {off} line(s) or coupler(s) and {xfOff} transformer(s) out of operation."));
+        if (couplers > 0) notes.Add(FormattableString.Invariant($"{couplers} busbar coupler(s) in operation are branches of X = {ZeroImpedanceXPu.ToString("R", CultureInfo.InvariantCulture)} pu."));
+        if (zeroZ > 0) notes.Add(FormattableString.Invariant($"{zeroZ} line(s) have R = X = 0; given X = {ZeroImpedanceXPu.ToString("R", CultureInfo.InvariantCulture)} pu."));
+        if (regulated > 0) notes.Add(FormattableString.Invariant($"{regulated} transformer(s) are at a tap off neutral (##R); the taps stay at n', and any regulated voltage or flow target is not applied."));
+        if (blocks["##E"].Count > 0) notes.Add(FormattableString.Invariant($"{blocks["##E"].Count} exchange schedule record(s) (##E) read past (scheduling data, not network)."));
 
         double freq = options.FrequencyHz ?? AssumedFrequencyHz;
         if (options.FrequencyHz is null) notes.Add(FormattableString.Invariant($"UCTE-DEF carries no system frequency; assumed {AssumedFrequencyHz:0.##} Hz (the European interconnected system)."));
@@ -408,15 +408,15 @@ public static class UcteParser
         if (phase)
         {
             if (du1 is null || n1 is null || p1 is null) throw l.Error("phase regulation needs du, n and n' (columns 21-25, 27-28, 30-32)");
-            if (n1 < 0 || Math.Abs(p1.Value) > n1) throw l.Error($"phase regulation tap n' {p1} is outside -n..n (n {n1})");
+            if (n1 < 0 || Math.Abs(p1.Value) > n1) throw l.Error(FormattableString.Invariant($"phase regulation tap n' {p1} is outside -n..n (n {n1})"));
             ratio = 1.0 + p1.Value * du1.Value / 100.0;
-            if (!(ratio > 0)) throw l.Error($"phase regulation gives a ratio factor of {ratio}; it must be above 0");
+            if (!(ratio > 0)) throw l.Error(FormattableString.Invariant($"phase regulation gives a ratio factor of {ratio}; it must be above 0"));
         }
         if (angle)
         {
             if (du2 is null || theta is null || n2 is null || p2 is null) throw l.Error("angle regulation needs du, theta, n and n' (columns 40-44, 46-50, 52-53, 55-57)");
-            if (n2 < 0 || Math.Abs(p2.Value) > n2) throw l.Error($"angle regulation tap n' {p2} is outside -n..n (n {n2})");
-            if (type.Length > 0 && type is not ("ASYM" or "SYMM")) throw l.Error($"angle regulation type is '{type}'; it must be ASYM or SYMM");
+            if (n2 < 0 || Math.Abs(p2.Value) > n2) throw l.Error(FormattableString.Invariant($"angle regulation tap n' {p2} is outside -n..n (n {n2})"));
+            if (type.Length > 0 && type is not ("ASYM" or "SYMM")) throw l.Error(FormattableString.Invariant($"angle regulation type is '{type}'; it must be ASYM or SYMM"));
             if (phase && p1 != 0 && p2 != 0)
                 throw l.Error("both phase and angle regulation are stepped off neutral; GridSim's transformer cannot combine the two");
             double step = p2.Value * du2.Value / 100.0, rad = theta.Value * Math.PI / 180.0;

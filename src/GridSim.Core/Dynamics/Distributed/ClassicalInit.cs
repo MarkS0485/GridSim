@@ -247,7 +247,8 @@ public static class ClassicalInit
             int count = genCountByBus.GetValueOrDefault(gen.Bus, 1);
             double share = Math.Abs(schedP) > MinScheduledShareMw ? gen.Pg / schedP : 1.0 / Math.Max(1, count);
             double qShare = count <= 1 ? share : QWeight(gen) / qWeightByBus[gen.Bus];
-            return new Complex(busGenP * share, busGenQ * qShare) / baseMva;
+            double pOut = count > 1 && SubtransientInit.MixedSignSlackBusP(model, gen, busGenP, schedP) is double mixed ? mixed : busGenP * share;   // DP-23
+            return new Complex(pOut, busGenQ * qShare) / baseMva;
         }
 
         // Held units: their solved injection as a constant (negative-load) admittance at their bus.

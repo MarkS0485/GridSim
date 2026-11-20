@@ -109,8 +109,12 @@ may show CRLF).
 
 NESO publishes two reduced GB models as DIgSILENT PowerFactory files. Neither is on disk, both need a browser download
 from neso.energy (not reachable from the build environment), and NESO's redistribution terms for them are not stated
-on the pages, so GridSim has no importer for them yet: a PowerFactory DGS importer will be written only against a
-real exported file, never against the format description alone.
+on the pages, so they are not bundled. GridSim now has a PowerFactory DGS importer (`gridsim dgs-import`, RC4 R4-11 part C), written from
+the public DGS format description and tested only on synthetic hand-written files: it carries the provenance tag
+`FormatFromPublicDescription`, refuses what it cannot confirm, and lists every unsupported class by name. (This replaces the earlier
+stance that an importer would be written only against a real exported file; the owner's decision 5 supersedes it for the build.)
+Acceptance on a real project (an import that reproduces the CGMES and RAW import of the same project), the DGS write and round
+trip, and the migration report on real data remain AWAITING FILES.
 
 | Model | Where | What to fetch |
 |---|---|---|
@@ -120,6 +124,6 @@ real exported file, never against the format description alone.
 To enable the work, put the files (unchanged, with their original names) in `data/reference-inbox/neso-gb-reduced-28/`
 and `data/reference-inbox/neso-gb-36/` (a folder outside the bundled data tree, so nothing is shipped by accident), and,
 if PowerFactory is available, also a DGS export of each model (File > Export > DGS, ASCII, all element classes). The
-`.pfdx` will then be probed (zip / XML container or opaque binary) and the importer written against the DGS export.
+`.pfdx` will then be probed (zip / XML container or opaque binary) and the importer checked and extended against the DGS export.
 `docs/reference/models/S267-2508.08945v1.pdf` (the GB-36 open dataset paper, arXiv 2508.08945) uses the NESO
 PowerFactory model but contains no network data tables, so it cannot stand in for the files.

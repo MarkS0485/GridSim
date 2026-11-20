@@ -326,6 +326,8 @@ GridSim.Web.Site.AccessControl accessControl = new(accessRoles.AnonymousRole, ac
         ? GridSim.Web.Site.AccessDenialAudit.None
         : new GridSim.Web.Site.AccessDenialAudit(realtimeAudit, realtimeAuditOptions));
 builder.Services.AddSingleton(accessControl);
+// RC4: the script console (/console). Its role gate and limits are WebScriptConsole's; it uses the catalogue, the access control and the solve limits registered above.
+builder.Services.AddSingleton(new GridSim.Web.Site.WebScriptConsole(catalog, accessControl, webLimits));
 Console.Error.WriteLine($"GridSim.Web: access control: {accessControl.Description}");
 if (accessControl.AnonymousRole > GridSim.Core.Security.OperationRole.Viewer && !hostAllow.LoopbackOnly && !replayOnly)
     Console.Error.WriteLine($"GridSim.Web: WARNING {GridSim.Web.Site.AccessControl.AnonymousRoleSetting}={accessControl.AnonymousRole} lets ANY anonymous caller "
@@ -369,7 +371,17 @@ if (securityHeaders.Hsts && !app.Environment.IsDevelopment())
 app.Use(async (ctx, next) =>
 {
     string host = ctx.Request.Host.Value ?? "";
-    if (!hostAllow.IsAllowed(host))
+    // APP-02: the container health probe is pinned to "Host: localhost" from inside the container. Once AllowedHosts names
+    // only the public host that probe would be refused and the instance marked unhealthy. A loopback Host name is therefore
+    // answered when the TCP peer is itself loopback and the request carries no proxy header (a request relayed by a
+    // reverse proxy has an X-Forwarded-* or Forwarded header). A rebinding page still fails: its Host is the attacker's
+    // name, never a loopback name. The list itself (and so LoopbackOnly and the anonymous role) is unchanged.
+    bool loopbackProbe = ctx.Connection.RemoteIpAddress is { } peer && System.Net.IPAddress.IsLoopback(peer)
+        && GridSim.Web.Site.HostAllowList.IsLoopbackName(host)
+        && !ctx.Request.Headers.ContainsKey("X-Forwarded-For")
+        && !ctx.Request.Headers.ContainsKey("X-Forwarded-Host")
+        && !ctx.Request.Headers.ContainsKey("Forwarded");
+    if (!loopbackProbe && !hostAllow.IsAllowed(host))
     {
         ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
         ctx.Response.ContentType = "text/plain; charset=utf-8";
@@ -425,6 +437,17 @@ if (replayOnly)
                     "Not available: this is a replay-only instance (GridSim:ReplayOnly=true), which offers only the raw public-data replay.");
                 return;
             }
+        }
+        // RC4 R4-10: the workbench is a live model solve too (it runs studies), so a replay-only instance answers 404 for it as well.
+        // RC4: the script console runs solves and engines too, so a replay-only instance answers 404 for it as well.
+        if (ctx.Request.Path.StartsWithSegments("/workbench", StringComparison.OrdinalIgnoreCase)
+            || ctx.Request.Path.StartsWithSegments("/console", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Response.StatusCode = StatusCodes.Status404NotFound;
+            ctx.Response.ContentType = "text/plain; charset=utf-8";
+            await Microsoft.AspNetCore.Http.HttpResponseWritingExtensions.WriteAsync(ctx.Response,
+                "Not available: this is a replay-only instance (GridSim:ReplayOnly=true), which offers only the raw public-data replay.");
+            return;
         }
         await next();
     });

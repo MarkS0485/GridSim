@@ -92,18 +92,23 @@ public static class MultiPhaseGridModelAdapter
             Add(zip.Bp * b.Pd, zip.Bq * b.Qd, PhaseLoadModel.ConstantCurrent, " (I)");
             Add(zip.Ap * b.Pd, zip.Aq * b.Qd, PhaseLoadModel.ConstantImpedance, " (Z)");
         }
-        foreach (Generator g in model.Generators)
+        var loadOrd = new List<int>(); // 1-based ordinal of the source record behind each load id, for the AN-23 de-duplication
+        for (int gi = 0; gi < model.Generators.Count; gi++)
         {
+            Generator g = model.Generators[gi];
             if (g.Bus == slack.Id) continue;
             // A unit at a PQ bus injects its scheduled output: a constant-power load of minus that.
             var s = new Complex(-g.Pg / baseMva, -g.Qg / baseMva);
             if (s == Complex.Zero) continue;
             loads.Add(new PhaseLoad(g.Bus, new[] { s, s, s }));
             loadIds.Add($"generator at bus {g.Bus}");
+            while (loadOrd.Count < loadIds.Count - 1) loadOrd.Add(0);
+            loadOrd.Add(gi + 1);
         }
 
         var branches = new List<PhaseBranch>();
         var branchIds = new List<string>();
+        var branchOrd = new List<int>();
         var branchKinds = new List<string>();
         for (int k = 0; k < model.Branches.Count; k++)
         {
@@ -118,8 +123,14 @@ public static class MultiPhaseGridModelAdapter
             PhaseImpedance? y = br.B != 0 ? PhaseImpedance.Diagonal(new Complex(0.0, br.B)) : null;
             branches.Add(new PhaseBranch(br.From, br.To, PhaseImpedance.Diagonal(z), Phase.Abc, y));
             branchIds.Add(br.Name ?? $"#{k + 1}");
+            branchOrd.Add(k + 1);
             branchKinds.Add(br.IsTransformer ? "transformer" : "line");
         }
+
+        // AN-23: element ids must be unique (the v2 reader refuses duplicates). Ids already unique keep their spelling.
+        while (loadOrd.Count < loadIds.Count) loadOrd.Add(0);
+        MakeUnique(loadIds, loadOrd);
+        MakeUnique(branchIds, branchOrd);
 
         var mp = new MultiPhaseModel(buses, branches, loads, baseMva, caps);
         // The sweep reports a non-radial or disconnected model; refuse it here so the adapter never hands one on.
@@ -149,5 +160,23 @@ public static class MultiPhaseGridModelAdapter
         {
             CapacitorIds = capIds,
         };
+    }
+
+    /// <summary>
+    /// AN-23: make every id in <paramref name="ids"/> unique. An id that is already unique keeps its spelling; ids that
+    /// repeat get " (#ordinal)" of their source record (and a further "'" if even that collides).
+    /// </summary>
+    private static void MakeUnique(List<string> ids, List<int> ordinals)
+    {
+        var count = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (string id in ids) count[id] = count.TryGetValue(id, out int c) ? c + 1 : 1;
+        var used = new HashSet<string>(ids.Where(i => count[i] == 1), StringComparer.Ordinal);
+        for (int i = 0; i < ids.Count; i++)
+        {
+            if (count[ids[i]] == 1) continue;
+            string cand = $"{ids[i]} (#{(ordinals[i] > 0 ? ordinals[i] : i + 1)})";
+            while (!used.Add(cand)) cand += "'";
+            ids[i] = cand;
+        }
     }
 }

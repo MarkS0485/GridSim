@@ -1,0 +1,2191 @@
+{
+  "timestampUtc": "2026-11-15T11:20:32.092641+00:00",
+  "runType": "measurement",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "python": "3.12.10",
+  "processor": "Intel64 Family 6 Model 190 Stepping 0, GenuineIntel",
+  "logicalCpus": 8,
+  "powerMode": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+  "threadSettings": {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "JULIA_NUM_THREADS": "1"
+  },
+  "case": "case1354pegase.m",
+  "caseSha256": "1b08b25a2f6c1d540d090009dfaff41ff2b05784a2d8d302a7ad695821557b89",
+  "startCaseSha256": "c8ba81c0b368ef1e5725f2a462193c33f47519ea493b7213f8a025f0a99b0dfd",
+  "gridSimCommit": "240edcc92410faef602d27cae51b7d5fb9fec68d",
+  "driverSha256": "57377482705908ee58b818607ec7ef698aacd1f80d5a87df6968f7ab0db54cb9",
+  "gridSimCoreSha256": "736b58f20cbdb1c22b1ed153941671fda93f889e13db760ac59ac9d17977eca7",
+  "gridSimBuildConfiguration": "Debug",
+  "harnessSourceSha256": {
+    "run.py": "b4c0b4d54fd2ec235a71929410148575d8a01d8300f9c9c521f5eac05fcecc60",
+    "case_reference.py": "3b5b1a40865d5fd5433c432e7d5f6225d2d4c590f973080e917f8a1879cd6fe6",
+    "external.py": "9a9f981e637a8b37ddb070d163c82438649aa8cab957387b32410483747ef1de",
+    "python_worker.py": "66849776656cd170d73f3e6075bd9346748ffdaec4d5a978024f930cecbafb45",
+    "matpower_worker.m": "8cc48ff1f7ada6b162304a2a8e2143710f1a4a959b61537d29b404387ecda076",
+    "powermodels_worker.jl": "3050916dc707d21c44499714f062e7fccf2020ffb812e9f42261be767f562341",
+    "driver/Program.cs": "8e80dfc35f3b5069247ebaf72fadf9448a8c981d76a4242e4406d7b991587242",
+    "driver/BenchmarkDriver.csproj": "dcf5e2ff407f05b5995fcf56ccf88ce4d29d2678f20072d118bd12bd70a9fd8d",
+    "run-benchmark.ps1": "5cc496b370bddabc755c7bd40da04bec44b3692c82c0860404c95ef60c42c9df",
+    "requirements.in": "98cbf25e49d62e9895c054acf39b4dc5ce05469fbc3e25cf2fdb719157599d73",
+    "requirements-windows-py312.lock": "80d4bac46bfd760875a2b081d3b77e712a9181e7f3c4e5619a71182b654ffa00",
+    "julia-env/Project.toml": "5d2439db2ae3821006381242f88403689778b9ede887c251ffeff6b14e0e2df1",
+    "julia-env/Manifest.toml": "cd0dc0829f4947fba01692b07cdae44f9323d3cb0a18e5b82ee65848f51d72ca",
+    "verify_bundle.py": "16653f3dee2823f78404d1098596213d2847a508e7bb4ddc5ffe1deab1e29136",
+    "prepare_docs.py": "68d1985a17a86010db93681b68e07567a1d394e133ac0a207b89b7b20803ade8"
+  },
+  "paths": [
+    {
+      "mode": "dense",
+      "command": [
+        "dotnet",
+        "<benchmarks-dir>/driver/bin/Debug/net10.0/BenchmarkDriver.dll",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "dense",
+        "<benchmarks-dir>/measurement-20261115-111634/dense",
+        "240edcc92410faef602d27cae51b7d5fb9fec68d"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 3501.3525,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 3142.6756,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 3551.9818,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 3605.2943,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 3220.9938,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 3163.7318,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 3161.2615,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 3323.5773,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 3177.7265,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 3177.7534,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        }
+      ],
+      "exitCode": 0,
+      "repeatDifferences": [],
+      "importDifferences": [],
+      "audits": [
+        {
+          "attempt": 1,
+          "export": "export-01.json",
+          "sha256": "7a498651430c8c6bad922239ec3574ac7881da124cca4420f3a3b0171a549c5e",
+          "audit": "audit-01.json",
+          "exitCode": 0
+        }
+      ]
+    },
+    {
+      "mode": "sparse",
+      "command": [
+        "dotnet",
+        "<benchmarks-dir>/driver/bin/Debug/net10.0/BenchmarkDriver.dll",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "sparse",
+        "<benchmarks-dir>/measurement-20261115-111634/sparse",
+        "240edcc92410faef602d27cae51b7d5fb9fec68d"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 52.778,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 50.9324,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 51.507,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 55.4713,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 51.7184,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 51.3333,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 50.1955,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 56.2829,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 55.5188,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 51.8979,
+          "converged": true,
+          "iterations": 6,
+          "referenceMismatchPu": [
+            5.707256889309065e-12,
+            2928,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ]
+        }
+      ],
+      "exitCode": 0,
+      "repeatDifferences": [],
+      "importDifferences": [],
+      "audits": [
+        {
+          "attempt": 1,
+          "export": "export-01.json",
+          "sha256": "a4cfac22618757c1c4db0d59db76fa4b2b2c08a88d961aa25b414a5d397d8655",
+          "audit": "audit-01.json",
+          "exitCode": 0
+        }
+      ]
+    },
+    {
+      "mode": "matpower",
+      "command": [
+        "<benchmarks-dir>/octave-runtime/octave-11.3.0-w64/mingw64/bin/octave-cli.exe",
+        "--no-init-file",
+        "--quiet",
+        "<repo>/benchmarks/free-ac-power-flow/matpower_worker.m",
+        "<benchmarks-dir>/matpower-8.1",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/matpower"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 229.91299629211426,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 224.98297691345215,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 224.00999069213867,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 225.91018676757812,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 238.4040355682373,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 223.2491970062256,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 226.59897804260254,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 234.80510711669922,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 221.00400924682617,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 219.1920280456543,
+          "converged": true,
+          "iterations": 5,
+          "version": "8.1",
+          "runtime": "11.3.0",
+          "referenceMismatchPu": [
+            2.830518042173935e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9140
+          ],
+          "referenceResidualPassed": true,
+          "nativeVsReferenceBranchFlows": {
+            "fromMw": [
+              6.447426707106851e-11,
+              633
+            ],
+            "fromMvar": [
+              1.9772605774903695e-10,
+              295
+            ],
+            "toMw": [
+              6.447430523498499e-11,
+              633
+            ],
+            "toMvar": [
+              1.9772516957061725e-10,
+              295
+            ]
+          }
+        }
+      ],
+      "exitCode": 0
+    },
+    {
+      "mode": "pandapower",
+      "command": [
+        "<user-profile>\\AppData\\Local\\GridSimBenchmarkPython\\Scripts\\python.exe",
+        "<repo>/benchmarks/free-ac-power-flow/python_worker.py",
+        "pandapower",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/pandapower"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 57.8518,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 54.6233,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 53.77,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 57.3814,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 53.0587,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 53.5378,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 54.6387,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 55.0105,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 54.3762,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 56.0154,
+          "converged": true,
+          "iterations": 5,
+          "version": "3.5.6",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            6.287024234552519e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            6.661338147750939e-16,
+            8225
+          ],
+          "referenceResidualPassed": true
+        }
+      ],
+      "exitCode": 0,
+      "convertedInput": {
+        "file": "converted-ppc.npz",
+        "sha256": "8d971788603b91507a1e584b2203ff4b1d2bcc8c37499f23298cb2891f88a026"
+      }
+    },
+    {
+      "mode": "pypsa",
+      "command": [
+        "<user-profile>\\AppData\\Local\\GridSimBenchmarkPython\\Scripts\\python.exe",
+        "<repo>/benchmarks/free-ac-power-flow/python_worker.py",
+        "pypsa",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/pypsa"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 1261.9002,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 1263.9767,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 1249.9451,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 1268.8955,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 1356.0397,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 1247.5651,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 1325.2625,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 1261.8359,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 1267.4647,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 1263.1426,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.2.4",
+          "iterationLimit": 100,
+          "referenceMismatchPu": [
+            1.086334577848902e-11,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        }
+      ],
+      "exitCode": 0,
+      "convertedInput": {
+        "file": "converted-ppc.npz",
+        "sha256": "8d971788603b91507a1e584b2203ff4b1d2bcc8c37499f23298cb2891f88a026"
+      }
+    },
+    {
+      "mode": "veragrid",
+      "command": [
+        "<user-profile>\\AppData\\Local\\GridSimBenchmarkPython\\Scripts\\python.exe",
+        "<repo>/benchmarks/free-ac-power-flow/python_worker.py",
+        "veragrid",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/veragrid"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 96.819,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 94.8521,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 92.8544,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 94.314,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 100.1716,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 97.9238,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 100.3693,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 95.2071,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 93.4856,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 95.4337,
+          "converged": true,
+          "iterations": 5,
+          "version": "6.8.4",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            5.119460411151522e-12,
+            6475,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            2.220446049250313e-16,
+            9180
+          ],
+          "referenceResidualPassed": true
+        }
+      ],
+      "exitCode": 0
+    },
+    {
+      "mode": "powsybl",
+      "command": [
+        "<user-profile>\\AppData\\Local\\GridSimBenchmarkPython\\Scripts\\python.exe",
+        "<repo>/benchmarks/free-ac-power-flow/python_worker.py",
+        "powsybl",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/powsybl"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 170.3906,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 141.4289,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 202.225,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 157.2714,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 216.8617,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 70.4978,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 78.3272,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 79.8381,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 159.4421,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 158.3214,
+          "converged": true,
+          "iterations": 5,
+          "version": "1.16.1",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            2.1670842897947296e-12,
+            5589,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        }
+      ],
+      "exitCode": 0,
+      "convertedInput": {
+        "file": "case1354pegase.mat",
+        "sha256": "ed6083d9d78225a292ab37043c7000e1269903f145e05887da7019a703cc53d8"
+      }
+    },
+    {
+      "mode": "andes",
+      "command": [
+        "<user-profile>\\AppData\\Local\\GridSimBenchmarkPython\\Scripts\\python.exe",
+        "<repo>/benchmarks/free-ac-power-flow/python_worker.py",
+        "andes",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/andes"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 31.3655,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 31.1914,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 32.5907,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 31.3412,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 31.9653,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 33.0801,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 31.6313,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 30.8028,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 30.7668,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 31.2137,
+          "converged": true,
+          "iterations": 5,
+          "version": "2.0.0",
+          "iterationLimit": 50,
+          "referenceMismatchPu": [
+            0.0012603176506581803,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            8.060219158778636e-14,
+            4231
+          ],
+          "referenceResidualPassed": false,
+          "regularisedModelMismatchPu": [
+            4.837801270696218e-12,
+            960,
+            "Q"
+          ]
+        }
+      ],
+      "exitCode": 0,
+      "modelDifference": "ANDES adds 1e-8 pu to line resistance and reactance."
+    },
+    {
+      "mode": "powermodels",
+      "command": [
+        "<benchmarks-dir>/julia-1.10.12/bin/julia.exe",
+        "--startup-file=no",
+        "--project=<benchmarks-dir>/julia-env",
+        "<repo>/benchmarks/free-ac-power-flow/powermodels_worker.jl",
+        "<benchmarks-dir>/measurement-20261115-111634/input/case1354pegase.m",
+        "<benchmarks-dir>/measurement-20261115-111634/powermodels"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "elapsedMs": 127.9087,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 2,
+          "elapsedMs": 83.7769,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 3,
+          "elapsedMs": 81.4011,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 4,
+          "elapsedMs": 78.777,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 5,
+          "elapsedMs": 76.6242,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 6,
+          "elapsedMs": 77.4817,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 7,
+          "elapsedMs": 82.7653,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 8,
+          "elapsedMs": 73.5297,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 9,
+          "elapsedMs": 69.9324,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        },
+        {
+          "attempt": 10,
+          "elapsedMs": 69.5881,
+          "converged": true,
+          "version": "0.21.7",
+          "iterations": null,
+          "referenceMismatchPu": [
+            4.825722044188296e-12,
+            960,
+            "Q"
+          ],
+          "referenceVoltageTargetErrorPu": [
+            0.0,
+            9180
+          ],
+          "referenceResidualPassed": true
+        }
+      ],
+      "exitCode": 0
+    }
+  ],
+  "crossPathDifferences": [],
+  "differencesFromMatpower": {
+    "dense": {
+      "voltagePu": [
+        4.085620730620576e-14,
+        5131
+      ],
+      "angleDeg": [
+        1.1812772982011666e-12,
+        4402
+      ],
+      "fromMw": [
+        1.531035298540928e-10,
+        1206
+      ],
+      "fromMvar": [
+        2.669026666346497e-10,
+        634
+      ],
+      "toMw": [
+        1.531035298540928e-10,
+        1206
+      ],
+      "toMvar": [
+        2.6690299970155706e-10,
+        634
+      ]
+    },
+    "sparse": {
+      "voltagePu": [
+        4.085620730620576e-14,
+        5131
+      ],
+      "angleDeg": [
+        1.1812772982011666e-12,
+        4402
+      ],
+      "fromMw": [
+        1.531035298540928e-10,
+        1206
+      ],
+      "fromMvar": [
+        2.669026666346497e-10,
+        634
+      ],
+      "toMw": [
+        1.531035298540928e-10,
+        1206
+      ],
+      "toMvar": [
+        2.6690299970155706e-10,
+        634
+      ]
+    },
+    "pandapower": {
+      "voltagePu": [
+        2.3092638912203256e-14,
+        4402
+      ],
+      "angleDeg": [
+        2.597033699203166e-12,
+        7885
+      ],
+      "fromMw": [
+        2.3912027913297607e-10,
+        1206
+      ],
+      "fromMvar": [
+        5.614708697976312e-10,
+        353
+      ],
+      "toMw": [
+        2.391196129991613e-10,
+        1206
+      ],
+      "toMvar": [
+        5.614460008018796e-10,
+        353
+      ]
+    },
+    "pypsa": {
+      "voltagePu": [
+        3.774758283725532e-14,
+        903
+      ],
+      "angleDeg": [
+        2.149391775674303e-12,
+        1584
+      ],
+      "fromMw": [
+        1.9628820790984491e-10,
+        1206
+      ],
+      "fromMvar": [
+        3.914806256943848e-10,
+        600
+      ],
+      "toMw": [
+        1.9628798586524e-10,
+        1206
+      ],
+      "toMvar": [
+        3.9102587834349833e-10,
+        600
+      ]
+    },
+    "veragrid": {
+      "voltagePu": [
+        8.748557434046234e-14,
+        4885
+      ],
+      "angleDeg": [
+        3.666400516522117e-12,
+        4355
+      ],
+      "fromMw": [
+        1.844284724938916e-10,
+        1205
+      ],
+      "fromMvar": [
+        4.126263775106054e-10,
+        601
+      ],
+      "toMw": [
+        1.8454215933161322e-10,
+        1205
+      ],
+      "toMvar": [
+        4.121432084502885e-10,
+        601
+      ]
+    },
+    "powsybl": {
+      "voltagePu": [
+        2.042810365310288e-14,
+        3817
+      ],
+      "angleDeg": [
+        4.671818487622659e-12,
+        903
+      ],
+      "fromMw": [
+        1.1846978953400367e-10,
+        295
+      ],
+      "fromMvar": [
+        2.2149038159113843e-10,
+        600
+      ],
+      "toMw": [
+        1.1846990055630613e-10,
+        295
+      ],
+      "toMvar": [
+        2.2137669475341681e-10,
+        600
+      ]
+    },
+    "andes": {
+      "voltagePu": [
+        4.259480277379879e-07,
+        747
+      ],
+      "angleDeg": [
+        0.0001327503347020522,
+        8748
+      ],
+      "fromMw": [
+        0.06145770603188794,
+        600
+      ],
+      "fromMvar": [
+        0.06762592437459602,
+        600
+      ],
+      "toMw": [
+        0.061441077763220164,
+        600
+      ],
+      "toMvar": [
+        0.06727673072242624,
+        600
+      ]
+    },
+    "powermodels": {
+      "voltagePu": [
+        5.262457136723242e-14,
+        4402
+      ],
+      "angleDeg": [
+        2.582822844487964e-12,
+        401
+      ],
+      "fromMw": [
+        1.962340290262432e-10,
+        1206
+      ],
+      "fromMvar": [
+        4.21323420596309e-10,
+        601
+      ],
+      "toMw": [
+        1.9623369595933582e-10,
+        1206
+      ],
+      "toMvar": [
+        4.210960469208658e-10,
+        601
+      ]
+    }
+  },
+  "changedHarnessFiles": []
+}

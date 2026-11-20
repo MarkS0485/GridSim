@@ -34,7 +34,10 @@ public sealed class App : Application
         // A desktop head gets the main window; the headless test platform has no lifetime of this kind and opens the
         // window itself, so nothing is shown here in that case.
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            AppCrashHandling.InstallUiHandler();   // APP-07: a UI-thread fault writes the crash log before the app ends
             desktop.MainWindow = new MainWindow();
+        }
 
         base.OnFrameworkInitializationCompleted();
     }

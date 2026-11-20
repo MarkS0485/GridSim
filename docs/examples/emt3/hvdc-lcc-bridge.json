@@ -1,0 +1,21 @@
+{
+  "schema": "gridsim-emt3/1",
+  "time_step_s": 1e-5,
+  "duration_s": 0.1,
+  "sample_every": 10,
+  "frequency_hz": 50,
+  "buses": [],
+  "hvdc": [
+    {
+      "name": "G", "kind": "lcc",
+      "v_ll_rms": 10000, "frequency_hz": 50, "commutation_l_h": 5e-3, "source_r_ohm": 1e-3, "pulses": 6,
+      "alpha_deg": 20, "alpha_steps": [{ "at_s": 0.06, "alpha_deg": 35 }],
+      "load": { "r_ohm": 30, "l_h": 0.2 }
+    }
+  ],
+  "outputs": [
+    { "name": "dc_current_a", "kind": "dc-current", "target": "G" },
+    { "name": "dc_positive_v", "kind": "dc-voltage-positive", "target": "G" },
+    { "name": "dc_negative_v", "kind": "dc-voltage-negative", "target": "G" }
+  ]
+}

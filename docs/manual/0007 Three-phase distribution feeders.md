@@ -752,6 +752,57 @@ naming the source and `[VERIFY]`; set the tag before relying on the file. The v2
 form cannot, and exits 3 when the written file does not read back to the same feeder. Every mode reads a v2 feeder as
 it reads a v1 one, and `gridsim validate <file>` checks one against the schema and the reader.
 
+### Regulators, banks and capacitors in the meshed solver
+
+`dist3ph` is the radial sweep. `dist3ph-mesh` ([ch. 19](<0019 CLI reference.md#dist3ph-mesh>)) solves any topology in the explicit
+phase frame, and its case file takes three kinds of element the sweep handles in its own way: `regulators` (step-voltage
+regulators, wye, open delta or closed delta, with fixed taps or a line-drop-compensator tap search), `banks` (three-phase
+transformer banks: grounded wye / grounded wye, delta / grounded wye, wye / delta, delta / delta and the two open connections)
+and `capacitors` (shunt banks). A step of a steps file switches a capacitor bank in or out. A small case, a 1000 V source
+behind a line of 1 + j2 ohm feeding a 10 ohm load and a 20 kvar capacitor bank, with a step that takes the bank out:
+
+```bash
+gridsim dist3ph-mesh cap.json --steps steps.json
+```
+
+```
+$ gridsim dist3ph-mesh cap.json --steps steps.json
+dist3ph-mesh - capacitor example: 2 node(s), 1 branch(es), 2 load(s), 2 step(s)
+  [bank-out] CONVERGED; 1 iteration(s); current mismatch 1.78E-015 A
+    S        a       1000.0000 V      0.0000 deg
+    L        a        894.4272 V    -10.3048 deg
+  [bank-in] CONVERGED; 1 iteration(s); current mismatch 2.42E-014 A
+    S        a       1000.0000 V      0.0000 deg
+    L        a        923.7112 V    -11.7251 deg
+[exit 0]
+```
+
+The bank-out voltage is the divider `1000 x 10 / (11 + j2)` = 894.43 V. With the bank in, the load admittance gains
+`j 20000 / 1000^2` = j0.02 S and the voltage rises to 923.71 V. The bank is a constant-impedance leg that the load factors do not
+scale. The case file's members, the tap search and the exit codes are in the CLI reference. `dist3ph` itself is unchanged: it has
+no tap search and no capacitor switching.
+
+Two builders from the meshed solver serve networks the sweep cannot hold. A North American 120/240 V service is a
+`split_phase_sources` entry (or a `centre_tap_transformers` unit fed from a primary node) with a neutral wire `n` in the service
+branch: the neutral current is the sum of the two line currents, and balanced halves leave it at zero. A single-wire earth-return
+line is a `swer` case: the load current returns through the earth, the earth-return impedance comes from the line constants (a 40 km
+line of a 1 ohm/km conductor at 100 ohm-m has a resistance above the conductor's own 40 ohm), and the loop equation
+`E = I (Z_line + R_source_earth + R_load_earth + Z_load)` gives the current. The member lists are in the CLI reference.
+
+A feeder you already have as a `dist3ph` file does not need rewriting as a mesh case: `dist3ph-mesh --from-dist3ph <feeder.json>`
+lifts it, transformers and step-voltage regulators included, into the phase frame and solves it there. The IEEE 123-node feeder,
+whose switches need a small impedance, is:
+
+```bash
+gridsim dist3ph-mesh --from-dist3ph data/dist3ph/ieee123.json --switch-z-pu 1e-6
+```
+
+The voltages agree with the published IEEE profile within 6e-4 per unit and 0.06 degree, the bounds the sweep is held to, and the
+four regulators are listed in the `regulators` table at the taps in the file. A feeder with a delta secondary is solved with its first
+wire pinned as the reference, and a note says so; compare those nodes line to line. A feeder the frame cannot carry is listed element by
+element and not solved (exit 1). The mesh solver takes the taps as written: the compensator tap search applies to a mesh case
+with an `ldc` member, not to a lifted feeder.
+
 ### Result files
 
 `--json <file>`, `--csv <file>` and `--out <file>` write the study's figures at full precision in addition to the
@@ -870,8 +921,8 @@ verb are in [ch. 19](<0019 CLI reference.md#parsing-rules-and-exit-codes>).
 - The verb is experimental and its banner says so.
 - The transformer connections are `gy-gy`, `d-gy`, `y-d`, `d-d`, `oy-od` (step-down only) and `od-od`; magnetising
   branches are refused. Only the sweep models a connection other than `gy-gy`.
-- A regulator has fixed taps. There is no regulator control, line-drop compensator or voltage band, and no capacitor
-  switching.
+- In `dist3ph` a regulator has fixed taps. There is no regulator control, line-drop compensator or voltage band, and no
+  capacitor switching. `dist3ph-mesh` has the compensator tap search (single solves) and switches capacitor banks by step.
 - A switch has no impedance, and there is no distributed load along a line.
 - The feeder must be one radial tree with one source and no generation in a feeder file. A meshed feeder, a second
   source and a distributed generator are not supported.

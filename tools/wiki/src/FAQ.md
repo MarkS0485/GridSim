@@ -2,12 +2,21 @@
 
 ## Is GridSim open source?
 
-No. It is source-available, proprietary software: you can read the code, but [LICENSE.md]({{REPO}}/blob/main/LICENSE.md)
-governs its use. Releases published before version 1.3.0 were under the GNU GPL v3.0-or-later and remain available
-under that licence. For what you may do with the current version, read the licence itself. Licensing is measured
-on buses and nothing else; the manual explains how it works in practice
-([Licensing and activation]({{SITE}}manual/0004%20Licensing%20and%20activation/)). It works offline and, with no licence
-installed, GridSim runs at the free Personal tier.
+No. It is source-available, not open source: you can read the code, but GridSim requires a licence and
+[LICENSE.md]({{REPO}}/blob/main/LICENSE.md) governs its use. Releases published before version 1.3.0 were under the
+GNU GPL v3.0-or-later and remain available under that licence. The licence terms set out tiers measured on buses and
+nothing else; with no licence installed, GridSim runs at the free Personal tier (every bundled network, and user networks
+of up to 1,500 buses). The manual explains how it works in practice
+([Licensing and activation]({{SITE}}manual/0004%20Licensing%20and%20activation/)), and it all works offline.
+
+## Does a licence cost anything?
+
+Not at present. At present licences are issued gratis: no payment is required for any tier, and there is no present
+intention to charge. Anyone who emails mark@gridsimdigitaltwin.co.uk for a licence today receives a Network Operator (DNO)
+licence, which has no restrictions. That is not a promise that licences will always be gratis; GridSim ships with a
+licence mechanism so that the terms can be applied if that is ever needed, for example to support its development.
+The licence covers the software, not Mark's time: support, custom work or other commitments on your terms need a
+separate agreement and compensation.
 
 ## What data does it use?
 
@@ -37,8 +46,17 @@ what your machine offers. GPU arithmetic is outside the bit-identity contract. S
 
 ## Which platforms are supported?
 
-Release builds exist for Windows x64 and Linux x64. There is no macOS build in RC-1; Mac users build from source (see
-[Install](Install)). The WPF desktop app is Windows only; the Avalonia desktop app has Windows and Linux builds.
+The command line tool has release builds for Windows x64, Linux x64 and macOS arm64 (Apple silicon). The WPF desktop
+app is Windows only; the Avalonia desktop app has Windows and Linux builds, and Mac users build it from source (see
+[Install](Install)).
+
+## Is GridSim validated?
+
+No. Nothing in GridSim is validated, at any scale. Its author is an HPC engineer, not an electrical engineer, and his
+role is the code. The core solvers are cross-checked against independent open-source tools and published solutions,
+which shows the same equations were solved the same way; it does not show that a model matches a real power system.
+GridSim claims no accuracy, no parity with any commercial tool and no fitness for production use. Results you obtain,
+whether they agree or not, are welcome at mark@gridsimdigitaltwin.co.uk.
 
 ## Do I need to install .NET?
 
@@ -46,7 +64,7 @@ Not for the release binaries, which are self-contained. Building from source nee
 
 ## How do I report a bug?
 
-Email gdatooling@proton.me with the output of `gridsim --version`, your operating system, the exact command, the case
+Email mark@gridsimdigitaltwin.co.uk with the output of `gridsim --version`, your operating system, the exact command, the case
 (or a small case that shows the problem), and what you expected. The manual lists exactly what to send under
 [How to report a problem]({{SITE}}manual/0030%20Troubleshooting/#how-to-report-a-problem).
 
@@ -54,7 +72,7 @@ Email gdatooling@proton.me with the output of `gridsim --version`, your operatin
 
 Do not use a public issue or a discussion. Report it privately through the repository's Security tab
 ([Report a vulnerability]({{REPO}}/security/advisories/new)), or email the security contact of record,
-`gdatooling@proton.me`. The [security policy]({{REPO}}/blob/main/SECURITY.md) says how a report is assessed
+`mark@gridsimdigitaltwin.co.uk`. The [security policy]({{REPO}}/blob/main/SECURITY.md) says how a report is assessed
 (CVSS base scores, recorded), the 48-hour remediation target for a base score of 7.0 or above, how fixes ship, and how
 to receive security notices (watch the repository for Releases and Discussions). The
 [security governance document]({{REPO}}/blob/main/docs/assurance/security-governance.md) covers ownership and review.
@@ -67,7 +85,7 @@ version and the project URL ({{REPO}}). Get the version from `gridsim --version`
 
 ## Where do I ask questions?
 
-Ask in [GitHub Discussions]({{REPO}}/discussions) (the Q&A category), or email gdatooling@proton.me. Start with the
+Ask in [GitHub Discussions]({{REPO}}/discussions) (the Q&A category), or email mark@gridsimdigitaltwin.co.uk. Start with the
 [user manual]({{SITE}}manual/0000%20Contents/) and [Troubleshooting](Troubleshooting).
 
 ## Can I use it on my own network model?

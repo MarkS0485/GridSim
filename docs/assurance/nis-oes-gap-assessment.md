@@ -563,7 +563,7 @@ confirmed by a release test run, so B5 is Partial.
   `Audit:LogPath`) is recorded as an `AvailabilityDegraded` security event, which becomes an incident when
   `--incident-log` / `Audit:IncidentLogPath` is set (7.1). The `/health` endpoint itself raises nothing; it answers 503
   on a breach. There is no degraded-mode fallback to a last-good estimate: a failing window is skipped and counted, and
-  the resident loop carries on (`RealtimeEstimatorOptions.ContinueOnError`). Capacity SLOs by scale come from the benchmark corpus (`docs/developer/benchmarks/benchmark-results.md`): the
+  the resident loop carries on (`RealtimeEstimatorOptions.ContinueOnError`). Capacity SLOs by scale come from the benchmark corpus (`docs/developer/benchmarks/history/bench-and-perf-yardsticks/benchmark-results.md`): the
   estimator's dense/sparse crossover and per-window solve time bound the achievable window latency.
 
 **Restriction constraint.** Availability of a *historical* estimator is a resilience property of an
@@ -767,6 +767,6 @@ tabletop.
   `EstimationResult.cs` -- the estimator, measurement equation, input, and result contract.
 - `src/GridSim.Core/Simulation/RealtimeEstimatorEngine.cs` -- the resident, guard-safe streaming loop.
 - `docs/validation/solver-validation-report.md`, `tools/crossval/crossval_estimation.py`,
-  `docs/developer/benchmarks/benchmark-results.md` -- the machine-epsilon cross-check and capacity evidence base.
+  `docs/developer/benchmarks/history/bench-and-perf-yardsticks/benchmark-results.md` -- the machine-epsilon cross-check and capacity evidence base.
 - NIS Regulations 2018 (Regulations 10, 11, 15-18); NCSC Cyber Assessment Framework (Objectives
   A-D); Ofgem energy-sector CAF profile for downstream electricity.

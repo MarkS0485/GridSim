@@ -1,3 +1,3 @@
 $ gridsim results/networks-tmp/mycase9241.m --once
-error: This network has 9,241 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+error: This network has 9,241 buses; your Personal licence allows 1,500. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 [exit 2]

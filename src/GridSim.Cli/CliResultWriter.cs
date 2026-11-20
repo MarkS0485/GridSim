@@ -385,7 +385,7 @@ internal static class CliOutput
     /// </summary>
     public static readonly IReadOnlySet<string> WriterVerbs = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
-        "dcopf", "acopf", "cpf", "taps", "ptdf", "lodf", "iec60909", "fault", "protection-check", "grade",
+        "dcopf", "acopf", "cpf", "taps", "ptdf", "lodf", "iec60909", "g74", "ansi-sc", "sc-dc", "sc-61363", "modal-full", "fault", "protection-check", "grade",
         "nminus1", "n-1", "nminus2", "n-2", "n-1-1", "nminus1minus1", "cycle", "freq", "domains", "dist3ph",
         "losses", "physics-check", "experimental", "dcpf", "convert", "validate",
         "zonal",   // S2 / P02 (October 2026): the PyPSA-GB zonal transport model
@@ -399,13 +399,32 @@ internal static class CliOutput
         "inertia-placement", // 2026-10-25: the inertia placement study (InertiaPlacementStudy)
         "qsts",       // P2-2: the quasi-static time series (QstsEngine)
         "hosting",    // P2-2: hosting capacity (HostingCapacity)
+        "sensitivity", "qv-curve", "pv-contingency", "dc-contingency", "fault-level-n1",   // R4-03
+        "line-constants",   // R4-04: line constants from geometry
+        "dist3ph-mesh",     // R4-15: meshed unbalanced load flow in the phase frame
+        "emt3",   // R4-16: three-phase EMT depth A (nodal solver: FD lines, saturation, arresters)
+        "devices-check", "fault-line", "sc-trace", "protection-audit",   // R4-07
+        "fault-series", "fault-simultaneous",   // RC4 (last candidate): open-conductor and simultaneous shunt faults
+        "substation-state",   // R4-11a: node-breaker switch states projected to a bus-branch case
+        "cgmes-export", "cgmes-conform",   // R4-11b: CGMES per-profile export and bundle conformity run
+        // RC4 (last candidate): the study verbs that already had a result document of their own. They take --json / --csv through
+        // the shared writer (CliResultFromJson); their own --out keeps naming their own result file (see VerbsWithoutOut).
+        "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",
+        "study-case", "case-diff", "result-diff", "report",
     };
 
     /// <summary>
-    /// Writer verbs that do NOT take --out: convert, whose second positional argument is already its output (the
-    /// converted case), so "--out" next to it would read as a third way to name that output. It takes --json / --csv.
+    /// Writer verbs whose --out is NOT the shared writer's: convert, whose second positional argument is already its output
+    /// (the converted case), so "--out" next to it would read as a third way to name that output; and the RC4 study verbs
+    /// whose --out has always named their own result file or folder (a study result, a diff, a report, an import folder),
+    /// which must keep meaning exactly that. All of them take the shared --json / --csv.
     /// </summary>
-    public static readonly IReadOnlySet<string> VerbsWithoutOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "convert" };
+    public static readonly IReadOnlySet<string> VerbsWithoutOut = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "convert",
+        "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",
+        "study-case", "case-diff", "result-diff", "report",
+    };
 
     /// <summary>The report the running verb fills; null when no result file was asked for (the usual case).</summary>
     public static CliResult? Report { get; private set; }

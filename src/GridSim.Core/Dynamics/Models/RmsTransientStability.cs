@@ -564,11 +564,26 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     // [Vrmin, Vrmax] for IEEET1 (whose regulator output at equilibrium is Vr = (Ke + Se)*Efd).
     private readonly double _min, _max;
 
+    // R4-08: a user-defined (declarative) controller, when this exciter wraps one instead of a coded AVR. It carries its own
+    // stabiliser path, so Stabiliser is null. Null for every coded exciter: no coded path reads it.
+    private readonly IRmsFieldController? _user;
+
     private RmsExciter(Sexs? sexs, Ieeet1? ieeet1, double gain, double ke, double aex, double bex,
-        double min, double max, Pss1a? stabiliser, string kind, AcExciter? ac = null, Esst4b? st4b = null)
+        double min, double max, Pss1a? stabiliser, string kind, AcExciter? ac = null, Esst4b? st4b = null,
+        IRmsFieldController? user = null)
     {
         _sexs = sexs; _ieeet1 = ieeet1; _ac = ac; _st4b = st4b; _gain = gain; _ke = ke; _aex = aex; _bex = bex;
-        _min = min; _max = max; Stabiliser = stabiliser; Kind = kind;
+        _min = min; _max = max; Stabiliser = stabiliser; Kind = kind; _user = user;
+    }
+
+    /// <summary>R4-08: wrap a user-defined controller (a declarative model of role exciter, see
+    /// <c>GridSim.Core.Dynamics.UserModels</c>) so the RMS studies take it where they take a coded exciter. The controller
+    /// owns the whole chain (a stabiliser is part of its diagram), so there is no separate PSS1A.</summary>
+    public static RmsExciter FromUser(IRmsFieldController controller, string kind)
+    {
+        ArgumentNullException.ThrowIfNull(controller);
+        ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+        return new RmsExciter(null, null, 1.0, 0.0, 0.0, 0.0, double.NegativeInfinity, double.PositiveInfinity, null, kind, null, null, controller);
     }
 
     /// <summary>True for an exciter that reads the field current (EXAC1, ESAC1A, ESST4B).</summary>
@@ -647,6 +662,7 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     {
         if (!double.IsFinite(fieldVoltagePu))
             throw new ArgumentOutOfRangeException(nameof(fieldVoltagePu), $"Initial field {fieldVoltagePu} is not finite.");
+        if (_user is not null) { _user.Initialize(fieldVoltagePu); return; }
         if (_ac is not null || _st4b is not null)
         {
             // Each checks its own limits at the equilibrium (field current = field voltage); ESST4B on its first step,
@@ -670,7 +686,8 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     /// <c>Efd = K*Verr</c>, so <c>Verr = Efd/K</c>. IEEET1: <c>Ka*Verr = Vr = (Ke + Se)*Efd</c> with the rate
     /// feedback washed out, so <c>Verr = (Ke + Se)*Efd/Ka</c>. The PSS adds nothing in steady state.</summary>
     public double EquilibriumErrorPu(double fieldVoltagePu) =>
-        _ac is not null ? _ac.EquilibriumErrorPu(fieldVoltagePu)
+        _user is not null ? _user.EquilibriumErrorPu(fieldVoltagePu)
+        : _ac is not null ? _ac.EquilibriumErrorPu(fieldVoltagePu)
         : _st4b is not null ? _st4b.EquilibriumErrorPu(fieldVoltagePu)
         : LimitedQuantity(fieldVoltagePu) / _gain;
 
@@ -678,6 +695,7 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     /// summing junction, and the AVR returns the field voltage to hold across the step.</summary>
     public double Step(double voltageErrorPu, double speedDeviationPu, double dtSeconds)
     {
+        if (_user is not null) return _user.Step(voltageErrorPu, speedDeviationPu, dtSeconds);
         if (_ac is not null || _st4b is not null)
             throw new InvalidOperationException($"{Kind} reads the machine's field current; the caller must use the step that supplies it.");
         double vs = Stabiliser is null ? 0.0 : Stabiliser.Step(speedDeviationPu, dtSeconds);

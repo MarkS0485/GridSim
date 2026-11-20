@@ -212,7 +212,13 @@ public enum RedispatchOutcome
 /// action, by name (lines as "branch NAME", boundaries as "boundary NAME").</param>
 /// <param name="LpStatus">The last LP's status; null when no LP ran.</param>
 public sealed record CorrectiveRedispatch(
-    RedispatchOutcome Outcome, GridModel Model, double MovedMw, IReadOnlyList<string> OverloadedBefore, LpStatus? LpStatus);
+    RedispatchOutcome Outcome, GridModel Model, double MovedMw, IReadOnlyList<string> OverloadedBefore, LpStatus? LpStatus)
+{
+    /// <summary>AN-03: the overloaded elements (same naming as <see cref="OverloadedBefore"/>) that no generator can move
+    /// and that are therefore still over their limit after an <see cref="RedispatchOutcome.Applied"/> redispatch. Empty
+    /// when every overload was relieved.</summary>
+    public IReadOnlyList<string> UnrelievedAfter { get; init; } = Array.Empty<string>();
+}
 
 /// <summary>
 /// N-k security screening: take one element (N-1), a pair (N-2) or an arbitrary set out of
@@ -275,12 +281,35 @@ public static partial class ContingencyAnalysis
     /// <summary>The <see cref="ContingencyResult.Outage"/> label of <see cref="ScreenBaseCase"/>.</summary>
     public const string BaseCaseLabel = "base case";
 
+    /// <summary>AN-02: the indices of the branches that are in service, in branch order. An out-of-service branch is
+    /// already out: removing it again gives the base case, so no outage screen enumerates it.</summary>
+    public static int[] InServiceBranchIndices(GridModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        var list = new List<int>(model.Branches.Count);
+        for (int i = 0; i < model.Branches.Count; i++) if (model.Branches[i].InService) list.Add(i);
+        return list.ToArray();
+    }
+
+    /// <summary>AN-02: an explicitly named outage of a branch that is already out of service is refused by name.</summary>
+    internal static void RequireInServiceOutages(GridModel model, IEnumerable<int> indices, string paramName)
+    {
+        foreach (int i in indices)
+            if (i >= 0 && i < model.Branches.Count && !model.Branches[i].InService)
+            {
+                Branch b = model.Branches[i];
+                throw new ArgumentException(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                    $"branch {i} ({(string.IsNullOrEmpty(b.Name) ? $"{b.From}-{b.To}" : b.Name)}) is out of service: removing it is not an outage."), paramName);
+            }
+    }
+
     public static IReadOnlyList<ContingencyResult> ScreenBranches(
         GridModel model, IPowerFlowSolver? solver = null, PowerFlowOptions? options = null)
     {
         solver ??= SolverSelector.CreateNewton(model);   // shared dense/sparse rule (was always dense; R004)
-        var results = new List<ContingencyResult>(model.Branches.Count);
-        for (int i = 0; i < model.Branches.Count; i++)
+        int[] live = InServiceBranchIndices(model);   // AN-02
+        var results = new List<ContingencyResult>(live.Length);
+        foreach (int i in live)
             results.Add(ScreenOutageCore(model, new[] { i }, solver, options));
         return results;
     }
@@ -299,7 +328,8 @@ public static partial class ContingencyAnalysis
         solverFactory ??= () => SolverSelector.CreateNewton(model);   // shared dense/sparse rule (was always dense; R004)
         // Which branches to outage: all of them, or a caller-supplied subset (for sampling the
         // largest systems where a full N-1 sweep would blow the time budget).
-        int[] idx = branchIndices?.ToArray() ?? Enumerable.Range(0, model.Branches.Count).ToArray();
+        int[] idx = branchIndices?.ToArray() ?? InServiceBranchIndices(model);   // AN-02
+        if (branchIndices is not null) RequireInServiceOutages(model, idx, nameof(branchIndices));
         var results = new ContingencyResult[idx.Length];
         using var local = new ThreadLocal<IPowerFlowSolver>(solverFactory);
         var po = new ParallelOptions
@@ -352,7 +382,8 @@ public static partial class ContingencyAnalysis
     {
         if (k < 1) throw new ArgumentOutOfRangeException(nameof(k), k, "contingency depth k must be >= 1");
         solverFactory ??= () => SolverSelector.CreateNewton(model);   // shared dense/sparse rule (was always dense; R004)
-        int n = model.Branches.Count;
+        int[] live = InServiceBranchIndices(model);   // AN-02: an out-of-service branch is not a candidate
+        int n = live.Length;
         var none = Array.Empty<ContingencyResult>();
         if (k > n) return new NkScreenReport(none, none) { Note = NkScreenReport.TooFewBranches(n, k) };
         if (k == 1) return new NkScreenReport(ScreenBranchesParallel(model, solverFactory, options, maxDegreeOfParallelism, null, ct), none);
@@ -362,13 +393,13 @@ public static partial class ContingencyAnalysis
         IReadOnlyList<ContingencyResult> excluded = none;
         if (exhaustive)
         {
-            candidates = Enumerable.Range(0, n).ToArray();
+            candidates = live;
         }
         else
         {
             IReadOnlyList<ContingencyResult> single =
                 ScreenBranchesParallel(model, solverFactory, options, maxDegreeOfParallelism, null, ct);
-            candidates = RankCandidates(single, candidateCount, k, out excluded);
+            candidates = RankCandidates(single, candidateCount, k, out excluded).Select(i => live[i]).ToArray();
         }
 
         // Enumerate the k-subsets of the candidate set.
@@ -445,7 +476,8 @@ public static partial class ContingencyAnalysis
         bool defaultAction = correctiveAction is null;   // GR-621: the default action reports its outcome
         correctiveAction ??= RedispatchToRelieve;
         solverFactory ??= () => SolverSelector.CreateNewton(model);   // shared dense/sparse rule (was always dense; R004)
-        int n = model.Branches.Count;
+        int[] live = InServiceBranchIndices(model);   // AN-02
+        int n = live.Length;
         var none = Array.Empty<ContingencyResult>();
         if (n < 2) return new NkScreenReport(none, none) { Note = NkScreenReport.TooFewBranches(n, 2) };
 
@@ -454,13 +486,13 @@ public static partial class ContingencyAnalysis
         IReadOnlyList<ContingencyResult> excluded = none;
         if (exhaustive)
         {
-            candidates = Enumerable.Range(0, n).ToArray();
+            candidates = live;
         }
         else
         {
             IReadOnlyList<ContingencyResult> single =
                 ScreenBranchesParallel(model, solverFactory, options, maxDegreeOfParallelism, null, ct);
-            candidates = RankCandidates(single, candidateCount, 2, out excluded);
+            candidates = RankCandidates(single, candidateCount, 2, out excluded).Select(i => live[i]).ToArray();
         }
 
         // Corrective operating point per first outage: remove A, redispatch the post-contingency network,
@@ -600,13 +632,13 @@ public static partial class ContingencyAnalysis
             Generator gen = model.Generators[i];
             if (!double.IsFinite(gen.Pg))
                 throw new InvalidDataException(
-                    $"Corrective redispatch: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pg {gen.Pg} MW; an output must be finite.");
+                    FormattableString.Invariant($"Corrective redispatch: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pg {gen.Pg} MW; an output must be finite."));
             if (!double.IsFinite(gen.Pmin))
                 throw new InvalidDataException(
-                    $"Corrective redispatch: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW; a dispatch floor must be finite.");
+                    FormattableString.Invariant($"Corrective redispatch: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW; a dispatch floor must be finite."));
             if (double.IsNaN(gen.Pmax) || gen.Pmin > gen.Pmax)
                 throw new InvalidDataException(
-                    $"Corrective redispatch: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW above Pmax {gen.Pmax} MW.");
+                    FormattableString.Invariant($"Corrective redispatch: generator {i} ('{gen.Name ?? gen.Type}' at bus {gen.Bus}) has Pmin {gen.Pmin} MW above Pmax {gen.Pmax} MW."));
             pg[i] = gen.Pg;
             pmin[i] = gen.Pmin;
             pmax[i] = double.IsInfinity(gen.Pmax) ? DcOptimalPowerFlow.UnboundedPmaxMw : gen.Pmax;
@@ -700,8 +732,17 @@ public static partial class ContingencyAnalysis
             moved += Math.Abs(newPg[i] - pg[i]);
             gens[i] = gens[i] with { Pg = newPg[i] };
         }
+        // AN-03: an element no generator can move has no LP row, so it can stay over its limit. Nothing moved and an
+        // overload left: the redispatch could do nothing (Infeasible, the input model); something moved: Applied, with
+        // the elements still over named.
+        double[] finalFlows = DcFlowsOf(model, df, newPg);
+        var unrelieved = new List<string>();
+        foreach (int e in active)
+            if (Math.Abs(elements[e].Flow(finalFlows)) > elements[e].LimitMw + RedispatchLimitToleranceMw) unrelieved.Add(elements[e].Text);
+        if (unrelieved.Count > 0 && moved == 0.0)
+            return new CorrectiveRedispatch(RedispatchOutcome.Infeasible, model, 0.0, overloadedNames, lastStatus);
         return new CorrectiveRedispatch(RedispatchOutcome.Applied, Dispatch.Dispatcher.Clone(model, generators: gens),
-            moved, overloadedNames, lastStatus);
+            moved, overloadedNames, lastStatus) { UnrelievedAfter = unrelieved };
     }
 
     /// <summary>A monitored element is over its limit, for <see cref="PlanCorrectiveRedispatch"/>, when its |DC flow|
@@ -1090,6 +1131,12 @@ public static partial class ContingencyAnalysis
 
         if (!r.Converged) return NonConverged(label, Splits(before, reduced));
 
+        // AN-06: the tap loop can stop unsettled (pass cap) without a tap at its limit; the row then is not the regulated
+        // state, and says so. A tap pinned at its limit is a settled stop the voltage check already sees.
+        string? tapNote = solver is OltcLoopPowerFlow tapLoop && !tapLoop.TapsSettled && tapLoop.TapsAtLimit.Count == 0
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"tap changers not settled after {tapLoop.OltcPasses} pass(es)")
+            : null;
+
         // LineFlows is index-aligned with the reduced model's branches; original[j] is branch j's key (D03).
         var violations = new List<string>();
         var details = new List<ContingencyViolation>();
@@ -1163,7 +1210,7 @@ public static partial class ContingencyAnalysis
             }
             if (!double.IsPositiveInfinity(worstUnder)) violations.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"undervoltage {worstUnder:F3} p.u."));
             if (!double.IsNegativeInfinity(worstOver)) violations.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"overvoltage {worstOver:F3} p.u."));
-            return new ContingencyResult(label, true, maxLoad, worstBoundary, minVm, maxVm, violations) { Details = details };
+            return new ContingencyResult(label, true, maxLoad, worstBoundary, minVm, maxVm, violations) { Details = details, Note = tapNote };
         }
 
         // The default: one operational band for every bus (unchanged code, so every existing verdict is unchanged).
@@ -1178,8 +1225,10 @@ public static partial class ContingencyAnalysis
                 details.Add(new ContingencyViolation(ContingencyViolationKind.Overvoltage, r.BusIds[i], r.Vm[i], ""));
         }
 
-        return new ContingencyResult(label, true, maxLoad, worstBoundary, minVm, maxVm, violations) { Details = details };
+        return new ContingencyResult(label, true, maxLoad, worstBoundary, minVm, maxVm, violations) { Details = details, Note = tapNote };
     }
+
+    private static string? JoinNotes(string? a, string? b) => a is null ? b : b is null ? a : a + "; " + b;
 
     /// <summary>
     /// F20: a branch's loading (percent) against its short-term (RateB) or emergency (RateC) rating: the larger end MVA,
@@ -1286,12 +1335,12 @@ public static partial class ContingencyAnalysis
                 GridModel reduced = model.CopyWith(buses: buses, generators: gens);
                 if (dispatch != OutageDispatch.ReferenceBus)   // N124: share the lost output before the re-solve
                 {
-                    (reduced, string shareNote) = ShareLostPower(reduced, gen.Pg, dispatch);
+                    (reduced, string shareNote) = ShareLostPower(reduced, gen.Pg, dispatch, new[] { gen.Bus });
                     note = note is null ? shareNote : note + "; " + shareNote;
                 }
                 int[] original = KeptIndices(model.Branches.Count, Array.Empty<int>());
-                return ScreenStateCore(label, reduced, original, solver, options, postFault: true, before: model)
-                    with { Kind = OutageKind.Generator, LostGenerationMw = gen.Pg, Note = note };
+                ContingencyResult genRow = ScreenStateCore(label, reduced, original, solver, options, postFault: true, before: model);
+                return genRow with { Kind = OutageKind.Generator, LostGenerationMw = gen.Pg, Note = JoinNotes(note, genRow.Note) };
             }
 
             case OutageKind.Bus:
@@ -1321,12 +1370,19 @@ public static partial class ContingencyAnalysis
                     return NonConverged(label, Splits(model, reduced)) with { Kind = OutageKind.Bus, LostLoadMw = bus.Pd, LostGenerationMw = lostGen, Note = note };
                 if (dispatch != OutageDispatch.ReferenceBus)   // N124: share the net lost power (generation less load)
                 {
-                    (reduced, string shareNote) = ShareLostPower(reduced, lostGen - bus.Pd, dispatch);
+                    var neighbours = new List<int>();
+                    foreach (int j in removedBranches)
+                    {
+                        Branch rb = model.Branches[j];
+                        if (!rb.InService) continue;
+                        neighbours.Add(rb.From == bus.Id ? rb.To : rb.From);
+                    }
+                    (reduced, string shareNote) = ShareLostPower(reduced, lostGen - bus.Pd, dispatch, neighbours);
                     note = note is null ? shareNote : note + "; " + shareNote;
                 }
                 int[] original = KeptIndices(model.Branches.Count, removedBranches);
-                return ScreenStateCore(label, reduced, original, solver, options, postFault: true, before: model)
-                    with { Kind = OutageKind.Bus, LostLoadMw = bus.Pd, LostGenerationMw = lostGen, Note = note };
+                ContingencyResult busRow = ScreenStateCore(label, reduced, original, solver, options, postFault: true, before: model);
+                return busRow with { Kind = OutageKind.Bus, LostLoadMw = bus.Pd, LostGenerationMw = lostGen, Note = JoinNotes(note, busRow.Note) };
             }
 
             default:
@@ -1411,7 +1467,8 @@ public static partial class ContingencyAnalysis
     /// in the solve the reference then supplies its share plus the change in losses). Returns the model with the moved
     /// dispatch and a note in words; with nothing to share (0 MW) the model is returned unchanged.</para>
     /// </summary>
-    internal static (GridModel Model, string Note) ShareLostPower(GridModel reduced, double lostMw, OutageDispatch dispatch)
+    internal static (GridModel Model, string Note) ShareLostPower(GridModel reduced, double lostMw, OutageDispatch dispatch,
+        IReadOnlyCollection<int>? islandBuses = null)
     {
         ArgumentNullException.ThrowIfNull(reduced);
         if (dispatch == OutageDispatch.ReferenceBus)
@@ -1440,6 +1497,20 @@ public static partial class ContingencyAnalysis
             if (!adjacency.TryGetValue(u, out List<int>? next)) continue;
             foreach (int v in next) if (reach.Add(v)) queue.Enqueue(v);
         }
+        // AN-01: only the part of the network that lost the power shares it. islandBuses names a bus (or the former
+        // neighbours of a removed bus) of that part; units of other islands cannot deliver to it. Null = the whole network.
+        if (islandBuses is not null)
+        {
+            var part = new HashSet<int>();
+            foreach (int s in islandBuses) if (part.Add(s)) queue.Enqueue(s);
+            while (queue.Count > 0)
+            {
+                int u = queue.Dequeue();
+                if (!adjacency.TryGetValue(u, out List<int>? next)) continue;
+                foreach (int v in next) if (part.Add(v)) queue.Enqueue(v);
+            }
+            reach.IntersectWith(part);
+        }
 
         IReadOnlyList<Generator> gens = reduced.Generators;
         int n = gens.Count;
@@ -1455,6 +1526,11 @@ public static partial class ContingencyAnalysis
             double mva = Dynamics.Models.MachineBase.EffectiveMva(g, reduced.BaseMva);
             double w = dispatch == OutageDispatch.GovernorDroop ? mva : g.H * mva;
             if (!(w > 0.0) || !double.IsFinite(w)) continue;
+            // RC4 (2.1.073): a MATPOWER case may now load with PMIN above PMAX (an OPF limit a power flow does not use);
+            // sharing within [Pmin, Pmax] needs a real range, so a participating unit with a crossed one is refused here.
+            if (g.Pmin > g.Pmax)
+                throw new ArgumentException(FormattableString.Invariant(
+                    $"Outage sharing by {how}: generator {i} ('{g.Name ?? g.Type}' at bus {g.Bus}) has Pmin {g.Pmin} MW above Pmax {g.Pmax} MW, so it has no dispatch range to share within."));
             double r = raise ? g.Pmax - g.Pg : g.Pg - g.Pmin;
             if (!(r > 0.0)) continue;   // already at (or beyond) its limit in this direction: no headroom
             weight[i] = w;

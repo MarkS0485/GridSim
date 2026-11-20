@@ -1,0 +1,9 @@
+GRAMMAR 1
+# Lose generator G2 of the WSCC 9-bus case 100 ms into a live run and watch the frequency.
+LOAD CASE "data/matpower/lib/case9.m" FREQUENCY 60 HZ
+SOLVE POWERFLOW
+EXPORT RESULT "results/outage-base.json"
+SELECT ENGINE LIVE STEP 20 MS
+AT 100 MS TRIP GENERATOR "G2"
+STEP SIM 500 MS
+REPORT SIM

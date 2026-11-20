@@ -200,7 +200,12 @@ public static class HostingCapacity
         foreach (HostingSnapshot sn in s.SnapshotsOrDefault)
             if (!(sn.LoadMultiplier >= 0) || !(sn.ResourceMultiplier >= 0) || !double.IsFinite(sn.LoadMultiplier) || !double.IsFinite(sn.ResourceMultiplier))
                 p.Add("snapshot multipliers must be finite and 0 or more.");
-        if (s.ReverseFlowBranch is { } rb && !model.Branches.Any(b => b.Name == rb)) p.Add($"reverse-flow branch '{rb}' is not in the case.");
+        if (s.ReverseFlowBranch is { } rb)
+        {
+            int rbHits = model.Branches.Count(b => b.Name == rb);
+            if (rbHits == 0) p.Add($"reverse-flow branch '{rb}' is not in the case.");
+            else if (rbHits > 1) p.Add($"{rbHits} branches are named '{rb}'; the reverse-flow branch name must match exactly one.");
+        }
         if (s.Method == HostingMethod.Qsts && s.ResourceProfile is { } rp && s.Base.Profile(rp) is null) p.Add($"resource profile '{rp}' is not defined in the base study.");
         if (p.Count > 0)
             throw new InvalidDataException($"hosting-capacity study refused ({p.Count} problem{(p.Count == 1 ? "" : "s")}):\n  - " + string.Join("\n  - ", p));
@@ -314,16 +319,16 @@ public static class HostingCapacity
         {
             baseBus.TryGetValue(v.Bus, out QstsBusViolation? b0);
             if (s.Judges(HostingConstraint.Overvoltage) && v.SecondsAbove > allowed && (b0 is null || v.PuSecondsAbove > b0.PuSecondsAbove))
-                found.Add(new HostingViolation(HostingConstraint.Overvoltage, v.Bus, v.MaxPu, $"bus {v.Bus} at {v.MaxPu:F4} pu for {v.SecondsAbove} s"));
+                found.Add(new HostingViolation(HostingConstraint.Overvoltage, v.Bus, v.MaxPu, FormattableString.Invariant($"bus {v.Bus} at {v.MaxPu:F4} pu for {v.SecondsAbove} s")));
             if (s.Judges(HostingConstraint.Undervoltage) && v.SecondsBelow > allowed && (b0 is null || v.PuSecondsBelow > b0.PuSecondsBelow))
-                found.Add(new HostingViolation(HostingConstraint.Undervoltage, v.Bus, v.MinPu, $"bus {v.Bus} at {v.MinPu:F4} pu for {v.SecondsBelow} s"));
+                found.Add(new HostingViolation(HostingConstraint.Undervoltage, v.Bus, v.MinPu, FormattableString.Invariant($"bus {v.Bus} at {v.MinPu:F4} pu for {v.SecondsBelow} s")));
         }
         if (s.Judges(HostingConstraint.Thermal))
             foreach (QstsBranchViolation v in r.BranchViolations)
             {
                 baseBr.TryGetValue(v.Branch, out QstsBranchViolation? b0);
                 if (v.SecondsOver > allowed && (b0 is null || v.PercentSecondsOver > b0.PercentSecondsOver))
-                    found.Add(new HostingViolation(HostingConstraint.Thermal, v.Branch, v.MaxPercent, $"branch {v.Name} at {v.MaxPercent:F1} % for {v.SecondsOver} s"));
+                    found.Add(new HostingViolation(HostingConstraint.Thermal, v.Branch, v.MaxPercent, FormattableString.Invariant($"branch {v.Name} at {v.MaxPercent:F1} % for {v.SecondsOver} s")));
             }
         if (s.Judges(HostingConstraint.ReversePower) && s.ReverseFlowBranch is not null)
         {
@@ -331,13 +336,13 @@ public static class HostingCapacity
             double seconds = r.Steps.Count(st => st.MonitoredPMw[0] < -s.ReverseFlowAllowanceMw) * (double)r.StepSeconds;
             double baseWorst = baseRun is null ? double.PositiveInfinity : baseRun.Steps.Min(st => st.MonitoredPMw[0]);
             if (seconds > allowed && worst < Math.Min(baseWorst, -s.ReverseFlowAllowanceMw))
-                found.Add(new HostingViolation(HostingConstraint.ReversePower, -1, -worst, $"{-worst:F3} MW back through {s.ReverseFlowBranch} for {seconds} s"));
+                found.Add(new HostingViolation(HostingConstraint.ReversePower, -1, -worst, FormattableString.Invariant($"{-worst:F3} MW back through {s.ReverseFlowBranch} for {seconds} s")));
         }
         if (s.Judges(HostingConstraint.TapOperations) && s.TapIncreasePercent is double pct && baseRun is not null)
         {
             int ops = r.TotalTapOperations, b = baseRun.TotalTapOperations;
             if (ops > b + b * pct / 100.0)
-                found.Add(new HostingViolation(HostingConstraint.TapOperations, -1, ops, $"{ops} tap operations against {b} in the base (allowance {pct} %)"));
+                found.Add(new HostingViolation(HostingConstraint.TapOperations, -1, ops, FormattableString.Invariant($"{ops} tap operations against {b} in the base (allowance {pct} %)")));
         }
         return found;
     }

@@ -1,0 +1,30 @@
+{
+  "schema": "gridsim-emt3/1",
+  "time_step_s": 5e-5,
+  "duration_s": 0.3,
+  "sample_every": 4,
+  "frequency_hz": 50,
+  "buses": ["T"],
+  "machines": [
+    {
+      "name": "G", "kind": "synchronous", "bus": "T", "neutral": "grounded",
+      "rating_mva": 100, "rated_kv_ll": 13.8,
+      "parameters": {
+        "inertia_s": 3.5, "damping_pu": 0,
+        "xd_pu": 1.8, "xdp_pu": 0.3, "xdpp_pu": 0.2, "xq_pu": 1.7, "xqp_pu": 0.5, "xqpp_pu": 0.2,
+        "tdop_s": 6.0, "tdopp_s": 0.04, "tqop_s": 0.5, "tqopp_s": 0.05,
+        "xl_pu": 0.15, "ra_pu": 0.003
+      },
+      "initial": { "mode": "no-load", "v_pu": 1.0, "angle_deg": 90 }
+    }
+  ],
+  "faults": [{ "name": "F", "bus": "T", "phases": "abc", "r_ohm": 1e-5, "at_s": 0.005 }],
+  "outputs": [
+    { "name": "ia", "kind": "current", "target": "G", "phase": "a" },
+    { "name": "ib", "kind": "current", "target": "G", "phase": "b" },
+    { "name": "ic", "kind": "current", "target": "G", "phase": "c" },
+    { "name": "speed_pu", "kind": "speed", "target": "G" },
+    { "name": "torque_pu", "kind": "torque", "target": "G" },
+    { "name": "field_current_pu", "kind": "field-current", "target": "G" }
+  ]
+}

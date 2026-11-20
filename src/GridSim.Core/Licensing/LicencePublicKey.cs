@@ -3,8 +3,8 @@ namespace GridSim.Core.Licensing;
 /// <summary>
 /// The embedded ECDSA P-256 <b>public</b> key (SubjectPublicKeyInfo, base64) that verifies licence
 /// keys entirely offline - no network call, ever. This is safe to commit and ship: a public key can
-/// only <i>verify</i> a signature, never mint one. The matching <b>private</b> key lives only in the
-/// out-of-repo forge (<c>W:\Keys\gridsim-signing-key.pem</c>, used by the forge in <c>W:\Code\GridSimLicensing</c>; rotated 2026-10-25) and is never committed.
+/// only <i>verify</i> a signature, never mint one. The matching <b>private</b> key is held offline by the
+/// maintainer (rotated 2026-10-25) and is never committed.
 ///
 /// To rotate keys: run the forge's <c>keygen</c> and paste the new public SPKI here. Keys signed by
 /// the old private key stop verifying, so rotate deliberately.

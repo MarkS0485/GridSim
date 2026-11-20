@@ -179,7 +179,7 @@ public sealed class CheckedPowerFlow : IPowerFlowSolver
 
 For a new numerical method, copy the structure of `BackwardForwardSweep` for result assembly, and
 `NewtonShell` (`src/GridSim.Core/PowerFlow/NewtonShell.cs`) for the shared step (`SolveStep`), the damped update
-(`ApplyStep`), the voltage floor (`VmFloorPu`, `0.2` pu) and the non-finite guard.
+(`ApplyStep`), the voltage floor (`VmFloorPu`, `0.01` pu; it was `0.2` pu before RC4) and the non-finite guard.
 
 **Wire it.** An engine you only construct needs no wiring. To make it selectable by name:
 
@@ -1777,6 +1777,16 @@ read the post-solve model. A threshold shared by both faces is owned by one Core
 literal mirror of it, `PresentationConstantsAntiDriftTests` pins the WPF constant equal to the web `PresentationLimits`
 value, or to the literal it replaced. It checks only `StatusLampRules.IdleInterconnectorMw` against Core, and the WPF copy
 of that one is removed.
+
+## Reaching a new capability from Python
+
+A capability added behind a CLI verb reaches Python with no extra code when the verb writes its result through the shared
+result writer: add the verb to `CliOutput.WriterVerbs` and to `WRITER_VERBS` in `python/gridsim/_cli.py` (the contract test
+keeps the two lists equal), and both `GridSim.run` and `Session.run_verb` carry it. `gridsim rpc` (protocol
+`gridsim-rpc/1`, [ch. 19 "rpc"](<0019 CLI reference.md#rpc>)) runs any verb as a child process of the host, so it needs no
+change. Add an operation to `RpcCommand.cs` only for a path that gains from holding state between calls (as `solve` holds a
+loaded case) or from running in process; give it a strict key set, an error kind and a test against the verb it mirrors, and
+list its name in `RpcCommand.Operations` (a contract test compares the list with `python/gridsim/_session.py`).
 
 ## Delivering a slice
 

@@ -3,6 +3,9 @@
 *GridSim + GDA evidence artefact, assembled 2026-07-14. Every figure carries its
 source inline; nothing here is a placeholder.*
 
+*This dossier compares one GridSim reconstruction with the published figures for one event. It is not a
+validation of GridSim; nothing in GridSim is validated, at any scale.*
+
 ---
 
 ## 1. What this document is

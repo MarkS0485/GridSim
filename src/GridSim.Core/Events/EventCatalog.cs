@@ -102,28 +102,28 @@ public static class EventCatalog
             if (e.Losses is null)
                 throw new InvalidDataException($"Event '{e.Id}' has no losses list.");
             if (e.Outcome is null)
-                throw new InvalidDataException($"Event '{e.Id}' has no recorded outcome.");
+                throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}' has no recorded outcome."));
             if (!(double.IsFinite(e.PreEventInertiaMwS) && e.PreEventInertiaMwS > 0))
-                throw new InvalidDataException($"Event '{e.Id}': preEventInertiaMwS {e.PreEventInertiaMwS} must be a finite number above 0.");
+                throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': preEventInertiaMwS {e.PreEventInertiaMwS} must be a finite number above 0."));
             if (!(double.IsFinite(e.PreEventDemandMw) && e.PreEventDemandMw > 0))
-                throw new InvalidDataException($"Event '{e.Id}': preEventDemandMw {e.PreEventDemandMw} must be a finite number above 0.");
+                throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': preEventDemandMw {e.PreEventDemandMw} must be a finite number above 0."));
             foreach (PowerStep l in e.Losses)
                 if (!(double.IsFinite(l.AtSeconds) && l.AtSeconds >= 0) || !double.IsFinite(l.DeltaPMw))
-                    throw new InvalidDataException($"Event '{e.Id}': the loss '{l.What}' at {l.AtSeconds} s of {l.DeltaPMw} MW needs a finite time of 0 s or later and a finite MW.");
+                    throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': the loss '{l.What}' at {l.AtSeconds} s of {l.DeltaPMw} MW needs a finite time of 0 s or later and a finite MW."));
             // A catalog that omits the list is a malformed event, not "no actions": refuse it by name rather than
             // fail later on a null.
             if (e.RecordedActions is null)
-                throw new InvalidDataException($"Event '{e.Id}' has no recordedActions list (write [] when the record shows none).");
+                throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}' has no recordedActions list (write [] when the record shows none)."));
             // N317 (LF6, October 2026): a recorded demand effect that cannot be applied is refused at load, naming the
             // event, rather than when a replay first runs.
             if (e.DemandEffectProblem() is { } demandEffectProblem)
                 throw new InvalidDataException(demandEffectProblem);
             foreach (RecordedAction a in e.RecordedActions)
                 if (!(double.IsFinite(a.AtSeconds) && a.AtSeconds >= 0) || !double.IsFinite(a.DeltaPMw))
-                    throw new InvalidDataException($"Event '{e.Id}': the recorded action '{a.What}' at {a.AtSeconds} s of {a.DeltaPMw} MW needs a finite time of 0 s or later and a finite MW.");
+                    throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': the recorded action '{a.What}' at {a.AtSeconds} s of {a.DeltaPMw} MW needs a finite time of 0 s or later and a finite MW."));
                 else if (a.Kind == RecordedActionKind.Unspecified)
                     throw new InvalidDataException(
-                        $"Event '{e.Id}': the recorded action at {a.AtSeconds} s ('{a.What}') has no kind. Set \"kind\" to " +
+                        FormattableString.Invariant($"Event '{e.Id}': the recorded action at {a.AtSeconds} s ('{a.What}') has no kind. Set \"kind\" to ") +
                         $"\"{nameof(RecordedActionKind.DemandDisconnection)}\" (automatic LFDD: never replayed in a counterfactual) " +
                         $"or \"{nameof(RecordedActionKind.OperatorInstruction)}\" (replaces lost energy whatever the nadir: kept " +
                         "in a counterfactual).");

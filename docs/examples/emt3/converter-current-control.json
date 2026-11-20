@@ -1,0 +1,29 @@
+{
+  "schema": "gridsim-emt3/1",
+  "time_step_s": 5e-6,
+  "duration_s": 0.06,
+  "sample_every": 20,
+  "frequency_hz": 50,
+  "buses": ["G"],
+  "sources": [{ "name": "E", "bus": "G", "v_ll_rms": 489.8979485566356, "angle_deg": 90 }],
+  "dc_buses": [{ "name": "D", "capacitance_f": 2e-3, "initial_v": 1070, "supply_v": 1100, "supply_ohm": 0.5 }],
+  "converters": [
+    {
+      "name": "C", "kind": "switched", "ac_bus": "G", "dc_bus": "D",
+      "rs_ohm": 1e-3, "roff_ohm": 1e7,
+      "pwm": { "carrier_hz": 2000, "carrier_phase": 0 },
+      "filter": { "r_ohm": 0.05, "l_h": 2e-3 },
+      "control": {
+        "bandwidth_rad_s": 628.3185307179587, "control_every": 50, "frequency_hz": 50, "phase_deg": 90,
+        "id_a": 0, "iq_a": 0, "steps": [{ "at_s": 0.02, "id_a": 100, "iq_a": 0 }]
+      }
+    }
+  ],
+  "outputs": [
+    { "name": "dc_positive_v", "kind": "dc-voltage-positive", "target": "D" },
+    { "name": "dc_negative_v", "kind": "dc-voltage-negative", "target": "D" },
+    { "name": "ia", "kind": "current", "target": "C", "phase": "a" },
+    { "name": "ib", "kind": "current", "target": "C", "phase": "b" },
+    { "name": "ic", "kind": "current", "target": "C", "phase": "c" }
+  ]
+}

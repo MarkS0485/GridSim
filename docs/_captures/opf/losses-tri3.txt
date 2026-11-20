@@ -1,7 +1,7 @@
 $ gridsim losses docs/_captures/opf/tri3
 Loss allocation - Three-bus worked example (3 buses, 3 branches)
   Total losses: 0.00 MW  (reactive: 6.08 MVAr)
-  Reconciliation residual: 1.42E-014 MW
+  Reconciliation residual: 0.00E+000 MW
 
   Zone losses:
   | Zone | P Loss MW | Q Loss MVAr | Branches |

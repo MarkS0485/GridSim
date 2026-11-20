@@ -29,16 +29,6 @@ data/uk-full/
 gda-out/
 *.gda-model.json
 
-# Unity (generated)
-unity/**/Library/
-unity/**/Temp/
-unity/**/Obj/
-unity/**/Build/
-unity/**/Logs/
-unity/**/UserSettings/
-unity/**/*.csproj
-unity/**/*.sln
-
 # viz scratch output
 viz/gridviz.json
 

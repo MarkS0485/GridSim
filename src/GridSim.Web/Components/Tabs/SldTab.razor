@@ -1,0 +1,221 @@
+@using GridSim.Core.Licensing
+@using GridSim.Core.Model
+@using GridSim.Core.Presentation.Workbench.Sld
+@using GridSim.Web.Projection
+@using GridSim.Web.Site
+@inject LicenceGate Licence
+@inject WebLimits Limits
+@implements IDisposable
+
+@* RC4 R4-18: the single-line diagram and its editor on the web client. The geometry, the colours, the SVG and every edit are the
+   Core layer's (GridSim.Core.Presentation.Workbench.Sld), projected unchanged through SldDtos, so this page and the Avalonia
+   workbench draw the same diagram from the same calls. This component is a section of the workbench route, not an entry of the
+   dashboard's tab strip (that list is pinned). Edits go to a private working copy of the case: the shared case is never opened for
+   writing; the changed files are offered as downloads. *@
+
+<div class="card sld">
+    <div class="card-h">SINGLE-LINE DIAGRAM - @CaseName</div>
+    <div class="runbar">
+        <label class="prov"><input type="checkbox" checked="@_caseLayout" @onchange="e => { _caseLayout = (bool)(e.Value ?? false); Rebuild(); }" /> placed from case</label>
+        <label class="prov">colour
+            <select class="busselect" @onchange="e => { _mode = Enum.Parse<SldColourMode>(e.Value?.ToString() ?? nameof(SldColourMode.VoltageLevel)); Rebuild(); }">
+                @foreach (SldColourMode m in Enum.GetValues<SldColourMode>()) { <option value="@m" selected="@(m == _mode)">@m</option> }
+            </select>
+        </label>
+        <button class="tab" disabled="@_busy" @onclick="ColourByResult">COLOUR BY RESULT</button>
+        @if (_doc is { CanEdit: true })
+        {
+            <button class="tab" @onclick="Adopt" disabled="@(_doc is not SldCaseDocument)">ADOPT LAYOUT</button>
+            <button class="tab" @onclick="Undo" disabled="@(!_doc.CanUndo)">UNDO</button>
+            <button class="tab" @onclick="Redo" disabled="@(!_doc.CanRedo)">REDO</button>
+            <button class="tab" @onclick="AddBusBelow" disabled="@(!(_diagram?.CanMove ?? false))">ADD BUS BELOW</button>
+            <button class="tab" @onclick="AddGenerator" disabled="@(_selectedBus is null || _doc is not SldCaseDocument)">ADD GENERATOR</button>
+            <button class="tab" @onclick="AddLoad" disabled="@(_selectedBus is null || _doc is not SldCaseDocument)">ADD LOAD</button>
+            <button class="tab" @onclick="Delete" disabled="@(_selected is null || _doc is not SldCaseDocument)">DELETE</button>
+            <button class="tab" @onclick="ToggleSwitch" disabled="@(_doc is not SldSubstationDocument)">TOGGLE SWITCH</button>
+        }
+        <a class="tab" download="@(CaseName + ".svg")" href="data:image/svg+xml;charset=utf-8,@Uri.EscapeDataString(_dto?.Svg ?? "")">DOWNLOAD SVG</a>
+    </div>
+    <p class="note">@_status</p>
+    @if (_error is not null) { <pre class="note">@_error</pre> }
+    else if (_dto is not null)
+    {
+        <p class="note">Layout: @_dto.Mode. @_dto.Note Geometry SHA-256 <code>@_dto.Sha256</code>.@(_dto.Crossings > 0 ? " The router could not keep " + _dto.Crossings + " connection(s) clear of a symbol." : "")</p>
+        @foreach (string o in _dto.Omissions) { <p class="note">Not drawn: @o</p> }
+        <div style="overflow:auto;max-height:38em;border:1px solid #888;background:#fff">
+            <div style="position:relative;width:@(Px(_dto.Right - _dto.Left))px;height:@(Px(_dto.Bottom - _dto.Top))px">
+                @((MarkupString)_dto.Svg)
+                @if (_selected is not null && _dto.Symbols.FirstOrDefault(s => s.Id == _selected) is { } sel)
+                {
+                    <div style="position:absolute;pointer-events:none;outline:2px solid orangered;left:@(Px(sel.Left - _dto.Left - 2))px;top:@(Px(sel.Top - _dto.Top - 2))px;width:@(Px(sel.Right - sel.Left + 4))px;height:@(Px(sel.Bottom - sel.Top + 4))px"></div>
+                }
+                <div class="sld-hit" style="position:absolute;left:0;top:0;right:0;bottom:0;cursor:crosshair" @onpointerdown="Down" @onpointerup="Up" @ondblclick="DoubleClick"></div>
+            </div>
+        </div>
+        <div class="runbar">
+            @foreach (SldLegendDto l in _dto.Legend) { <span class="prov"><span style="display:inline-block;width:10px;height:10px;background:@l.Colour"></span> @l.Label</span> }
+        </div>
+        @if (_doc is SldCaseDocument cd && cd.IsDirty)
+        {
+            <div class="runbar">
+                <span class="note">Edited files (the working copy only; download them to keep the change):</span>
+                @foreach ((string file, byte[] bytes) in cd.ChangedFiles())
+                {
+                    <a class="tab" download="@file" href="data:application/json;base64,@Convert.ToBase64String(bytes)">@file</a>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string CaseName { get; set; } = "";
+    [Parameter, EditorRequired] public GridModel Model { get; set; } = default!;
+    /// <summary>The folder of a JSON case (editable on a working copy), or null for a source with no case files (read-only).</summary>
+    [Parameter] public string? CaseFolder { get; set; }
+
+    private const double Scale = 1;
+    private GridModel? _openedFor;
+    private ISldDocument? _doc;
+    private SldModel? _readOnly;
+    private SldColourInput? _input;
+    private SldDiagram? _diagram;
+    private SldColourSet? _colours;
+    private SldDiagramDto? _dto;
+    private SldColourMode _mode = SldColourMode.VoltageLevel;
+    private bool _caseLayout, _busy;
+    private string? _selected, _error;
+    private string _status = "";
+    private Point2? _grab;
+
+    private sealed record Point2(double X, double Y);
+
+    private SldModel? Current => _doc?.Model ?? _readOnly;
+    private int? _selectedBus => Current is { } m && _selected is { } id && id.StartsWith("bus/", StringComparison.Ordinal)
+        && int.TryParse(id.AsSpan(4), out int b) && m.NodeOfBus(b) >= 0 ? b : null;
+
+    private static string Px(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(_openedFor, Model)) return;
+        _openedFor = Model;
+        (_doc as IDisposable)?.Dispose();
+        _doc = null;
+        _readOnly = null;
+        _error = null;
+        if (CaseFolder is not null)
+        {
+            try
+            {
+                _doc = SldCaseDocument.OpenWorkingCopy(CaseFolder, Licence);
+                _status = "Editable on a private working copy; the automatic layout is read-only until you adopt it.";
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException or System.Text.Json.JsonException)
+            {
+                _status = "Read-only: " + ex.Message;
+            }
+        }
+        if (_doc is null)
+        {
+            _readOnly = SldModel.From(Model);
+            if (_status.Length == 0) _status = "Read-only diagram: this source has no case files to edit.";
+        }
+        Rebuild();
+    }
+
+    private void Rebuild()
+    {
+        if (Current is not { } m) return;
+        try
+        {
+            _diagram = SldDiagrams.Build(m, _caseLayout ? SldLayoutMode.Case : SldLayoutMode.Auto);
+            _colours = SldColouring.Colour(m, _diagram.Geometry, _mode, _input);
+            _dto = SldDiagramDto.From(_diagram, _colours, CaseName, Scale);
+            if (_selected is not null && _diagram.Geometry.Symbol(_selected) is null) _selected = null;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private void Afterwards(SldCommandResult r)
+    {
+        _status = r.Message + (r.Problems.Count > 0 ? " " + string.Join(" ", r.Problems.Take(3)) : "");
+        _input = null;
+        Rebuild();
+    }
+
+    private double ToX(double offset) => offset / Scale + _dto!.Left;
+    private double ToY(double offset) => offset / Scale + _dto!.Top;
+
+    private void Down(PointerEventArgs e)
+    {
+        if (_diagram is null || _dto is null) return;
+        double x = ToX(e.OffsetX), y = ToY(e.OffsetY);
+        SldHit hit = SldHitTester.HitTest(_diagram.Geometry, x, y, 4);
+        _selected = hit.Kind == SldHitKind.None ? null : hit.ElementId;
+        _grab = null;
+        if (hit is { Kind: SldHitKind.Symbol } && hit.Id.StartsWith("bus/", StringComparison.Ordinal) && _diagram.CanMove && _doc is SldCaseDocument
+            && _diagram.Geometry.Symbol(hit.Id) is { } s)
+            _grab = new Point2(x - s.Box.CentreX, y - s.Box.CentreY);
+    }
+
+    private void Up(PointerEventArgs e)
+    {
+        if (_grab is not { } g || _doc is null || _selectedBus is not int bus || _dto is null) { _grab = null; return; }
+        _grab = null;
+        double x = ToX(e.OffsetX) - g.X, y = ToY(e.OffsetY) - g.Y;
+        var o = new SldOptions();
+        Afterwards(_doc.Execute(new SldMoveBus(bus, x / o.LayoutScale, y / o.LayoutScale)));
+    }
+
+    private void DoubleClick() { if (_selected?.StartsWith("switch/", StringComparison.Ordinal) == true) ToggleSwitch(); }
+
+    private void Adopt()
+    {
+        if (_doc is null) return;
+        SldCommandResult r = _doc.Execute(new SldAdoptLayout());
+        if (r.Ok) _caseLayout = true;
+        Afterwards(r);
+    }
+
+    private void Undo() { if (_doc is not null) Afterwards(_doc.Undo()); }
+    private void Redo() { if (_doc is not null) Afterwards(_doc.Redo()); }
+
+    private void AddBusBelow()
+    {
+        if (_doc is null || _selectedBus is not int b || _diagram?.Geometry.Symbol(_selected!) is not { } sym || Current is not { } m) { _status = "Select the bus the new bus is to be connected to."; return; }
+        var o = new SldOptions();
+        Afterwards(_doc.Execute(new SldAddBus(null, m.Nodes[m.NodeOfBus(b)].BaseKv, sym.Box.CentreX / o.LayoutScale, (sym.Box.CentreY + 160) / o.LayoutScale, null, b)));
+    }
+
+    private void AddGenerator() { if (_doc is not null && _selectedBus is int b) Afterwards(_doc.Execute(new SldAddGenerator(b, 100, 50))); }
+    private void AddLoad() { if (_doc is not null && _selectedBus is int b) Afterwards(_doc.Execute(new SldAddLoad(b, 10, 3))); }
+    private void Delete() { if (_doc is not null && _selected is { } id) Afterwards(_doc.Execute(new SldDelete(id))); }
+
+    private void ToggleSwitch()
+    {
+        if (_doc is null || _selected is not { } id || !id.StartsWith("switch/", StringComparison.Ordinal) || Current is not { } m) return;
+        SldElement? sw = m.Elements.FirstOrDefault(e => e.Id == id);
+        if (sw is null) return;
+        Afterwards(_doc.Execute(new SldSetSwitch(id["switch/".Length..], sw.InService)));
+    }
+
+    private async Task ColourByResult()
+    {
+        if (Current is not { } m || _busy) return;
+        _busy = true;
+        StateHasChanged();
+        try
+        {
+            SolveRun<SldColourInput> run = await Limits.RunSolveAsync(() => SldResults.PowerFlow(m, _input));
+            if (run.Status == SolveRunStatus.Completed) { _input = run.Value; _mode = SldColourMode.Loading; Rebuild(); _status = "Coloured by the power-flow result."; }
+            else _status = run.Status == SolveRunStatus.Busy ? "Every solve slot on this host is in use; try again shortly." : "The power flow did not finish inside the host's solve timeout.";
+        }
+        finally { _busy = false; }
+    }
+
+    public void Dispose() => (_doc as IDisposable)?.Dispose();
+}

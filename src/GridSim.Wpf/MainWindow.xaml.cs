@@ -672,9 +672,12 @@ public partial class MainWindow : Window
     /// current stream and start the new one on the same socket. Any what-if overlay is cleared first. The chosen start
     /// is always behind the horizon (the presets guarantee it), so the server never rejects it.
     /// </summary>
+    private int _streamGeneration;   // APP-26: bumped by every stream restart (ApplyBridgeStream)
+
     private async void ApplyBridgeStream()
     {
         if (_bridge is not GridBridgeClient b) return;
+        _streamGeneration++;   // APP-26: a query sent before this restart must not be painted onto the restarted stream
         _whatIf = false; _vm.ClearQueryResult();
         _bridgeLive = false;
         // A new stream plays (D-DOC-141): a held display of the old stream has nothing left to show.
@@ -1207,6 +1210,7 @@ public partial class MainWindow : Window
         if (_bridge is not GridBridgeClient b) return;
         _vm.SetBridgeStatus($"QUERY  *  {op} ...", BridgeWarnBrush);
         _vm.Log(_vm.Clock, $"Bridge query: {title} ...");
+        int generation = _streamGeneration;   // APP-26
         QueryResult qr;
         try { qr = await b.Query(op, _bridgeQueryAt, @params); }   // no ConfigureAwait => continuation resumes on the UI thread
         catch (Exception ex)
@@ -1222,6 +1226,12 @@ public partial class MainWindow : Window
             return;
         }
         if (!ReferenceEquals(_bridge, b)) return;   // switched away while the query was in flight
+        if (generation != _streamGeneration)
+        {
+            // APP-26: the stream was restarted while the query was in flight; the answer describes the previous stream.
+            _vm.Log(_vm.Clock, $"Query '{op}' answer for the previous stream discarded");
+            return;
+        }
 
         bool hasOverlay = false, notConverged = false;
         if (qr.Solve is SolveSnapshot snap)

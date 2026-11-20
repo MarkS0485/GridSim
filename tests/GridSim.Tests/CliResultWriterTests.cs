@@ -284,6 +284,20 @@ public sealed class CliResultWriterTests
             "scopf",      // added 2026-10-25: the new scopf verb writes through the shared writer (new coverage, not a moved expectation)
             "qsts",       // added on the QSTS branch: the new qsts verb writes through the shared writer (new coverage, not a moved expectation)
             "hosting",    // added on the QSTS branch: the new hosting verb writes through the shared writer (new coverage, not a moved expectation)
+            "sensitivity", "qv-curve", "pv-contingency", "dc-contingency", "fault-level-n1", // added RC4 R4-03: the new analysis verbs write through the shared writer (new coverage, not a moved expectation)
+            "g74", // added RC4 R4-06: the G74 short-circuit verb writes through the shared writer (new coverage, not a moved expectation)
+            "ansi-sc", // added RC4 R4-20a: the ANSI C37-style short-circuit verb writes through the shared writer (new coverage, not a moved expectation)
+            "sc-dc", // added RC4 R4-20c: the new sc-dc verb writes through the shared writer (new coverage, not a moved expectation)
+            "sc-61363", // added RC4 R4-20b: the new sc-61363 verb writes through the shared writer (new coverage, not a moved expectation)
+            "modal-full", // added RC4 R4-12: the full-model small-signal verb writes through the shared writer (new coverage, not a moved expectation)
+            "line-constants", // added RC4 R4-04: the new line-constants verb writes through the shared writer (new coverage, not a moved expectation)
+            "dist3ph-mesh", // added RC4 R4-15: the new meshed unbalanced load-flow verb writes through the shared writer (new coverage, not a moved expectation)
+            "emt3", // added RC4 R4-16: the new emt3 verb writes through the shared writer (new coverage, not a moved expectation)
+            "fault-series", "fault-simultaneous", // added RC4 (last candidate): the open-conductor and simultaneous-fault verbs write through the shared writer (new coverage, not a moved expectation)
+            "devices-check", "fault-line", "sc-trace", "protection-audit", // added RC4 R4-07: the placed-device verbs write through the shared writer (new coverage, not a moved expectation)
+            "substation-state", // added RC4 R4-11 part A: the node-breaker substation-state verb writes through the shared writer (new coverage, not a moved expectation)
+            "cgmes-export", "cgmes-conform", // added RC4 R4-11 part B: the CGMES per-profile export and conformity verbs write through the shared writer (new coverage, not a moved expectation)
+            "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess", "study-case", "case-diff", "result-diff", "report", // added RC4 (last candidate): the ten study verbs write --json and --csv through the shared writer (new coverage, not a moved expectation)
         };
         foreach (string v in f10) Assert.Contains(v, CliOutput.WriterVerbs);
         Assert.DoesNotContain("serve", CliOutput.WriterVerbs);

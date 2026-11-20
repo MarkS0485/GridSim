@@ -114,4 +114,5 @@ public sealed record DynamicsCaseCounts(int Requested, int Attempted, int Comple
 /// </summary>
 public sealed record DynamicsStudyResult(string Status, bool LikeForLike, IReadOnlyList<string> Reasons,
     DynamicsModelCoverageReport Coverage, DynamicsEngineDeclaration Engine, DynamicsInitialisationEvidence? Initialisation,
-    IReadOnlyList<DynamicsCaseResult> Cases, DynamicsCaseCounts Counts);
+    IReadOnlyList<DynamicsCaseResult> Cases, DynamicsCaseCounts Counts,
+    DynamicsAdaptiveEvidence? Adaptive = null);   // RC4 R4-14: present only when the request asked for the adaptive companion run

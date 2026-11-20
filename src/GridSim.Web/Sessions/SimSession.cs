@@ -543,6 +543,9 @@ public sealed class SimSession : IAsyncDisposable
     /// <param name="LostMw">The live output (MW) that was removed, when a unit was tripped; 0 otherwise.</param>
     public sealed record TripOutcome(bool Tripped, string Message, string? UnitName = null, double LostMw = 0.0);
 
+    /// <summary>APP-05: units already tripped in this session (index:bus:name), under <c>_gate</c>.</summary>
+    private readonly HashSet<string> _trippedUnits = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Map trip (right-click on a bus, or the T key): remove the largest unit that is generating right now, at
     /// <paramref name="busId"/> or, when it is null, on the whole system. The unit is chosen by the shared Core
@@ -569,6 +572,12 @@ public sealed class SimSession : IAsyncDisposable
             }
 
             Generator g = pick.Value.Unit;
+            // APP-05: a trip is a frequency what-if; the unit stays in the dispatch and is still the largest on the next
+            // frame, so the same unit is refused here as in WPF and Avalonia (key index:bus:name, as their TripKey).
+            if (!_trippedUnits.Add($"{pick.Value.Index}:{g.Bus}:{g.Name}"))
+                return new TripOutcome(false,
+                    $"TRIP refused: {g.Name ?? $"the unit at bus {g.Bus}"} has already been tripped in this run " +
+                    "(a trip is a frequency what-if: the unit stays in the dispatch, so it cannot be lost twice)");
             string name = g.Name ?? $"unit {pick.Value.Index} @ {BusLabel(model, g.Bus)}";
             _live.TripInfeed(g.Pg);
             return new TripOutcome(true,
@@ -953,6 +962,9 @@ public sealed class SimSession : IAsyncDisposable
     }
 
     private void RaiseState() { try { StateChanged?.Invoke(); } catch { } }
+
+    /// <summary>Test seam (APP-06): set the session error as a failed loop or a bridge fault does, and raise StateChanged.</summary>
+    internal void SetErrorForTests(string? text) { Error = text; RaiseState(); }
 
     // Known limitation "Web output conventions" (chapter 36): a bridge pause, speed change or seek that failed (a closed
     // or half-open socket, a command the server refused) used to go through a Safe() helper that swallowed every

@@ -25,7 +25,7 @@ internal interface IWlsStep
     /// Re-bind to new measurement weights for the SAME (model, measurement set) the last <see cref="Begin"/>
     /// bound - the robust IRLS outer loop, which only changes weights. October 2026 review (R120): the loop
     /// used to call <see cref="Begin"/> again on every outer pass, so the sparse backend rebuilt its gain
-    /// pattern, slot map and RCM ordering (pure structure, independent of the weights) up to ten times, and
+    /// pattern, slot map and minimum-degree ordering (pure structure, independent of the weights) up to ten times, and
     /// the dense backends re-allocated their m x s and s x s buffers. Backends whose prepared state does not
     /// depend on the weights only swap the array reference; that is bit-identical to a fresh
     /// <see cref="Begin"/> because every per-iteration buffer is cleared and refilled before use. Backends
@@ -166,7 +166,7 @@ internal sealed class DenseWlsStep : IWlsStep
 /// <summary>Sparse normal equations on the Gilbert-Peierls LU - the gb-full-scale backend.
 /// H is held as per-measurement sparse rows from the shared evaluation path. The gain matrix's
 /// SPARSITY PATTERN is fixed for a whole pass (it is structural - the measurement topology),
-/// so <see cref="Begin"/> builds the CSC structure, per-row value slots and the RCM ordering
+/// so <see cref="Begin"/> builds the CSC structure, per-row value slots and the minimum-degree ordering
 /// exactly once; each iteration only refills values and refactors numerically. That removes the
 /// per-iteration CSR rebuild + re-sort + re-ordering the first implementation paid.</summary>
 internal sealed class SparseWlsStep : IWlsStep
@@ -252,7 +252,7 @@ internal sealed class SparseWlsStep : IWlsStep
         }
     }
 
-    /// <summary>Weights only: the gain pattern, RCM ordering and slot map depend on the measurement
+    /// <summary>Weights only: the gain pattern, minimum-degree ordering and slot map depend on the measurement
     /// STRUCTURE, not the weights; the gain values, Jacobian rows and scatter scratch are cleared and refilled
     /// on every use (FillGain), so this is bit-identical to a fresh <see cref="Begin"/>.</summary>
     public void RebindWeights(double[] w)
@@ -294,7 +294,7 @@ internal sealed class SparseWlsStep : IWlsStep
             // Structure-reuse guard: the per-iteration numeric Jacobian must never touch a state
             // column outside the structural pattern Begin derived once. If it did, the scatter/slot
             // refill would silently drop that term. Pins the "measurement structure is fixed across
-            // the pass" claim at runtime (PerformanceOpts.md 4.1 has no such check by construction).
+            // the pass" claim at runtime (docs/developer/performance-optimisations.md 4.1 has no such check by construction).
             for (int p = 0; p < numeric.Count; p++)
                 System.Diagnostics.Debug.Assert(
                     Array.BinarySearch(_rowCols[r], numeric[p].Col) >= 0,
@@ -696,7 +696,7 @@ internal sealed class QrWlsStep : IWlsStep
 
 /// <summary>
 /// The CANONICAL WLS step (Ruling, 2026-10-15): every plain WLS (and robust IRLS) estimate on the CPU, whatever its
-/// size, solves the gain through ONE factorisation, the sparse Gilbert-Peierls LU under the frozen RCM ordering
+/// size, solves the gain through ONE factorisation, the sparse Gilbert-Peierls LU under the frozen minimum-degree ordering
 /// (<see cref="SparseWlsStep"/>), exactly as every Newton step is solved through one canonical sparse routine. Before,
 /// a case at or below 200 buses was solved by a dense partial-pivot LU and a larger one by the sparse LU, so the same
 /// network estimated as 200 and as 201 buses went through different arithmetic and differed in the last bits, against

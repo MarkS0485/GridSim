@@ -1,0 +1,37 @@
+{
+  "format": "gridsim-model/1",
+  "id": "PSS1A",
+  "title": "PSS1A single-input power-system stabiliser",
+  "role": "stabiliser",
+  "source": "IEEE Std 421.5 PSS1A (PSS/E PSS1A); block structure as implemented in GridSim.Core.Dynamics.Models.Pss1a (gain, washout, two lead-lag stages, output limits). Public-source citation as given in that class documentation; not independently re-verified in R4-08.",
+  "parameters": [
+    { "name": "Ks",    "unit": "pu", "value": 10.0, "description": "stabiliser gain" },
+    { "name": "Tw",    "unit": "s",  "value": 10.0, "min": 0, "minExclusive": true, "description": "washout" },
+    { "name": "T1",    "unit": "s",  "value": 0.15, "min": 0, "description": "stage 1 lead" },
+    { "name": "T2",    "unit": "s",  "value": 0.05, "min": 0, "minExclusive": true, "description": "stage 1 lag" },
+    { "name": "T3",    "unit": "s",  "value": 0.15, "min": 0, "description": "stage 2 lead" },
+    { "name": "T4",    "unit": "s",  "value": 0.05, "min": 0, "minExclusive": true, "description": "stage 2 lag" },
+    { "name": "Vsmin", "unit": "pu", "value": -0.1, "allowInfinite": true },
+    { "name": "Vsmax", "unit": "pu", "value": 0.1,  "allowInfinite": true }
+  ],
+  "ports": {
+    "inputs": [ { "name": "u", "unit": "pu" } ],
+    "outputs": [ { "name": "vs", "unit": "pu", "from": "out" } ]
+  },
+  "blocks": [
+    { "id": "g",    "type": "gain", "inputs": ["u"], "params": { "k": "@Ks" } },
+    { "id": "wash", "type": "washout", "inputs": ["g"], "params": { "time": "@Tw" } },
+    { "id": "st1",  "type": "leadlag", "inputs": ["wash"], "params": { "lead": "@T1", "lag": "@T2" } },
+    { "id": "st2",  "type": "leadlag", "inputs": ["st1"],  "params": { "lead": "@T3", "lag": "@T4" } },
+    { "id": "out",  "type": "limit", "inputs": ["st2"], "params": { "min": "@Vsmin", "max": "@Vsmax" } }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "u0", "unit": "pu" } ],
+    "steps": [
+      { "id": "g0", "type": "gain", "inputs": ["u0"], "params": { "k": "@Ks" } },
+      { "action": "initialise", "block": "wash", "values": ["g0"] },
+      { "action": "initialise", "block": "st1",  "values": [0.0] },
+      { "action": "initialise", "block": "st2",  "values": [0.0] }
+    ]
+  }
+}

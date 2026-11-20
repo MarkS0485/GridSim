@@ -15,6 +15,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GridSim.Core\GridSim.Core.csproj" />
+    <!-- RC4: the console page (/console) hosts GridSim.Scripting, a library over GridSim.Core only. -->
+    <ProjectReference Include="..\GridSim.Scripting\GridSim.Scripting.csproj" />
   </ItemGroup>
 
   <!-- F11: the test project hosts this app in memory with WebApplicationFactory<Program>; the top-level

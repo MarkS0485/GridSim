@@ -133,10 +133,16 @@
       "gridsim.core": {
         "type": "Project"
       },
+      "gridsim.scripting": {
+        "type": "Project",
+        "dependencies": {
+          "GridSim.Core": "[2.1.73, )"
+        }
+      },
       "gridsim.ui": {
         "type": "Project",
         "dependencies": {
-          "GridSim.Core": "[2.0.2, )"
+          "GridSim.Core": "[2.1.73, )"
         }
       }
     }

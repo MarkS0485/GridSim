@@ -179,7 +179,9 @@ public sealed class SimHost
     public static bool IsBundledSource(ModelSource s)
     {
         ArgumentNullException.ThrowIfNull(s);
-        return BundledNetworks.IsBundledPath(s.MFile ?? s.V2Case ?? s.Dir);   // R002: the one shared list
+        return s.V2Case is not null && s.MFile is null
+            ? BundledNetworks.IsBundledV2Case(s.V2Case)   // APP-25: the manifest and every file it lists
+            : BundledNetworks.IsBundledPath(s.MFile ?? s.V2Case ?? s.Dir);   // R002: the one shared list
     }
 
     /// <summary>

@@ -25,7 +25,5 @@ data/reference-inbox/
 # Large folders the web app does not use.
 docs/
 review-progress/
-unity/
 tests/
 tools/
-brand/

@@ -1,0 +1,47 @@
+{
+  "format": "gridsim-model/1",
+  "id": "IEEET1",
+  "title": "IEEET1 type 1 (DC) excitation system",
+  "role": "exciter",
+  "source": "IEEE type 1 excitation system (PSS/E IEEET1); block structure as implemented in GridSim.Core.Dynamics.Models.Ieeet1 (regulator lag with limits, saturated exciter pole, rate feedback washout). Public-source citation as given in that class documentation; not independently re-verified in R4-08.",
+  "parameters": [
+    { "name": "Ka",    "unit": "pu", "value": 400.0, "min": 0, "minExclusive": true, "description": "regulator gain" },
+    { "name": "Ta",    "unit": "s",  "value": 0.04,  "min": 0, "description": "regulator time constant" },
+    { "name": "Ke",    "unit": "pu", "value": 1.0,   "description": "exciter self-excitation constant" },
+    { "name": "Te",    "unit": "s",  "value": 0.8,   "min": 0, "minExclusive": true, "description": "exciter time constant" },
+    { "name": "Kf",    "unit": "s",  "value": 0.03,  "description": "rate feedback gain (pu*s: the feedback is Kf*s/(1+s*Tf) of Efd)" },
+    { "name": "Tf",    "unit": "s",  "value": 1.0,   "min": 0, "minExclusive": true, "description": "rate feedback time constant" },
+    { "name": "Vrmin", "unit": "pu", "value": -7.3,  "allowInfinite": true },
+    { "name": "Vrmax", "unit": "pu", "value": 7.3,   "allowInfinite": true },
+    { "name": "Aex",   "unit": "pu", "value": 0.0,   "min": 0, "description": "saturation scale: Se = Aex*exp(Bex*Efd)" },
+    { "name": "Bex",   "unit": "pu", "value": 0.0,   "description": "saturation exponent" }
+  ],
+  "derived": [
+    { "name": "KfOverTf", "op": "div", "a": "@Kf", "b": "@Tf" }
+  ],
+  "ports": {
+    "inputs": [ { "name": "verr", "unit": "pu" }, { "name": "speed", "unit": "pu" } ],
+    "outputs": [ { "name": "efd", "unit": "pu", "from": "exc" } ]
+  },
+  "blocks": [
+    { "id": "fbw", "type": "washout", "inputs": ["exc.prev", "exc"], "params": { "time": "@Tf" } },
+    { "id": "vf",  "type": "gain", "inputs": ["fbw"], "params": { "k": "@KfOverTf" } },
+    { "id": "err", "type": "sum", "inputs": ["verr", "vf"], "signs": "+-" },
+    { "id": "reg", "type": "lag", "inputs": ["err"], "params": { "gain": "@Ka", "time": "@Ta", "min": "@Vrmin", "max": "@Vrmax" } },
+    { "id": "exc", "type": "satpole", "inputs": ["reg"], "params": { "te": "@Te", "ke": "@Ke", "a": "@Aex", "b": "@Bex" } }
+  ],
+  "initialisation": {
+    "inputs": [ { "name": "efd0", "unit": "pu" } ],
+    "equilibriumError": "eq0",
+    "steps": [
+      { "id": "se0",  "type": "expsat", "inputs": ["efd0"], "params": { "a": "@Aex", "b": "@Bex" } },
+      { "id": "kese", "type": "sum", "inputs": ["@Ke", "se0"], "signs": "++" },
+      { "id": "vr0",  "type": "product", "inputs": ["kese", "efd0"] },
+      { "action": "require", "value": "vr0", "min": "@Vrmin", "max": "@Vrmax", "model": "IEEET1", "quantity": "regulator output Vr = (Ke + Se)*Efd", "argument": "fieldVoltagePu" },
+      { "id": "eq0",  "type": "div", "inputs": ["vr0"], "params": { "d": "@Ka" } },
+      { "action": "initialise", "block": "exc", "values": ["efd0"] },
+      { "action": "initialise", "block": "reg", "values": ["vr0"] },
+      { "action": "initialise", "block": "fbw", "values": ["efd0"] }
+    ]
+  }
+}

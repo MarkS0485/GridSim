@@ -76,7 +76,9 @@ public sealed partial class MainWindow : Window
         // records the shell's own actions still gets working open commands (their pickers come from ShellOptions.Pickers).
         CaseFiles = Actions as ShellActions ?? new ShellActions(this, _vm, options);
         ShellCommands.Register(_vm.Registry, Actions,
-            CaseFileCommands.Commands(CaseFiles).Append(AuditLogWindow.Command(() => this)).ToArray());
+            CaseFileCommands.Commands(CaseFiles).Append(AuditLogWindow.Command(() => this))
+                .Append(GridSim.App.Workbench.WorkbenchWindow.Command(() => this))
+                .Append(GridSim.App.Scripting.ScriptConsoleWindow.Command(() => this)).ToArray());
         // UI programme Phase 4.1: Author mode (desktop only). Its commands (Edit, Case and the ASSETS tree's context
         // menus) are Author mode only, so the Run-mode menu bar and shortcuts are exactly as before; the window rebuilds
         // its menus and shortcuts whenever the mode changes, and a load while authoring asks Save / Discard / Cancel first.
@@ -125,6 +127,10 @@ public sealed partial class MainWindow : Window
         MapActions = new MapActions(Schematic, _vm.Map, _vm.Run, _vm.Settings, _vm.NoteSettingsChanged, line => _vm.StatusText = line);
         WireMap(options);
         WireHeader(options);
+
+        // RC4 R4-10: Ctrl+Shift+B opens the workbench window on the loaded model. A window of its own, not a tab: the tab strip
+        // and the menu are pinned by their tests, and the key is handled here rather than added to the registry for the same reason.
+        AddHandler(KeyDownEvent, OpenWorkbenchOnKey, RoutingStrategies.Tunnel);
 
         // The Run commands appear with the first loaded case (the registry shows no command without its page), and
         // their enabled state follows the feed (a replay has no SOLVER or STEP choice, as in WPF).
@@ -386,6 +392,22 @@ public sealed partial class MainWindow : Window
             _registryKeys.Add(binding);
         }
     }
+
+    /// <summary>R4-10: Ctrl+Shift+B (Command+Shift+B on macOS) opens the workbench on the loaded model, or empty when none is loaded.</summary>
+    private void OpenWorkbenchOnKey(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.B || e.KeyModifiers != (CommandModifier | KeyModifiers.Shift)) return;
+        e.Handled = true;
+        OpenWorkbench();
+    }
+
+    /// <summary>Open a workbench window on the model the main window has loaded (empty when none).</summary>
+    public GridSim.App.Workbench.WorkbenchWindow OpenWorkbench()
+        => GridSim.App.Workbench.WorkbenchWindow.Open(this, "Loaded model", _vm.Run.LoadedModel);
+
+    /// <summary>Open the Script Console on the case the main window has loaded (RC4: File / Script console...).</summary>
+    public GridSim.App.Scripting.ScriptConsoleWindow OpenScriptConsole()
+        => GridSim.App.Scripting.ScriptConsoleWindow.Open(this, _vm.Run.CurrentSource);
 
     /// <summary>True while the keyboard focus is in a control that takes typed characters (the typing guard).</summary>
     public bool IsTyping() => TypingGuard.IsTextEntryTarget(FocusManager?.GetFocusedElement());
@@ -893,6 +915,17 @@ public sealed partial class MainWindow : Window
     // the window is closing, so there is nowhere left on screen to show it.
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
+        // APP-21: unsaved AUTHOR edits live only in memory, so closing (Alt+F4, the close button, File > Exit) asks the
+        // same Save / Discard / Cancel question as leaving AUTHOR or loading another case. The first close is cancelled
+        // while the question is open; on Save or Discard the window closes itself, on Cancel it stays. This comes before
+        // the bridge branch so the two deferred closes never interleave.
+        if (!_closeAfterAuthorResolved && AuthorMode.Author is { IsDirty: true } && _vm.Tabs.Assets.IsAuthoring)
+        {
+            e.Cancel = true;
+            if (AuthorClosing is not { IsCompleted: false }) AuthorClosing = ResolveAuthorThenClose();
+            return;
+        }
+
         // Slice 1.8, WPF OnClosing: with a live bridge the first close is cancelled while the socket is closed
         // asynchronously; the window then closes itself and this handler runs again with the bridge gone.
         // NCSC CAF B5: first, no automatic reconnect may start (or finish) while the window closes.
@@ -907,6 +940,29 @@ public sealed partial class MainWindow : Window
         if (!_vm.SettingsChanged) return;
         _vm.Settings.Save();
         if (_vm.Settings.SaveProblem is { } problem) Trace.WriteLine($"GridSim: settings not saved: {problem}");
+    }
+
+    // Set once the unsaved AUTHOR edits have been saved or discarded, so the second (real) close does not ask again.
+    private bool _closeAfterAuthorResolved;
+
+    /// <summary>The Save / Discard / Cancel question a close began (null unless the window was closed with unsaved AUTHOR edits).</summary>
+    public Task? AuthorClosing { get; private set; }
+
+    private async Task ResolveAuthorThenClose()
+    {
+        bool leave;
+        try { leave = await AuthorMode.LeaveForLoadAsync().ConfigureAwait(true); }
+#pragma warning disable CA1031 // Not swallowed: a failed question keeps the window (and the edits) open and says why.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _vm.Run.LoadError = ex.Message;
+            return;
+        }
+        if (!leave) return;
+        _closeAfterAuthorResolved = true;
+        // Queued, not called inline, so the close never runs inside the Closing event that began it.
+        Dispatcher.UIThread.Post(Close);
     }
 
     // Set once the bridge has been disposed on the way out, so the second (real) close does not wait again.

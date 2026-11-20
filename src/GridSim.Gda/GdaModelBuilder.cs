@@ -65,8 +65,8 @@ public sealed record LtdsDataset(
     /// Banbury Road 33/11 kV (BANR5) as X1 0.6457 pu on 100 MVA, and its two 12 MVA units publish X1 110.846 and
     /// 111.939: 1.108 and 1.119 pu on 100 MVA, 0.557 in parallel, plus the 33 kV source behind them, which is the
     /// published 0.6457. Read as ohms referred to the 132 kV GSP (the old reading), the pair would be 0.320 pu, about
-    /// half of what NGED's own fault table implies. W:\Code\Profiles tools/build_transformers.py records the same
-    /// finding across NGED, UKPN and NPg (slopes -0.74, -0.61, -0.76).</para>
+    /// half of what NGED's own fault table implies. A separate profiling tool (build_transformers.py, outside this
+    /// repository) records the same finding across NGED, UKPN and NPg (slopes -0.74, -0.61, -0.76).</para>
     /// </summary>
     public bool TransformerPercentOn100Mva { get; init; }
 

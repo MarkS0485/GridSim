@@ -148,5 +148,5 @@ the bit-identity guarantee. The desktop apps need no compute GPU; they draw thro
 
 ## Reporting bugs
 
-Send every bug report to **gdatooling@proton.me**. Please give the version (`gridsim --version`), the operating system,
+Send every bug report to **mark@gridsimdigitaltwin.co.uk**. Please give the version (`gridsim --version`), the operating system,
 the command or the steps, the case (or a small case that shows the problem) and what you expected.

@@ -47,5 +47,5 @@ Send these, in this order, and the report can be reproduced without a question b
 5. The input: the case name, or the file or folder.
 6. The environment: operating system and any `DOTNET_*` or `GRIDSIM_*` variable that is set (name the variable, never send a key).
 
-Send reports to gdatooling@proton.me. Full list:
+Send reports to mark@gridsimdigitaltwin.co.uk. Full list:
 [How to report a problem](https://marks0485.github.io/GridSim/manual/0030%20Troubleshooting/#how-to-report-a-problem).

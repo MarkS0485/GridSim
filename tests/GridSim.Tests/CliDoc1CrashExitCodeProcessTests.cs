@@ -158,13 +158,14 @@ public sealed class CliDoc1CrashExitCodeProcessTests
                 ("\t2\t163\t6.54\t300\t-300\t1.025\t100\t1\t300\t10\t", "\t2\t163\t6.54\t300\t-300\t1.025\t100\t1\t300\t400\t"));
             CliProcess.Result r = CliProcess.RunBuilt(new[] { verb, m }.Concat(extra).ToArray());
             AssertExit(1, r);
-            // Test changed 2026-10-19: since 1.95.328 (GR-651) the MATPOWER parser itself refuses PMIN above PMAX when
-            // the case is loaded, so the refusal now comes from the case load (still exit 1, still naming the unit by
-            // its mpc.gen row and both limits) before the verb's own DC-OPF check (prefix + " DC-OPF: generator 1 ...")
-            // is reached. That check is still in place for models built other ways. The prefix is no longer printed.
-            _ = prefix;
-            Assert.Contains("error loading case '", r.StdErr, StringComparison.Ordinal);
-            Assert.Contains("mpc.gen row 2 has QMIN above QMAX or PMIN above PMAX (Q -300 / 300, P 400 / 300).", r.StdErr, StringComparison.Ordinal);
+            // Test changed 2026-10-19: since 1.95.328 (GR-651) the MATPOWER parser itself refused PMIN above PMAX when
+            // the case was loaded. Test changed again 2026-11-19 (2.1.073, RC4 large-case bug A): PMIN / PMAX are OPF
+            // limits a power flow does not use, so the parser now loads the row with a warning note and the refusal is
+            // back where this test first pinned it, in the verb's own DC-OPF check (still exit 1, still naming the unit
+            // and both limits). Only the source of the message moved; the verdict (refused, exit 1) is unchanged.
+            Assert.DoesNotContain("error loading case '", r.StdErr, StringComparison.Ordinal);
+            Assert.Contains(prefix + " DC-OPF: generator 1 (", r.StdErr, StringComparison.Ordinal);
+            Assert.Contains("at bus 2) has Pmin 400 MW above Pmax 300 MW.", r.StdErr, StringComparison.Ordinal);
         }
         finally { Delete(dir); }
     }

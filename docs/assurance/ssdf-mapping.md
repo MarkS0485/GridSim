@@ -236,7 +236,7 @@ machines needs a named sender or client, or an explicit opt-out flag (`BugHunt11
 **Status: Partially achieved.** Dependabot watches NuGet, Docker and GitHub Actions (monthly, with Dependabot
 security updates enabled on the public repository); NuGet audit and the vulnerable-package gate fail the build on a
 known-vulnerable dependency; CodeQL scans the C# when run by hand. A security contact is published
-(`gdatooling@proton.me`, RFC 9116 `security.txt`). Since 2026-11-01 [`SECURITY.md`](../../SECURITY.md) states the
+(`mark@gridsimdigitaltwin.co.uk`, RFC 9116 `security.txt`). Since 2026-11-01 [`SECURITY.md`](../../SECURITY.md) states the
 disclosure and remediation policy: private reporting through GitHub private vulnerability reporting, an objective
 CVSS v4.0 and v3.1 base-score assessment recorded in the advisory, a 48-hour remediation target from that assessment
 for a base score of 7.0 or above, support for the latest release only, and the advisory channel (a published

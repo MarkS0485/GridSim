@@ -160,12 +160,12 @@ public static class UnitCommitment
             throw new ArgumentOutOfRangeException(nameof(options), options.QuadraticSegments, "A quadratic cost needs at least one segment.");
         double[] scale = options.DemandScale ?? Enumerable.Repeat(1.0, T).ToArray();
         double[] reserve = options.ReserveMw ?? new double[T];
-        if (scale.Length != T) throw new ArgumentException($"Unit commitment: {scale.Length} demand scale(s) for {T} period(s).", nameof(options));
-        if (reserve.Length != T) throw new ArgumentException($"Unit commitment: {reserve.Length} reserve value(s) for {T} period(s).", nameof(options));
+        if (scale.Length != T) throw new ArgumentException(FormattableString.Invariant($"Unit commitment: {scale.Length} demand scale(s) for {T} period(s)."), nameof(options));
+        if (reserve.Length != T) throw new ArgumentException(FormattableString.Invariant($"Unit commitment: {reserve.Length} reserve value(s) for {T} period(s)."), nameof(options));
         for (int t = 0; t < T; t++)
         {
-            if (!double.IsFinite(scale[t]) || scale[t] < 0) throw new ArgumentException($"Unit commitment: period {t + 1} demand scale {scale[t]} must be a finite number at or above 0.", nameof(options));
-            if (!double.IsFinite(reserve[t]) || reserve[t] < 0) throw new ArgumentException($"Unit commitment: period {t + 1} reserve {reserve[t]} must be a finite number at or above 0.", nameof(options));
+            if (!double.IsFinite(scale[t]) || scale[t] < 0) throw new ArgumentException(FormattableString.Invariant($"Unit commitment: period {t + 1} demand scale {scale[t]} must be a finite number at or above 0."), nameof(options));
+            if (!double.IsFinite(reserve[t]) || reserve[t] < 0) throw new ArgumentException(FormattableString.Invariant($"Unit commitment: period {t + 1} reserve {reserve[t]} must be a finite number at or above 0."), nameof(options));
         }
 
         IReadOnlyList<Generator> gens = model.Generators;
@@ -509,7 +509,7 @@ public static class UnitCommitment
         string name = gen.Name ?? $"gen {g} (bus {gen.Bus})";
         double pmin = gen.Pmin, pmax = gen.Pmax;
         if (!double.IsFinite(pmin) || double.IsNaN(pmax) || pmax < pmin)
-            throw new ArgumentException($"Unit commitment: unit {name} has the range Pmin {pmin} .. Pmax {pmax}.");
+            throw new ArgumentException(FormattableString.Invariant($"Unit commitment: unit {name} has the range Pmin {pmin} .. Pmax {pmax}."));
         if (!double.IsFinite(pmax))
             throw new ArgumentException($"Unit commitment: unit {name} has no finite Pmax; a committed unit needs one.");
         if (d.MinUpPeriods < 1 || d.MinDownPeriods < 1)

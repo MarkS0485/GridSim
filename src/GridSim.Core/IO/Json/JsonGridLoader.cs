@@ -396,7 +396,13 @@ public static class JsonGridLoader
     {
         if (b.Zip is not BusZipDto z) return null;
         string where = $"buses.json: bus {b.Id}" + (b.Name is null ? "" : $" ('{b.Name}')");
+        return ParseZipValues(where, z.Ap, z.Bp, z.Cp, z.Aq, z.Bq, z.Cq);
+    }
 
+    /// <summary>The ZIP rule shared by the case loaders and the bridge model block: every coefficient present and finite,
+    /// each triple summing to 1. <paramref name="where"/> prefixes every refusal.</summary>
+    internal static ZipLoad ParseZipValues(string where, double? zAp, double? zBp, double? zCp, double? zAq, double? zBq, double? zCq)
+    {
         // Each coefficient must be present (no silent default) and a finite number.
         double Coefficient(double? value, string key)
         {
@@ -406,8 +412,8 @@ public static class JsonGridLoader
                 throw new InvalidDataException($"{where}: zip coefficient '{key}' is {v.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}, which is not a finite number.");
             return v;
         }
-        double ap = Coefficient(z.Ap, "ap"), bp = Coefficient(z.Bp, "bp"), cp = Coefficient(z.Cp, "cp");
-        double aq = Coefficient(z.Aq, "aq"), bq = Coefficient(z.Bq, "bq"), cq = Coefficient(z.Cq, "cq");
+        double ap = Coefficient(zAp, "ap"), bp = Coefficient(zBp, "bp"), cp = Coefficient(zCp, "cp");
+        double aq = Coefficient(zAq, "aq"), bq = Coefficient(zBq, "bq"), cq = Coefficient(zCq, "cq");
 
         // Each triple must sum to 1, or the bus would not draw its stated Pd / Qd at nominal voltage.
         double pSum = ap + bp + cp;

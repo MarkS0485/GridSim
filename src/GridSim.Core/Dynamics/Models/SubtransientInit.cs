@@ -324,7 +324,8 @@ public static class SubtransientInit
             int count = genCountByBus.GetValueOrDefault(gen.Bus, 1);
             double share = Math.Abs(schedP) > MinScheduledPowerMw ? gen.Pg / schedP : 1.0 / Math.Max(1, count);
             double qShare = count <= 1 ? share : QWeight(gen) / qWeightByBus[gen.Bus];
-            return (vt, busGenP * share / baseMva, busGenQ * qShare / baseMva);
+            double pOut = count > 1 && SubtransientInit.MixedSignSlackBusP(model, gen, busGenP, schedP) is double mixed ? mixed : busGenP * share;   // DP-23
+            return (vt, pOut / baseMva, busGenQ * qShare / baseMva);
         }
 
         for (int mi = 0; mi < gm; mi++)
@@ -646,6 +647,28 @@ public static class SubtransientInit
     /// <summary>A bus whose scheduled machine output is at or below this (MW) shares its injection equally between
     /// its machines instead of in proportion to schedule.</summary>
     public const double MinScheduledPowerMw = 1e-9;
+
+    /// <summary>DP-23: the active power of <paramref name="gen"/> when its bus is a SLACK bus carrying units of both signs
+    /// (for example a generator beside a pumping unit). Splitting the solved bus total by <c>Pg / sum(Pg)</c> multiplies
+    /// both shares up when the signed schedules nearly cancel; here each unit keeps its schedule and takes a
+    /// non-negative MBase-weighted part of the solve's change (<c>busGenP - schedP</c>), so the shares add to the bus
+    /// total. Returns null (the caller keeps the proportional rule, bit for bit) on any other bus.</summary>
+    internal static double? MixedSignSlackBusP(GridModel model, Generator gen, double busGenP, double schedP)
+    {
+        bool slack = false;
+        foreach (Bus b in model.Buses) if (b.Id == gen.Bus) { slack = b.Type == BusType.Slack; break; }
+        if (!slack) return null;
+        bool pos = false, neg = false;
+        double wsum = 0.0;
+        foreach (Generator x in model.Generators)
+        {
+            if (x.Bus != gen.Bus) continue;
+            if (x.Pg > 0.0) pos = true; else if (x.Pg < 0.0) neg = true;
+            wsum += Math.Max(x.MBase, MinMBaseWeightMva);
+        }
+        if (!(pos && neg)) return null;
+        return gen.Pg + (busGenP - schedP) * (Math.Max(gen.MBase, MinMBaseWeightMva) / wsum);
+    }
 
     /// <summary>For each connected island (over in-service branches) containing none of
     /// <paramref name="machineBuses"/>, its slack bus - else its first PV bus - where a reference is needed.

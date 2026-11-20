@@ -13,7 +13,7 @@ validated, how to add one, and the known non-convergence / parse-gap classes.
 - Committed archive: `data/matpower/` (provenance in `data/matpower/README.md`)
 - Fetch script: `tools/fetch-cases.sh`
 - Tests: `tests/GridSim.Tests/IeeeCasesTests.cs`, `tests/GridSim.Tests/MatpowerParserTests.cs`
-- Server run findings: `docs/developer/benchmarks/server-results/README-section.md`
+- Server run findings: `docs/developer/benchmarks/history/server-results-2026-07/index.md`
 
 ---
 
@@ -171,7 +171,7 @@ not a corruption  -  on the server run the two `case533mt` files were the only l
 ```
 LOAD FAIL: The input string '135/sqrt(3)' was not in a correct format.
 ```
-(`docs/developer/benchmarks/server-results/README-section.md:93-94`, `docs/developer/benchmarks/server-results/20260701-101835/regime.log:110-111`).
+(`docs/developer/benchmarks/history/server-results-2026-07/index.md:93-94`, `docs/developer/benchmarks/history/server-results-2026-07/20260701-101835/regime.log:110-111`).
 Closing it would require a tiny expression evaluator in `ParseNum`.
 
 ---
@@ -282,7 +282,7 @@ Nothing is embedded from these; they are **disk-discovered only** (see below). A
 tree holds roughly **~161 `.m` cases** spanning up to **~78k buses** (e.g. the ACTIVSg25k / 70k
 networks), the union of PGLib-OPF and MATPOWER's `data/`. The server run confirmed clean scaling and
 reached 10,000 buses (`case_ACTIVSg10k`) in its partial snapshot
-(`docs/developer/benchmarks/server-results/README-section.md:57-63`).
+(`docs/developer/benchmarks/history/server-results-2026-07/index.md:57-63`).
 
 ### Auto-discovery
 
@@ -357,7 +357,7 @@ iteration count and final mismatch. Since 1.95.001 they are bit-identical on the
 `DenseSparseParityTests`), so this cross-check now tests the two assemblies, not two numerical answers. The server regime runs both sweeps to cross-check. In the
 partial snapshot the **dense reference sweep had not yet started**, so its column is marked
 *pending* and the cross-check is explicitly **not yet available**
-(`docs/developer/benchmarks/server-results/README-section.md:6-11`, `:32-35`, `:123-126`). The sparse half alone landed
+(`docs/developer/benchmarks/history/server-results-2026-07/index.md:6-11`, `:32-35`, `:123-126`). The sparse half alone landed
 every converged case at mismatch <= ~1e-9 (mostly 1e-11/1e-12).
 
 ---
@@ -398,7 +398,7 @@ Use this only when the case must ship inside the Core assembly (as the classics 
 
 ## 6. Known non-convergence classes (from the server run)
 
-Findings below are from the partial server sweep, `docs/developer/benchmarks/server-results/README-section.md:65-94`
+Findings below are from the partial server sweep, `docs/developer/benchmarks/history/server-results-2026-07/index.md:65-94`
 (mirrored in `README.md:240-245`). These are **expected outcomes, not parser bugs** or solver
 failures.
 

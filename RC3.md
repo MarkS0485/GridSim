@@ -76,5 +76,5 @@ All on one Windows 11 x64 machine (8 cores, 8 GB RAM), .NET SDK 10.0.401.
 
 ## Reporting bugs
 
-Send every bug report to **gdatooling@proton.me**. Please give the version (`gridsim --version`), the operating system,
+Send every bug report to **mark@gridsimdigitaltwin.co.uk**. Please give the version (`gridsim --version`), the operating system,
 the command or the steps, the case (or a small case that shows the problem) and what you expected.

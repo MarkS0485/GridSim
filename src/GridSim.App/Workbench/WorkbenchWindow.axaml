@@ -1,0 +1,100 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctl="using:GridSim.App.Workbench"
+        xmlns:plot="using:GridSim.App.Controls"
+        x:Class="GridSim.App.Workbench.WorkbenchWindow"
+        Title="GridSim Workbench"
+        Width="1180" Height="760" MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Bg}">
+  <!-- RC4 R4-10: the workbench core on Avalonia. A project tree on the left (the model, its groups, the studies, the
+       reports); on the right the model table (sort, filter, group), a study and its result, the plot and the report. The
+       tables, plots and reports are the Core workbench layer's (GridSim.Core.Presentation.Workbench); the web client shows
+       the same ones. A separate window, not a tab: the main window's tab strip is pinned by its tests. -->
+  <DockPanel Margin="8">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,8">
+      <TextBox x:Name="PathBox" Width="460" Watermark="case file or folder (.m, .raw, .uct, .case.json, CGMES .zip)" />
+      <Button x:Name="OpenButton" Classes="FlatBtn" Content="Open" Click="Open_Click" />
+    </StackPanel>
+    <TextBlock x:Name="StatusLine" DockPanel.Dock="Bottom" Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{StaticResource Text}" />
+    <ListBox x:Name="TreeList" DockPanel.Dock="Left" Width="300" Margin="0,0,8,0" FontFamily="{StaticResource MonoFont}"
+             SelectionChanged="Tree_SelectionChanged" />
+    <TabControl x:Name="WorkbenchTabs">
+      <TabItem Header="Model" x:Name="ModelTabItem">
+        <DockPanel>
+          <WrapPanel DockPanel.Dock="Top" Margin="0,4,0,8">
+            <TextBlock Text="Sort" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox x:Name="SortPicker" Width="170" Margin="0,0,4,0" />
+            <CheckBox x:Name="DescendingBox" Content="descending" Margin="0,0,12,0" />
+            <TextBlock Text="Filter" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox x:Name="FilterColumnPicker" Width="170" Margin="0,0,4,0" />
+            <ComboBox x:Name="FilterOpPicker" Width="120" Margin="0,0,4,0" />
+            <TextBox x:Name="FilterValueBox" Width="110" Margin="0,0,12,0" />
+            <TextBlock Text="Group by" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox x:Name="GroupPicker" Width="120" Margin="0,0,12,0" />
+            <Button x:Name="ApplyButton" Classes="FlatBtn" Content="Apply" Click="Apply_Click" />
+          </WrapPanel>
+          <ListBox x:Name="TableList" FontFamily="{StaticResource MonoFont}" />
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="Study" x:Name="StudyTabItem">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,4,0,8">
+            <ComboBox x:Name="StudyPicker" Width="240" />
+            <Button x:Name="RunButton" Classes="FlatBtn" Content="Run study" Click="Run_Click" />
+          </StackPanel>
+          <ListBox x:Name="ResultList" FontFamily="{StaticResource MonoFont}" />
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="Plot" x:Name="PlotTabItem">
+        <DockPanel>
+          <ComboBox x:Name="PlotPicker" DockPanel.Dock="Top" Width="240" Margin="0,4,0,8" HorizontalAlignment="Left" />
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+            <plot:PlotControl x:Name="PlotView" HorizontalAlignment="Left" VerticalAlignment="Top" />
+          </ScrollViewer>
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="Diagram" x:Name="DiagramTabItem">
+        <!-- RC4 R4-18: the single-line diagram and its editor. The geometry, colours and edits are Core's (Presentation.Workbench.Sld);
+             the web workbench draws the same diagram from the same calls. -->
+        <DockPanel>
+          <WrapPanel DockPanel.Dock="Top" Margin="0,4,0,4">
+            <CheckBox x:Name="CaseLayoutBox" Content="Placed from case" Margin="0,0,8,0" />
+            <TextBlock Text="Colour" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox x:Name="ColourPicker" Width="140" Margin="0,0,8,0" />
+            <Button x:Name="ResultColourButton" Classes="FlatBtn" Content="Colour by result" Click="ResultColour_Click" Margin="0,0,8,0" />
+            <Button x:Name="FitButton" Classes="FlatBtn" Content="Fit" Click="Fit_Click" Margin="0,0,8,0" />
+            <Button x:Name="AdoptButton" Classes="FlatBtn" Content="Adopt layout" Click="Adopt_Click" Margin="0,0,8,0" />
+            <Button x:Name="UndoButton" Classes="FlatBtn" Content="Undo" Click="Undo_Click" Margin="0,0,4,0" />
+            <Button x:Name="RedoButton" Classes="FlatBtn" Content="Redo" Click="Redo_Click" Margin="0,0,8,0" />
+            <Button x:Name="AddBusButton" Classes="FlatBtn" Content="Add bus below" Click="AddBus_Click" Margin="0,0,4,0" />
+            <Button x:Name="AddGenButton" Classes="FlatBtn" Content="Add generator" Click="AddGen_Click" Margin="0,0,4,0" />
+            <Button x:Name="AddLoadButton" Classes="FlatBtn" Content="Add load" Click="AddLoad_Click" Margin="0,0,4,0" />
+            <Button x:Name="AddBranchButton" Classes="FlatBtn" Content="Add branch" Click="AddBranch_Click" Margin="0,0,4,0" />
+            <Button x:Name="ToggleButton" Classes="FlatBtn" Content="Toggle switch" Click="Toggle_Click" Margin="0,0,4,0" />
+            <Button x:Name="DeleteButton" Classes="FlatBtn" Content="Delete" Click="Delete_Click" Margin="0,0,8,0" />
+            <Button x:Name="DiagramSaveButton" Classes="FlatBtn" Content="Save case" Click="DiagramSave_Click" Margin="0,0,8,0" />
+            <TextBox x:Name="SvgPathBox" Width="220" Watermark="Export SVG to a new file" Margin="0,0,4,0" />
+            <Button x:Name="SvgButton" Classes="FlatBtn" Content="Export SVG" Click="Svg_Click" />
+          </WrapPanel>
+          <TextBlock x:Name="DiagramStatus" DockPanel.Dock="Bottom" Margin="0,4,0,0" TextWrapping="Wrap" />
+          <Border BorderBrush="Gray" BorderThickness="1">
+            <ctl:SldControl x:Name="DiagramView" />
+          </Border>
+        </DockPanel>
+      </TabItem>
+      <TabItem Header="Report" x:Name="ReportTabItem">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,4,0,8">
+            <ComboBox x:Name="FormatPicker" Width="140" />
+            <Button x:Name="GenerateButton" Classes="FlatBtn" Content="Generate report" Click="Generate_Click" />
+            <TextBox x:Name="SavePathBox" Width="320" Watermark="Save to a new file (.md, .html or .csv)" />
+            <Button x:Name="SaveButton" Classes="FlatBtn" Content="Save" Click="Save_Click" />
+          </StackPanel>
+          <TextBox x:Name="ReportBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap"
+                   FontFamily="{StaticResource MonoFont}" />
+        </DockPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

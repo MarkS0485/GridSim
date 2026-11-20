@@ -384,7 +384,7 @@ public sealed class PageClippingTests
         Assert.Empty(bad);
     }
 
-    [AvaloniaTheory(Skip = "Temporarily disabled: no visible machine rows on this runner")]
+    [AvaloniaTheory]
     [InlineData(1580, 940)]
     public void MECHANICAL_per_machine_rows_are_padded_10_7_as_in_WPF(double width, double height)
     {

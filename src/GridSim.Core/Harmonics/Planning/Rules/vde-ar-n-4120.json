@@ -1,0 +1,98 @@
+{
+  "schema": "gridsim-connection-rules/1",
+  "id": "vde-ar-n-4120",
+  "title": "VDE-AR-N 4120 customer installations on the high-voltage network (structure only)",
+  "provenance": {
+    "source": "",
+    "edition": "",
+    "filledBy": "",
+    "date": ""
+  },
+  "scope": {
+    "voltageKvMin": 60.0,
+    "voltageKvMax": 220.0,
+    "source": "VDE FNN technical connection rules overview by voltage level (vde.com/en/fnn/topics/technical-connection-rules), read 2026-11-17; range only, limits not read"
+  },
+  "rules": [
+    {
+      "id": "steady-state-voltage-change",
+      "topic": "Steady-state voltage change at the point of connection",
+      "clause": "",
+      "quantity": "voltage_change_pct",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "%",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "rapid-voltage-change",
+      "topic": "Rapid voltage change on switching",
+      "clause": "",
+      "quantity": "rapid_voltage_change_pct",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "%",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "flicker-plt",
+      "topic": "Long-term flicker severity Plt from the plant",
+      "clause": "",
+      "quantity": "plt",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "pu",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "harmonic-currents",
+      "topic": "Harmonic current emission (per order)",
+      "clause": "",
+      "quantity": "harmonic_current_pct",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "%",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "reactive-power-capability",
+      "topic": "Reactive power or power factor range at the point of connection",
+      "clause": "",
+      "quantity": "power_factor",
+      "comparison": "range",
+      "limit": null,
+      "unit": "",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "fault-ride-through",
+      "topic": "Fault ride-through voltage-time requirement",
+      "clause": "",
+      "quantity": "fault_ride_through_margin_pu",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "pu",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "active-power-overfrequency",
+      "topic": "Active power reduction at over-frequency",
+      "clause": "",
+      "quantity": "overfrequency_droop_pct",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "%",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    },
+    {
+      "id": "short-circuit-contribution",
+      "topic": "Short-circuit current contribution",
+      "clause": "",
+      "quantity": "short_circuit_contribution_pu",
+      "comparison": "<=",
+      "limit": null,
+      "unit": "pu",
+      "note": "topic named from public summaries; limit AWAITING STANDARD TEXT; whether and where this requirement sits in the text is to be confirmed by the owner"
+    }
+  ]
+}

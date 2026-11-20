@@ -1,6 +1,6 @@
 $ gridsim pf gb-full --top 3
 Power flow - GB full (3539-bus, 5918-branch) (3539 buses)
-  converged in 11 iteration(s), mismatch 3.25E-011 pu   losses 523.821 MW / -7587.106 MVAr
+  converged in 11 iteration(s), mismatch 2.97E-011 pu   losses 523.490 MW / -7370.935 MVAr
   voltage range 0.9434 - 1.0457 pu
   lowest voltages:
       bus 4105   0.9434 pu    -10.342 deg

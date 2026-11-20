@@ -94,7 +94,13 @@ public sealed record LossyBergeronLine(int Id, int From, int To, LossyLineParame
 /// <param name="Segments">Number of sections.</param>
 /// <param name="HalfSectionTravelSeconds">Travel time of each lossless half-section, <c>tau/(2n)</c>.</param>
 /// <param name="HalfSectionSteps">The same in timesteps (an exact whole number, checked).</param>
-/// <param name="InternalNodes">Internal node ids added for the line, in order from the sending end.</param>
+/// <param name="InternalNodes">Internal node ids added for the line, in the order they were created (DP-27). Section by section
+/// from the sending end: each section first takes its end node (the shared junction with the next section; the last section
+/// ends on the line's own To terminal and takes none), then its inner nodes (with R > 0: the node after the sending-end R/4n
+/// arm, the Bergeron junction, the node after the R/2n arm and the node before the receiving-end R/4n arm; with R = 0 only the
+/// Bergeron junction). So the list is in spatial order from the sending end only for a single section; with more than one
+/// section each junction precedes the inner nodes of the section it ends. Nothing reads positions in this list today; use
+/// <paramref name="ElementIds"/> for spatial order.</param>
 /// <param name="ElementIds">Engine element ids added for the line, in order from the sending end.</param>
 /// <param name="SendingEndElementId">The first series element of the line (the sending-end R/4n arm, or the first
 /// half-section when R = 0): its branch current is the current entering the line's series path, positive into the

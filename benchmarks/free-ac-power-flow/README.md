@@ -2,7 +2,7 @@
 
 The benchmark compares balanced AC load flow across nine solver paths.
 The default case is MATPOWER 8.1 PEGASE with 1,354 buses. See the [results and pre-run
-criteria](https://marks0485.github.io/GridSim/developer/benchmarks/free-ac-power-flow/)
+criteria](https://marks0485.github.io/GridSim/developer/benchmarks/)
 and [solver roster](TOOLS.md).
 
 ## Prepare the Windows runtime
@@ -78,4 +78,4 @@ target errors, GridSim import checks and physics audits to assess
 electrical agreement. Partial timings are based on the successful
 attempts shown in the table. Use `--rehearsal` for development timings.
 
-See the [suite rehearsal results](../../docs/developer/benchmarks/free-ac-power-flow-suite.md) for the case comparison, attempt data and charts.
+See the [suite rehearsal results](../../docs/developer/benchmarks/history/suite-rehearsal/index.md) for the case comparison, attempt data and charts.

@@ -1,0 +1,152 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gridsim.local/schemas/usermodel/gridsim-model-1.schema.json",
+  "title": "gridsim-model/1: a declarative dynamic model (RC4 R4-08)",
+  "description": "A block diagram interpreted by GridSim's own control blocks, inside the bit-identity guarantee. The closed block catalogue is the enum of block.type; a block outside it is refused. Semantic rules the schema cannot express (unit agreement, undeclared ports, algebraic loops, the initialisation order, the role port conventions) are checked by the validator and compiler (Core Dynamics/UserModels) and reported with the object they name. Every object forbids unknown members; a duplicate member is refused by the parser.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "id", "role", "source", "ports", "blocks", "initialisation"],
+  "properties": {
+    "format": { "const": "gridsim-model/1" },
+    "id": { "$ref": "#/$defs/name" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "role": { "enum": ["exciter", "governor", "stabiliser", "generic"] },
+    "source": { "type": "string", "minLength": 1, "pattern": "\\S", "description": "The public source of the structure (required)." },
+    "parameters": { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
+    "derived": { "type": "array", "items": { "$ref": "#/$defs/derived" } },
+    "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+    "ports": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "outputs"],
+      "properties": {
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/inputPort" } },
+        "outputs": { "type": "array", "items": { "$ref": "#/$defs/outputPort" } }
+      }
+    },
+    "blocks": { "type": "array", "items": { "$ref": "#/$defs/block" } },
+    "initialisation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inputs", "steps"],
+      "properties": {
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/inputPort" } },
+        "equilibriumError": { "$ref": "#/$defs/name", "description": "Exciter role: the initialisation value that is the steady regulator error Vref - Vt." },
+        "steps": { "type": "array", "items": { "oneOf": [ { "$ref": "#/$defs/block" }, { "$ref": "#/$defs/initialise" }, { "$ref": "#/$defs/require" } ] } }
+      }
+    }
+  },
+  "$defs": {
+    "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+    "unit": { "type": "string", "description": "pu, 1, s combined with * and /, for example pu, s, 1/s. Only the time exponent is tracked: pu and 1 are the same dimension." },
+    "ref": {
+      "description": "A number, '+inf', '-inf', '@Param' (a declared parameter or derived constant), or a port name or block id with an optional '.prev' (the block's output at the start of the step, the only way to close a loop).",
+      "oneOf": [ { "type": "number" }, { "type": "string", "pattern": "^(\\+inf|-inf|@[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*(\\.prev)?)$" } ]
+    },
+    "paramRef": {
+      "description": "A number, '+inf', '-inf' or '@Param' (a block parameter is never a signal).",
+      "oneOf": [ { "type": "number" }, { "type": "string", "pattern": "^(\\+inf|-inf|@[A-Za-z_][A-Za-z0-9_]*)$" } ]
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "unit", "value"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "unit": { "$ref": "#/$defs/unit" },
+        "value": { "oneOf": [ { "type": "number" }, { "enum": ["+inf", "-inf"] } ] },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "minExclusive": { "type": "boolean" },
+        "maxExclusive": { "type": "boolean" },
+        "allowInfinite": { "type": "boolean" },
+        "description": { "type": "string" }
+      }
+    },
+    "derived": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "op", "a", "b"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "op": { "enum": ["add", "sub", "mul", "div"] },
+        "a": { "$ref": "#/$defs/paramRef" },
+        "b": { "$ref": "#/$defs/paramRef" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sumOf", "equals"],
+      "properties": {
+        "sumOf": { "type": "array", "items": { "$ref": "#/$defs/name" }, "minItems": 1 },
+        "equals": { "type": "number" },
+        "tolerance": { "type": "number", "minimum": 0 }
+      }
+    },
+    "inputPort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "unit"],
+      "properties": { "name": { "$ref": "#/$defs/name" }, "unit": { "$ref": "#/$defs/unit" } }
+    },
+    "outputPort": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "unit", "from"],
+      "properties": { "name": { "$ref": "#/$defs/name" }, "unit": { "$ref": "#/$defs/unit" }, "from": { "$ref": "#/$defs/ref" } }
+    },
+    "block": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "$ref": "#/$defs/name" },
+        "type": {
+          "enum": ["gain", "div", "sum", "product", "lag", "leadlag", "washout", "integrator", "pi", "limit", "ratelimit", "deadband",
+                   "table1d", "expsat", "min", "max", "switch", "const", "hold", "delay", "satpole"],
+          "description": "The closed catalogue. Parameters per type: gain k; div d; lag gain, time, [min, max]; leadlag lead, lag; washout time (a second input defers the state update to that value); integrator gain, [min, max]; pi kp, ki, [min, max]; limit min, max; ratelimit rise, fall; deadband lower, upper; table1d (the table member); expsat a, b; switch threshold; const value; delay steps (a literal whole number); satpole te, ke, a, b; sum needs signs; hold, product, min, max take none."
+        },
+        "inputs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+        "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/paramRef" } },
+        "signs": { "type": "string", "pattern": "^[+-]+$" },
+        "table": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y", "xUnit", "yUnit"],
+          "properties": {
+            "x": { "type": "array", "items": { "type": "number" }, "minItems": 2 },
+            "y": { "type": "array", "items": { "type": "number" }, "minItems": 2 },
+            "xUnit": { "$ref": "#/$defs/unit" },
+            "yUnit": { "$ref": "#/$defs/unit" }
+          }
+        }
+      }
+    },
+    "initialise": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "block", "values"],
+      "properties": {
+        "action": { "const": "initialise" },
+        "block": { "$ref": "#/$defs/name" },
+        "values": { "type": "array", "items": { "$ref": "#/$defs/ref" }, "description": "lag, integrator, ratelimit, hold, delay, satpole: the OUTPUT; leadlag, washout: the INPUT; pi: (input, output)." }
+      }
+    },
+    "require": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "value", "model", "quantity", "argument"],
+      "properties": {
+        "action": { "const": "require" },
+        "value": { "$ref": "#/$defs/ref" },
+        "min": { "$ref": "#/$defs/paramRef" },
+        "max": { "$ref": "#/$defs/paramRef" },
+        "model": { "type": "string" },
+        "quantity": { "type": "string" },
+        "argument": { "$ref": "#/$defs/name" }
+      }
+    }
+  }
+}

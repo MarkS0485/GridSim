@@ -90,7 +90,10 @@ public sealed class V2KindSpecCodeDefaultTests
         // Gast (valveMinPu 0, valveMaxPu +Infinity, turbineDampingPu 0) that the governor kind documented in its
         // descriptions but did not register. Three entries added, one per parameter, each checked against the code by
         // the per-entry test above and pinned row by row in B5ConverterModelsTests.N309 / Issue12. No value changed.
-        Assert.Equal(594, counts.Values.Sum());
+        // Added 2026-11-19 (RC4, the Newton retry option): 594 -> 595. solverProfile.retryFromDcStart registers the code
+        // default PowerFlowOptions.RetryFromDcStart = true, one new entry checked against the code by the per-entry test
+        // above. No existing entry or value changed.
+        Assert.Equal(595, counts.Values.Sum());
     }
 
     // ------------------------------------------------------------------------------ the Q24 keys

@@ -1,8 +1,10 @@
 # 4. Licensing and activation
 
-GridSim is source-available, proprietary software (`LICENSE.md`). Personal and academic use covers network
-models of up to 1,500 buses; commercial licences, on application, have no bus limit. The only thing it counts is buses, and it
-counts them per network model. This chapter explains what is checked and when, how to install a licence file, how
+GridSim is source-available, not open source, and requires a licence (`LICENSE.md`, which governs). Under the licence
+terms, personal and academic use covers network models of up to 1,500 buses, and the commercial and Network Operator
+tiers have no bus limit. At present licences are issued gratis: no payment is required for any tier, and anyone who asks
+today receives a Network Operator (DNO) licence, which has no restrictions (see "Tiers and bus limits"). The only thing
+GridSim counts is buses, and it counts them per network model. This chapter explains what is checked and when, how to install a licence file, how
 GridSim finds it, and what each program does when it refuses a network. Everything happens offline: a licence key is
 verified with a public key built into GridSim, no program ever contacts a licence server, and activation works on an
 air-gapped machine. With no licence installed GridSim does not lock you out. It runs at the free Personal tier.
@@ -60,9 +62,12 @@ gridsim results/licence-tmp/mycase9241.m --once
 
 ```
 $ gridsim results/licence-tmp/mycase9241.m --once
-error: This network has 9,241 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+error: This network has 9,241 buses; your Personal licence allows 1,500. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 [exit 2]
 ```
+
+The wording of the message, and the address it prints, come from the program. A licence with no bus limit is issued
+gratis on request to `mark@gridsimdigitaltwin.co.uk`, the contact address (see "Tiers and bus limits").
 
 The same network loaded from the shipped `data/matpower/` folder is a Bundled Network and solves at the same tier:
 
@@ -132,8 +137,13 @@ its own, never cumulatively across models. Nothing else is counted: no generator
 The tiers are those of `LICENSE.md`, which governs. The limit GridSim enforces is the number inside the key: a key for
 the Academic tier with a larger allowance carries that allowance, and a key that encodes 0 is unlimited. The free
 default is fixed at 1,500. A model is refused when its bus count is greater than the limit, so a model of exactly
-1,500 buses loads at the free tier and one of 1,501 does not. Licence terms and commercial arrangements:
-`gdatooling@proton.me`.
+1,500 buses loads at the free tier and one of 1,501 does not.
+
+These are the licence terms; none of them is charged at present. Licences are issued gratis, and anyone who emails
+`mark@gridsimdigitaltwin.co.uk` for a licence today receives a Network Operator (DNO) licence, which has no restrictions. That is
+not a promise that licences will always be gratis: the licence mechanism ships so that the terms can be applied if that
+is ever needed, for example to support GridSim's development. A licence covers the software, not Mark's time; support,
+custom work or other commitments on your terms need a separate agreement and compensation.
 
 ## Bundled networks and user networks
 
@@ -274,7 +284,7 @@ cannot show them, because only keys signed by GridSim verify):
 lapsed status: Commercial Code * Example Ltd * unlimited buses * EXPIRED 2025-12-31 * for GridSim 1.x * id doc002
 lapsed, 1500 buses: True
 lapsed, 9000 buses: False
-Your Commercial Code licence expired on 2025-12-31, so the free Personal tier applies: this network has 9,000 buses and the free tier allows 1,500. Renew or ask about a new term: gdatooling@proton.me
+Your Commercial Code licence expired on 2025-12-31, so the free Personal tier applies: this network has 9,000 buses and the free tier allows 1,500. Licences are free at present: to renew or ask about a new term, contact mark@gridsimdigitaltwin.co.uk
 ...
 ```
 
@@ -282,7 +292,7 @@ The status line in this capture is from an earlier build, which printed the key'
 current build prints the limit that applies: `Commercial Code | Example Ltd | 1,500 buses (the free tier applies) |
 EXPIRED 2025-12-31 | for GridSim 1.x | id doc002`. The decisions and the message are unchanged.
 
-A lapsed customer is never worse off than an unlicensed user, and nothing is deleted or locked. Installing a renewed
+A lapsed licence holder is never worse off than an unlicensed user, and nothing is deleted or locked. Installing a renewed
 key replaces the lapsed one. Expiry is judged against the computer's UTC date, so a wrong system clock changes it.
 
 ## A licence covers one major version
@@ -294,7 +304,7 @@ way: strict equality. A refused key is treated like any rejected key: the progra
 line ends with the reason, and `licence import` of such a key exits 2 and installs nothing. The reason reads:
 
 ```
-this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: gdatooling@proton.me
+this key was issued for GridSim 1.x and this build is major version 2 (GridSim 2.x); a licence covers every release of the major version it was issued for (LICENSE.md section 1), so GridSim 2.x needs a 2.x key: mark@gridsimdigitaltwin.co.uk
 ```
 
 Keys issued before keys carried a major version count as 1.x keys. The key and its decoded fields are the subject of
@@ -316,7 +326,7 @@ commercial licence removes the limit: <contact>`. In the case editor's `--check`
 
 ```
 $ GridSim.SchemaEditor results/licence-tmp/mygb --check
-Licence refused the case at open (3539 buses): This network has 3,539 buses; your Personal licence allows 1,500. A larger or commercial licence removes the limit: gdatooling@proton.me
+Licence refused the case at open (3539 buses): This network has 3,539 buses; your Personal licence allows 1,500. A larger licence removes the limit. Licences are free at present: ask mark@gridsimdigitaltwin.co.uk
 [exit 2]
 ```
 

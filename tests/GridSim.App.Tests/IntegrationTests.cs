@@ -228,7 +228,7 @@ public sealed class IntegrationTests
             // Test retargeted 2026-10-20 (UI shell: v2 + pickers): File > Open case folder... and Open v2 case... (the OS
             // pickers) now sit between Open run folder... and Audit log.... Equal: the whole File menu is still pinned
             // exactly, in order, with the audit log after the open commands and Exit last.
-            Assert.Equal(new[] { "Open case...", "Open run folder...", "Open case folder...", "Open v2 case...", "Audit log...", "Exit" },
+            Assert.Equal(new[] { "Open case...", "Open run folder...", "Open case folder...", "Open v2 case...", "Audit log...", "Workbench...", "Script console...", "Exit" },
                 menus[0].Items.OfType<MenuItem>().Select(i => (string?)i.Header));
             MenuItem view = menus[2];
             MenuItem minimap = Item(view, "Minimap");

@@ -524,7 +524,7 @@ with Q-limits and the OLTC loop on.
 **Dense and sparse agree to the last bit.** On the CPU the two Newton engines give identical voltages, angles, flows,
 losses, mismatches and iteration counts, bit for bit. The choice of engine therefore changes speed and memory, never
 an answer. A GPU backend changes only the linear solve inside each Newton step and sits outside that guarantee. The
-CPU sparse solve is a direct sparse LU with reverse Cuthill-McKee ordering and partial pivoting; an ILU(0)-
+CPU sparse solve is a direct sparse LU with minimum-degree ordering (reverse Cuthill-McKee is kept only as a comparison) and partial pivoting; an ILU(0)-
 preconditioned BiCGSTAB solver runs only if the factorisation is singular, and a GPU sparse solve that gives up is
 retried on the exact CPU LU first.
 

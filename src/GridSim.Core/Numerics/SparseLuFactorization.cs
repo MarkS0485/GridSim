@@ -6,7 +6,7 @@ namespace GridSim.Core.Numerics;
 
 /// <summary>
 /// A sparse LU factorisation built by the Gilbert-Peierls left-looking algorithm with
-/// partial pivoting, over a fill-reducing column ordering (reverse Cuthill-McKee).
+/// partial pivoting, over a fill-reducing column ordering (minimum degree).
 ///
 /// Left-looking G-P is the standard fast sparse LU: column <c>k</c> is produced by a
 /// single sparse triangular solve <c>L z = A(:,q[k])</c>, whose nonzero pattern is found
@@ -14,7 +14,7 @@ namespace GridSim.Core.Numerics;
 /// the arithmetic proportional to the true (post-fill) nonzeros instead of paying the
 /// dictionary/hash overhead and per-solve re-symbolic cost of the old dynamic scheme.
 ///
-/// The factorisation is <c>L U = P A Q</c>, where <c>Q</c> is the RCM column permutation
+/// The factorisation is <c>L U = P A Q</c>, where <c>Q</c> is the minimum-degree column permutation
 /// (<see cref="_q"/>), <c>P</c> is the partial-pivoting row permutation (encoded by
 /// <see cref="_pinv"/>), <c>L</c> is unit lower-triangular and <c>U</c> upper-triangular.
 /// All factors are stored compressed-sparse-column (CSC); <c>L</c> keeps its unit diagonal

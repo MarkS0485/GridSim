@@ -272,14 +272,20 @@ public sealed class SubstationTopology
         int n = sectionRecords.Count;
         var sectionIndex = new Dictionary<string, int>(StringComparer.Ordinal);
         for (int i = 0; i < n; i++) sectionIndex[sectionRecords[i].Id] = i;
-        var feederIndex = new Dictionary<TopologyFeeder, int>();
+        // IO-22: a transformer's two bays are different terminals, so its circuit node is the END reached, keyed by the
+        // authored bus of the bay's section (a transformer bayed at both voltages does not join them). Every other feeder
+        // kind keeps one node per circuit.
+        long?[] sectionBus = sectionRecords.Select(BusOf).ToArray();
+        (TopologyFeeder, long?) EndKey(TopologyBay b) =>
+            (b.Feeder!, b.Feeder!.Target == AssetRefTarget.Transformer ? sectionBus[sectionIndex[b.Section]] : null);
+        var feederIndex = new Dictionary<(TopologyFeeder, long?), int>();
         foreach (TopologyBay b in bayList)
-            if (b.Feeder is not null && !feederIndex.ContainsKey(b.Feeder)) feederIndex[b.Feeder] = n + feederIndex.Count;
+            if (b.Feeder is not null && !feederIndex.ContainsKey(EndKey(b))) feederIndex[EndKey(b)] = n + feederIndex.Count;
         var uf = new UnionFind(n + feederIndex.Count);
         foreach (TopologyDevice d in devices)
             if (d.Role == TopologyDeviceRole.Coupler && d.IsClosed) uf.Union(sectionIndex[d.From!], sectionIndex[d.To!]);
         foreach (TopologyBay b in bayList)
-            if (b.Feeder is not null && b.Closed) uf.Union(sectionIndex[b.Section], feederIndex[b.Feeder]);
+            if (b.Feeder is not null && b.Closed) uf.Union(sectionIndex[b.Section], feederIndex[EndKey(b)]);
 
         // Groups in the order of their first section; sections in overlay order within a group.
         var rootToGroup = new Dictionary<int, int>();
@@ -328,7 +334,7 @@ public sealed class SubstationTopology
             foreach (TopologyBay b in bayList)
             {
                 if (b.Feeder is null || b.Closed) continue;
-                int a = uf.Find(sectionIndex[b.Section]), c = uf.Find(feederIndex[b.Feeder]);
+                int a = uf.Find(sectionIndex[b.Section]), c = uf.Find(feederIndex[EndKey(b)]);
                 if (a != c && roots.Contains(a) && roots.Contains(c))
                     foreach (string id in b.Devices)
                         if (!devices.First(x => x.Id == id).IsClosed) between.Add(id);
@@ -361,8 +367,8 @@ public sealed class SubstationTopology
             var joining = new HashSet<string>(StringComparer.Ordinal);
             foreach (TopologyDevice d in devices)
                 if (d.Role == TopologyDeviceRole.Coupler && d.IsClosed && uf.Find(sectionIndex[d.From!]) == root) joining.Add(d.Id);
-            foreach (IGrouping<TopologyFeeder, TopologyBay> byFeeder in bayList.Where(b => b.Feeder is not null && b.Closed
-                         && uf.Find(sectionIndex[b.Section]) == root).GroupBy(b => b.Feeder!))
+            foreach (IGrouping<(TopologyFeeder, long?), TopologyBay> byFeeder in bayList.Where(b => b.Feeder is not null && b.Closed
+                         && uf.Find(sectionIndex[b.Section]) == root).GroupBy(EndKey))
                 if (byFeeder.Select(b => b.Section).Distinct(StringComparer.Ordinal).Count() >= 2)
                     foreach (TopologyBay b in byFeeder)
                         foreach (string id in b.Devices) joining.Add(id);

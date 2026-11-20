@@ -64,7 +64,7 @@ public static class NpgSource
 
         // ---- circuits (Appendix 3) ----
         var circuits = new List<LtdsCircuit>();
-        using (DataSourceTable t = Open("LTDS_Appendix_3_Circuit_Data"))
+        using (DataSourceTable t = Need(Open("LTDS_Appendix_3_Circuit_Data"), "NPg LTDS_Appendix_3_Circuit_Data", ["Operating Voltage (kV)"]))
             foreach (IRow r in t.Rows())
             {
                 string nm1 = r["S/S or Busbar Name Node 1"], nm2 = r["S/S or Busbar Name Node 2"];
@@ -89,7 +89,7 @@ public static class NpgSource
         Dictionary<string, List<(string Code, double Kv)>> busbarSites = SiteIndex(nodes.Values);
         var tx2 = new List<LtdsTransformer2>();
         int windingsJoinedBySite = 0;   // N202: windings placed on their site's busbar, reported in the build notes
-        using (DataSourceTable t = Open("LTDS_Appendix_4_Transformer_Data"))
+        using (DataSourceTable t = Need(Open("LTDS_Appendix_4_Transformer_Data"), "NPg LTDS_Appendix_4_Transformer_Data", ["Primary Voltage (kV)"], ["Secondary Voltage (kV)"]))
             foreach (IRow r in t.Rows())
             {
                 string nm = r["S/S or Busbar Name Node"];
@@ -307,6 +307,14 @@ public static class NpgSource
             else if (gap == bestGap && !string.Equals(code, best, StringComparison.OrdinalIgnoreCase)) tied = true;
         }
         return best is not null && !tied ? best : own;
+    }
+
+    // APP-27: the table, after its required columns (one spelling of each group) are checked.
+    private static DataSourceTable Need(DataSourceTable t, string what, params string[][] groups)
+    {
+        try { RequiredColumns.Require(t.Headers, what, groups); }
+        catch { t.Dispose(); throw; }
+        return t;
     }
 
     private static double Num(IRow r, params string[] names)
