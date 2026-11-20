@@ -423,6 +423,13 @@ public sealed class WorkbenchViewTests
             ComboBox picker = w.FindControl<ComboBox>("StudyPicker")!;
             picker.SelectedItem = "power-flow";
             w.FindControl<Button>("RunButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            // The click always returns before the study completes (RunSelectedAsync forces a yield and solves on a worker
+            // thread), so wait for the run to finish, as the failing-study window test below does. The assertions are unchanged.
+            for (int i = 0; i < 400 && (vm.IsBusy || vm.Result is null); i++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(50);
+            }
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("CONVERGED", vm.Result!.Status);
             ListBox results = w.FindControl<ListBox>("ResultList")!;
