@@ -9,7 +9,7 @@ namespace GridSim.Core.Analysis;
 public sealed record PvPoint(double Lambda, double[] Vm);
 
 /// <summary>The PV curves of a continuation (F18): the largest converged multiplier and every converged point.</summary>
-/// <param name="MaxLambda">Exactly <see cref="ContinuationPowerFlow.MaxLoadability"/> for the same arguments (0 when even
+/// <param name="MaxLambda">Exactly <see cref="ContinuationPowerFlow.MaxLoadability(GridModel, double, double, int)"/> for the same arguments (0 when even
 /// the base case did not converge).</param>
 /// <param name="BusIds">Bus ids, in the order of each point's <see cref="PvPoint.Vm"/>.</param>
 /// <param name="Points">The converged points, in the order solved (strictly rising multipliers).</param>
@@ -66,11 +66,11 @@ public static class ContinuationPowerFlow
         => Run(model, step, minStep, maxSteps, onConverged: null);
 
     /// <summary>
-    /// The same continuation as <see cref="MaxLoadability"/>, also recording every converged point: its load
+    /// The same continuation as <see cref="MaxLoadability(GridModel, double, double, int)"/>, also recording every converged point: its load
     /// multiplier and every bus voltage magnitude there, in the order solved (F18, October 2026: the PV-curve export of
     /// the <c>cpf</c> verb). The multipliers rise strictly (a step that fails is backed off and halved, so the next one
     /// tried is still above the last converged one), so the points trace each bus's PV curve up to the nose.
-    /// <see cref="PvCurve.MaxLambda"/> is bit-for-bit what <see cref="MaxLoadability"/> returns for the same arguments:
+    /// <see cref="PvCurve.MaxLambda"/> is bit-for-bit what <see cref="MaxLoadability(GridModel, double, double, int)"/> returns for the same arguments:
     /// it is the same loop, with a recorder that only copies results.
     /// </summary>
     public static PvCurve TracePvCurve(GridModel model, double step = 0.25, double minStep = 1e-3, int maxSteps = 200)

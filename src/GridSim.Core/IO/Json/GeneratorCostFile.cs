@@ -46,7 +46,7 @@ public static class GeneratorCostFile
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(path);
         if (!File.Exists(path)) throw new FileNotFoundException($"cost file '{path}' not found.", path);
-        string text = File.ReadAllText(path);
+        string text = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         return Apply(model, text, Path.GetFileName(path));
     }
 

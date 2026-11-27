@@ -19,8 +19,8 @@ network of a running live simulation.
 **Grammar version 1** is the version described here. A script may open with `GRAMMAR 1`; a script that asks for any other
 number is refused. Grammar 1 is frozen for the whole of the v2 contract: a later grammar adds statements and never changes
 the meaning of a statement written in grammar 1. Every script terminates: there is no `WHILE`, no unbounded loop, no
-recursion, and no clock, random number, file or network access beyond the named verbs (`LOAD CASE` reads a case and
-`EXPORT RESULT` writes a result).
+recursion, and no clock, random number, file or network access beyond the named verbs (`LOAD CASE` reads a case,
+`EXPORT RESULT` writes a result, and the `DYNAMICS` file and `SCHEMAS` folder settings of `SELECT ENGINE` are read).
 
 ## Before you start
 
@@ -66,7 +66,8 @@ tick 24, frequency 58.398622 Hz, rocof -3.926716 Hz/s, generation 319.4347 MW, d
 ```
 
 The exit code is 0 when every statement ran, 1 when a statement was refused (the message names its line and column), and
-2 for a usage or file error. Under `LIVE` the trip of `G2` also takes it out of the live network, so the generation that
+2 for a usage or file error. Like every GridSim app, `gridsim-script` runs the telemetry guard before anything else and
+exits with code 78 if it refuses (see [technical ch. 35, section Telemetry](<../technical/0035 Deployment and security.md#telemetry>)). Under `LIVE` the trip of `G2` also takes it out of the live network, so the generation that
 the last tick reports is what the remaining machines produce, with the losses of that network.
 
 ### Loops, decisions, values and procedures
@@ -234,6 +235,7 @@ the same model give the same record and the same exported bytes. A path appears 
 | `SET GENERATOR name P\|Q\|V expression` | Sets a generator's active power (`MW`), reactive power (`MVAR`) or voltage set-point (`PU`, or `KV` on a bus with a base voltage). |
 | `SET LOAD name P\|Q expression` | Sets a load's active power (`MW`, not negative) or reactive power (`MVAR`). |
 | `FAULT BUS name` | A bolted three-phase fault at a bus. RMS and EMT engines only. |
+| `FAULT BUS name TYPE [WITH R n PU X n PU]` | TYPE is `THREE_PHASE`, `SLG`, `LL` or `LLG`: a fault of that type at the bus, bolted or through the fault impedance (pu on the system base). RMS SUBTRANSIENT and GOVERNED only; cleared by `CLEAR FAULT BUS`. |
 | `CLEAR FAULT BUS name` | Clears it. |
 | `REPORT BUSES` | Voltage magnitude and angle and net injection at every bus (see Reports and the solved state). |
 | `REPORT BRANCHES` | From-end and to-end flows, loss and loading of every branch. |
@@ -320,6 +322,12 @@ date, an execution error), or under `LIVE` the live network as of the last step.
 A condition compares two expressions with `=`, `!=`, `<`, `<=`, `>` or `>=` (same unit on both sides; `TIME >= 0.1 S` works
 because both are times), or tests an element's status: `GENERATOR n IS TRIPPED`, `LINE n IS IN SERVICE`, `LOAD n IS
 TRIPPED`. Conditions combine with `NOT`, `AND` and `OR` (in that order of binding) and brackets.
+
+Expressions and conditions have two fixed size limits, so that every script is checked in bounded time and memory. Brackets,
+minus signs, `NOT` and the arguments of `ABS`, `MIN` and `MAX` nest at most 64 deep inside one another, and one expression or
+condition is at most 256 operations deep (a chain `a + b + c` is two deep). A deeper one is a syntax error at the token
+that goes past the limit, naming its line and column; split a long expression with `LET`. Every script that met these
+limits before still means what it meant.
 
 ### Blocks
 
@@ -487,6 +495,50 @@ How additions stay additive:
 - Something that cannot be added without changing existing results (for example, evaluating a stage that
   `PROTECTION FREQUENCY` refuses today) gets a new model word, not a change to the old one.
 
+### The STUDIES extension
+
+A script whose first statement is `GRAMMAR 1 WITH STUDIES` can run three studies on the plant as it stands (after its
+`TRIP`, `CLOSE` and `SET` edits) and read their results by name. Without that header nothing changes: `STUDY` is an
+unknown verb, the words below are free names, and the run record is grammar 1's. The header was refused by grammar 1
+("unexpected WITH"), so accepting it keeps the promise above; `GRAMMAR 2` is still refused.
+
+| Statement | What runs (the CLI verb, with its default options) | Readings |
+|---|---|---|
+| `STUDY CONTINGENCY AS a` | `nminus1`: every in-service branch out in turn, netted against the base case | `VIOLATIONS OF STUDY a` (the outages that fail: with violations, islanded or not solved; a plain number), `WORST LOADING OF STUDY a` (the largest post-outage branch loading of a solved outage, `PU` of rating A) |
+| `STUDY SHORTCIRCUIT BUS "5" AS s` | `iec60909 --bus 5`: three-phase, maximum | `IK OF BUS "5" IN STUDY s` (Ik'', `KA`) |
+| `STUDY OPF AS o` | `acopf-full` | `OBJECTIVE OF STUDY o` (cost per hour, a plain number), `P OF GENERATOR "G1" IN STUDY o` (`MW`) |
+| `STUDY SCOPF AS c` | `scopf`: the DC preventive SCOPF over every branch outage | `OBJECTIVE OF STUDY c` (total cost per hour), `SECURED OF STUDY c` (outages secured); both plain numbers |
+| `STUDY RMS DYNAMICS "case.dyr" FAULT BUS "4" AT 0.1 S CLEAR AT 0.15 S FOR 3 S AS r` | `dynamics-study`: a bolted fault at the bus, cleared in place | `STABLE OF STUDY r` (1 or 0), `FINAL FREQUENCY OF STUDY r` (`HZ`, the reference machine at the end), `MIN VOLTAGE OF BUS "4" IN STUDY r` (`PU`, the least over the run) |
+| `STUDY CCT DYNAMICS "case.dyr" FAULT BUS "4" AT 0.1 S FOR 3 S AS c` | `dynamics-study`: the critical clearing time of that fault, cleared in place | `CCT OF STUDY c` (`S`, the longest clearing time found stable) |
+
+`REPORT STUDY a` prints a study's values. The same Core code runs as for the verb, so the values are the verb's (the run
+record holds them in round-trip text; a reading turns them into the script's decimal numbers as every reading does). A
+study that has no answer (a base case or an OPF that does not converge) is an execution error and keeps nothing. A study
+name may be run again; the readings then see the latest run. `KA` is the unit of the `IK` reading only: no number can be
+written in it, but an `IK` reading can be stored, compared with another and divided by another. In such a script `STUDY`,
+`STUDIES`, `CONTINGENCY`, `SHORTCIRCUIT`, `OPF`, `AS`, `VIOLATIONS`, `WORST`, `OBJECTIVE`, `IK` and `KA` are keywords and
+cannot name a value. `SCOPF` and `SECURED` are not keywords: they are read as such only after `STUDY` and before
+`OF STUDY`, so they can still name a value. The same holds for `CCT`, `DYNAMICS`, `STABLE`, `FINAL` and `VOLTAGE`.
+`STUDY RMS` and `STUDY CCT` need a PSS/E .raw case and its DYR file; they run the `dynamics-study` verb's own Core code
+with fixed settings (step 5 ms, power-flow tolerance 1e-8 pu, unmodelled records refused, the first in-service machine
+as angle reference), so their values are the verb's. The extension is for scripts: the console reads it as grammar 1. The run record gains
+`grammarExtensions: ["STUDIES"]` and a `studies` array (each study's name, kind and values) only when the header is there;
+`grammarVersion` stays `1`.
+
+```text
+GRAMMAR 1 WITH STUDIES
+LOAD CASE "case9.m" FREQUENCY 60 HZ
+TRIP LINE "8-9"
+STUDY CONTINGENCY AS n1
+STUDY SHORTCIRCUIT BUS "5" AS sc
+IF VIOLATIONS OF STUDY n1 > 0
+  PRINT WORST LOADING OF STUDY n1
+END
+PRINT IK OF BUS "5" IN STUDY sc
+```
+
+Python programs reach the same studies through `gridsim.ModelSession` and `psspy` ([ch. 19](<0019 CLI reference.md#python>)).
+
 ### Stages and failure
 
 A script runs in three stages. The whole text is parsed first; a syntax error anywhere refuses the script and nothing
@@ -521,6 +573,15 @@ record is written beside it as `session-<UTC time>.run.json`.
 `gridsim-script run FILE.gss` runs a file, `gridsim-script check FILE.gss` parses it and checks its procedures without
 running anything (exit 0 or 1), and `gridsim-script --version` prints the GridSim version and the grammar version.
 
+A model that `LOAD CASE` reads is checked against the installed licence exactly as the `gridsim` command line checks one: a
+Bundled Network is always admitted, and any other model must fit the licence's bus limit. A refusal is an execution error at
+the `LOAD CASE` line that carries the same message the command line prints.
+
+`--confine` (on `run` and `repl`) confines the script to its base folder: a path that `LOAD CASE`, `EXPORT RESULT` or a
+`DYNAMICS` or `SCHEMAS` setting names must lie inside the base folder, and a network (UNC) path, a device path or a path
+through a symbolic link or junction is refused with an execution error. Use it to run a script someone else wrote. Without
+it, paths behave as before: a relative path starts at the base folder and an absolute path is taken as written.
+
 ### The console panels
 
 The desktop app and the web app each host the same console as a panel. Neither has a second interpreter: both call
@@ -528,8 +589,11 @@ The desktop app and the web app each host the same console as a panel. Neither h
 (the loop `gridsim-script` itself runs) and a script file is `Runner`, so the same lines give the same `.gss` recording and the
 same run record, byte for byte, in the console, the desktop panel and the web panel. The library's hosting hooks are
 additive: `Session.Gate` lets a host refuse a statement before it runs, `Session.Limits` caps the engine ticks of a step and
-of a session and carries a cancellation token, and `StatementEffects` says which statements change state. `gridsim-script` sets none of
-them.
+of a session, the statements, blocks and loop iterations of a session and its output, and carries a cancellation token
+checked before every statement, block and loop iteration; `Session.Licence` is the licence gate of `LOAD CASE`,
+`Session.ConfineToBaseDirectory` the `--confine` rule and `Session.HideBaseDirectory` keeps the base folder's absolute path
+out of messages; `InteractiveConsole.MaxPendingChars` caps an open block; and `StatementEffects` says which statements change
+state. `gridsim-script` and the desktop panel set the licence gate (and `--confine` its rule) and no limit.
 
 **Desktop.** **File > Script console...** opens a window with an input line (Up and Down walk the history), an output pane, a
 box for a `.gss` path with **Run file** and **Check only**, **Load open case** (types `LOAD CASE` for the MATPOWER file or case
@@ -548,13 +612,16 @@ recorded for download as the `.gss` and the `.run.json`. The host applies its ro
 | `SOLVE POWERFLOW` | Analyst, as `POST /api/solve` |
 | `TRIP`, `CLOSE`, `SET`, `FAULT`, `CLEAR FAULT`, `SELECT ENGINE`, `STEP SIM`, `AT`, and any `IF`, `FOR EACH`, `PROC` or `CALL` that contains one | Operator |
 | `LOAD CASE` of a model under `results/` or `gda-out/` | Operator, as for the dashboard and the workbench |
-| `EXPORT RESULT`, and `LOAD CASE` of a file or folder the catalogue does not list | refused for every role (the web console reads and writes no other file) |
+| `EXPORT RESULT`, `LOAD CASE` of a file or folder the catalogue does not list, `SELECT ENGINE ... SCHEMAS`, and a `DYNAMICS` file outside the folder of a model the catalogue lists | refused for every role (the web console reads and writes no other file) |
 
 A script that holds a statement the caller may not run is refused whole, naming the line and column, before any statement
 of it runs; a line typed in a session is refused the same way and the session goes on. Each role refusal is one `AccessDenied` audit
 entry, as on the other web surfaces, and the licence gate applies to every model loaded. The limits are stated on the page: a script
-of at most 64 KB, one `STEP SIM` of at most 100000 engine ticks and a session of 400000, output cut at 256 KB, one free solve slot,
-and the host's solve timeout. See [ch. 9](<0009 The web app and REST and WebSocket API.md>).
+of at most 64 KB, one `STEP SIM` of at most 100000 engine ticks and a session of 400000, at most 200000 statements, blocks and
+loop iterations and 4 M characters of output in a session (output shown cut at 256 KB), an open block of the interactive
+session of at most 64 KB, one free solve slot, and the host's solve timeout, which is checked before every statement, block
+and loop iteration. The page lists the models by paths relative to the console's folder, and messages name that folder as
+"the base folder", never its absolute path. See [ch. 9](<0009 The web app and REST and WebSocket API.md>).
 
 ## Variations
 
@@ -594,9 +661,10 @@ and the host's solve timeout. See [ch. 9](<0009 The web app and REST and WebSock
   `WITH ASSETS OFF` to trip generators in a case that carries authored assets.
 - A named value holds a number or a quantity; there are no text values, lists or user-defined types.
 - `gridsim-script` itself has no role gate: it runs on the machine that starts it, with that user's rights. The role gate and the
-  limits above belong to the web panel; the desktop panel is the same local use as the executable.
-- The web panel stops a run at the host's solve timeout between statements; a single statement already running finishes, and keeps its
-  solve slot until it does.
+  limits above belong to the web panel; the desktop panel is the same local use as the executable. Run a script from someone
+  else with `--confine`.
+- The web panel stops a run at the host's solve timeout before a statement, block or loop iteration; a single statement already
+  running finishes, and keeps its solve slot until it does.
 
 ## See also
 

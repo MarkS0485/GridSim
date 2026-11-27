@@ -262,6 +262,7 @@ public static class AuditLogFile
         }
 
         var chain = new ChainVerifier(anchor, keepEntries);
+        const int MaxEntryBytes = 4 * 1024 * 1024;   // SEC-16
         byte[] chunk = new byte[StreamChunkBytes];
         // The bytes of the line being assembled across reads (a line may span any number of chunks).
         byte[] line = new byte[256];
@@ -282,6 +283,11 @@ public static class AuditLogFile
             {
                 int newline = Array.IndexOf(chunk, (byte)'\n', at, read - at);
                 int take = (newline < 0 ? read : newline) - at;
+                // SEC-16: an entry is a few hundred bytes; a file with no line feed was buffered whole, and past 1 GiB the
+                // doubling overflowed to one chunk per resize. Beyond the cap the verification fails, naming why.
+                if ((long)lineLength + take > MaxEntryBytes)
+                    return chain.Fail(chain.Count, FormattableString.Invariant(
+                        $"entry {chain.Count + 1} is longer than {MaxEntryBytes} bytes with no line break, so it is not an audit entry"));
                 if (lineLength + take > line.Length)
                     Array.Resize(ref line, Math.Max(line.Length * 2, lineLength + take));
                 Buffer.BlockCopy(chunk, at, line, lineLength, take);

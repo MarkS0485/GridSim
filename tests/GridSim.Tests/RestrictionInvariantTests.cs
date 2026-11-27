@@ -23,7 +23,7 @@ public class RestrictionInvariantTests
 
     // GR-884: one folder per test run (a fixed name was shared by concurrent test processes, which then read each
     // other's files).
-    private static readonly string RunDir = Path.Combine(Path.GetTempPath(), $"gridsim-restriction-tests-{Guid.NewGuid():N}");
+    private static readonly string RunDir = TestTemp.Under($"gridsim-restriction-tests-{Guid.NewGuid():N}");
 
     private static string TempPath(string name)
     {

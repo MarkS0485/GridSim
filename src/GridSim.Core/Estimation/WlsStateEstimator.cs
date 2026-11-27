@@ -125,6 +125,14 @@ public sealed record EstimationOptions
 
     public int MaxBadDataRemovals { get; init; } = 20;
 
+    /// <summary>Largest-normalised-residual detection (off by default). Off: the normalised residuals are looked at only
+    /// when the chi-square test fails, so a single gross error the chi-square test misses (it loses power as the degrees
+    /// of freedom grow) stays in. On: the largest normalised residual is also tested when the chi-square test passes, and
+    /// a removable row above <see cref="NormalizedResidualThreshold"/> is removed as it would be after a failed test.
+    /// With no bad data some row exceeds 3 by chance on a large set, so this can remove good data; that is why it is
+    /// opt-in. Applies to the WLS removal loop only (the robust methods never remove).</summary>
+    public bool LnrDetection { get; init; }
+
     /// <summary>Confidence level of the chi-square acceptance test.</summary>
     public double ChiSquareConfidence { get; init; } = 0.95;
 
@@ -734,10 +742,10 @@ public sealed class WlsStateEstimator
             }
             chiThreshold = ChiSquare.Quantile(mChi - s, opt.ChiSquareConfidence);
             chiPassed = objective <= chiThreshold;
-            if (chiPassed && opt.LeanResiduals) break; // consistent fit: skip the m covariance solves
+            if (chiPassed && opt.LeanResiduals && !opt.LnrDetection) break; // consistent fit: skip the m covariance solves
 
             (normalized, critical) = step.NormalizedResiduals(vm, va, residualPu);
-            if (chiPassed) break;
+            if (chiPassed && !opt.LnrDetection) break;
 
             // Identify: the largest normalized residual among removable measurements - not critical,
             // and not a prior-backfill pseudo (removing the replacement would re-open the hole it plugs).
@@ -779,6 +787,15 @@ public sealed class WlsStateEstimator
         EstimationResult result = Assemble(model, mm, opt, status, totalIters, maxUpdate, vm, va,
             normalized, critical, chiThreshold, chiPassed, removed, observability);
         result.IrlsCapReached = irlsCapReached;   // R175 (Q13): reported, never hidden
+        // The largest finite normalised residual of the last pass and its row, when the normalised residuals were
+        // computed. Reporting only: nothing acts on it unless LnrDetection is on.
+        if (normalized.Length == mm.Measurements.Count)
+            for (int r = 0; r < normalized.Length; r++)
+                if (double.IsFinite(normalized[r]) && !(normalized[r] <= result.MaxNormalizedResidual))
+                {
+                    result.MaxNormalizedResidual = normalized[r];
+                    result.MaxNormalizedResidualMeasurement = mm.Measurements[r];
+                }
         // GR-518: the interior guard's hard backstop (a Vm pushed below the floor is set to the floor) used to act
         // without a word. Every clamp is now counted and the buses named, so a state that leaned on the backstop is
         // visible in the result. Reporting only: the state and every other field are unchanged.

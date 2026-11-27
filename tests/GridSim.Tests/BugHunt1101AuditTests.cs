@@ -26,7 +26,7 @@ public sealed partial class BugHunt1101WebTests
     [Fact]
     public void B175_the_feed_records_each_consumed_window_by_name_and_content_and_nothing_else()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-windows-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-bh1101-windows-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(dir, "nested"));
         try
         {

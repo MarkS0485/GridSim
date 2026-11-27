@@ -517,6 +517,74 @@ gridsim nminus1 case118 --batched-lanes 0
   processor). Every number is bit-identical to the default screen; only the speed differs, and a `note:` line on
   standard error says the batched sweep ran.
 
+### Remedial action schemes - RAS
+
+A remedial action scheme (also called a special protection scheme) is automatic logic that acts after a contingency:
+when a named outage happens and a line overloads, trip a generator, shed some load, and so on. `nminus1` and `nminus2`
+run such schemes inside each contingency when given a scheme file with `--ras`.
+
+```bash
+gridsim nminus1 two.m --ras schemes.json
+gridsim nminus1 case.raw --outage-types branch,gen --ras schemes.json --json n1.json
+gridsim nminus2 case14 --ras schemes.json
+```
+
+The file:
+
+```json
+{ "schema": "gridsim-ras/1", "maxLevels": 5,
+  "schemes": [
+    { "name": "RAS-1", "priority": 1,
+      "arming":   [ { "kind": "outage", "branch": "1-2:A" },
+                    { "kind": "preFlowAbove", "branch": "1-2:B", "mva": 80 } ],
+      "triggers": [ { "kind": "loadingAbove", "branch": "1-2:B", "percent": 100, "rating": "A" } ],
+      "logic": "all",
+      "actions":  [ { "kind": "tripGenerator", "unit": "1:2" } ],
+      "maxOperations": 1 } ] }
+```
+
+- **Arming** (all must hold, judged on the base case and the contingency): `outage` (the contingency is the named
+  `branch`, `unit` or `bus`, or contains it; a bus outage contains its branches and units), `preFlowAbove` and
+  `preFlowBelow` (a branch's flow before the outage, `mva` for the larger end's apparent power or `mw` for the real
+  power into its from end), `preVoltageBelow` and `preVoltageAbove` (a bus, `pu`), and `always`.
+- **Triggers** (judged on the state after the outage, and after each level): `loadingAbove` (a branch above `percent`
+  of its `rating` A, B or C; a branch with no such rating is refused), `flowAbove` (real power into the branch at
+  `atEnd` `from` or `to`, above `mw`, signed), `voltageBelow` and `voltageAbove` (a bus, `pu`), and `notConverged`
+  (the state has no power-flow solution). `logic` is `all` (the default) or `any`. A condition on an element that is
+  out of service is false.
+- **Actions**, applied in the order listed: `tripGenerator` (`unit`), `tripBranch` and `closeBranch` (`branch`),
+  `shedLoad` (`bus` with `mw` or `fraction`, at constant power factor; never more than the bus load), `setGeneratorP`
+  (`unit`, `mw`, `mode` `absolute` or `delta`; held within the unit's Pmin and Pmax), `switchShunt` (`bus`, `mvar`, the
+  change at 1 pu, positive capacitive; |mvar| at most 100000) and `setTap` (`branch`, `ratio` from 0.5 to 2). An action
+  on an element that is already out is reported `ACTION SKIPPED` with the reason, and does nothing. `closeBranch` never
+  puts back the contingency's own outaged branch: that would screen the base case under the contingency's name, so it is
+  skipped ("the branch is the contingency's outage").
+- The file is read strictly: an unknown key, or a key given twice in one object, is refused by name (exit 1).
+- **Keys** follow the scripting object model: a bus by its id; on a PSS/E RAW case a unit as `bus:id` and a branch as
+  `from-to:circuit`; on any other case a unit by its name or `G<bus>` and a branch by its name or `from-to`, with `#2`,
+  `#3` on repeats. An unknown key is refused (exit 1) before anything is screened.
+- `priority` (default 0) orders schemes within a level, then the name. `maxOperations` (default 1) limits how often a
+  scheme operates in one contingency. `maxLevels` (default 5, at most 100) limits the levels.
+
+How a contingency runs: the outage is screened as usual (the `Before schemes:` table is the screen's own, with its lost
+load and generation, reference-move and 'base only' lines, and every outage that makes a base-case violation worse).
+Then, level by level, every armed scheme whose triggers hold and that has operations left operates; all their actions
+are applied and the state is solved again. A level where no scheme operates ends the run, and so does a level where
+every action was skipped (the state did not change, so nothing new can happen). The `After schemes:` table prints the
+same lines for the final state, so a contingency that is secure after its schemes but deepens a base-case violation is
+named. If schemes would still operate after
+`maxLevels`, the contingency ends as `RAS LOOP`. Otherwise it ends `SECURE AFTER RAS`, `VIOLATIONS AFTER RAS` (netted
+against the base case like any row) or `NOT CONVERGED AFTER RAS`. Load shed and generator trips move the reference
+bus's output, as outages do. The verdict counts a contingency as secure only when it is secure after its schemes.
+
+With the two-bus case of the tests (G1 150 MW and G1b 50 MW at bus 1, a 200 MW load at the reference bus 2, two lines
+A and B of X = 0.2 pu rated 120 MVA), losing A puts 200 MW on B, 204.31 MVA or 170 %. RAS-1 above trips G1b, leaving
+151.76 MVA (126 %), so the row ends `VIOLATIONS AFTER RAS` at level 1. A second scheme that sets G1 to 100 MW when B
+is overloaded operates in the same level, and the row ends `SECURE AFTER RAS` at 100.51 MVA (84 %).
+
+The schemes are steady state: they act on load-flow states, with no time delays between actions and no dynamic
+simulation. The conditions and actions are the fixed list above; there are no free expressions.
+
 ### nminus1-sweep - the branch sweep, in parallel
 
 ```bash
@@ -919,7 +987,7 @@ error: nminus1: a positional case 'case14' and --dir 'data/uk' were both given a
 - A violation present in the base case is netted by element: a pre-existing violation that an outage makes worse is not
   counted against that outage.
 - The screens do not elect a slack bus for an island that holds generation, so every split reads `ISLANDED`.
-- The N-1-1 corrective action works in the DC model (reactance only, 1 pu voltages): it holds rated lines and limited
+- The N-1-1 corrective action works in the DC model (series reactance with taps, phase shifts and bus Gs, 1 pu voltages): it holds rated lines and limited
   boundaries, not voltages, and minimises the MW moved, not the cost. The slack unit's room to move is measured from its
   DC-balanced output (its stated output plus its island's imbalance, which the slack absorbs), not from its stated
   output; the DC model is lossless, so AC losses are not in that figure.
@@ -930,6 +998,8 @@ error: nminus1: a positional case 'case14' and --dir 'data/uk' were both given a
 - `screen` and `trip` use the legacy 0.125 Hz/s RoCoF limit in their verdicts, and the governor, damping and responsive
   capacity constants behind the nadir are not fitted to a measured trip.
 - `cycle --pipeline` exits 2 because the pipelined backlog drain is not implemented (R096).
+- Remedial action schemes (`--ras`) are steady state: no time delays and no dynamic simulation of their operation. They
+  run with the reference-bus dispatch only, and they are checked against closed forms, not against vendor RAS runs.
 
 ## See also
 

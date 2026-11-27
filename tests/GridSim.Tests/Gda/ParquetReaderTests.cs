@@ -14,7 +14,7 @@ public class ParquetReaderTests
     [Fact]
     public async Task Reads_parquet_rows_by_column_name()
     {
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-pq-" + Guid.NewGuid().ToString("N") + ".parquet");
+        string path = TestTemp.Under("gridsim-pq-" + Guid.NewGuid().ToString("N") + ".parquet");
         var name = new DataField<string>("Busbar Name");
         var kv = new DataField<double>("Operating Voltage (kV)");
         var n = new DataField<int>("Count");

@@ -991,6 +991,186 @@ Settling:       49.951 Hz
 The header still reads `0 unit(s) tripped`, because a shed is not a trip, but the report shows it: the 632 MW block
 leaves at 49.6 Hz, the nadir is 49.595 Hz and the frequency settles at 49.951 Hz.
 
+### Per-unit relays
+
+A generating unit carries relays of its own: under and over frequency (81U, 81O), RoCoF (81R), vector shift (78), under
+and over voltage (27, 59), reverse power (32) and loss of excitation (40). Their settings belong to the unit, from its
+protection schedule or its connection agreement, so two units of one type on one site can differ. A JSON v2 case gives
+them as a template of kind `unitProtection` (the class default, often a placeholder) that a generator takes with
+`protectionTemplate` or a binding rule, with the unit's own values on top from an override that names the `unit`
+(technical manual, chapter 28, "Unit protection (RC5)"). Presets give the ENA settings with their sources: `rocofPreset`
+`legacy`, `legacy-high-impedance` or `modern`, and `interfacePreset` `g99-hv` or `g99-lv` (EREC G99 Issue 2 Table 10.1).
+
+`protection-check` then judges every unit's own relays with the unit's own settings, after the network elements. The
+example case holds a placeholder class default taken by `CCGT B` (with its own 81U pickup and the modern RoCoF setting on
+top) and the G99 HV interface settings taken by `Embedded C` through a binding rule (with its own reverse-power setting):
+
+```bash
+gridsim protection-check docs/_captures/v2-schema/inputs/unit-protection/unit-protection.case.json
+```
+
+```
+$ gridsim protection-check docs/_captures/v2-schema/inputs/unit-protection/unit-protection.case.json
+note: unit-protection.case.json: unit protection: 2 units with relays of their own (15 relay stages, 6 with a placeholder setting), 2 unit protection templates; the power flow does not use them
+Protection assessment  -  docs/_captures/v2-schema/inputs/unit-protection/unit-protection.case.json  (3 buses, converged=True)  [passive; solve unchanged]
+  operating elements: 2
+  | device | function | location | quantity | pickup | time | basis |
+  |--------|----------|----------|----------|--------|------|-------|
+  | 32 | Reverse power (unit) | Embedded C | -20.000 MW | -2.500 | 2.00s | unit Embedded C relay 32: the unit absorbs 20 MW, past the 2.5 MW reverse-power pickup (0.05 pu of 50 MVA); settings: pickup 0.05 pu of rating (sourced, unit, Synthetic); delay 2 s (sourced, unit, Synthetic) |
+  | 32 | Reverse power | Embedded C | -20.000 MW | -5.000 | - | Embedded C is absorbing 20.0 MW (reverse/motoring past the 5 MW pickup) |
+  not evaluated on a steady snapshot: 81R (RoCoF); 78 (Vector shift / LoM); 50N/51N/21N/46 (Ground / negative-sequence); 81R (RoCoF (unit)); 81R (RoCoF (unit))
+  unit relays (2 unit(s) with protection of their own, 15 relay stage(s)):
+  | unit | relay | function | verdict | quantity | pickup | delay | settings |
+  |------|-------|----------|---------|----------|--------|-------|----------|
+  | CCGT B | 27-1 | Undervoltage stage 1 (unit) | holds | 1.000 pu | 0.800 | 2 s | pickup 0.8 pu (placeholder, template 'ccgt-placeholder', CuratedPlaceholder); delay 2 s (placeholder, template 'ccgt-placeholder', CuratedPlaceholder) |
+  | CCGT B | 59-1 | Overvoltage stage 1 (unit) | holds | 1.000 pu | 1.150 | 2 s | pickup 1.15 pu (placeholder, template 'ccgt-placeholder', CuratedPlaceholder); delay 2 s (placeholder, template 'ccgt-placeholder', CuratedPlaceholder) |
+  | CCGT B | 32 | Reverse power (unit) | holds | 80.000 MW | -3.000 | 5 s | pickup 0.02 pu of rating (placeholder, template 'ccgt-placeholder', CuratedPlaceholder); delay 5 s (placeholder, template 'ccgt-placeholder', CuratedPlaceholder) |
+  | CCGT B | 40-1 | Loss of excitation zone 1 (unit) | holds | 2.050 pu | 0.500 | 0.1 s | offset 0.1 pu (placeholder, template 'ccgt-placeholder', CuratedPlaceholder); diameter 1 pu (placeholder, template 'ccgt-placeholder', CuratedPlaceholder); delay 0.1 s (placeholder, template 'ccgt-placeholder', CuratedPlaceholder) |
+  | CCGT B | 81U-1 | Underfrequency stage 1 (unit) | holds | 50.000 Hz | 47.500 | 2 s | pickup 47.5 Hz (sourced, unit, Synthetic); delay 2 s (placeholder, template 'ccgt-placeholder', CuratedPlaceholder) |
+  | CCGT B | 81O-1 | Overfrequency stage 1 (unit) | holds | 50.000 Hz | 52.000 | 2 s | pickup 52 Hz (placeholder, template 'ccgt-placeholder', CuratedPlaceholder); delay 2 s (placeholder, template 'ccgt-placeholder', CuratedPlaceholder) |
+  | CCGT B | 81R | RoCoF (unit) | not checkable | - | 1.000 | 0.5 s | pickup 1 Hz/s (sourced, unit, preset rocof 'modern', Recorded); delay 0.5 s (sourced, unit, preset rocof 'modern', Recorded) |
+  | Embedded C | 27-1 | Undervoltage stage 1 (unit) | holds | 0.969 pu | 0.800 | 2.5 s | pickup 0.8 pu (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 2.5 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+  | Embedded C | 59-1 | Overvoltage stage 1 (unit) | holds | 0.969 pu | 1.100 | 1 s | pickup 1.1 pu (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 1 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+  | Embedded C | 59-2 | Overvoltage stage 2 (unit) | holds | 0.969 pu | 1.130 | 0.5 s | pickup 1.13 pu (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 0.5 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+  | Embedded C | 32 | Reverse power (unit) | WOULD OPERATE | -20.000 MW | -2.500 | 2 s | pickup 0.05 pu of rating (sourced, unit, Synthetic); delay 2 s (sourced, unit, Synthetic) |
+  | Embedded C | 81U-1 | Underfrequency stage 1 (unit) | holds | 50.000 Hz | 47.500 | 20 s | pickup 47.5 Hz (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 20 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+  | Embedded C | 81U-2 | Underfrequency stage 2 (unit) | holds | 50.000 Hz | 47.000 | 0.5 s | pickup 47 Hz (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 0.5 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+  | Embedded C | 81O-1 | Overfrequency stage 1 (unit) | holds | 50.000 Hz | 52.000 | 0.5 s | pickup 52 Hz (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 0.5 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+  | Embedded C | 81R | RoCoF (unit) | not checkable | - | 1.000 | 0.5 s | pickup 1 Hz/s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 0.5 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded) |
+    CCGT B 81R: unit CCGT B relay 81R: not checkable: RoCoF needs a dynamic run (a frequency trajectory); a steady-state snapshot has no df/dt; settings: pickup 1 Hz/s (sourced, unit, preset rocof 'modern', Recorded); delay 0.5 s (sourced, unit, preset rocof 'modern', Recorded)
+    Embedded C 81R: unit Embedded C relay 81R: not checkable: RoCoF needs a dynamic run (a frequency trajectory); a steady-state snapshot has no df/dt; settings: pickup 1 Hz/s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded); delay 0.5 s (sourced, template 'g99-embedded', preset interface 'g99-hv', Recorded)
+
+PROTECTION SIMULATION suggests 2 protection event(s) would occur. e.g. on Embedded C, relay 32 (Reverse power (unit)) would likely operate: unit Embedded C relay 32: the unit absorbs 20 MW, past the 2.5 MW reverse-power pickup (0.05 pu of 50 MVA); settings: pickup 0.05 pu of rating (sourced, unit, Synthetic); delay 2 s (sourced, unit, Synthetic).
+[exit 0]
+```
+
+- **Unit relays table.** One row per stage of every unit: the unit, the stage (`81U-1`, `32`, `40-1`, ...), the verdict,
+  the quantity, the pickup, the delay and the settings, each value with its grade (`placeholder` or `sourced`), where it
+  came from (`unit`, or `template '<name>'`, with any preset) and its provenance tag. `Embedded C` absorbs 20 MW, beyond
+  its own 2.5 MW reverse-power setting (0.05 pu of 50 MVA), so its 32 operates and joins the operating elements.
+- **Not checkable.** RoCoF and vector shift need a dynamic run, and a delayed stage beyond its pickup on a fault snapshot
+  or a trajectory summary has no duration to judge; each is listed with its reason, never reported as a trip.
+- A case without unit protection prints exactly what it printed before.
+
+`trip` on a case with unit protection adds the units' frequency relays on its trajectory, each with its own settings.
+
+In a dynamics study the units' own relays can also act during the run (opt-in): `gridsim dynamics-study <study.json>
+--unit-protection <file>` (or `adaptive.unitProtection` in the study file) puts them in the variable-step companion run,
+where an operating stage disconnects its unit and the run continues. The study binds a PSS/E RAW case, so the file names
+each unit by its PSS/E machine key `<bus>:<id>` (the generator record's bus number and machine ID, for example `101:1`);
+it holds the same `unitProtection` templates and per-unit values as a v2 case (`gridsim-unit-protection/1`). The result
+gains `unitProtection`, with every unit trip, and each adaptive row's `unitRelays`; everything else is as without it. A
+unit the RAW case does not have is refused. See `dynamics-study` in the CLI reference.
+
+With unit protection the study also re-runs each events row on the full-model engine (the fixed-step machines with flux
+decay and their exciters) with the units' relays acting, including loss of excitation (40): the apparent impedance at the
+machine terminals, each step, against the unit's two offset mho zones and their delays. So a field failure trips its unit
+after the zone delay while a normal fault-and-clear does not. A stage operates at the first step at least its delay after
+it picked up, and the unit leaves one step later; the trips are under `unitProtection.fullModel`, with every stage the
+engine cannot evaluate listed with the reason (for example 40 on a unit with no rating, or 78 with a delay). On a unit
+whose step-up transformer is folded into the machine (`unitTransformerXPu`), 40 and the under / over-voltage stages
+(27 / 59, whose VTs are on the generator side) read the machine terminal, the generator side of the transformer, in the
+steady-state check and in both RMS runs; such a 27 / 59 record names the voltage it read (`VoltageMeasuredAt`). The study's rows and status are unchanged.
+A study without the `adaptive` member takes `--unit-protection` too: the relays then act in this full-model run alone,
+reported under `unitProtection.fullModel` exactly as with it.
+
+### Placed relays with `protection-eval` and `protection-grade`
+
+A `gridsim-devices/1` file places relays on branches. Besides the curves, a device can carry `distance` zones (a 21), a
+`directional` element (a 67, 67N or 67Q by its polarisation) or a `differential` setting (an 87L), and a 50N or 51N
+times on the residual current. `protection-eval` measures every device on one fault:
+
+```
+gridsim protection-eval case9 --devices devices.json --bus 5 --type ll
+gridsim protection-eval case9 --devices devices.json --branch 1 --fraction 0.3 --type 3ph
+```
+
+Each line names the device, the element, what it measured (secondary amps, or the deciding loop's impedance in
+secondary ohms and its zone), the direction for a 67, and the operating time. `protection-grade` runs the coordination
+checks over every bus for each fault type: grading margins between each device and its upstream backup (G1), zone 1 not
+reaching the far bus (G2), zone 2 covering it (G3), how far along the line zone 1 reaches (G4) and earth-fault
+sensitivity (G5):
+
+```
+gridsim protection-grade case9 --devices devices.json --types 3ph,ll --cti 0.3
+```
+
+It exits 0 when everything that could be checked passed, and 3 when a check failed or nothing could be checked. The
+three older verbs (`sc-trace`, `fault-line`, `protection-audit`) still evaluate the phase overcurrent elements only.
+The flags are in the [CLI reference](<0019 CLI reference.md#protection-eval>).
+
+A distance relay can also carry:
+- a `scheme` with the relay at the other end of the line (`DUTT`, `PUTT`, `POTT` or `DCB`, with a channel time and,
+  for DCB, a coordination time). `protection-eval` then prints each end's aided trip time and adds the columns `scheme`,
+  `aided` and `aided_trip_s`;
+- a `reverse` zone, which looks behind the relay. It sends the DCB block, and it also trips on its own `timeS` as a
+  time-delayed back-up for faults behind the relay, as many relays use it. That trip is graded like any other zone's;
+- `mutual` compensation from a parallel line;
+- a `loadEncroachment` blinder that blocks phase loops in the load region. `protection-grade` then adds G6, which checks
+  whether a zone reaches the prefault load point;
+- `sotf` (switch-onto-fault), used only by the relays on the line that is marked as closed onto the fault
+  (`--energised true`, which needs `--branch`). Relays on other lines keep their zone timers;
+- `powerSwing` blinders.
+
+```
+gridsim protection-eval case9 --devices devices.json --branch 1 --fraction 0.85
+gridsim protection-eval case9 --devices devices.json --branch 1 --fraction 0.85 --energised true
+gridsim protection-eval case9 --devices devices.json --swing swing.csv
+```
+
+The last form reads a bus-voltage trace with both ends of each relay's branch. It can be a `dynamics-study` result
+file, read as it is: its `busVoltage` channels are used directly, and the study must hold one fixed-time case. It can
+also be a CSV with `t_s`, then `vm_<bus>` and `va_<bus>`. The relay's current comes from the branch's own data with the
+case's fixed tap, so a tap changer that moves during the RMS run is not followed. For each relay with `powerSwing` it lists every pass of
+the impedance through the outer blinder: whether it was a swing, and from when to when the zones were blocked. A 21 may
+also sit on a two-winding transformer (with `onTransformer: true`), where it measures the transformer's impedance on its
+own side.
+
+An 87 can also protect a transformer or a busbar.
+
+A transformer differential (87T) is an 87 on a two-winding transformer with a `transformerDifferential` member:
+
+```json
+{ "id": "T1", "type": "relay", "function": "87", "branch": { "index": 1, "from": 2, "to": 3, "end": "from" },
+  "transformerDifferential": { "vectorGroup": "YNd1", "ratedMva": 60, "is1": 0.2, "k1": 0.3, "is2": 2.0, "k2": 0.8 } }
+```
+
+- The vector group is one of YNd1, Yd11, Dyn1, Dyn11, YNyn0, Yy0 and Dd0. It must agree with the case: the HV side is
+  the bus with the higher base kV, the phase shift must be the group's (LV lags HV by the clock number times 30
+  degrees), and the windings, where the case gives them, must match.
+- The settings are in pu of `ratedMva`, so no CT ratios are needed. The CTs sit on the transformer's own ends. To put
+  one further out, give `hvCt` or `lvCt` as `{ "branch": { ... } }`: a branch from the transformer's bus, with the CT at
+  its other end. That bus is then inside the zone, and a fault on it is an internal fault. The bus must then carry no
+  load, shunt, unit, HVDC converter, static var compensator or FACTS device, since no CT would measure its current.
+- The star side's currents are turned to match the delta side and its zero sequence is removed. A YN side of a YNyn0
+  unit has its zero sequence removed.
+- The row's Id, Ib and threshold are in pu of the rating.
+- The input is fundamental phasors only: there is no inrush, 2nd or 5th harmonic restraint and no CT saturation. A tap
+  away from 1 shows as a differential current, as it would in a relay set at the nominal ratio. Three-winding units are
+  refused.
+
+A busbar differential (87B) is an 87 with a `busDifferential` member:
+
+```json
+{ "id": "B1", "type": "relay", "function": "87", "branch": { "index": 0, "from": 1, "to": 2, "end": "from" },
+  "busDifferential": { "zone": [ 1 ], "cts": [
+      { "branch": { "index": 0, "from": 1, "to": 2, "end": "from" }, "ct": { "primaryA": 1200, "secondaryA": 1 } },
+      { "branch": { "index": 1, "from": 1, "to": 3, "end": "from" }, "ct": { "primaryA": 800, "secondaryA": 1 } } ],
+    "is1A": 0.2, "k1": 0.3, "bias": "sum" } }
+```
+
+- Each CT sits at the zone end of a branch that leaves the zone. Currents are in secondary amps of the CT with the
+  largest primary. The device's own `branch` only places it in the file.
+- Id is the sum of the currents into the zone. Ib is their sum (`"bias": "sum"`) or the largest (`"max"`). It operates
+  when Id > k1 Ib + is1A. Give `is2A` and `k2` for the dual slope of the 87L.
+- Units, loads and shunts at a zone bus count as one feeder per bus.
+- `checkZone` lists every bus of the station (a superset of the zone). A trip then needs both zones.
+- The element is low-impedance with ideal CTs. There is no CT saturation detection and no high-impedance scheme.
+
+For these elements `protection-grade` adds two checks. G7 (87B only) fails when a branch leaves the zone without a CT;
+it names the branch, and the element is then not evaluated. G8 checks that the 87T or 87B does not operate for any
+fault of the study outside its zone.
+
 ## Pitfalls
 
 - **`fault` is not the equipment duty.** It superposes the fault on the solved state with the loads as impedances; the
@@ -1082,6 +1262,11 @@ leaves at 49.6 Hz, the nadir is 49.595 Hz and the frequency settles at 49.951 Hz
   carries the saturated reactance the standard's `lambda` needs).
 - In the unbalanced study converter-interfaced units add no fault current: the model has no negative- or zero-sequence
   behaviour for them.
+- `protection-eval` and `protection-grade` take earth faults on a case with winding connections (as the unbalanced
+  study does); on case9 use `3ph`, `ll` or a JSON v2 copy with windings. The fault is a reactance (no fault resistance).
+  The distance schemes are logic on static fault phasors (no channel failure, current-reversal guard, echo or weak
+  infeed); power-swing blocking reads a positive-sequence trace and has no out-of-step tripping. 87T, 87B and line
+  charging compensation are not modelled.
 - `grade` takes the fault current as an input: no verb couples the per-branch currents of `iec60909 --branches` into a
   grading chain, and fuse and recloser curves are not modelled.
 - `trip --asset-dynamics` runs the lumped frequency model, so voltage and thermal protection stages are not evaluated

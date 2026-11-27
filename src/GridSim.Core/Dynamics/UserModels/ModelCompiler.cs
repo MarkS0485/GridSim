@@ -7,8 +7,10 @@ namespace GridSim.Core.Dynamics.UserModels;
 /// <summary>The closed block catalogue: the only operations a document may use.</summary>
 public static class ModelCatalogue
 {
+    // RC5 wp32b: AddedForRelays marks the blocks added with the relay role (ontimer, latch). The refusal of an unknown block type
+    // lists the whole catalogue, these included (a refusal must be true).
     internal sealed record Spec(string Type, int MinIn, int MaxIn, string[] Required, string[] Optional, bool Stateful,
-        bool Combinational, int InitValues, bool PrevAllowed, string Summary);
+        bool Combinational, int InitValues, bool PrevAllowed, string Summary, bool AddedForRelays = false);
 
     private static readonly string[] None = Array.Empty<string>();
 
@@ -35,6 +37,9 @@ public static class ModelCatalogue
         new("hold", 0, 0, None, None, true, false, 1, true, "a value fixed at initialisation (for example the load reference); initialised with its OUTPUT"),
         new("delay", 1, 1, new[] { "steps" }, None, true, false, 1, true, "fixed delay of a whole number of steps; initialised with its OUTPUT"),
         new("satpole", 1, 1, new[] { "te", "ke", "a", "b" }, None, true, false, 1, true, "IEEE Type-1 saturated exciter pole Te dE/dt = u - (ke + a*exp(b*E))*E, exact with the saturation frozen over the step; initialised with its OUTPUT"),
+        new("expr", 1, 8, None, None, false, true, 0, false, "an expression of in0..in7 and @parameters (+ - * /, unary -, brackets, min, max, abs, sqrt, exp, clamp) evaluated in its written order; 'expr' gives the text and 'unit' the output unit; a non-finite result refuses the step"),
+        new("ontimer", 1, 1, new[] { "time" }, None, true, false, 1, false, "on-delay timer counted in whole steps: picks up at the first step its input is non-zero and gives 1 from the first step k with (k - k_pickup) h + h 1e-6 >= time (the built-in unit relay stages' rule), 0 before; a step with the input 0 resets it; one fixed step size; initialised with its OUTPUT, which must be 0", AddedForRelays: true),
+        new("latch", 1, 1, None, None, true, false, 1, false, "seal-in: gives 1 from the first step its input is non-zero to the end of the run, 0 before; initialised with its OUTPUT (0 or 1)", AddedForRelays: true),
     };
 
     internal static Spec? Find(string type)
@@ -87,6 +92,19 @@ public sealed class CompiledModel
 
     /// <summary>The declared parameter names, then derived names, in document order.</summary>
     public IReadOnlyList<string> ParameterNames => Document.Parameters.Select(p => p.Name).ToList();
+
+    /// <summary>RC5 wp32b: true when a block or an output port reads the input port named <paramref name="port"/>.</summary>
+    internal bool ReadsInput(string port)
+    {
+        for (int i = 0; i < Document.Inputs.Count && i < InputSlots.Length; i++)
+        {
+            if (Document.Inputs[i].Name != port) continue;
+            int slot = InputSlots[i];
+            foreach (OpSpec o in Ops) if (Array.IndexOf(o.In, slot) >= 0) return true;
+            return Array.IndexOf(OutputSlots, slot) >= 0;
+        }
+        return false;
+    }
 }
 
 /// <summary>
@@ -219,8 +237,13 @@ public static class ModelCompiler
 
         // Each parameter reference of each block is resolved (and an undeclared one reported) exactly once, here.
         for (int i = 0; i < doc.Blocks.Count; i++)
+        {
             foreach (var kv in doc.Blocks[i].Params)
                 if (kv.Value.Kind == ModelRefKind.Parameter) ResolveConst(kv.Value, "block " + doc.Blocks[i].Id);
+            // RC5 WP12: the @parameters an expr block's text names.
+            if (doc.Blocks[i].Type == "expr" && ExprProgram.Parse(doc.Blocks[i].Expr).Program is { } xp)
+                foreach (string pn in xp.Parameters) ResolveConst(new ModelRef(ModelRefKind.Parameter, pn, false, 0), "block " + doc.Blocks[i].Id);
+        }
 
         // ---- initialisation block ------------------------------------------------------------------------------------
         var initOps = new List<OpSpec>();
@@ -541,6 +564,18 @@ public static class ModelCompiler
             }
         }
         else if (b.Table is not null) issues.Add(new ModelIssue("unknown-param", obj, "'table' belongs to a table1d block only."));
+        if (sp.Type == "expr")
+        {
+            (ExprProgram? xp, string? err) = ExprProgram.Parse(b.Expr);
+            if (b.Expr is null) issues.Add(new ModelIssue("missing-param", obj, "an expr block needs the 'expr' member (the expression text)."));
+            else if (xp is null) issues.Add(new ModelIssue("bad-expr", obj, err!));
+            else if (xp.MaxInput >= b.Inputs.Count)
+                issues.Add(new ModelIssue("bad-expr", obj, $"the expression reads in{xp.MaxInput.ToString(CultureInfo.InvariantCulture)} but the block has {b.Inputs.Count.ToString(CultureInfo.InvariantCulture)} input(s)."));
+            if (b.UnitText is null) issues.Add(new ModelIssue("missing-param", obj, "an expr block declares its output unit with the 'unit' member (it is not inferred)."));
+            else if (ModelUnit.Parse(b.UnitText) is null) issues.Add(new ModelIssue("unit-mismatch", obj, $"'{b.UnitText}' is not a unit in the grammar (pu, 1, s combined with * and /)."));
+        }
+        else if (b.Expr is not null || b.UnitText is not null)
+            issues.Add(new ModelIssue("unknown-param", obj, "'expr' and 'unit' belong to an expr block only."));
         if (sp.Type == "delay")
         {
             ModelRef? st = b.Params.FirstOrDefault(p => p.Key == "steps").Value;
@@ -647,6 +682,21 @@ public static class ModelCompiler
                 Need("te", S); Need("ke", One); Need("a", One);
                 if (d0 is { } sp0) Need("b", One.Over(sp0));
                 return (slots.ToArray(), names.ToArray(), d0);
+            case "expr":
+            {
+                // RC5 WP12: the parameters in first-appearance order (the program's parameter numbers); the output unit is the
+                // declared one, never inferred.
+                if (ExprProgram.Parse(b.Expr).Program is { } xp)
+                    foreach (string pn in xp.Parameters)
+                    {
+                        names.Add("@" + pn);
+                        slots.Add(resolve(new ModelRef(ModelRefKind.Parameter, pn, false, 0), obj));
+                    }
+                return (slots.ToArray(), names.ToArray(), ModelUnit.Parse(b.UnitText));
+            }
+            // RC5 wp32b: a timer and a seal-in give a 0 / 1 signal; the timer's time is in seconds.
+            case "ontimer": Need("time", S); return (slots.ToArray(), names.ToArray(), One);
+            case "latch": return (slots.ToArray(), names.ToArray(), One);
         }
         return (slots.ToArray(), names.ToArray(), null);
     }
@@ -674,19 +724,34 @@ public static class ModelCompiler
             "exciter" => (new[] { "verr", "speed" }, new[] { "efd" }, new[] { "efd0" }, true),
             "governor" => (new[] { "speed" }, new[] { "pm" }, new[] { "pm0" }, false),
             "stabiliser" => (new[] { "u" }, new[] { "vs" }, new[] { "u0" }, false),
+            // RC5 WP12: terminal |V| in; active and reactive current exporting positive on the unit's MBASE (injection), or
+            // drawn P and Q as multiples of the load's PMw and QMvar (load); started from p0, q0 and |V0|.
+            "injection" => (new[] { "vm" }, new[] { "ip", "iq" }, new[] { "p0", "q0", "v0" }, false),
+            "load" => (new[] { "vm" }, new[] { "p", "q" }, new[] { "p0", "q0", "v0" }, false),
+            // RC5 wp32b: the fields of RelayInputs in, the trip (0, or the reason code) out; no initialisation inputs.
+            "relay" => (new[] { "vm", "f", "p", "q", "dfdt", "speed", "i" }, new[] { "trip" }, Array.Empty<string>(), false),
             _ => null,
         };
         if (want is not { } w) return;
         if (!doc.Inputs.Select(p => p.Name).SequenceEqual(w.ins))
             issue("role-ports", "ports.inputs", $"a {doc.Role} has the input ports [{string.Join(", ", w.ins)}] in that order.");
         if (!doc.Outputs.Select(p => p.Name).SequenceEqual(w.outs))
-            issue("role-ports", "ports.outputs", $"a {doc.Role} has the output port [{string.Join(", ", w.outs)}].");
+            issue("role-ports", "ports.outputs", w.outs.Length == 1 ? $"a {doc.Role} has the output port [{string.Join(", ", w.outs)}]."
+                : $"a {doc.Role} has the output ports [{string.Join(", ", w.outs)}] in that order.");
         if (!doc.Initialisation.Inputs.Select(p => p.Name).SequenceEqual(w.init))
             issue("role-ports", "initialisation.inputs", $"a {doc.Role} is initialised from [{string.Join(", ", w.init)}].");
         if (w.eq && doc.Initialisation.EquilibriumError is null)
             issue("role-ports", "initialisation.equilibriumError", "an exciter must name the initialisation value that is its steady regulator error.");
         foreach (ModelPort p in doc.Inputs.Concat(doc.Outputs).Concat(doc.Initialisation.Inputs))
+        {
+            // RC5 wp32b: a relay's dfdt is a rate (Hz/s), declared 1/s; every other relay port is dimensionless (f in Hz, 1).
+            if (doc.Role == "relay" && p.Name == "dfdt" && doc.Inputs.Contains(p))
+            {
+                if (p.Unit != ModelUnit.One.Over(ModelUnit.Seconds)) issue("unit-mismatch", "port " + p.Name, $"a relay's 'dfdt' port is a rate in 1/s (Hz/s); it is declared in {p.Unit}.");
+                continue;
+            }
             if (p.Unit != ModelUnit.One) issue("unit-mismatch", "port " + p.Name, $"a {doc.Role} port is per-unit; '{p.Name}' is declared in {p.Unit}.");
+        }
     }
 }
 

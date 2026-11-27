@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 /// </summary>
 public class N212GdaModelWriterLosslessTests
 {
-    private static string TempDir() => Path.Combine(Path.GetTempPath(), $"gridsim-n212-{Guid.NewGuid():N}");
+    private static string TempDir() => TestTemp.Under($"gridsim-n212-{Guid.NewGuid():N}");
 
     private static void SameBits(double expected, double actual, string what) =>
         Assert.True(BitConverter.DoubleToInt64Bits(expected) == BitConverter.DoubleToInt64Bits(actual),

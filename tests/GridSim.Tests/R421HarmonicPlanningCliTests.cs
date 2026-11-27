@@ -12,7 +12,7 @@ public sealed class R421HarmonicPlanningCliTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-r421-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-r421-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

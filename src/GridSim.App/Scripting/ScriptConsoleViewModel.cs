@@ -48,6 +48,13 @@ public sealed class ScriptConsoleViewModel : ObservableObject, IDisposable
     /// <summary>Hosting hook for the session (see <see cref="Session.Gate"/>); the desktop sets none. Tests use it to see the thread a statement runs on.</summary>
     public Func<Statement, Session, string?>? Gate { get; set; }
 
+    /// <summary>The licence gate a <c>LOAD CASE</c> answers to (see <see cref="Session.Licence"/>), exactly as on the command line and in
+    /// <c>gridsim-script</c>. Null (the default) resolves the installed licence (<see cref="GridSim.Core.Licensing.LicenceGate.Resolve()"/>)
+    /// when a session or run starts.</summary>
+    public GridSim.Core.Licensing.LicenceGate? Licence { get; set; }
+
+    private GridSim.Core.Licensing.LicenceGate LicenceForRun() => Licence ?? GridSim.Core.Licensing.LicenceGate.Resolve();
+
     /// <summary>Raised after every change the window shows.</summary>
     public event EventHandler? Refreshed;
 
@@ -200,8 +207,9 @@ public sealed class ScriptConsoleViewModel : ObservableObject, IDisposable
         {
             string baseDir = Path.GetDirectoryName(full)!;
             Func<Statement, Session, string?>? gate = Gate;
+            GridSim.Core.Licensing.LicenceGate licence = LicenceForRun();
             using var sw = new StringWriter { NewLine = "\n" };
-            RunResult r = await Task.Run(() => Runner.Run(bytes, new RunOptions(baseDir, sw, gate))).ConfigureAwait(true);
+            RunResult r = await Task.Run(() => Runner.Run(bytes, new RunOptions(baseDir, sw, gate, Licence: licence))).ConfigureAwait(true);
             if (sw.ToString().Length > 0) Append(sw.ToString().TrimEnd('\n'));
             LastRunRecordJson = r.RecordJson;
             Directory.CreateDirectory(RecordDirectory);
@@ -295,6 +303,7 @@ public sealed class ScriptConsoleViewModel : ObservableObject, IDisposable
         SessionRunRecordPath = null;
         _console = new InteractiveConsole(BaseDirectory, text => _gssWriter.WriteLine(text));
         _console.Session.Gate = Gate;
+        _console.Session.Licence = LicenceForRun();
         Append("recording to " + _gssPath);
         return _console;
     }

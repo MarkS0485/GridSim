@@ -41,7 +41,7 @@ public static class Cholesky
                 {
                     if (!(s > 0.0))
                         throw DomainRefusal.Mark(new ArgumentException(
-                            $"The matrix is not positive definite (pivot {i} is {s:R}); a correlation matrix must be positive definite.", nameof(a)));
+                            FormattableString.Invariant($"The matrix is not positive definite (pivot {i} is {s:R}); a correlation matrix must be positive definite."), nameof(a)));
                     l[i, i] = Math.Sqrt(s);
                 }
                 else l[i, j] = s / l[j, j];

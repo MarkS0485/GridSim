@@ -1,0 +1,150 @@
+name: .NET runtime watch
+
+# Weekly check that global.json's .NET SDK is the latest 10.0 SDK. The builds are self-contained and carry the .NET
+# runtime, so a .NET security fix reaches users only in a new GridSim release. When global.json is behind, this
+# workflow opens (or updates) ONE issue that names the new SDK, its release date, whether Microsoft marked the release
+# as a security release and the CVE ids it lists. When global.json is current again, it closes that issue. The issue
+# is the cue to bump global.json, rebuild and release.
+#
+# Source: the official release metadata, https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json
+# (`latest-sdk`, and the release entry that ships that SDK for `release-date`, `security` and `cve-list`).
+#
+# The issue is found by its label (dotnet-runtime-watch) or by its title prefix, so a run never opens a second one.
+# A fetch or parse error fails the run; it never reads as "up to date".
+#
+# Dependabot's dotnet-sdk ecosystem (.github/dependabot.yml) watches the same file and opens the bump pull request.
+#
+# Triggers and guard: weekly and by hand. Every job is guarded by the repository name (or a run started by hand), as
+# in ci.yml, so it runs only on the public repository; the private development repository has Actions disabled.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 6 * * 3'   # Wednesdays 06:41 UTC, the day after Patch Tuesday in the weeks it falls
+
+concurrency:
+  group: dotnet-runtime-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: Compare global.json with the latest .NET 10.0 SDK
+    if: github.repository == 'MarkS0485/GridSim' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read    # read global.json
+      issues: write     # open, update or close the tracking issue
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the SDK and open, update or close the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          FEED: https://dotnetcli.blob.core.windows.net/dotnet/release-metadata/10.0/releases.json
+          LABEL: dotnet-runtime-watch
+          TITLE_PREFIX: '.NET SDK/runtime update available:'
+        run: |
+          set -euo pipefail
+
+          # ---- Versions -----------------------------------------------------------------------------------------
+          # Plain MAJOR.MINOR.PATCH only (no preview or rc suffix); anything else fails the run.
+          valid() { [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; }
+          # Numeric, part by part: 10.0.401 < 10.0.402 < 10.0.500. Prints -1, 0 or 1.
+          compare() {
+            local -a a b
+            IFS=. read -r -a a <<<"$1"
+            IFS=. read -r -a b <<<"$2"
+            for i in 0 1 2; do
+              if (( 10#${a[$i]} < 10#${b[$i]} )); then echo -1; return; fi
+              if (( 10#${a[$i]} > 10#${b[$i]} )); then echo 1; return; fi
+            done
+            echo 0
+          }
+          # Self-check of the comparison before it is trusted.
+          [[ "$(compare 10.0.401 10.0.402)" == "-1" && "$(compare 10.0.401 10.0.500)" == "-1" &&
+             "$(compare 10.0.500 10.0.402)" == "1" && "$(compare 10.0.401 10.0.401)" == "0" &&
+             "$(compare 10.0.99 10.0.100)" == "-1" ]] || { echo "::error::Version comparison self-check failed."; exit 1; }
+
+          CURRENT="$(jq -er '.sdk.version' global.json)" || { echo "::error::Cannot read sdk.version from global.json."; exit 1; }
+          valid "$CURRENT" || { echo "::error::global.json sdk.version '$CURRENT' is not MAJOR.MINOR.PATCH."; exit 1; }
+
+          # ---- Release metadata ---------------------------------------------------------------------------------
+          META="$(mktemp)"
+          curl --fail --silent --show-error --location --retry 3 --max-time 60 -o "$META" "$FEED" \
+            || { echo "::error::Failed to fetch $FEED"; exit 1; }
+          jq -e 'type == "object" and (.releases | type == "array")' "$META" >/dev/null \
+            || { echo "::error::The release metadata is not the expected JSON."; exit 1; }
+
+          LATEST="$(jq -er '."latest-sdk"' "$META")" || { echo "::error::No latest-sdk in the release metadata."; exit 1; }
+          valid "$LATEST" || { echo "::error::latest-sdk '$LATEST' is not MAJOR.MINOR.PATCH."; exit 1; }
+
+          # The release entry that ships that SDK (in .sdk or in the .sdks list).
+          RELEASE="$(jq -ec --arg v "$LATEST" \
+            '[.releases[] | select(.sdk.version == $v or ((.sdks // []) | any(.version == $v)))] | first // empty' "$META")" \
+            || { echo "::error::No release entry ships SDK $LATEST."; exit 1; }
+          DATE="$(jq -er '."release-date"' <<<"$RELEASE")" || { echo "::error::No release-date for SDK $LATEST."; exit 1; }
+          RUNTIME="$(jq -er '."release-version"' <<<"$RELEASE")" || { echo "::error::No release-version for SDK $LATEST."; exit 1; }
+          SECURITY="$(jq -er '.security | if type == "boolean" then tostring else error("not a boolean") end' <<<"$RELEASE")" \
+            || { echo "::error::No security flag for SDK $LATEST."; exit 1; }
+          CVES="$(jq -r '[(."cve-list" // [])[] | ."cve-id"] | join(", ")' <<<"$RELEASE")"
+
+          echo "global.json: $CURRENT; latest 10.0 SDK: $LATEST (release $RUNTIME, $DATE, security: $SECURITY)"
+
+          # ---- The tracking issue -------------------------------------------------------------------------------
+          ISSUES="$(gh issue list --state open --limit 200 --json number,title,labels)"
+          mapfile -t OPEN < <(jq -r --arg l "$LABEL" --arg p "$TITLE_PREFIX" \
+            '[.[] | select((.labels | any(.name == $l)) or (.title | startswith($p)))] | sort_by(.number) | .[].number' \
+            <<<"$ISSUES")
+
+          if [[ "$(compare "$CURRENT" "$LATEST")" == "-1" ]]; then
+            TITLE="$TITLE_PREFIX $CURRENT → $LATEST"
+            BODY="$(mktemp)"
+            {
+              echo "global.json pins .NET SDK **$CURRENT**. The latest .NET 10.0 SDK is **$LATEST** (runtime $RUNTIME)."
+              echo
+              echo "- Release date: $DATE"
+              if [[ "$SECURITY" == "true" ]]; then
+                echo "- Security release: **yes**"
+              else
+                echo "- Security release: no"
+              fi
+              if [[ -n "$CVES" ]]; then
+                echo "- CVEs: $CVES"
+              else
+                echo "- CVEs: none listed"
+              fi
+              echo
+              echo "The builds are self-contained and carry the .NET runtime, so users get this only in a new GridSim"
+              echo "release: bump global.json (and the Dockerfile base images) to $LATEST, rebuild, and release."
+              echo
+              echo "Source: $FEED"
+              echo
+              echo "_Updated by the .NET runtime watch workflow; it closes this issue when global.json is current._"
+            } >"$BODY"
+
+            gh label create "$LABEL" --color 5319e7 \
+              --description "Weekly .NET SDK/runtime check (dotnet-runtime-watch.yml)" --force >/dev/null
+
+            if (( ${#OPEN[@]} == 0 )); then
+              gh issue create --title "$TITLE" --body-file "$BODY" --label "$LABEL"
+            else
+              gh issue edit "${OPEN[0]}" --title "$TITLE" --body-file "$BODY" --add-label "$LABEL"
+              echo "Updated issue #${OPEN[0]}."
+              # Should never happen; keeps the one-issue rule if it does.
+              for n in "${OPEN[@]:1}"; do
+                gh issue close "$n" --reason "not planned" --comment "Duplicate of #${OPEN[0]}."
+              done
+            fi
+          else
+            echo "global.json is current."
+            for n in "${OPEN[@]}"; do
+              gh issue close "$n" --reason completed --comment "global.json now pins .NET SDK $CURRENT, the latest 10.0 SDK ($LATEST)."
+            done
+          fi

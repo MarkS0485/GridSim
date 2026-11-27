@@ -6,7 +6,7 @@ namespace GridSim.Core.Dynamics.Emt.Nonlinear;
 /// x = Wb, y = A; the first segment's slope is the unsaturated 1/L and the last segment's the air-core 1/L).
 /// The flux is integrated with the trapezoidal rule, <c>lambda(n) = lambda(n-1) + (dt/2)(v(n) + v(n-1))</c> (backward Euler
 /// <c>dt v(n)</c> at an event step), so the current at the step is an algebraic function of the voltage and Newton works on
-/// the voltage alone. <paramref name="InitialFlux"/> sets the starting (residual) flux linkage; the initial current is
+/// the voltage alone. <c>initialFlux</c> sets the starting (residual) flux linkage; the initial current is
 /// <c>f(lambda0)</c>. There is NO hysteresis (a single-valued curve): remanence at zero current is not representable, which
 /// is stated in the manual as not validated.
 /// </summary>

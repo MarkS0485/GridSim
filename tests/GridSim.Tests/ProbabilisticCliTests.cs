@@ -9,7 +9,7 @@ public sealed class ProbabilisticCliTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-r409-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-r409-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

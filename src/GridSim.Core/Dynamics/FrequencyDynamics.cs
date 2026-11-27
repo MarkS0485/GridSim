@@ -153,7 +153,7 @@ public sealed record DynamicsConfig
 /// <see cref="FullDeliveryDeviationHz"/>, capped beyond - first-order-lagged by
 /// <see cref="TimeConstantS"/>. DC: deadband 0.015, knee (0.2, 5%), full at 0.5 Hz. DM/DR have no
 /// low-gain segment: knee at the deadband with fraction 0 gives their ramp-from-deadband shape
-/// (DM 0.1->0.2 Hz, DR 0.015->0.2 Hz). Knee <= 0 falls back to a droop line through zero.
+/// (DM 0.1->0.2 Hz, DR 0.015->0.2 Hz). Knee &lt;= 0 falls back to a droop line through zero.
 /// </summary>
 public sealed record SystemResponseService(
     double Mw, double DeadbandHz, double FullDeliveryDeviationHz, double TimeConstantS,

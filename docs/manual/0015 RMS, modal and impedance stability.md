@@ -21,6 +21,7 @@ verbs that sit next to these in the command list, are covered in
 | Are the electromechanical oscillations damped, at what frequency, and which machines drive them? | `gridsim modal` | Linearised swing, eigenvalues and participation factors. |
 | Does a converter oscillate against a weak grid, and at what short-circuit ratio does it start? | `gridsim impedance-stability` | Generalised Nyquist criterion on the converter-grid loop gain. |
 | How does the fleet divide into speed domains, and what happens as synchronous inertia goes to zero? | `domains`, `h0-study` | See [ch. 14](<0014 Frequency studies.md>). |
+| Does a unit meet the GB Grid Code or RfG fault ride-through, reactive and frequency requirements? | `gridsim grid-code` | The RMS study, the static power flow and governor frequency injection, against the code's values. See [Grid-code compliance](#grid-code-compliance). |
 | What does a fault do to the waveform in the first milliseconds? | `emt` | See [ch. 16, Electromagnetic transients](<0016 Electromagnetic transients (EMT).md>). |
 
 The three verbs are not substitutes. `stability` is a large-disturbance, time-domain answer for one fault location and
@@ -199,7 +200,7 @@ A CCT of 0 ms means even an instantaneous clear loses synchronism; 1000 ms means
 It is the first loss from below: the 16 steps (32 ms) below it are checked to hold and as many above it are probed; NON-MONOTONE marks a later clearing time that holds again (a stable pocket).
 Each trial is judged over the 5 s after the fault clears (the documented default window: first-swing stability, the same window as the classical search); an undamped system can lose synchronism on a later swing, so a longer window can give a shorter CCT.
 
-Self-clearing 3-phase fault; the subtransient engine is validated (reduces to the classical CCT),
+Self-clearing 3-phase fault; the subtransient engine is checked against the classical CCT it reduces to,
 but these GENROU parameters are synthesised from X'd - the result is INDICATIVE, not validated.
 [exit 0]
 ```
@@ -314,7 +315,7 @@ model order that has no generator, else the first bus of the model. The last fie
 |---|---|
 | `Bus` | The machine's terminal bus. |
 | `H sys (s)` | Inertia constant on the system base: `H x MBase / BaseMva`. Bus 1 of `case9` is 23.64 s on 247.5 MVA at 100 MVA, which is 58.509 s. |
-| `|E'| pu` | Magnitude of the internal EMF `E' = Vt + j X'd It`, with X'd moved to the system base and `It` from the solved generator output. It is held constant through the run. |
+| `\|E'\| pu` | Magnitude of the internal EMF `E' = Vt + j X'd It`, with X'd moved to the system base and `It` from the solved generator output. It is held constant through the run. |
 | `delta0 (deg)` | Angle of `E'` in the power-flow angle frame (slack bus at 0 degrees). It is the rotor angle the swing starts from. |
 
 The mechanical power of each machine is set to its electrical output at `delta0`, so a run with no fault stays at
@@ -692,7 +693,7 @@ A CCT of 0 ms means even an instantaneous clear loses synchronism; 1000 ms means
 It is the first loss from below: the 16 steps (32 ms) below it are checked to hold and as many above it are probed; NON-MONOTONE marks a later clearing time that holds again (a stable pocket).
 Each trial is judged over the 5 s after the fault clears (the documented default window: first-swing stability, the same window as the classical search); an undamped system can lose synchronism on a later swing, so a longer window can give a shorter CCT.
 
-Self-clearing 3-phase fault; the subtransient engine is validated (reduces to the classical CCT),
+Self-clearing 3-phase fault; the subtransient engine is checked against the classical CCT it reduces to,
 but these GENROU parameters are synthesised from X'd - the result is INDICATIVE, not validated.
 [exit 0]
 ```
@@ -764,6 +765,28 @@ verdict over the connected machines:
 gridsim stability case9 --rms --events "fault:7@0.1,clear:7@0.183,trip:5@0.183,reclose:5@0.683"
 ```
 
+Unbalanced and impedance faults have their own forms: `sfault:TYPE:BUS@t` or `sfault:TYPE:BUS:R:X@t` puts a fault of
+TYPE `3ph`, `slg` (single line to ground), `ll` (line to line) or `llg` (double line to ground) on a bus, bolted or
+through Zf = R + jX pu on the system base, cleared by `clear:BUS@t`. `lfault:TYPE:K:D@t` (or `lfault:TYPE:K:D:R:X@t`)
+puts it a fraction D along line K, and `lclear:K@t` clears it. The run then also prints, for each fault, the sequence
+and phase currents into the fault, the phase voltages and the negative- and zero-sequence Thevenin impedances at the
+first step it is on, and `--events-out` writes `rms-fault-points.csv` with those quantities at every step:
+
+```bash
+gridsim stability case9 --rms --events "sfault:slg:7:0:0.05@0.1,clear:7@0.183"
+gridsim stability case9 --rms --events "lfault:llg:1:0.3@0.1,trip:1@0.18,lclear:1@0.18"
+```
+
+These are the positive-sequence faults PSS/E and PowerFactory RMS use: the fault point carries an equivalent shunt
+built from the negative- and zero-sequence Thevenin impedances there (Z2 + Z0 + 3Zf for single line to ground, Z2 + Zf
+for line to line, Z2 in parallel with Z0 + 3Zf for double line to ground), recomputed whenever a branch or machine trips.
+At the fault instant the currents equal the static unbalanced fault study (`fault`, [ch. 12](<0012 Faults, short circuit and protection grading.md>))
+for the same fault. The machines see the positive sequence only: negative-sequence braking torque and per-phase detail
+are not modelled (use `emt3` for those). A single line to ground fault needs a zero-sequence earth path in the case
+(transformer winding connections or machine earthing, for example from a SEQ file); without one it draws no current.
+A bolted or three-phase fault may be in place beside an unbalanced one, and the unbalanced fault's Z2 and Z0 include
+it. Two unbalanced faults in place at the same time are refused: clear the first before applying the second.
+
 `--events` owns the whole disturbance, so `--screen`, `--fault-bus`, `--clear` and `--clear-by-trip` with it exit 2.
 `--events-out <dir>` writes the trajectories: `rms-events-machines.csv` (every machine at every step),
 `rms-events-converters.csv` when the case has converter plant, `rms-events.json` (schema `gridsim-rms-events-export/1`)
@@ -776,11 +799,207 @@ without the flag they qualify. Every flag is in [ch. 19, stability](<0019 CLI re
 `--dyn-data <file>` reads a machine dynamic data file (`gridsim-dynamics/2`). The classical engine (single bus and
 `--screen`) and `modal` take X'd, H and the damping D for each machine the file binds; `--rms` takes the GENROU
 reactances and time constants, inertia, damping, saturation and leakage, and the exciter (SEXS, IEEET1, EXAC1, ESAC1A or ESST4B, with a
-PSS1A) and governor (TGOV1, IEEEG1, HYGOV or GAST) the machine's template names. Machines the file does not bind keep the
+PSS1A) and governor (TGOV1, IEEEG1, HYGOV, GAST, GGOV1 or WSIEG1) the machine's template names. GGOV1 reads the machine's
+electrical power as well as its speed, and WSIEG1 maps its gate through a nonlinear gain table. The file may also name the extended
+library: a GENCLS (classical) or GENTPJ machine, the ESST1A, EXST1, SCRX, ESDC1A, EXDC2, IEEEX1, ESAC8B and ESST3A exciters,
+the IEEEST, PSS2A, PSS2B and PSS2C stabilisers, on speed or electrical power, alongside any exciter, and the IEEEG3 hydro
+governor. EXDC2's regulator limits scale with the terminal voltage, ESST3A draws its field from the terminal voltage and
+current, and PSS2C can switch itself on and off with the unit's power. A PSS/E `.dyr` file brings them (GENTPJ excepted: its record order is not public) with
+`--dyr-extended` ([ch. 2](<0002 Loading networks.md#dynamic-data-dyr>)). Each starts at rest at the solved point and is
+verified against a SciPy reference integration of its block diagram; none is compared with a PSS/E run of the same data,
+and the exciters that read the terminal voltage (ESST1A, EXST1, bus-fed SCRX, a transducer lag, a stabiliser on
+electrical power) are refused on a unit with a unit transformer folded into its reactances. The other exciters run on
+such a unit but regulate the HV bus voltage, not the machine terminal (the voltage the kernel recovers behind the folded
+reactances is the HV bus's), and each such machine gets a `note:` line saying so. Machines the file does not bind keep the
 built-in data. The header counts the values that came from the file and adds a `machine data:` line; the INDICATIVE
 label goes only when the file covers every machine and every value is tagged `Recorded` or `DerivedFromRecorded`. A
 file can give a MATPOWER case the inertia it lacks, so `modal case14` with a file that binds its five units runs where
 the bare case exits 2. No such file ships with GridSim; the format is in `schemas/schemaNotes.md`. A missing file, or one that fails the schema, kind or binding checks, exits 1 with every problem listed.
+
+### Dynamic loads
+
+By default the RMS engine holds every load as a constant admittance at its solved voltage. A PSS/E `.dyr` file read with
+`--dyr-extended` can give a load a third-order induction motor (a `CIM5BL` record): the motor takes that load's power,
+slows when the voltage falls, and stalls when it falls below the motor's breakdown voltage. The header lists each
+dynamic load, and the converter traces (`--events-out`) carry its voltage, P and Q as an injection, so its consumption
+shows with the sign reversed. Through the API (`RmsLoadedMachineData`) a study also takes a ZIP load with exponential
+recovery (Karlsson and Hill) and a subset of the WECC composite load CMLD: motor A, the static load, the substation
+transformer and the feeder. Its extensions (`CompositeLoadData.Extensions`) add motors B and C, motor D (the WECC
+air-conditioner model with its stall, restart, thermal, under-voltage and contactor logic), the electronic load,
+under-voltage relays on the three-phase motors, the substation tap changer and distributed generation (a DER_A unit at the
+far end). The frequency terms and the CMLD DYR records are not included, so it is not yet the full WECC model.
+Technical ch. 24 gives the equations. Each load is verified against its own equations (the motor's equivalent circuit
+and breakdown voltage, the recovery load's closed form, SciPy integrations), not against a PSS/E run of the same data,
+and the motors see the nominal frequency, not the bus frequency. The motor's rotor EMF is integrated by RK4; a step
+beyond RK4's stability bound for it is taken in equal sub-steps, chosen from the state at the start of the step, so a
+stalled motor no longer diverges at a half-cycle step and a step inside the bound is computed exactly as before. The bound
+for a stalled motor is 2.5 / (decay + 2 pi f), the decay being |1 + j(X - X') / (Ra + jX')| / T'o: about 7.3 ms at 50 Hz
+and 6.1 ms at 60 Hz for a slow motor, 4.7 ms at 60 Hz for a fast one such as the WECC CMLD motor A, which at the 5 ms
+default is therefore taken in two sub-steps; a running motor allows tens of ms. With no dynamic load every number is unchanged.
+
+### Your own models: declarative documents and plug-ins
+
+A governor or exciter of your own can drive a machine in `dynamics-study` in place of the one its DYR record gives. Name it
+in a `--model-assignments` file: a shipped declarative model (`gridsim user-model list`), a `gridsim-model/1` document of
+your own, or, with `--model-plugins`, a model from a .NET plug-in you have built. For example, to drive the bus 1 machine
+with a TGOV1 written in your own plug-in:
+
+```text
+gridsim user-model check-plugin plugins.json
+gridsim dynamics-study study.json --model-plugins plugins.json --model-assignments assign.json --out result.json
+```
+
+`plugins.json` lists the plug-in assembly by path (inside its folder) and SHA-256, and the model ids to take from it;
+`assign.json` binds `MY_TGOV1` to `{ "bus": 1, "id": "1" }` with its parameters. The coverage report then lists that record
+as `SUPPORTED (PLUGIN, sha256:..., OUTSIDE THE VERIFIED CONTRACT)`, and the result's provenance names the plug-in, its hash
+and its parameter values. A plug-in is checked for determinism (a lint of what it references, and a side-by-side replay from two operating points)
+but not sandboxed: it runs with your rights, so load only assemblies you trust. Chapter 19, under `user-model`, gives the
+contract, how to write a plug-in and the loading rules.
+
+A declarative document may also be an `injection` (a generator driven as a current source) or a `load` model, and may use
+the `expr` block for arithmetic the other blocks do not give. Through the API, `SubtransientInit.MachineData.UserInjection`
+puts an injection model on a generator and `UserDynamicLoadData` puts a load model on a bus (the same route takes plug-ins of
+those roles). A load model `p = q = (V/V0)^2` gives the static constant-admittance load's bus voltage to 1e-12 pu through a
+fault, and a plug-in or `expr` TGOV1 gives the coded TGOV1's trace bit for bit.
+
+In a dynamics study the same models go in the `deviceModels` member of the `--model-assignments` file, with no DYR record
+of their own:
+
+```json
+{ "schema": "gridsim-model-assignments/1",
+  "deviceModels": [
+    { "role": "injection", "bind": { "machine": { "bus": 3, "id": "1" } }, "plugin": "SAMPLE_PQ" },
+    { "role": "load", "bind": { "bus": 4, "pMw": 10, "qMvar": 0 }, "file": "zload.model.json", "sha256": "<hex>" } ] }
+```
+
+An injection model drives the unit as a current source on its own bus and replaces its DYR machine, exciter and governor;
+a load model takes the stated part of the bus load. Plug-ins need `--model-plugins`; a declarative file is pinned by its
+SHA-256, and a re-run by `breaking-change validate` checks that hash again.
+
+Plug-ins written against contract 2 (`[GridSimModelPlugin(2)]`) may also be machines and relays. A machine plug-in (role
+`machine` in `deviceModels`) is a Norton source with a constant admittance that keeps its own rotor, field and mechanical
+power. A relay plug-in is bound to a unit by name and run with `RmsTransientStability.StudyEventsWithUserRelays`:
+it reads the unit's voltage, frequency, rate of change of frequency, power, speed and current at every step and trips the
+unit by the same path as the unit's own relays. A plug-in under-voltage relay written as the built-in 27 stage trips at the
+same step and gives the same run bit for bit. Chapter 19, under `user-model`, gives the contract.
+
+A relay may also be a declarative document of role `relay`. Its inputs are `vm`, `f` (Hz), `p`, `q`, `dfdt` (Hz/s), `speed`
+and `i`; its output `trip` is 0, or the reason code to trip with. The `ontimer` block times a condition in whole steps, by
+the built-in relay stages' rule, and `latch` seals it in. This under-voltage element trips with code 27 once `vm` has been
+below 0.8 pu for 0.05 s:
+
+```json
+{ "format": "gridsim-model/1", "id": "UV27", "role": "relay", "source": "definite-time under-voltage element",
+  "parameters": [ { "name": "PICKUP", "unit": "pu", "value": 0.8 }, { "name": "DELAY", "unit": "s", "value": 0.05 } ],
+  "ports": { "inputs": [ { "name": "vm", "unit": "pu" }, { "name": "f", "unit": "1" }, { "name": "p", "unit": "pu" },
+                         { "name": "q", "unit": "pu" }, { "name": "dfdt", "unit": "1/s" }, { "name": "speed", "unit": "pu" },
+                         { "name": "i", "unit": "pu" } ],
+             "outputs": [ { "name": "trip", "unit": "1", "from": "out" } ] },
+  "blocks": [
+    { "id": "below", "type": "switch", "inputs": ["vm", 0, 1], "params": { "threshold": "@PICKUP" } },
+    { "id": "timer", "type": "ontimer", "inputs": ["below"], "params": { "time": "@DELAY" } },
+    { "id": "out", "type": "gain", "inputs": ["timer"], "params": { "k": 27 } } ],
+  "initialisation": { "inputs": [], "steps": [ { "action": "initialise", "block": "timer", "values": [0] } ] } }
+```
+
+On the 9-bus case it trips at the same step as the built-in 27 stage with the same settings, and the run is the same bits.
+
+A relay, plug-in or declarative, may watch a branch instead of a unit. It then reads the voltage at one end and the current,
+active and reactive power flowing into the branch there (there is no frequency or speed: a declarative relay that reads `f`,
+`dfdt` or `speed` is refused on a branch), and its trip opens the branch from the next step, as a scheduled branch trip does.
+In a dynamics study, relays are `deviceModels` entries of role `relay`:
+
+```json
+{ "schema": "gridsim-model-assignments/1",
+  "deviceModels": [
+    { "role": "relay", "bind": { "machine": { "bus": 2, "id": "1" } }, "file": "uv27.model.json", "sha256": "<hex>" },
+    { "role": "relay", "bind": { "branch": { "from": 2, "to": 4, "circuit": "1" } }, "plugin": "MY_OC",
+      "parameters": { "PICKUP": 2.0 } } ] }
+```
+
+A branch relay reads the `from` end as written. Each events row is then run again on the full-model engine with the relays
+acting, as additional evidence (`userRelays.fullModel` in the result, or `unitProtection.fullModel` when unit protection is
+given too); the study's own rows are unchanged and still decide its status.
+
+### SVC, STATCOM and HVDC models
+
+By default an RMS study leaves HVDC links, FACTS devices and static var compensators out of the dynamic network. With
+`--dyr-extended`, a CSVGN1 record on a 0 MW unit makes that unit an SVC, and a CDC4T record (it starts with the quoted DC
+line name, `'LINK A' 'CDC4T' ...`) gives a two-terminal LCC link its dynamics; each starts on its power-flow state, appears
+in the converter traces and, with `--events-out`, writes its states to `rms-devices.csv` (`t_s,device,name,model,state,value`).
+In `dynamics-study` the optional `devices` list does the same by name (`kind` `svc`, `statcom`, `lcc`, `vsc` or `mtdc`, with
+the model's parameters). A STATCOM and a VSC link have no DYR record GridSim reads (their PSS/E record orders are not public or
+not confirmed), so they are given that way or through the API. The LCC link blocks when its rectifier voltage falls below
+VBLOCK and recovers along its ramps after TBLOCK. Commutation failure, DC line dynamics and switched SVC elements are not
+modelled.
+
+A `vsc` device takes `"dcFollowsLimitedPower": true` to feed the DC voltage converter's current limit back to the DC side:
+with a fault at that converter's bus, the power converter's power drops to what the voltage converter can deliver, plus
+losses. It is off by default, which keeps the earlier results.
+
+An `mtdc` device runs a multi-terminal DC link of the case as a DC grid. Give one entry in `terminals` for each converter:
+
+```json
+{ "kind": "mtdc", "name": "LINK M", "dcBaseKv": 500,
+  "busCapacitances": [ { "dcBus": 3, "microFarads": 50 } ],
+  "terminals": [
+    { "bus": 2, "mode": "dcVoltage", "imaxPu": 1.2, "mbaseMva": 600 },
+    { "bus": 3, "mode": "droop", "droop": 20, "tp": 0.01, "imaxPu": 1.2, "mbaseMva": 600, "capacitanceMicroFarads": 100 },
+    { "bus": 4, "mode": "power", "tp": 0.02, "imaxPu": 1.2, "mbaseMva": 600,
+      "mmc": { "submodules": 200, "csmFarads": 0.01, "larmHenries": 0.05 } }
+  ] }
+```
+
+`mode` is `power` (hold the power-flow power through the lag `tp`), `droop` (P = P0 - droop x (Vdc - Vdc0)) or `dcVoltage`
+(hold the DC bus voltage). Each terminal may also give `tq`, `kv` (AC voltage control) and `priority`. A DC bus whose
+voltage no converter holds needs a capacitance, from a converter, an MMC or `busCapacitances`. `mmc` makes the converter an
+averaged MMC; add `kpW`, `kiW` and `tw` to turn on its energy controller. `rms-devices.csv` then lists each DC bus voltage
+(`vdc_pu_<dc bus>`) and each converter's DC power and reactive state. The DC lines are resistive, and DC faults are not
+modelled. The run starts from the power flow's multi-terminal solution, which uses PSS/E's line-commutated converter
+equations; in the run each converter behaves as a lossless voltage-source converter. The droop control acts on the DC
+voltage of the step before, so the step must be shorter than 2 H V0 / droop at each droop bus (H the bus's stored-energy
+constant, V0 its starting DC voltage in pu); a longer step is refused with the limit stated.
+
+### IEC 61400-27-1 wind turbines (Type 4A and 4B)
+
+A `dynamics-study` file can make a unit of the case an IEC 61400-27-1 style full-converter wind turbine, Type 4A or Type 4B,
+with the 2020 edition's structure. These models are implemented from public open-source implementations (Dynawo, MPL-2.0)
+and the CGMES DY definitions; they are not checked against the IEC 61400-27-1 text, which was not used. Every result that
+uses one says so in `effectiveOptions.iec61400`.
+
+Give the optional `iec61400` list, one entry per unit. The unit takes its whole model from the entry, so remove its DYR
+records (a unit with both is refused):
+
+```json
+"iec61400": [ {
+  "machine": { "bus": 2, "id": "1" }, "type": "4B", "edition": 2020,
+  "genSystem": { "dipmax": 1, "diqmin": -100, "diqmax": 100, "tg": 0.01 },
+  "pControl": { "dpmax": 1, "tpord": 0.05, "dprefmax": 100, "dprefmin": -100, "mpuscale": false, "updip": 0, "tpaero": 0.1 },
+  "qControl": { "windQcontrolModesType": 0, "windLVRTQcontrolModesType": 1, "iqh1": 1.05, "iqmax": 1.05, "iqmin": -1.05,
+                "iqpost": 0, "kiq": 2.25, "kiu": 10, "kpq": 1.1, "kpu": 2, "kpufrt": 2, "kqv": 2, "qmax": 0.8, "qmin": -0.8,
+                "rdroop": 0, "xdroop": 0, "tpost": 0.1, "tqord": 0.05, "tuss": 1, "udb1": -0.1, "udb2": 0.1,
+                "umax": 1.1, "umin": 0.9, "uqdip": 0.9, "uqrise": 1.1, "uref0": 0 },
+  "currentLimit": { "imax": 1.3, "imaxdip": 1.3, "mdfslim": false, "mqpri": true, "kpqu": 20, "upqumax": 1.1,
+                    "ipvdl": [[0, 1.1]], "iqvdl": [[0, 1.1]] },
+  "mechanical": { "cdrt": 15, "hgen": 1, "hwtr": 5, "kdrt": 500 },
+  "pll": { "tpll": 0.01, "upll1": 999, "upll2": 0.13 },
+  "measurement": { "tufilt": 0.01, "tpfilt": 0.01, "tqfilt": 0.01 }
+} ]
+```
+
+The names are the CGMES 2.4.15 DY names where CGMES has one, else Dynawo's 2020 names in lower case. Values are per unit on
+the unit's MVA base. `windQcontrolModesType` is 0 voltage, 1 reactive power, 2 open-loop reactive power, 3 power factor or
+4 open-loop power factor; `windLVRTQcontrolModesType` is the ride-through mode 0, 1 or 2. A Type 4A unit takes `tpwtref` in
+`pControl` and no `mechanical`; a Type 4B unit takes `tpaero` and `mechanical`. The tables `ipvdl` and `iqvdl` are
+`[voltage, current]` points, rising in voltage, linear between points and held at the ends. The optional `protection`
+member takes the thresholds `uover`, `uunder`, `fover` and `funder`, a table of allowed time against level for each
+(`tuover`, `tuunder`, `tfover`, `tfunder`, as `[level, seconds]` points), and `tufilt`, `tffilt` and `dfmax`; a trip
+disconnects the unit for the rest of the run.
+
+The unit starts on its power-flow point. A start outside a current limit, inside the fault band or beyond a protection
+threshold is refused. It runs at one step size, so it is refused with a step schedule, the error-controlled step or the
+`adaptive` run. Types 1, 2 and 3, the 2015 structure, the plant controller and the Q limiter tables are not built, and the
+models are not read from DYR files. Technical ch. 24 gives the equations.
 
 ### Renewable models from a PSS/E DYR file
 
@@ -885,7 +1104,7 @@ fault bus 35  *  cleared after 150 ms  *  STABLE (fleet stays in synchronism)  *
 law 9 (synchronism, scored from this run): HOLDS: largest rotor angle from the centre of inertia 49.1 deg (limit 180 deg, the out-of-step criterion); peak speed deviation 0.675 Hz, reported, not scored (no frequency band in a fault study)
 converters: 628 nodes, 369 in fault ride-through mid-fault, 628 recovered by 3 s; active power 23941 MW before, 23944 MW at 3 s
 
-Self-clearing 3-phase fault; the subtransient engine is validated (reduces to the classical CCT),
+Self-clearing 3-phase fault; the subtransient engine is checked against the classical CCT it reduces to,
 but these GENROU parameters are synthesised from X'd - the result is INDICATIVE, not validated.
 [exit 0]
 ```
@@ -1108,6 +1327,98 @@ impedance-stability: case IEEE 9-bus (WSCC), inverter bus 2, mode GridFollowingI
 `gridsim domains` and `gridsim h0-study` are frequency-study verbs. Their output and use are in
 [ch. 14, Frequency studies](<0014 Frequency studies.md>).
 
+### A step schedule, or the step chosen for you
+
+`dynamics-study` can run its events rows with a step schedule: a fine step over the fault and a coarser one for the slow
+recovery after it. Add `stepSchedule` to `integration`:
+
+```json
+"integration": { "stepSeconds": 0.005, "durationSeconds": 10,
+                 "stepSchedule": [ { "fromS": 0, "dtS": 0.001 }, { "fromS": 0.5, "dtS": 0.005 } ] }
+```
+
+Each window must be a whole number of its own steps, and an event must not fall inside a coarser window: start a window
+at it. Or add `errorControl` (EXPERIMENTAL, outside the verified contract; for example
+`{ "relativeTolerance": 1e-3, "absoluteTolerance": 1e-4 }`) and GridSim chooses the windows: it runs the study, runs it again with every step halved, and halves the step wherever the two differ by more
+than half the tolerance (the safety factor), until they agree. The error figure is a first-order estimate, and a run
+can take up to 24 full simulations. Every event then lands exactly on its time. Each row reports the windows it ran
+with under `stepControl`. A row whose tolerance could not be met is INCOMPLETE. The no-event check and the clearing-time
+rows keep `stepSeconds`. See [CLI reference: dynamics-study](<0019 CLI reference.md#dynamics-study>).
+
+### Long-term (quasi-steady-state) studies
+
+For minutes of tap changer action, load recovery and AGC, use `gridsim long-term <case> <long-term.json>`. It replaces the
+fast dynamics with a power flow at each step and steps only the slow elements, so a 10-minute study takes seconds:
+
+```json
+{ "schema": "gridsim-long-term/1", "stepSeconds": 1, "durationSeconds": 600,
+  "units": [ { "generator": 0, "droopPu": 0.05 }, { "generator": 1, "droopPu": 0.05 } ],
+  "agc": { "kiPerSecond": 0.01, "units": [ { "generator": 1, "participation": 1 } ] },
+  "oltcTimers": [ { "transformer": "T5", "firstDelaySeconds": 30, "nextDelaySeconds": 5 } ],
+  "loads": [ { "bus": 5, "tpSeconds": 60, "tqSeconds": 60, "alphaS": 0, "alphaT": 2, "betaS": 0, "betaT": 2 } ],
+  "events": [ { "kind": "branchTrip", "atSeconds": 10, "branch": 3 } ] }
+```
+
+The CSV has one row per step: the frequency deviation, the lowest voltage, the AGC set points, the taps and the
+recovering loads. If the power flow fails at a step, the run stops there and says "loss of short-term equilibrium"; if
+GridSim's frequency loop runs out of passes, it says "numerical failure" instead. It
+shows no rotor swings; use the RMS engine for those. See [CLI reference: long-term](<0019 CLI reference.md#long-term>)
+and [technical ch. 43](<../technical/0043 Long-term dynamics.md>).
+
+## Grid-code compliance
+
+`gridsim grid-code <study.json>` checks one unit against the GB Grid Code European Connection Conditions (Issue 6
+Revision 33) or Regulation (EU) 2016/631 (RfG) and prints a `gridsim-gridcode/1` result with a verdict. The method of
+each check is in [technical ch. 39](<../technical/0039 Grid-code compliance.md>); the study file is in
+[ch. 19](<0019 CLI reference.md#grid-code>).
+
+| Check | What it answers |
+|---|---|
+| `frt-envelope` | Does the unit stay connected through a fault that holds the PCC at the code's retained voltage for the clearing time? After clearing, the voltage is the network's own recovery, compared with the code's line but not shaped to it. |
+| `frt-retained-voltage` | Which fault reactance gives the code's retained voltage at the PCC? |
+| `frt-recovery` | Is a converter unit's active power back to 90 % within 0.5 s of the voltage returning to 0.9 pu (ECC.6.3.15.8(vii))? |
+| `frt-uv-settings` | Does each undervoltage stage wait longer than the line stays below its pickup? |
+| `q-capability` | Does the plant deliver the code's reactive range at the PCC at Pmax, at each test voltage? |
+| `lfsm-o`, `lfsm-u` | Does the governor give the required power change for an over- or under-frequency step? |
+| `fsm-step` | Does the governor follow the FSM step trajectory (t1, t2, dP1)? |
+| `rocof-settings`, `rocof-event` | Is each RoCoF stage set above the withstand limit, and does the unit ride through a real event? |
+| `frequency-relays` | Is each frequency stage outside the no-trip range, and long enough in each timed band? |
+| `ffci-envelope` (GB) | Does a converter unit inject at least the fast fault current of ECC.6.3.16 (Figures ECC.6.3.16(a)-(c)) during a balanced fault? |
+| `frt-long` (GB) | Does a type C or D unit stay connected through each dip of the voltage-duration profile for faults over 140 ms (ECC.6.3.15.9)? |
+| `avr-step` (GB) | On open circuit, does the AVR take the terminal voltage from 90 % to 100 % in under 0.6 s and settle within 5 % of the change in under 3 s (ECC.A.6.2.4.1)? |
+| `vctrl-step` (GB) | Does a PPM's reactive power respond to a voltage step within 0.2 s, reach 90 % within 1 s or 2 s, and stop oscillating (ECC.A.7.2.3.1)? |
+
+A GB study takes the code's values as they are. An RfG study gives the TSO's choices (`frtProfile`, thresholds,
+droops, `area`), and each is refused unless it lies inside the Regulation's range. A fault deeper than the line gives NOT
+DEMONSTRATED: the test is more severe than the requirement, so a trip would be allowed. A fault that leaves the PCC more
+than 1e-3 pu above the retained voltage also gives NOT DEMONSTRATED, because it is milder than the line. A GB FRT run
+must start from the ECC.6.3.15.8 pre-fault point (the unit at its rated MW, 1.0 pu at the PCC), or it gives NOT
+DEMONSTRATED with the reason. GB LFSM-O is read 10 s after the step, and an FSM step test needs a step large enough
+for the governor to reach dP1 (0.25 Hz for GB). A check that cannot be evaluated
+(for example the active-power recovery of a synchronous unit, whose electrical power the RMS traces do not carry, or a
+PPM reactive polygon the code gives only as a figure) gives NOT EVALUATED and the verdict INCOMPLETE. The PPM polygons of
+Figures ECC.6.3.2.4(a)-(d) are taken from the user (`uqProfile`, with its citation). The FRT line shape, Figure
+ECC.6.3.2.3 and the FSM trajectory are read from the published figures.
+
+The four GB checks at the end of the table run only when a study names them. They read the extension file
+`gb-ecc-issue6-rev33-ext`, and `grid-code --list` shows them on a line of their own. Several of the figures they rely on are
+marked NOT TO SCALE. Only labelled numbers are used, so a `frt-long` duration on a sloped part of the profile gives NOT
+EVALUATED. `avr-step` needs the unit's exciter in `dynData`. It runs the machine on open circuit, with no network. In
+`vctrl-step` the study's own events make the voltage step, and the MVAr-seconds rule is always NOT EVALUATED because its
+figure labels no level.
+
+For example, these entries in `checks` run the four checks:
+
+```json
+{ "id": "ffci-envelope" },
+{ "id": "frt-long", "durationsSeconds": [1.2, 2.5] },
+{ "id": "avr-step", "stepSeconds": 0.001 },
+{ "id": "vctrl-step", "events": [ { "kind": "loadStep", "atSeconds": 1.0, "bus": 2, "deltaPMw": 0, "deltaQMvar": 50 } ], "durationSeconds": 10 }
+```
+
+The verdicts are study evidence, not a compliance certificate. They were not checked against an ESO compliance
+submission or a vendor tool.
+
 ## Pitfalls
 
 - **`No synchronous machines with inertia` and exit 2.** The case has no rotor to integrate. `case14` is the example:
@@ -1196,6 +1507,12 @@ error: --scr expected no value: the SCR sweep applies to --grid canonical only b
   impedance; it does not scan several converters together. Its converter parameters are placeholders unless a bound asset class
   gives recorded values.
 - The `SCR boundary` line reports a critical SCR only for a sweep that changes from unstable to stable as SCR rises.
+- Results that use a plug-in model are outside the verified contract: GridSim verifies the route, not the plug-in's
+  equations. Injection, machine and load models and relays (declarative or plug-in) are reached through the API or the
+  `deviceModels` member of the `--model-assignments` file, not from the study file itself. Relays act in the full-model
+  companion run only, and not with the adaptive run, a step schedule or the error-controlled step.
+- A plug-in machine is a Norton source on its own bus, not one of the kernel's integrated machines: it is not judged in the
+  synchronism verdict, has no rotor-angle channel and takes no exciter or governor of its own from the study.
 
 ## See also
 

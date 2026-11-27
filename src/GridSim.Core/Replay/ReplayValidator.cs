@@ -80,7 +80,7 @@ public sealed record ReplayResult(
 /// <see cref="RecordedOutcome"/>. When a 1-second NESO trace is attached it also computes a per-sample RMSE
 /// (aligned on the loss instant; the path is data-gated - dormant until a real trace is dropped in). It
 /// cross-checks the implied inertia via <see cref="InertiaEstimator"/> and scores with
-/// <see cref="FrequencyLimits.Assess"/>. Only a <see cref="ReplayVerdict.Reproduced"/> baseline should unlock a
+/// <see cref="FrequencyLimits.Assess(FrequencyResponse)"/>. Only a <see cref="ReplayVerdict.Reproduced"/> baseline should unlock a
 /// counterfactual: reproduce reality first.
 /// </summary>
 public static class ReplayValidator
@@ -323,13 +323,21 @@ public static class ReplayValidator
     private static TraceComparison TryPerSampleRmse(GridEvent ev, FrequencyResponse sim, DynamicsConfig cfg)
     {
         string? path = ev.Outcome.NesoTraceCsvPath;
-        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return TraceComparison.None;
+        if (string.IsNullOrWhiteSpace(path)) return TraceComparison.None;
+        // SEC-01: a trace the catalogue named is a side file: EventCatalog.Load has refused a network or device path and
+        // resolved a relative one against the catalogue's folder; it is read with a size limit and its lines are never
+        // quoted. A named trace that is not there is said in the note (it used to be skipped without a word).
+        bool catalogTrace = EventCatalog.IsCatalogTrace(ev.Outcome);
+        if (!File.Exists(path))
+            return catalogTrace ? new TraceComparison(null, 0, 0, $"the catalogue names the trace '{Path.GetFileName(path)}', which was not found; no RMSE") : TraceComparison.None;
 
         // D-DOC-027: the reader refuses a damaged row (InvalidDataException, naming the line) instead of skipping it, so a
         // trace is never silently shortened; the exception propagates to the caller, which reports an input error.
         // D-DOC-037: the raw samples are kept (for the back-test at the trace's own cadence); upsampling the list gives the
         // same points, in the same order, as upsampling the reader directly, so the RMSE is bit-identical.
-        List<FrequencySample> raw = NesoFrequencyCsv.Read(path).ToList();
+        List<FrequencySample> raw = (catalogTrace
+            ? NesoFrequencyCsv.ReadSideFile(path, GridSim.Core.Security.SideFile.TraceMaxBytes, $"event '{ev.Id}': nesoTraceCsvPath")
+            : NesoFrequencyCsv.Read(path)).ToList();
         // GR-832: the upsampling factor is the integrator steps per second; a step of more than 2 s rounded it to 0.
         int upsample = (int)Math.Round(1.0 / cfg.StepSeconds, MidpointRounding.AwayFromZero);
         if (upsample < 1)

@@ -167,7 +167,7 @@ public class PsseRev30AndSeqTests
     }
 
     [Fact]
-    public void The_writer_still_writes_only_revisions_33_34_and_35()
+    public void The_writer_refuses_revision_30_naming_the_revisions_it_writes()
     {
         var ex = Assert.Throws<ArgumentOutOfRangeException>(() => PsseRawWriter.Write(Ukgds30().Model, 30));
         Assert.Contains("PSS/E revision 30 is not supported; supported: 33, 34, 35.", ex.Message, StringComparison.Ordinal);

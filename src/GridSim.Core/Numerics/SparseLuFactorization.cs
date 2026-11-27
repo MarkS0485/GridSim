@@ -217,16 +217,6 @@ internal sealed class SparseLuFactorization
     internal static SparseLuFactorization FromPlanValues(SparseLuPlan plan, double[] lx, double[] ux)
         => new(plan.N, plan.Lp, plan.LiStep, lx, plan.Up, plan.Ui, ux, plan.PivotStep, plan.Q) { Plan = plan };
 
-    /// <summary>
-    /// Factor values <paramref name="ax"/> on <paramref name="plan"/>'s pattern (the caller has checked
-    /// <see cref="SparseLuPlan.SamePattern"/>) by replaying the full factorisation's arithmetic: for each column, the
-    /// same scatter of A(:,col), the same updates in the same reach order (the order the depth-first search gave), the same
-    /// pivot search and the same divisions, so every L and U value is the value <see cref="Factor"/> computes, to the bit.
-    /// Returns null when the pivot search picks a different row from the plan's (the full factorisation would then build
-    /// a different pattern; the caller must fall back to <see cref="Factor"/>) or when a pivot is at or below the relative
-    /// floor (singular, as <see cref="Factor"/> would report). NaN or infinite entries are refused as there. The returned
-    /// factorisation shares the plan's index arrays (read only) and carries the plan.
-    /// </summary>
     /// <summary><see cref="PreferDiagonal"/> for a replay: the reach is <paramref name="reach"/>[r0..r1) and a row is
     /// still a candidate at step <paramref name="k"/> when its pivot step is at least k. <paramref name="stride"/> and
     /// <paramref name="lane"/> address an interleaved multi-case workspace (1 and 0 for a single case).</summary>
@@ -243,6 +233,16 @@ internal sealed class SparseLuFactorization
         return ipiv;
     }
 
+    /// <summary>
+    /// Factor values <paramref name="ax"/> on <paramref name="plan"/>'s pattern (the caller has checked
+    /// <see cref="SparseLuPlan.SamePattern"/>) by replaying the full factorisation's arithmetic: for each column, the
+    /// same scatter of A(:,col), the same updates in the same reach order (the order the depth-first search gave), the same
+    /// pivot search and the same divisions, so every L and U value is the value <see cref="Factor"/> computes, to the bit.
+    /// Returns null when the pivot search picks a different row from the plan's (the full factorisation would then build
+    /// a different pattern; the caller must fall back to <see cref="Factor"/>) or when a pivot is at or below the relative
+    /// floor (singular, as <see cref="Factor"/> would report). NaN or infinite entries are refused as there. The returned
+    /// factorisation shares the plan's index arrays (read only) and carries the plan.
+    /// </summary>
     internal static SparseLuFactorization? Refactor(SparseLuPlan plan, double[] ax)
     {
         int n = plan.N;
@@ -511,7 +511,7 @@ internal sealed class SparseLuFactorization
 
         /// <summary>The smallest pivot-step slot of any entry of <paramref name="h"/> through the column
         /// permutation - where the back solve for h may stop - or n for an empty row. The natural sort key for
-        /// grouping rows into blocks (see <see cref="EvaluateBlock"/>).</summary>
+        /// grouping rows into blocks (see <see cref="EvaluateBlock(List{ValueTuple{int, double}}[], int[], int, int, double[], double[])"/>).</summary>
         internal int BackSolveStop(List<(int Col, double Val)> h)
         {
             int stop = _f._n;
@@ -523,7 +523,7 @@ internal sealed class SparseLuFactorization
             return stop;
         }
 
-        /// <summary>Right-hand sides solved together by <see cref="EvaluateBlock"/> (lanes of one block).</summary>
+        /// <summary>Right-hand sides solved together by <see cref="EvaluateBlock(List{ValueTuple{int, double}}[], int[], int, int, double[], double[])"/> (lanes of one block).</summary>
         internal const int BlockWidth = 8;
 
         /// <summary>
@@ -822,15 +822,23 @@ internal sealed class SparseLuFactorization
 
     private static void Grow(ref int[] a, int needed)
     {
-        int cap = a.Length * 2;
+        // NUM-09: in long, so a factor past 2^30 entries no longer doubles to a negative and then to 0 for ever; above the
+        // largest array .NET allows it is refused by name.
+        long cap = Math.Max(1L, a.Length) * 2;
         while (cap < needed) cap *= 2;
-        Array.Resize(ref a, cap);
+        if (cap > Array.MaxLength) cap = Array.MaxLength;
+        if (cap < needed) throw new InvalidOperationException(FormattableString.Invariant($"Sparse LU: the factor needs {needed} entries, more than the largest array ({Array.MaxLength})."));
+        Array.Resize(ref a, (int)cap);
     }
 
     private static void Grow(ref double[] a, int needed)
     {
-        int cap = a.Length * 2;
+        // NUM-09: in long, so a factor past 2^30 entries no longer doubles to a negative and then to 0 for ever; above the
+        // largest array .NET allows it is refused by name.
+        long cap = Math.Max(1L, a.Length) * 2;
         while (cap < needed) cap *= 2;
-        Array.Resize(ref a, cap);
+        if (cap > Array.MaxLength) cap = Array.MaxLength;
+        if (cap < needed) throw new InvalidOperationException(FormattableString.Invariant($"Sparse LU: the factor needs {needed} entries, more than the largest array ({Array.MaxLength})."));
+        Array.Resize(ref a, (int)cap);
     }
 }

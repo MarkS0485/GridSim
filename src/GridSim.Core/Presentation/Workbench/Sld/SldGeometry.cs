@@ -24,7 +24,7 @@ public readonly record struct SldBox(double Left, double Top, double Right, doub
 /// top and bottom slots of a busbar, <c>#in</c> and <c>#out</c> the two ends of an edge symbol, <c>#t</c> the top of a hanging symbol.</summary>
 public sealed record SldPort(string Id, double X, double Y);
 
-/// <summary>One drawn object: a busbar or a symbol. <see cref="ElementId"/> is the model element it stands for (the same as
+/// <summary>One drawn object: a busbar or a symbol. <c>ElementId</c> is the model element it stands for (the same as
 /// <see cref="Id"/>), <see cref="InService"/> false for an open switch or an out-of-service element.</summary>
 public sealed record SldSymbol(string Id, SldKind Kind, string Label, SldBox Box, IReadOnlyList<SldPort> Ports, bool InService, double BaseKv);
 

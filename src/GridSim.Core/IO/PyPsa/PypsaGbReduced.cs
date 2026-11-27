@@ -289,7 +289,7 @@ public static class PypsaGbReduced
         if (!File.Exists(path)) return Array.Empty<Boundary>();
         string file = Path.GetFileName(path);
         List<BoundaryFile>? raw;
-        try { raw = JsonSerializer.Deserialize(File.ReadAllText(path), StrictJson.ListBoundaryFile); }
+        try { raw = JsonSerializer.Deserialize(GridSim.Core.IO.InputFileLimits.ReadAllText(path), StrictJson.ListBoundaryFile); }
         catch (JsonException ex) { throw new InvalidDataException($"{file}: {ex.Message}", ex); }
         if (raw is null) throw new InvalidDataException($"{file}: the file holds null; it must be a list of boundaries.");
 

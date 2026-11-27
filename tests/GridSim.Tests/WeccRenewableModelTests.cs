@@ -408,7 +408,12 @@ public class WeccRenewableModelTests
         ReecOutputs o = reec.Evaluate(u, t, Dt);
         Assert.Equal(0.0, o.Ipmax);
         Assert.Equal(0.0, o.Ipcmd);
-        Assert.Equal(0.0, o.Ipmin);   // -Ipmax
+        // Ipmin = -1.2 (was 0, a bug). Proof: EPRI 3002027129 Fig. 4-7 applies the current limit first (Ipmin = -Ipmax),
+        // then "if SOC >= SOCmax, Ipmin = 0; elseif SOC <= SOCmin, Ipmax = 0". Here ReecA() has Imax = 1.2, PqFlag 0 and
+        // Q0 = 0, so Iqcmd = 0 and the current limit gives Ipmax = sqrt(1.2^2 - 0) = 1.2, Ipmin = -1.2. SOC <= SOCmin sets
+        // only Ipmax = 0, so Ipmin stays -1.2 and charging is allowed (as the comment above says). With Ipmin = Ipmax = 0
+        // dSOC/dt = -Pe/T = 0 and SOCmin would be absorbing. Minimal case: Pref = +0.5 gives Ipcmd = clamp(0.5, -1.2, 0) = 0.
+        Assert.Equal(-1.2, o.Ipmin, 12);   // -Ipmax of the current limit
     }
 
     [Fact]

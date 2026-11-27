@@ -20,7 +20,7 @@ public sealed partial class Cf3OpenCodeFindingsTests
     /// 132/33/11 kV three-winding unit, one 33 kV cable (R1 5, X1 10), demand and a generator.</summary>
     private static string N252Lake()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-cf3-n252-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-cf3-n252-" + Guid.NewGuid().ToString("N"));
         string ltds = Path.Combine(root, "NationalGrid", "RAWData", "LTDS Tabular Model");
         Directory.CreateDirectory(ltds);
         File.WriteAllText(Path.Combine(ltds, "ltds-attachment-8-node.csv"),

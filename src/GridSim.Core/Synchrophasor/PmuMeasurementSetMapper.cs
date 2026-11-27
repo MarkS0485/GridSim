@@ -150,6 +150,12 @@ public static class PmuMeasurementSetMapper
                 throw new InvalidDataException(
                     $"The angle-reference phasor of PMU {angleReference.PmuId} carries no data at {frame.TimeUtc:O} (the " +
                     "missing-data marker), so none of this superframe's angles can be referenced to the slack frame.");
+            // SEC-32: a reference phasor of exactly (0, 0) (a dead bus or a lost VT) has no angle; atan2(0, 0) = 0 shifted
+            // every angle of the superframe.
+            if (refPhasor.Real == 0.0 && refPhasor.Imag == 0.0)
+                throw new InvalidDataException(
+                    $"The angle-reference phasor of PMU {angleReference.PmuId} is zero at {frame.TimeUtc:O} (no voltage), so it has " +
+                    "no angle and none of this superframe's angles can be referenced to the slack frame.");
             referenceRad = refPhasor.AngleRad;
             return referenceRad.Value;
         }
@@ -202,6 +208,8 @@ public static class PmuMeasurementSetMapper
                 if (!double.IsFinite(ph.Real) || !double.IsFinite(ph.Imag)) { missingChannels++; continue; }
                 measurements.Add(new Measurement(MeasurementKind.VmPu, ph.Magnitude / v.BaseVolts, v.VmSigmaPu,
                     Bus: v.BusId, Source: "pmu"));
+                // SEC-32: a zero phasor has a magnitude (0) but no angle; no angle row at the channel's normal sigma.
+                if (ph.Real == 0.0 && ph.Imag == 0.0) continue;
                 measurements.Add(new Measurement(MeasurementKind.VaDeg, SlackFrameDeg(ph), v.VaSigmaDeg,
                     Bus: v.BusId, Source: "pmu"));
             }
@@ -212,6 +220,7 @@ public static class PmuMeasurementSetMapper
                 if (!double.IsFinite(ph.Real) || !double.IsFinite(ph.Imag)) { missingChannels++; continue; }
                 measurements.Add(new Measurement(MeasurementKind.IMagPu, ph.Magnitude / c.BaseAmps, c.IMagSigmaPu,
                     From: c.FromBusId, To: c.ToBusId, Circuit: c.Circuit, End: c.End, Source: "pmu"));
+                if (ph.Real == 0.0 && ph.Imag == 0.0) continue;   // SEC-32: no angle in a zero current
                 // The current angle is re-referenced against the same VOLTAGE reference: the estimator's IAngDeg
                 // model is Va[a] - atan2(Q, P), which lives in the slack frame like VaDeg.
                 measurements.Add(new Measurement(MeasurementKind.IAngDeg, SlackFrameDeg(ph), c.IAngSigmaDeg,

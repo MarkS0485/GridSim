@@ -112,6 +112,33 @@ public static class SubstationJson
             foreach (NbShunt x in m.Shunts)
             { w.WriteStartObject(); w.WriteString("id", x.Id); w.WriteString("node", x.Node); w.WriteNumber("gMw", x.Gs); w.WriteNumber("bMvar", x.Bs); w.WriteEndObject(); }
             w.WriteEndArray();
+            // WP24: written only when the model holds a three-winding transformer, so every other file is written as before.
+            if (m.Transformers3W.Count > 0)
+            {
+                w.WriteStartArray("transformers3w");
+                foreach (NbTransformer3W x in m.Transformers3W)
+                {
+                    w.WriteStartObject(); w.WriteString("id", x.Id); w.WriteString("hv", x.NodeHv); w.WriteString("mv", x.NodeMv); w.WriteString("lv", x.NodeLv);
+                    w.WriteNumber("r12Pu", x.R12); w.WriteNumber("x12Pu", x.X12); w.WriteNumber("r13Pu", x.R13); w.WriteNumber("x13Pu", x.X13);
+                    w.WriteNumber("r23Pu", x.R23); w.WriteNumber("x23Pu", x.X23); w.WriteNumber("bPu", x.B);
+                    foreach ((string key, IReadOnlyList<double>? list) in new[] { ("ratio", x.Ratio), ("phaseShiftDeg", x.ShiftDeg), ("ratedMva", x.RatedMva) })
+                    {
+                        if (list is null) continue;
+                        w.WriteStartArray(key);
+                        foreach (double v in list) w.WriteNumberValue(v);
+                        w.WriteEndArray();
+                    }
+                    w.WriteEndObject();
+                }
+                w.WriteEndArray();
+            }
+            // Written only when the model holds notes (an SCL import with --assume-closed), so every other file is as before.
+            if (m.Notes.Count > 0)
+            {
+                w.WriteStartArray("notes");
+                foreach (string n in m.Notes) w.WriteStringValue(n);
+                w.WriteEndArray();
+            }
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(ms.ToArray()).Replace("\r\n", "\n") + "\n";
@@ -138,7 +165,7 @@ public static class SubstationJson
         using (doc)
         {
             JsonElement root = doc.RootElement;
-            var o = new Obj(root, "$", "format", "name", "baseMva", "frequencyHz", "substations", "lines", "transformers", "loads", "generators", "shunts");
+            var o = new Obj(root, "$", "format", "name", "baseMva", "frequencyHz", "substations", "lines", "transformers", "loads", "generators", "shunts", "transformers3w", "notes");
             if (o.Str("format") != Format) throw new InvalidDataException($"$.format: expected \"{Format}\" but got \"{o.StrOr("format", "")}\".");
             return new SubstationModel
             {
@@ -159,6 +186,14 @@ public static class SubstationJson
                         x.NumOr("pMinMw", 0), x.NumOr("pMaxMw", double.PositiveInfinity), x.BoolOr("slack", false)); }),
                 Shunts = o.Items("shunts", e => { var x = new Obj(e.El, e.Path, "id", "node", "gMw", "bMvar");
                     return new NbShunt(x.Str("id"), x.Str("node"), x.NumOr("gMw", 0), x.NumOr("bMvar", 0)); }),
+                // WP24: optional; read only when present.
+                Transformers3W = o.Items("transformers3w", e => { var x = new Obj(e.El, e.Path, "id", "hv", "mv", "lv", "r12Pu", "x12Pu", "r13Pu", "x13Pu", "r23Pu", "x23Pu", "bPu", "ratio", "phaseShiftDeg", "ratedMva");
+                    return new NbTransformer3W(x.Str("id"), x.Str("hv"), x.Str("mv"), x.Str("lv"), x.NumOr("r12Pu", 0), x.Num("x12Pu"), x.NumOr("r13Pu", 0), x.Num("x13Pu"),
+                        x.NumOr("r23Pu", 0), x.Num("x23Pu"), x.NumOr("bPu", 0), x.Nums3OrNull("ratio"), x.Nums3OrNull("phaseShiftDeg"), x.Nums3OrNull("ratedMva")); }),
+                // Optional provenance notes (strings); read only when present.
+                Notes = o.Items("notes", e => e.El.ValueKind == JsonValueKind.String
+                    ? e.El.GetString()!
+                    : throw new InvalidDataException($"{e.Path}: expected a string.")),
             };
         }
     }
@@ -228,6 +263,16 @@ public static class SubstationJson
                 throw new InvalidDataException($"{_path}.{n}: expected a finite number.");
             return x;
         }
+        /// <summary>WP24: an optional array of exactly three finite numbers (one per winding); null when absent.</summary>
+        public IReadOnlyList<double>? Nums3OrNull(string n)
+        {
+            if (!Has(n, out JsonElement v)) return null;
+            if (v.ValueKind != JsonValueKind.Array || v.GetArrayLength() != 3) throw new InvalidDataException($"{_path}.{n}: expected an array of three numbers (one per winding).");
+            var list = new List<double>(3);
+            foreach (JsonElement item in v.EnumerateArray()) list.Add(Number(n, item));
+            return list.AsReadOnly();
+        }
+
         public bool Bool(string n)
         {
             if (!Has(n, out JsonElement v)) throw new InvalidDataException($"{_path}.{n}: required true or false is missing.");

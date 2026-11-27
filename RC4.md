@@ -26,7 +26,7 @@ runtime).
 | Line constants | `line-constants` | Overhead lines: perfect earth and exact earth-return integral, Kron reduction, transposition, sequence values |
 | Resident endpoint | `rpc`, Python `Session` | `gridsim-rpc/1` on standard input and output or loopback TCP; no authentication (see Known limits) |
 | Short-circuit duty | `g74`, `ansi-sc`, `sc-61363`, `sc-dc`, `fault-series`, `fault-simultaneous` | Equations on small cases; `iec60909` unchanged; open-conductor and simultaneous shunt faults on the operating point, a shunt and a series fault together not offered |
-| Protection | `devices-check`, `fault-line`, `sc-trace`, `protection-audit` | Placed relays, fuses, reclosers and breakers with IEC 60255-151 and IEEE C37.112 curve families |
+| Protection | `devices-check`, `fault-line`, `sc-trace`, `protection-audit` | Placed relays, fuses, reclosers and breakers with IEC 60255-151 and IEEE C37.112 curve families. Only phase overcurrent (50, 51) and the fuse, recloser and breaker checks are evaluated; settings for 21, 67, 50N and 51N are accepted and reported as not evaluated |
 | Declarative models | `user-model` | `gridsim-model/1` block diagrams; the models the catalogue can express match the coded models bit for bit |
 | Small-signal analysis | `modal-full` | Dense and Arnoldi eigen-solvers with residual-checked eigenpairs; unsupported controllers reported NOT LINEARISED |
 | Adaptive dynamics | `dynamics-study` (`adaptive`) | Dormand-Prince kernel on the reduced swing model; fixed-step rows and `status` unchanged |
@@ -73,8 +73,12 @@ usable operating point); otherwise the original non-converged result is reported
 
 The retry runs only when the failed solve stalled or diverged (its final mismatch is above 1e-3 of its starting
 mismatch). A solve stopped by the iteration cap while still converging is not retried and is reported `MaxIterations`
-as before, so `MaxIterations` is never exceeded by a second attempt. `PowerFlowOptions.RetryFromDcStart = false` turns
-the retry off.
+as before. Since 2.1.075 a solve stopped by the cap is also judged by its last step: a cap of 0 or 1 is never retried,
+and a solve of two or more steps whose last step at least halved its mismatch is still converging and is not retried
+(case9 from flat start at `MaxIterations=2` and `Tolerance=1e-4` is reported `MaxIterations`; in 2.1.073 it was retried and reported
+converged after four Newton steps). A solve the retry does run gets its own `MaxIterations` budget, so the two attempts
+together can take up to twice `MaxIterations` Newton steps. `PowerFlowOptions.RetryFromDcStart = false` turns the
+retry off.
 
 ## Artefacts
 

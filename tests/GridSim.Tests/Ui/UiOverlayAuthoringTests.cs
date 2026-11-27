@@ -230,7 +230,7 @@ public sealed class UiOverlayAuthoringTests
         Assert.Equal(52.5, V2CaseLoader.LoadWithNotes(f.ManifestPath, V2TestSupport.SchemasDir).Overlay!.Find("ov.l6")!.Params.GetProperty("heightM").GetDouble());
 
         // Save As: a new case of the user's own, with its overlay files, which the copy then edits.
-        string target = Path.Combine(Path.GetTempPath(), "gridsim-overlay-saveas-" + Guid.NewGuid().ToString("N"));
+        string target = TestTemp.Under("gridsim-overlay-saveas-" + Guid.NewGuid().ToString("N"));
         try
         {
             Assert.True(a.FieldGrid(Ov(a, "ov.sub")).Edit("params.name", "North Scotland 400").Ok);

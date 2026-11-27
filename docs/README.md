@@ -15,7 +15,7 @@ mark@gridsimdigitaltwin.co.uk.
 | [`assurance/`](assurance/) | Security and assurance notes: risk register, incident response, SBOM and secrets handling, standards mappings. |
 | [`developer/`](developer/) | Building and running GridSim yourself: the documentation style guide, deployment examples, benchmarks and performance baselines, case libraries, the solve export format. |
 | [`reference/`](reference/) | The cited public reference documents, checked by `reference/MANIFEST.sha256`, and [`paywalls.md`](reference/paywalls.md): the `[VERIFY]` values whose settling document is paywalled. |
-| [`releases/`](releases/) | Release-candidate addenda (RC2 additions). The release records `RC1.md`, `RC3.md` and `RC4.md` stay at the repository root. |
+| [`releases/`](releases/) | Release-candidate addenda (RC2 additions). The release records `RC1.md`, `RC3.md`, `RC4.md` and `RC5.md` stay at the repository root. |
 | [`screenshots/`](screenshots/) | Screenshots used by the manuals. |
 | [`archive/`](archive/) | Three 2.1.030 assessments (7 November 2026), kept unedited as a historical record; not current. |
 | [`brand/`](brand/README.md) | The brand kit: logo and avatar SVGs and the brand sheet (social preview source). |
@@ -24,5 +24,6 @@ mark@gridsimdigitaltwin.co.uk.
 The deterministic maths library is summarised in [`developer/deterministic-maths.md`](developer/deterministic-maths.md) and specified in
 [technical ch. 38](<technical/0038 Deterministic mathematics.md>).
 
-The latest release is 2.1.071 RC-3 ([`RC3.md`](../RC3.md)); RC-4 is in preparation ([`RC4.md`](../RC4.md)). The
+The latest release is 2.1.105 RC-5 ([`RC5.md`](../RC5.md)); RC-4 is described in [`RC4.md`](../RC4.md) and RC-3 in
+[`RC3.md`](../RC3.md). The
 change history is in [`CHANGELOG.md`](../CHANGELOG.md).

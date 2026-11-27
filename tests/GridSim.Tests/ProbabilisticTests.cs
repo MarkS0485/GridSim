@@ -638,7 +638,7 @@ public sealed class ProbabilisticTests
     }
 
     [Fact]
-    public void Non_converged_ac_samples_are_kept_as_rows_and_counted_in_the_denominator()
+    public void Non_converged_ac_samples_are_kept_as_rows_and_left_out_of_every_probability()
     {
         // Slack at V = 1 behind X = 0.1 pu to a load with no reactive demand. V^4 - V^2 + X^2 P^2 = 0 has a real root only
         // while P <= 1/(2X) = 5 pu = 500 MW (discriminant 1 - 4 X^2 P^2), so every sample above 500 MW must fail.
@@ -663,9 +663,13 @@ public sealed class ProbabilisticTests
         int above = 0;
         for (int i = 0; i < 400; i++) if (new NormalDistribution(480, 40).Quantile(src.U(i, 0)) > 500) above++;
         Assert.True(r.NonConverged >= above, $"{r.NonConverged} failed, {above} samples above the nose");
-        // The exceedance probability divides by ALL samples: no sample converges above 450 MVA loading... compare directly.
-        Assert.NotNull(r.Branches[0].ExceedProbability);
-        Assert.True(r.Branches[0].ExceedProbability <= (double)r.Converged / r.Samples + 1e-12);
+        // ANA-20 (re-pinned): the exceedance probability is over the CONVERGED samples (it used to divide by all of them, so
+        // each failed sample, the heaviest draws, counted as "no overload"). It is a whole number of converged samples over
+        // Converged, and the run is INCOMPLETE with the failed count in its reason.
+        double p = r.Branches[0].ExceedProbability!.Value;
+        Assert.Equal(Math.Round(p * r.Converged), p * r.Converged, 9);
+        Assert.Equal(ProbabilisticStatus.Incomplete, r.Status);
+        Assert.Contains($"{r.NonConverged} of 400 samples did not converge", r.Reason, StringComparison.Ordinal);
         // A request in which no sample can converge is INCOMPLETE, not a number.
         PlfResult none = ProbabilisticLoadFlow.Run(model, Dc(ProbabilisticMethod.MonteCarlo, new[] { Load("l2", 2, new NormalDistribution(900, 1)) }, n: 20) with { Evaluator = PlfEvaluator.Ac });
         Assert.Equal(ProbabilisticStatus.Incomplete, none.Status);

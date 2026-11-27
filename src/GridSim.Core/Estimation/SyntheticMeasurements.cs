@@ -101,8 +101,9 @@ public static class SyntheticMeasurements
             Case = model.Name,
             BaseMva = model.BaseMva,
             TakenUtc = opt.TakenUtc,
-            Note = $"synthetic seed={opt.Seed} noise={opt.NoiseScale} " +
-                   $"coverage=vm:{opt.VmCoverage}/inj:{opt.InjCoverage}/flow:{opt.FlowCoverage}",
+            // NUM-11: invariant, so the saved set is the same file on a decimal-comma machine.
+            Note = FormattableString.Invariant($"synthetic seed={opt.Seed} noise={opt.NoiseScale} ") +
+                   FormattableString.Invariant($"coverage=vm:{opt.VmCoverage}/inj:{opt.InjCoverage}/flow:{opt.FlowCoverage}"),
             Measurements = ms,
         };
     }

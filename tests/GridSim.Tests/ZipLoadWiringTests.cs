@@ -282,7 +282,7 @@ public class ZipLoadWiringTests
     // A two-bus case whose load bus 2 carries the given JSON fragment (inserted after "baseKv"), e.g. a zip block.
     private static string WriteCase(string bus2Extra)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-zip-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-zip-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "system.json"), """{ "name": "zip", "baseMva": 100 }""");
         File.WriteAllText(Path.Combine(dir, "buses.json"),

@@ -1,7 +1,11 @@
 # Dependabot  -  monthly checks for NuGet, the Docker base images and the GitHub Actions; updates are merged by hand.
 #
-# Version-update pull requests are paused for the release (open-pull-requests-limit: 0 on every ecosystem). Security
-# alerts are unaffected. Raise the limits again to resume update pull requests.
+# Version-update pull requests are paused for the release (open-pull-requests-limit: 0 on every ecosystem except
+# dotnet-sdk). Security alerts are unaffected. Raise the limits again to resume update pull requests.
+#
+# The dotnet-sdk entry stays ACTIVE while the others are paused: the builds are self-contained and carry the .NET
+# runtime, so a .NET security fix reaches users only through a new GridSim release. The weekly workflow
+# .github/workflows/dotnet-runtime-watch.yml also opens an issue when global.json is behind the latest 10.0 SDK.
 #
 # Ecosystems covered:
 #   * nuget           -  PackageReferences in every project: Core, Gda, Gpu (ILGPU), Cli, Web, Wpf and the tests
@@ -12,6 +16,7 @@
 #                        Avalonia, SkiaSharp and HarfBuzzSharp move together: SkiaSharp and HarfBuzzSharp stay
 #                        at the versions the chosen Avalonia.Skia names, so merge those bumps as one change.
 #   * github-actions  -  the action versions pinned in .github/workflows/*.
+#   * dotnet-sdk      -  the SDK version in global.json (weekly; .NET servicing releases land on Patch Tuesday).
 #
 # Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
@@ -74,5 +79,19 @@ updates:
     labels: ["dependencies", "github-actions"]
     commit-message:
       prefix: "ci"
+      include: "scope"
+    assignees: ["MarkS0485"]
+
+  # ------------------------------------------------------------ .NET SDK ---
+  # Stays active while the others are paused (see the header). Updates global.json's sdk.version; the
+  # rollForward and allowPrerelease settings there are kept.
+  - package-ecosystem: "dotnet-sdk"
+    directory: "/"                  # global.json at the repository root
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 1     # active: one SDK bump at a time
+    labels: ["dependencies", "dotnet-sdk"]
+    commit-message:
+      prefix: "deps"
       include: "scope"
     assignees: ["MarkS0485"]

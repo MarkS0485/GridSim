@@ -163,6 +163,15 @@ voltages happen to agree. A bus pinned by pandapower only, whose GridSim
 output sits within GridSim's 1e-3 MVAr limit slack, is listed under `q_limit_boundary_buses` and is the same state
 (gb-network-2224 has six, units with Qmin = 0 solving at Q = 0).
 
+The comparison keeps which limit each tool pinned. One tool at Qmax and the other at Qmin (or either against a unit with
+Qmin = Qmax) is always a disagreement. A boundary case needs one tool pinned and the other free, and the free tool's
+output is measured against the limit the other one pinned, never against the nearer of the two limits.
+
+The export must hold exactly one result row per model bus. An empty result, a model bus with no row, a bus listed
+twice, or a row for a bus the model does not have is refused before anything is solved (`crossval: cannot read export:
+the export's result must hold exactly one row per model bus: ...`, exit 3). So `buses_compared` is always the model's
+bus count.
+
 A GridSim solve that did not converge still goes to the sidecar. The first line says `DID NOT CONVERGE`; read it
 before the verdict.
 

@@ -22,7 +22,10 @@ public abstract record ReplayEffect;
 
 public sealed record InfeedEffect(double DeltaMw, int Bus) : ReplayEffect;
 
-public sealed record FaultEffect(int BusId, bool On) : ReplayEffect;
+/// <summary>A fault applied (On) or cleared at a bus. WP2: <see cref="Type"/> set makes an applied fault a sequence fault of
+/// that type through <see cref="FaultRPu"/> + j<see cref="FaultXPu"/> (pu, system base), which only the RMS SUBTRANSIENT and
+/// GOVERNED engines take; null is the bolted three-phase fault.</summary>
+public sealed record FaultEffect(int BusId, bool On, GridSim.Core.Protection.FaultType? Type = null, double FaultRPu = 0.0, double FaultXPu = 0.0) : ReplayEffect;
 
 /// <summary>One event of a whole-horizon engine: its script time, its order among events of the same time, the statement text.</summary>
 public sealed record ReplayEvent(long TimeUs, int Order, string Text, int ScheduledAtLine, ReplayEffect Effect);
@@ -145,6 +148,8 @@ public sealed partial class ReplayEngine
                 if (x.Effect is FaultEffect xf && xf.BusId == f.BusId)
                     on = xf.On;
             if (f.On && on) throw new ScriptException(ErrorPhase.Execution, default, "this bus is already faulted");
+            if (f.On && f.Type is not null && !(Kind == ReplayKind.Rms && Settings.Model != "CLASSICAL"))
+                throw new ScriptException(ErrorPhase.Execution, default, "a fault with a type or an impedance (THREE_PHASE, SLG, LL, LLG, WITH R .. X ..) needs RMS SUBTRANSIENT or RMS GOVERNED; this engine takes the bolted FAULT BUS only");
             if (!f.On && !on) throw new ScriptException(ErrorPhase.Execution, default, "no fault is in place at this bus");
             if (Kind == ReplayKind.Rms && Settings.Model != "CLASSICAL" && f.On && e.TimeUs == 0)
                 throw new ScriptException(ErrorPhase.Execution, default, $"RMS {Settings.Model} starts from the solved undisturbed state: a fault cannot be applied at 0 ms");

@@ -20,7 +20,7 @@ public class Cf5SaveGateTrustTests
     {
         public TempDir()
         {
-            Dir = Path.Combine(Path.GetTempPath(), "gridsim-editor-cf5-" + Guid.NewGuid().ToString("N"));
+            Dir = TestTemp.Under("gridsim-editor-cf5-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Dir);
         }
 

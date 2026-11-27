@@ -34,7 +34,7 @@ public sealed class Doc8ExportsAndFormatsTests
 {
     private static string TempFile(string name)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc8-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc8-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return Path.Combine(dir, name);
     }

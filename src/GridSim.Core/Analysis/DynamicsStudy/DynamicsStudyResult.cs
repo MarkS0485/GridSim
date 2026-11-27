@@ -102,7 +102,38 @@ public sealed record DynamicsCctEvidence(int FaultBus, IReadOnlyList<string> Cle
 /// <summary>One batch row's result. Exactly one per requested row, in request order.</summary>
 public sealed record DynamicsCaseResult(int Index, string Name, DynamicsCaseKind Kind, string Disposition, string? Reason,
     bool Indicative, IReadOnlyList<DynamicsAppliedEvent>? Events, DynamicsRunEvidence? Run, DynamicsPostEventTopology? PostEvent,
-    DynamicsCctEvidence? Cct);
+    DynamicsCctEvidence? Cct)
+{
+    /// <summary>WP21 (RC5): how the row's steps were chosen, present only when the request gave a step schedule or asked for
+    /// the error-controlled step.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public DynamicsStepControlEvidence? StepControl { get; init; }
+}
+
+/// <summary>WP21 (RC5): one window of the steps an events row ran with.</summary>
+/// <param name="FromSeconds">The window's start (s).</param>
+/// <param name="StepSeconds">Its step (s).</param>
+/// <param name="ScaledError">With the error-controlled step, the window's largest scaled difference between the last pass's two
+/// runs (1 = the tolerance); null for a user schedule.</param>
+public sealed record DynamicsStepWindow(double FromSeconds, double StepSeconds, double? ScaledError);
+
+/// <summary>WP21 (RC5): the steps of an events row.</summary>
+/// <param name="Mode">"schedule" (the user's windows) or "errorControl" (chosen by step doubling over whole runs).</param>
+/// <param name="Windows">The windows the reported run used, in time order.</param>
+/// <param name="Steps">The number of steps taken.</param>
+/// <param name="ToleranceMet">With error control, whether every window met the tolerance; null for a schedule.</param>
+/// <param name="MaxScaledError">With error control, the largest scaled difference of the last pass; null for a schedule.</param>
+/// <param name="Passes">With error control, the refinement passes; null for a schedule.</param>
+/// <param name="Runs">With error control, the full runs made; null for a schedule.</param>
+/// <param name="Note">With error control, why the tolerance was not met; otherwise null.</param>
+public sealed record DynamicsStepControlEvidence(string Mode, IReadOnlyList<DynamicsStepWindow> Windows, int Steps, bool? ToleranceMet,
+    double? MaxScaledError, int? Passes, int? Runs, string? Note)
+{
+    /// <summary>2.1.126: with error control, <see cref="GridSim.Core.Dynamics.Models.RmsErrorControl.ExperimentalNote"/>;
+    /// null (not written) for a user schedule.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? Status { get; init; }
+}
 
 /// <summary>Row counts.</summary>
 public sealed record DynamicsCaseCounts(int Requested, int Attempted, int Completed, int Failed, int NotRun, int NotAttempted);
@@ -115,4 +146,10 @@ public sealed record DynamicsCaseCounts(int Requested, int Attempted, int Comple
 public sealed record DynamicsStudyResult(string Status, bool LikeForLike, IReadOnlyList<string> Reasons,
     DynamicsModelCoverageReport Coverage, DynamicsEngineDeclaration Engine, DynamicsInitialisationEvidence? Initialisation,
     IReadOnlyList<DynamicsCaseResult> Cases, DynamicsCaseCounts Counts,
-    DynamicsAdaptiveEvidence? Adaptive = null);   // RC4 R4-14: present only when the request asked for the adaptive companion run
+    DynamicsAdaptiveEvidence? Adaptive = null)   // RC4 R4-14: present only when the request asked for the adaptive companion run
+{
+    /// <summary>RC5 stage 6: the units' own relays in the full-model engine (one companion run per events row), present only
+    /// when unit protection was asked for.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public DynamicsFullModelUnitRelayEvidence? FullModelUnitRelays { get; init; }
+}

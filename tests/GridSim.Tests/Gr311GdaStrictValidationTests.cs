@@ -16,7 +16,7 @@ public class Gr311GdaStrictValidationTests : IDisposable
 
     public Gr311GdaStrictValidationTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "gridsim-gr311-" + Guid.NewGuid().ToString("N"));
+        _root = TestTemp.Under("gridsim-gr311-" + Guid.NewGuid().ToString("N"));
         string ltds = Path.Combine(_root, "NationalGrid", "RAWData", "LTDS Tabular Model");
         Directory.CreateDirectory(ltds);
 

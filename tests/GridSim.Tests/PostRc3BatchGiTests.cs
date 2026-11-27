@@ -158,7 +158,7 @@ public class PostRc3BatchGiTests
     {
         GridEvent ev = EventCatalog.Builtin().Single(e => e.Id == "gb-2023-12-22");
         ev = ev with { Outcome = ev.Outcome with { NesoTraceCsvPath = FullTrace() } };
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-cat-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-cat-{Guid.NewGuid():N}.json");
         try
         {
             EventCatalog.Save(path, new[] { ev });
@@ -225,7 +225,7 @@ public class PostRc3BatchGiTests
 
     private static string WriteCsv(params string[] lines)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-neso-{Guid.NewGuid():N}.csv");
+        string path = TestTemp.Under($"gridsim-neso-{Guid.NewGuid():N}.csv");
         File.WriteAllLines(path, lines);
         return path;
     }

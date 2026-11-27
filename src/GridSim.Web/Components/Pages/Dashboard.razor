@@ -117,7 +117,7 @@ else
         <div class="tile"><span class="tv clock">@(_frame?.Clock ?? "--:--")</span><span class="tl">Clock</span></div>
     </section>
 
-    <TransportBar Session="_session" OnChanged="StateHasChanged" />
+    <TransportBar Session="_session" OnChanged="StateHasChanged" Authorize="Authorize" />
 
     <nav class="tabstrip">
         @foreach (string t in Tabs)
@@ -133,7 +133,7 @@ else
                 <NetworkMap Topology="_session.Topology" Frame="_frame"
                             IsBridge="_session.IsBridge" Playing="_session.Playing"
                             Backdrop="_session.IsRaw"
-                            CanTrip="_session.CanTrip" TripLargest="_session.TripLargestInfeed"
+                            CanTrip="_session.CanTrip" TripLargest="TripLargestGuarded"
                             NominalHz="_session.NominalHz"
                             OnDrillBus="HandleMapDrill" />
                 break;
@@ -183,7 +183,7 @@ else
                 <ExperimentalTab Frame="_frame" />
                 break;
             case "HARMONICS":
-                <HarmonicsTab Frame="_frame" RunStudy="_session.RunHarmonicsStudy" RunStudyWith="_session.RunHarmonicsStudyWith" />
+                <HarmonicsTab Frame="_frame" RunStudy="_session.RunHarmonicsStudy" RunStudyWith="_session.RunHarmonicsStudyWith" Deny="HarmonicsDenied" />
                 break;
             case "ASSETS":
                 <AssetsTab Topology="_session.Topology" Frame="_frame" FocusBus="_drillBus" FocusRoute="_drillRoute" IsBridge="_session.IsBridge" QueryAsset="QueryAsset" />
@@ -303,6 +303,21 @@ else
     private System.Security.Claims.ClaimsPrincipal? CurrentUser() =>
         AuthState is { IsCompletedSuccessfully: true } done ? done.Result.User : null;
 
+    /// <summary>
+    /// The role gate of the page's actions, the same bands as the other surfaces (AccessControl.DashboardOperationPrefix): null
+    /// when the caller may do <paramref name="operation"/>, else the refusal to show (audited as one AccessDenied entry).
+    /// </summary>
+    private string? Authorize(GridSim.Core.Security.OperationRole required, string operation) =>
+        Access.RefusalFor(Access.IdentityFor(CurrentUser(), null), required, GridSim.Web.Site.AccessControl.DashboardOperationPrefix + operation);
+
+    private SimSession.TripOutcome TripLargestGuarded(int? busId) =>
+        Authorize(GridSim.Web.Site.AccessControl.SimControlRole, "trip") is { } why
+            ? new SimSession.TripOutcome(false, why)
+            : _session!.TripLargestInfeed(busId);
+
+    // The harmonics study needs the solve role; the tab asks this before it runs anything and shows the refusal.
+    private string? HarmonicsDenied() => Authorize(GridSim.Web.Site.AccessControl.SolveRole, "harmonics");
+
     private string? _presenceHandle;
     private CancellationTokenSource? _presenceCts;
 
@@ -320,9 +335,15 @@ else
             // The denial throws before Sessions.Create, so no session is built; the catch below shows it on the load-error
             // panel. The caller is the signed-in user when the cascading sign-in state is already available, else anonymous
             // (the safe side: never more than the anonymous role).
-            if (Catalog.IsPrivate(CaseId))
-                Access.Require(Access.IdentityFor(CurrentUser(), null), CaseCatalog.PrivateListingRole,
-                    GridSim.Web.Site.AccessControl.DashboardPrivateOperation);
+            // A live session is a solver loop that anyone holding it can drive, so it starts on the interactive pass only, and
+            // only for a caller who holds the /ws/sim control band (Operator); a bridge feed or raw replay is only watched and needs no role. The prerender pass is unchanged, and the
+            // component it builds is discarded when the circuit's own pass starts. A private model needs the higher of the
+            // two bands. One Require call serves both (the private case keeps its own operation name for the audit).
+            bool isPrivate = Catalog.IsPrivate(CaseId);
+            if (GridSim.Web.Site.AccessControl.DashboardSessionRole(isPrivate, RendererInfo.IsInteractive, GridSim.Web.Site.AccessControl.IsBridgeFeedId(CaseId)) is { } needed)
+                Access.Require(Access.IdentityFor(CurrentUser(), null), needed,
+                    isPrivate ? GridSim.Web.Site.AccessControl.DashboardPrivateOperation
+                              : GridSim.Web.Site.AccessControl.DashboardOperationPrefix + "session");
             // GR-235: counted against this client for GridSim:MaxSessionsPerClient (the signed-in user, else the remote
             // address when the host can still see one; with neither, only the global cap applies).
             _session = Sessions.Create(CaseId, SolverChoice.Parse(Solver),

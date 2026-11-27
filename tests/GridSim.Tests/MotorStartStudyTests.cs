@@ -365,7 +365,7 @@ public sealed class MotorStartStudyTests
     [Fact]
     public void A_case_without_explicit_generator_outputs_is_refused_by_the_adapter()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-motor-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-motor-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

@@ -13,6 +13,21 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // The telemetry guard runs before anything else. It exits with code 78 (one line on stderr and the trace log)
+        // when the build marker is missing, a telemetry assembly is loaded or loads later, or an exporter variable is
+        // set; see GridSim.Core.Diagnostics.TelemetryGuard. The rest of start-up is in a separate method so that
+        // nothing it touches is loaded before the guard has run.
+        GridSim.Core.Diagnostics.TelemetryGuard.EnforceAtStartup("GridSim.App.Desktop", AppAssemblies, foreignEntryAllowed: false);
+        return Start(args);
+    }
+
+    /// <summary>The app's own assemblies, each of which must carry the TelemetryOff build marker.</summary>
+    internal static readonly string[] AppAssemblies =
+        ["GridSim.App.Desktop", "GridSim.App", "GridSim.Ui", "GridSim.Core", "GridSim.Scripting"];
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static int Start(string[] args)
+    {
         // APP-07: crash handling first, so a failure while starting is logged too (CrashLog, GRIDSIM_CRASH_DIR).
         GridSim.App.AppCrashHandling.InstallProcessHandlers();
         try { return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args); }

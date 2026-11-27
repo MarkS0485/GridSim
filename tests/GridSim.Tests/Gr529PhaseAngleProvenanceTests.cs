@@ -52,7 +52,7 @@ public class Gr529PhaseAngleProvenanceTests
     [Fact]
     public void Gr529_the_measurement_set_json_round_trips_provenance_and_omits_it_when_null()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gr529-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gr529-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -90,7 +90,7 @@ public class Gr529PhaseAngleProvenanceTests
         EstimationResult est = new WlsStateEstimator().Estimate(m, set);
         Assert.True(est.Converged);
 
-        string dir = Path.Combine(Path.GetTempPath(), "gr529x-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gr529x-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

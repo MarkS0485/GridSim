@@ -14,7 +14,8 @@ namespace GridSim.Core.Analysis.MotorStart;
 /// <para><b>Order of operations</b> (each step's failure stops the later ones):</para>
 /// <list type="number">
 /// <item>Validate the request against the case: one motor of that name, its bus in the model, a disconnected initial
-/// state below running speed, a direct-on-line start, a positive step dividing the event time and the horizon.</item>
+/// state below running speed, a direct-on-line start or a valid starter for the method (a starter runs on the starter
+/// engine in MotorStartRunner.Starters.cs), a positive step dividing the event time and the horizon.</item>
 /// <item>Authored against resolved: every authored in-service generator must be in the resolved model, by name, with
 /// exactly its authored output. A loader that balanced the schedule fails here (INCOMPLETE).</item>
 /// <item>Pre-start AC verification with the motor DISCONNECTED (it is not in the pre-start network at all): the
@@ -32,7 +33,7 @@ namespace GridSim.Core.Analysis.MotorStart;
 /// <para>Every solve starts from the model's authored bus voltages (not the previous step), so each step is a pure
 /// function of its inputs. Plain arithmetic and Math.Sqrt only: repeat runs are bit-identical.</para>
 /// </summary>
-public static class MotorStartRunner
+public static partial class MotorStartRunner
 {
     /// <summary>The electrical approximation recorded with every result.</summary>
     public const string ElectricalApproximation =
@@ -79,6 +80,9 @@ public static class MotorStartRunner
         }
 
         // ---- Steps 4 and 5: coast to the event, then the coupled start. ----
+        // A reduced-voltage starter runs on the starter engine; direct-on-line keeps the original path below, unchanged.
+        if (request.Starter is not null)
+            return RunWithStarter(input, request, motor, factory, method, generators, pre, preSolved!);
         var sim = new Simulation(model, motor, request, factory, preSolved!);
         return sim.Run(generators, pre, input, method);
     }
@@ -104,7 +108,7 @@ public static class MotorStartRunner
             throw new InvalidDataException($"motor '{motor.Name}': its bus {motor.Bus} is not a bus of the resolved model.");
         if (input.Model.InductionMachines.Any(m => m.Bus == motor.Bus && string.Equals(m.Name, motor.Name, StringComparison.Ordinal)))
             throw new InvalidDataException($"motor '{motor.Name}': the resolved model already holds an induction machine of that name at bus {motor.Bus}; the pre-start network would count the motor twice.");
-        if (r.Method != MotorStartMethod.DirectOnLine) throw new InvalidDataException("start.method: only directOnLine is supported.");
+        if (r.Method != MotorStartMethod.DirectOnLine || r.Starter is not null) ValidateStarter(r.Method, r.Starter, r.StepSeconds, r.Termination.RunningSpeedPu, r.Initial.SpeedPu, input.Model, motor);
         if (r.Initial.Connected)
             throw new InvalidDataException("initial.connected: a motor connected before the start event is not a start (a running restart or a post-start equilibrium would replace the pre-start point); give connected false, with the rotor's speed, and the start event connects it.");
         Finite(r.Initial.SpeedPu, "initial.speedPu");

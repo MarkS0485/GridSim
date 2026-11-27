@@ -48,6 +48,11 @@ public enum AcOpfIpmStatus
     /// <summary>The iteration broke down: a singular Newton (KKT) system, a value that is not a number, a step length
     /// below 1e-8, or a barrier parameter outside [eps, 1/eps] (MIPS's own numerical-failure tests).</summary>
     NumericalFailure,
+    /// <summary>The problem is likely infeasible: the iteration broke down after the feasibility condition stopped falling
+    /// while the complementarity grew, the signature of a problem with no feasible point (evidence, not proof; reported by
+    /// <see cref="GridSim.Core.Analysis.Opf.AcOpfExtended"/> only; the message names the constraints with the largest final
+    /// multipliers). No optimum.</summary>
+    Infeasible,
 }
 
 /// <summary>One iteration of the interior point method, for the log: the objective (unscaled, cost per hour), MIPS's four
@@ -96,7 +101,9 @@ public sealed record AcOpfIpmResult(
     /// <summary>True when the method met all four conditions.</summary>
     public bool Converged => Status == AcOpfIpmStatus.Converged;
 
-    /// <summary>Active power losses at the optimum (MW): generation minus load.</summary>
+    /// <summary>Generation minus load at the optimum (MW), with load the sum of bus Pd. ANA-16: power drawn by bus shunt
+    /// conductance (Gs times Vm squared) is inside this figure, so on a case with shunt conductance it is more than the
+    /// network's series losses.</summary>
     public double LossesMw => TotalGenerationMw - TotalLoadMw;
 }
 
@@ -149,6 +156,24 @@ public static class AcOpfInteriorPoint
 
     // MATLAB's eps (2^-52): MIPS's test for equal bounds and for a barrier parameter out of range.
     private const double MachineEpsilon = 2.220446049250313e-16;
+
+    /// <summary>ANA-06: the AC-OPF problem is built from the branch admittances, the bus loads and the generators only.
+    /// A case that carries DC links, FACTS devices, static var compensators or induction machines would be optimised
+    /// without them (a different network), so it is refused, naming each kind and its count. Shared by the extended
+    /// problem and the AC-SCOPF.</summary>
+    internal static void RefuseUnmodelledDevices(GridModel m)
+    {
+        var kinds = new List<string>();
+        void Add(int count, string what) { if (count > 0) kinds.Add(string.Create(CultureInfo.InvariantCulture, $"{count} {what}")); }
+        Add(m.LccLinks.Count, "LCC DC link(s)");
+        Add(m.VscLinks.Count, "VSC DC link(s)");
+        Add(m.MtdcLinks.Count, "multi-terminal DC network(s)");
+        Add(m.FactsDevices.Count, "FACTS device(s)");
+        Add(m.StaticVarCompensators.Count, "static var compensator(s)");
+        Add(m.InductionMachines.Count, "induction machine(s)");
+        if (kinds.Count > 0)
+            throw new InvalidDataException($"AC-OPF: the case has {string.Join(", ", kinds)}; this AC-OPF does not model them, so it would optimise a different network. Remove them or use a power-flow study.");
+    }
 
     /// <summary>Solve the AC optimal power flow of <paramref name="model"/>. Throws <see cref="InvalidDataException"/>
     /// for a model it refuses (see the class note); otherwise returns a result whose <see cref="AcOpfIpmResult.Status"/>
@@ -226,6 +251,7 @@ public static class AcOpfInteriorPoint
             Base = m.BaseMva;
             if (Nb == 0) throw new InvalidDataException("AC-OPF: the case has no buses.");
             if (Ng == 0) throw new InvalidDataException("AC-OPF: the case has no in-service generators to dispatch.");
+            RefuseUnmodelledDevices(m);   // ANA-06
             if (!(Base > 0) || !double.IsFinite(Base))
                 throw new InvalidDataException($"AC-OPF: the system base {Fmt(Base)} MVA is not a finite number above 0.");
 

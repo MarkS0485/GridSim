@@ -6,6 +6,8 @@ state fitted to that period's real telemetry. This chapter covers how to start a
 do, how to read the chi-square status pill that accompanies every estimated frame, and what the web console shows. The
 apps get their frames from the GDA bridge server, which [ch. 24](<0024 The GDA bridge.md>) covers.
 
+GDA (Grid Data Analysis) is the author's own tool. It is not public and will not be made public, and GridSim's GDA work exists for the author's own use; it is documented because understanding the interface has value to readers. You do not get GDA, its code or its data lake, and no help is given to reconstruct it. The apps are clients of a bridge protocol, and a bridge client or an estimated-state store built on your own data is a legitimate and intended use; the server and lake that normally sit behind them are the author's.
+
 ## Before you start
 
 - **A reachable bridge.** The apps are clients. A bridge server with the estimated lake behind it must be running and
@@ -183,6 +185,10 @@ fallback to a live solve. The `live` source starts 169 hours plus 2 days before 
 last 7 days: **Estimation quality (gb-spine)** plots objective `J` against the chi-square gate on the left axis and
 iterations and removals on the right, and **Solve vs estimate divergence (gb-spine)** plots the largest voltage,
 angle and flow differences between the two routes. `J` above the gate is an inconsistent fit.
+
+## The 169-hour horizon
+
+A replay shows the past only: no frame newer than now minus 169 hours is shown, and the client refuses one if a server sends it. The horizon is a safety invariant, not a setting. Real-time observation of a national grid is a security matter, so GridSim is built so that it cannot be used for it: not by the public, and not by the author either. It is built into the code paths and the test suite as an invariant ([technical ch. 8, Provenance and invariants](<../technical/0008 Provenance and invariants.md>), `ForwardInferenceGuard`), and there is no option, environment variable or licence that changes it. Every FROM preset is older than the horizon for this reason ([ch. 24](<0024 The GDA bridge.md>)).
 
 ## Pitfalls
 

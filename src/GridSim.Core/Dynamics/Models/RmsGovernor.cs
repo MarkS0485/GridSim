@@ -99,9 +99,13 @@ public sealed record GastData(
 
 /// <summary>Hydro governor parameters (see <see cref="HydroGovernor"/>'s constructor: permanent and transient droop, the
 /// dashpot reset time, the gate servo and the ideal water column; per-unit on the machine base). The v2 governor kind
-/// names this model "HYGOV"; it is GridSim's classic transient-droop governor with the ideal (inelastic, lossless) water
-/// column, which is the PSS/E HYGOV structure without HYGOV's turbine gain At, no-load flow qNL, turbine damping and
-/// gate-velocity limit (those are not modelled; a data set that relies on them is approximated, see the notes).</summary>
+/// names this model "HYGOV", but it is GridSim's simplified hydro governor, not the PSS/E HYGOV structure. It is the
+/// classic dashpot transient-droop governor: the droop is fed back from the actual gate position, so the gate servo Tg sits
+/// inside the droop loop (PSS/E HYGOV takes the droop from the desired gate, before the servo). The water column is the
+/// ideal (inelastic, lossless) linearised penstock (1 - Tw s) / (1 + Tw s / 2), where HYGOV uses the nonlinear turbine
+/// h = (q/g)^2. HYGOV's turbine gain At, no-load flow qNL, turbine damping and gate-velocity limit are not modelled.
+/// Trajectories are therefore not like for like with PSS/E HYGOV; a mapped HYGOV record is listed as "mapped, governor
+/// structure differs".</summary>
 public sealed record HydroGovernorData(
     double PermanentDroopPu, double TransientDroopPu, double ResetTimeSeconds, double GateTimeSeconds,
     double WaterTimeSeconds, double GateMinPu = 0.0, double GateMaxPu = double.PositiveInfinity) : GovernorData

@@ -62,7 +62,7 @@ public static class VizExport
             {
                 Hour = (float)hour,
                 LoadGw = (float)(m.Buses.Sum(b => b.Pd) / 1000.0),
-                GenGw = (float)(r.PInjMw.Where(p => p > 0).Sum() / 1000.0),
+                GenGw = (float)(SolvedGeneration.GeneratorOutputMw(m, r) / 1000.0),   // SEC-07: the units' output (was the positive net injections)
                 LossMw = (float)r.TotalLossMw,
                 FreqHz = (float)baseModel.FrequencyHz, // steady state: nominal (was hard-coded 50 Hz; R296)
                 Converged = r.Converged,
@@ -74,7 +74,40 @@ public static class VizExport
         }
 
         scene.Frames = frameList.ToArray();
+        CheckFinite(scene);
         return scene;
+    }
+
+    /// <summary>SEC-07: every number of the scene is a 32-bit float, and JSON has no infinity or NaN. A value that is not
+    /// finite in single precision (a base kV of 1e39, a NaN from a solve) is refused, naming where it is, instead of
+    /// failing in the serializer as an internal error.</summary>
+    private static void CheckFinite(VizScene scene)
+    {
+        static void Check(float v, string where)
+        {
+            if (!float.IsFinite(v))
+                throw new InvalidDataException($"gridviz scene: {where} is {v.ToString(System.Globalization.CultureInfo.InvariantCulture)}, which is not a finite single-precision number, so the scene cannot be written.");
+        }
+        Check(scene.BaseMva, "the base MVA");
+        foreach (VizBus b in scene.Buses)
+        {
+            Check(b.Kv, $"bus {b.Id}'s base kV");
+            Check(b.X, $"bus {b.Id}'s x");
+            Check(b.Y, $"bus {b.Id}'s y");
+        }
+        foreach (VizFrame f in scene.Frames)
+        {
+            string at = $"the frame at hour {f.Hour.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)}";
+            Check(f.Hour, "a frame's hour");
+            Check(f.LoadGw, at + ": the load");
+            Check(f.GenGw, at + ": the generation");
+            Check(f.LossMw, at + ": the losses");
+            Check(f.FreqHz, at + ": the frequency");
+            for (int k = 0; k < f.Vm.Length; k++) Check(f.Vm[k], $"{at}: bus {scene.Buses[k].Id}'s voltage magnitude");
+            for (int k = 0; k < f.VaDeg.Length; k++) Check(f.VaDeg[k], $"{at}: bus {scene.Buses[k].Id}'s voltage angle");
+            for (int k = 0; k < f.PInjMw.Length; k++) Check(f.PInjMw[k], $"{at}: bus {scene.Buses[k].Id}'s P injection");
+            for (int k = 0; k < f.QInjMvar.Length; k++) Check(f.QInjMvar[k], $"{at}: bus {scene.Buses[k].Id}'s Q injection");
+        }
     }
 
     public static string ToJson(VizScene scene) => JsonSerializer.Serialize(scene, Json.VizScene);

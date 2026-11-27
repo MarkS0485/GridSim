@@ -50,6 +50,15 @@ internal static class CliFiles
     private static readonly object Gate = new();
     private static HashSet<string> _inputFiles = new(PathComparer);
     private static List<(string Folder, string Why)> _protectedFolders = new();
+    private static List<string> _written = new();
+    private static HashSet<string> _writtenSet = new(PathComparer);
+
+    /// <summary>
+    /// RC5 (run journal): set in a re-run started by <c>breaking-change validate</c> to that re-run's scratch folder.
+    /// While it is set, <see cref="Output"/> also refuses any target outside it. Unset (every ordinary run) the check
+    /// does nothing.
+    /// </summary>
+    public const string ReplayScratchVariable = "GRIDSIM_REPLAY_SCRATCH";
 
     /// <summary>
     /// Record the run's inputs from its command line, once, before any verb runs. <paramref name="args"/> is the whole
@@ -65,10 +74,47 @@ internal static class CliFiles
             if (!string.IsNullOrWhiteSpace(f))
                 folders.Add((WithSeparator(Path.GetFullPath(f)), "it is a file of the bundled data folder (the built-in cases and fixtures)"));
 
+        // RC5 (run journal): the classification is shared with the journal, which records the same inputs, case folders
+        // and outputs. The inputs and case folders recorded here are exactly what this method has always recorded.
+        foreach (ClassifiedToken t in Classify(args))
+        {
+            if (t.Kind == "input") files.Add(t.Full);
+            else if (t.Kind == "case-folder")
+                folders.Add((WithSeparator(t.Full), $"it is a file of the case folder '{t.Full}' that this run reads"));
+        }
+
+        lock (Gate)
+        {
+            _inputFiles = files;
+            _protectedFolders = folders;
+            _written = new List<string>();
+            _writtenSet = new HashSet<string>(PathComparer);
+        }
+    }
+
+    /// <summary>One classified command-line token (see <see cref="Classify"/>).</summary>
+    /// <param name="Index">The token's index in the command line.</param>
+    /// <param name="Part">The piece's position in a comma list, or null for a whole token.</param>
+    /// <param name="Raw">The token as written (for --flag=value, the value; for a comma list, the piece).</param>
+    /// <param name="Full">The token resolved against the working folder.</param>
+    /// <param name="Kind">"input" (an existing file), "case-folder" (a folder holding system.json) or "output" (the value
+    /// of an output flag).</param>
+    internal readonly record struct ClassifiedToken(int Index, int? Part, string Raw, string Full, string Kind);
+
+    /// <summary>
+    /// The command line's tokens by what they are to the output policy: every existing file it names (other than the
+    /// value of an output flag) is an input, every folder holding <c>system.json</c> is a case folder, and the value of
+    /// each output flag is an output. Pure apart from reading the file system; other tokens are not listed.
+    /// </summary>
+    internal static List<ClassifiedToken> Classify(IReadOnlyList<string> args)
+    {
+        ArgumentNullException.ThrowIfNull(args);
+        var list = new List<ClassifiedToken>();
         for (int i = 0; i < args.Count; i++)
         {
             string tok = args[i];
             if (string.IsNullOrEmpty(tok)) continue;
+            int at = i;
             if (tok.StartsWith("--", StringComparison.Ordinal))
             {
                 int eq = tok.IndexOf('=', StringComparison.Ordinal);
@@ -77,33 +123,55 @@ internal static class CliFiles
                 {
                     // The value of an output flag is an output: skip it ("--out x" or "--out=x"). A flag followed by
                     // another flag has no value here (modal's --json, for example), so nothing is skipped.
-                    if (eq < 0 && i + 1 < args.Count && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) i++;
+                    string? value = null;
+                    if (eq >= 0) value = tok[(eq + 1)..];
+                    else if (i + 1 < args.Count && !args[i + 1].StartsWith("--", StringComparison.Ordinal)) value = args[++i];
+                    if (!string.IsNullOrEmpty(value) && FullOrNull(value) is string outFull)
+                        list.Add(new ClassifiedToken(eq >= 0 ? at : i, null, value, outFull, "output"));
                     continue;
                 }
                 if (eq < 0) continue;   // a plain flag; its value (if any) is the next token, examined on its own
                 tok = tok[(eq + 1)..];  // --flag=value: the value may name an input
             }
             // A comma list (bench --cases a,b,c; transient --cases) names several cases.
-            foreach (string piece in tok.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-                Note(piece, files, folders);
+            string[] pieces = tok.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            for (int k = 0; k < pieces.Length; k++)
+            {
+                if (FullOrNull(pieces[k]) is not string full) continue;
+                int? part = pieces.Length > 1 ? k : null;
+                if (File.Exists(full)) list.Add(new ClassifiedToken(at, part, pieces[k], full, "input"));
+                else if (Directory.Exists(full) && File.Exists(Path.Combine(full, "system.json")))
+                    list.Add(new ClassifiedToken(at, part, pieces[k], full, "case-folder"));
+            }
         }
-
-        lock (Gate)
-        {
-            _inputFiles = files;
-            _protectedFolders = folders;
-        }
+        return list;
     }
 
-    // One command-line token: an existing file is an input; an existing case folder (system.json inside) protects its files.
-    private static void Note(string token, HashSet<string> files, List<(string, string)> folders)
+    private static string? FullOrNull(string token)
     {
-        string full;
-        try { full = Path.GetFullPath(token); }
-        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return; }
-        if (File.Exists(full)) files.Add(full);
-        else if (Directory.Exists(full) && File.Exists(Path.Combine(full, "system.json")))
-            folders.Add((WithSeparator(full), $"it is a file of the case folder '{full}' that this run reads"));
+        try { return Path.GetFullPath(token); }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return null; }
+    }
+
+    /// <summary>The input files recorded by <see cref="Init"/> (full paths).</summary>
+    public static IReadOnlyCollection<string> InputFiles
+    {
+        get { lock (Gate) return _inputFiles.ToArray(); }
+    }
+
+    /// <summary>The protected folders recorded by <see cref="Init"/> (full paths ending in a separator) and why.</summary>
+    public static IReadOnlyList<(string Folder, string Why)> ProtectedFolders
+    {
+        get { lock (Gate) return _protectedFolders.ToArray(); }
+    }
+
+    /// <summary>
+    /// RC5 (run journal): every output path this run has passed through <see cref="Output"/>, in call order, each once.
+    /// The journal hashes them when the run ends. Additive: nothing reads it to decide anything about the run.
+    /// </summary>
+    public static IReadOnlyList<string> Written
+    {
+        get { lock (Gate) return _written.ToArray(); }
     }
 
     private static string WithSeparator(string folder) =>
@@ -165,8 +233,13 @@ internal static class CliFiles
         if (why is not null)
             throw new OutputRefusedException(
                 $"refusing to write the {what} to '{full}': {why}. An output never replaces an input; name another path.");
+        RefuseOutsideReplayScratch(full, what);
         string? dir = Path.GetDirectoryName(full);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        lock (Gate)
+        {
+            if (_writtenSet.Add(full)) _written.Add(full);
+        }
         return full;
     }
 
@@ -180,8 +253,59 @@ internal static class CliFiles
         string full = Path.GetFullPath(dir);
         if (File.Exists(full))
             throw new OutputRefusedException($"refusing to use '{full}' as the {what}: it is an existing file, not a folder.");
+        RefuseOutsideReplayScratch(full, what);
         Directory.CreateDirectory(full);
         return full;
+    }
+
+    /// <summary>
+    /// RC5 (2.1.127): the re-run guard alone, for a verb that writes its result file itself rather than through
+    /// <see cref="Output"/> (dynamics-study, long-term). Inert unless GRIDSIM_REPLAY_SCRATCH is set, so an ordinary run is
+    /// exactly as before; in a re-run started by <c>breaking-change validate</c> it refuses a target outside the scratch
+    /// folder (<see cref="OutputRefusedException"/>, exit 2), as <see cref="Output"/> does.
+    /// </summary>
+    public static void ReplayGuard(string path, string what)
+    {
+        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(ReplayScratchVariable))) return;
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        RefuseOutsideReplayScratch(Path.GetFullPath(path), what);
+    }
+
+    // RC5 (run journal): defence in depth for a re-run. Inert unless GRIDSIM_REPLAY_SCRATCH is set.
+    private static void RefuseOutsideReplayScratch(string full, string what)
+    {
+        string? scratch = Environment.GetEnvironmentVariable(ReplayScratchVariable);
+        if (string.IsNullOrEmpty(scratch)) return;
+        string? refusal = GridSim.Core.Security.PathConfinement.Refusal(full, full, scratch);
+        if (refusal is not null)
+            throw new OutputRefusedException(
+                $"refusing to write the {what} to '{full}': a re-run writes inside its scratch folder only ({refusal}).");
+    }
+
+    /// <summary>
+    /// CLI-04: the report file of a verb that also writes its table beside it as <c>&lt;report&gt;.csv</c>
+    /// (<see cref="Path.ChangeExtension(string?, string?)"/>). A report named <c>x.csv</c> would make both writers open the
+    /// same file (a sharing violation on Windows, one corrupt file elsewhere), so it is refused (exit 2) before anything is
+    /// opened. Otherwise the same as <see cref="Output"/>.
+    /// </summary>
+    public static string ReportWithCsv(string path, string what)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        string full = Path.GetFullPath(path);
+        // R3-07: compared without regard to case on every system (macOS volumes ignore case; refusing more is safe).
+        if (string.Equals(full, Path.GetFullPath(Path.ChangeExtension(path, ".csv")), StringComparison.OrdinalIgnoreCase))
+            throw new OutputRefusedException($"refusing to write the {what} to '{full}': its table is written beside it as <report>.csv, which is this same file. Name the report with another extension (for example .md).");
+        return Output(path, what);
+    }
+
+    /// <summary>CLI-02: the output of this run (a path passed through <see cref="Output"/>) that <paramref name="message"/>
+    /// names, or null when it names none.</summary>
+    internal static string? WrittenPathIn(string message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        foreach (string w in Written)
+            if (message.Contains(w, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal)) return w;
+        return null;
     }
 
     /// <summary>Open an output text file through the policy (UTF-8 without a BOM, as before).</summary>

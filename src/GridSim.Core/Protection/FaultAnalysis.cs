@@ -101,7 +101,12 @@ public sealed record FaultResult(
     double TheveninZPu,             // the Thevenin impedance magnitude seen at the fault bus
     IReadOnlyDictionary<int, double> DifferentialCurrentPuByBus, // fault current appears at the faulted bus
     IReadOnlyList<ConverterFaultInfeed>? Converters = null,       // converter-interfaced units' during-fault currents
-    bool ConvertersConverged = true);                              // the converter current fixed point converged
+    bool ConvertersConverged = true)                               // the converter current fixed point converged
+{
+    /// <summary>RC5 WP18: the fault current If as a phasor (pu on the system base, into the fault), the value whose magnitude
+    /// is <see cref="FaultCurrentPu"/>. Read by the busbar differential; no other output uses it.</summary>
+    public Complex FaultCurrentPhasorPu { get; init; }
+}
 
 /// <summary>A converter-interfaced unit's state during the fault: its terminal voltage, its injected current
 /// (pu on the system base, and as a multiple of its own rated current), the active/reactive split, and whether it
@@ -173,6 +178,48 @@ public static partial class FaultAnalysis
             bool isDead = dead is not null && dead[i];
             if (!touched[i] || isDead) shunts.Add((i, Complex.One));
         }
+    }
+
+    /// <summary>
+    /// ANA-05: the fault bus's island (the live buses joined to it through in-service branches) must hold a fault source: a
+    /// synchronous unit with a source reactance or, in the balanced study (<paramref name="convertersFeed"/>), a
+    /// converter-interfaced unit with its fault-current injection. Without one the superposition's "Thevenin impedance"
+    /// is the constant-impedance loads alone and the loads appear to feed the fault. Refused by name, with the wording of
+    /// <see cref="ShortCircuit.Iec60909"/>, which refuses the same model. A model with a source is untouched.
+    /// </summary>
+    private static void RequireFaultSource(GridModel model, Dictionary<int, int> index, bool[] dead, int faultIndex, int faultBusId,
+        double subtransientXdPu, bool convertersFeed)
+    {
+        int n = model.BusCount;
+        var adj = new List<int>[n];
+        foreach (Branch br in model.Branches)
+        {
+            if (!br.InService || !index.TryGetValue(br.From, out int f) || !index.TryGetValue(br.To, out int t)) continue;
+            (adj[f] ??= new List<int>()).Add(t);
+            (adj[t] ??= new List<int>()).Add(f);
+        }
+        var inIsland = new bool[n];
+        var stack = new Stack<int>();
+        inIsland[faultIndex] = true; stack.Push(faultIndex);
+        int count = 1;
+        while (stack.Count > 0)
+        {
+            int u = stack.Pop();
+            if (adj[u] is null) continue;
+            foreach (int w in adj[u])
+                if (!inIsland[w] && !dead[w]) { inIsland[w] = true; count++; stack.Push(w); }
+        }
+        bool anyConverter = false;
+        foreach (Generator g in model.Generators)
+        {
+            if (!index.TryGetValue(g.Bus, out int i) || !inIsland[i] || dead[i] || g.PowerFlowOnly) continue;
+            if (g.IsConverterInterfaced) { if (convertersFeed) return; anyConverter = true; continue; }
+            if (g.FaultSourceReactancePu(subtransientXdPu) * model.BaseMva / RatedMva(g) > 0.0) return;
+        }
+        string where = count == n ? "this model has" : $"the island of fault bus {faultBusId} ({count} bus(es) connected to it through in-service branches) has";
+        throw new InvalidOperationException(anyConverter
+            ? $"The fault study needs at least one synchronous source to feed an unbalanced fault; {where} only converter-interfaced plant, which this study keeps at its prefault current (no fault infeed in the sequence networks)."
+            : $"The fault study needs at least one source (generator) to feed the fault; {where} none, so only the loads would appear to feed it.");
     }
 
     /// <summary>
@@ -298,6 +345,7 @@ public static partial class FaultAnalysis
             shunts.Add((i, Complex.One / new Complex(0, xdSys)));
         }
         GroundIsolatedBuses(model, index, shunts, k, faultBusId, dead);   // GR-135, PR-03
+        RequireFaultSource(model, index, dead, k, faultBusId, subtransientXdPu, convertersFeed: true);   // ANA-05
         FaultNetworkSystem lu = FaultNetworkSystem.ForModel(model, shunts);
 
         // One column of Zbus: solve y . x = e_k.
@@ -380,7 +428,7 @@ public static partial class FaultAnalysis
         double ifKa = baseKv > 0 ? ifPu * baseMva / (Math.Sqrt(3.0) * baseKv) : 0.0;
         var diff = new Dictionary<int, double> { [faultBusId] = ifPu };
 
-        return new FaultResult(faulted, faultBusId, ifPu, ifKa, zth.Magnitude, diff, infeeds, convConverged);
+        return new FaultResult(faulted, faultBusId, ifPu, ifKa, zth.Magnitude, diff, infeeds, convConverged) { FaultCurrentPhasorPu = ifault };
     }
 
     // =================================================================================================================
@@ -491,7 +539,9 @@ public static partial class FaultAnalysis
         }
         var e = new Complex[n];
         e[k] = Complex.One;
-        Complex[] z1col = FaultNetworkSystem.ForModel(model, Shunts(g => g.FaultSourceReactancePu(subtransientXdPu))).Solve(e);
+        List<(int Index, Complex Y)> posShunts = Shunts(g => g.FaultSourceReactancePu(subtransientXdPu));
+        RequireFaultSource(model, index, dead, k, faultBusId, subtransientXdPu, convertersFeed: false);   // ANA-05
+        Complex[] z1col = FaultNetworkSystem.ForModel(model, posShunts).Solve(e);
         GridModel negModel = ReversedPhaseShifts(model);
         Complex[] z2col = FaultNetworkSystem.ForModel(negModel, Shunts(g => g.FaultSourceNegativeSeqReactancePu(subtransientXdPu))).Solve(e);
 

@@ -15,7 +15,7 @@ public sealed class CliS4CliAndLoaderProcessTests
     {
         string src = Path.Combine(AppContext.BaseDirectory, "data", caseFolder);
         Assert.True(Directory.Exists(src), $"bundled case folder missing: {src}");
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-s4-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-s4-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         foreach (string f in Directory.GetFiles(src)) File.Copy(f, Path.Combine(dir, Path.GetFileName(f)));
         string path = Path.Combine(dir, file);
@@ -83,7 +83,7 @@ public sealed class CliS4CliAndLoaderProcessTests
     [Fact]
     public void N076_screen_csv_names_the_peak_rocof_column()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n076-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n076-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -131,7 +131,7 @@ public sealed class CliS4CliAndLoaderProcessTests
     [Fact]
     public void N074_freq_uses_a_file_after_a_flag_and_refuses_two()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n074-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n074-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -181,7 +181,7 @@ public sealed class CliS4CliAndLoaderProcessTests
     [Fact]
     public void N122_pf_writes_a_result_file_and_keeps_stdout()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n122-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n122-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -235,7 +235,7 @@ public sealed class CliS4CliAndLoaderProcessTests
     [Fact]
     public void N116_iec60909_result_file_records_missing_earthing_data()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n116-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n116-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

@@ -78,6 +78,26 @@ public static class CgmesVocabulary
         _ => throw new ArgumentOutOfRangeException(nameof(k), k, "GridSim writes EQ, TP, SSH and SV only."),
     };
 
+    /// <summary>
+    /// RC5 WP10: the md:Model.profile URI of the diagram layout, geographical location, short-circuit and dynamics
+    /// profiles (<see cref="ProfileUris"/> keeps refusing these four kinds). CGMES 2.4.15: the profile URIs the ENTSO-E
+    /// RDFS files of 4 July 2016 declare (DiagramLayout/3/1, GeographicalLocation/2/1, EquipmentShortCircuit/3/1, which
+    /// ENTSO-E places inside the EQ profile, and Dynamics/3/1). CGMES 3.0: the owl:versionIRI of the PROF files in
+    /// entsoe/CGMES-AP (CGMES/PROF/CGMES-DL-PROF.rdf and so on; note that the dynamics profile is version 1.0).
+    /// </summary>
+    public static string ExtraProfileUris(CgmesVersion v, CgmesProfileKind k) => (v, k) switch
+    {
+        (CgmesVersion.V2_4_15, CgmesProfileKind.DL) => "http://entsoe.eu/CIM/DiagramLayout/3/1",
+        (CgmesVersion.V2_4_15, CgmesProfileKind.GL) => "http://entsoe.eu/CIM/GeographicalLocation/2/1",
+        (CgmesVersion.V2_4_15, CgmesProfileKind.SC) => "http://entsoe.eu/CIM/EquipmentShortCircuit/3/1",
+        (CgmesVersion.V2_4_15, CgmesProfileKind.DY) => "http://entsoe.eu/CIM/Dynamics/3/1",
+        (CgmesVersion.V3_0, CgmesProfileKind.DL) => "http://iec.ch/TC57/ns/CIM/DiagramLayout-EU/3.0",
+        (CgmesVersion.V3_0, CgmesProfileKind.GL) => "http://iec.ch/TC57/ns/CIM/GeographicalLocation-EU/3.0",
+        (CgmesVersion.V3_0, CgmesProfileKind.SC) => "http://iec.ch/TC57/ns/CIM/ShortCircuit-EU/3.0",
+        (CgmesVersion.V3_0, CgmesProfileKind.DY) => "http://iec.ch/TC57/ns/CIM/Dynamics-EU/1.0",
+        _ => throw new ArgumentOutOfRangeException(nameof(k), k, "ExtraProfileUris covers DL, GL, SC and DY only."),
+    };
+
     /// <summary>Classify a document from its declared profile URIs (null when none is recognised).</summary>
     public static CgmesProfileKind? KindOf(IEnumerable<string> profileUris)
     {

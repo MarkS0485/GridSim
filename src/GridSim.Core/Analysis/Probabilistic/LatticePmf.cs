@@ -43,7 +43,7 @@ public sealed class LatticePmf
 
     /// <summary>
     /// The mass function of <c>scale * X</c> for the law <paramref name="d"/> on the lattice of <paramref name="step"/>
-    /// (origin 0). A discrete law gives one atom per value, at the nearest lattice index; <paramref name="exactAtoms"/> is
+    /// (origin 0). A discrete law gives one atom per value, at the nearest lattice index; <see cref="AtomsExact"/> is
     /// false when some atom was off the lattice by more than 1e-9 of a step.
     /// </summary>
     public static LatticePmf OfTerm(UncertainDistribution d, double scale, double step)

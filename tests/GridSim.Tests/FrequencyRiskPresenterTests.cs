@@ -397,7 +397,7 @@ public sealed class FrequencyRiskPresenterTests
 
     private static Dictionary<string, double> WrittenInfeedCapacities(GridModel m)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-r200-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-r200-{Guid.NewGuid():N}");
         try
         {
             GdaModelWriter.WriteDirectory(m, dir);

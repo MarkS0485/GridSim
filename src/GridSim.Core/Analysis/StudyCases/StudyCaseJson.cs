@@ -72,7 +72,7 @@ public static partial class StudyCaseJson
     /// <summary>Parses a document, turning malformed JSON into a <see cref="StudyCaseException"/> that names the document.</summary>
     public static JsonDocument Parse(byte[] bytes, string what)
     {
-        try { return JsonDocument.Parse(bytes); }
+        try { return JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes)); }
         catch (JsonException ex) { throw new StudyCaseException($"{what} is not valid JSON: {ex.Message}"); }
     }
 }

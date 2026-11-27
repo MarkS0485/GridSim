@@ -64,6 +64,10 @@ public sealed class SessionManager
 
     // CAF B5: whether bridge sessions supervise their stream (BridgeReconnectSetting).
     private readonly bool _bridgeReconnect;
+
+    /// <summary>The host's security-event recorder (its audit log), set by the host once the log is known; null when the host
+    /// keeps none. Bridge sessions record each reconnect attempt and give-up through it (<c>AvailabilityDegraded</c>).</summary>
+    public Action<GridSim.Core.Diagnostics.SecurityEventKind, string>? SecurityAudit { get; set; }
     private readonly CycleOptions? _cycleOptions;
     private int _counter;
 
@@ -403,7 +407,8 @@ public sealed class SessionManager
             // server, so the session checks it then, through the same gate and the same content rule as a replay.
             string licensedName = remoteCase;
             return SimSession.CreateBridge(sid, new Uri(_bridgeEndpoint!), remoteCase, remoteSource, _bridgeResilience,
-                licence: model => _catalog.CheckLicence(model, licensedName), reconnect: _bridgeReconnect);
+                licence: model => _catalog.CheckLicence(model, licensedName), reconnect: _bridgeReconnect,
+                securityAudit: SecurityAudit);
         }
 
         CaseEntry e = _catalog.Find(caseId)

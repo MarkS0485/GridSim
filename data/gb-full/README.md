@@ -101,3 +101,14 @@ rows). With r = 0 these branches add no resistive damping in a harmonic study, a
 each of the k DNO nodes sits behind one share of a single SGT's reactance, not a transformer of its own. A data
 limitation of the assembled model; the fix (resistance from the X/R of real SGTs, and the fan-out) belongs to the
 upstream export. No gb-full number is changed here.
+
+## Short stub lines in EMT (lines mode)
+
+1,744 of the charged lines have a travel time `tau = sqrt(X B) / omega` shorter than the default 20 microsecond EMT
+step, and 590 of them have a surge impedance `Zc = sqrt(X / B)` above 1 kOhm (on a 132 kV, 100 MVA base), where an
+overhead line is about 300 to 500 Ohm and a cable 20 to 60 Ohm. The shortest, LOWF1T-LOWF1 at 132 kV, has X = 1.95e-5 pu
+and B = 1.39e-7 pu: about 11 uH (a stub of some tens of metres) with about 2.5 pF of charging (centimetres of cable),
+which gives `tau` of about 5.2 ns and Zc of about 2 kOhm. These look like tee and substation stubs (names ending in T, Q
+or S) with a placeholder-sized charging B: the connection is real, but X and B are not a consistent line. `emt --lines`
+models every line shorter than the step as a pi branch of the same line, so they run at normal steps. No gb-full number
+is changed here.

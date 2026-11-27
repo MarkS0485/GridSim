@@ -12,7 +12,7 @@ public class MeasurementSetRequiredFieldsTests
 {
     private static string Write(string measurementsJson)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-ms-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-ms-{Guid.NewGuid():N}.json");
         // Moved 2026-10 (D-DOC-061, docs-session finding, Ruling R1: Mark delegated 2026-10-04): the fixture had no
         // takenUtc, and the two "loads" tests relied on an undated set loading, which is the defect D-DOC-061 reports (an
         // undated set skipped the horizon guard). MeasurementSet.Load now refuses an undated set, so the fixture states a

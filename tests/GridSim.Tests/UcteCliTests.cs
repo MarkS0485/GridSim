@@ -24,7 +24,7 @@ public class UcteCliTests
     [Fact]
     public void Convert_takes_a_uct_input_and_proves_the_round_trip()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-ucte-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-ucte-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

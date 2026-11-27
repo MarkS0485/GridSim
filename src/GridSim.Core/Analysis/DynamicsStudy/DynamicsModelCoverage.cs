@@ -89,7 +89,7 @@ public sealed record DynamicsModelBinding(DynamicsModelCoverageReport Report, Ma
 /// (<see cref="PsseDyrReader"/>) and loader (<see cref="MachineDynamicsLoader"/>) unchanged. The reader's strict and
 /// permissive paths stay what they are; this class classifies records before and after calling the permissive path:
 /// <list type="number">
-/// <item>Every record is read (<see cref="PsseDyrReader.ReadRecords"/>; a malformed file is an input error).</item>
+/// <item>Every record is read (<see cref="PsseDyrReader.ReadRecords(string)"/>; a malformed file is an input error).</item>
 /// <item>Records the reader does not map, whose PSS/E order is not public, of a renewable chain (out of v1 scope), naming
 /// a machine the RAW case does not hold, or for an out-of-service unit, are classified here and not passed on.</item>
 /// <item>The remaining records are rewritten one per original line (so the reader's line numbers are the file's) and read
@@ -105,6 +105,9 @@ public static partial class DynamicsModelCoverage
     private static readonly System.Buffers.SearchValues<char> QuoteNeeded = System.Buffers.SearchValues.Create(" \t,/'");
 
     private const string LeftOutPrefix = "left out (unmodelled dynamics allowed): ";
+
+    // RC5 WP23: the provenance of an IEC 61400 unit's numbers (given in the study file).
+    private static readonly ProvenanceTag[] IecProvenance = { ProvenanceTag.Recorded };
 
     [GeneratedRegex(@"\(line (\d+)\)")]
     private static partial Regex LineTag();
@@ -123,7 +126,13 @@ public static partial class DynamicsModelCoverage
         "linear penstock where HYGOV's is nonlinear; values map one to one but trajectories are not like for like";
 
     public static DynamicsModelBinding Build(PsseParseResult raw, string dyrText, string dyrName, string schemasDir,
-        DynamicsUnmodelledPolicy policy)
+        DynamicsUnmodelledPolicy policy) => Build(raw, dyrText, dyrName, schemasDir, policy, null);
+
+    /// <summary>RC5 WP23: <see cref="Build(PsseParseResult, string, string, string, DynamicsUnmodelledPolicy)"/> with units the
+    /// study models as IEC 61400-27-1 style Type 4 wind turbines (<paramref name="iecUnits"/>). Each such unit takes no DYR record
+    /// (refused when it has one) and is BOUND with its model's description. Null or empty: exactly the historical report.</summary>
+    public static DynamicsModelBinding Build(PsseParseResult raw, string dyrText, string dyrName, string schemasDir,
+        DynamicsUnmodelledPolicy policy, IReadOnlyList<Iec61400StudyUnit>? iecUnits)
     {
         ArgumentNullException.ThrowIfNull(raw);
         ArgumentNullException.ThrowIfNull(dyrText);
@@ -234,6 +243,28 @@ public static partial class DynamicsModelCoverage
             if (read.Machines > 0) set = BindDocument(read.Json, dyrName, schemasDir, model);
         }
 
+        // RC5 WP23: the units the study models as IEC 61400 wind turbines join the bound data (none on every existing call).
+        var iecByGen = new Dictionary<int, string>();
+        if (iecUnits is { Count: > 0 })
+        {
+            var extra = new List<MachineDynamicsEntry>();
+            foreach (Iec61400StudyUnit u in iecUnits)
+            {
+                if (!units.TryGetValue((u.Machine.Bus, u.Machine.Id), out var unit))
+                    throw new InvalidDataException($"iec61400: the RAW case holds no {u.Machine}.");
+                if (!unit.InService || unit.GenIndex < 0)
+                    throw new InvalidDataException($"iec61400: {u.Machine} is out of service in the RAW case.");
+                if (records.Any(r => r.Bus == u.Machine.Bus && r.Id == u.Machine.Id))
+                    throw new InvalidDataException($"iec61400: {u.Machine} has DYR records; an IEC 61400 unit takes its whole model from the study file, so remove them.");
+                var data = new Dynamics.Models.SubtransientInit.MachineData(0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0) { Iec61400 = u.Data };
+                extra.Add(new MachineDynamicsEntry(unit.GenIndex, u.Machine.ToString(), "study:iec61400", data, null, IecProvenance,
+                    new[] { u.Data.Description + " from the study file (Dynawo and CGMES DY sources; not checked against the IEC 61400-27-1 text)" }));
+                iecByGen[unit.GenIndex] = u.Data.Description;
+            }
+            set = new MachineDynamicsSet(set?.Name ?? Path.GetFileNameWithoutExtension(dyrName), set?.Path ?? dyrName,
+                (set?.Entries ?? Array.Empty<MachineDynamicsEntry>()).Concat(extra).ToList());
+        }
+
         // Every in-service unit.
         var unitRows = new List<DynamicsUnitCoverage>();
         var traceLabels = new Dictionary<(int, string), IReadOnlyList<string>>();
@@ -262,7 +293,7 @@ public static partial class DynamicsModelCoverage
                 || pre.Any(kv => records[kv.Key].Bus == key.Bus && records[kv.Key].Id == key.Id
                     && kv.Value.Status is DyrRecordStatus.Skipped or DyrRecordStatus.OutOfScope);
             unitRows.Add(new DynamicsUnitCoverage(key.Bus, key.Id, gi, approximated ? "APPROXIMATED" : "BOUND",
-                mrec is null ? null : $"{mrec.Model} (line {mrec.Line.ToString(CultureInfo.InvariantCulture)})",
+                mrec is null ? iecByGen.GetValueOrDefault(gi) : $"{mrec.Model} (line {mrec.Line.ToString(CultureInfo.InvariantCulture)})",
                 e.Exciter?.Model, e.Exciter?.Pss is null ? null : Slot("pss") ?? "PSS1A", e.Data.Governor?.Model,
                 e.Provenance.Select(t => t.ToString()).ToList(), e.Notes.ToList()));
         }

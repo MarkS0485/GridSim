@@ -68,7 +68,7 @@ internal static class SpecialistStudyCli
             if (output is not null && (File.Exists(output) || Directory.Exists(output)))
                 throw new IOException("Result path already exists; use a new path for this invocation.");
             byte[] bytes = File.ReadAllBytes(input);
-            using (JsonDocument document = JsonDocument.Parse(bytes)) CheckDuplicates(document.RootElement);
+            using (JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes))) CheckDuplicates(document.RootElement);
             (object result, int exit) = body(new Invocation(input, bytes, output));
             string json = JsonSerializer.Serialize(result, OutputJson);
             if (output is not null)
@@ -96,7 +96,7 @@ internal static class SpecialistStudyCli
     /// <summary>Deserialise the strict request and check its schema version.</summary>
     public static T Parse<T>(byte[] bytes, Func<T, int> schemaVersion) where T : class
     {
-        T request = JsonSerializer.Deserialize<T>(bytes, InputJson) ?? throw new InvalidDataException("Study is null.");
+        T request = JsonSerializer.Deserialize<T>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, InputJson) ?? throw new InvalidDataException("Study is null.");
         if (schemaVersion(request) != 1) throw new InvalidDataException("schemaVersion must be 1.");
         return request;
     }

@@ -69,7 +69,7 @@ public sealed record HarmonicModelOptions
     /// reactance: <c>y_g(h) = 1 / (j * h * X)</c>, with <c>X</c> the machine's negative-sequence reactance
     /// (X2, defaulting to X''d - the round-rotor convention) plus its unit transformer, converted from MBase to
     /// the system base. Exactly the reactance the fault studies use
-    /// (<see cref="Generator.FaultSourceNegativeSeqReactancePu"/>), so the two models cannot drift apart.
+    /// (<see cref="GridSim.Core.Model.Generator.FaultSourceNegativeSeqReactancePu(double)"/>), so the two models cannot drift apart.
     ///
     /// <para>Why: synchronous machines are the main harmonic path to ground and the main thing that sets
     /// where the network resonates. Without them a radial feeder's Y(h) is singular and a meshed network's

@@ -20,7 +20,7 @@ public class EventCatalogTests
     public void Builtins_round_trip_through_json()
     {
         IReadOnlyList<GridEvent> original = EventCatalog.Builtin(Now);
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-cat-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-cat-{Guid.NewGuid():N}.json");
         try
         {
             EventCatalog.Save(path, original);
@@ -51,7 +51,7 @@ public class EventCatalogTests
                 new RecordedOutcome(-0.25, 49.3, 49.8, 0, null, ProvenanceTag.Synthetic),
                 ProvenanceTag.Synthetic),
         };
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-fut-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-fut-{Guid.NewGuid():N}.json");
         try
         {
             EventCatalog.Save(path, future);

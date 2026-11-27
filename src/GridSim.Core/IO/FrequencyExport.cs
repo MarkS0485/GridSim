@@ -31,6 +31,9 @@ public static class FrequencyExport
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase, // uniform camelCase across meta + body
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        // IO-21: a diverged run (or zero effective inertia) can hand over NaN or Infinity; it is written as the named
+        // literal, as SolveExport and the other result exports write it, instead of failing after the whole run.
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
     });
 
     /// <summary>The classic (non-forming) discrete recurrence - the exact byte sequence pre-forming exports carried.</summary>
@@ -56,7 +59,7 @@ public static class FrequencyExport
         DynamicsConfig cfg, FrequencyResponse response, FrequencyExportMeta meta)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(systemInertiaMwS, demandMw, events, cfg, response, meta));
+        AtomicText.Write(path, /* IO-22 */ ToJson(systemInertiaMwS, demandMw, events, cfg, response, meta));
     }
 
     public static string ToJson(

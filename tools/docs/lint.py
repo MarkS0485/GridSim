@@ -43,6 +43,8 @@ NAME_EXEMPT = {"0019 CLI reference.md", "0000 Contents.md"}
 # Archived 2.1.030 assessments (7 November 2026), kept unedited as a record: no spelling check. ASCII and links still apply.
 SPELL_EXEMPT = {"docs/archive/GRIDSIM_TECHNICAL_REFERENCE.md", "docs/archive/GRIDSIM_COMPREHENSIVE_REPORT.md",
                 "docs/archive/GRIDSIM_EXECUTIVE_OVERVIEW.md"}
+# Published titles cited as written (US spelling is the title's own): removed before the spelling check only.
+CITED_TITLES = ("Numerical Optimization", "Time-Scale Modeling of Dynamic Networks")
 
 
 def slug(heading):
@@ -101,6 +103,8 @@ def lint_file(path, strict, findings, anchors19):
             continue
         prose = strip_code(raw)
         low = prose.lower()
+        for title in CITED_TITLES:
+            low = low.replace(title.lower(), "")
         for stem in ([] if rel in SPELL_EXEMPT else US_SPELLINGS):
             m = re.search(r"\b" + stem, low)
             if m and not re.search(r"https?://\S*" + stem, low):

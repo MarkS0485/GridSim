@@ -13,7 +13,7 @@ public sealed class ScucCliProcessTests
 {
     private static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-scuc-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-scuc-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

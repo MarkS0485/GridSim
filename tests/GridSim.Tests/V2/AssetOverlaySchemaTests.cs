@@ -165,7 +165,7 @@ public sealed class AssetOverlaySchemaTests
         return Path.Combine(folder, "case.json");
     }
 
-    private static string NewFolder() => Path.Combine(Path.GetTempPath(), "gridsim-p5a-" + Guid.NewGuid().ToString("N"));
+    private static string NewFolder() => TestTemp.Under("gridsim-p5a-" + Guid.NewGuid().ToString("N"));
 
     private static void Delete(string dir)
     {

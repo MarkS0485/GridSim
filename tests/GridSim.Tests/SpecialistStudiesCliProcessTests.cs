@@ -8,7 +8,7 @@ public sealed class SpecialistStudiesCliProcessTests
 {
     private sealed class Folder : IDisposable
     {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gridsim-p8-" + Guid.NewGuid().ToString("N"));
+        public string Path { get; } = TestTemp.Under("gridsim-p8-" + Guid.NewGuid().ToString("N"));
         public Folder() => Directory.CreateDirectory(Path);
         public string File(string name) => System.IO.Path.Combine(Path, name);
         public string Write(string name, object study)

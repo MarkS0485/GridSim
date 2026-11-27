@@ -40,7 +40,12 @@ public sealed record RelayVerdict(
     double Margin,                      // signed distance past pickup (>0 = operated)
     double? TimeToTripS,                // inverse-time operating time, else null
     string Basis,                       // the "would fire because ..." sentence
-    ProtectionConfidence Confidence);
+    ProtectionConfidence Confidence)
+{
+    /// <summary>RC5 per-unit protection: the unit relay stage this verdict judged, with the value, grade (placeholder or
+    /// sourced) and layer (unit override or class default) of each setting it used; null for every network element.</summary>
+    public UnitRelayStage? UnitStage { get; init; }
+}
 
 /// <summary>
 /// A summary of a dynamic run, supplied when one is available so the frequency-derivative elements

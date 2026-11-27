@@ -16,7 +16,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr808PmuCurrentMeteredEndTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-gr808-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-gr808-{Guid.NewGuid():N}");
 
     public Gr808PmuCurrentMeteredEndTests() => Directory.CreateDirectory(_dir);
 

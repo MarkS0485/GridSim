@@ -11,7 +11,7 @@ namespace GridSim.Tests;
 /// </summary>
 public class Gr837AnchorDirectoryFlushTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gr837-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gr837-" + Guid.NewGuid().ToString("N"));
 
     public Gr837AnchorDirectoryFlushTests() => Directory.CreateDirectory(_dir);
 

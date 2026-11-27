@@ -12,7 +12,7 @@ namespace GridSim.Tests;
 /// </summary>
 public class GA7E3Batch1Tests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-ga7e3-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-ga7e3-{Guid.NewGuid():N}");
 
     public GA7E3Batch1Tests() => Directory.CreateDirectory(_root);
 

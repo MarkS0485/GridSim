@@ -14,7 +14,7 @@ public sealed class HostingCliProcessTests
 {
     private static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-hosting-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-hosting-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

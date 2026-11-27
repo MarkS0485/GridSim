@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class R412ModalFullCliTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r412-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r412-" + Guid.NewGuid().ToString("N"));
 
     public R412ModalFullCliTests() => Directory.CreateDirectory(_dir);
 

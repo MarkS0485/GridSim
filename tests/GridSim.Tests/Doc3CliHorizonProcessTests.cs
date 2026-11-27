@@ -24,7 +24,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Doc3CliHorizonProcessTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc3-cli-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc3-cli-" + Guid.NewGuid().ToString("N"));
 
     public Doc3CliHorizonProcessTests() => Directory.CreateDirectory(_dir);
 

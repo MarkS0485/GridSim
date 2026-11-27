@@ -490,7 +490,7 @@ public static class ClassicalInit
     /// <summary>
     /// Critical clearing time (seconds) for a self-clearing three-phase fault at <paramref name="faultBusId"/>,
     /// quantised to the integration step (N042, the classical twin of R106 / ruling Q15). This is
-    /// <see cref="CriticalClearingBracket"/>'s <see cref="CctBracket.StableSeconds"/>: the LONGEST clearing time
+    /// <see cref="CriticalClearingBracket(GridModel, PowerFlowResult, double[], int, double?, double, double, int, bool, int, double)"/>'s <see cref="CctBracket.StableSeconds"/>: the LONGEST clearing time
     /// on the step grid (a whole number of <paramref name="stepSeconds"/> steps) after which the classical fleet
     /// still holds synchronism. When the search reached step resolution (always, with the default cap and
     /// window), clearing one step later loses synchronism. Returns 0 if even an instantaneous fault is unstable,
@@ -507,7 +507,7 @@ public static class ClassicalInit
     /// <para><paramref name="holdNonMachines"/> is passed to <see cref="FromSolvedCase"/> unchanged.</para>
     ///
     /// <para><paramref name="f0"/> is the nominal frequency (Hz) the swing is integrated at; null (the default) takes the
-    /// model's own <see cref="GridModel.FrequencyHz"/> (R238, see <see cref="CriticalClearingBracket"/>).</para>
+    /// model's own <see cref="GridModel.FrequencyHz"/> (R238, see <see cref="CriticalClearingBracket(GridModel, PowerFlowResult, double[], int, double?, double, double, int, bool, int, double)"/>).</para>
     /// </summary>
     public static double CriticalClearingTimeSeconds(GridModel model, PowerFlowResult result,
         double[]? xdpMachineBase, int faultBusId,

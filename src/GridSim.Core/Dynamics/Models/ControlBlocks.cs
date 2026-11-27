@@ -8,11 +8,11 @@ namespace GridSim.Core.Dynamics.Models;
 ///
 /// The linear dynamic blocks (<see cref="FirstOrderLag"/>, <see cref="LeadLag"/>, <see cref="Washout"/>)
 /// integrate by the <b>exact zero-order-hold</b> discretisation of their pole, not by an Euler/RK step: for
-/// an input held constant across the step the state advance <c>x <- a*x + (1-a)*K*u</c> with
+/// an input held constant across the step the state advance <c>x &lt;- a*x + (1-a)*K*u</c> with
 /// <c>a = exp(-dt/T)</c> is the closed-form solution of the block's ODE, so a step response reproduces the
 /// analytic <c>K(1-e^{-t/T})</c> to machine epsilon at every sample and is unconditionally A-stable at any
 /// step. The pure <see cref="Integrator"/> (a marginally-stable pole at the origin) advances by the
-/// forward-Euler rule <c>x <- x + K*u*dt</c>, which is likewise exact for a held input (a ramp). Every block
+/// forward-Euler rule <c>x &lt;- x + K*u*dt</c>, which is likewise exact for a held input (a ramp). Every block
 /// is a pure function of (state, input, dt) with no shared or static state, so a study is bit-for-bit
 /// reproducible run to run, matching the whole-app determinism contract (technical manual ch. 11).
 ///
@@ -154,8 +154,9 @@ public sealed class LeadLag
     /// <param name="lagSeconds">Denominator (lag) time constant Tb (s), &gt; 0.</param>
     public LeadLag(double leadSeconds, double lagSeconds)
     {
-        if (leadSeconds < 0.0) throw new ArgumentOutOfRangeException(nameof(leadSeconds), "Lead time constant must be >= 0.");
-        if (lagSeconds <= 0.0) throw new ArgumentOutOfRangeException(nameof(lagSeconds), "Lag time constant must be > 0.");
+        // DYN-11: written so NaN (and infinity) fail too; "x < 0" is false for NaN.
+        if (!(leadSeconds >= 0.0) || !double.IsFinite(leadSeconds)) throw new ArgumentOutOfRangeException(nameof(leadSeconds), "Lead time constant must be >= 0.");
+        if (!(lagSeconds > 0.0) || !double.IsFinite(lagSeconds)) throw new ArgumentOutOfRangeException(nameof(lagSeconds), "Lag time constant must be > 0.");
         _c = leadSeconds / lagSeconds;
         _tb = lagSeconds;
     }
@@ -191,7 +192,7 @@ public sealed class Washout
     /// <param name="timeConstantSeconds">Washout time constant T (s), &gt; 0.</param>
     public Washout(double timeConstantSeconds)
     {
-        if (timeConstantSeconds <= 0.0) throw new ArgumentOutOfRangeException(nameof(timeConstantSeconds), "Washout time constant must be > 0.");
+        if (!(timeConstantSeconds > 0.0) || !double.IsFinite(timeConstantSeconds)) throw new ArgumentOutOfRangeException(nameof(timeConstantSeconds), "Washout time constant must be > 0.");   // DYN-11
         _t = timeConstantSeconds;
     }
 
@@ -217,7 +218,7 @@ public sealed class Washout
 /// <summary>
 /// Pure integrator <c>K / s</c> with optional non-windup limits - the integral path of a PI regulator, an
 /// over/under-excitation timer, a valve position. The state is the output; <c>dx/dt = K u</c>, advanced by
-/// forward Euler (<c>x <- x + K u dt</c>), which is exact for an input held across the step (a ramp).
+/// forward Euler (<c>x &lt;- x + K u dt</c>), which is exact for an input held across the step (a ramp).
 /// Clamping the state itself to <c>[min, max]</c> makes the limit non-windup: the output cannot integrate
 /// past the limit, so it releases immediately when the input reverses.
 /// </summary>
@@ -233,7 +234,9 @@ public sealed class Integrator
     /// <param name="max">Non-windup upper limit (default none).</param>
     public Integrator(double gain, double min = double.NegativeInfinity, double max = double.PositiveInfinity)
     {
-        if (max < min) throw new ArgumentException("max must be >= min.", nameof(max));
+        // DYN-11: a NaN gain or limit is refused (NaN failed no comparison and made every output NaN).
+        if (!double.IsFinite(gain)) throw new ArgumentOutOfRangeException(nameof(gain), gain, "Integrator gain must be a finite number.");
+        if (!(max >= min)) throw new ArgumentException("max must be >= min.", nameof(max));
         _k = gain;
         _min = min;
         _max = max;
@@ -273,7 +276,8 @@ public sealed class PiController
     public PiController(double proportionalGain, double integralGain,
         double min = double.NegativeInfinity, double max = double.PositiveInfinity)
     {
-        if (max < min) throw new ArgumentException("max must be >= min.", nameof(max));
+        if (!double.IsFinite(proportionalGain)) throw new ArgumentOutOfRangeException(nameof(proportionalGain), proportionalGain, "Kp must be a finite number.");   // DYN-11
+        if (!(max >= min)) throw new ArgumentException("max must be >= min.", nameof(max));
         _kp = proportionalGain;
         _outMin = min;
         _outMax = max;
@@ -287,4 +291,8 @@ public sealed class PiController
     /// <summary>Advance one step with <paramref name="input"/> held across it, and return the output.</summary>
     public double Step(double input, double dtSeconds)
         => Math.Clamp(_kp * input + _integral.Step(input, dtSeconds), _outMin, _outMax);
+
+    /// <summary>RC5 WP12: the output for <paramref name="input"/> on the present integral state, advancing nothing (the held
+    /// evaluation of a declarative injection or load model).</summary>
+    internal double HeldOutput(double input) => Math.Clamp(_kp * input + _integral.Output, _outMin, _outMax);
 }

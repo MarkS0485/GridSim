@@ -11,7 +11,7 @@ namespace GridSim.Core.Estimation;
 /// <see cref="IPowerFlowSolver"/>. The estimator owns the loop (start point, damping, convergence,
 /// chi-square, bad-data removal); the step backend owns representation: how H is held, how the gain is
 /// formed and solved, how observability is gated, and how the residual covariance is computed.
-/// Today's implementations are dense LU (<= threshold) and sparse Gilbert-Peierls (above it);
+/// Today's implementations are dense LU (&lt;= threshold) and sparse Gilbert-Peierls (above it);
 /// alternative METHODS (Hachtel-constrained, QR-orthogonal, robust reweighting) drop in behind
 /// this same seam without touching the loop.
 /// </summary>
@@ -49,7 +49,7 @@ internal interface IWlsStep
     (double[] Normalized, bool[] Critical) NormalizedResiduals(double[] vm, double[] va, double[] residualPu);
 }
 
-/// <summary>Dense normal equations on <see cref="ILinearSolver"/> - the <= threshold backend.</summary>
+/// <summary>Dense normal equations on <see cref="ILinearSolver"/> - the &lt;= threshold backend.</summary>
 internal sealed class DenseWlsStep : IWlsStep
 {
     private readonly ILinearSolver _linear;
@@ -357,7 +357,7 @@ internal sealed class SparseWlsStep : IWlsStep
 /// where G_f/g_f are the free rows' normal equations and C the constraint Jacobian.
 /// A pure switching node's zero net injection is a network FACT, not telemetry - the
 /// constrained method honours it exactly instead of "within 10 MVAr", and conditions
-/// better than the huge-weight trick. Dense backend (<= SolverSelector threshold);
+/// better than the huge-weight trick. Dense backend (&lt;= SolverSelector threshold);
 /// the sparse constrained backend is future work and selection above the threshold
 /// fails loud rather than silently degrading.
 /// </summary>

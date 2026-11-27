@@ -22,7 +22,7 @@ public sealed class WebHostTests
     /// <summary>A factory for the web app with the given settings layered on top (Development environment).</summary>
     private static WebApplicationFactory<Program> Factory(params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-webhost-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-webhost-keys-" + Guid.NewGuid().ToString("N"));
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Auth:KeysDirectory", keys);
@@ -179,19 +179,12 @@ public sealed class WebHostTests
     public async Task Home_page_carries_the_configured_site_values()
     {
         await using var f = Factory(
-            ("Site:GoogleTagId", "G-TEST123456"),
-            ("Site:AnalyticsScriptUrl", "https://stats.example.com/a.js"),
-            ("Site:AnalyticsCollectorUrl", "https://stats.example.com"),
             ("Site:ShareImageUrl", "https://www.example.com/og.png"),
             ("Site:OrganisationName", "Example Org"),
             ("Site:FooterLinks:0:Text", "Source"),
             ("Site:FooterLinks:0:Url", "https://code.example.com/gridsim"));
         using HttpClient c = Client(f);
         string html = await c.GetStringAsync(new Uri("/", UriKind.Relative));
-        Assert.Contains("https://www.googletagmanager.com/gtag/js?id=G-TEST123456", html, StringComparison.Ordinal);
-        Assert.Contains("gtag('config', 'G-TEST123456');", html, StringComparison.Ordinal);
-        Assert.Contains("src=\"https://stats.example.com/a.js\"", html, StringComparison.Ordinal);
-        Assert.Contains("data-collector=\"https://stats.example.com\"", html, StringComparison.Ordinal);
         Assert.Contains("content=\"https://www.example.com/og.png\"", html, StringComparison.Ordinal);
         Assert.Contains("\"name\":\"Example Org\"", html, StringComparison.Ordinal);
         Assert.Contains("href=\"https://code.example.com/gridsim\"", html, StringComparison.Ordinal);

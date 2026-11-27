@@ -36,7 +36,7 @@ public static class PropagationDelay
     /// <summary>
     /// Compute the domain-pair delay matrix tau (seconds, in <paramref name="masses"/> order), the wave
     /// speed used (km/s), and the largest delay. Returns all-zero when propagation is disabled, there is
-    /// <=1 domain, or the buses carry no map coordinates.
+    /// &lt;=1 domain, or the buses carry no map coordinates.
     /// </summary>
     public static (double[,] tauSeconds, double waveSpeedKmPerS, double maxDelaySeconds) Compute(
         GridModel model, IReadOnlyList<SpeedDomain> masses, DistributedConfig dist)

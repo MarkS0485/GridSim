@@ -56,8 +56,8 @@ internal static class HarmonicPlanningCommands
     private static T Read<T>(string studyPath, string verb, out byte[] bytes)
     {
         bytes = File.ReadAllBytes(studyPath);
-        using (JsonDocument document = JsonDocument.Parse(bytes)) TransmissionSecurityCommand.CheckDuplicates(document.RootElement);
-        return JsonSerializer.Deserialize<T>(bytes, Json) ?? throw new InvalidDataException("Study is null.");
+        using (JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes))) TransmissionSecurityCommand.CheckDuplicates(document.RootElement);
+        return JsonSerializer.Deserialize<T>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, Json) ?? throw new InvalidDataException("Study is null.");
     }
 
     private static string? OutPath(string? output)

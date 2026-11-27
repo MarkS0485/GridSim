@@ -141,7 +141,7 @@ internal static class NewtonShell
     /// is not a usable operating point, so the retry does not report it.</summary>
     public const double MaxRetryBranchAngleDeg = 90.0;
 
-    /// <summary>The stall factor of <see cref="Stalled"/>: a failed Newton run whose final mismatch is at or below this
+    /// <summary>The stall factor of <see cref="Stalled(double, double)"/>: a failed Newton run whose final mismatch is at or below this
     /// fraction of the mismatch at its own start point was still converging when the iteration cap stopped it.</summary>
     public const double RetryStallFactor = 1e-3;
 
@@ -161,28 +161,75 @@ internal static class NewtonShell
     /// </summary>
     public static bool Stalled(double startMismatch, double finalMismatch) => !(finalMismatch <= RetryStallFactor * startMismatch);
 
+    /// <summary>The last-step factor of <see cref="Stalled(NewtonRunEnd, double)"/>: a Newton run stopped by the iteration
+    /// cap after two or more steps whose last step cut the mismatch to this fraction or less of the mismatch it started
+    /// from was still converging when the cap stopped it.</summary>
+    public const double RetryLastStepFactor = 0.5;
+
+    /// <summary>How a Newton run that did not converge ended: its mismatch at its own start point, its mismatch before its
+    /// last step (NaN when it took none), the steps it took and whether the iteration cap stopped it (false when a step
+    /// could not be solved or was not finite).</summary>
+    public readonly record struct NewtonRunEnd(double StartMismatch, double BeforeLastStepMismatch, int Steps, bool CapReached, bool Diverged = false);
+
+    /// <summary>The divergence stop (<see cref="PowerFlowOptions.DivergeLimitPu"/>): true when <paramref name="mismatch"/>
+    /// is above both the limit and the mismatch <paramref name="startMismatch"/> at the pass's starting point. False for
+    /// a NaN on either side (a non-finite state has its own status) and when the limit is +Infinity (stop off).</summary>
+    public static bool DivergedBeyondLimit(PowerFlowOptions opt, double startMismatch, double mismatch)
+        => mismatch > Math.Max(opt.DivergeLimitPu, startMismatch);
+
+    /// <summary>
+    /// The retry's stall test (2.1.075): whether a Newton run that did not converge, ending at
+    /// <paramref name="finalMismatch"/>, stalled or diverged rather than being stopped by the iteration cap while still
+    /// converging. It is <see cref="Stalled(double, double)"/> on the run's start mismatch, with two more ways for a run
+    /// stopped by the cap to count as still converging:
+    /// <list type="bullet">
+    /// <item>a cap of 0 (no step taken): the caller allowed no step, so nothing is solved again;</item>
+    /// <item>two or more steps taken and the last one cut the mismatch to <see cref="RetryLastStepFactor"/> of where it
+    /// started or less.</item>
+    /// </list>
+    /// A run of one step keeps the start-ratio test alone (its last-step ratio is its start ratio), and a run ended by a
+    /// step that could not be solved is judged as before.
+    /// <para>Why the last step: the start ratio alone needs a thousandfold cut, which a quadratically converging run makes
+    /// only after about three steps, so a cap of 2 read as a stall: case9 from flat start (1.63, 0.1875, 2.15e-3 pu) was
+    /// retried at MaxIterations 2 and, with Tolerance 1e-4, reported converged after four steps against a budget of two.
+    /// Its last step cut the mismatch 87-fold (ratio 0.011). The failed solves the retry is for barely move on their
+    /// last step: from flat start at 50 steps the ratio is 0.957 on case13659pegase, 0.763 on pglib case162_ieee_dtc (it
+    /// alternates between 3.37 and 2.57 pu; the other half of the cycle is above 1), 0.999 on case240_pserc and 1.014 on
+    /// case3_lmbd, all at least 1.5 times the factor.</para>
+    /// </summary>
+    public static bool Stalled(NewtonRunEnd run, double finalMismatch)
+    {
+        if (run.CapReached && run.Steps == 0) return false;
+        if (!Stalled(run.StartMismatch, finalMismatch)) return false;
+        if (run.CapReached && run.Steps >= 2 && finalMismatch <= RetryLastStepFactor * run.BeforeLastStepMismatch) return false;
+        return true;
+    }
+
     /// <summary>
     /// The automatic retry shared by both engines. <paramref name="attempt"/> runs one complete solve (Q-limit loop
     /// included) with the given options, from the ordinary start (<c>false</c>) or from the DC-angle start
     /// (<c>true</c>, see <see cref="TrySeedDcAngles"/>), and returns its result (null when the DC-angle start cannot be
-    /// formed), whether its last Newton run failed to converge, that run's mismatch at its own start point (for
-    /// <see cref="Stalled"/>), and the engine's per-solve state to restore.
+    /// formed), whether its last Newton run failed to converge, how that run ended (<see cref="NewtonRunEnd"/>, for
+    /// <see cref="Stalled(NewtonRunEnd, double)"/>), and the engine's per-solve state to restore.
     ///
     /// <para>The ordinary solve runs first, exactly as before, and is returned untouched whenever it converges, so every
     /// case that converged before gives the same bits. Only when its Newton iteration did not converge (not when the
-    /// Q-limit pass cap stopped it), and only when that run stalled or diverged (<see cref="Stalled"/>: not when the
+    /// Q-limit pass cap stopped it), and only when that run stalled or diverged (<see cref="Stalled(NewtonRunEnd, double)"/>: not when the
     /// iteration cap stopped a run that was still converging) and <see cref="PowerFlowOptions.RetryFromDcStart"/> is on,
-    /// is the case solved again: the same Newton iteration and step rule, the same options
-    /// and voltage magnitudes, with the bus angles started from the DC power flow instead, and without a trace. A
+    /// is the case solved again (never when <see cref="PowerFlowOptions.MaxIterations"/> is 1 or less: one step is no evidence of a
+    /// stall, a cap-1 solve is typically a warm start, and a DC-angle restart would exceed the cap and discard it): the same Newton iteration and step rule, the same options
+    /// and voltage magnitudes, with the bus angles started from the DC power flow instead, and without a trace (so a
+    /// caller's <see cref="PowerFlowOptions.Trace"/> always holds the ordinary attempt: after a converged retry it
+    /// describes the failed first solve, not the reported state). A
     /// converged retry whose largest branch angle is within <see cref="MaxRetryBranchAngleDeg"/> is returned; otherwise
     /// the ordinary solve's result is returned, its numbers unchanged, with a note saying what the retry did.</para>
     /// </summary>
     public static PowerFlowResult SolveWithRetry(PowerFlowOptions opt, GridModel model, Func<int, int> indexOf,
-        Func<PowerFlowOptions, bool, (PowerFlowResult? Result, bool NewtonFailed, double RunStartMismatch, object? State)> attempt,
+        Func<PowerFlowOptions, bool, (PowerFlowResult? Result, bool NewtonFailed, NewtonRunEnd RunEnd, object? State)> attempt,
         Action<object?> restoreFirst)
     {
-        (PowerFlowResult? first, bool newtonFailed, double runStartMismatch, object? firstState) = attempt(opt, false);
-        if (first!.Converged || !newtonFailed || !opt.RetryFromDcStart || !Stalled(runStartMismatch, first.MaxMismatch))
+        (PowerFlowResult? first, bool newtonFailed, NewtonRunEnd runEnd, object? firstState) = attempt(opt, false);
+        if (first!.Converged || !newtonFailed || !opt.RetryFromDcStart || opt.MaxIterations <= 1 || !Stalled(runEnd, first.MaxMismatch))
             return first;
 
         (PowerFlowResult? retry, _, _, _) = attempt(opt with { Trace = null }, true);
@@ -222,7 +269,9 @@ internal static class NewtonShell
 
     /// <summary>
     /// Replaces the start angles of every non-slack bus in <paramref name="spec"/> with the DC power flow's
-    /// (<see cref="Analysis.DcPowerFlow"/>: series reactance only, the one DC model GridSim has), offset by the slack
+    /// (<see cref="Analysis.DcPowerFlow"/> on the reactance-only legacy view of the model, B33: every tap 1, every phase
+    /// shift 0 and every Gs 0, so the retry's start point, and with it which retries converge, is what it always was),
+    /// offset by the slack
     /// bus's own start angle. Each DC angle is first reduced to [-180, 180] degrees: the AC equations depend on angles
     /// only through their sines and cosines, so this is the same start point, and a lossless DC model that must push a
     /// large imbalance through the slack's connection (case13659pegase: about 720 degrees) does not leave the reported
@@ -236,8 +285,9 @@ internal static class NewtonShell
         for (int i = 0; i < n; i++) if (spec.Type0[i] == BusType.Slack) { slack = i; slacks++; }
         if (slacks != 1) return false;
         Analysis.DcPowerFlowResult dc;
-        try { dc = Analysis.DcPowerFlow.Solve(model); }
+        try { dc = Analysis.DcPowerFlow.Solve(Analysis.DcDemand.LegacyView(model)); }
         catch (InvalidOperationException) { return false; }
+        catch (ArgumentException) { return false; }   // NUM-08: a factor with a non-finite entry (the sparse LU's refusal)
         if (dc.Islands.Count != 1 || indexOf(dc.Islands[0].ReferenceBusId) != slack) return false;
         double va0 = spec.Va[slack];
         for (int k = 0; k < dc.BusIds.Count; k++)
@@ -563,10 +613,13 @@ internal static class NewtonShell
     /// </summary>
     public static string? DiagnoseSlackQ(
         int n, BusType[] type0, double[] q, double[] qd, double[] qMinBus, double[] qMaxBus, double @base,
-        double[]? vm = null, ZipLoad?[]? zip = null)
+        double[]? vm = null, ZipLoad?[]? zip = null, IReadOnlyList<Bus>? buses = null)
     {
         if (zip is not null && vm is null)
             throw new ArgumentException("DiagnoseSlackQ needs the solved voltages to evaluate a ZIP load.", nameof(vm));
+        // NUM-07: the note names the bus id (the 0-based position was printed as the bus number) when the buses are given,
+        // and lists every slack that breaches its limits, not only the first (one slack per island).
+        List<string>? notes = null;
         for (int i = 0; i < n; i++)
         {
             if (type0[i] != BusType.Slack) continue;
@@ -576,12 +629,13 @@ internal static class NewtonShell
             // Reactive the slack machines are producing (load at the solved voltage, R065; exactly qd[i] for a
             // constant-power bus).
             double qGen = q[i] * @base + (zip is null ? qd[i] : LoadAtVoltage.QMvar(qd[i], zip[i], vm![i]));
+            int shown = buses is not null && i < buses.Count ? buses[i].Id : i;
             if (qGen > qMax + QLimitTolMva)
-                return FormattableString.Invariant($"Slack bus {i}: reactive output {qGen:F2} MVAr exceeds aggregate Qmax {qMax:F2} MVAr.");
-            if (qGen < qMin - QLimitTolMva)
-                return FormattableString.Invariant($"Slack bus {i}: reactive output {qGen:F2} MVAr below aggregate Qmin {qMin:F2} MVAr.");
+                (notes ??= []).Add(FormattableString.Invariant($"Slack bus {shown}: reactive output {qGen:F2} MVAr exceeds aggregate Qmax {qMax:F2} MVAr."));
+            else if (qGen < qMin - QLimitTolMva)
+                (notes ??= []).Add(FormattableString.Invariant($"Slack bus {shown}: reactive output {qGen:F2} MVAr below aggregate Qmin {qMin:F2} MVAr."));
         }
-        return null;
+        return notes is null ? null : string.Join(" ", notes);
     }
 
     /// <summary>
@@ -594,7 +648,8 @@ internal static class NewtonShell
     /// </summary>
     public static PowerFlowResult AssembleResult(
         GridModel model, int n, double[] vm, double[] va, double[] p, double[] q, double @base,
-        bool converged, int totalIters, double maxMis, Func<int, int> indexOf, BusType[]? solvedTypes = null)
+        bool converged, int totalIters, double maxMis, Func<int, int> indexOf, BusType[]? solvedTypes = null,
+        bool diverged = false)
     {
         var vaDeg = new double[n];
         var pInj = new double[n];
@@ -615,6 +670,7 @@ internal static class NewtonShell
         // guard here too so a stale/underflowed mismatch can't smuggle a NaN solution out as a good answer.
         PowerFlowStatus status = !finite ? PowerFlowStatus.NonFinite
                                : converged ? PowerFlowStatus.Converged
+                               : diverged ? PowerFlowStatus.Diverged
                                : PowerFlowStatus.MaxIterations;
         bool trustworthy = status == PowerFlowStatus.Converged;
 

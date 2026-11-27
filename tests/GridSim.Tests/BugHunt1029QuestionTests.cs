@@ -60,7 +60,7 @@ public sealed partial class BugHunt1029Tests
     [Fact]
     public void BH36_editor_refuses_two_network_files_with_one_file_name()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "bh36-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("bh36-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path.Combine(dir, "a"));
         Directory.CreateDirectory(Path.Combine(dir, "b"));
         try
@@ -137,7 +137,7 @@ public sealed partial class BugHunt1029Tests
     [Fact]
     public void BH81_qsts_load_binding_with_no_buses_is_refused()
     {
-        string path = Path.Combine(Path.GetTempPath(), "bh81-" + Guid.NewGuid().ToString("N") + ".json");
+        string path = TestTemp.Under("bh81-" + Guid.NewGuid().ToString("N") + ".json");
         File.WriteAllText(path, """
         { "format": "gridsim-qsts/1", "stepSeconds": 60, "steps": 2,
           "profiles": { "load": { "stepSeconds": 60, "values": [1.0, 0.9] } },

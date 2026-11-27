@@ -46,7 +46,7 @@ public class GdaPathsTests
     [Fact]
     public void PickNewest_prefers_parseable_dates_over_lexicographic_order_with_real_files()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-gda-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-gda-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -76,7 +76,7 @@ public class GdaPathsTests
     [Fact]
     public void PickNewest_refuses_to_rank_undated_candidates_by_modification_time()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-gda-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-gda-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -110,7 +110,7 @@ public class GdaPathsTests
         // carries only a local download mtime, which is reset to "now" on every mirror sync.
         // That mtime is NOT a publication date, so it must not be used to exclude the file under
         // an as-of - otherwise the dataset silently vanishes after each sync.
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-gda-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-gda-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -162,7 +162,7 @@ public class GdaPathsTests
     [Fact]
     public void TecRegister_never_selects_a_register_published_after_the_as_of()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-gda-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-gda-" + Guid.NewGuid().ToString("N"));
         string dir = Path.Combine(root, "NESO", "RAWData", "Transmission Entry Capacity (TEC) register");
         Directory.CreateDirectory(dir);
         try

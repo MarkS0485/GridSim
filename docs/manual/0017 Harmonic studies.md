@@ -379,6 +379,25 @@ block); and `--export`, the export. It rebuilds `Y(h)` from the case directory p
 voltages and THD without calling GridSim. The
 [technical chapter](<../technical/0019 Harmonics.md>) recomputes bus 9's THD from this file by hand.
 
+## Coupled harmonic power flow and harmonic state estimation
+
+Two further verbs work on the same study network (machine source reactance, loads as damping shunts). Both are
+experimental.
+
+`gridsim harmonic-pf <case> --spectra <file.json>` runs the coupled harmonic power flow. Each source bus gets a Norton
+coupling admittance `g + j b h` (`--norton-g`, `--norton-b`, pu; both 0 by default) in parallel with its current source,
+which damps a resonance the plain current source would excite. With both at 0 the result is the plain penetration solve.
+It prints the THD per bus and, with `--out`, writes |V_h| and its angle per bus and order. The coupling is an assumed
+model, not a measured converter characteristic.
+
+`gridsim harmonic-se <case> <measurements.json>` estimates the harmonic current injected at named candidate buses from
+metered bus voltage phasors (a `gridsim-harmonic-meas/1` file, dated with `takenUtc`). Per order it gives the estimated
+injections, the voltage at every bus, each measurement's residual and normalised residual, and a chi-square test at 99 %.
+A failed test exits 3 and names the measurement with the largest normalised residual, the most likely bad one. Fewer
+measurements than candidates, or candidates the measurements cannot tell apart, are reported, never estimated as zero.
+
+Flags and file formats: [ch. 19](<0019 CLI reference.md#harmonic-pf>) and [ch. 19](<0019 CLI reference.md#harmonic-se>).
+
 ## What non-compliance means
 
 The verdict is IEEE 519-2014 voltage-distortion limits at the bus, chosen by the bus's nominal voltage `baseKv`:
@@ -502,7 +521,10 @@ What the verdict does and does not say:
 - The study is positive-sequence and balanced. Triplen sources cannot be entered here; the three-phase harmonic study
   on a distribution feeder is `dist3ph harmonics` ([ch. 7](<0007 Three-phase distribution feeders.md>)).
 - Spectra are one fixed current per order at each source. A converter whose emission depends on its terminal voltage is
-  not modelled on the command line; the coupled harmonic flow is Core API only.
+  not modelled on the command line. `harmonic-pf` adds a Norton coupling admittance at each source bus, an assumed
+  placeholder, and is experimental.
+- `harmonic-se` estimates source injections from bus voltage phasors only; branch current measurements are not read. It
+  is experimental: verified on closed forms, not compared with field measurements.
 - A spectrum line at an order outside the analysed set cannot be studied: it is refused, not included.
 - The THD in the console, the export and the Web HARMONICS tab is relative to each bus's solved fundamental voltage. The
   console solves the fundamental itself (as `--once` does); the Web tab uses the live frame, so the two agree only when

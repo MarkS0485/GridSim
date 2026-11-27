@@ -67,7 +67,7 @@ public class SyntheticMeasurementTests
         Assert.NotNull(set.TakenUtc);
         Assert.Contains("seed=20260713", set.Note, StringComparison.Ordinal);
 
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-synth-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-synth-{Guid.NewGuid():N}.json");
         try
         {
             set.Save(path);

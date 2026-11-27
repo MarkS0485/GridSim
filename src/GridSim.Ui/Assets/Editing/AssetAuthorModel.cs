@@ -672,7 +672,7 @@ public sealed class AssetAuthorModel : ObservableModel
                 CaseRef r = n.Record!;
                 fields = Authoring.FieldGrid(r);
                 // Phase 4.3: the per-element editor of the record's kind, over the same grid (null: the generic grid).
-                if (n.Kind == AuthorNodeKind.Record) editor = ElementEditors.For(Authoring, n.Role, fields);
+                if (n.Kind == AuthorNodeKind.Record) editor = ElementEditors.For(Authoring, n.Role, fields, TemplateDataRoot);
                 string? key = RecordActions.KeyField(Authoring, r);
                 string keyText = key is null ? "These records have no key (nothing refers to them by name or id)."
                     : "Key: " + key + " (Rename changes it and every reference to it in one step).";

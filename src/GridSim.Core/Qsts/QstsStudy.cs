@@ -356,6 +356,10 @@ public sealed record QstsStudy
     public OltcTiming TimingFor(string transformer) =>
         OltcSettings.TryGetValue(transformer, out OltcTiming? t) ? t : OltcDefault;
 
+    /// <summary>NUM-17: the largest number of steps a study may ask for: 100,000,000 (about three years at one-second
+    /// steps).</summary>
+    public const int MaxSteps = 100_000_000;
+
     /// <summary>Check the study against <paramref name="model"/>. Throws one <see cref="InvalidDataException"/> that lists
     /// every problem; returns normally only when the study can run as written.</summary>
     public void Validate(GridModel model)
@@ -364,6 +368,9 @@ public sealed record QstsStudy
         var p = new InvariantProblemList();   // bug #193: every interpolated number in a message is formatted invariantly
         if (StepSeconds < 1) p.Add($"stepSeconds must be a whole number of seconds, at least 1 (got {StepSeconds}).");
         if (Steps < 1) p.Add($"steps must be at least 1 (got {Steps}).");
+        // NUM-17: a stated cap (about three years at one-second steps); a study file could ask for 2^31 - 1 steps, each
+        // recording a voltage per bus and a loading per branch.
+        else if (Steps > MaxSteps) p.Add($"steps must be at most {MaxSteps} (got {Steps}); split the study into shorter runs.");
         if (StartSecondOfDay < 0 || StartSecondOfDay >= 86400) p.Add($"startSecondOfDay must be in [0, 86400) (got {StartSecondOfDay}).");
         if (MaxControlIterations < 0) p.Add("maxControlIterations must be 0 or more.");
         if (MaxContinuousIterations < 1) p.Add("maxContinuousIterations must be at least 1.");

@@ -156,7 +156,7 @@ public static class ConnectionAssessmentRunner
                     }
                 }
                 else
-                    notes.Add($"Table 21 and Table 22 (Stages 2A, 2B, 2C) are given for 6.6, 11, 20 and 22 kV; a PCC at {r.PccLineKv:R} kV has no worst-case reactance factor, so Stage 2C cannot run: the network operator's Stage 3 applies.");
+                    notes.Add(FormattableString.Invariant($"Table 21 and Table 22 (Stages 2A, 2B, 2C) are given for 6.6, 11, 20 and 22 kV; a PCC at {r.PccLineKv:R} kV has no worst-case reactance factor, so Stage 2C cannot run: the network operator's Stage 3 applies."));
             }
 
             if (decided is null)
@@ -210,7 +210,7 @@ public static class ConnectionAssessmentRunner
 
         if (resonant is not null)
         {
-            notes.Add($"Resonant plant (clause {resonant.Clause}): {resonant.Outcome}; magnification {resonant.MagnificationFactor:R}, resonant order {resonant.ResonantOrder:R}.");
+            notes.Add(FormattableString.Invariant($"Resonant plant (clause {resonant.Clause}): {resonant.Outcome}; magnification {resonant.MagnificationFactor:R}, resonant order {resonant.ResonantOrder:R}."));
             if (resonant.Outcome == "STAGE 3" && decided == Accepted) decided = Stage3Required;
         }
         if (s2c is { BackgroundAssumed: true } && decided == Accepted)

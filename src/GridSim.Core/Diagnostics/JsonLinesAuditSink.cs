@@ -83,7 +83,7 @@ public sealed class JsonLinesAuditSink : IAuditSink, IDeliveryChannel
             try
             {
                 byte[] line = Encoding.UTF8.GetBytes(Format(entry) + "\n");
-                using var fs = new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                using var fs = new FileStream(FilePath, UserOnlyFile.Options(FileMode.Append, FileAccess.Write, FileShare.Read));   // SEC-09
                 fs.Write(line);
                 fs.Flush(flushToDisk: true);
             }

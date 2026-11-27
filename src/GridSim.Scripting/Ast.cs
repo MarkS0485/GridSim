@@ -83,10 +83,15 @@ public sealed record SetStatement(SourcePos Pos, Noun Noun, NameRef Name, Locate
     public override string Canonical() => "SET " + Word(Noun) + " " + Name.Canonical() + " " + Property.Value + " " + Value.Canonical();
 }
 
-/// <summary>FAULT BUS "name": a bolted three-phase fault at a bus (RMS and EMT engines).</summary>
-public sealed record FaultStatement(SourcePos Pos, NameRef Bus) : Statement(Pos)
+/// <summary>FAULT BUS "name": a bolted three-phase fault at a bus (RMS and EMT engines). WP2: an optional fault type
+/// (THREE_PHASE, SLG, LL or LLG) and an optional fault impedance (WITH R n PU X n PU, system base) make it a sequence fault,
+/// which the RMS SUBTRANSIENT and GOVERNED engines take (<c>RmsSequenceFault</c>). Without them the statement and its
+/// canonical text are exactly the bolted fault's.</summary>
+public sealed record FaultStatement(SourcePos Pos, NameRef Bus, string? FaultType = null, Quantity? FaultR = null, Quantity? FaultX = null) : Statement(Pos)
 {
-    public override string Canonical() => "FAULT BUS " + Bus.Canonical();
+    public override string Canonical() => "FAULT BUS " + Bus.Canonical()
+        + (FaultType is null ? "" : " " + FaultType)
+        + (FaultR is null ? "" : " WITH R " + FaultR.Value + " X " + FaultX!.Value);
 }
 
 /// <summary>CLEAR FAULT BUS "name": the fault at that bus is cleared.</summary>

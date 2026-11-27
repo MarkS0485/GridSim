@@ -6,18 +6,25 @@ name: Release
 # Bug #195: a release-candidate tag is accepted too: v<MAJOR>.<MINOR>.<PATCH>-<label>, where the label is letters,
 # digits, dots and hyphens starting with a letter (v2.1.000-RC-1, v2.0.195-rc1.0). The numeric part must still equal
 # the one <Version>; the label goes only into the Release title, and the Release is marked a pre-release. A
-# pre-release does NOT push the NuGet package or the container image (their version is the numeric part alone, so a
+# pre-release never pushes the NuGet package or a container image (their version is the numeric part alone, so a
 # candidate would take the final release's version in the feed and the registry); its files on the Release page
 # still pass every gate and carry the provenance attestation.
 #
-# What ships (F25, Ruling R1, 2026-10-04), and nothing else:
+# ROADMAP, NOT PUBLISHED: the NuGet package (GridSim.Core) and the two container images (web from the Dockerfile, CLI
+# from Dockerfile.cli) are roadmap items. The groundwork is real and runs on every release: the package is packed,
+# signed and attested (publish.yml) and both images are built and probed here, each kept as a workflow artefact
+# (package-core, image-web, image-cli). Nothing is PUSHED. The three push jobs (web-image-push, cli-image-push and the
+# push job inside publish.yml) run only when the repository variable GRIDSIM_PUBLISH_PACKAGES is exactly 'true' and the
+# tag is not a release candidate. The variable is unset, so they are off. Do not set it without the owner's say-so:
+# shipping GridSim as a consumable library needs a safe way to handle licences first, and broader validation.
+#
+# What ships on the Release page (F25, Ruling R1, 2026-10-04), and nothing else:
 #   * the command line tool `gridsim` as self-contained single-file binaries for win-x64, linux-x64 and osx-arm64
 #     (attached to the GitHub Release);
-#   * GridSim.Core as a NuGet package (publish.yml, pushed to this repository's GitHub Packages feed);
-#   * the web app as the replay-only container image ghcr.io/<owner>/gridsim-web:<version> (the Dockerfile; its
-#     Production settings are replay-only, so the solve API and the simulation socket are not served);
 #   * GA-5 (owner decision, 2026-11-01): the desktop apps as RC-1 shipped them, the WPF app (GridSim.Wpf) for win-x64
-#     and the Avalonia app (GridSim.App.Desktop) for win-x64 and linux-x64, each with its own SBOM (job desktop).
+#     and the Avalonia app (GridSim.App.Desktop) for win-x64 and linux-x64, each with its own SBOM (job desktop);
+#   * the CycloneDX SBOMs, including those of the web image and of GridSim.Core, which describe the roadmap artefacts
+#     above (the web app's replay-only container image ghcr.io/<owner>/gridsim-web:<version> and the NuGet package).
 # Not shipped: a macOS desktop build; GridSim.Gda and the GDA data are not release
 # artefacts (GDA is a model the author uses, not a product: the `gda` verbs stay in the CLI and need a GDA data lake).
 # WorkflowContractTests pins this scope, so an artefact cannot be added or dropped here without a test failing.
@@ -576,6 +583,61 @@ jobs:
           path: artifacts/image-sbom/*.json
           if-no-files-found: error
 
+  # ------------------------------------------------------------------------------- CLI container image ---
+  # ROADMAP (groundwork only, see the header): the command line tool's image, built from Dockerfile.cli, probed and kept
+  # as a workflow artefact (image-cli). It is not a release-* artefact and not a dependency of the Release job, so it is
+  # never attached to the Release page; it is pushed to a registry only by job cli-image-push, which is off by default.
+  cli-image:
+    name: CLI container image (groundwork, not published)
+    needs: [ verify, ci, sbom ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Build image
+        shell: bash
+        env:
+          SHA: ${{ github.sha }}
+          SBOM_SHA256: ${{ needs.sbom.outputs.cli_sha256 }}
+        run: |
+          set -euo pipefail
+          [[ "$SBOM_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo "::error::bad CLI SBOM hash '$SBOM_SHA256'"; exit 1; }
+          # As for the web image (bug #176): the image build cannot see .git, so the state of this checkout is handed in.
+          if [[ -z "$(git status --porcelain)" ]]; then tree=clean; else tree=dirty; git status --porcelain; fi
+          echo "source tree: $tree"
+          docker build -f Dockerfile.cli -t gridsim-cli:release --build-arg SOURCE_REVISION="$SHA" --build-arg SBOM_SHA256="$SBOM_SHA256" \
+            --build-arg SOURCE_TREE="$tree" .
+
+      # The image must run the tool at this exact version, solve a bundled case, and attest a release build with the CLI SBOM.
+      - name: Run and probe
+        shell: bash
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+          SBOM_SHA256: ${{ needs.sbom.outputs.cli_sha256 }}
+        run: |
+          set -euo pipefail
+          out="$(docker run --rm gridsim-cli:release --version | tr -d '\r')"
+          echo "$out"
+          [[ "$out" == "gridsim $VERSION+"* ]] || { echo "::error::the CLI image said '$out', not gridsim $VERSION+<commit>"; exit 1; }
+          docker run --rm gridsim-cli:release case9 --once > /dev/null
+          report="$(docker run --rm gridsim-cli:release compliance verify | tr -d '\r' || true)"
+          echo "$report"
+          grep -q "^  release build  yes" <<< "$report" || { echo "::error::the CLI image does not attest a release build"; exit 1; }
+          grep -q "^  sbom sha256    $SBOM_SHA256\$" <<< "$report" || { echo "::error::the CLI image does not name the CLI SBOM hash"; exit 1; }
+
+      - name: Save image
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/image
+          docker save gridsim-cli:release | gzip > artifacts/image/gridsim-cli.tar.gz
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: image-cli   # not release-*: it is groundwork for the container registry, not for the Release page
+          path: artifacts/image/gridsim-cli.tar.gz
+          if-no-files-found: error
+
   # ----------------------------------------------------------------------------------------- SBOM ---
   # Runs FIRST (only verify before it): the CLI, the web image and the NuGet package are built with the SHA-256 of
   # their SBOM injected, so the hashes must exist before they are built.
@@ -826,13 +888,17 @@ jobs:
           fi
 
   # ------------------------------------------------------------------------------------ web image push ---
+  # ROADMAP, OFF BY DEFAULT: nothing is published yet, pending broader validation. This job runs only when the repository
+  # variable GRIDSIM_PUBLISH_PACKAGES is 'true'. Do not set it without the owner's say-so.
   # The image built and probed by job web-image, pushed to the repository owner's GitHub Container Registry only once
-  # the Release exists. The built-in token's packages: write permission is enough (no extra secret).
+  # the Release exists. The built-in token's packages: write permission is enough (no extra secret). This and
+  # cli-image-push are the only jobs here with packages: write.
   web-image-push:
     name: Push web image (GHCR)
     needs: [ verify, release ]
-    # Bug #195: a release candidate does not take the final version's image tag in the registry.
-    if: needs.verify.outputs.prerelease == 'false'
+    # Bug #195: a release candidate does not take the final version's image tag in the registry. The second condition is
+    # the publishing switch: unset or anything but 'true' leaves the job skipped.
+    if: needs.verify.outputs.prerelease == 'false' && vars.GRIDSIM_PUBLISH_PACKAGES == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -875,14 +941,65 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
+  # ------------------------------------------------------------------------------------ CLI image push ---
+  # ROADMAP, OFF BY DEFAULT: the same switch and the same rules as web-image-push. The CLI image built and probed by job
+  # cli-image, pushed to ghcr.io/<owner>/gridsim-cli:<version> only once the Release exists.
+  cli-image-push:
+    name: Push CLI image (GHCR)
+    needs: [ verify, release, cli-image ]
+    # Bug #195: a release candidate does not take the final version's image tag. Second condition: the publishing switch.
+    if: needs.verify.outputs.prerelease == 'false' && vars.GRIDSIM_PUBLISH_PACKAGES == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write       # the Sigstore identity for the image's provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: image-cli
+          path: image
+      - name: Load, tag and push
+        id: push
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          OWNER: ${{ github.repository_owner }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${OWNER,,}/gridsim-cli:$VERSION"   # registry paths must be lower case
+          gunzip -c image/gridsim-cli.tar.gz | docker load
+          docker tag gridsim-cli:release "$image"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$ACTOR" --password-stdin
+          docker push "$image"
+          echo "pushed $image"
+          digest="$(docker inspect --format '{{index .RepoDigests 0}}' "$image" | sed 's/.*@//')"
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::no registry digest for $image ('$digest')"; exit 1; }
+          echo "name=${image%:*}" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Image provenance attestation
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        with:
+          subject-name: ${{ steps.push.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
   # --------------------------------------------------------------------------------- NuGet packages ---
+  # ROADMAP: the package is packed, signed and attested on every release (job publish of publish.yml, which keeps it as
+  # the workflow artefact package-core), also for a release candidate, so the groundwork is exercised. It is PUSHED to the
+  # feed only by job push of publish.yml, which runs only when GRIDSIM_PUBLISH_PACKAGES is 'true' and the tag is not a
+  # candidate (the `prerelease` input below). Do not set the variable without the owner's say-so.
   # A release created with the built-in token does not trigger other workflows' "release: published" event, so the
   # package workflow is called directly here with the verified version.
   nuget:
     name: NuGet packages
     needs: [ verify, release, sbom ]
-    # Bug #195: a release candidate does not take the final version's package version in the feed.
-    if: needs.verify.outputs.prerelease == 'false'
+    # packages: write below is only the ceiling a called workflow may not exceed; the one job of publish.yml that uses
+    # it (push) is switched off by default, and the pack job asks for no package permission at all.
     permissions:
       contents: read
       packages: write
@@ -891,6 +1008,8 @@ jobs:
     uses: ./.github/workflows/publish.yml
     with:
       version: ${{ needs.verify.outputs.version }}
+      # A candidate's package is packed (groundwork) but never pushed: publish.yml's push job needs this to be false.
+      prerelease: ${{ needs.verify.outputs.prerelease == 'true' }}
       # B5: the package is GridSim.Core alone, so it carries the hash of the SBOM of exactly that project.
       sbom-sha256: ${{ needs.sbom.outputs.core_sha256 }}
     # F13: the package-signing step in publish.yml reads SIGNING_CERT_PFX_BASE64 / SIGNING_CERT_PASSWORD. GR-909: only

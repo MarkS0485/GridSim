@@ -227,9 +227,120 @@ public static partial class RmsTransientStability
         }
         double[] pm = p.Pm;
         double[] toSystem = plan.MachineToSystem;
+        // WP3b (RC5): a governor that reads the electrical power (GGOV1) gets a hook the kernel feeds it to; with none, the
+        // historical closure below, unchanged.
+        for (int i = 0; i < n; i++)
+            if (govs[i] is IRmsElectricalPowerGovernor { NeedsElectricalPower: true })
+                return new ElectricalPowerHook(govs, pgov0, pm, toSystem, stepSeconds).MechanicalPower;
         return (i, speedDeviationPu) => govs[i] is { } g
             ? pm[i] + (g.Step(speedDeviationPu, stepSeconds) - pgov0[i]) * toSystem[i]
             : pm[i];
+    }
+
+    /// <summary>WP3b (RC5): the mechanical-power hook of a run with a governor that reads the electrical power. The kernel
+    /// sets each machine's start-of-step electrical power (system base) through <see cref="IRmsElectricalPowerFeed"/>; the
+    /// hook converts it to the machine base. Every other governor is stepped exactly as by the plain hook.</summary>
+    private sealed class ElectricalPowerHook(IRmsGovernor?[] govs, double[] pgov0, double[] pm, double[] toSystem, double stepSeconds)
+        : IRmsElectricalPowerFeed
+    {
+        private readonly double[] _pe = Fill(govs.Length);
+
+        private static double[] Fill(int n)
+        {
+            var a = new double[n];
+            Array.Fill(a, double.NaN);
+            return a;
+        }
+
+        public void SetElectricalPower(int machine, double electricalPowerSystemPu) => _pe[machine] = electricalPowerSystemPu;
+
+        public double MechanicalPower(int i, double speedDeviationPu) => govs[i] switch
+        {
+            IRmsElectricalPowerGovernor { NeedsElectricalPower: true } eg
+                => pm[i] + (eg.Step(speedDeviationPu, _pe[i] / toSystem[i], stepSeconds) - pgov0[i]) * toSystem[i],
+            { } g => pm[i] + (g.Step(speedDeviationPu, stepSeconds) - pgov0[i]) * toSystem[i],
+            _ => pm[i],
+        };
+    }
+
+    /// <summary>
+    /// WP21 (RC5): the mechanical-power hook of a run on a step schedule. The kernel hands it the step in force before each
+    /// call (<see cref="IRmsStepSizedHook"/>); every governor is stepped by the same expressions as the fixed-step hooks above
+    /// (<see cref="GovernorHook"/>, <see cref="ElectricalPowerHook"/>), with that step in place of the fixed one. Fresh
+    /// governors per run, initialised as <see cref="GovernorHook"/> does.
+    /// </summary>
+    private class StepSizedGovernorHook : IRmsStepSizedHook
+    {
+        private readonly IRmsGovernor?[] _govs;
+        private readonly double[] _pgov0, _pm, _toSystem;
+        private double _dt = double.NaN;
+
+        internal StepSizedGovernorHook(SubtransientInit.Prepared p, GovernorPlan plan)
+        {
+            int n = p.Machines.Count;
+            _govs = new IRmsGovernor?[n];
+            _pgov0 = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                if (plan.BySlot[i] is not { } gd) continue;
+                _pgov0[i] = p.Pm[i] / plan.MachineToSystem[i];
+                IRmsGovernor g = gd.Create();
+                g.Initialize(_pgov0[i]);
+                _govs[i] = g;
+            }
+            _pm = p.Pm;
+            _toSystem = plan.MachineToSystem;
+        }
+
+        public void UseStep(double stepSeconds) => _dt = stepSeconds;
+
+        protected virtual double ElectricalPowerMachineBase(int i) => double.NaN;
+
+        public double MechanicalPower(int i, double speedDeviationPu) => _govs[i] switch
+        {
+            IRmsElectricalPowerGovernor { NeedsElectricalPower: true } eg
+                => _pm[i] + (eg.Step(speedDeviationPu, ElectricalPowerMachineBase(i), _dt) - _pgov0[i]) * _toSystem[i],
+            { } g => _pm[i] + (g.Step(speedDeviationPu, _dt) - _pgov0[i]) * _toSystem[i],
+            _ => _pm[i],
+        };
+
+        /// <summary>True when a governor of the run reads the electrical power (then the kernel must feed it).</summary>
+        internal bool NeedsElectricalPower
+        {
+            get
+            {
+                foreach (IRmsGovernor? g in _govs) if (g is IRmsElectricalPowerGovernor { NeedsElectricalPower: true }) return true;
+                return false;
+            }
+        }
+    }
+
+    /// <summary>WP21: <see cref="StepSizedGovernorHook"/> for a run with a governor that reads the electrical power (GGOV1);
+    /// the kernel feeds each machine's start-of-step electrical power as for <see cref="ElectricalPowerHook"/>.</summary>
+    private sealed class StepSizedElectricalPowerHook : StepSizedGovernorHook, IRmsElectricalPowerFeed
+    {
+        private readonly double[] _pe;
+        private readonly double[] _toSystemFeed;
+
+        internal StepSizedElectricalPowerHook(SubtransientInit.Prepared p, GovernorPlan plan) : base(p, plan)
+        {
+            _pe = new double[p.Machines.Count];
+            Array.Fill(_pe, double.NaN);
+            _toSystemFeed = plan.MachineToSystem;
+        }
+
+        public void SetElectricalPower(int machine, double electricalPowerSystemPu) => _pe[machine] = electricalPowerSystemPu;
+
+        protected override double ElectricalPowerMachineBase(int i) => _pe[i] / _toSystemFeed[i];
+    }
+
+    /// <summary>WP21: the mechanical-power hook of a scheduled run (fresh governors), or null with no governor.</summary>
+    private static Func<int, double, double>? ScheduledGovernorHook(SubtransientInit.Prepared p, GovernorPlan? plan)
+    {
+        if (plan is null) return null;
+        var plain = new StepSizedGovernorHook(p, plan);
+        if (!plain.NeedsElectricalPower) return plain.MechanicalPower;
+        return new StepSizedElectricalPowerHook(p, plan).MechanicalPower;
     }
 
     /// <summary>
@@ -246,9 +357,29 @@ public static partial class RmsTransientStability
         ArgumentNullException.ThrowIfNull(model);
         double nominalHz = f0 ?? model.FrequencyHz;
         if (!(nominalHz > 0.0) || !double.IsFinite(nominalHz))
-            throw new ArgumentOutOfRangeException(nameof(f0), $"The RMS study's nominal frequency must be positive and finite (got {nominalHz} Hz"
+            throw new ArgumentOutOfRangeException(nameof(f0), FormattableString.Invariant($"The RMS study's nominal frequency must be positive and finite (got {nominalHz} Hz")
                 + (f0 is null ? ", the model's FrequencyHz)." : ")."));
         return nominalHz;
+    }
+
+    /// <summary>DYN-06 (no model change): with a unit transformer folded into a machine's reactances the kernel recovers
+    /// E'' - j X'' I with X'' including the transformer, which is the HV bus voltage. An exciter that reads the terminal
+    /// quantities is refused in that case (<see cref="MapExcitersToFleet"/>); every other exciter (SEXS, IEEET1, EXAC1,
+    /// ESAC1A, and ESDC1A, IEEEX1, ESAC8B with no transducer lag) is stepped on, and referenced to, the HV bus voltage. That
+    /// is kept and said here, one note per such machine, for the caller to print beside the verdict.</summary>
+    public static IReadOnlyList<string> HvBusRegulationNotes(GridModel model, IReadOnlyList<RmsExciter?>? exciters)
+    {
+        if (exciters is null || exciters.Count != model.Generators.Count) return Array.Empty<string>();
+        var notes = new List<string>();
+        for (int k = 0; k < exciters.Count; k++)
+        {
+            if (exciters[k] is not { } ex || ex.NeedsTerminalQuantities) continue;
+            Generator gen = model.Generators[k];
+            if (!(gen.UnitTransformerXPu > 0)) continue;
+            notes.Add($"generator {k} at bus {gen.Bus}{(gen.Name is null ? "" : $" ({gen.Name})")}: its {ex.Kind} exciter regulates the HV bus voltage, "
+                + "not the machine terminal voltage, because the unit transformer is folded into the machine reactances (the AVR reference is set from the HV bus too).");
+        }
+        return notes;
     }
 
     /// <summary>
@@ -275,6 +406,7 @@ public static partial class RmsTransientStability
         var fleet = new IRmsFieldController?[p.Machines.Count];
         var seenExciters = new HashSet<RmsExciter>(ReferenceEqualityComparer.Instance);
         var seenStabilisers = new HashSet<Pss1a>(ReferenceEqualityComparer.Instance);
+        var seenLibraryStabilisers = new HashSet<IRmsStabiliser>(ReferenceEqualityComparer.Instance);   // WP3a
         int slot = 0;   // next machine slot in the prepared fleet
         for (int k = 0; k < g; k++)
         {
@@ -304,6 +436,9 @@ public static partial class RmsTransientStability
                         + "needs its own exciter.", nameof(exciters));
                 if (ex.Stabiliser is { } pss && !seenStabilisers.Add(pss))
                     throw new ArgumentException($"exciters[{k}] shares its PSS1A instance with an earlier exciter; each "
+                        + "machine needs its own stabiliser.", nameof(exciters));
+                if (ex.LibraryStabiliser is { } lib && !seenLibraryStabilisers.Add(lib))
+                    throw new ArgumentException($"exciters[{k}] shares its {lib.Kind} instance with an earlier exciter; each "
                         + "machine needs its own stabiliser.", nameof(exciters));
                 if (ex.NeedsTerminalQuantities)
                 {
@@ -480,7 +615,7 @@ public static partial class RmsTransientStability
 
 /// <summary>
 /// The step-quantised critical-clearing bracket of <see cref="RmsTransientStability.CriticalClearingBracket"/>
-/// (R106, ruling Q15) and of the classical <see cref="Distributed.ClassicalInit.CriticalClearingBracket"/> (N042,
+/// (R106, ruling Q15) and of the classical <see cref="Distributed.ClassicalInit.CriticalClearingBracket(GridModel, PowerFlowResult, double[], int, double?, double, double, int, bool, int, double)"/> (N042,
 /// the same contract). Clearing after <see cref="StableSteps"/> whole integration steps keeps synchronism; clearing
 /// after <see cref="UnstableSteps"/> steps loses it (null when the whole search window survived). With the default
 /// iteration cap the two are adjacent steps, so the true boundary of the discretised model lies between them.
@@ -568,12 +703,80 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     // stabiliser path, so Stabiliser is null. Null for every coded exciter: no coded path reads it.
     private readonly IRmsFieldController? _user;
 
+    // WP3a (RC5): a library exciter model (ESST1A, EXST1, SCRX, ESDC1A) in place of the four coded AVRs, and a library
+    // stabiliser (IEEEST, PSS2A, PSS2B) in place of the PSS1A. Both null for every exciter built before them, whose paths
+    // below are unchanged.
+    private readonly IRmsExciterModel? _model;
+    private readonly IRmsStabiliser? _library;
+
     private RmsExciter(Sexs? sexs, Ieeet1? ieeet1, double gain, double ke, double aex, double bex,
         double min, double max, Pss1a? stabiliser, string kind, AcExciter? ac = null, Esst4b? st4b = null,
-        IRmsFieldController? user = null)
+        IRmsFieldController? user = null, IRmsExciterModel? model = null, IRmsStabiliser? library = null)
     {
         _sexs = sexs; _ieeet1 = ieeet1; _ac = ac; _st4b = st4b; _gain = gain; _ke = ke; _aex = aex; _bex = bex;
-        _min = min; _max = max; Stabiliser = stabiliser; Kind = kind; _user = user;
+        _min = min; _max = max; Stabiliser = stabiliser; Kind = kind; _user = user; _model = model; _library = library;
+    }
+
+    /// <summary>WP3a (RC5): a library excitation system (<see cref="St1Exciter"/> ESST1A or EXST1, <see cref="Scrx"/>,
+    /// <see cref="Esdc1a"/>) with an optional PSS1A or library stabiliser (not both). It reads the field current, and the
+    /// terminal voltage when the model or the stabiliser needs it, so the study binds the machine base for it.</summary>
+    public static RmsExciter FromModel(IRmsExciterModel model, Pss1a? stabiliser = null, IRmsStabiliser? libraryStabiliser = null)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        if (stabiliser is not null && libraryStabiliser is not null)
+            throw new ArgumentException("An exciter takes one stabiliser: a PSS1A or a library stabiliser, not both.", nameof(libraryStabiliser));
+        return new RmsExciter(null, null, 1.0, 0.0, 0.0, 0.0, double.NegativeInfinity, double.PositiveInfinity, stabiliser, model.Kind,
+            model: model, library: libraryStabiliser);
+    }
+
+    /// <summary>WP3a (RC5): this exciter's AVR with the library stabiliser <paramref name="stabiliser"/> (IEEEST, PSS2A or
+    /// PSS2B) in place of a PSS1A. The AVR's arithmetic is unchanged; the stabiliser output joins its summing junction.
+    /// Refused for an exciter that already has a stabiliser or wraps a user-defined controller.</summary>
+    public RmsExciter WithLibraryStabiliser(IRmsStabiliser stabiliser)
+    {
+        ArgumentNullException.ThrowIfNull(stabiliser);
+        if (Stabiliser is not null || _library is not null)
+            throw new InvalidOperationException($"{Kind} already has a stabiliser; an exciter takes one.");
+        if (_user is not null) throw new InvalidOperationException("A user-defined controller carries its own stabiliser path.");
+        return new RmsExciter(_sexs, _ieeet1, _gain, _ke, _aex, _bex, _min, _max, null, Kind, _ac, _st4b, null, _model, stabiliser);
+    }
+
+    /// <summary>WP3a (RC5): the library stabiliser (IEEEST, PSS2A, PSS2B), or null.</summary>
+    public IRmsStabiliser? LibraryStabiliser => _library;
+
+    // WP3a: the stabiliser output for one step: the library stabiliser on the full measurements, else the PSS1A on the
+    // speed (the historical expression), else 0.
+    private double StabiliserOutput(double speedDeviationPu, FieldControlInputs inputs, double dtSeconds)
+        => _library is not null ? _library.Step(inputs, dtSeconds)
+            : Stabiliser is null ? 0.0 : Stabiliser.Step(speedDeviationPu, dtSeconds);
+
+    // WP3a: one step of an exciter that has a library model or a library stabiliser. Only reached when one of them is set.
+    private double LibraryStep(double voltageErrorPu, FieldControlInputs inputs, Complex terminalVoltagePu, Complex terminalCurrentSystemPu,
+        double dtSeconds)
+    {
+        double vs = StabiliserOutput(inputs.SpeedDeviationPu, inputs, dtSeconds);
+        // WP19 (RC5): a compound-source model (ESST3A) also reads the terminal phasors, the current on its machine base. Only
+        // such a model takes this branch; every other library model steps exactly as before.
+        if (_model is IRmsPhasorExciterModel phasor)
+        {
+            if (double.IsNaN(_machineOverSystem) || !double.IsFinite(inputs.TerminalVoltagePu))
+                throw new InvalidOperationException($"{Kind} reads the terminal voltage and current on its bound machine base; the caller must use the step that supplies them.");
+            return phasor.Step(voltageErrorPu, vs, inputs, terminalVoltagePu, terminalCurrentSystemPu / _machineOverSystem, dtSeconds);
+        }
+        if (_model is not null) return _model.Step(voltageErrorPu, vs, inputs, dtSeconds);
+        double verr = voltageErrorPu + vs;
+        if (_sexs is not null) return _sexs.Step(verr, dtSeconds);
+        if (_ieeet1 is not null) return _ieeet1.Step(verr, dtSeconds);
+        if (_ac is not null)
+        {
+            if (!double.IsFinite(inputs.FieldCurrentPu)) throw new InvalidOperationException($"{Kind} reads the machine's field current; the caller must use the step that supplies it.");
+            return _ac.Step(verr, inputs.FieldCurrentPu, dtSeconds);
+        }
+        if (double.IsNaN(_machineOverSystem) || !double.IsFinite(inputs.TerminalVoltagePu))
+            throw new InvalidOperationException("ESST4B reads the terminal voltage and current on its bound machine base; the caller must use the step that supplies them.");
+        Complex itMachine = terminalCurrentSystemPu / _machineOverSystem;
+        return _st4b!.Step(verr, terminalVoltagePu.Real, terminalVoltagePu.Imaginary, itMachine.Real, itMachine.Imaginary,
+            inputs.FieldCurrentPu, dtSeconds);
     }
 
     /// <summary>R4-08: wrap a user-defined controller (a declarative model of role exciter, see
@@ -586,11 +789,41 @@ public sealed class RmsExciter : IRmsTerminalFieldController
         return new RmsExciter(null, null, 1.0, 0.0, 0.0, 0.0, double.NegativeInfinity, double.PositiveInfinity, null, kind, null, null, controller);
     }
 
-    /// <summary>True for an exciter that reads the field current (EXAC1, ESAC1A, ESST4B).</summary>
-    public bool NeedsFieldCurrent => _ac is not null || _st4b is not null;
+    /// <summary>2.1.126: true for a user or plug-in controller (<see cref="FromUser"/>).</summary>
+    internal bool IsUserDefined => _user is not null;
 
-    /// <summary>True for an exciter that reads the terminal voltage and current (ESST4B).</summary>
-    public bool NeedsTerminalQuantities => _st4b is not null;
+    /// <summary>True for an exciter that reads the field current (EXAC1, ESAC1A, ESST4B, and every exciter with a library
+    /// model or a library stabiliser).</summary>
+    public bool NeedsFieldCurrent => _ac is not null || _st4b is not null || _model is not null || _library is not null;
+
+    /// <summary>True for an exciter that reads the terminal voltage and current (ESST4B, and a library model or stabiliser
+    /// that reads them).</summary>
+    public bool NeedsTerminalQuantities => _st4b is not null || (_model?.NeedsTerminalQuantities ?? false) || (_library?.NeedsTerminalQuantities ?? false);
+
+    /// <summary>RC5 (2.1.118, widened 2.1.120): true for an exciter that sets a state, or checks its start, from the first
+    /// step's terminal measurements. The kernel refuses such an exciter when a disturbance is in force at t = 0, because the
+    /// measurements then come from the disturbed network:
+    /// <list type="bullet">
+    /// <item>ESST4B (every state from VT, IT and IFD);</item>
+    /// <item>ESST3A (the steady input), and EXDC2 (its Vt-scaled limit check);</item>
+    /// <item>SCRX bus fed (x0 = Efd0 / Vt0 and the reference);</item>
+    /// <item>a voltage transducer with TR above 0 (EXDC2, IEEEX1, ESDC1A, ESAC8B, ESST1A, EXST1): the lag starts at the first
+    /// measured Vt;</item>
+    /// <item>a library stabiliser that sets a state from the first step's network measurement
+    /// (<see cref="IRmsStabiliser.ReadsNetworkInputsAtStart"/>): IEEEST, PSS2A, PSS2B or PSS2C on electrical power, whose
+    /// washouts start at the first step's input, and PSS2C with its output logic, switched from the first step's power. On
+    /// rotor speed it reads a state, which no network change moves at t = 0, so it is not refused, with or without the
+    /// IEEEST voltage cut-off (memoryless: it sets no state).</item>
+    /// </list></summary>
+    internal bool FinishesInitialisationOnFirstStep =>
+        _st4b is not null
+        || _model is Esst3a
+        || _model is Exdc2 { NeedsTerminalQuantities: true }
+        || _model is Scrx { NeedsTerminalQuantities: true }
+        || _model is Esdc1a { NeedsTerminalQuantities: true }
+        || _model is Esac8b { NeedsTerminalQuantities: true }
+        || _model is St1Exciter { TransducerActive: true }
+        || (_library?.ReadsNetworkInputsAtStart ?? false);
 
     /// <summary>A static ESST4B exciter (see <see cref="Esst4b"/>) with an optional PSS1A. It reads the terminal
     /// quantities on its machine base, so the study binds that base (<see cref="BindMachineBase"/>) before it runs.</summary>
@@ -663,6 +896,14 @@ public sealed class RmsExciter : IRmsTerminalFieldController
         if (!double.IsFinite(fieldVoltagePu))
             throw new ArgumentOutOfRangeException(nameof(fieldVoltagePu), $"Initial field {fieldVoltagePu} is not finite.");
         if (_user is not null) { _user.Initialize(fieldVoltagePu); return; }
+        if (_model is not null)
+        {
+            _model.Initialize(fieldVoltagePu);
+            Stabiliser?.Initialize(0.0);
+            _library?.Initialize();
+            return;
+        }
+        _library?.Initialize();   // WP3a: null for every exciter built before the library stabilisers
         if (_ac is not null || _st4b is not null)
         {
             // Each checks its own limits at the equilibrium (field current = field voltage); ESST4B on its first step,
@@ -687,6 +928,7 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     /// feedback washed out, so <c>Verr = (Ke + Se)*Efd/Ka</c>. The PSS adds nothing in steady state.</summary>
     public double EquilibriumErrorPu(double fieldVoltagePu) =>
         _user is not null ? _user.EquilibriumErrorPu(fieldVoltagePu)
+        : _model is not null ? _model.EquilibriumErrorPu(fieldVoltagePu)
         : _ac is not null ? _ac.EquilibriumErrorPu(fieldVoltagePu)
         : _st4b is not null ? _st4b.EquilibriumErrorPu(fieldVoltagePu)
         : LimitedQuantity(fieldVoltagePu) / _gain;
@@ -696,6 +938,9 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     public double Step(double voltageErrorPu, double speedDeviationPu, double dtSeconds)
     {
         if (_user is not null) return _user.Step(voltageErrorPu, speedDeviationPu, dtSeconds);
+        if (_model is not null || _library is not null)
+            return LibraryStep(voltageErrorPu, new FieldControlInputs(speedDeviationPu, double.NaN, double.NaN, double.NaN),
+                Complex.Zero, Complex.Zero, dtSeconds);
         if (_ac is not null || _st4b is not null)
             throw new InvalidOperationException($"{Kind} reads the machine's field current; the caller must use the step that supplies it.");
         double vs = Stabiliser is null ? 0.0 : Stabiliser.Step(speedDeviationPu, dtSeconds);
@@ -707,6 +952,9 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     /// current <paramref name="fieldCurrentPu"/> (Xad base). For SEXS and IEEET1 the field current is not used.</summary>
     public double Step(double voltageErrorPu, double speedDeviationPu, double fieldCurrentPu, double dtSeconds)
     {
+        if (_model is not null || _library is not null)
+            return LibraryStep(voltageErrorPu, new FieldControlInputs(speedDeviationPu, fieldCurrentPu, double.NaN, double.NaN),
+                Complex.Zero, Complex.Zero, dtSeconds);
         if (_st4b is not null)
             throw new InvalidOperationException("ESST4B reads the terminal voltage and current; the caller must use the step that supplies them.");
         if (_ac is null) return Step(voltageErrorPu, speedDeviationPu, dtSeconds);
@@ -719,6 +967,16 @@ public sealed class RmsExciter : IRmsTerminalFieldController
     public double Step(double voltageErrorPu, double speedDeviationPu, double fieldCurrentPu, Complex terminalVoltagePu,
         Complex terminalCurrentSystemPu, double dtSeconds)
     {
+        if (_model is not null || _library is not null)
+        {
+            // WP3a: |Vt| and the electrical power Re(Vt conj(It)) on the machine base (the current is on the system base).
+            if (double.IsNaN(_machineOverSystem))
+                throw new InvalidOperationException($"{Kind}: a library model or stabiliser that reads the terminal quantities needs its machine base bound (BindMachineBase); the RMS study binds it.");
+            double vt = Math.Sqrt(terminalVoltagePu.Real * terminalVoltagePu.Real + terminalVoltagePu.Imaginary * terminalVoltagePu.Imaginary);
+            double pe = (terminalVoltagePu.Real * terminalCurrentSystemPu.Real + terminalVoltagePu.Imaginary * terminalCurrentSystemPu.Imaginary) / _machineOverSystem;
+            return LibraryStep(voltageErrorPu, new FieldControlInputs(speedDeviationPu, fieldCurrentPu, vt, pe),
+                terminalVoltagePu, terminalCurrentSystemPu, dtSeconds);
+        }
         if (_st4b is null) return Step(voltageErrorPu, speedDeviationPu, fieldCurrentPu, dtSeconds);
         if (double.IsNaN(_machineOverSystem))
             throw new InvalidOperationException("ESST4B needs its machine base bound (BindMachineBase) to read the terminal current on it; the RMS study binds it.");

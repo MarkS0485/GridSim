@@ -35,6 +35,13 @@ public static class Dnp3Frame
     /// <summary>Encode a header-only (no user data) data-link frame.</summary>
     public static byte[] ToBytes(Dnp3DataLinkHeader header)
     {
+        ArgumentNullException.ThrowIfNull(header);
+        // IO-25: a data-link address is 16 bits; one outside 0..65535 was masked into the frame as another station's
+        // address. Refused, as the IEC 104 and GOOSE encoders refuse the same overflow.
+        if (header.Destination is < 0 or > 0xFFFF)
+            throw new ArgumentOutOfRangeException(nameof(header), header.Destination, "DNP3 destination address must be 0..65535.");
+        if (header.Source is < 0 or > 0xFFFF)
+            throw new ArgumentOutOfRangeException(nameof(header), header.Source, "DNP3 source address must be 0..65535.");
         var b = new byte[10];
         b[0] = 0x05;
         b[1] = 0x64;

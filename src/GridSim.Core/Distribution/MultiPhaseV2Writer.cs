@@ -27,7 +27,7 @@ namespace GridSim.Core.Distribution;
 ///
 /// <para><b>Provenance.</b> A feeder read from a v2 file carries its provenance and it is written back as read. A
 /// feeder from a v1 file or a lifted case carries none, and the caller MUST then say what it is
-/// (<paramref name="provenanceForUnprovenanced"/> of <see cref="ToJson"/>): GridSim never invents a tag. Giving one for a
+/// (<c>provenanceForUnprovenanced</c> of <see cref="ToJson"/>): GridSim never invents a tag. Giving one for a
 /// feeder that already has its own is refused too (which one would win would be a guess).</para>
 /// </summary>
 public static class MultiPhaseV2Writer

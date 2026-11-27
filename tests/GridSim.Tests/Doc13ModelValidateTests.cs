@@ -415,7 +415,7 @@ mpc.branch = [ 1 2 0.01 0.1 0 0 0 0 0 0 1 -360 360; 2 2 0.01 0.1 0 0 0 0 0 0 1 -
     /// <summary>A minimal v1 JSON case folder: a slack generator on bus 1 and whatever buses and lines are given.</summary>
     private static string JsonCase(string buses, string lines, string? system = null)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc13-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc13-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "system.json"), system ?? "{ \"name\": \"t\", \"baseMva\": 100, \"frequencyHz\": 50 }");
         File.WriteAllText(Path.Combine(dir, "buses.json"), buses);

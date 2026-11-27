@@ -2,7 +2,7 @@
   "schema": "gridsim-kind/2",
   "kind": "exciter",
   "title": "Exciter (AVR)",
-  "description": "Excitation system of a synchronous machine: SEXS, IEEE Type 1, the alternator-rectifier EXAC1 / ESAC1A, or the static ESST4B. The CLI RMS study's typical, clearly indicative settings are the code defaults. Dynamics wiring: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired).",
+  "description": "Excitation system of a synchronous machine: SEXS, IEEE Type 1, the alternator-rectifier EXAC1 / ESAC1A, the static ESST4B, the potential-source static EXST1 / ESST1A, the static SCRX, the dc commutator ESDC1A, EXDC2 or IEEEX1, the PID alternator ESAC8B, or the compound-source static ESST3A. The CLI RMS study's typical, clearly indicative settings are the code defaults. Dynamics wiring: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired).",
   "params": {
     "model": {
       "type": "enum",
@@ -11,11 +11,19 @@
         "IEEET1",
         "EXAC1",
         "ESAC1A",
-        "ESST4B"
+        "ESST4B",
+        "ESST1A",
+        "EXST1",
+        "SCRX",
+        "ESDC1A",
+        "EXDC2",
+        "IEEEX1",
+        "ESAC8B",
+        "ESST3A"
       ],
       "required": true,
       "markGated": false,
-      "description": "Exciter / AVR model. EXAC1 (IEEE 1981 AC1) and ESAC1A (IEEE 421.5-2005 AC1A) are the alternator-rectifier exciters: they read the machine's field current (rectifier regulation FEX and the demagnetising term KD) and take the ac... parameters, all required. ESST4B (IEEE 421.5-2005 ST4B) is the static exciter with outer voltage and inner field PI regulators fed from a potential and/or compound source: it reads the terminal voltage and current and the field current, and takes the st4b... parameters, all required.",
+      "description": "Exciter / AVR model. EXAC1 (IEEE 1981 AC1) and ESAC1A (IEEE 421.5-2005 AC1A) are the alternator-rectifier exciters: they read the machine's field current (rectifier regulation FEX and the demagnetising term KD) and take the ac... parameters, all required. ESST4B (IEEE 421.5-2005 ST4B) is the static exciter with outer voltage and inner field PI regulators fed from a potential and/or compound source: it reads the terminal voltage and current and the field current, and takes the st4b... parameters, all required. EXST1 (IEEE 1981 ST1) and ESST1A (IEEE 421.5-2005 ST1A) are the potential-source controlled-rectifier exciters whose ceiling is Vt VRMAX - KC IFD: they read the terminal voltage and the field current and take the st1... parameters (ESST1A also the st1a... ones). SCRX is the bus-fed or solid-fed static exciter (scrx... parameters). ESDC1A (IEEE 421.5-2005 DC1A) is the dc commutator exciter with quadratic saturation (dc1a... parameters). EXDC2 (IEEE 1981 DC2, its regulator limits VRMAX and VRMIN scaled by the terminal voltage) and IEEEX1 (IEEE 1979 type 1, constant limits) are the dc commutator exciters of ESDC1A's data and take the dc1a... parameters. ESAC8B (IEEE 421.5-2005 AC8B) is the PID-regulated alternator exciter (ac8b... parameters). ESST3A (IEEE 421.5-2005 ST3A) is the compound-source static exciter with an inner field-voltage loop: it reads the terminal voltage and current and the field current, and takes the st3a... parameters.",
       "codeDefaults": []
     },
     "sexsLeadS": {
@@ -543,6 +551,702 @@
       "required": false,
       "markGated": false,
       "description": "ESST4B potential circuit phase angle THETAP (degrees). Required for model ESST4B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1TrS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A voltage transducer time constant TR (s); 0 (the default) is none.",
+      "codeDefaults": []
+    },
+    "st1ViMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A input limiter upper limit VIMAX (pu). Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1ViMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A input limiter lower limit VIMIN (pu). Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1TcS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A lead time constant TC (s); TC = TB = 0 bypasses the lead-lag. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1TbS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A lag time constant TB (s). Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1Ka": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A regulator gain KA, above 0. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1TaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A regulator time constant TA (s). Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1VrMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A output ceiling VRMAX (pu of terminal voltage): Efd is at most Vt VRMAX - KC IFD. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1VrMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A output floor VRMIN (pu of terminal voltage): Efd is at least Vt VRMIN. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1Kc": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A rectifier loading factor KC. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1Kf": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A rate feedback gain KF; 0 is none. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1TfS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "EXST1 / ESST1A rate feedback time constant TF (s); above 0 when KF is. Required for models EXST1 and ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aTc1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A second lead time constant TC1 (s); TC1 = TB1 = 0 bypasses it. Required for model ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aTb1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A second lag time constant TB1 (s). Required for model ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aVaMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A regulator upper limit VAMAX (pu, non-windup). Required for model ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aVaMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A regulator lower limit VAMIN (pu, non-windup). Required for model ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aKlr": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A field current limiter gain KLR; 0 is none. Required for model ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aIlrPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A field current limiter reference ILR (pu). Required for model ESST1A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st1aVos": {
+      "type": "integer",
+      "unit": "1",
+      "min": 1,
+      "max": 2,
+      "required": false,
+      "markGated": false,
+      "description": "ESST1A stabiliser input location VOS: 1 (the default) at the summing junction, 2 after the regulator.",
+      "codeDefaults": []
+    },
+    "scrxLeadS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SCRX lead time constant TA (s, the PSS/E TA/TB times TB); TA = TB = 0 bypasses the lead-lag. Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxLagS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SCRX lag time constant TB (s). Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxGain": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SCRX gain K, above 0. Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxExciterTimeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SCRX exciter time constant TE (s). Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxFieldMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "SCRX lower limit EMIN (pu, non-windup). Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxFieldMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "SCRX upper limit EMAX (pu, non-windup). Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxSourceSwitch": {
+      "type": "integer",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "SCRX CSWITCH: 0 bus fed (the output scales with the terminal voltage), 1 solid fed. Required for model SCRX in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "scrxCrowbarRatio": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "SCRX rc/rfd: above 0 the rectifier carries no negative field current and Efd = -rc/rfd IFD while IFD is below 0; 0 (the default) is negative current capability.",
+      "codeDefaults": []
+    },
+    "dc1aTrS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 voltage transducer time constant TR (s); 0 (the default) is none.",
+      "codeDefaults": []
+    },
+    "dc1aKa": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 regulator gain KA, above 0. Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aTaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 regulator time constant TA (s). Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aTbS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 lag time constant TB (s); TB = TC = 0 bypasses the lead-lag. Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aTcS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 lead time constant TC (s). Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aVrMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 regulator upper limit VRMAX (pu, non-windup). Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aVrMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 regulator lower limit VRMIN (pu, non-windup). Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aKe": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 exciter constant KE. Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aTeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 exciter time constant TE (s), above 0. Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aKf": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 rate feedback gain KF; 0 is none. Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aTf1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 rate feedback time constant TF1 (s); above 0 when KF is. Required for models ESDC1A, EXDC2 and IEEEX1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "dc1aSatE1": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 saturation point E1 (pu); with the other three points the quadratic SE(Efd) Efd = B (Efd - A)^2. Default 0.",
+      "codeDefaults": []
+    },
+    "dc1aSatSe1": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 saturation factor SE(E1); SE(E1) = SE(E2) = 0 (the default) is no saturation.",
+      "codeDefaults": []
+    },
+    "dc1aSatE2": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 saturation point E2 (pu). Default 0.",
+      "codeDefaults": []
+    },
+    "dc1aSatSe2": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESDC1A / EXDC2 / IEEEX1 saturation factor SE(E2). Default 0.",
+      "codeDefaults": []
+    },
+    "ac8bTrS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B voltage transducer time constant TR (s); 0 (the default) is none.",
+      "codeDefaults": []
+    },
+    "ac8bKp": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B PID proportional gain KP. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bKi": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B PID integral gain KI (per second); KP and KI not both 0. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bKd": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B PID derivative gain KD (seconds); 0 is none. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bTdS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B derivative time constant TD (s); above 0 when KD is. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bKa": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B regulator gain KA, above 0. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bTaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B regulator time constant TA (s). Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bVrMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B regulator upper limit VRMAX (pu, non-windup). Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bVrMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B regulator lower limit VRMIN (pu, non-windup). Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bTeS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B exciter time constant TE (s), above 0. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bKe": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B exciter constant KE. Required for model ESAC8B in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ac8bSatE1": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B saturation point E1 (pu). Default 0.",
+      "codeDefaults": []
+    },
+    "ac8bSatSe1": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B saturation factor SE(E1); SE(E1) = SE(E2) = 0 (the default) is no saturation.",
+      "codeDefaults": []
+    },
+    "ac8bSatE2": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B saturation point E2 (pu). Default 0.",
+      "codeDefaults": []
+    },
+    "ac8bSatSe2": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B saturation factor SE(E2). Default 0.",
+      "codeDefaults": []
+    },
+    "ac8bKc": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B rectifier loading factor KC (not in the PSS/E record); 0 (the default) gives Efd = VE.",
+      "codeDefaults": []
+    },
+    "ac8bKdExc": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESAC8B exciter demagnetising factor KD of the field current (not in the PSS/E record); default 0.",
+      "codeDefaults": []
+    },
+    "st3aTrS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A voltage transducer time constant TR (s); 0 (the default) is none.",
+      "codeDefaults": []
+    },
+    "st3aViMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A regulator input upper limit VIMAX (pu). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aViMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A regulator input lower limit VIMIN (pu). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aKm": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A inner loop forward gain KM, above 0. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aTcS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A lead time constant TC (s). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aTbS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A lag time constant TB (s); TB = TC = 0 bypasses the lead-lag. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aKa": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A regulator gain KA, above 0. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aTaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A regulator time constant TA (s). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aVrMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A regulator upper limit VRMAX (pu, non-windup). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aVrMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A regulator lower limit VRMIN (pu, non-windup). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aKg": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A inner loop feedback gain KG. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aKp": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A potential circuit gain KP. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aKi": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A current circuit gain KI. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aVbMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A power source ceiling VBMAX (pu), above 0. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aKc": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A rectifier loading factor KC. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aXlPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A reactance XL of the potential source (pu). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aVgMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A inner loop feedback limit VGMAX (pu). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aThetapDeg": {
+      "type": "number",
+      "unit": "deg",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A potential circuit phase angle THETAP (degrees). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aTmS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A inner loop time constant TM (s), above 0. Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aVmMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A inner loop upper limit VMMAX (pu, non-windup). Required for model ESST3A in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "st3aVmMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "ESST3A inner loop lower limit VMMIN (pu, non-windup). Required for model ESST3A in a gridsim-dynamics/2 file.",
       "codeDefaults": []
     }
   }

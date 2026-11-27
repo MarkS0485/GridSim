@@ -299,10 +299,23 @@ The engines fail loud:
   its mismatch far below that line (2.1e-7, 6.5e-8 and 3.4e-9 of the start on case9, case14 and case118 one step
   short of convergence from flat start), so it is not retried and is reported `MaxIterations`, exactly as without the
   retry: the iteration cap is the caller's budget. The failures the retry is for end within a few times of their
-  start (case13659pegase from flat start 0.31, pglib case162_ieee_dtc 0.30, case240_pserc 0.63). A converged retry
-  is reported unless a branch carries more than 90 deg net of its phase shift; otherwise the ordinary result is
+  start (case13659pegase from flat start 0.31, pglib case162_ieee_dtc 0.30, case240_pserc 0.63). Since 2.1.075 a
+  pass stopped by the cap is also judged by its last step: a cap of 0 or 1 is never retried (no step allowed, or one
+  step, which is no evidence of a stall; a cap-1 solve is typically a warm start, which a DC-angle restart would
+  discard), and a pass of two or more steps whose last step at least halved its mismatch (`RetryLastStepFactor`,
+  `0.5`) is still converging and is not retried (case9 with `MaxIterations = 2`: last-step ratio 0.011). The failures
+  the retry is for barely move on their last step (ratios 0.96, 0.76, 1.00 and 1.01 at 50 steps on case13659pegase,
+  case162_ieee_dtc, case240_pserc and case3_lmbd). A pass of one step keeps the start-ratio test alone. A capped pass
+  that fails these tests counts as stalled and is retried with its own `MaxIterations` budget, so the two attempts
+  together can take up to twice `MaxIterations` steps; set `RetryFromDcStart = false` where the cap must bound the
+  total. A converged retry is reported unless a branch carries more than 90 deg net of its phase shift; otherwise the ordinary result is
   reported unchanged with a note. `PowerFlowResult.NewtonRetry` and `NewtonRetryNote` say what happened, and
   `RetryFromDcStart = false` turns the retry off.
+- A `PowerFlowOptions.Trace` always records the ordinary (first) attempt: the retry runs without a trace. After a
+  converged retry (`NewtonRetry = Converged`) the trace therefore describes the failed first solve, not the reported
+  state, whose `Iterations` and `MaxMismatch` are the retry's; the first attempt's iterations and mismatch are in
+  `NewtonRetryNote`. To trace the solve that is reported, run again with `RetryFromDcStart = false` from the state
+  you want, or check `NewtonRetry` before using a trace export beside a result.
 - Studies that start from a solved state call `ConvergenceContract.RequireConverged`
   (`src/GridSim.Core/PowerFlow/ConvergenceContract.cs`), which throws `NonConvergedStateException` naming the
   study, the status, the mismatch and the iteration count. Fault analysis, protection assessment and cascade,
@@ -393,7 +406,15 @@ solve (`revertCount < 1`). A bus that re-violates after reverting is pinned agai
 pinned, so the loop terminates and the final state respects the limits. With the option off, a switched bus never
 returns to `Pv`.
 
-**Pass cap.** The loop stops at `MaxQLimitPasses` (default 12). If the last permitted pass switched a bus, the
+**Divergence stop.** Each iteration of a Newton, fast-decoupled or Gauss-Seidel pass evaluates the largest power
+mismatch for the convergence test. If it is not below the tolerance and is above both `DivergeLimitPu` (default 10 pu)
+and the mismatch at the start of the pass, the pass stops there and the result is `Diverged`. The start of the pass is
+part of the test because a flat start on a large case can itself be above the limit. The test reads the mismatch that
+was already computed and ends the loop; no step, factorisation or update is changed, so a pass that converges does
+exactly what it did. A `Diverged` run still goes through the automatic DC-angle retry on the Newton engines, as any
+run that stalls does. `DivergeLimitPu = double.PositiveInfinity` turns the stop off.
+
+**Pass cap.** The loop stops at `MaxQLimitPasses` (default 100). If the last permitted pass switched a bus, the
 switched types have never been solved. The engine then solves once more on the final types so the reported state
 matches them, adds those iterations to `Iterations`, and reports the result not converged (status
 `MaxIterations`), whatever that last solve achieves. `NewtonShell.QLimitPasses` refuses a cap below 1.
@@ -488,6 +509,68 @@ Properties:
 `SolverSelector.CreateNewton`; the tap passes change taps, never the bus count, so one pick serves the whole
 loop.
 
+### Area interchange and remote voltage outer loops
+
+Two more opt-in wrappers around any `IPowerFlowSolver`, used by `pf --area-interchange` / `--area-control` and
+`pf --remote-vreg-file` / `--remote-vreg`. Each changes only unit set points between ordinary engine solves and returns
+the last solve unchanged, so the dense and sparse engines give the same bits with them, and the returned state is the
+plain solve of the adjusted model (`Rc5Wp13AreaControlTests` T03 checks this bit for bit on case14).
+
+`AreaInterchangePowerFlow` holds each controlled area's net export E_a at PDES_a within PTOL_a. E_a is the sum over the
+in-service branches with exactly one end in area a of s_k P_k, where P_k is the active power into the branch at its
+metered end and s_k is +1 when that end is in a and -1 when it is not. A tie's losses therefore fall on the area at the
+far end from the meter, as in PSS/E (branch MET field, the from end by default). After each solve, every area more than
+PTOL off, in ascending area number, adds PDES - E to its adjustment K_a, and K_a is shared over the in-service units at
+the area's swing bus by (Pmax - Pmin) (equally when a range is zero or unbounded), within [Pmin, Pmax], by the same
+water filling as the distributed slack. An area whose units are all bound with part of K_a unplaced is AT LIMIT and is
+not moved again. The loop stops when no area needs a change (20 passes at most). The area holding a slack bus cannot be
+controlled: the slack takes the remainder.
+
+`RemoteVoltagePowerFlow` holds a PQ bus at a target voltage by moving the set point of a PV bus. The controlling bus
+stays PV in the Newton solve. After each solve, each control in the order given computes e = target - V_reg and moves
+its set point by a secant step on its own history, v_{k+1} = v_k + e_k (v_k - v_{k-1}) / (V_reg,k - V_reg,k-1), with
+slope 1 on the first step and the set point kept in [0.8, 1.2] pu. The loop stops when every regulated bus is within
+1e-8 pu (30 passes at most). A controlling bus the reactive-limit loop turned PQ, at the limit the target pushes
+against, is AT Q LIMIT and its set point is frozen. A frozen control is looked at again after every solve: another
+control's step can bring its unit off the limit, and then it is released and starts its secant afresh. PSS/E solves the
+remote voltage inside the Newton step; at a point where no limit binds both methods satisfy the same equations, so they
+reach the same state.
+
+On the closed-form three-bus chain of `Rc5Wp13AreaControlTests` (bus 3 at 50 + j20 MVA held at 1.0 pu through two
+X = 0.1 lines) the loop reaches V2 = sqrt(1.0429) pu and Qg2 = 45.8 Mvar in 4 passes.
+
+### Fast-decoupled and Gauss-Seidel engines
+
+Two further engines are chosen by name only (`pf --engine fdxb|fdbx|gs`, and psspy `solv` for Gauss-Seidel). psspy
+`fdns`, `fncl` and `nsol` are refused: FDNS is PSS/E's fixed-slope decoupled Newton and NSOL its decoupled Newton, and
+neither is confirmed to match these engines, so nothing is substituted. The
+engine selection below never returns them, so every default solve is unchanged. They are there for comparison and for
+moving PSS/E scripts across; Newton stays the recommended engine.
+
+`FastDecoupledPowerFlow` is the fast-decoupled load flow (Stott and Alsac, IEEE Trans. PAS-93, 1974) in its XB and BX
+forms (van Amerongen, IEEE Trans. PWRS 4(4), 1989). `FdlfMatrices` builds B' and B'' as MATPOWER's `makeB.m` does:
+
+| Matrix | Bus shunts | Line charging | Tap ratio | Phase shift | Series r (XB) | Series r (BX) |
+|---|---|---|---|---|---|---|
+| B' | left out | left out | set to 1 | kept | left out | kept |
+| B'' | kept | kept | kept | left out | kept | left out |
+
+Each is `-Im(Y)` of the modified data, so a branch's off-diagonal cell is `Im(y)` with tap 1: `-10` for `x = 0.1` in XB.
+B' is reduced to the non-slack buses and factorised once (sparse LU); B'' is reduced to the PQ buses and factorised once
+per reactive-limit pass. One iteration is a P-theta half-iteration, `dtheta = B'^-1 (dP / V)`, then a Q-V half-iteration,
+`dV = B''^-1 (dQ / V)`, with the mismatch tested after each half.
+
+`GaussSeidelPowerFlow` iterates as MATPOWER's `gausspf.m`: each PQ bus, then each PV bus, in model order,
+`V_k <- V_k + alpha ((conj(S_k / V_k) - sum_j Y_kj V_j) / Y_kk)` over the latest voltages, a PV bus taking the Q
+calculated at the latest voltages; after the PV loop each PV bus's magnitude is put back to its set point. `alpha` is 1 by
+default (`--gs-accel`).
+
+Both use Newton's convergence test (largest |dP| at the non-slack buses and |dQ| at the PQ buses below the tolerance, pu;
+MATPOWER's `fdpf.m` divides by |V| first, GridSim does not), the same reactive-limit loop (`ApplyQLimits`, the revert
+rules and the R282 rule) and the ZIP terms in the mismatch. A converged answer is therefore Newton's solution to the
+tolerance; the bits differ from Newton's. Neither has the DC-start retry, and both refuse a model with HVDC links, FACTS
+devices, static var compensators or induction machines, and a solve trace.
+
 ### Backward/forward sweep
 
 `BackwardForwardSweep` solves radial feeders, where the high R/X ratios make transmission Newton a poor fit. It
@@ -564,7 +647,7 @@ out of service; `LiveSim` calls it for recloser-opened branches. `Prepare` union
 | Component | Treatment |
 |---|---|
 | Has a `Slack` bus | Kept unchanged. |
-| No slack, at least one bus with generation (`sum |Pg| > 0`) | The bus carrying the largest single `|Pg|` is promoted to `Slack`; ties go to the lowest bus index. |
+| No slack, at least one bus with generation (`sum \|Pg\| > 0`) | The bus carrying the largest single `\|Pg\|` is promoted to `Slack`; ties go to the lowest bus index. |
 | No slack and no such generation | Blacked out: its buses, branches and generators are dropped, and `LostLoadMw` and `LostGenMw` record what was lost. |
 
 A model with one component and a slack is returned unchanged, so a fully connected model is untouched and solves
@@ -655,7 +738,7 @@ with different options (Limits).
 | `Status` | `Converged`, `MaxIterations` or `NonFinite` (below). Defaults to `Converged` for presolved states that carry only the boolean. |
 | `Converged` | Both engines set it `true` only when `Status == Converged`; the type does not enforce this. Every other status means the state is untrustworthy. |
 | `Iterations` | Newton steps summed over all reactive-limit passes (sweeps for the sweep engine). |
-| `MaxMismatch` | The final `max|f|` in per-unit (sweep: see above). |
+| `MaxMismatch` | The final `max\|f\|` in per-unit (sweep: see above). |
 | `BusIds` | Result index to external bus id; the only way to map the arrays back to the model. |
 | `Vm`, `VaDeg` | Solved voltage, pu and degrees. |
 | `PInjMw`, `QInjMvar` | Net injection (generation minus demand) per bus. |
@@ -664,8 +747,9 @@ with different options (Limits).
 
 | Status | Arises when |
 |---|---|
-| `Converged` | `max|f| < Tolerance` at a check, every solved value finite, and (Newton) the reactive-limit loop ended without a pending switch. |
+| `Converged` | `max\|f\| < Tolerance` at a check, every solved value finite, and (Newton) the reactive-limit loop ended without a pending switch. |
 | `MaxIterations` | The iteration cap was reached; or a step could not be solved and the state is finite; or the reactive-limit loop hit `MaxQLimitPasses` with a bus still switching. |
+| `Diverged` | A pass stopped early because its largest mismatch rose above `DivergeLimitPu` and above the mismatch at the start of that pass. The state is the one at the iteration that stopped it. |
 | `NonFinite` | `MaxMismatch`, `Vm`, `Va` or an injection is NaN or infinite; the sweep returns it for a topology it cannot solve. |
 
 `LineFlow(From, To, PFromMw, QFromMvar, PToMw, QToMvar, PLossMw, QLossMvar, Name, RatingMva, LoadingPercent)`
@@ -687,11 +771,12 @@ lightly loaded line.
 
 | Name | Value | Unit | Meaning | Source symbol |
 |---|---|---|---|---|
-| Convergence tolerance | `1e-8` | pu on `BaseMva` | Bound on `max|f|`; strict `<`. | `PowerFlowOptions.Tolerance` |
+| Convergence tolerance | `1e-8` | pu on `BaseMva` | Bound on `max\|f\|`; strict `<`. | `PowerFlowOptions.Tolerance` |
 | Iteration cap | `30` | steps per pass | Newton iterations per reactive-limit pass; the mismatch is evaluated after the last allowed step, so a solve that reaches the tolerance on step 30 is converged. | `PowerFlowOptions.MaxIterations` |
 | Flat start | `false` | - | Start voltages at 1.0 pu and angles at 0 (slack angle and generator-bus magnitudes excepted). | `PowerFlowOptions.FlatStart` |
 | Enforce Q limits | `true` | - | Run the PV to PQ outer loop. | `PowerFlowOptions.EnforceQLimits` |
-| Q-limit pass cap | `12` | passes | Outer-loop cap; below 1 throws when `EnforceQLimits` is on. | `PowerFlowOptions.MaxQLimitPasses` |
+| Q-limit pass cap | `100` | passes | Outer-loop cap; below 1 throws when `EnforceQLimits` is on. | `PowerFlowOptions.MaxQLimitPasses` |
+| Divergence limit | `10` | pu | A pass stops with `Diverged` when its mismatch exceeds the larger of this and the pass's starting mismatch; `+Infinity` turns the stop off. Read from the mismatch already computed; no step changes. | `PowerFlowOptions.DivergeLimitPu` |
 | Revert Q limits | `false` | - | Opt-in PQ to PV revert (MATPOWER `enforce_q_lims` style). | `PowerFlowOptions.RevertQLimits` |
 | Retry from DC start | `true` | - | Retry a stalled or diverged Newton solve once from DC-power-flow angles; `false` reports the ordinary solve as it ended. | `PowerFlowOptions.RetryFromDcStart` |
 | Trace | `null` | - | Opt-in `SolveTrace` capture of Y, spec, per-step mismatch, correction, Jacobian and Q-limit events; `null` has no overhead. | `PowerFlowOptions.Trace` |
@@ -706,8 +791,9 @@ Constants:
 | Largest undamped step | `0.4` | rad or pu | Cap on the largest correction component. | `NewtonShell.MaxUndampedStep` |
 | Voltage floor | `0.01` (was `0.2` before 2.1.073) | pu | Floor on `Vm` of a PQ bus after an update. | `NewtonShell.VmFloorPu` |
 | Retry stall factor | `1e-3` | ratio | A failed pass is retried only if its final mismatch is above this fraction of its start mismatch. | `NewtonShell.RetryStallFactor` |
+| Retry last-step factor | `0.5` | ratio | A pass stopped by the cap after two or more steps is not retried when its last step cut the mismatch to this fraction or less. | `NewtonShell.RetryLastStepFactor` |
 | Retry branch angle | `90` | deg | Largest branch angle (net of phase shift) a converged retry may report. | `NewtonShell.MaxRetryBranchAngleDeg` |
-| Singular-pivot floor | `1e-12` x `max|A_ij|` | relative | A pivot at or below it is singular. | `NumericTolerances.RelativePivotFloor` |
+| Singular-pivot floor | `1e-12` x `max\|A_ij\|` | relative | A pivot at or below it is singular. | `NumericTolerances.RelativePivotFloor` |
 | BiCGSTAB tolerance | `min(1e-10, Tolerance*1e-3)` | relative residual | Fallback solve convergence. | `NewtonShell.SolveStep` |
 | BiCGSTAB cap | `4m + 200` | iterations | Fallback iteration cap. | `NumericTolerances.DefaultKrylovMaxIterations(m)` (a method) |
 | OLTC pass cap | `25` | re-solves | Outer-loop cap. | `SteadyStateSolver.DefaultMaxOltcPasses` |
@@ -718,7 +804,7 @@ Constants:
 | Live threshold | `1500` | buses | Same rule in `LiveSim` and `GdaReplayLoop`. | `LiveSolveSettings.SparseThresholdBuses` |
 | Live sparse iteration cap | `40` | steps | Sparse live solve, Q limits off. | `LiveSolveSettings.SparseMaxIterations` |
 | Sweep loop cap | `6` | links | Largest compensated loop count. | `BackwardForwardSweep.MaxCompensatedLoops` |
-| Sweep voltage floor | `1e-6` | pu | Floor on `|V|` in the current division and on path reactance. | `BackwardForwardSweep.SafetyFloor` |
+| Sweep voltage floor | `1e-6` | pu | Floor on `\|V\|` in the current division and on path reactance. | `BackwardForwardSweep.SafetyFloor` |
 | Sweep control tolerance floor | `1e-6` | pu | Regulation and loop tolerance is `max(Tolerance, this)`. | `BackwardForwardSweep.MinControlTolPu` |
 | Sweep loop pivot floor | `1e-14` | pu (absolute) | Pivot of the small loop solve. | `BackwardForwardSweep.LoopPivotFloor` |
 | Jacobian capture gate | `300` | buses | Export includes the Jacobian up to this size unless forced (dense engine only). | `SolveTrace.JacobianMaxN` |
@@ -784,7 +870,7 @@ Slack bus 1; PV buses 2, 3, 6, 8; PQ buses 4, 5, 7, 9 to 14. So `npvpq = 13`, `n
 is 22 by 22. Rows 0 to 12 are the P equations of buses 2 to 14 and rows 13 to 21 the Q equations of buses 4, 5,
 7, 9, 10, 11, 12, 13, 14. One reactive-limit pass; no bus switched.
 
-| Newton step | `max|f|` before the step (pu) | Row of the maximum | Largest correction |
+| Newton step | `max\|f\|` before the step (pu) | Row of the maximum | Largest correction |
 |---|---|---|---|
 | 0 | `4.218284e-02` | Q of bus 4 | `Vm` of bus 4: `-1.326882e-03` pu |
 | 1 | `5.669102e-05` | Q of bus 4 | `Vm` of bus 4: `-2.264672e-06` pu |
@@ -805,7 +891,7 @@ the case stores `Qmin = 0` for the slack machine; the slack is never limited, so
 `gridsim case118 --once --enableExport` (`docs/_captures/power-flows/case118-export.txt`) prints
 `[export] dense-newton: converged=True iters=6 maxMis=2.85E-014`. The trace splits into two passes:
 
-| Pass | System size `m` | Step | `max|f|` before the step (pu) |
+| Pass | System size `m` | Step | `max\|f\|` before the step (pu) |
 |---|---|---|---|
 | 0 | 181 (117 P rows, 64 Q rows) | 0 | `1.296780e+00` |
 | 0 | | 1 | `2.418409e-02` |
@@ -817,7 +903,7 @@ the case stores `Qmin = 0` for the slack machine; the slack is never limited, so
 After pass 0 converged (the next evaluation was below `1e-8`), `ApplyQLimits` switched six PV buses to PQ in one
 call: buses 19, 32, 34, 92 and 105 pinned at `Qmin`, bus 103 pinned at `Qmax`. That is `m = 181 + 6 = 187` in pass
 1, whose start mismatch is `0.354` pu because the pinned Q values differ from the pass-0 solution. Pass 1
-converged with `max|f| = 2.851406207206033e-14`, no bus switched, and the loop stopped after two of the twelve
+converged with `max|f| = 2.851406207206033e-14`, no bus switched, and the loop stopped after two of the 100
 permitted passes. `Iterations = 3 + 3 = 6`; total loss is `132.48074930437622` MW and `-644.0822370596604` MVAr
 (line charging exceeds series reactive loss).
 
@@ -835,8 +921,13 @@ permitted passes. `Iterations = 3 + 3 = 6`; total loss is `132.48074930437622` M
 | `src/GridSim.Core/PowerFlow/BackwardForwardSweep.cs` | `BackwardForwardSweep` | Radial and weakly meshed sweep, PV regulation, loop compensation. |
 | `src/GridSim.Core/PowerFlow/SteadyStateSolver.cs` | `SteadyStateSolver` | OLTC outer loop, `RegulatedModel`, `TapsSettled`, `OltcPasses`. |
 | `src/GridSim.Core/PowerFlow/SolverSelector.cs` | `SolverSelector`, `SolverKind` | Engine choice and construction. |
+| `src/GridSim.Core/PowerFlow/FastDecoupledPowerFlow.cs`, `FdlfMatrices.cs` | `FastDecoupledPowerFlow`, `FdlfVariant`, `FdlfMatrices` | Opt-in fast-decoupled engine (XB, BX) and its B' and B'' (`pf --engine fdxb\|fdbx`). |
+| `src/GridSim.Core/PowerFlow/GaussSeidelPowerFlow.cs` | `GaussSeidelPowerFlow` | Opt-in Gauss-Seidel engine (`pf --engine gs`). |
 | `src/GridSim.Core/PowerFlow/DistributedSlackPowerFlow.cs` | `DistributedSlackPowerFlow` | Opt-in wrapper that shares the slack by participation factors (`pf --distributed-slack`). |
 | `src/GridSim.Core/PowerFlow/OltcLoopPowerFlow.cs`, `SwitchedShuntPowerFlow.cs` | `OltcLoopPowerFlow`, `SwitchedShuntPowerFlow` | Opt-in wrappers for discrete switched shunts (`pf --switched-shunts`). |
+| `src/GridSim.Core/PowerFlow/AreaInterchangePowerFlow.cs` | `AreaInterchangePowerFlow`, `AreaInterchangeSpec` | Opt-in area interchange control, tie lines only (`pf --area-interchange`, `--area-control`). |
+| `src/GridSim.Core/PowerFlow/RemoteVoltagePowerFlow.cs` | `RemoteVoltagePowerFlow`, `RemoteVoltageControl` | Opt-in remote voltage regulation by a PV bus's set point (`pf --remote-vreg-file`, `--remote-vreg`). |
+| `src/GridSim.Core/PowerFlow/ControlFiles.cs` | `ControlFiles` | Strict readers for `gridsim-area-interchange/1` and `gridsim-remote-vreg/1`. |
 | `src/GridSim.Core/PowerFlow/PowerFlowOptions.cs` | `PowerFlowOptions` | Solve options. |
 | `src/GridSim.Core/PowerFlow/PowerFlowResult.cs` | `PowerFlowResult`, `PowerFlowStatus`, `LineFlow` | Result and status. |
 | `src/GridSim.Core/PowerFlow/ConvergenceContract.cs` | `ConvergenceContract`, `NonConvergedStateException` | Refusal of a non-converged state by dependent studies. |

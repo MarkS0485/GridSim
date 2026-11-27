@@ -212,6 +212,22 @@ A source that is empty or blank is skipped. A source that holds a key which veri
 which is rejected stops the search: GridSim runs at the free tier and says why, and does not try the later sources. A
 file that cannot be read (missing, locked, no permission) counts as absent, silently.
 
+### In a container
+
+The web and command line images set `GRIDSIM_LICENCE_FILE=/licence/licence.gridsim`, so they read the licence from a
+folder mounted read-only at `/licence`:
+
+```bash
+docker run --rm -v "$PWD:/work" -v "$PWD/licence:/licence:ro" gridsim-cli licence status
+```
+
+Because a missing file counts as absent, a container with nothing mounted at `/licence`, or with an empty folder there,
+runs at the free tier and starts normally; no special setting is needed. A file that is there but holds a bad key runs
+at the free tier too, with the reason shown. No image ever contains a licence. The key can also be passed as
+`-e GRIDSIM_LICENCE=<key>`, or as `Licence__Key` to the web app. Installing with `gridsim licence import` inside a
+container fails with an error naming the file, because the mount is read-only; put `licence.gridsim` in the host
+folder instead. Building and running the images: [ch. 3, Containers](<0003 Configuration.md#containers>).
+
 ## Installing a licence
 
 ```bash
@@ -294,6 +310,11 @@ EXPIRED 2025-12-31 | for GridSim 1.x | id doc002`. The decisions and the message
 
 A lapsed licence holder is never worse off than an unlicensed user, and nothing is deleted or locked. Installing a renewed
 key replaces the lapsed one. Expiry is judged against the computer's UTC date, so a wrong system clock changes it.
+
+**Known limit: the clock.** GridSim runs offline and checks the start and expiry dates against the system clock alone. A
+clock set back makes an expired key apply again, and a clock set forward makes a valid key read as expired. This is a known
+limit, not resisted: licences are free at present and the source is available, so a key records terms rather than enforcing them
+against the machine's owner.
 
 ## A licence covers one major version
 

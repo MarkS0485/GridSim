@@ -310,7 +310,7 @@ public static class V2DocumentValidator
         if (errors.Count > 0) return errors;
         try
         {
-            GridSim.Core.Distribution.MultiPhaseJsonLoader.ParseV2(File.ReadAllText(path), path);
+            GridSim.Core.Distribution.MultiPhaseJsonLoader.ParseV2(GridSim.Core.IO.InputFileLimits.ReadAllText(path), path);
             return Array.Empty<SchemaError>();
         }
         catch (Exception ex) when (ex is InvalidDataException or ArgumentException)

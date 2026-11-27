@@ -138,7 +138,7 @@ public class EmtOutOfPhaseSyncTests
         //     paper cites on every run. Regenerating that artefact is a deliberate act: set EMT_REPORT_DIR to the
         //     folder you mean, and the CSV is written there (and kept). A folder that cannot be created fails loud. ---
         string? reportDir = Environment.GetEnvironmentVariable("EMT_REPORT_DIR");
-        string dir = reportDir ?? Path.Combine(Path.GetTempPath(), $"gridsim-emt-oop-{Guid.NewGuid():N}");
+        string dir = reportDir ?? TestTemp.Under($"gridsim-emt-oop-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         string csvPath = Path.Combine(dir, "0026-emt-out-of-phase.csv");
 

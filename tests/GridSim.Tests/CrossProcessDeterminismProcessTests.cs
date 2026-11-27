@@ -24,7 +24,7 @@ public sealed class CrossProcessDeterminismProcessTests
     [InlineData("case118")]
     public void Two_cli_runs_write_the_same_solve_export_apart_from_meta(string caseName)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-xproc-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-xproc-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

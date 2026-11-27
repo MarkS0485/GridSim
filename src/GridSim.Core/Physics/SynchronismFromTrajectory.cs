@@ -55,7 +55,7 @@ public static class SynchronismFromTrajectory
     /// <c>stability --rms --clear</c>. Same criterion and arithmetic as <see cref="Classical"/>; the one difference is the
     /// machine set, which is the set the RMS integrator itself judges: the first <paramref name="synchronismMachines"/>
     /// traces (island reference machines, appended after them, are left out of both the centre of inertia and the
-    /// maximum, exactly as <see cref="MultiMachineSubtransient"/> leaves them out of its pole-slip test).
+    /// maximum, exactly as <see cref="GridSim.Core.Dynamics.Models.MultiMachineSubtransient"/> leaves them out of its pole-slip test).
     /// <paramref name="h"/> is the system-base inertia vector the run was integrated with (one per trace).
     /// </summary>
     /// <exception cref="ArgumentException">As <see cref="Classical"/>, and a synchronism count outside 1..traces.</exception>

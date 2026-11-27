@@ -18,7 +18,7 @@ namespace GridSim.Core.PowerFlow;
 /// (a separate multiply and subtract per element at every vector width, never a fused multiply-add; D-DOC-209,
 /// October 2026: the old DenseLuKernels forwarder had no caller and is gone). The pivot search, row swaps and back
 /// substitution keep the original scalar order, so the result is bit-for-bit identical to
-/// the textbook version. The factored matrix is written back into <paramref name="a"/> on
+/// the textbook version. The factored matrix is written back into <c>a</c> on
 /// completion, preserving the in-place contract.
 /// </summary>
 public sealed class DenseLuSolver : ILinearSolver

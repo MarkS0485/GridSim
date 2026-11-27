@@ -20,7 +20,9 @@ public sealed class LicenceFileTokenTests
         Assert.Equal("GSK1.abcdef", LicenceGate.ExtractToken("GSK1.abc\ndef\n# trailing comment\nignored"));
     }
 
+    // Re-pinned (SEC-14): a file of comment lines only holds no key, so it reads as no licence installed ("") rather than
+    // handing the comment text to the verifier, which reported "licence key ... rejected: not valid base64".
     [Fact]
-    public void Content_with_no_key_line_is_returned_trimmed()
-        => Assert.Equal("# only a comment", LicenceGate.ExtractToken("  # only a comment  \n"));
+    public void Content_with_no_key_line_holds_no_key()
+        => Assert.Equal("", LicenceGate.ExtractToken("  # only a comment  \n"));
 }

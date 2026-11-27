@@ -59,7 +59,7 @@ public sealed class CorrectiveSequenceCliProcessTests
     [Fact]
     public void Real_entry_point_is_repeatable_writes_once_and_maps_verdicts_to_exit_codes()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-corrective-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-corrective-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {

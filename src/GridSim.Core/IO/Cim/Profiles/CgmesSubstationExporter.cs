@@ -178,14 +178,25 @@ public static class CgmesSubstationExporter
             eq.Add(w.Obj("PowerTransformerEnd", "PTE", e2, e2, null, w.Ref("PowerTransformerEnd.PowerTransformer", "EQ", t.Id),
                 w.Ref("TransformerEnd.Terminal", "T", "EQ." + t.Id + ".2"), ("TransformerEnd.endNumber", "2"),
                 ("PowerTransformerEnd.r", "0"), ("PowerTransformerEnd.x", "0"), ("PowerTransformerEnd.ratedU", Num(kvL))));
+            // 3.0 requires TapChanger.neutralU and ltcFlag on every changer, and PhaseTapChangerLinear.xMin and xMax, as for
+            // the three-winding ends below: the changer sits on end 1, so neutralU is end 1's rated voltage, there is no load
+            // tap changing, and the curve is flat at the magnitude of end 1's own reactance in ohms (the impedance end 1
+            // already carries). The magnitude: a phase shifter's series reactance is not negative, and the importer refuses a
+            // negative xMin or xMax, so a negative end reactance (possible on a star end) is written as |x|.
+            // Written in 3.0 only, so the 2.4.15 document is unchanged (a breaking change of the 3.0 output, B30).
+            object[] required2w30 = options.Version == CgmesVersion.V3_0
+                ? new object[] { ("TapChanger.neutralU", Num(kvH)), ("TapChanger.ltcFlag", "false") } : Array.Empty<object>();
+            string xEnd1 = Num(Math.Abs(x2));
+            object[] flat2w30 = options.Version == CgmesVersion.V3_0
+                ? new object[] { ("PhaseTapChangerLinear.xMin", xEnd1), ("PhaseTapChangerLinear.xMax", xEnd1) } : Array.Empty<object>();
             if (t.TapRatio != 1.0)
-                eq.Add(w.Obj("RatioTapChanger", "RTC", t.Id, t.Id + " ratio", null, w.Ref("RatioTapChanger.TransformerEnd", "PTE", e1),
+                eq.Add(w.Obj("RatioTapChanger", "RTC", t.Id, t.Id + " ratio", null, new object[] { w.Ref("RatioTapChanger.TransformerEnd", "PTE", e1),
                     ("TapChanger.neutralStep", "0"), ("TapChanger.lowStep", "0"), ("TapChanger.highStep", "1"), ("TapChanger.normalStep", "1"),
-                    ("RatioTapChanger.stepVoltageIncrement", Num(Exact(t.TapRatio, (t.TapRatio - 1.0) * 100.0, x => 1.0 + 1.0 * x / 100.0)))));
+                    ("RatioTapChanger.stepVoltageIncrement", Num(Exact(t.TapRatio, (t.TapRatio - 1.0) * 100.0, x => 1.0 + 1.0 * x / 100.0))) }.Concat(required2w30).ToArray()));
             if (t.PhaseShiftDeg != 0.0)
-                eq.Add(w.Obj("PhaseTapChangerLinear", "PTC", t.Id, t.Id + " phase", null, w.Ref("PhaseTapChanger.TransformerEnd", "PTE", e1),
+                eq.Add(w.Obj("PhaseTapChangerLinear", "PTC", t.Id, t.Id + " phase", null, new object[] { w.Ref("PhaseTapChanger.TransformerEnd", "PTE", e1),
                     ("TapChanger.neutralStep", "0"), ("TapChanger.lowStep", "0"), ("TapChanger.highStep", "1"), ("TapChanger.normalStep", "1"),
-                    ("PhaseTapChangerLinear.stepPhaseShiftIncrement", Num(t.PhaseShiftDeg))));
+                    ("PhaseTapChangerLinear.stepPhaseShiftIncrement", Num(t.PhaseShiftDeg)) }.Concat(required2w30).Concat(flat2w30).ToArray()));
             Rating(t.Id, t.RateAMva);
         }
         foreach (NbLoad l in model.Loads)
@@ -217,6 +228,47 @@ public static class CgmesSubstationExporter
                 ("LinearShuntCompensator.gPerSection", Num(Exact(sh.Gs, sh.Gs / scale, x => 0.0 + x * scale))),
                 ("ShuntCompensator.maximumSections", "1"), ("ShuntCompensator.nomU", Num(kv))));
             Terminal(eq, "EQ", sh.Id, 1, sh.Node);
+        }
+        // WP24: three-winding transformers (after every other class, so a model without them is written as before). One
+        // PowerTransformer with three PowerTransformerEnds (endNumber 1..3); each end carries its star impedance referred to
+        // that end (ohms = per unit x kV^2 / base at the end's node), the CGMES convention for a three-winding unit, and the
+        // magnetising susceptance on end 1. A winding's ratio and shift are a one-step ratio / linear phase changer on its end.
+        foreach (NbTransformer3W t3 in model.Transformers3W)
+        {
+            var s3 = t3.Star();
+            double[] sr = { s3.R1, s3.R2, s3.R3 }, sx = { s3.X1, s3.X2, s3.X3 };
+            eq.Add(w.Obj("PowerTransformer", "EQ", t3.Id, t3.Id, null, w.Ref("Equipment.EquipmentContainer", "SS", substationOfNode[t3.NodeHv])));
+            for (int n = 0; n < 3; n++) Terminal(eq, "EQ", t3.Id, n + 1, t3.NodeOf(n));
+            for (int n = 0; n < 3; n++)
+            {
+                double kv = kvOfNode[t3.NodeOf(n)], zb = kv * kv / baseMva;
+                string en = t3.Id + "." + (n + 1).ToString(Inv);
+                double xOhm = Exact(sx[n], sx[n] * zb, x => x / zb);
+                var props = new List<object> { w.Ref("PowerTransformerEnd.PowerTransformer", "EQ", t3.Id), w.Ref("TransformerEnd.Terminal", "T", "EQ." + t3.Id + "." + (n + 1).ToString(Inv)),
+                    ("TransformerEnd.endNumber", (n + 1).ToString(Inv)),
+                    ("PowerTransformerEnd.r", Num(Exact(sr[n], sr[n] * zb, x => x / zb))), ("PowerTransformerEnd.x", Num(xOhm)) };
+                if (n == 0) props.Add(("PowerTransformerEnd.b", Num(Exact(t3.B, t3.B / zb, x => x * zb))));
+                props.Add(("PowerTransformerEnd.ratedU", Num(kv)));
+                if (t3.RatedMvaOf(n) > 0) props.Add(("PowerTransformerEnd.ratedS", Num(t3.RatedMvaOf(n))));
+                eq.Add(w.Obj("PowerTransformerEnd", "PTE", en, en, null, props.ToArray()));
+                double ratio = t3.RatioOf(n), shift = t3.ShiftOf(n);
+                // 3.0 requires TapChanger.neutralU and ltcFlag on every changer, and PhaseTapChangerLinear.xMin and xMax: the
+                // end's rated voltage, no load tap changing, and a flat curve at the end's own reactance (the impedance the
+                // end already carries). Written in 3.0 only, so the 2.4.15 document is unchanged.
+                object[] required30 = options.Version == CgmesVersion.V3_0
+                    ? new object[] { ("TapChanger.neutralU", Num(kv)), ("TapChanger.ltcFlag", "false") } : Array.Empty<object>();
+                string xEnd = Num(Math.Abs(xOhm));
+                object[] flat30 = options.Version == CgmesVersion.V3_0
+                    ? new object[] { ("PhaseTapChangerLinear.xMin", xEnd), ("PhaseTapChangerLinear.xMax", xEnd) } : Array.Empty<object>();
+                if (ratio != 1.0)
+                    eq.Add(w.Obj("RatioTapChanger", "RTC", en, en + " ratio", null, new object[] { w.Ref("RatioTapChanger.TransformerEnd", "PTE", en),
+                        ("TapChanger.neutralStep", "0"), ("TapChanger.lowStep", "0"), ("TapChanger.highStep", "1"), ("TapChanger.normalStep", "1"),
+                        ("RatioTapChanger.stepVoltageIncrement", Num(Exact(ratio, (ratio - 1.0) * 100.0, x => 1.0 + 1.0 * x / 100.0))) }.Concat(required30).ToArray()));
+                if (shift != 0.0)
+                    eq.Add(w.Obj("PhaseTapChangerLinear", "PTC", en, en + " phase", null, new object[] { w.Ref("PhaseTapChanger.TransformerEnd", "PTE", en),
+                        ("TapChanger.neutralStep", "0"), ("TapChanger.lowStep", "0"), ("TapChanger.highStep", "1"), ("TapChanger.normalStep", "1"),
+                        ("PhaseTapChangerLinear.stepPhaseShiftIncrement", Num(shift)) }.Concat(required30).Concat(flat30).ToArray()));
+            }
         }
 
         // =============================== TP ===============================================================================
@@ -259,6 +311,13 @@ public static class CgmesSubstationExporter
         }
         foreach (NbShunt sh in model.Shunts)
             ssh.Add(w.Stub("LinearShuntCompensator", "EQ", sh.Id, ("ShuntCompensator.sections", "1")));
+        foreach (NbTransformer3W t3 in model.Transformers3W)
+            for (int n = 0; n < 3; n++)
+            {
+                string en = t3.Id + "." + (n + 1).ToString(Inv);
+                if (t3.RatioOf(n) != 1.0) ssh.Add(w.Stub("RatioTapChanger", "RTC", en, ("TapChanger.step", "1")));
+                if (t3.ShiftOf(n) != 0.0) ssh.Add(w.Stub("PhaseTapChangerLinear", "PTC", en, ("TapChanger.step", "1")));
+            }
         foreach (NbTransformer t in model.Transformers)
         {
             if (t.TapRatio != 1.0) ssh.Add(w.Stub("RatioTapChanger", "RTC", t.Id, ("TapChanger.step", "1")));
@@ -293,7 +352,9 @@ public static class CgmesSubstationExporter
         omissions.Add(new(CgmesProfileKind.SC, "the whole SC profile", "the substation model holds no sequence-network data."));
         omissions.Add(new(CgmesProfileKind.DY, "the whole DY profile", "the substation model holds no dynamic models."));
         omissions.Add(new(CgmesProfileKind.EQ, "RotatingMachine.ratedS, SynchronousMachine.type / operatingMode, reactive capability curves, PowerTransformerEnd.ratedS / connectionKind / grounded, current and voltage limits, LimitTypeKind other than PATL", "not held by NbGenerator / NbTransformer / NbLine."));
-        omissions.Add(new(CgmesProfileKind.EQ, "Line, SeriesCompensator, three-winding transformers, EquivalentInjection, ExternalNetworkInjection, BusbarSection, Junction", "the model has no such classes (busbar sections are connectivity nodes)."));
+        omissions.Add(model.Transformers3W.Count > 0
+            ? new(CgmesProfileKind.EQ, "Line, SeriesCompensator, EquivalentInjection, ExternalNetworkInjection, BusbarSection, Junction", "the model has no such classes (busbar sections are connectivity nodes).")
+            : new(CgmesProfileKind.EQ, "Line, SeriesCompensator, three-winding transformers, EquivalentInjection, ExternalNetworkInjection, BusbarSection, Junction", "the model has no such classes (busbar sections are connectivity nodes)."));
         omissions.Add(new(CgmesProfileKind.EQ, "Equipment.inService / normallyInService", "every written item is in service; the ideal-switch model has no out-of-service equipment."));
         omissions.Add(new(CgmesProfileKind.SSH, "Equipment.inService, Terminal.connected = false, tap steps other than the written step", "terminals are always connected; the tap ratio / phase shift is carried as step 1 of a one-step changer."));
         if (model.Generators.Any(g => double.IsNegativeInfinity(g.Pmin))) omissions.Add(new(CgmesProfileKind.EQ, "GeneratingUnit.minOperatingP (unbounded Pmin)", "an infinite value has no CGMES form; read back as 0 on a re-import."));
@@ -317,6 +378,8 @@ public static class CgmesSubstationExporter
         foreach (NbLoad l in m.Loads) yield return new TKey("EQ." + l.Id + ".1", l.Node);
         foreach (NbGenerator g in m.Generators) yield return new TKey("EQ." + g.Id + ".1", g.Node);
         foreach (NbShunt s in m.Shunts) yield return new TKey("EQ." + s.Id + ".1", s.Node);
+        foreach (NbTransformer3W t in m.Transformers3W)
+            for (int n = 0; n < 3; n++) yield return new TKey("EQ." + t.Id + "." + (n + 1).ToString(Inv), t.NodeOf(n));
     }
 
     private static string DescriptionJson(SubstationModel m)

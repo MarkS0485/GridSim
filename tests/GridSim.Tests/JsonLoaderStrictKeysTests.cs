@@ -15,7 +15,7 @@ public class JsonLoaderStrictKeysTests
 {
     private static string WriteCase(string transmissionJson)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-strict-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-strict-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "system.json"), """{ "name": "strict", "baseMva": 100 }""");
         File.WriteAllText(Path.Combine(dir, "buses.json"), """

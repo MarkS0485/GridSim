@@ -59,14 +59,19 @@ loads the case, solves it once with the on-load tap changer loop (at most 25 pas
   for a replay, the frame count. A live session shows a `SOLVER` picker (Auto, the dense and sparse Newton engines,
   Radial sweep); picking one reloads the page with `?solver=auto|dense|sparse|sweep`, which restarts the session on
   that engine. A raw replay reads `REPLAY | raw public data`.
+  Driving a live session from the page (play, step, speed, step size and the trip buttons, on the transport bar and the
+  map) needs Operator, and the HARMONICS study needs Analyst: the same bands as the `/ws/sim` controls and
+  `POST /api/solve`, refused with the role needed and audited as one `AccessDenied` entry. A live solver session starts only for a caller who holds Operator; watching a raw replay or a bridge feed needs no role. On `/workbench/<case id>`, running a study needs Analyst.
 - **`/console`** is the scripting console of [ch. 35](<0035 Scripting.md>): a script box with **Run** and **Check only**, and an
   interactive session with history that can be downloaded as the recorded `.gss` and `.run.json`. It lists the models it may
   load, with the `LOAD CASE` line for each. The role gate is the host's (`GridSim:AnonymousRole` and the sign-in role claims,
   as for `/ws/sim`): a Viewer may check a script and run the read-only verbs (`LOAD CASE`, `REPORT`, `PRINT`, `LET`); `SOLVE POWERFLOW` needs Analyst, as `POST /api/solve` does; `TRIP`, `CLOSE`, `SET`, `FAULT`, `CLEAR FAULT`, `SELECT ENGINE`, `STEP SIM`, `AT` and any block holding one need Operator. A script with
   a refused statement runs nothing, and the page names the line and column and the role needed. The licence gate and the
   private-model rule (`results/` and `gda-out/` need Operator) are the dashboard's, `EXPORT RESULT` is not offered, and a replay-only
-  instance answers 404. A run holds a solve slot, stops at the solve timeout, and is capped in script size, engine ticks and output
-  (the limits are printed on the page).
+  instance answers 404. A run holds a solve slot, stops at the solve timeout (checked before every statement, block and loop
+  iteration), and is capped in script size, engine ticks, statements, blocks and loop iterations, and output (the limits are
+  printed on the page). `SELECT ENGINE ... SCHEMAS` is not offered, and a `DYNAMICS` file must lie in the folder of a listed
+  model. Models are listed by paths relative to the console's folder, and messages never name the server's install path.
 - **Tabs.** A solved session shows NETWORK, GENERATION & INERTIA, THE MACHINE, SCADA, OPERATOR, MARKET, FREQUENCY
   SECURITY, MECHANICAL, HUMAN SCALE, SPEED DOMAINS, TRIP / DEVICE, INVERTER FLEET, CONFORMANCE, EXPERIMENTAL, HARMONICS, CYCLE,
   ASSETS and AUDIT LOG. The raw replay runs no solve, so it shows NETWORK, CHARTS, GENERATION & INERTIA, THE MACHINE,
@@ -95,7 +100,7 @@ The body is `{ "case": "<id>" }`. The answer always says whether the solve conve
 | Status | Body |
 |---|---|
 | 200 | `converged: true`, `status: "Converged"`, `iterations`, `maxMismatch`, `topology`, `state`. |
-| 422 | `converged: false`, `status` (`MaxIterations` or `NonFinite`), an `error` text saying the state is not a solution, `iterations`, `maxMismatch`, and the same `topology` and `state` for inspection only. |
+| 422 | `converged: false`, `status` (`MaxIterations`, `Diverged` or `NonFinite`), an `error` text saying the state is not a solution, `iterations`, `maxMismatch`, and the same `topology` and `state` for inspection only. |
 | 400 | No case in the body, or the case is a replay run (use `/ws/sim` for a replay). |
 | 403 | The licence does not cover the model. |
 | 404 | Unknown case. |
@@ -219,6 +224,87 @@ address also needs `GridSim__BridgeAllowUnencrypted=true`, or the host stops at 
 - **`trip` on a replay or bridge feed is refused.** Only a live in-process session can be tripped.
 - **A bridge id with a typo in its source is refused.** `bridge:gb-spine@estimate` names no source; the error lists the
   five that exist.
+
+## Telemetry
+
+This section is about usage telemetry (data about visitors or their use of the app sent to a third party), not the
+grid telemetry GridSim reads as input.
+
+The web app sends no usage telemetry of its own. ASP.NET Core sends nothing at run time unless a telemetry library is
+added, and GridSim adds none. The build switch that turns off Avalonia's build statistics (`Directory.Build.targets`,
+and `AVALONIA_TELEMETRY_OPTOUT=1` in every CI workflow) applies to every project, this one included.
+
+A guard enforces this. It is the first statement of the host, before configuration is read, and the host exits with
+code **78** if any of these is true:
+
+- **The build marker is missing.** `GridSim.Web`, `GridSim.Core` and `GridSim.Scripting` must each carry the build
+  marker `TelemetryOff=true`, as must the entry assembly when it is a GridSim assembly. (A test runner that hosts the
+  app in process is not, so then only the app's own assemblies are checked.)
+- **A telemetry library is loaded**, at start-up or at any time later. The refused names are
+  `Avalonia.BuildServices`, `Microsoft.ApplicationInsights`, `Microsoft.Extensions.Logging.ApplicationInsights`,
+`OpenTelemetry.Exporter`, `Azure.Monitor`, `Sentry`, `Microsoft.VisualStudio.Telemetry`, `Segment`, `Mixpanel`,
+`Bugsnag`, `Raygun`, `Datadog`, `Elastic.Apm`, `NewRelic` and `Honeycomb`, and the injected agents
+`Microsoft.AspNetCore.ApplicationInsights.HostingStartup`, `OpenTelemetry.AutoInstrumentation`, `Dynatrace`,
+`OneAgent`, `AppDynamics`, `Instana`, `Serilog.Sinks.ApplicationInsights` and `Serilog.Sinks.Datadog`. An assembly
+matches when its name is the prefix or starts with the prefix and a dot (so `Sentry.AspNetCore` matches and
+`SentryLike` does not).
+- **An environment variable would load an agent into the host:** `DOTNET_STARTUP_HOOKS`,
+  `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`, `DOTNET_HOSTINGSTARTUPASSEMBLIES` or `DOTNET_ADDITIONAL_DEPS` set (how App
+  Service and the OpenTelemetry automatic instrumentation attach); `DOTNET_DiagnosticPorts` or its legacy form `COMPlus_DiagnosticPorts` set to a non-empty value; a
+  profiler switch (`CORECLR_ENABLE_PROFILING`,
+  `CORECLR_ENABLE_NOTIFICATION_PROFILERS` or their `DOTNET_` forms) set to anything but empty or a value read as 0; and, while such a switch is on, any
+  variable whose name starts with `CORECLR_PROFILER`, `CORECLR_NOTIFICATION_PROFILERS`, `DOTNET_PROFILER` or
+  `DOTNET_NOTIFICATION_PROFILERS` (with profiling off the runtime loads no profiler). A diagnostic profiler is refused too, and so
+  is a host started by `dotnet watch` (it sets `DOTNET_STARTUP_HOOKS`); start it with `dotnet run`.
+- **A third-party script origin is configured, or the page policy allows one.** This is checked as soon as the
+  configuration is read. Every answer carries the Content-Security-Policy
+  `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'` (the last part follows `GridSim:FrameAncestors`), so a page can load scripts, styles, images and
+  fonts, and open connections, from this app only. The guard builds that policy from the configuration exactly as the
+  answers get it, and exits if its `connect-src` is not `'self'`, or if a `GridSim:FrameAncestors`, `GridSim:Hsts` or
+  `GridSim:ScriptCsp` value is malformed (the line names the setting), or if `GridSim:ScriptCspSources` names an
+  origin, or if a removed analytics setting (`Site:GoogleTagId`,
+  `Site:AnalyticsScriptUrl`, `Site:AnalyticsCollectorUrl`, `Site:AnalyticsSiteName`) is set. Styles allow
+  `'unsafe-inline'` because the pages' Razor components set inline `style` attributes; scripts do not, and the pages
+  have no inline script.
+- **An environment variable would switch on an exporter:**
+
+- any variable whose name starts with `OTEL_EXPORTER_` or `OTEL_DOTNET_AUTO_`;
+- `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER` or `OTEL_LOGS_EXPORTER` set to anything but `none`;
+- `APPLICATIONINSIGHTS_CONNECTION_STRING`, `APPLICATIONINSIGHTS_AUTHENTICATION_STRING`,
+  `APPINSIGHTS_INSTRUMENTATIONKEY`, `ApplicationInsightsAgent_EXTENSION_VERSION`,
+  `XDT_MicrosoftApplicationInsights_Mode`, `APPINSIGHTS_PROFILERFEATURE_VERSION` or
+  `APPINSIGHTS_SNAPSHOTFEATURE_VERSION` (Application Insights and Azure Monitor);
+- `SENTRY_DSN`, `DD_API_KEY`, `NEW_RELIC_LICENSE_KEY`, `ELASTIC_APM_SERVER_URL`, `ELASTIC_APM_SERVER_URLS` or
+  `HONEYCOMB_API_KEY`;
+- `DD_TRACE_ENABLED` set to `true` or `1`;
+- `AVALONIA_TELEMETRY_OPTOUT` set to anything but `1` or `true` (unset is fine).
+
+- **An environment variable configures an APM agent:** `DD_AGENT_HOST`, `DD_TRACE_AGENT_URL` (Datadog),
+  `NEW_RELIC_APP_NAME` (New Relic), `DT_TENANT`, `DT_CONNECTION_POINT` (Dynatrace) or any variable whose name starts
+  with `APPDYNAMICS_` set to anything; `DD_PROFILING_ENABLED` set to anything but empty, `0` or `false`; `DD_ENV` or
+  `DD_SERVICE` (Datadog's service tags) set to anything, each on its own and whatever `DD_TRACE_ENABLED` says. Only
+  these exact names: a name that merely contains one (`DDENV`, `MY_DD_ENV`) is fine.
+
+Names are matched ignoring case. 
+- **The guard itself fails.** Any error inside the guard also exits.
+
+On exit the host writes one line to the error stream (the container log) and the trace log, naming the reason, for
+example `GridSim.Web: telemetry guard: environment variable OTEL_EXPORTER_OTLP_ENDPOINT is set (it configures a telemetry exporter). Exiting with code 78.`
+
+The guard checks what is loaded and configured. It does not watch network traffic.
+
+## Offline operation
+
+The web app starts, runs and stops with no internet connection; it needs one only to be downloaded. The licence is
+checked offline, and every script, style, font and image the pages use is served by the app itself, with no CDN.
+
+The host listens for its own connections. It makes outgoing connections only for a bridge session, when an operator
+has set `GridSim:BridgeEndpoint` (empty by default). The pages never load anything from another origin. A few settings,
+all empty by default, put an address the operator chooses into a page: `Site:ShareImageUrl` (share-card meta tags),
+`Site:OrganisationUrl` and `Site:OrganisationLogoUrl` (a data block), `Site:FooterLinks` (footer links), and
+`Sso:Authority` with `Sso:PublicOrigin` (the single sign-on redirect). None of them makes the host or the page send a
+request; a link or redirect is followed only when the visitor's browser navigates. The full list is in technical
+chapter 35, section Offline operation.
 
 ## Limits
 

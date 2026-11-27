@@ -13,7 +13,7 @@ import json
 import subprocess
 import threading
 
-from ._cli import GridSimError, Result, _RESULT_FLAGS, _floats, canonical, find_cli
+from ._cli import GridSimError, Result, _check_result_flags, _floats, canonical, find_cli
 
 #: The protocol label every response must carry.
 PROTOCOL = "gridsim-rpc/1"
@@ -60,14 +60,40 @@ class SolveResult:
         return f"SolveResult(case={self.case!r}, converged={self.converged}, iterations={self.iterations}, buses={len(self.bus)})"
 
 
-class CaseHandle:
+class _Held:
+    """A case object issued by one session's host: it remembers that session and the host instance (the process the
+    session was running when the case was loaded). A session uses it only when both are its own, so a case of another
+    session, or of the same session before its host was restarted, is refused before anything is sent: level 1 handles
+    are numbered per host (``case-1`` in every host), so the id alone cannot tell them apart."""
+
+    _session = None
+    _host = None
+    released = False
+
+    def _owned_by(self, session, op):
+        """The id, when ``session`` and its current host issued this case; GridSimError (nothing sent, nothing marked)
+        otherwise."""
+        if self._session is not session:
+            raise GridSimError(f"{op}: case {self.handle!r} belongs to another session; use that session (or load the case "
+                               "in this one)", 2)
+        if self._host is not session._host:
+            raise GridSimError(f"{op}: case {self.handle!r} was loaded before this session's host was restarted, and the new "
+                               "host does not hold it; load the case again", 2)
+        if self.released and op != "release":
+            raise GridSimError(f"{op}: case {self.handle!r} has been released", 2)
+        return self.handle
+
+
+class CaseHandle(_Held):
     """A case held by the host: ``handle`` (its id), ``case`` (the model name), ``buses``, ``branches``, ``sha256`` and
     ``identity`` (``files``, ``file`` or ``built-in-name``: what the SHA-256 is of). ``solve()`` re-solves it without
-    reloading; ``release()`` lets the host drop it."""
+    reloading; ``release()`` lets the host drop it. It belongs to the session that loaded it and to that session's host
+    instance: another session, or the same session after its host restarted, refuses it."""
 
     def __init__(self, session, response):
         r = response["result"]
         self._session = session
+        self._host = session._host
         self.handle = r["handle"]
         self.case = r["case"]
         self.buses = r["buses"]
@@ -106,6 +132,7 @@ class Session:
         self._lock = threading.Lock()
         self._stderr = []
         self._proc = None
+        self._host = None
         self.start()
 
     # -- life cycle -------------------------------------------------------------------------------------------------
@@ -120,6 +147,7 @@ class Session:
                                           cwd=self.cwd, env=self.env)
         except OSError as ex:
             raise SessionError(f"could not start {' '.join(cmd)}: {ex}", command=cmd) from ex
+        self._host = object()   # this host instance: a case loaded from it is refused after a restart
         self._drain = threading.Thread(target=self._drain_stderr, args=(self._proc,), daemon=True)
         self._drain.start()
         hello = self.request("hello")
@@ -214,14 +242,22 @@ class Session:
         return CaseHandle(self, self.request("load", case=str(case)))
 
     def solve(self, handle):
-        """Solve a held case (a CaseHandle or its id string); returns a SolveResult."""
-        return SolveResult(self.request("solve", handle=_handle_id(handle)))
+        """Solve a held case (a CaseHandle or its id string); returns a SolveResult. A CaseHandle of another session, or
+        of this session before its host restarted, is refused (GridSimError) before anything is sent."""
+        return SolveResult(self.request("solve", handle=self._handle_id(handle, "solve")))
 
     def release(self, handle):
-        """Release a held case on the host."""
-        self.request("release", handle=_handle_id(handle))
-        if isinstance(handle, CaseHandle):
+        """Release a held case on the host. A CaseHandle of another session, or of this session before its host
+        restarted, is refused (GridSimError): nothing is sent and nothing is marked released."""
+        hid = self._handle_id(handle, "release")
+        self.request("release", handle=hid)
+        if isinstance(handle, _Held):
             handle.released = True
+
+    def _handle_id(self, handle, op):
+        """The id to send for ``handle``: a case object is checked against this session and its host first; a plain
+        id string is sent as it is (the host refuses an id it never issued)."""
+        return handle._owned_by(self, op) if isinstance(handle, _Held) else str(handle)
 
     def stats(self):
         """The host's counters: requests, loads, solves, verb_runs and handles (the evidence a handle is reused)."""
@@ -233,9 +269,7 @@ class Session:
         when the run writes no result."""
         name = canonical(verb)
         argv = [str(a) for a in args]
-        for flag in _RESULT_FLAGS:
-            if flag in argv:
-                raise ValueError(f"{flag} is the wrapper's to give: it writes the result to a temporary file and reads it back")
+        _check_result_flags(name, argv)   # the one check GridSim.run makes (--out passes for OWN_OUT_VERBS)
         fields = {"verb": name, "args": argv}
         if timeout is not None:
             fields["timeout_s"] = timeout
@@ -261,6 +295,3 @@ class Session:
     def __repr__(self):
         return f"Session({self.command!r}, {'open' if self._proc is not None else 'closed'})"
 
-
-def _handle_id(handle):
-    return handle.handle if isinstance(handle, CaseHandle) else str(handle)

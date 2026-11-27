@@ -129,7 +129,7 @@ public sealed class GA7E3Batch2WebTests
 
     private static WebApplicationFactory<Program> Factory(WebLimits? limits, params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-ga7e3b2-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-ga7e3b2-keys-" + Guid.NewGuid().ToString("N"));
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Auth:KeysDirectory", keys);

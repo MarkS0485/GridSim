@@ -124,7 +124,40 @@ def load_export(path):
     schema = doc.get("schema", "")
     if not schema.startswith("gridsim-solve-export/"):
         raise ValueError(f"not a gridsim solve-export (schema={schema!r})")
+    check_result_covers_model(doc)
     return doc
+
+
+def check_result_covers_model(doc):
+    """Require exactly one result row per model bus (external review, RC5).
+
+    The comparison loops over the result rows, so a result that left a bus out (or was empty) compared fewer buses than
+    the network has, and a bus listed twice was compared twice, yet either could pass. Refused here, naming the ids: a
+    duplicated model or result id, a model bus with no result row, and a result row for a bus the model does not have.
+    Returns the number of model buses, which is then the number of buses compared."""
+    model_ids = [b.get("id") for b in ((doc.get("model") or {}).get("buses") or [])]
+    result_ids = [b.get("id") for b in ((doc.get("result") or {}).get("buses") or [])]
+    problems = []
+    for what, ids in (("model", model_ids), ("result", result_ids)):
+        seen, dup = set(), []
+        for bid in ids:
+            if bid in seen and bid not in dup:
+                dup.append(bid)
+            seen.add(bid)
+        if dup:
+            problems.append(f"{len(dup)} {what} bus id(s) listed more than once (first: {dup[:5]})")
+    result_set, model_set = set(result_ids), set(model_ids)
+    missing_ids = [bid for bid in model_ids if bid not in result_set]
+    if missing_ids:
+        problems.append(f"{len(missing_ids)} model bus(es) have no result row (first: {missing_ids[:5]})")
+    extra = [bid for bid in result_ids if bid not in model_set]
+    if extra:
+        problems.append(f"{len(extra)} result row(s) name a bus the model does not have (first: {extra[:5]})")
+    if not model_ids:
+        problems.append("the model has no buses")
+    if problems:
+        raise ValueError("the export's result must hold exactly one row per model bus: " + "; ".join(problems))
+    return len(model_ids)
 
 
 def _num(value, default):
@@ -497,39 +530,74 @@ def gridsim_pinned_buses(doc):
     return out
 
 
-def q_limit_comparison(doc, net):
-    """Compare the two tools' reactive-limit outcomes bus by bus (N243).
+def pandapower_gen_q_by_bus(net):
+    """Bus id -> the reactive output (MVAr) pandapower's generators produce at the bus (one gen row per bus, N243)."""
+    out = {}
+    ids = {idx: bid for bid, idx in _pandapower_bus_ids(net).items()}
+    for gi in net.gen.index:
+        bid = ids.get(int(net.gen.at[gi, "bus"]))
+        out[bid] = out.get(bid, 0.0) + float(net.res_gen.at[gi, "q_mvar"])
+    return out
 
-    A bus pinned by one tool and not the other is a BOUNDARY case, not a disagreement, when GridSim's own generator
-    output there sits within GRIDSIM_Q_LIMIT_TOL_MVA of the limit concerned: GridSim kept it PV with Q a hair past (or
-    on) the limit, pandapower pinned it at the limit, and the two states are the same to that tolerance (gb-network-2224:
-    six units with Qmin = 0 whose bus solves at Q = 0). Returns (gridsim, pandapower, boundary bus ids, agrees)."""
+
+def classify_q_limit_outcomes(gs, pp_, ranges, q_gridsim, q_pandapower):
+    """Sort the buses where the two tools' reactive-limit labels differ into (boundary, disagree), each in id order.
+
+    gs / pp_: bus id -> 'max' / 'min' / 'fixed' for the buses each tool pinned. ranges: bus id -> (qmin, qmax).
+    q_gridsim / q_pandapower: bus id -> the generator reactive output (MVAr) each tool solved at the bus.
+
+    The upper / lower identity is kept (external review, RC5). Two different labels (one tool at Qmax and the other at
+    Qmin, or either against 'fixed') are a disagreement outright, never a boundary case. Only a bus pinned by one tool
+    and left free by the other can be a boundary case, and then the distance is measured from the FREE tool's output to
+    the one limit in dispute, the limit the other tool pinned: within GRIDSIM_Q_LIMIT_TOL_MVA the two states are the
+    same to that tolerance (gb-network-2224: six units with Qmin = 0 whose bus solves at Q = 0). The distance to the
+    other limit is never used: min(|q - qmax|, |q - qmin|) used to let a unit pinned at +10 MVAr by one tool pass as a
+    boundary case against the same unit at -10 MVAr in the other."""
+    boundary, disagree = [], []
+    for bid in sorted(set(gs) | set(pp_), key=str):
+        a, b = gs.get(bid), pp_.get(bid)
+        if a == b:
+            continue
+        qmin, qmax = ranges.get(bid, (None, None))
+        if (a is not None and b is not None) or qmin is None or qmax is None:
+            disagree.append(bid)
+            continue
+        pinned = a if a is not None else b
+        q_free = (q_pandapower if a is not None else q_gridsim).get(bid)
+        limit = float(qmin if pinned == "min" else qmax)   # 'max', or 'fixed' (Qmin = Qmax)
+        if q_free is None or not math.isfinite(q_free) or not math.isfinite(limit):
+            disagree.append(bid)
+            continue
+        (boundary if abs(q_free - limit) <= GRIDSIM_Q_LIMIT_TOL_MVA else disagree).append(bid)
+    return boundary, disagree
+
+
+def q_limit_comparison(doc, net):
+    """Compare the two tools' reactive-limit outcomes bus by bus (N243), through classify_q_limit_outcomes.
+
+    A bus pinned by one tool and not the other is a BOUNDARY case, not a disagreement, when the free tool's generator
+    output there sits within GRIDSIM_Q_LIMIT_TOL_MVA of the limit the other tool pinned: GridSim kept it PV with Q a
+    hair past (or on) the limit, pandapower pinned it at the limit, and the two states are the same to that tolerance.
+    Opposite labels are always a disagreement. Returns (gridsim, pandapower, boundary bus ids, agrees)."""
     from sidecar_common import load_at_voltage
     gs = gridsim_pinned_buses(doc)
     pp_ = pandapower_pinned_buses(net)
     ranges = {r["bus"]: (r["qmin"], r["qmax"]) for r in aggregate_generators(doc["model"])}
     buses = {b["id"]: b for b in doc["model"]["buses"]}
-    solved = {b["id"]: b for b in doc["result"]["buses"]}
-    boundary, disagree = [], []
-    for bid in sorted(set(gs) | set(pp_), key=str):
-        if gs.get(bid) == pp_.get(bid):
-            continue
-        qmin, qmax = ranges.get(bid, (None, None))
-        s = solved.get(bid)
-        if qmin is None or s is None:
-            disagree.append(bid)
-            continue
-        # The reactive power GridSim's generators produce at the bus: the net injection plus the load drawn at the
-        # solved voltage (as NewtonShell.ApplyQLimits measures it).
-        q_gen = float(s["qInjMvar"]) + load_at_voltage(buses[bid], float(s["vm"]))[1]
-        near = min(abs(q_gen - qmax), abs(q_gen - qmin))
-        (boundary if near <= GRIDSIM_Q_LIMIT_TOL_MVA else disagree).append(bid)
+    # The reactive power GridSim's generators produce at each bus: the net injection plus the load drawn at the solved
+    # voltage (as NewtonShell.ApplyQLimits measures it).
+    q_gridsim = {}
+    for s in doc["result"]["buses"]:
+        if s["id"] in buses:
+            q_gridsim[s["id"]] = float(s["qInjMvar"]) + load_at_voltage(buses[s["id"]], float(s["vm"]))[1]
+    boundary, disagree = classify_q_limit_outcomes(gs, pp_, ranges, q_gridsim, pandapower_gen_q_by_bus(net))
     return gs, pp_, boundary, not disagree
 
 
 def diff(doc, tol):
     model = doc["model"]
     result = doc["result"]
+    model_bus_count = check_result_covers_model(doc)   # exactly one result row per model bus (external review, RC5)
     ppc, id_to_row, info = build_ppc(model, result)
     net, pp_tol, pp_iters = solve_pandapower(ppc, model)
 
@@ -583,6 +651,8 @@ def diff(doc, tol):
             max_dva, worst_dva_bus = dva, bid
         rows.append({"bus": bid, "vm_gridsim": b["vm"], "vm_pandapower": vm_pp, "dvm": dvm,
                      "va_gridsim": b["vaDeg"], "va_pandapower": va_pp, "dva_deg": dva})
+    if len(rows) != model_bus_count:
+        raise RuntimeError(f"{len(rows)} buses compared but the model has {model_bus_count}; no verdict can be given")
     max_dva_rad = math.radians(max_dva)
 
     # Q-limit outcome on both sides: the same buses must end pinned at the same limits, or the two tools solved
@@ -606,7 +676,7 @@ def diff(doc, tol):
         "tolerance_deg": math.degrees(tol_rad),
         "allowance": allowance,                  # None, or {dvm_pu, dva_rad, reason}
         "zip_buses": sum(1 for b in model.get("buses", []) if b.get("zip")),   # D-DOC-044
-        "buses_compared": len(rows),
+        "buses_compared": len(rows),             # every model bus, exactly once (check_result_covers_model)
         "max_dvm_pu": max_dvm,
         "max_dva_deg": max_dva,
         "max_dva_rad": max_dva_rad,

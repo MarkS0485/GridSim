@@ -12,6 +12,12 @@ public interface IAdaptiveOde
     /// <summary>Write <c>f(t, y)</c> into <paramref name="dydt"/>. Must be a pure function of its arguments and of the
     /// problem's own mode state (which only changes between steps), and must not touch <paramref name="y"/>.</summary>
     void Derivative(double t, double[] y, double[] dydt);
+
+    /// <summary>How many leading state components are angles in radians (0 when none). The error test gives each of
+    /// them the fixed scale <c>atol + rtol * 1 rad</c>, not one that grows with the angle's own size: an angle has no
+    /// natural zero (it is measured from an arbitrary reference and drifts while the frequency is off nominal), so a
+    /// scale relative to its value would loosen as it drifts.</summary>
+    int AngleStates => 0;
 }
 
 /// <summary>
@@ -64,8 +70,11 @@ public sealed class AdaptiveStepException(string message) : InvalidOperationExce
 /// ones (Dormand and Prince 1980); the tests check the order of the scheme and the estimate against exact solutions.
 /// </para>
 /// <para>
-/// <b>Error norm.</b> <c>err = max_i |y5_i - y4_i| / (atol + rtol * max(|y_i|, |y5_i|))</c>; the step is accepted when
-/// <c>err &lt;= 1</c>.
+/// <b>Error norm.</b> <c>err = max_i |y5_i - y4_i| / sc_i</c> with <c>sc_i = atol + rtol * max(|y_i|, |y5_i|)</c>; the
+/// step is accepted when <c>err &lt;= 1</c>. For the angle states of the problem (<see cref="IAdaptiveOde.AngleStates"/>)
+/// the scale is the fixed <c>sc_i = atol + rtol * 1 rad</c>: the error test then does not depend on where the angles are
+/// measured from, and does not loosen as they drift off frequency. The scale is a per-component constant or a
+/// per-component function; no sum over components is formed, so the norm has no order dependence.
 /// </para>
 /// <para>
 /// <b>Step rule.</b> <c>h' = h * clamp(0.9 * err^(-1/5), 0.2, 5)</c>, limited to the option range: a pure function of the
@@ -80,7 +89,10 @@ public sealed class AdaptiveStepController
     public const int Order = 5;
 
     /// <summary>The scheme as stated in result declarations.</summary>
-    public const string Scheme = "Dormand-Prince 5(4) embedded pair, fifth-order solution propagated; err = max |y5 - y4| / (atol + rtol max(|y|,|y5|)), accept when err <= 1; h' = h clamp(0.9 err^(-1/5), 0.2, 5)";
+    public const string Scheme = "Dormand-Prince 5(4) embedded pair, fifth-order solution propagated; err = max |y5 - y4| / (atol + rtol max(|y|,|y5|)), rotor angles / (atol + rtol x 1 rad), accept when err <= 1; h' = h clamp(0.9 err^(-1/5), 0.2, 5)";
+
+    /// <summary>The fixed reference size (rad) that the relative tolerance is applied to for an angle state.</summary>
+    public const double AngleReferenceRad = 1.0;
 
     private const double Safety = 0.9, MinFactor = 0.2, MaxFactor = 5.0;
 
@@ -140,15 +152,21 @@ public sealed class AdaptiveStepController
         ode.Derivative(t + h, yNew, k7);
         Evaluations += 7;
 
+        int angles = ode.AngleStates;
+        if (angles < 0 || angles > n) throw new ArgumentException("AngleStates must lie between 0 and the problem's dimension.", nameof(ode));
+        double angleScale = _o.AbsoluteTolerance + _o.RelativeTolerance * AngleReferenceRad;
         double err = 0.0;
         for (int i = 0; i < n; i++)
         {
             // y5 - y4 = h * sum (b5 - b4) k  (the seventh stage carries the fourth-order weight only)
             double e = h * (71.0 / 57600.0 * k1[i] - 71.0 / 16695.0 * k3[i] + 71.0 / 1920.0 * k4[i]
                 - 17253.0 / 339200.0 * k5[i] + 22.0 / 525.0 * k6[i] - 1.0 / 40.0 * k7[i]);
-            double scale = _o.AbsoluteTolerance + _o.RelativeTolerance * Math.Max(Math.Abs(y[i]), Math.Abs(yNew[i]));
+            double scale = i < angles ? angleScale : _o.AbsoluteTolerance + _o.RelativeTolerance * Math.Max(Math.Abs(y[i]), Math.Abs(yNew[i]));
             double r = Math.Abs(e) / scale;
-            if (!(r <= err)) err = r;   // a NaN error wins (propagates as non-finite)
+            // A NaN in any component rejects the step (the caller treats infinity as a rejection): a running maximum
+            // would drop a NaN that is followed by a finite value.
+            if (double.IsNaN(r)) return double.PositiveInfinity;
+            if (r > err) err = r;
         }
         if (!double.IsFinite(err)) return double.PositiveInfinity;
         return err;

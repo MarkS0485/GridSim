@@ -119,7 +119,7 @@ public sealed class WebScriptConsoleTests
         Assert.Contains("EXPORT RESULT", export.Message, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(Root(), "x.json")));
 
-        string copy = Path.Combine(Path.GetTempPath(), "gridsim-console-" + Guid.NewGuid().ToString("N") + ".m");
+        string copy = TestTemp.Under("gridsim-console-" + Guid.NewGuid().ToString("N") + ".m");
         File.Copy(Path.Combine(Root(), "data", "matpower", "lib", "case9.m"), copy);
         try
         {
@@ -133,7 +133,7 @@ public sealed class WebScriptConsoleTests
     [Fact]
     public async Task A_private_model_needs_the_private_listing_role_to_load()
     {
-        string baseDir = Path.Combine(Path.GetTempPath(), "gridsim-console-priv-" + Guid.NewGuid().ToString("N"));
+        string baseDir = TestTemp.Under("gridsim-console-priv-" + Guid.NewGuid().ToString("N"));
         string model = Path.Combine(baseDir, "gda-out", "Secret");
         Directory.CreateDirectory(model);
         foreach (string f in Directory.EnumerateFiles(Path.Combine(Root(), "data", "uk"), "*.json")) File.Copy(f, Path.Combine(model, Path.GetFileName(f)));
@@ -250,7 +250,7 @@ public sealed class WebScriptConsoleTests
 
     private static WebApplicationFactory<Program> Factory(params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-console-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-console-keys-" + Guid.NewGuid().ToString("N"));
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Auth:KeysDirectory", keys);

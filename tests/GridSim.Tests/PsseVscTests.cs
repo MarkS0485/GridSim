@@ -24,6 +24,12 @@ public class PsseVscTests
     /// <summary>A revision 33 case: slack bus 1 (345 kV) feeding buses 2 and 3 through 0.01 pu lines; a VSC link from
     /// converter 1 at bus 2 (TYPE 2, a power order <paramref name="order"/> MW drawn from bus 2) to converter 2 at bus 3
     /// (TYPE 1, <paramref name="vdc"/> kV), DC resistance <paramref name="rdc"/> ohms.</summary>
+    // The TYPE 2 DCSET is written as -order (it was +order). Proof: the PSS/E data format defines DCSET for TYPE 2 as the
+    // power demand, "a positive value specifies that the converter is feeding active power into the AC network at bus
+    // ibus" (quoted verbatim by PowerFlowData.jl and InterPSS). The reader now negates it into DcSetpoint, the MW drawn
+    // from the bus (P_inj = -DcSetpoint, VscDcLinks). So "order MW drawn" is DCSET = -order in the file: minimal case
+    // order = 200 gives DCSET = -200, DcSetpoint = +200 and P_inj = -200 MW at bus 2, the same model as before, so every
+    // expected value in this class and in PsseFactsTests stays as it was.
     internal static string Case(double order = 200, double vdc = 300, double rdc = 2, string loss1 = "500, 2, 100", string loss2 = "500, 2, 100",
         int mode1 = 2, double acset1 = 0.95, int mode2 = 1, double acset2 = 1.02, string q2 = "300, -300", string smax1 = "0, 0", double pwf1 = 1.0,
         int type1 = 2, int type2 = 1, int remot2 = 0, int mdc = 1) => $"""
@@ -45,8 +51,8 @@ public class PsseVscTests
         0 / END OF AREA DATA, BEGIN TWO-TERMINAL DC DATA
         0 / END OF TWO-TERMINAL DC DATA, BEGIN VSC DC DATA
         'VSC A', {mdc}, {I(rdc)}, 1, 1
-        2, {type1}, {mode1}, {I(type1 == 1 ? vdc : order)}, {I(acset1)}, {loss1}, {smax1}, {I(pwf1)}, 300, -300, 0, 100
-        3, {type2}, {mode2}, {I(type2 == 1 ? vdc : order)}, {I(acset2)}, {loss2}, 0, 0, 1, {q2}, {remot2}, 100
+        2, {type1}, {mode1}, {I(type1 == 1 ? vdc : -order)}, {I(acset1)}, {loss1}, {smax1}, {I(pwf1)}, 300, -300, 0, 100
+        3, {type2}, {mode2}, {I(type2 == 1 ? vdc : -order)}, {I(acset2)}, {loss2}, 0, 0, 1, {q2}, {remot2}, 100
         0 / END OF VSC DC DATA, BEGIN IMPEDANCE CORRECTION DATA
         0 / END OF IMPEDANCE CORRECTION DATA, BEGIN MULTI-TERMINAL DC DATA
         0 / END OF MULTI-TERMINAL DC DATA, BEGIN MULTI-SECTION LINE DATA

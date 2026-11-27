@@ -137,6 +137,11 @@ public static class MultiMachineSubtransient
         /// reactances here); a machine built directly without it takes the leakage-free <c>Xq / Xd</c> of its own
         /// fields.</summary>
         public double EffectiveSaturationQAxisScale => SaturationQAxisScale ?? Xq / Xd;
+
+        /// <summary>WP3a (RC5): the GENTPJ stator-current saturation term Kis on the system base (pu flux per pu current):
+        /// saturation is evaluated on <c>|psi''| + Kis |It|</c>. 0 (the default) is GENROU, taking the historical
+        /// expression operand for operand.</summary>
+        public double SaturationKis { get; init; }
     }
 
     /// <summary>Per-machine trajectory: rotor angle, speed and the four flux states through the run.</summary>
@@ -163,6 +168,10 @@ public static class MultiMachineSubtransient
         /// rescue (WECC REGC_A units, DECISIONS D38); a rescue that also fails counts in
         /// <see cref="ConverterIterationFailures"/>. Always 0 without WECC units.</summary>
         public int ConverterRescuedSteps { get; init; }
+
+        /// <summary>WP6 (RC5): the recorded states of each network device or generator-held SVC / STATCOM with an RMS model
+        /// (one sample per trace sample), in unit order; null when the run has none.</summary>
+        public IReadOnlyList<RmsDeviceTrace>? Devices { get; init; }
     }
 
     /// <summary>A temporary reduced admittance applied over a fault window (onset, cleared), as in the
@@ -178,6 +187,10 @@ public static class MultiMachineSubtransient
     /// <summary>Fraction of a step within which a network stage time counts as reached (R249): absorbs the
     /// floating-point rounding of a stage time formed as onset + clearing, never a genuine sub-step offset.</summary>
     public const double StageTimeToleranceSteps = 1e-6;
+
+    /// <summary>DYN-10: the largest number of steps one run may take, 100,000,000 (1,000 s at 10 us). The traces are sized
+    /// from the count up front, so a larger run is refused by name rather than overflowing the cast.</summary>
+    public const int MaxRunSteps = 100_000_000;
 
     /// <summary>Cap on the per-step fixed-point iteration between converter currents and network voltages
     /// (R166). A step that does not settle within it is counted in the result's converter-iteration failures.</summary>
@@ -287,6 +300,32 @@ public static class MultiMachineSubtransient
         IReadOnlyList<IRmsFieldController?>? fieldControllers = null,
         IReadOnlyList<RmsMachineTrip>? machineTrips = null,
         Action<double, IRmsNetwork, Complex[], Complex[]>? stepObserver = null)
+        => SimulateCore(machines, h, d, pm, efd, delta0, eqp0, edp0, eqpp0, edpp0, network, f0, stepSeconds, durationSeconds,
+            stages, slipLimitRad, exciters, voltageReferencePu, mechanicalPower, converters, synchronismMachines, fieldControllers,
+            machineTrips, stepObserver, unitRelays: null);
+
+    /// <summary>
+    /// The body of the network overload of <c>Simulate</c> (the one that takes an <see cref="IRmsNetwork"/>)
+    /// (moved here unchanged), with RC5 stage 6's optional unit relays (<see cref="FullModelUnitRelays"/>). With
+    /// <paramref name="unitRelays"/> null (every public entry) each line of the historical kernel runs as before: every new
+    /// statement below is guarded by it, no array changes size and no operation changes order.
+    /// </summary>
+    internal static Result SimulateCore(
+        IReadOnlyList<Machine> machines,
+        double[] h, double[] d, double[] pm, double[] efd,
+        double[] delta0, double[] eqp0, double[] edp0, double[] eqpp0, double[] edpp0,
+        IRmsNetwork network,
+        double f0, double stepSeconds, double durationSeconds,
+        IReadOnlyList<RmsNetworkStage>? stages, double slipLimitRad,
+        IReadOnlyList<Sexs>? exciters, double[]? voltageReferencePu,
+        Func<int, double, double>? mechanicalPower,
+        IReadOnlyList<RmsConverterUnit>? converters,
+        int synchronismMachines,
+        IReadOnlyList<IRmsFieldController?>? fieldControllers,
+        IReadOnlyList<RmsMachineTrip>? machineTrips,
+        Action<double, IRmsNetwork, Complex[], Complex[]>? stepObserver,
+        FullModelUnitRelays? unitRelays,
+        RmsStepSchedule? schedule = null)
     {
         ArgumentNullException.ThrowIfNull(machines);
         ArgumentNullException.ThrowIfNull(network);
@@ -332,7 +371,35 @@ public static class MultiMachineSubtransient
         }
 
         double ws = 2.0 * Math.PI * f0;
-        int steps = (int)Math.Round(durationSeconds / stepSeconds);
+        // DYN-10: the step count is checked against a stated cap before the cast (a ratio above int.MaxValue wrapped to a
+        // negative count and the trace lists were then sized with it).
+        double stepRatio = Math.Round(durationSeconds / stepSeconds);
+        if (!(stepRatio <= MaxRunSteps))
+            throw new ArgumentOutOfRangeException(nameof(durationSeconds), durationSeconds,
+                FormattableString.Invariant($"the run is {stepRatio:R} steps of {stepSeconds:R} s, more than the {MaxRunSteps} a run may take."));
+        int steps = (int)stepRatio;
+
+        // WP21 (RC5): a step schedule (null on every historical path, which then runs every line below unchanged). Its sample
+        // times and steps replace k * stepSeconds and stepSeconds; the governor hook must take the step per call.
+        double[]? schedTimes = null, schedSteps = null;
+        IRmsStepSizedHook? stepSized = null;
+        if (schedule is not null)
+        {
+            // The events are placed first, so an event inside a coarse window is reported as such even when that window is
+            // also not a whole number of its steps.
+            if (stages is not null)
+                for (int s = 0; s < stages.Count; s++) schedule.RequireEventPlacement(stages[s].AtSeconds, $"RMS network stage {s}");
+            if (machineTrips is not null)
+                foreach (RmsMachineTrip tr in machineTrips)
+                    if (tr is not null) schedule.RequireEventPlacement(tr.AtSeconds, $"the trip of machine {tr.Machine}");
+            (schedTimes, schedSteps) = schedule.Expand(durationSeconds);
+            steps = schedSteps.Length;
+            if (unitRelays is not null)
+                throw new ArgumentException("A step schedule cannot run the units' own relays: their timers count steps of one fixed size.", nameof(schedule));
+            if (mechanicalPower is not null)
+                stepSized = mechanicalPower.Target as IRmsStepSizedHook
+                    ?? throw new ArgumentException("A step schedule needs a mechanical-power hook that takes the step on each call; this one was built for one fixed step.", nameof(schedule));
+        }
 
         // R061 rest (CF4): the trip time of each machine (null when no trips: the historical path). Fail loud on a
         // malformed list: a machine out of range, a trip time that is not finite or negative, a machine tripped twice,
@@ -361,6 +428,12 @@ public static class MultiMachineSubtransient
             if (!anyLeft)
                 throw new ArgumentException("every machine of the synchronism set is tripped; at least one machine must "
                     + "stay connected for the run to have a synchronism verdict.", nameof(machineTrips));
+        }
+        if (unitRelays is not null && tripAt is null)
+        {
+            // RC5 stage 6: unit relays trip machines during the run, so the trip times exist from the start (none yet).
+            tripAt = new double[n];
+            Array.Fill(tripAt, double.PositiveInfinity);
         }
         double tripEps = stepSeconds * StageTimeToleranceSteps;   // the same "reached" rule as a network stage
         bool Tripped(int i, double atTime) => tripAt is not null && atTime + tripEps >= tripAt[i];
@@ -461,6 +534,14 @@ public static class MultiMachineSubtransient
                 foreach (RmsNetworkStage st in stages) if (t + stageEps >= st.AtSeconds) net = st.Network;
             return net;   // the latest stage whose time has arrived; the base network before any
         }
+        // RC5 stage 6: the index of the scheduled stage in force (-1: the base network), the same rule as NetAt.
+        int StageIndexAt(double t)
+        {
+            int idx = -1;
+            if (stages is not null)
+                for (int s = 0; s < stages.Count; s++) if (t + stageEps >= stages[s].AtSeconds) idx = s;
+            return idx;
+        }
 
         // R115: per-step buffers hoisted out of the time loop (they were allocated afresh every step). Each is fully
         // overwritten before it is read in a step and never retained past it (the traces copy values), so reusing
@@ -470,6 +551,8 @@ public static class MultiMachineSubtransient
         var eqpp = new double[n];
         var edpp = new double[n];
         double[]? pmBuffer = mechanicalPower is not null ? new double[n] : null;
+        // WP3b (RC5): a hook that reads the electrical power (GGOV1) is fed it below; null for every historical hook.
+        IRmsElectricalPowerFeed? powerFeed = mechanicalPower?.Target as IRmsElectricalPowerFeed;
         var swing = new SwingWorkspace(n, nc);
         // R115 (1.95.074): the network solve outputs and the EMF phasors are written into these instead of new
         // arrays on every solve. vSpare is the converter-voltage buffer the next solve writes into; the iteration
@@ -534,7 +617,16 @@ public static class MultiMachineSubtransient
 
         for (int k = 0; k <= steps; k++)
         {
-            double t = k * stepSeconds;
+            double t = schedTimes is null ? k * stepSeconds : schedTimes[k];
+            // WP21: the step taken from this sample (the plain step without a schedule; at the last sample, the last step).
+            double dtK = schedSteps is null ? stepSeconds : schedSteps[Math.Min(k, schedSteps.Length - 1)];
+            if (schedSteps is not null)
+            {
+                // The "reached" tolerance of stages and trips is a millionth of the step in force, as on the plain path.
+                stageEps = dtK * StageTimeToleranceSteps;
+                tripEps = dtK * StageTimeToleranceSteps;
+                stepSized?.UseStep(dtK);
+            }
             for (int i = 0; i < n; i++)
             {
                 eqp[i] = fEqp[i].Output; edp[i] = fEdp[i].Output;
@@ -544,6 +636,16 @@ public static class MultiMachineSubtransient
             // The network this step. With converters, their phase-locked currents and terminal voltages are
             // iterated to the algebraic fixed point, then held (like the EMFs) across the step.
             IRmsNetwork net = NetAt(t);
+            if (unitRelays is not null)
+            {
+                // RC5 stage 6: no machine left (scheduled and relay trips together): the run ends at the previous step.
+                if (!unitRelays.AnyConnected(t, tripAt!, synchronismMachines >= 0 ? Math.Min(synchronismMachines, n) : n))
+                {
+                    unitRelays.EndNoMachine(t, (k - 1) * stepSeconds);
+                    break;
+                }
+                net = unitRelays.NetworkAt(StageIndexAt(t), net);   // the scheduled network, less every relay-tripped machine
+            }
             SubtransientNetworkInterface.EmfPhasorsInto(eqpp, edpp, delta, eStep);
             Complex[] e = eStep;
             Complex[] im;
@@ -658,7 +760,11 @@ public static class MultiMachineSubtransient
                 double idNow = im[j].Real * sn - im[j].Imaginary * cs;
                 Machine mf = machines[j];
                 double satNow = 0.0;
-                if (mf.Saturation is { } sf) (satNow, _) = sf.GenrouIncrements(eqpp[j], edpp[j], mf.EffectiveSaturationQAxisScale);
+                if (mf.Saturation is { } sf)
+                    (satNow, _) = mf.SaturationKis == 0.0
+                        ? sf.GenrouIncrements(eqpp[j], edpp[j], mf.EffectiveSaturationQAxisScale)
+                        : sf.GentpjIncrements(eqpp[j], edpp[j], mf.EffectiveSaturationQAxisScale,
+                            mf.SaturationKis * Math.Sqrt(im[j].Real * im[j].Real + im[j].Imaginary * im[j].Imaginary));
                 return eqp[j] + (mf.Xd - mf.Xdp) * idNow + satNow;
             }
 
@@ -674,7 +780,7 @@ public static class MultiMachineSubtransient
                     if (Tripped(i, t)) continue;
                     double tr = e[i].Real + xppSys[i] * im[i].Imaginary;
                     double ti = e[i].Imaginary - xppSys[i] * im[i].Real;
-                    field[i] = exciters[i].Step(voltageReferencePu![i] - Math.Sqrt(tr * tr + ti * ti), stepSeconds);
+                    field[i] = exciters[i].Step(voltageReferencePu![i] - Math.Sqrt(tr * tr + ti * ti), dtK);
                 }
             }
             else if (fieldControllers is not null)
@@ -698,6 +804,18 @@ public static class MultiMachineSubtransient
                         fieldReference[i] = Math.Sqrt(tr0 * tr0 + ti0 * ti0) + fc0.EquilibriumErrorPu(efd[i]);
                     }
                 }
+                else if (k == 0 && !ReferenceEquals(net, network))
+                {
+                    // RC5 (2.1.118, widened 2.1.120): with the caller's references, an exciter that finishes its
+                    // initialisation on the first step's terminal measurements (see RmsExciter.FinishesInitialisationOnFirstStep)
+                    // would fold a disturbance in force at t = 0 into its steady state. Refuse it, as the automatic references
+                    // above are refused. Read-only: a run with no disturbance at t = 0 never reaches this throw.
+                    for (int i = 0; i < n; i++)
+                        if (fieldControllers[i] is RmsExciter { FinishesInitialisationOnFirstStep: true } fx)
+                            throw new InvalidOperationException($"{fx.Kind} on machine {i} finishes its initialisation on the first "
+                                + "step's terminal measurements, which must come from the undisturbed base network; schedule the "
+                                + "disturbance after t = 0.");
+                }
                 for (int i = 0; i < n; i++)
                 {
                     if (fieldControllers[i] is not { } fc) continue;   // held field for this machine
@@ -706,11 +824,11 @@ public static class MultiMachineSubtransient
                     double ti = e[i].Imaginary - xppSys[i] * im[i].Real;
                     if (fc is IRmsTerminalFieldController { NeedsTerminalQuantities: true } ftc)
                         field[i] = ftc.Step(fieldReference[i] - Math.Sqrt(tr * tr + ti * ti), omega[i], FieldCurrent(i),
-                            new Complex(tr, ti), im[i], stepSeconds);
+                            new Complex(tr, ti), im[i], dtK);
                     else if (fc is IRmsFieldCurrentController { NeedsFieldCurrent: true } fcc)
-                        field[i] = fcc.Step(fieldReference[i] - Math.Sqrt(tr * tr + ti * ti), omega[i], FieldCurrent(i), stepSeconds);
+                        field[i] = fcc.Step(fieldReference[i] - Math.Sqrt(tr * tr + ti * ti), omega[i], FieldCurrent(i), dtK);
                     else
-                        field[i] = fc.Step(fieldReference[i] - Math.Sqrt(tr * tr + ti * ti), omega[i], stepSeconds);
+                        field[i] = fc.Step(fieldReference[i] - Math.Sqrt(tr * tr + ti * ti), omega[i], dtK);
                 }
             }
 
@@ -725,8 +843,8 @@ public static class MultiMachineSubtransient
                 {
                     // Unsaturated: the historical arithmetic, operand for operand (the increment is an exact 0.0).
                     double se = 0.0;
-                    fEqp[i].Step(field[i] - (mc.Xd - mc.Xdp) * id0 - se, stepSeconds);
-                    fEdp[i].Step((mc.Xq - mc.Xqp) * iq0, stepSeconds);
+                    fEqp[i].Step(field[i] - (mc.Xd - mc.Xdp) * id0 - se, dtK);
+                    fEdp[i].Step((mc.Xq - mc.Xqp) * iq0, dtK);
                 }
                 else
                 {
@@ -734,12 +852,16 @@ public static class MultiMachineSubtransient
                     // SubtransientMachine.SaturationCurve.GenrouIncrements), frozen at the start-of-step subtransient EMFs.
                     // SubtransientInit seeds the field and the rotor angle with exactly these terms, so a saturated fleet
                     // starts at equilibrium. (It used to be E'q*Se(E'q) on the d-axis only.)
-                    (double satD, double satQ) = sat.GenrouIncrements(eqpp[i], edpp[i], mc.EffectiveSaturationQAxisScale);
-                    fEqp[i].Step(field[i] - (mc.Xd - mc.Xdp) * id0 - satD, stepSeconds);
-                    fEdp[i].Step((mc.Xq - mc.Xqp) * iq0 - satQ, stepSeconds);
+                    // WP3a (RC5): GENTPJ adds Kis |It| (start-of-step current) to the flux magnitude; Kis = 0 is GENROU's call.
+                    (double satD, double satQ) = mc.SaturationKis == 0.0
+                        ? sat.GenrouIncrements(eqpp[i], edpp[i], mc.EffectiveSaturationQAxisScale)
+                        : sat.GentpjIncrements(eqpp[i], edpp[i], mc.EffectiveSaturationQAxisScale,
+                            mc.SaturationKis * Math.Sqrt(im[i].Real * im[i].Real + im[i].Imaginary * im[i].Imaginary));
+                    fEqp[i].Step(field[i] - (mc.Xd - mc.Xdp) * id0 - satD, dtK);
+                    fEdp[i].Step((mc.Xq - mc.Xqp) * iq0 - satQ, dtK);
                 }
-                fEqpp[i].Step(eqp[i] - (mc.Xdp - mc.Xdpp) * id0, stepSeconds);
-                fEdpp[i].Step(edp[i] + (mc.Xqp - mc.Xqpp) * iq0, stepSeconds);
+                fEqpp[i].Step(eqp[i] - (mc.Xdp - mc.Xdpp) * id0, dtK);
+                fEdpp[i].Step(edp[i] + (mc.Xqp - mc.Xqpp) * iq0, dtK);
             }
 
             // Governor: mechanical power read from the start-of-step speed and held across the step's RK4.
@@ -747,6 +869,18 @@ public static class MultiMachineSubtransient
             if (mechanicalPower is not null)
             {
                 pmStep = pmBuffer!;
+                if (powerFeed is not null)
+                {
+                    // RC5 (2.1.120): a governor that reads the electrical power (GGOV1 with Rselect 1 or a supervisory load
+                    // controller) sets Pref, Pmwset and its power transducer from the first step's power. With a disturbance
+                    // in force at t = 0 that power comes from the disturbed network, so refuse it. Read-only: a run with no
+                    // disturbance at t = 0 never reaches this throw.
+                    if (k == 0 && !ReferenceEquals(net, network))
+                        throw new InvalidOperationException("GGOV1 reading the electrical power (Rselect 1 or a supervisory load "
+                            + "controller) sets its references from the first step's electrical power, which must come from the "
+                            + "undisturbed base network; schedule the disturbance after t = 0.");
+                    for (int i = 0; i < n; i++) powerFeed.SetElectricalPower(i, e[i].Real * im[i].Real + e[i].Imaginary * im[i].Imaginary);
+                }
                 for (int i = 0; i < n; i++) pmStep[i] = mechanicalPower(i, omega[i]);
             }
             if (tripAt is not null)
@@ -757,13 +891,19 @@ public static class MultiMachineSubtransient
                 for (int i = 0; i < n; i++) if (Tripped(i, t)) pmStep[i] = 0.0;
             }
 
+            // RC5 stage 6: the units' own relays read this step's solve; an operating stage disconnects its machine from the
+            // next step on (tripAt). A trip of the last connected machine ends the run here.
+            if (unitRelays is not null
+                && !unitRelays.Evaluate(k, t, net, e, im, ic, omega, pmStep, d, h, tripAt!, synchronismMachines >= 0 ? Math.Min(synchronismMachines, n) : n))
+                break;
+
             // Converter controls advance from the start-of-step terminal voltage.
-            for (int u = 0; u < nu; u++) convState[u].Step(t, vConv[nodeOf[u]], vConv, stepSeconds);
+            for (int u = 0; u < nu; u++) convState[u].Step(t, vConv[nodeOf[u]], vConv, dtK);
 
             // Coupled rotor swing by RK4, subtransient EMFs and converter currents frozen; Pe recomputed each
             // sub-step from the network.
             Array.Copy(ic, icFrozen, nc);
-            SwingStep(n, delta, omega, eqpp, edpp, pmStep, d, h, net, icFrozen, ws, stepSeconds, swing);
+            SwingStep(n, delta, omega, eqpp, edpp, pmStep, d, h, net, icFrozen, ws, dtK, swing);
         }
 
         var traces = new List<MachineTrace>(n);
@@ -778,7 +918,11 @@ public static class MultiMachineSubtransient
                     cV[c], cP[c], cQ[c], cIp[c], cIq[c], cDip[c])
                     { RegulatedBusVoltagePu = cReg[c], RegulatedBus = regNode[c] >= 0 ? converters[c].WeccMeasurement!.RegulatedBus : 0 });
         }
-        return new Result(traces, inSync, convTraces, converterIterationFailures) { ConverterRescuedSteps = rescuedSteps };
+        // WP6 (RC5): the device models' recorded states (read only; null without device models).
+        List<RmsDeviceTrace>? deviceTraces = null;
+        for (int u = 0; u < nu; u++)
+            if (convState[u] is IRmsDeviceStateRecorder { Trace: { } dtr }) (deviceTraces ??= new List<RmsDeviceTrace>()).Add(dtr);
+        return new Result(traces, inSync, convTraces, converterIterationFailures) { ConverterRescuedSteps = rescuedSteps, Devices = deviceTraces };
     }
 
     /// <summary>The network's converter nodes: the distinct converter buses in first-appearance order, then any WECC

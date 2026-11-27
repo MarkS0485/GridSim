@@ -96,7 +96,7 @@ public sealed class KindSpecRegistry
         var sources = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (string path in Directory.EnumerateFiles(kindsDir, "*" + KindFileSuffix, SearchOption.TopDirectoryOnly)
                                           .OrderBy(p => p, StringComparer.Ordinal))
-            sources[Path.GetFileName(path)] = File.ReadAllText(path);
+            sources[Path.GetFileName(path)] = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         return FromSources(sources, schemas);
     }
 

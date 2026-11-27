@@ -69,6 +69,7 @@ Every relay returns `RelayVerdict` records:
 | `TimeToTripS` | Operating time in seconds where the element has a curve or a definite time; `0.0` for instantaneous; `null` where there is none. |
 | `Basis` | The plain-language sentence, for example `Vm 0.000 pu at bus 7 is below the 0.80 pu undervoltage pickup`. |
 | `Confidence` | The grade above. |
+| `UnitStage` | RC5: the unit relay stage judged (each setting's value, grade, layer and provenance); null on every network verdict. |
 
 A relay that scans many locations (every bus, every branch) emits every operating verdict plus the single closest
 non-operating one (`VerdictCollector`: the non-operating verdict with the largest, least negative, margin), so a
@@ -76,6 +77,147 @@ report can say both where an element fires and how near the next location is to 
 system elements and return one `System` verdict each. The ground group returns one `System` verdict when there is no
 sequence study, and the collector pattern per branch when there is one; each of these has one
 `System` verdict.
+
+### Per-unit relays (RC5)
+
+A generating unit carries relays of its own (27 / 59, 32, 40, 81U / 81O, 81R, 78), with settings that belong to the unit:
+a `unitProtection` class default plus the unit's own values, resolved per setting (unit, else class, else absent; the
+case format is in [chapter 28](<0028 The v2 JSON schema.md#unit-protection-rc5>)). When the model carries them
+(`GridModel.UnitProtection` not null), `Assess` appends one verdict per resolved stage of every unit, in unit order and
+in the fixed stage order 27-1, 27-2, 59-1, 59-2, 32, 40-1, 40-2, 81U-1, 81U-2, 81O-1, 81O-2, 81R, 78, AFTER every
+network verdict (`UnitRelayAssessment`, `src/GridSim.Core/Protection/UnitRelayAssessment.cs`). A model without them
+gets exactly the verdict list it got before: same rows, same order, same values.
+
+Each unit verdict has `LocationKind = Generator`, `LocationId` the unit's index in `Model.Generators` (in service),
+`LocationName` the unit name, `Device` the stage (`81U-1`, `32`, `40-2`, ...), `Function` the stage name with `(unit)`,
+`TimeToTripS` the stage's definite delay, and `UnitStage` the resolved stage: each setting's value, grade
+(`placeholder` for CuratedPlaceholder, else `sourced`), layer (`unit`, `template '<name>'`, with any preset) and
+provenance. The basis names all of it: `unit Embedded C relay 32: the unit absorbs 20 MW, past the 2.5 MW reverse-power
+pickup (0.05 pu of 50 MVA); settings: pickup 0.05 pu of rating (sourced, unit, Synthetic); delay 2 s (sourced, unit,
+Synthetic)`. `Confidence` is `Grounded` when every setting the stage uses is sourced, `Generic` when any is a
+placeholder, `NotCheckable` when the stage cannot be judged.
+
+| Stage | Reads | Operates when |
+|---|---|---|
+| 27-n / 59-n | the unit's terminal bus voltage (lowest / highest phase in a sequence study); for a unit with a unit transformer folded in (`unitTransformerXPu` = X_t on its rating) the bus is the transformer's HV side and the relay's VTs are on the generator side, so it reads the machine terminal \|V_t\| = \|V_hv + j X_t I\| (I = conj(S / V) from the solved P and Q, the 40 convention); not checkable on a fault snapshot (no unit current) or without a solved output | below / above the pickup |
+| 32 | the unit's real output (the solved output for a unit on the slack bus, as the network 32 element) | it absorbs more than `reversePowerPu` x its rating |
+| 40-n | the apparent impedance at the terminals, Z = \|V\|^2 / conj(S) in pu of the unit's rating, from the solved P and Q; for a unit with a unit transformer folded in (`unitTransformerXPu` = X_t on its rating) the solved bus is the transformer's HV side and the relay sees the machine terminal, Z_t = Z + j X_t (V_t = V_hv + j X_t I, I the unit's current into the network) | Z lies inside the mho circle centred at -j(offset + diameter / 2) with radius diameter / 2 |
+| 81U-n / 81O-n | the operating frequency, or a trajectory's minimum / maximum | below / above the pickup; not checkable when the unit's `relayNominalHz` is not the system's nominal |
+| 81R | a trajectory's peak \|df/dt\| | above the pickup; not checkable on a steady state |
+| 78 | a trajectory's peak vector shift | above the pickup; not checkable without a voltage-angle transient |
+
+**Time delays.** A steady solved state is sustained, so a stage beyond its pickup operates whatever its delay. A fault
+snapshot (`Assess` given fault currents or a sequence study) and a trajectory summary (its extremes) carry no duration:
+a stage with a delay above zero that is beyond its pickup there is reported `NotCheckable`, its basis saying which pickup
+was crossed and that the delay cannot be judged; it is never reported as a trip. A stage with no delay is judged as
+usual. The RMS loop (opt-in) times the delays.
+
+**40 on a steady state** judges the operating point only (a unit absorbing reactive power at light load can sit inside
+the circle); it is not a field-failure transient, and the basis says so.
+
+`UnitRelayAssessment.AssessTrajectory(units, trajectory, systemNominalHz)` is the per-unit twin of
+`ProtectionAssessment.AssessTrajectory`: every unit's 81U, 81O, 81R and 78 on a dynamic run's trajectory (a
+centre-of-inertia run gives every unit the same frequency), with the other stages not checkable (no solved network);
+`LocationId` is -1. `gridsim trip` prints it after the system frequency elements when the case carries unit protection.
+
+### Unit relays in the RMS loop (RC5, opt-in)
+
+The passive verdicts above judge a state or a trajectory summary. The adaptive RMS path (RC4 R4-14) can also run every
+unit's own relays in the loop, so a unit that its own relay trips is disconnected during the run and the run continues
+(a cascade of unit trips). It is opt-in and off by default: `RmsTransientStability.StudyEventsAdaptive` is unchanged,
+and the new entry point `RmsTransientStability.StudyEventsAdaptiveWithUnitRelays` (or, in a dynamics study,
+`DynamicsAdaptiveRequest.UnitProtection`) turns it on. With it off every adaptive number and every byte of the adaptive
+evidence is what it was before (`UnitRelayInLoopTests` pins the SHA-256 of the evidence JSON taken on the kernel before
+any of this code existed); with it on and no stage picking up, every time, angle, speed, event and step count is also
+unchanged (the stage fractions stay 0 and the error norm is a maximum norm).
+
+| Stage | Reads, at every state of the run | Model |
+|---|---|---|
+| 81U-n / 81O-n | the machine's electrical frequency, F0 (1 + w) | definite time |
+| 81R | F0 dw/dt from the swing equation itself (no relay measurement window is modelled) | definite time |
+| 27-n / 59-n | the magnitude of the unit's terminal bus voltage (the sparse network's bus solve); for a unit with a unit transformer folded in (`unitTransformerXPu` = X_t on its rating) the bus is the transformer's HV side and the relay's VTs are on the generator side, so it reads the machine terminal \|V_t\| = \|V_hv + j X_t I\| (I the machine current of the same state, X_t on the system base) | definite time |
+| 32 | the machine's electrical power Re(E conj(I)) in MW, against `reversePowerPu` x its rating | definite time |
+| 78 | the jump of the terminal bus voltage angle across a network change (a scheduled event, a branch relay trip, a unit trip), solved on the same state before and after | instantaneous |
+| 40 | not evaluated: the adaptive path is the classical swing with its EMF frozen, so there is no field to lose and no terminal impedance after a field failure; listed with that reason | - |
+
+**Definite time.** As the R4-14 disc model, with the operate time equal to the stage's delay: while the quantity is beyond
+the pickup the stage's fraction grows at 1 / delay; it resets to 0 at once when the quantity comes back (the G59 / G99
+RoCoF note: the delay resets when RoCoF falls below the threshold); the stage operates when the fraction reaches 1. A delay
+not longer than the event tolerance operates on pickup. Pick-up, drop-out and trip are located by bisection to the event
+tolerance, as relay events are, and applied at the high end of the bracket. At one instant scheduled events come first,
+then branch relays (device order), then unit relays (unit order, then stage order), pick-up before trip.
+
+**A trip** disconnects the unit's machine (no current, no mechanical power), records an event with source `unit-relay`,
+and the run continues. A trip that would leave no connected machine stops the run at that instant with the reason in
+`StopReason`; nothing after it is computed. Units not integrated as machines (converter plant, held units, power-flow
+devices), out-of-service units and frequency stages written for another nominal frequency are listed in
+`UnitRelaysNotEvaluated` with the reason. Each stage's record (`AdaptiveUnitRelayRecord`) gives the unit, the stage,
+whether and when it picked up and tripped, the quantity at the trip and the settings phrase (grades and sources).
+Critical clearing time rows do not run unit relays.
+
+The run is single-threaded and a pure function of its inputs, so it is bit-identical across repeats and row parallelism
+(`UnitRelayInLoopTests`).
+
+### Unit relays in the full-model RMS engine (RC5, opt-in)
+
+The fixed-step full-model engine (`MultiMachineSubtransient`: six-state machines with flux decay, their exciters and
+governors) can run every unit's own relays too, including a dynamic loss of excitation (40). It is opt-in and off by
+default: `RmsTransientStability.StudyEvents` and every public `MultiMachineSubtransient.Simulate` entry are unchanged, and
+the new entry point `RmsTransientStability.StudyEventsWithUnitRelays` turns it on (in a dynamics study, unit protection
+adds a full-model companion run of each events row). With it off every array size, operation and its order is the
+existing one: all new work sits behind one guard. `FullModelKernelDigestTests` pins the SHA-256 of full-model runs (every
+sample's time, angle, speed and flux states, every step's field voltage, the verdict and the events, held-field and with
+SEXS exciters and TGOV1 governors, and the dynamics-study rows) taken on the kernel before any of this code existed; with
+relays on and no stage operating, every number of the run is the same bits as without them.
+
+| Stage | Reads, at every step start from that step's network solve | Model |
+|---|---|---|
+| 81U-n / 81O-n | the machine's electrical frequency, F0 (1 + w) | definite time |
+| 81R | F0 dw/dt from the swing equation with the step's mechanical and electrical power (no measurement window) | definite time |
+| 27-n / 59-n | the terminal voltage magnitude, V_t = E'' - jX'' I (the voltage of the unit's network bus); for a unit with a unit transformer folded in (`unitTransformerXPu` = X_t on its rating) the bus is the transformer's HV side and the relay's VTs are on the generator side, so it reads the machine terminal \|V_t\| = \|V_hv + j X_t I\| (X_t on the system base, = \|E'' - j X''_machine I\|), the same V_t as 40 | definite time |
+| 32 | the electrical power Re(E'' conj(I)) in MW, against `reversePowerPu` x its rating | definite time |
+| 40-1 / 40-2 | the apparent impedance at the machine terminals Z = V_t / I, in pu of the unit rating (Z on the system base x MBase / BaseMva); with a unit transformer folded into the reactances the network bus is its HV side, so V_t = V_hv + j X_t I (X_t on the system base, the machine's generator-side terminal, = E'' - j X''_machine I), inside the offset mho zone: centre -j(offset + diameter / 2), radius diameter / 2 | definite time |
+| 78 | the jump of the V_t angle across a network change (scheduled event or unit trip), at the instant of the change: the previous step's network solved again with the same EMFs and converter currents | instantaneous |
+
+**Event timing on a fixed step.** The engine has no sub-step events, so a stage is judged on the step grid: it picks up at
+the first step at which it is beyond its pickup and stays so, and operates at the first step at least its delay later,
+(k - k_p) h + h 10^-6 >= delay; it never operates early and the operate time resolution is one step h. A step not beyond
+resets it (the G59 / G99 reset note). A delay of 0 s operates on the pickup step. The counting is integer arithmetic on
+the step index, so it is the same on every CPU and run.
+
+**A trip** disconnects the unit from the next step on (one step after the operation, the engine's event resolution, so
+the step's solve and converter commit are never redone): the network in force is the scheduled stage rebuilt without the
+machine, its mechanical power is zero, its field is held and it is no longer judged for synchronism, exactly as a
+scheduled generator trip. A unit trips once (at one step units in order, stages in order). A trip that would leave no
+connected machine ends the run at that step with the reason (`EndReason`, `EndedAtSeconds`); nothing after it is computed.
+
+**Not evaluated, with the reason:** units not integrated as machines, out-of-service units, frequency stages written for
+another nominal frequency, a 78 with a delay, and a 40 on a unit with no rating (MBase) or with no field dynamics
+(Xd not above X'd). On a unit with a unit transformer folded in, 40 and 27 / 59 are evaluated at the machine terminal
+(above); a 27 / 59 record then carries `VoltageMeasuredAt` naming the voltage it read (the member is absent when the stage
+read the network bus, so such records are unchanged). Each record (`FullModelUnitRelayRecord`) gives the unit, the stage, whether it operated and tripped,
+the pickup, operate and disconnection times, the quantity read (for 40 the apparent R and X) and the settings phrase.
+Critical clearing time rows do not run unit relays. Tests: `FullModelUnitRelayTests` (a field failure trips 40 after its
+delay and the run continues; a normal fault-and-clear does not; 81U, 81R, 27 and 78 act; the last-machine end; quiet relays
+change no bit; repeats and row parallelism give the same bits).
+
+**A RAW-bound study** (`dynamics-study`) names a unit by its PSS/E machine key `<bus>:<id>`: the generator record's bus
+number `I` and machine ID `ID` as the RAW reader stores them (quotes removed, surrounding blanks trimmed, case kept, so
+`2:1` and `2:G1` are different machines; the same key the study's `machine` references and the DYR binding use). The RAW
+reader names no machine, so when unit protection is asked for, the runner gives each unnamed generator its key as its name
+for the adaptive run only (`DynamicsStudyRunner.UnitKeyed`; a generator that has a name keeps it); only names change, so
+every number of the run is the one the same machines give under any other names (`UnitProtectionFileTests`). A unit the
+case does not have is refused before any work, every unknown unit listed with the key rule. The settings come from a unit
+protection file (`gridsim-unit-protection/1`, `schemas/unitprotection/unit-protection.schema.json`, Core
+`UnitProtectionFile`): `unitProtection` templates in the v2 library template shape and one entry per unit (`unit`,
+`template`, and optionally the unit's own `params` with a `reason` and a `provenance`). It is validated against its schema
+together with the v2 schema set, and its templates and per-unit values go through the v2 loader's own code (the local
+template checks and the per-unit override resolution), so the same templates and values resolve exactly as in a v2 case. On
+the command line: `gridsim dynamics-study <study.json> --unit-protection <file>`, or `adaptive.unitProtection` (`path` and
+`sha256`) in the study file (CLI reference, `dynamics-study`). Without an adaptive run the CLI passes the file as
+`DynamicsStudyRequest.UnitProtection` (init-only; it drives the full-model companion run alone, and giving it beside
+`DynamicsAdaptiveRequest.UnitProtection` is an input error); `DynamicsStudyResult.FullModelUnitRelays` is then the only
+addition, the same rows as with the adaptive run.
 
 ### The operating quantities
 
@@ -139,7 +281,7 @@ is the order of verdicts in `ProtectionReport.Verdicts`.
 | 8 | `DistanceRelay` | 21, `21-Z1` to `21-Z3` | Distance | each line | `ZApp` at each end, pu | `ZApp` inside a forward zone |
 | 9 | `UnderFrequencyRelay` | 81U | Underfrequency | system | run minimum frequency, else `Model.FrequencyHz`, Hz | `f < UnderFrequencyHz` |
 | 10 | `OverFrequencyRelay` | 81O | Overfrequency | system | run maximum frequency, else `Model.FrequencyHz`, Hz | `f > OverFrequencyHz` |
-| 11 | `RocofRelay` | 81R | RoCoF | system | trajectory peak `|df/dt|`, Hz/s | `r > RocofTripHzPerS` |
+| 11 | `RocofRelay` | 81R | RoCoF | system | trajectory peak `\|df/dt\|`, Hz/s | `r > RocofTripHzPerS` |
 | 12 | `VectorShiftLomRelay` | 78 | Vector shift / LoM | system | trajectory peak vector shift, deg | `vs > VectorShiftTripDeg` |
 | 13 | `DifferentialRelay` | 87 | Differential | each bus | `DiffCurrentPu`, pu | `d > DifferentialPickupPu` |
 | 14 | `GroundFaultRelay` | 50N, 51N, 21N, 46 | Ground / negative-sequence | see below | needs `Sequence` | see below |
@@ -434,7 +576,14 @@ other setting is at its default on the command line. The verb prints the header,
   at bus N` for the other types).
 
 With `--fault-bus` the same settings are assessed on the faulted state, and the fault current and Thevenin impedance
-print first. The full flag set is in [0019 CLI reference.md](<../manual/0019 CLI reference.md#protection-check>) and
+print first.
+
+When the case carries unit protection (RC5), a `unit relays` table follows the `not evaluated` line: one row per unit
+stage with the unit, the stage, the function, the verdict (`WOULD OPERATE`, `holds` or `not checkable`), the quantity,
+the pickup, the delay and the settings phrase (each value's grade, layer and provenance tag), then one line per
+not-checkable stage giving its basis. The result file gets a `unit_relays` table with the same rows and each setting's
+grade, layer and provenance note. Unit verdicts that operate join the operating-elements table. A case without unit
+protection prints exactly what it printed before. The full flag set is in [0019 CLI reference.md](<../manual/0019 CLI reference.md#protection-check>) and
 [the `fault` verb](<../manual/0019 CLI reference.md#fault>).
 
 ### End of a plain solve
@@ -873,6 +1022,10 @@ to that line when `ConvertersConverged` is false; the faulted state is then mark
 | `src/GridSim.Core/Protection/ProtectionContext.cs` | `ProtectionContext` | The operating quantities computed once; per-branch settings; the phase quantities of an unbalanced study. |
 | `src/GridSim.Core/Protection/ProtectionRelays.cs` | `IProtectionRelay`, `ProtectionRegistry`, `VerdictCollector`, the 14 relay classes | Each relay's equation; the registry order. |
 | `src/GridSim.Core/Protection/ProtectionAssessment.cs` | `ProtectionAssessment` | `Assess`, `AssessThreePhaseFault`, `AssessUnbalancedFault`. |
+| `src/GridSim.Core/Protection/UnitProtection.cs` | `UnitProtectionSet`, `UnitProtectionClass`, `UnitProtectionAssignment`, `UnitProtectionLayer`, `ResolvedUnitProtection`, `UnitRelayStage`, `UnitSetting` | RC5 per-unit relay settings: resolution (unit, template, absent), presets and their sources, the checks. |
+| `src/GridSim.Core/Protection/UnitRelayAssessment.cs` | `UnitRelayAssessment` | RC5: each unit's own relays on a solved state or a trajectory. |
+| `src/GridSim.Core/Dynamics/Models/FullModelUnitRelays.cs` | `FullModelUnitRelays`, `FullModelUnitRelayRecord` | RC5: unit relay stages (incl. 40) in the full-model fixed-step RMS engine; `RmsTransientStability.StudyEventsWithUnitRelays` is the entry. |
+| `src/GridSim.Core/Dynamics/Models/Adaptive/UnitRelaysInLoop.cs` | `UnitRelaysInLoop`, `AdaptiveUnitRelayRecord`, `UnitRelayNotEvaluated` | RC5: unit relay stages in the adaptive RMS loop (the kernel's `IAdaptiveUnitTripTopology` disconnects the machine). |
 | `src/GridSim.Core/Protection/FaultAnalysis.cs` | `FaultAnalysis`, `FaultType`, `FaultResult`, `UnbalancedFaultResult`, `BranchSequenceCurrents`, `ConverterFaultInfeed` | The balanced Thevenin study, the unbalanced sequence-network study, the converter fixed point. |
 | `src/GridSim.Core/Protection/FaultNetworkSystem.cs` | `FaultNetworkSystem` | The factored fault admittance: the sparse LU at every size (dense LU as a test oracle only); singular fails loud. |
 | `src/GridSim.Core/Protection/ProtectionCascade.cs` | `ProtectionCascade`, `CascadeStep`, `CascadeResult` | The trip, re-solve, re-assess chain. |

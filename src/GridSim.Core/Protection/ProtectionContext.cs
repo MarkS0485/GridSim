@@ -21,6 +21,17 @@ public sealed class ProtectionContext
     /// distance relay sees is infinite.</summary>
     public const double MinApparentPowerPu = 1e-12;
 
+    /// <summary>ANA-02: a distance loop voltage at or below this fraction of the loop's nominal voltage (1 pu for an earth
+    /// loop, sqrt(3) pu for a phase loop) has collapsed: a bolted fault at the relay point, where V / I is rounding noise
+    /// (about 1e-17 pu) with an arbitrary angle and no zone or direction can be read from it. 1e-6 is ten orders above
+    /// double rounding of a solved fault voltage and three or more below any voltage a relay resolves (a VT and relay
+    /// measure to about 0.1 % of nominal), so no fault with a real fault impedance or a real line length between it and the
+    /// relay is affected. The test is on the loop VOLTAGE: the apparent impedance of such a loop can look far above rounding
+    /// when its current is a rounding residue too (a bolted fault on the HV bus of a transformer that nothing feeds from
+    /// the LV side: V about 1.9e-16 pu, I about 3.7e-10 pu, so V / I about 5e-7 pu), and the voltage still decides it. A placed distance relay then decides direction from the prefault (memory) voltage, as numerical
+    /// relays do; the generic 21, which has no memory voltage, reads the end as not measured.</summary>
+    public const double MinDistanceLoopVoltageFraction = 1e-6;
+
     public GridModel Model { get; }
     public PowerFlowResult Result { get; }
     public ProtectionSettings Settings { get; }

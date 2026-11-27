@@ -138,7 +138,10 @@ public class MachineAdmittanceSimdBitIdentityTests
     /// <paramref name="battery"/> every fifth generator is converter plant, so the run goes through ConverterNetwork.</summary>
     internal static MultiMachineSubtransient.Result DenseRun(GridModel b, bool battery)
     {
-        var gens = b.Generators.Select((g, k) => battery && k % 5 == 4 ? g with { Type = "battery" } : g).ToList();
+        // DYN-04 (2.1.161): a converted unit keeps its MATPOWER MBase of 100 MVA but carries up to 450 MW, so its solved
+        // current was above Imax x rating and the old run clamped it from t = 0 (a start that was not the solved point);
+        // such a start is now refused. The converted units are rated at 1000 MVA so they start at their solved point.
+        var gens = b.Generators.Select((g, k) => battery && k % 5 == 4 ? g with { Type = "battery", MBase = Math.Max(g.MBase, 1000.0) } : g).ToList();
         GridModel m = b.CopyWith(generators: gens);
         PowerFlowResult pf = new NewtonRaphsonPowerFlow().Solve(m);
         Assert.True(pf.Converged);
@@ -160,11 +163,14 @@ public class MachineAdmittanceSimdBitIdentityTests
     // AB8F39EF..., 118/battery 3BA9F372... -> E846BB1C..., 300/no battery BB764EAA... -> 21EBA8DC...
     // (hashes abbreviated). The SIMD-vs-scalar theory above still proves the kernel.
     [InlineData("118", false, "3C0846CF039B6C858E5BF9252B3CED853B918DC78921C374DFED793C5DEF483B")]
-    [InlineData("118", true, "75D2647AACC6DDA9A37E9C5C438502A4FDEEDB3BE37E2F78B392557685329E51")]
+    // Moved 2.1.161 (DYN-04): the 118/battery run rates its converted units at 1000 MVA (see DenseRun), since a start above
+    // Imax x rating is refused; the old run clamped those units from t = 0. Before 75D2647A..., after 2FE2EF72....
+    [InlineData("118", true, "2FE2EF72D8A3D54A1E575AE5B86C9AC19FF596DE387591A4867773FE65D067DE")]
     [InlineData("300", false, "7976B27AECAA13292463EE10D737D27E40602BBADA442C1FDBF57562C60E1856")]
     public void Dense_rms_runs_are_bit_identical_to_the_scalar_kernel(string name, bool battery, string recordedBefore)
     {
         GridModel b = name == "118" ? IeeeCases.Case118() : IeeeCases.Case300();
-        Assert.Equal(recordedBefore, Digest(DenseRun(b, battery)));
+        string digest = Digest(DenseRun(b, battery));
+        Assert.True(recordedBefore == digest, $"{name}/{battery}: digest {digest}, pinned {recordedBefore}");
     }
 }

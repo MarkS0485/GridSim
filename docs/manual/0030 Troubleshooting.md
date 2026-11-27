@@ -374,10 +374,10 @@ Fix. Treat the voltages as not regulated. Fix the base solve, or inspect which t
 
 ### A Q-limit study reports `MaxIterations` although the last Newton pass converged
 
-Cause. The Q-limit outer loop hit `MaxQLimitPasses` (default 12) right after a bus changed type. The engines solve once
+Cause. The Q-limit outer loop hit `MaxQLimitPasses` (default 100) right after a bus changed type. The engines solve once
 more and report non-convergence rather than accept voltages computed with the previous bus types.
 
-Fix. Raise `MaxQLimitPasses` (a value below 1 is refused), or look for a bus that oscillates between PV and PQ.
+Fix. Raise `MaxQLimitPasses` (a value below 1 is refused; `pf --max-q-passes` sets it), or look for a bus that oscillates between PV and PQ.
 
 ### A case that converged before no longer converges
 
@@ -927,7 +927,7 @@ and 0. A folder without an `exports/` directory of `slice-*.json` or `state-*.js
 with a log line.
 
 Fix. Keep the CSV beside the `exports/` folder, or re-run the verb that wrote the run
-([ch. 8, Loading a pre-solved run](<0008 The desktop app.md#loading-a-pre-solved-run>)).
+([ch. 8, Replaying a run directory](<0008 The desktop app.md#replaying-a-run-directory>)).
 
 ### A desktop launch flag has no effect
 

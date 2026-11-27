@@ -101,7 +101,10 @@ public static class FrequencyDependentYBus
 
             BranchStamp s = opt.LongLineCorrection && br.B != 0.0
                 ? LongLineStamp(br, h, rFactor, shiftSign)
-                : AdmittanceStamp.Branch(br.R, br.X, br.B, br.TapRatio, shiftSign * br.PhaseShiftDeg, h, rFactor);
+                // ANA-07: a series capacitor's X and a negative (reactor) B scale by 1/h, not h (sign rule; a transformer's
+                // negative star-leg X stays inductive). The values are scaled here and stamped at order 1, so h = 1 is unchanged.
+                : AdmittanceStamp.Branch(br.R, AdmittanceStamp.SeriesReactanceAtOrder(br.X, h, br.IsTransformer),
+                    AdmittanceStamp.ShuntSusceptanceAtOrder(br.B, h), br.TapRatio, shiftSign * br.PhaseShiftDeg, 1.0, rFactor);
 
             builder.Add(f, f, s.Yff.Real, s.Yff.Imaginary);
             builder.Add(t, t, s.Ytt.Real, s.Ytt.Imaginary);
@@ -265,8 +268,9 @@ public static class FrequencyDependentYBus
     /// </summary>
     private static BranchStamp LongLineStamp(Branch br, double h, double rFactor, double shiftSign)
     {
-        Complex z = new Complex(br.R * rFactor, h * br.X);   // series impedance at order h
-        Complex y = new Complex(0, h * br.B);                // total shunt admittance at order h
+        // ANA-07: the same sign rule as the lumped stamp (capacitive X and inductive B scale by 1/h).
+        Complex z = new Complex(br.R * rFactor, AdmittanceStamp.SeriesReactanceAtOrder(br.X, h, br.IsTransformer));   // series impedance at order h
+        Complex y = new Complex(0, AdmittanceStamp.ShuntSusceptanceAtOrder(br.B, h));                // total shunt admittance at order h
         Complex gl = Complex.Sqrt(z * y);
 
         Complex zc, ycHalf;

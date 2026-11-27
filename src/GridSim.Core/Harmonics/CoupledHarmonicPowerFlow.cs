@@ -66,9 +66,9 @@ public sealed record CoupledHarmonicResult(
 /// solve, update the injection from the coupling model, re-solve, until the voltage settles. The network
 /// physics stays grounded; only the coupling model is assumed, and it is provenance-tagged.
 ///
-/// <para><b>Experimental</b> (R062, October 2026): Core API and tests only; no CLI verb or production caller. Still
-/// needs: a measured or vendor converter coupling model (the only model, NortonCouplingModel, is a
-/// CuratedPlaceholder), a CLI surface, and validation against an independent coupled harmonic solver.</para>
+/// <para><b>Experimental</b> (R062, October 2026): reached from the CLI by the <c>harmonic-pf</c> verb, which prints and
+/// writes an EXPERIMENTAL label. Still needs: a measured or vendor converter coupling model (the only model,
+/// NortonCouplingModel, is a CuratedPlaceholder) and validation against an independent coupled harmonic solver.</para>
 /// </summary>
 public static class CoupledHarmonicPowerFlow
 {

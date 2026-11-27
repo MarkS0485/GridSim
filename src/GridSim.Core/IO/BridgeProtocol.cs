@@ -8,7 +8,7 @@ using GridSim.Core.Simulation;
 namespace GridSim.Core.IO;
 
 /// <summary>
-/// The wire schema for the GDA<->GridSim WebSocket bridge. A single socket carries three message kinds,
+/// The wire schema for the GDA&lt;->GridSim WebSocket bridge. A single socket carries three message kinds,
 /// each tagged by a <c>type</c> discriminator:
 /// <list type="bullet">
 /// <item><c>topology</c> - sent once at the start of a stream: <c>{type,model:{...}}</c>, where <c>model</c>
@@ -328,7 +328,7 @@ public static class BridgeProtocol
         if (c is null) return null;
         string who = g.Name ?? $"at bus {g.Bus}";
         if (!Enum.TryParse(c.Model, ignoreCase: true, out GeneratorCostModel model) || !Enum.IsDefined(model)
-            || int.TryParse(c.Model, out _))
+            || int.TryParse(c.Model, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _))
             throw new InvalidDataException(
                 $"Generator {who}: {field}.model '{c.Model}' is not a cost model (expected one of {string.Join(", ", Enum.GetNames<GeneratorCostModel>())}).");
         if (c.Coefficients is null)

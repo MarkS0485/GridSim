@@ -64,12 +64,14 @@ public class DcPowerFlowAndPvCurveTests
         }
         for (int i = 0; i < r.BusIds.Count; i++)
         {
-            double residual = r.PInjMw[i] - outflow.GetValueOrDefault(r.BusIds[i]);
+            // B33: the bus shunt conductance Gs is a constant-power DC load (MATPOWER Pg - Pd - Gs = sum of outflows).
+            double residual = r.PInjMw[i] - m.Buses[i].Gs - outflow.GetValueOrDefault(r.BusIds[i]);
             Assert.True(Math.Abs(residual) < 1e-6, $"case{n} bus {r.BusIds[i]}: KCL residual {residual:R} MW");
         }
 
         // The reference picks up the island's imbalance, so the island's injections sum to zero (to rounding).
-        Assert.True(Math.Abs(r.PInjMw.Sum()) < 1e-6, $"case{n}: island injections sum to {r.PInjMw.Sum():R} MW");
+        double gsTotal = m.Buses.Sum(b => b.Gs);   // B33: the reference also supplies the island's Gs
+        Assert.True(Math.Abs(r.PInjMw.Sum() - gsTotal) < 1e-6, $"case{n}: island injections sum to {r.PInjMw.Sum():R} MW against Gs {gsTotal:R} MW");
         DcIslandBalance isl = r.Islands[0];
         Assert.Equal(m.Buses.Sum(b => b.Pd), isl.LoadMw, 9);
         Assert.Equal(m.Generators.Sum(g => g.Pg), isl.ScheduledGenerationMw, 9);

@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr313NpgFallbackNarrowTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-gr313-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-gr313-" + Guid.NewGuid().ToString("N"));
     private const string Dataset = "LTDS_Appendix_3_Circuit_Data";
 
     public void Dispose()

@@ -104,9 +104,9 @@ internal static class ProbabilisticCommand
             if (outPath is not null && (File.Exists(outPath) || Directory.Exists(outPath)))
                 throw new IOException("Result path already exists; use a new path for this invocation.");
             byte[] bytes = File.ReadAllBytes(studyPath);
-            using JsonDocument document = JsonDocument.Parse(bytes);
+            using JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes));
             TransmissionSecurityCommand.CheckDuplicates(document.RootElement);
-            Request req = JsonSerializer.Deserialize<Request>(bytes, TransmissionSecurityCommand.Json) ?? throw new InvalidDataException("Study is null.");
+            Request req = JsonSerializer.Deserialize<Request>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, TransmissionSecurityCommand.Json) ?? throw new InvalidDataException("Study is null.");
             if (req.SchemaVersion != 1) throw new InvalidDataException("schemaVersion must be 1.");
             if (req.Methods is null || req.Methods.Length == 0) throw new InvalidDataException("At least one method is required.");
             string domain = req.Domain ?? req.Study;

@@ -76,7 +76,7 @@ public sealed record MeasurementSet
     /// real case. A set larger than this is refused with <see cref="InvalidDataException"/>.</param>
     public static MeasurementSet Load(string path, DateTime? utcNow = null, int maxMeasurements = DefaultMaxMeasurements)
     {
-        string json = File.ReadAllText(path);
+        string json = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         // D-DOC-070: the file must declare its schema; a file with no "schema" member used to load as a set because the
         // Schema property defaults to SchemaId.
         GridSim.Core.IO.SchemaMember.Require(json, path, SchemaId, "measurement set");
@@ -177,9 +177,9 @@ public sealed record MeasurementSet
 
         // GR-528: a set that declares a base of 0, a negative one or NaN skipped the base check entirely; it is refused.
         if (!(BaseMva > 0) || !double.IsFinite(BaseMva))
-            problems.Add($"set baseMva {BaseMva} is not a finite number above 0");
+            problems.Add(FormattableString.Invariant($"set baseMva {BaseMva} is not a finite number above 0"));
         else if (model.BaseMva > 0 && Math.Abs(BaseMva - model.BaseMva) > BaseMvaMatchToleranceMva)
-            problems.Add($"set baseMva {BaseMva} does not match model BaseMva {model.BaseMva}");
+            problems.Add(FormattableString.Invariant($"set baseMva {BaseMva} does not match model BaseMva {model.BaseMva}"));
 
         var busIds = new HashSet<int>(model.Buses.Select(b => b.Id));
         for (int i = 0; i < Measurements.Count; i++)
@@ -187,9 +187,9 @@ public sealed record MeasurementSet
             Measurement m = Measurements[i];
             string where = $"measurement #{i} ({m.Kind} @ {m.Describe()})";
             if (!double.IsFinite(m.Value))
-                problems.Add($"{where}: value {m.Value} is not finite");
+                problems.Add(FormattableString.Invariant($"{where}: value {m.Value} is not finite"));
             if (!double.IsFinite(m.Sigma) || m.Sigma <= 0)
-                problems.Add($"{where}: sigma {m.Sigma} must be finite and > 0");
+                problems.Add(FormattableString.Invariant($"{where}: sigma {m.Sigma} must be finite and > 0"));
 
             if (m.IsBranch)
             {

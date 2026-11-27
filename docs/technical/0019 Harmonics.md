@@ -61,8 +61,10 @@ sections below list the contribution of each element.
 `TapRatio` and phase shift `PhaseShiftDeg`, `AdmittanceStamp.Branch(R, X, B, tap, shift, h, rFactor)` computes:
 
 ```
-ys  = 1 / (R * rFactor + j * h * X)             series admittance: reactance scales with h
-bc  = j * h * B / 2                             half the line charging at each end: scales with h
+ys  = 1 / (R * rFactor + j * X(h))              series admittance
+bc  = j * B(h) / 2                              half the line charging at each end
+X(h) = X * h   when X >= 0 or the branch is a transformer;   X / h   when X < 0 on a line (a series capacitor)
+B(h) = B * h   when B >= 0;   B / h   when B < 0 (a reactor or magnetising branch folded into B)
 a   = TapRatio  (a = 1 when TapRatio <= 0)
 T   = a * exp(j * s * theta)                    theta = PhaseShiftDeg in radians, s = +1 or -1 (see "Sequence")
 Yff = (ys + bc) / a^2
@@ -72,7 +74,14 @@ Ytf = -ys / T
 ```
 
 The four terms are added to cells `(from,from)`, `(to,to)`, `(from,to)` and `(to,from)`. The tap ratio is independent
-of `h`. The fundamental `YBus` uses the same stamp with `h = 1`, `rFactor = 1`.
+of `h`. The fundamental `YBus` uses the same stamp with `h = 1`, `rFactor = 1`. An inductive reactance is omega L and
+scales with `h`; a capacitive one is -1 / (omega C) and scales with `1/h`, the rule the bus shunts below follow. A
+transformer branch keeps `h` whatever its sign: a negative transformer reactance is the star-equivalent leg of a
+three-winding unit, a combination of leakage inductances, not a capacitor. The long-line correction uses the same `X(h)`
+and `B(h)`. A series-compensated line held as one branch whose net X is below 0 (X_L - X_C < 0) is scaled as a pure
+capacitor; the right value, X_L h - X_C / h, needs the two parts, which the branch does not carry. The three-phase harmonic
+builder (`ThreePhaseHarmonicPenetration`) does not yet apply the sign rule: it scales every element of its phase
+impedance matrices by h, so a three-phase series capacitor is still out by h squared at order h.
 
 **Skin effect (opt-in).** The series-resistance factor is
 
@@ -195,7 +204,7 @@ Harmonic penetration is a complex linear solve, so the subsystem has its own int
 
 | Implementation | Method | Role |
 |---|---|---|
-| `DenseComplexLuSolver` | Dense complex LU with partial pivoting; singular when a pivot is at or below `NumericTolerances.RelativePivotFloor` (1e-12) times the largest `|A_ij|`; null on singular. | The oracle: exact reference for small cases. |
+| `DenseComplexLuSolver` | Dense complex LU with partial pivoting; singular when a pivot is at or below `NumericTolerances.RelativePivotFloor` (1e-12) times the largest `\|A_ij\|`; null on singular. | The oracle: exact reference for small cases. |
 | `RealExpandedComplexSolver` | The real `2n x 2n` expansion below, solved by the real `SparseLu` (Gilbert-Peierls with a minimum-degree fill-reducing ordering). | The default. Scales to `gb-full` (3539 buses). |
 | `SparseComplexBiCgStabSolver` | Native complex Jacobi-preconditioned BiCGSTAB with Hermitian inner products; relative residual tolerance `1e-12`, iteration cap `4n + 200`; null on breakdown or stagnation. | A third independent path that cross-validates the other two. |
 
@@ -306,7 +315,10 @@ solve bit for bit. The same triplen refusal as penetration applies. A singular `
 `ShuntAdmittance(h) = g + j * b * h` and `Injection = baseInjection`, so the iteration settles on the first pass. Its
 provenance is `CuratedPlaceholder`: the admittance and the voltage-to-emission law describe a converter's internal
 control, which the grid model does not contain. The network physics folding it in is grounded; the converter model is
-the assumption and is labelled. The coupled flow is Core API with no CLI verb and is marked experimental.
+the assumption and is labelled. The coupled flow is marked experimental. The `harmonic-pf` verb runs it on the
+`HarmonicModelOptions.Study` network with a `NortonCouplingModel(g, b)` from `--norton-g` and `--norton-b` (both 0 by
+default, which leaves `Y(h)` unmodified), refuses spectrum components outside the analysed orders, and divides THD by
+the solved fundamental (`HarmonicIndices.SolvedFundamentalVm`).
 
 ### Three-phase harmonic penetration
 
@@ -371,8 +383,32 @@ residual    = sqrt( sum_i w[i] * |z[i] - sum_j H[i][j] x[j]|^2 )
 It throws `ArgumentException` when `m < s`, `SingularHarmonicNetworkException` for a singular `Y(h)`, and
 `InvalidOperationException` when the Gram matrix is singular to working precision (candidate sources the measurements
 cannot distinguish). It never returns a zeroed source. The options default to the bare model
-(`new HarmonicModelOptions()`), not `Study`; pass `Study` to estimate on the study network. The estimator is Core API
-with no CLI verb and is marked experimental.
+(`new HarmonicModelOptions()`), not `Study`; pass `Study` to estimate on the study network. The estimator is marked
+experimental.
+
+`HarmonicStateEstimateAnalysis.Analyse` adds the bad-data statistics without changing the estimate. It calls `Estimate`,
+rebuilds the same `H` (one factorisation of `Y(h)`, the unit right-hand sides in candidate order) and computes:
+
+```
+V           = sum_j zcol_j x_j                       the estimated voltage at every bus
+r_i         = z_i - sum_j H[i][j] x_j                the residual of measurement i
+G           = H^H W H
+Omega_ii    = sigma_i^2 - H[i] G^-1 H[i]^H           the residual variance of each real part
+rN_i        = |r_i| / sqrt(Omega_ii)                 the normalised residual (none when Omega_ii <= 1e-9 sigma_i^2)
+J           = sum_i w[i] |r_i|^2                     the square of the estimator's residual norm
+dof         = 2 (m - s)
+threshold   = chi-square quantile at 0.99 for dof    (exact at 1 and 2, Wilson-Hilferty above)
+bad data    = J > threshold
+```
+
+`sigma` is the standard deviation of each of the real and imaginary parts, so `J` follows chi-square with `2 (m - s)`
+degrees of freedom when the errors are Gaussian. With one bad measurement in otherwise exact data, the residual is
+`Omega W e`, and by Cauchy-Schwarz the largest normalised residual is at the bad measurement unless two columns of
+`Omega` are parallel. A candidate set the estimator refuses as unobservable is reported with `Observable = false`.
+
+The `harmonic-se` verb reads a `gridsim-harmonic-meas/1` file (`HarmonicMeasurementSet`: strict keys, `takenUtc`
+required and not in the future, the base checked against the case, every bus checked; a `currents` key is refused because
+the estimator has no branch current measurement) and runs `Analyse` on the `Study` network for each order.
 
 ### Indices
 
@@ -566,7 +602,7 @@ accepted), and `--sources`, a `gridsim-harmonics/1` file (written from the expor
 | Coupled iteration cap | 50 | passes | Passes before `Converged = false`. | `CoupledHarmonicPowerFlow.Solve` parameter `maxIter` |
 | Norton conductance | 0.05 | pu | Default converter shunt conductance. | `NortonCouplingModel` constructor |
 | Estimator sigma | 1e-3 | pu | Default measurement standard deviation. | `HarmonicVoltageMeasurement.Sigma` |
-| Dense pivot floor | 1e-12 times max `|A_ij|` | relative | Singular threshold of the dense oracle. | `NumericTolerances.RelativePivotFloor` |
+| Dense pivot floor | 1e-12 times max `\|A_ij\|` | relative | Singular threshold of the dense oracle. | `NumericTolerances.RelativePivotFloor` |
 | BiCGSTAB tolerance | 1e-12 | relative | Complex BiCGSTAB residual tolerance. | `NumericTolerances.DefaultComplexKrylovTolerance` |
 | Forward-inference horizon | 169 | hours | Newest permitted `takenUtc` lag. | `ForwardInferenceGuard.HorizonHours` |
 | Heavy-model gate | 1500 | buses | Web tab and scheduled job skip larger cases. | `PresentationLimits.HeavyModelBusLimit`, `CycleOptions.HarmonicsBusLimit` |

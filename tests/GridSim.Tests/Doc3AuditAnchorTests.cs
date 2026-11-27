@@ -23,7 +23,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Doc3AuditAnchorTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc3-audit-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc3-audit-" + Guid.NewGuid().ToString("N"));
 
     public Doc3AuditAnchorTests() => Directory.CreateDirectory(_dir);
 
@@ -303,10 +303,17 @@ public sealed class Doc3AuditAnchorTests : IDisposable
             foreach ((string k, string v) in s) b.UseSetting(k, v);
         });
 
+        // 2.1.074 RC-4-Fixes (agreed with Mark): a host with no resident estimator keeps its own access log, so it now starts and
+        // writes nothing until a denial (AccessDenialAuditOwnLogTests); a log in a folder that does not exist is refused.
         using (WebApplicationFactory<Program> noRealtime = F(("Audit:LogPath", LogPath)))
         {
-            var ex = Assert.ThrowsAny<Exception>(() => noRealtime.CreateClient());
-            Assert.Contains("Audit:LogPath is set, but this host runs no resident estimator", Flatten(ex), StringComparison.Ordinal);
+            using HttpClient started = noRealtime.CreateClient();
+        }
+        using (WebApplicationFactory<Program> noFolder = F(("Audit:LogPath", Path.Combine(_dir, "no-such-folder", "audit.log"))))
+        {
+            var ex = Assert.ThrowsAny<Exception>(() => noFolder.CreateClient());
+            Assert.Contains("Audit:LogPath", Flatten(ex), StringComparison.Ordinal);
+            Assert.Contains("folder does not exist", Flatten(ex), StringComparison.Ordinal);
         }
         using (WebApplicationFactory<Program> anchorOnly = F(("Audit:AnchorPath", LogPath + ".anchor")))
         {

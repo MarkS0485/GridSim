@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "gridsim": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--quiet",
+        "--script",
+        "${CLAUDE_PLUGIN_ROOT}/server/main.py"
+      ],
+      "env": {
+        "GRIDSIM_MCP_CLI": "${user_config.gridsim_cli}",
+        "GRIDSIM_MCP_LICENCE_FILE": "${user_config.licence_file}",
+        "GRIDSIM_MCP_WORKSPACE": "${user_config.workspace}",
+        "GRIDSIM_MCP_ENABLE_COMPARE": "${user_config.enable_compare}",
+        "GRIDSIM_MCP_HARNESS": "${user_config.harness_path}",
+        "GRIDSIM_MCP_ENABLE_CASELAB": "${user_config.enable_caselab}",
+        "GRIDSIM_MCP_ENABLE_REBUILD": "${user_config.enable_rebuild}",
+        "GRIDSIM_MCP_REBUILD_DIR": "${user_config.rebuild_dir}"
+      }
+    }
+  }
+}

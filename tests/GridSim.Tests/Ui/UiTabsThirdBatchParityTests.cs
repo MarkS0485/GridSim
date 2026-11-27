@@ -40,7 +40,7 @@ public sealed class UiTabsThirdBatchParityTests : IDisposable
 
     public static TheoryData<string> Cases => new() { "case9", "uk" };
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-ui-audit-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-ui-audit-{Guid.NewGuid():N}");
 
     public UiTabsThirdBatchParityTests() => Directory.CreateDirectory(_dir);
 

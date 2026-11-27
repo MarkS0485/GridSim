@@ -368,7 +368,7 @@ public class SchemaValidatorTests
     [Fact]
     public void Parse_file_names_the_file_on_bad_json()
     {
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-v2-bad-" + Guid.NewGuid() + ".json");
+        string path = TestTemp.Under("gridsim-v2-bad-" + Guid.NewGuid() + ".json");
         File.WriteAllText(path, "{ \"a\": 1, \"a\": 2 }");
         try
         {

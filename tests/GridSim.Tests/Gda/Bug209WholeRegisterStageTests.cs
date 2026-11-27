@@ -24,7 +24,7 @@ public class Bug209WholeRegisterStageTests : IDisposable
     /// <summary>A lake root holding the given TEC rows and (optionally) embedded rows.</summary>
     private GdaPaths Lake(string tecRows, string? embRows = null)
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-bug209-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-bug209-" + Guid.NewGuid().ToString("N"));
         _roots.Add(root);
         string tec = Path.Combine(root, "NESO", "RAWData", "Transmission Entry Capacity (TEC) register");
         Directory.CreateDirectory(tec);

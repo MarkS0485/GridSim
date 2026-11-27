@@ -24,7 +24,7 @@ namespace GridSim.Tests.V2;
 internal static class KindFileSet
 {
     /// <summary>
-    /// The fifteen parameter kinds: each declares typed parameters with units and code defaults, checked against the
+    /// The sixteen parameter kinds (fifteen until RC5 added unitProtection, 2026-11-20): each declares typed parameters with units and code defaults, checked against the
     /// code. The <c>site</c> kind is a slot-only kind (two template-reference slots, no code defaults) and is listed in
     /// <see cref="SlotOnlyKinds"/>. Renamed 2026-10 (DOC-17 D-DOC-222): was <c>Slice3Kinds</c>, after the work slice
     /// that wrote these files, a name that told a reader nothing; same fifteen kinds, same order.
@@ -34,6 +34,9 @@ internal static class KindFileSet
         "synchronousMachine", "exciter", "pss", "governor", "gridFollowingInverter", "gridFormingInverter",
         "lineType", "transformerType", "oltc", "protection", "storage", "harmonicSpectrum", "load",
         "gridCodeProfile", "solverProfile",
+        // Added 2026-11-20 (RC5 per-unit protection, Mark's design steer: unit relay settings are a v2 template kind):
+        // the sixteenth parameter kind. Appended, so the fifteen above keep their order.
+        "unitProtection",
     };
 
     /// <summary>
@@ -93,7 +96,7 @@ internal static class KindFileSet
         return doc.RootElement.Clone();
     }
 
-    /// <summary>All fifteen parameter-kind files, keyed by kind name.</summary>
+    /// <summary>All parameter-kind files (sixteen since RC5), keyed by kind name.</summary>
     internal static IReadOnlyDictionary<string, JsonElement> LoadAll()
         => ParameterKinds.ToDictionary(k => k, Load, StringComparer.Ordinal);
 

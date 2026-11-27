@@ -578,7 +578,7 @@ beside `compose.yml` (never committed):
 | `Sso__Enabled`, `Sso__Authority` | `GRIDSIM_SSO_ENABLED`, `GRIDSIM_SSO_AUTHORITY` | Join a single sign-on estate. Off by default; every visitor is anonymous. |
 | `Auth__ApplicationName`, `Auth__CookieDomain` | `GRIDSIM_AUTH_APP_NAME`, `GRIDSIM_COOKIE_DOMAIN` | The estate's shared data-protection name and cookie domain. Empty: the name `GridSim` and a host-only cookie. |
 | `Auth__KeysDirectory` | (fixed) | `/keys`, the mount above. |
-| `Site__GoogleTagId`, `Site__AnalyticsScriptUrl`, `Site__AnalyticsCollectorUrl`, `Site__ShareImageUrl` | `GRIDSIM_GOOGLE_TAG_ID`, `GRIDSIM_ANALYTICS_SCRIPT_URL`, `GRIDSIM_ANALYTICS_COLLECTOR`, `GRIDSIM_SHARE_IMAGE_URL` | Analytics and the share card. All empty: no third-party script and no image tags. |
+| `Site__ShareImageUrl` | `GRIDSIM_SHARE_IMAGE_URL` | The share card. Empty: no image tags. The page loads no third-party script. |
 | `Site__SecurityTxt__Contact`, `Site__SecurityTxt__Expires` | `GRIDSIM_SECURITY_CONTACT`, `GRIDSIM_SECURITY_EXPIRES` | Serve `/.well-known/security.txt`. Without a contact it answers 404; a contact needs a future expiry. |
 | `ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS` | (fixed) | `Production` and `http://+:8080`. |
 
@@ -753,11 +753,16 @@ The workflows are in `.github/workflows/`.
   replay-only web container image (with the web bill of materials' SHA-256 built in), attaches the command-line and
   desktop archives, their SHA-256 checksums, the bills of materials and the changelog notes to the GitHub Release, and
   gives every one of those files a signed build-provenance attestation (check one with
-  `gh attestation verify <file> -R <owner>/GridSim`). The container image is pushed to the GitHub Container Registry
-  once the Release exists and then gets its own provenance attestation. This workflow is written but no release has yet
+  `gh attestation verify <file> -R <owner>/GridSim`). Container images are a roadmap item and nothing is published: the
+  workflow also builds the command-line image (`Dockerfile.cli`) and keeps both images as workflow artefacts, and its
+  push jobs, which would send them to the GitHub Container Registry once the Release exists and give each its own
+  provenance attestation, are switched off. They run only when the repository variable `GRIDSIM_PUBLISH_PACKAGES` is
+  `true`, and it is not set. This workflow is written but no release has yet
   been made through it.
-- **Publish packages** (`publish.yml`) packs the core library (`GridSim.Core`, the only package that ships) to the
-  repository's GitHub Packages feed, built with the `GridSim.Core` bill-of-materials SHA-256 when the release
+- **Publish packages** (`publish.yml`) packs the core library (`GridSim.Core`, the only package that is built) and keeps
+  it as a workflow artefact. The package is a roadmap item: the job that would push it to the repository's GitHub
+  Packages feed is switched off (it needs `GRIDSIM_PUBLISH_PACKAGES` set to `true`, and never runs for a release
+  candidate), so nothing is published. The package is built with the `GridSim.Core` bill-of-materials SHA-256 when the release
   calls it, signs the package when the signing certificate is configured (verifying it against the same pinned
   certificate), and refuses any version that differs from the source version. Started by hand or by a published
   GitHub Release, it first runs the whole CI workflow on the commit and packs nothing unless that passes; called by
@@ -787,10 +792,11 @@ security control.
   Where GridSim stands: the data boundary (the 169-hour guard), the restriction review gate, the physics audit,
   provenance labelling, the persistent and anchored audit log with per-event security entries, forwarding and the
   optional signed anchor, incident raising, the secrets store, deterministic estimates and replay, and the
-  false-data-injection screen are Achieved; web sign-in, single sign-on and the replay-only gate are in place as
-  compensating access controls; role-based access control, the distrusted-source control and service resilience are
-  Partially achieved: the web host enforces the role gate on its REST and WebSocket solve surface but not on the
-  dashboard's own sessions, the distrusted-source control (applied by `--distrust` and `Realtime:DistrustedSources`)
+  false-data-injection screen are Achieved, and so is role-based access control: the web host enforces the role gate on
+  its REST and WebSocket solve surface and on the dashboard's sessions and actions, and audits each denial when it has an
+  audit log, with or without the resident estimator. Web sign-in, single sign-on and the replay-only gate are in place as
+  compensating access controls. The distrusted-source control and service resilience are Partially achieved: the
+  distrusted-source control (applied by `--distrust` and `Realtime:DistrustedSources`)
   is held at Partially achieved until the release test run has exercised it, and the supervised bridge reconnect
   (`GridSim:BridgeReconnect`, `BridgeAutoReconnect`) is off by default and not yet confirmed by a release test run.
 - **[`nis-oes-gap-assessment.md`](../assurance/nis-oes-gap-assessment.md)** assesses GridSim as a component inside an

@@ -40,8 +40,10 @@ public sealed class HydroGovernor : IRmsGovernor
         double gateTimeSeconds, double waterTimeSeconds,
         double gateMinPu = 0.0, double gateMaxPu = double.PositiveInfinity)
     {
-        if (permanentDroopPu <= 0.0) throw new System.ArgumentOutOfRangeException(nameof(permanentDroopPu), "Rp must be > 0.");
-        if (waterTimeSeconds <= 0.0) throw new System.ArgumentOutOfRangeException(nameof(waterTimeSeconds), "Tw must be > 0.");
+        // DYN-11: NaN too.
+        if (!(permanentDroopPu > 0.0) || !double.IsFinite(permanentDroopPu)) throw new System.ArgumentOutOfRangeException(nameof(permanentDroopPu), "Rp must be > 0.");
+        if (!(waterTimeSeconds > 0.0) || !double.IsFinite(waterTimeSeconds)) throw new System.ArgumentOutOfRangeException(nameof(waterTimeSeconds), "Tw must be > 0.");
+        if (!(transientDroopPu >= 0.0) || !double.IsFinite(transientDroopPu)) throw new System.ArgumentOutOfRangeException(nameof(transientDroopPu), "Rt must be a finite number, 0 or more.");
         _rp = permanentDroopPu;
         _rt = transientDroopPu;
         _transientDroop = new Washout(resetTimeSeconds);

@@ -1,6 +1,6 @@
 # gb-full licence and provenance audit
 
-**Status as at GridSim 2.1.005 (re-checked 2026-11-01; first written at 2.0.171).** This page audits where the data of the bundled full GB case (`data/gb-full`) comes
+This page audits where the data of the bundled full GB case (`data/gb-full`) comes
 from and what that means for publishing it. It is a document only: no data is removed or changed, and no gb-full
 number moves. The rule it applies is the public / private boundary: a public GB model is exactly the published Long
 Term Development Statement (LTDS) data and the other published sources it cites, and an element that cannot be traced

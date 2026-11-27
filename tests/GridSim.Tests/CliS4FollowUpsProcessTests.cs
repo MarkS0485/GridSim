@@ -10,7 +10,7 @@ public sealed class CliS4FollowUpsProcessTests
 {
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-s4-followups-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-s4-followups-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

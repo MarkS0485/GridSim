@@ -15,7 +15,7 @@ public sealed partial class Lf5RemainingTests
     /// <summary>A fresh temporary folder for one test's input files.</summary>
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-lf5-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-lf5-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

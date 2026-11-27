@@ -338,7 +338,7 @@ public sealed class UiAssetIndexTests
     // copy is read by the loader, never compared byte for byte).
     private static string TaggedCopy(string sourceDir, Action<string, JsonArray> change)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-assets-b1-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-assets-b1-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var opts = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
         foreach (string f in Directory.EnumerateFiles(sourceDir, "*.json"))
@@ -535,7 +535,7 @@ public sealed class UiAssetIndexTests
     [MemberData(nameof(EditorTestSupport.BundledCases), MemberType = typeof(EditorTestSupport))]
     public void ModelRecordMap_equals_the_v2_loader_on_the_v2_projection_of_every_bundled_case(string relative)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-assets-b1-v2-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-assets-b1-v2-" + Guid.NewGuid().ToString("N"));
         try
         {
             V2CaseWriteResult w = V2CaseWriter.Write(JsonGridLoader.LoadDirectory(EditorTestSupport.CaseDir(relative), dispatch: false),
@@ -555,7 +555,7 @@ public sealed class UiAssetIndexTests
         // one file, the rest in the other. The loader reads the files in the manifest's order, each array in order, so
         // bus i lives in the first file when i is in its first half, and the lines of BOTH files come before any
         // transformer.
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-assets-b1-split-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-assets-b1-split-" + Guid.NewGuid().ToString("N"));
         try
         {
             V2CaseWriteResult w = V2CaseWriter.Write(JsonGridLoader.LoadDirectory(EditorTestSupport.CaseDir("uk"), dispatch: false),

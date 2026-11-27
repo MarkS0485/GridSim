@@ -131,7 +131,8 @@ public sealed class PresolvedReplay
             .Select(f => Path.Combine(runDir, f)).FirstOrDefault(File.Exists);
         if (csv is null) return map;
 
-        string[] lines = File.ReadAllLines(csv);
+        // NUM-12: through the input-file limit, as every other reader of a run's files.
+        string[] lines = GridSim.Core.IO.InputFileLimits.ReadAllText(csv).Replace("\r\n", "\n").Split('\n');
         int h = Array.FindIndex(lines, l => l.Length > 0 && !l.StartsWith('#'));
         if (h < 0) return map;
 
@@ -165,7 +166,9 @@ public sealed class PresolvedReplay
                 if (c < 0 || c >= f.Length) return null;
                 string cell = f[c].Trim();
                 if (cell.Length == 0) return null;
-                if (double.TryParse(cell, NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return v;
+                // NUM-12: NaN / Infinity is "no value" (the frame falls back to the model), as an empty cell is; it went
+                // straight into the frame.
+                if (double.TryParse(cell, NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return double.IsFinite(v) ? v : null;
                 throw new InvalidDataException($"{Path.GetFileName(csv)} line {r + 1}: '{cols[c].Trim()}' value '{cell}' is not a number.");
             }
 

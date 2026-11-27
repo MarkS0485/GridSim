@@ -94,10 +94,10 @@ public static class StatusLampRules
     public static bool IsVoltageAlert(double minBusVoltagePu, double maxBusVoltagePu)
     {
         if (!double.IsFinite(minBusVoltagePu) || !double.IsFinite(maxBusVoltagePu))
-            throw new ArgumentOutOfRangeException(nameof(minBusVoltagePu), $"min {minBusVoltagePu} / max {maxBusVoltagePu}",
+            throw new ArgumentOutOfRangeException(nameof(minBusVoltagePu), FormattableString.Invariant($"min {minBusVoltagePu} / max {maxBusVoltagePu}"),
                 "Bus voltages must be finite.");
         if (minBusVoltagePu > maxBusVoltagePu)
-            throw new ArgumentException($"Minimum bus voltage {minBusVoltagePu} pu is above the maximum {maxBusVoltagePu} pu.");
+            throw new ArgumentException(FormattableString.Invariant($"Minimum bus voltage {minBusVoltagePu} pu is above the maximum {maxBusVoltagePu} pu."));
         return minBusVoltagePu < ScadaThresholds.VoltageBandLowPu || maxBusVoltagePu > ScadaThresholds.VoltageBandHighPu;
     }
 

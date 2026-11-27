@@ -278,7 +278,7 @@ public class EditorUiTests
     [Fact]
     public void A_missing_folder_exits_1_and_usage_errors_exit_2()
     {
-        Assert.Equal(1, RunCli(Path.Combine(Path.GetTempPath(), "no-such-case-" + Guid.NewGuid().ToString("N")), "--check").Code);
+        Assert.Equal(1, RunCli(TestTemp.Under("no-such-case-" + Guid.NewGuid().ToString("N")), "--check").Code);
         Assert.Equal(1, RunCli(Path.Combine(CaseDir("uk"), "buses.json"), "--check").Code);
         Assert.Equal(2, RunCli().Code);
         Assert.Equal(2, RunCli(CaseDir("uk"), "--frobnicate").Code);

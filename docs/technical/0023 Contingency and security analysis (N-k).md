@@ -390,8 +390,10 @@ bit (the reference unit's bounds never bind there). `Pmin` is used as given; a n
 1e-9, 20,000 iterations); every step is sequential and pure, so the plan is deterministic.
 
 `PTDF(l, k)` is the DC sensitivity of line `l` to a unit injection at bus `k`, withdrawn at the reference bus of `k`'s own
-island (`DistributionFactors`, `src/GridSim.Core/Analysis/DistributionFactors.cs`). It uses only the series reactance
-(`b_l = 1/X_l`), so resistance, charging, taps and phase shifts are ignored and every voltage is 1 pu. Each island's
+island (`DistributionFactors`, `src/GridSim.Core/Analysis/DistributionFactors.cs`). It uses MATPOWER's DC model
+(`makeBdc`): the series reactance with the tap ratio, `b_l = (1/X_l)/tap_l`; resistance, charging and shunt susceptance
+are ignored and every voltage is 1 pu. Phase shifts and bus shunt conductance do not change a PTDF (the response to a unit
+injection) but do enter the DC flows the screen starts from, and an outaged phase shifter's shift leaves with it. Each island's
 reference is its first `Slack` bus, else the bus of its largest generator by `|Pg|`, else its first bus (the rule of
 `IslandPartition`, [ch. 3](<0003 Power flow.md#islands>)). An in-service zero-reactance branch that is the only link
 between two islands makes `Build` throw (outcome `NoDcModel`).
@@ -536,6 +538,42 @@ next position and the results so far). On cancellation the progress is kept and 
 when the chunk finishes, the shard returns all its results and resets. A fault resets the progress. A lock on the
 progress makes the one-run-at-a-time rule a guarantee. A resumed shard's outages were each screened against the frame that
 was current when that outage was reached.
+
+### Remedial action schemes
+
+`ContingencyAnalysis.ScreenWithRas` (single outages), `ScreenBranchSetsWithRas` (named branch sets) and
+`ScreenNMinusKWithRas` (the N-k screen) run a resolved `RasSet` (read by `RasFile`, keys resolved by `RasSet.Resolve`
+with the object model's `ElementKeys`) inside each contingency. They are new entry points; the existing screens are not
+changed, and the CLI reaches them only with `--ras`.
+
+1. The base case is screened (`ScreenBaseCase`) and solved once more for its flows and voltages. A base case that does
+   not converge is refused (`InvalidOperationException`). Each scheme is armed when all its arming conditions hold on
+   that state and the contingency's identity (the outaged branches, units and buses; a bus outage contains its branches
+   and units).
+2. The contingency is screened by the existing code (`ScreenElementOutage`, or the branch-set screen), and that row,
+   netted against the base case, is `PreRas`, bit for bit the row the plain screen gives.
+3. A `RasState` holds the post-contingency network as per-element records with an in or out flag: buses, branches and
+   the whole generator fleet (a tripped unit is marked out of service, so the in-service list the engines read is the
+   screen's own). Its built model has the same records in the same order as the screen's post-contingency model, so
+   its solve is the screen's solve; a test checks this bit for bit on every branch, generator and bus outage of case14.
+   A generator or bus outage that leaves no unit to hold the reference has no state, and no scheme is evaluated.
+4. Level by level: every armed scheme with operations left whose triggers hold (all, or any) on the present solved
+   state operates, in (priority, name, file order). Each action is applied to the state or skipped with its reason. If
+   anything changed, the state is solved again (the screen's solver, options and unsolvable-island check). A level with
+   no scheme operating ends the loop; a level beyond `MaxLevels` at which schemes would still operate ends it as
+   `RasLoop`. A tripped reference unit re-elects the reference as an outage does (`ReelectReference`); if no unit
+   could take it, the trip is skipped.
+5. When any action was applied, the final state is classified by the screen's own `ScreenStateCore` (post-fault rating,
+   per-bus limits, boundaries) and netted against the base case; otherwise the final row is `PreRas` itself.
+
+Triggers read the solved state: `loadingAbove` uses the solver's rating-A loading, or `PostFaultLoadingPercent` for
+rating B or C; `flowAbove` reads `PFromMw` or `PToMw`; voltages are matched by bus id. With no converged state only
+`notConverged` holds. Arming flows use the larger end's MVA or the from-end MW. Everything is ordered by index or by
+the sort above, so the results are the same on every run and every machine.
+
+Verification: closed forms of a two-bus lossless case (sin delta = P X, Q = (1 - cos delta) / X) for the loading before
+and after each level, and the nose-point condition 1 - 4 (P X)^2 >= 0 of a single line with a unity-power-factor load
+for the `notConverged` case. The tolerances are first-order bounds from Newton's stopping mismatch (1e-8 pu).
 
 ## Parallelism and determinism
 
@@ -818,6 +856,10 @@ B4 on the corrected full topology after `L3-4` is the base case's 48.43561773480
 | `src/GridSim.Core/Scheduling/CycleBudget.cs`, `CycleOptions.cs`, `JobCostModel.cs`, `JobResult.cs` | budget, options, cost EWMA, outcomes | Compute budget, defaults, cost learning, job outcomes |
 | `src/GridSim.Cli/Program.cs` | `SelectCase`, `LoadCaseArgument`, `SelectBatchCases`, `ContingencyBaseCase`, `PrintContingencyBaseCase`, `ContingencyVerdict`, `ContingencyStatus`, `PrintExcludedSingles`, `RunNMinus1`, `RunNMinus2`, `RunNMinus1Minus1`, `PrintNkTable`, `RunScreen`, `RunLossAllocation`, `RunTrip`, `RunNMinus1Sweep`, `RunStress`, `RunChain`, `RunCycle`, `LoadNamed` | Verb parsing, case loading, tables, report files |
 | `src/GridSim.Cli/SolverBackend.cs` | `SolverBackend` | `DenseSolver`, `SparseSolver`, `NewtonSolver` on the selected backend |
+| `src/GridSim.Core/Analysis/Ras/RasFile.cs` | `RasFile`, `RasSet`, `RasScheme`, `RasCondition`, `RasAction` | The strict `gridsim-ras/1` reader and key resolution |
+| `src/GridSim.Core/Analysis/Ras/RasEvaluator.cs` | `ContingencyAnalysis.ScreenWithRas`, `ScreenBranchSetsWithRas`, `ScreenNMinusKWithRas`, `RasState` | Arming, the level loop, the actions and the final classification |
+| `src/GridSim.Core/Analysis/Ras/RasResult.cs` | `RasStatus`, `RasContingencyResult`, `RasActionRecord`, `RasScreenReport` | The results |
+| `src/GridSim.Cli/RasCli.cs` | `RasCli` | `nminus1 --ras` and `nminus2 --ras`: tables, result file, verdict |
 
 ## Limits
 
@@ -839,6 +881,9 @@ B4 on the corrected full topology after `L3-4` is the base case's 48.43561773480
 - The shared 200-bus engine threshold is not a measured crossover: the sparse engine is faster at every size measured here (the sweep's own 1,000-bus literal was removed in 1.95.105).
 - A resumed `cycle` shard mixes frames, because each outage is screened against the frame current when it is reached.
 - `cycle --pipeline` is refused because the pipelined backlog drain does not exist (R096).
+- Remedial action schemes are steady state (no time delays, no dynamic simulation of their operation), use a fixed list
+  of conditions and actions, run with the reference-bus dispatch only, and are verified against closed forms, not
+  compared with vendor RAS runs.
 
 ## See also
 

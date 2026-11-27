@@ -4,15 +4,21 @@ The web app (`src/GridSim.Web`, Blazor Server plus a REST / WebSocket API) is de
 on `127.0.0.1:5540` behind a reverse proxy, and both take every machine-specific setting from environment variables:
 nothing in the repository names a real host, user or path.
 
-**The released image.** Each release (F25, the 1.0 ship scope) pushes the image built from the `Dockerfile` to the
-repository owner's GitHub Container Registry as `ghcr.io/<owner>/gridsim-web:<version>`, after probing that it starts,
-shows that version in its footer and is replay-only. It is the only form in which the web app ships: there is no web
-zip. Run it in place of a local build (`docker run --rm -p 127.0.0.1:5540:8080 ghcr.io/<owner>/gridsim-web:<version>`,
-or set `image:` in `compose.yml`); everything below applies unchanged.
+**Container images are a roadmap item.** No image is published yet, pending broader validation: containers and the
+NuGet package are planned, not released. The groundwork exists. The `Dockerfile` (the web app) and `Dockerfile.cli`
+(the command line tool) build locally, as shown below. Each release also builds both images and the `GridSim.Core`
+package, probes that the web image starts, shows that version in its footer and is replay-only, and keeps all three as
+workflow artefacts, but the jobs that would push them to the GitHub Container Registry as
+`ghcr.io/<owner>/gridsim-web:<version>` and `ghcr.io/<owner>/gridsim-cli:<version>` (and the package to the GitHub
+Packages feed) are switched off. They run only if the repository variable `GRIDSIM_PUBLISH_PACKAGES` is set to `true`,
+and it is not set. There is no web zip either, so for now the web app runs from a local build of the `Dockerfile`, from
+`compose.yml`, or from the systemd unit. Shipping GridSim as a code library also needs a safe way to handle licences,
+which is still to come. Everything below applies to a locally built image.
 
 | File | Purpose |
 |---|---|
 | `Dockerfile` (repo root) | Two-stage container image: the .NET SDK builds with the `portable` publish profile, the ASP.NET Core runtime image runs it as the unprivileged `app` user. |
+| `Dockerfile.cli` (repo root) | Image for the `gridsim` command line tool; see [Containers](#containers). |
 | `compose.yml` (repo root) | Runs the image on `127.0.0.1:${GRIDSIM_PORT:-5540}`; every setting is a variable with a safe default (listed at the top of the file). |
 | `compose.override.example.yml` | Shape of a local `compose.override.yml` for site wiring such as an external Docker network. |
 | `gridsim-web.example.service` | systemd unit for a host without Docker, on the same `127.0.0.1:5540`. |
@@ -57,7 +63,7 @@ app with a message naming the setting.
 | `Sso:PublicOrigin` | empty | This app's public origin (for example `https://gridsim.example.com`) for the SSO landing URL and the ticket audience. Set it when the reverse proxy does not forward `X-Forwarded-Proto`; empty uses the request's own origin. A refused sign-in is logged with its reason. |
 | `AllowedHosts` | `localhost;127.0.0.1;[::1]` | The host names this instance answers (bug #170, the standard ASP.NET Core key; as an environment variable `AllowedHosts`, in Compose `GRIDSIM_ALLOWED_HOSTS`). Semicolon-separated names, `*.example.com` for any sub-domain, IPv6 in brackets; the port is ignored. A request under any other name gets a 400 whose text names this setting, before any page, API call or WebSocket runs: this is what stops a DNS-rebinding page reaching the instance. **Behind a reverse proxy that forwards `Host` (the nginx example does), set the public name, for example `AllowedHosts=gridsim.example.com`.** `*` alone answers any name (the earlier behaviour) and removes that protection; the start-up log then warns, and `/ws/sim` accepts a page's origin only when it is loopback or listed in `GridSim:AllowedOrigins`. An empty entry, a scheme, path or port in an entry, or `*` with other entries stops start-up. The container health probe sends `Host: localhost` from inside the container; the app answers a loopback `Host` from a loopback peer (with no proxy header) whatever this list holds, so the probe stays healthy under a custom list. |
 | `GridSim:AllowedOrigins` | empty | Extra page origins (comma-separated, for example `https://ops.example.com`) that may open `/ws/sim` from a browser. A page whose origin equals the request's host is accepted while `AllowedHosts` is a list of names. |
-| `GridSim:AnonymousRole` | `Operator` when every `AllowedHosts` name is a loopback name, else `Viewer` | The role band (`Viewer`, `Analyst`, `Operator`, `Administrator`) of a caller who is not signed in (environment variable `GridSim__AnonymousRole`). `POST /api/solve` needs `Analyst` and every `/ws/sim` control frame `Operator`; a refusal is a 403 or an error frame, and is written to the audit log as an `AccessDenied` entry when `Audit:LogPath` is set. A signed-in caller also holds the highest band among its `GridSim.<band>` role claims (for example `GridSim.Operator`). **Behind a reverse proxy under a public name, anonymous callers can therefore read but not solve**; give operators the role claim through sign-on, or set this on purpose (start-up warns when it gives more than `Viewer` to an instance that answers other names). Any other value stops start-up. The dashboard's own sessions are not role-gated. |
+| `GridSim:AnonymousRole` | `Operator` when every `AllowedHosts` name is a loopback name, else `Viewer` | The role band (`Viewer`, `Analyst`, `Operator`, `Administrator`) of a caller who is not signed in (environment variable `GridSim__AnonymousRole`). `POST /api/solve` needs `Analyst` and every `/ws/sim` control frame `Operator`; a refusal is a 403 or an error frame, and is written to the audit log as an `AccessDenied` entry when `Audit:LogPath` is set. A signed-in caller also holds the highest band among its `GridSim.<band>` role claims (for example `GridSim.Operator`). **Behind a reverse proxy under a public name, anonymous callers can therefore read but not solve**; give operators the role claim through sign-on, or set this on purpose (start-up warns when it gives more than `Viewer` to an instance that answers other names). Any other value stops start-up. On the dashboard, driving a live session (play, step, speed, step size, trip) needs `Operator` and the harmonics study `Analyst`; a workbench study needs `Analyst`; watching a raw replay or a bridge feed needs no role, and a live solver session needs `Operator` to open. The loopback default trusts the `Host` header: a reverse proxy in front of an instance left at the default must pass the client's host (`proxy_set_header Host $host`, as the shipped nginx example does) and the `X-Forwarded-For` header, or every caller it forwards is treated as local. |
 | `GridSim:FrameAncestors` | `'none'` | Who may show the pages in a frame (bug #179): the Content-Security-Policy `frame-ancestors` source list sent on every answer, with the matching `X-Frame-Options` (`DENY` for `'none'`, `SAMEORIGIN` for `'self'`). For example `'self' https://portal.example.com` to let a named portal embed the dashboard; `*` lets any site frame it (not recommended). Every answer also carries `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`. A semicolon, comma or line break, or a quoted word other than `'none'` / `'self'`, stops start-up. |
 | `GridSim:Hsts` | `true` | Outside Development the app sends `Strict-Transport-Security: max-age=31536000` on HTTPS requests (a request the trusted proxy forwarded as https counts; never for the loopback names). `false` leaves HSTS to the reverse proxy. |
 | `GridSim:MaxSessions` | `64` | Most sessions held at once (a whole number, 1 or more). |
@@ -95,19 +101,72 @@ GRIDSIM_UID=1000
 GRIDSIM_GID=1000
 ```
 
+## Containers
+
+There are two images, and you build both yourself from the repository with the commands below.
+
+| Image | Dockerfile | What it runs |
+|---|---|---|
+| `gridsim-web` | `Dockerfile` | The web app, as described above. |
+| `gridsim-cli` | `Dockerfile.cli` | The `gridsim` command line tool and the GridSim.Core library it carries. |
+
+Both build in two stages on the .NET SDK image named in `global.json` (pinned by digest), install no packages, and run
+as the unprivileged `app` user. The command line image publishes the tool exactly as the release does (the
+self-contained single-file `linux-x64` profile), so its run-time stage is the small `runtime-deps` image with no
+separate .NET runtime. Both take the same provenance build arguments: `SOURCE_REVISION`, and in a release build
+`SBOM_SHA256` and `SOURCE_TREE`.
+
+```bash
+docker build -t gridsim-web --build-arg SOURCE_REVISION=$(git rev-parse HEAD) .
+docker build -f Dockerfile.cli -t gridsim-cli --build-arg SOURCE_REVISION=$(git rev-parse HEAD) .
+
+docker run --rm gridsim-cli                                   # the help
+docker run --rm gridsim-cli case9 --once                      # a bundled case; nothing to mount
+docker run --rm -v "$PWD:/work" -v "$PWD/licence:/licence:ro" gridsim-cli pf case14
+docker run --rm -v "$PWD:/work" gridsim-cli pf my-network.m   # a case of your own, read from the mounted folder
+```
+
+The command line image works in `/work`: mount the folder that holds your cases there, and the files a verb writes land
+in it. The bundled cases (the IEEE and other test networks shipped in `data/`) are inside the image and need no mount.
+The image runs as user 1654; on Linux, when the mounted folder belongs to you, add `--user "$(id -u):$(id -g)"` so the
+results can be written there and stay yours.
+
+### The licence
+
+Both images set `GRIDSIM_LICENCE_FILE=/licence/licence.gridsim`, so each looks for its licence in a `/licence` folder
+mounted read-only. Put `licence.gridsim` in a `licence` folder on the host and mount it:
+
+- the command line image: `-v "$PWD/licence:/licence:ro"`;
+- the web app under Compose: `compose.yml` mounts `${GRIDSIM_LICENCE_DIR:-./licence}` at `/licence` read-only.
+
+Nothing mounted, an empty folder or no `licence.gridsim` in it all mean the free tier, and the program starts as usual.
+A file that is there but holds a bad key also runs at the free tier, and `gridsim licence status` (or the web footer)
+says why. A licence is never built into an image: `.dockerignore` keeps `licence/`, every `*.gridsim` file, `.env` and
+private keys out of the build context, and `.gitignore` keeps `licence/` out of the repository.
+
+To pass the key itself instead of a file, use an environment variable: `-e GRIDSIM_LICENCE=<key>` for either image, or
+`Licence__Key` for the web app (Compose maps `GRIDSIM_LICENCE_KEY` from your `.env` to it). Installing a licence with
+`gridsim licence import` inside a container does not work, because `/licence` is read-only: copy the file into the host
+folder instead.
+
+### Offline
+
+Neither image needs the internet once it is built. The licence check is offline, the web pages load nothing from
+another origin, and the only connections either program opens are the ones a user starts on purpose, with an address
+of their own (for example a GDA bridge endpoint or `pmu-ingest --live`). Building an image does download the base
+images and NuGet packages.
+
 ## Site identity settings
 
-Set these only for a deployment that should carry its own analytics, share card, security contact or links. As
+Set these only for a deployment that should carry its own share card, security contact or links. The page loads no
+script from another origin: `Site:GoogleTagId`, `Site:AnalyticsScriptUrl`, `Site:AnalyticsCollectorUrl` and
+`Site:AnalyticsSiteName` were removed in 2.1.140, and a host given one exits at start-up with code 78 naming it. As
 environment variables, `:` becomes `__` (for example `Site__SecurityTxt__Contact`). Compose maps the first six from
 `GRIDSIM_*` variables (listed at the top of `compose.yml`); the rest go in `compose.override.yml` or the systemd
 `EnvironmentFile`.
 
 | Setting | Effect when set |
 |---|---|
-| `Site:GoogleTagId` | Loads the Google tag (gtag.js) with this id, e.g. `G-XXXXXXXXXX`. |
-| `Site:AnalyticsScriptUrl` | Loads this first-party analytics script (absolute URL) and sends it a page view on each navigation. |
-| `Site:AnalyticsCollectorUrl` | The script's `data-collector` attribute (absolute URL); needs `AnalyticsScriptUrl`. |
-| `Site:AnalyticsSiteName` | The script's `data-site` attribute (default `GridSim`). |
 | `Site:ShareImageUrl` | Adds `og:image` and `twitter:image` with this absolute URL. |
 | `Site:OrganisationName`, `Site:OrganisationUrl`, `Site:OrganisationLogoUrl` | Adds a schema.org Organization block (URL and logo optional, absolute; both need the name). |
 | `Site:FooterLinks:N:Text`, `Site:FooterLinks:N:Url` | Footer links, in order of N (0, 1, 2, ...); each needs both. |

@@ -9,7 +9,7 @@ namespace GridSim.Core.Assets;
 ///
 /// <para>Sample: local (Hz, RoCoF, phase) pushed through a transport delay (<c>detectionLatencyS</c>) -
 /// modelling PLL/measurement latency and the fact a PLL sees its OWN bus, not the COI. Compute: a
-/// deadbanded droop leg (shape shared with <see cref="SwingKernel.FastResponseTarget"/>) plus an
+/// deadbanded droop leg (shape shared with <see cref="SwingKernel.FastResponseTarget(double, double, double)"/>) plus an
 /// optional df/dt leg, capped by SoC/headroom. Actuate: ramp-limit the fast slew, then first-order lag
 /// (<c>actuateTauS</c>). Protect: on sustained local RoCoF over <c>rocofTripHzPerS</c>, a phase step over
 /// <c>vectorShiftTripDeg</c>, or under-voltage below <c>lvrtVoltagePu</c>, the unit trips and its

@@ -338,7 +338,9 @@ The flags are in [ch. 19, CLI reference](<0019 CLI reference.md#batchsolve>).
 A Monte Carlo over branch reactances, or any set of models on one topology, gives a family of matrices with one
 sparsity structure. `DcPowerFlow.SolveBatch` (library API; there is no verb yet) solves such a family: each model's
 reduced susceptance B' is built exactly as `DcPowerFlow.Solve` builds it, models with the same B' structure form a
-family, and each family is factored and solved four models at a time, one model per lane of a 256-bit vector. Entry i
+family, and each family is factored and solved four models at a time, one model per lane of a 256-bit vector. The
+families are found by hashing each B' structure once and comparing it in full only with the families of the same hash,
+so grouping takes time linear in the number of models even when every model has its own topology. Entry i
 of the result holds exactly the bits of `DcPowerFlow.Solve` for model i, at any thread count, with hardware intrinsics
 on or off (`DcPowerFlowBatchTests`, `MultiCaseSparseLuTests`, `SparseLuPlanTests`).
 

@@ -66,7 +66,7 @@ public sealed partial class Cf1OpenCodeFindingsTests
     [Fact]
     public void N251_the_cli_switch_tightens_the_export_and_is_refused_where_it_would_be_ignored()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n251-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n251-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

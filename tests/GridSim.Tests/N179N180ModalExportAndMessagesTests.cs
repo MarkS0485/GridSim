@@ -8,8 +8,8 @@ using Xunit;
 namespace GridSim.Tests;
 
 /// <summary>
-/// N180 (October 2026): `modal --enable-inverters` on data/gb-synthetic exits 1 (two right-half-plane eigenvalues) and
-/// its state matrix is defective, so participation factors are undefined; the export used to carry all-zero
+/// N180 (October 2026): `modal --enable-inverters` on data/gb-synthetic has a defective state matrix (since 2.1.100 it
+/// exits 0 with no right-half-plane eigenvalue; before, a RoCoF-row bug gave two and exit 1), so participation factors are undefined; the export used to carry all-zero
 /// participation rows with nothing saying so, and the console printed "(rigid COI mode)" against every oscillatory
 /// mode. The export now states participationAvailable / participationUnavailableReason and the run's exitCode.
 /// N179: `modal` on a MATPOWER case exits 2 because a .m file has no inertia data (every H = 0), not because of the
@@ -58,20 +58,29 @@ public sealed class N179N180ModalExportAndMessagesTests
 
     // ---- CLI end to end -------------------------------------------------------------------------------------------
 
-    /// <summary>N180: data/gb-synthetic with --enable-inverters: exit 1 unchanged, the export is written and says the
-    /// participation is unavailable and the exit code is 1; the console says "unavailable" instead of "(rigid COI
-    /// mode)".</summary>
+    /// <summary>N180: data/gb-synthetic with --enable-inverters: the export is written and says the participation is
+    /// unavailable and gives the exit code; the console says "unavailable" instead of "(rigid COI mode)".</summary>
+    // 2.1.100: exit 1 -> 0 and rhpEigenvalueCount 2 -> 0; the case and every participation assertion are unchanged.
+    // Proof: the COI rate a grid-forming df/dt term reads is f0/M_T sum_i M_i omega_i', and the speed rows carry
+    // + sum_inv p / (Base M_T), so the rate row must hold f0 / (M_T Base) on each inverter power state. It held 0. In the
+    // minimal case (one machine H = 5, D = 0, one GFM with tau = 0.05 and synthetic inertia x Base M_T / f0, x = 1) the
+    // actuator pole is -(1 + x) / tau = -40, where the old row gave -20 (CoreReviewFix3Tests); the independent reference is
+    // the review's central finite difference of the COI RoCoF through the A rows, column 0.03125 = f0 / (M_T Base) against
+    // the code's 0. With the row corrected, gb-synthetic has no right-half-plane eigenvalue: the two were an artefact of
+    // the missing term. The case is still genuinely defective after the fix: the eigenvalue near -10 is repeated with
+    // too few eigenvectors (deflated residual |A v - lambda v| = 66.5 against the tolerance 0.053), so participation is
+    // really unavailable and the test keeps its intent on the same case.
     [Fact]
     public void Defective_inverter_case_export_says_participation_unavailable()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n180-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n180-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
             string export = Path.Combine(dir, "ss.json");
             string caseDir = Path.Combine(CliProcess.Root(), "data", "gb-synthetic");
             CliProcess.Result r = CliProcess.RunBuilt("modal", "--dir", caseDir, "--enable-inverters", "--export", export);
-            Assert.True(r.ExitCode == 1, r.ToString());
+            Assert.True(r.ExitCode == 0, r.ToString());
             Assert.Contains("participation factors unavailable", r.StdErr, StringComparison.Ordinal);
             Assert.Contains("(participation factors unavailable: participationAvailable false)", r.StdOut, StringComparison.Ordinal);
             Assert.Contains("  unavailable: the state matrix is defective", r.StdOut, StringComparison.Ordinal);
@@ -80,8 +89,8 @@ public sealed class N179N180ModalExportAndMessagesTests
             JsonElement doc = JsonDocument.Parse(File.ReadAllText(export)).RootElement;
             Assert.False(doc.GetProperty("participationAvailable").GetBoolean());
             Assert.Contains("defective", doc.GetProperty("participationUnavailableReason").GetString(), StringComparison.Ordinal);
-            Assert.Equal(1, doc.GetProperty("exitCode").GetInt32());
-            Assert.Equal(2, doc.GetProperty("rhpEigenvalueCount").GetInt32());
+            Assert.Equal(0, doc.GetProperty("exitCode").GetInt32());
+            Assert.Equal(0, doc.GetProperty("rhpEigenvalueCount").GetInt32());
             Assert.Equal(116, doc.GetProperty("states").GetArrayLength());
         }
         finally { try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
@@ -92,7 +101,7 @@ public sealed class N179N180ModalExportAndMessagesTests
     [Fact]
     public void Stable_case_export_says_exit_zero()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n180-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n180-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

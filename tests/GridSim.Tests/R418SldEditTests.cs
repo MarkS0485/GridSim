@@ -337,7 +337,7 @@ public sealed class R418SldEditTests
     [Fact]
     public void A_switch_file_is_saved_in_place_with_one_changed_value()
     {
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-r418-" + Guid.NewGuid().ToString("N") + ".json");
+        string path = TestTemp.Under("gridsim-r418-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
             string canonical = Text(SubstationFixtures.TwoFeed());

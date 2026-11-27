@@ -18,7 +18,7 @@ public class GdaBuildTests : IDisposable
 
     public GdaBuildTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "gridsim-gda-" + Guid.NewGuid().ToString("N"));
+        _root = TestTemp.Under("gridsim-gda-" + Guid.NewGuid().ToString("N"));
         string ltds = Path.Combine(_root, "NationalGrid", "RAWData", "LTDS Tabular Model");
         Directory.CreateDirectory(ltds);
 

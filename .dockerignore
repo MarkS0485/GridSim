@@ -1,5 +1,5 @@
-# Keep the container build context small and free of anything local (F05). The Dockerfile copies only what the
-# web app needs; this list stops everything else from being sent to the Docker daemon at all.
+# Keep the container build context small and free of anything local (F05). The Dockerfiles copy only what each image
+# needs; this list stops everything else from being sent to the Docker daemon at all.
 
 # Source control metadata (the commit is passed in with --build-arg SOURCE_REVISION instead).
 .git
@@ -22,8 +22,29 @@ data/reference-inbox/
 .idea/
 *.user
 
-# Large folders the web app does not use.
+# Licences, keys and local secrets. A licence is mounted at run time (/licence, read-only), never built into an image.
+licence/
+**/*.gridsim
+.env
+**/.env
+compose.override.yml
+token.txt
+**/*.token
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+**/*.snk
+
+# Large folders the images do not use.
 docs/
 review-progress/
 tests/
 tools/
+
+# The exceptions: the files the command line image (Dockerfile.cli) needs from the folders above. The CLI reference
+# chapter is compiled into the binary for the per-verb help, and the crossval sidecar ships beside it. An exception
+# must come after the folder it reopens.
+!docs/manual/0019 CLI reference.md
+!tools/crossval/crossval.py
+!tools/crossval/sidecar_common.py

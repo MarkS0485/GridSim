@@ -20,7 +20,7 @@ public class PresolvedReplayUtcTests
     // Build a two-frame gda-replay style run directory whose state-estimate.csv carries the given time_utc cells.
     private static string MakeRun(string time0, string time3)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-utc-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-utc-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(dir, "exports"));
         var trace = new SolveTrace();
         GridModel model = IeeeCases.Case9();

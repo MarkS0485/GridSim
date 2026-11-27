@@ -101,8 +101,9 @@ memory across the tier was 394 MB.
 - `case13659pegase` now converges in GridSim. A DC-angle retry runs when a Newton solve stalls. The result matches PowSyBl
   to 2.8e-13 pu in voltage magnitude and 2.4e-10 degrees in angle on all 13,659 buses. VeraGrid's reported convergence on
   this case is to a second, non-physical root about 165 degrees away.
-- The MATPOWER reader now accepts inverted limits on out-of-service generators, which was the cause of the 28 reader
-  refusals in the run.
+- The MATPOWER reader now loads a generator row with PMIN above PMAX (as in the PGLib-OPF `__api` cases) with a warning
+  instead of refusing the case, which was the cause of the 28 reader refusals in the run. QMIN above QMAX loads with a
+  warning on an out-of-service unit and is still refused on an in-service one. See CHANGELOG 2.1.073, Fixed.
 
 The tables and charts show the run as measured; the summary chart notes both fixes.
 

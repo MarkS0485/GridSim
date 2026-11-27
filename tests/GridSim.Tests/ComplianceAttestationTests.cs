@@ -44,7 +44,9 @@ public class ComplianceAttestationTests
         // added. Why: both were recorded Achieved while their descriptions claimed a release made after the full test
         // matrix with a signed provenance attestation, which the published 2.1.000 RC-1 (built outside release.yml) did
         // not have; the manifest now records them PartiallyAchieved with the gap named, exactly as this test requires.
-        Assert.Equal(new[] { "distrusted-source", "rbac", "resilience", "secure-sdlc-attestation", "supply-chain" }, notAchieved);
+        // 2.1.074 RC-4-Fixes: rbac removed (now Achieved). Its two named gaps are closed: the dashboard's live sessions and
+        // actions are role-gated, and a host with Audit:LogPath and no resident estimator audits denials in its own log.
+        Assert.Equal(new[] { "distrusted-source", "resilience", "secure-sdlc-attestation", "supply-chain" }, notAchieved);
         Assert.False(ComplianceManifest.AllInScopeAchieved);
         foreach (ComplianceControl c in ComplianceManifest.InScope.Where(c => c.Status != ComplianceStatus.Achieved))
             Assert.Contains("(", c.Description, StringComparison.Ordinal);   // the gap is stated in the description
@@ -59,7 +61,7 @@ public class ComplianceAttestationTests
         Assert.Equal(ComplianceManifest.Hash, attestation.ManifestHash);
         string report = attestation.Report();
         Assert.Contains("NOT ATTESTED (not a release build", report, StringComparison.Ordinal);
-        Assert.Contains("  not achieved   rbac (B2): PartiallyAchieved", report, StringComparison.Ordinal);
+        Assert.Contains("  not achieved   distrusted-source (D1): PartiallyAchieved", report, StringComparison.Ordinal);
     }
 
     [Fact]

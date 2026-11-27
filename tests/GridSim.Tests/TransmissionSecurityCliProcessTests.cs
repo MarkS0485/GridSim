@@ -11,7 +11,7 @@ public sealed class TransmissionSecurityCliProcessTests
     [InlineData(.95, 3)]
     public void Real_entry_point_is_repeatable_and_preserves_existing_output(double minimum, int exit)
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-security-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-security-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {
@@ -58,7 +58,7 @@ public sealed class TransmissionSecurityCliProcessTests
     [Fact]
     public void Input_hash_mismatch_and_missing_outage_identity_exit_as_input_errors()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-security-invalid-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-security-invalid-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {

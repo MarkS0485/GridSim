@@ -9,7 +9,7 @@ namespace GridSim.Core.IO.Json.Lossless;
 /// SCHEMA-EDITOR-PLAN.md section 4, "the bytes are the model").
 ///
 /// Why not JsonNode or a DTO round trip: re-serialising loses what a hand-maintained case file is made of. Strings are
-/// re-escaped (the uk files' raw '&amp;' becomes "&"; intl names with raw UTF-8 letters become "ß" escapes),
+/// re-escaped (the uk files' raw '&amp;' becomes "&amp;"; intl names with raw UTF-8 letters become "ß" escapes),
 /// alignment and blank lines vanish, comments cannot be kept, and the bundled cases use at least four different
 /// layouts (hand-aligned uk, Python indent=2 gb-full, STJ-written gb-synthetic, Python intl with raw non-ASCII). So
 /// this class never writes JSON: it parses the bytes once with <see cref="Utf8JsonReader"/> (comments allowed and
@@ -148,7 +148,7 @@ internal sealed class JsonSourceText
     public static JsonSourceText Load(string path, StringComparer keyComparer)
     {
         ArgumentNullException.ThrowIfNull(path);
-        return Parse(File.ReadAllBytes(path), Path.GetFileName(path), keyComparer);
+        return Parse(GridSim.Core.IO.InputFileLimits.ReadAllBytes(path), Path.GetFileName(path), keyComparer);
     }
 
     /// <summary>Parse new bytes with the same document name and key comparer (used after every patch).</summary>

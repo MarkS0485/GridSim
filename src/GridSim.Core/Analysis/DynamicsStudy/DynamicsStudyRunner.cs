@@ -81,6 +81,27 @@ public static class DynamicsStudyRunner
             try { boundDevices = Protection.Devices.DeviceSetValidator.Bind(deviceSet, model, request.Adaptive.Curves ?? new Protection.Devices.CurveLibrary()); }
             catch (Protection.Devices.DeviceSetException ex) { throw new InvalidDataException("adaptive.devices: " + ex.Message); }
         }
+        // RC5 stage 3: the units' own relays bind to the case's generators before any work (absent for every incumbent request).
+        // A unit is named by its generator name or, for a RAW machine (which has none), by its PSS/E key <bus>:<id>.
+        // RC5: or for the full-model companion run only (DynamicsStudyRequest.UnitProtection), with or without the adaptive run.
+        if (request.UnitProtection is not null && request.Adaptive?.UnitProtection is not null)
+            throw new InvalidDataException("unit protection is given twice (for the full-model run and in the adaptive request); give it once.");
+        Protection.UnitProtectionSet? fullModelUnits = request.UnitProtection ?? request.Adaptive?.UnitProtection;
+        GridModel adaptiveModel = model, unitKeyedModel = model;
+        if (fullModelUnits is { } unitProtection)
+        {
+            unitKeyedModel = UnitKeyed(raw);
+            BindUnits(raw, unitKeyedModel, unitProtection);
+            if (request.Adaptive?.UnitProtection is not null) adaptiveModel = unitKeyedModel;
+        }
+        // RC5 wp32b: user relays bind to the case's units (by their PSS/E key <bus>:<id>) and branches before any work (absent for
+        // every existing request, and then nothing here runs).
+        IReadOnlyList<GridSim.Core.Dynamics.Plugins.UserRelayBinding>? relayBindings = null;
+        if (request.RelayModels is { Count: > 0 } relayModels)
+        {
+            unitKeyedModel = UnitKeyed(raw);
+            relayBindings = BindRelays(raw, unitKeyedModel, relayModels);
+        }
         int refGen = ResolveMachine(raw, request.AngleReference, "angleReference");
         var channelGen = new List<(DynamicsChannelRequest Channel, int? Gen, string Label)>();
         foreach (DynamicsChannelRequest ch in request.Channels)
@@ -116,10 +137,20 @@ public static class DynamicsStudyRunner
             MaxParallelism: request.MaxParallelism);
 
         // 2. Model coverage.
-        DynamicsModelBinding binding = DynamicsModelCoverage.Build(raw, request.DyrText, request.DyrName, request.SchemasDir,
-            request.Initialisation.Unmodelled);
+        // RC5 WP23: IEC 61400 units are bound by the coverage builder (none on every existing request: the historical call).
+        DynamicsModelBinding binding = request.Iec61400Units is { Count: > 0 } iecUnits
+            ? DynamicsModelCoverage.Build(raw, request.DyrText, request.DyrName, request.SchemasDir, request.Initialisation.Unmodelled, iecUnits)
+            : DynamicsModelCoverage.Build(raw, request.DyrText, request.DyrName, request.SchemasDir, request.Initialisation.Unmodelled);
         // R4-08: declarative user models bound to machines (additive; absent for every existing request).
-        if (request.UserModels is { Count: > 0 } userModels) binding = UserModelOverlay.Apply(raw, binding, userModels);
+        if (request.UserModels is { Count: > 0 } userModels && request.PluginModels is not { Count: > 0 }) binding = UserModelOverlay.Apply(raw, binding, userModels);
+        // RC5 WP12: plug-in models by the same route, after the declarative ones (absent for every existing request).
+        else if (request.PluginModels is { Count: > 0 } pluginModels) binding = UserModelOverlay.ApplyAll(raw, binding, request.UserModels, pluginModels);
+        // RC5 WP32: the injection, machine and load models are named in the coverage notes (absent for every existing request).
+        if (request.DeviceModels is { Count: > 0 } deviceNotes && binding.Set is not null)
+            binding = new DynamicsModelBinding(binding.Report with { ReaderNotes = binding.Report.ReaderNotes.Concat(deviceNotes.Select(a => a.Note)).ToList() }, binding.Set);
+        // RC5 wp32b: the user relays likewise (absent for every existing request).
+        if (request.RelayModels is { Count: > 0 } relayNotes && binding.Set is not null)
+            binding = new DynamicsModelBinding(binding.Report with { ReaderNotes = binding.Report.ReaderNotes.Concat(relayNotes.Select(a => a.Note)).ToList() }, binding.Set);
         DynamicsModelCoverageReport coverage = binding.Report;
         if (!coverage.Simulable || binding.Set is null)
         {
@@ -132,9 +163,34 @@ public static class DynamicsStudyRunner
 
         // 3. Machines and slots (from the bound data alone, so these refusals come before any solve).
         MachineDynamicsSet set = binding.Set;
-        var data = new List<SubtransientInit.MachineData>(model.Generators.Count);
+        var machineList = new List<SubtransientInit.MachineData>(model.Generators.Count);
         for (int k = 0; k < model.Generators.Count; k++)
-            data.Add((set.For(k) ?? throw new InvalidOperationException($"internal error: generator {k} has no bound machine data")).Data);
+            machineList.Add((set.For(k) ?? throw new InvalidOperationException($"internal error: generator {k} has no bound machine data")).Data);
+        // WP6 (RC5): the request's network device models (opt-in); without them the study takes the plain list, as before.
+        // RC5 WP32: the injection, machine and load models (opt-in; none on every existing request, and then nothing here runs).
+        List<DynamicLoadData>? userLoads = null;
+        if (request.DeviceModels is { Count: > 0 } deviceModels)
+            foreach (DeviceModelAssignment a in deviceModels)
+            {
+                if (a.Machine is { } dm)
+                {
+                    int gi = ResolveMachine(raw, dm, $"deviceModels ({a.Device.Model})");
+                    // The unit is converter plant now, so its DYR governor is not used (as its exciter is not: Exciters). The
+                    // kernel refuses a governor on a unit it does not integrate as a machine, so leaving it here stopped every
+                    // study whose driven unit has a DYR governor at initialisation.
+                    machineList[gi] = machineList[gi] with { UserInjection = a.Device, Governor = null };
+                }
+                else
+                {
+                    if (!model.Buses.Any(b => b.Id == a.Bus))
+                        throw new InvalidDataException($"deviceModels ({a.Device.Model}): bus {a.Bus.ToString(CultureInfo.InvariantCulture)} is not a bus of the RAW case.");
+                    (userLoads ??= new List<DynamicLoadData>()).Add(new GridSim.Core.Dynamics.Plugins.UserDynamicLoadData(a.Bus, a.PMw, a.QMvar, a.Device));
+                }
+            }
+        IReadOnlyList<SubtransientInit.MachineData> data = request.Devices is { Count: > 0 } requestDevices
+            ? new RmsLoadedMachineData(machineList, Array.Empty<DynamicLoadData>(), requestDevices) : machineList;
+        if (userLoads is not null)
+            data = new RmsLoadedMachineData(machineList, userLoads, request.Devices ?? Array.Empty<RmsNetworkDeviceData>());
         int[] slotOf = new int[model.Generators.Count];
         int slots = 0;
         for (int k = 0; k < model.Generators.Count; k++)
@@ -210,11 +266,111 @@ public static class DynamicsStudyRunner
         DynamicsStudyResult aggregated = Aggregate(request, coverage, engine, init, results.Select(r => r!).ToList());
 
         // 7. R4-14: the opt-in variable-step companion run (never part of the incumbent path; absent leaves the result untouched).
-        if (request.Adaptive is null) return aggregated;
-        DynamicsAdaptiveEvidence adaptive = DynamicsAdaptiveRunner.Run(model, pf, data, request,
+        if (request.Adaptive is null)
+        {
+            // RC5 wp32b: user relays (with or without unit protection): the full-model companion rows with them acting.
+            if (relayBindings is not null)
+                return aggregated with
+                {
+                    FullModelUnitRelays = FullModelUnitRelayRows(ctx, fullModelUnits is null ? unitKeyedModel : unitKeyedModel.WithUnitProtection(fullModelUnits),
+                        resolvedCases, cancellation, relayBindings),
+                };
+            if (fullModelUnits is null) return aggregated;
+            // RC5: unit protection without the adaptive run: the full-model companion rows only (step 8 below, same code).
+            return aggregated with { FullModelUnitRelays = FullModelUnitRelayRows(ctx, unitKeyedModel.WithUnitProtection(fullModelUnits), resolvedCases, cancellation) };
+        }
+        DynamicsAdaptiveEvidence adaptive = DynamicsAdaptiveRunner.Run(adaptiveModel, pf, data, request,
             resolvedCases.Select(l => (IReadOnlyList<RmsEvent>?)l?.Select(e => e.Engine).ToList()).ToArray(), resolvedTrips.ToArray(),
             channels, slotOf, slotOf[refGen], nominalHz, boundDevices, cancellation);
-        return aggregated with { Adaptive = adaptive };
+        if (fullModelUnits is not { } units) return aggregated with { Adaptive = adaptive };
+
+        // 8. RC5 stage 6: with unit protection, each events row also runs on the full-model fixed-step engine with the units'
+        //    own relays in it (incl. 40). Additional evidence only: the rows above are unchanged.
+        return aggregated with { Adaptive = adaptive, FullModelUnitRelays = FullModelUnitRelayRows(ctx, unitKeyedModel.WithUnitProtection(units), resolvedCases, cancellation) };
+    }
+
+    /// <summary>RC5 stage 6: the full-model unit relay companion rows (see <see cref="DynamicsFullModelUnitRelayEvidence"/>).</summary>
+    private static DynamicsFullModelUnitRelayEvidence FullModelUnitRelayRows(Context ctx, GridModel keyed,
+        IReadOnlyList<IReadOnlyList<ResolvedEvent>?> resolvedCases, CancellationToken cancellation,
+        IReadOnlyList<GridSim.Core.Dynamics.Plugins.UserRelayBinding>? userRelays = null)
+    {
+        DynamicsStudyRequest request = ctx.Request;
+        int n = request.Cases.Count;
+        var rows = new DynamicsFullModelUnitRelayRow?[n];
+        var notEvaluated = new IReadOnlyList<Dynamics.Models.Adaptive.UnitRelayNotEvaluated>?[n];
+        void RunRow(int i)
+        {
+            DynamicsCaseRequest c = request.Cases[i];
+            if (cancellation.IsCancellationRequested)
+            {
+                rows[i] = new(i, c.Name, DynamicsDisposition.NotAttempted, "the run was cancelled before this row started", null, null, null, null);
+                return;
+            }
+            if (c.Kind != DynamicsCaseKind.Events)
+            {
+                rows[i] = new(i, c.Name, DynamicsDisposition.NotRun, "a critical clearing time row does not run unit relays", null, null, null, null);
+                return;
+            }
+            try
+            {
+                // RC5 wp32b: with user relays, the run that takes them (the units' own relays act too when the model carries them).
+                RmsTransientStability.UnitRelayStudy s = userRelays is null
+                    ? RmsTransientStability.StudyEventsWithUnitRelays(keyed, ctx.Pf, ctx.Data,
+                        resolvedCases[i]!.Select(e => e.Engine).ToList(), stepSeconds: request.StepSeconds, durationSeconds: request.DurationSeconds,
+                        slipLimitRad: request.Criteria.SlipLimitRad, exciters: Exciters(ctx))
+                    : RmsTransientStability.StudyEventsWithUserRelays(keyed, ctx.Pf, ctx.Data,
+                        resolvedCases[i]!.Select(e => e.Engine).ToList(), userRelays, stepSeconds: request.StepSeconds, durationSeconds: request.DurationSeconds,
+                        slipLimitRad: request.Criteria.SlipLimitRad, exciters: Exciters(ctx));
+                notEvaluated[i] = s.NotEvaluated;
+                rows[i] = new(i, c.Name, DynamicsDisposition.Evaluated, null, s.Result.StayedInSynchronism, s.EndedAtSeconds, s.EndReason, s.UnitRelays)
+                {
+                    BranchRelays = userRelays is not null && userRelays.Any(b => b.BranchIndex is not null) ? s.BranchRelays : null,
+                };
+            }
+            catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+            {
+                rows[i] = new(i, c.Name, DynamicsDisposition.Failed, "the engine refused the row: " + ex.Message, null, null, null, null);
+            }
+        }
+        if (request.MaxParallelism <= 1)
+            for (int i = 0; i < n; i++) RunRow(i);
+        else
+            Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = request.MaxParallelism }, RunRow);
+
+        var trips = new List<DynamicsFullModelUnitTrip>();
+        foreach (DynamicsFullModelUnitRelayRow r in rows.Select(x => x!))
+            foreach (FullModelUnitRelayRecord u in r.UnitRelays ?? Array.Empty<FullModelUnitRelayRecord>())
+                if (u.Tripped)
+                    trips.Add(new DynamicsFullModelUnitTrip(r.Index, r.Name, u.Unit, u.Device, u.OperateSeconds!.Value, u.DisconnectedSeconds!.Value,
+                        u.OperateQuantity, u.ImpedanceRPu, u.ImpedanceXPu, u.Settings));
+        // The stages not evaluated depend on the model and the run's nominal frequency only, so every row lists the same.
+        IReadOnlyList<Dynamics.Models.Adaptive.UnitRelayNotEvaluated> skipped = notEvaluated.FirstOrDefault(x => x is not null)
+            ?? Array.Empty<Dynamics.Models.Adaptive.UnitRelayNotEvaluated>();
+        string hStep = request.StepSeconds.ToString("R", CultureInfo.InvariantCulture);
+        if (userRelays is not null)
+        {
+            // RC5 wp32b: the companion run with user relays names its entry point and adds the user relay rule; branch trips are listed.
+            var branchTrips = new List<DynamicsFullModelBranchTrip>();
+            foreach (DynamicsFullModelUnitRelayRow r in rows.Select(x => x!))
+                foreach (FullModelBranchRelayRecord b in r.BranchRelays ?? Array.Empty<FullModelBranchRelayRecord>())
+                    if (b.Tripped)
+                        branchTrips.Add(new DynamicsFullModelBranchTrip(r.Index, r.Name, b.Branch, b.Device, b.OperateSeconds!.Value, b.DisconnectedSeconds!.Value,
+                            b.ReasonCode, b.Settings));
+            return new DynamicsFullModelUnitRelayEvidence(
+                Engine: $"GridSim RMS full model (RmsTransientStability.StudyEventsWithUserRelays / MultiMachineSubtransient, six-state machines with flux decay and their exciters and governors, fixed step {hStep} s)",
+                Rule: keyed.UnitProtection is null ? RmsTransientStability.UserRelayRule
+                    : RmsTransientStability.FullModelUnitRelayRule + "; " + RmsTransientStability.UserRelayRule,
+                StatusRule: "the fixed-step rows (cases) are run without unit or user relays, unchanged, and decide the study status; these rows are the same events re-run with the relays acting, as additional evidence",
+                NotEvaluated: skipped, Trips: trips, Rows: rows.Select(r => r!).ToList())
+            {
+                BranchTrips = userRelays.Any(b => b.BranchIndex is not null) ? branchTrips : null,
+            };
+        }
+        return new DynamicsFullModelUnitRelayEvidence(
+            Engine: $"GridSim RMS full model (RmsTransientStability.StudyEventsWithUnitRelays / MultiMachineSubtransient, six-state machines with flux decay and their exciters and governors, fixed step {hStep} s)",
+            Rule: RmsTransientStability.FullModelUnitRelayRule,
+            StatusRule: "the fixed-step rows (cases) are run without unit relays, unchanged, and decide the study status; these rows are the same events re-run with the units' own relays acting, as additional evidence",
+            NotEvaluated: skipped, Trips: trips, Rows: rows.Select(r => r!).ToList());
     }
 
     private static void Validate(DynamicsStudyRequest r)
@@ -245,6 +401,74 @@ public static class DynamicsStudyRunner
             if (!(ad.CctToleranceSeconds > 0.0) || !double.IsFinite(ad.CctToleranceSeconds))
                 throw new InvalidDataException("adaptive.cctToleranceSeconds must be a positive, finite number.");
         }
+        if (r.StepSchedule is not null || r.ErrorControl is not null)
+        {
+            // WP21 (RC5): the opt-in step schedule and error-controlled step (both absent on every existing request).
+            if (r.StepSchedule is not null && r.ErrorControl is not null)
+                throw new InvalidDataException("integration: give stepSchedule or errorControl, not both.");
+            if (r.UserModels is { Count: > 0 } || r.PluginModels is { Count: > 0 })
+                throw new InvalidDataException("integration: a step schedule or the error-controlled step does not run user or plug-in models, because GridSim cannot check that they take the step on each call.");
+            if (r.StepSchedule is { } sch)
+            {
+                try { _ = sch.Expand(r.DurationSeconds); }
+                catch (ArgumentException ex) { throw new InvalidDataException("integration.stepSchedule: " + ex.Message); }
+            }
+            if (r.ErrorControl is { } ec)
+            {
+                try { ec.Validate(); }
+                catch (ArgumentException ex) { throw new InvalidDataException("integration.errorControl: " + ex.Message); }
+            }
+        }
+        if (r.Iec61400Units is { Count: > 0 } iecUnits)
+        {
+            // RC5 WP23: IEC 61400 units (absent on every existing request).
+            if (r.Adaptive is not null)
+                throw new InvalidDataException("iec61400: the variable-step companion run (adaptive) holds no converter units; remove one of the two.");
+            if (r.StepSchedule is not null || r.ErrorControl is not null)
+                throw new InvalidDataException("iec61400: an IEC 61400 unit runs at one step size (its timers count whole steps), so it does not run with a step schedule or the error-controlled step.");
+            var seen = new HashSet<(int, string)>();
+            foreach (Iec61400StudyUnit u in iecUnits)
+            {
+                if (u?.Machine is null || u.Data is null) throw new InvalidDataException("iec61400: every unit needs a machine and its data.");
+                if (!seen.Add((u.Machine.Bus, u.Machine.Id))) throw new InvalidDataException($"iec61400: {u.Machine} is given twice.");
+                if (r.UserModels?.Any(a => a.Machine == u.Machine) == true || r.PluginModels?.Any(a => a.Machine == u.Machine) == true)
+                    throw new InvalidDataException($"iec61400: {u.Machine} also has a user or plug-in model; an IEC 61400 unit has no governor or exciter.");
+                IReadOnlyList<string> problems = Dynamics.Models.Iec61400.Iec61400Data.Problems(u.Data);
+                if (problems.Count > 0) throw new InvalidDataException($"iec61400: {u.Machine}: " + string.Join(" ", problems));
+            }
+        }
+        if (r.DeviceModels is { Count: > 0 } deviceModels)
+        {
+            // RC5 WP32: injection, machine and load models (absent on every existing request).
+            if (r.Adaptive is not null)
+                throw new InvalidDataException("deviceModels: the variable-step companion run (adaptive) holds no converter units or user loads; remove one of the two.");
+            if (r.StepSchedule is not null || r.ErrorControl is not null)
+                throw new InvalidDataException("deviceModels: a step schedule or the error-controlled step does not run user or plug-in models, because GridSim cannot check that they take the step on each call.");
+            var units = new HashSet<(int, string)>();
+            foreach (DeviceModelAssignment a in deviceModels)
+            {
+                if (a is null) throw new InvalidDataException("deviceModels: an entry is null.");
+                if (a.Machine is not { } m) continue;
+                string who = $"deviceModels: {m}";
+                if (!units.Add((m.Bus, m.Id))) throw new InvalidDataException($"{who} is given two injection or machine models.");
+                if (r.UserModels?.Any(u => u.Machine == m) == true || r.PluginModels?.Any(u => u.Machine == m) == true)
+                    throw new InvalidDataException($"{who} also has a governor or exciter model; a unit driven by an injection or machine model has none.");
+                if (r.Iec61400Units?.Any(u => u.Machine == m) == true)
+                    throw new InvalidDataException($"{who} is also an IEC 61400 unit; a unit takes one model.");
+                if (r.AngleReference == m)
+                    throw new InvalidDataException($"{who} is the angleReference; a unit driven by an injection or machine model is not integrated as a synchronous machine.");
+            }
+        }
+        if (r.RelayModels is { Count: > 0 } relayModels)
+        {
+            // RC5 wp32b: user relays (absent on every existing request).
+            if (r.Adaptive is not null)
+                throw new InvalidDataException("relay models: the variable-step companion run (adaptive) does not run user relays; remove one of the two.");
+            if (r.StepSchedule is not null || r.ErrorControl is not null)
+                throw new InvalidDataException("relay models: a relay's timers count whole steps of one size, so it does not run with a step schedule or the error-controlled step.");
+            foreach (RelayModelAssignment a in relayModels)
+                if (a is null || (a.Machine is null) == (a.Branch is null)) throw new InvalidDataException("relay models: every relay is bound to one unit or one branch.");
+        }
         if (r.Cases.Count == 0) throw new InvalidDataException("cases must hold at least one row.");
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (DynamicsCaseRequest c in r.Cases)
@@ -258,6 +482,13 @@ public static class DynamicsStudyRunner
                 foreach (DynamicsEventRequest e in c.Events)
                     if (e is null || !double.IsFinite(e.AtSeconds) || !(e.AtSeconds > 0.0) || e.AtSeconds > r.DurationSeconds)
                         throw new InvalidDataException($"case '{c.Name}': every event time must be finite, after 0 s and within the duration.");
+                if (r.StepSchedule is { } schedule)
+                    foreach (DynamicsEventRequest e in c.Events)
+                    {
+                        // WP21: an event strictly inside a coarse window is refused before any work.
+                        try { schedule.RequireEventPlacement(e.AtSeconds, $"the {e.Kind} event"); }
+                        catch (ArgumentException ex) { throw new InvalidDataException($"case '{c.Name}': integration.stepSchedule: {ex.Message}"); }
+                    }
             }
             else
             {
@@ -285,6 +516,80 @@ public static class DynamicsStudyRunner
     };
 
     /// <summary>The index into <c>model.Generators</c> of the in-service unit with this native identity.</summary>
+    /// <summary>
+    /// RC5: the RAW case's model with each unnamed generator named by its PSS/E machine key <c>&lt;bus&gt;:&lt;id&gt;</c>
+    /// (<see cref="IO.Json.UnitProtectionFile.MachineKey"/>; the RAW reader names no machine), so unit protection binds to
+    /// RAW machines by that key. A generator that has a name keeps it. Only names change: every number, list and order is
+    /// the RAW model's. Used for the unit relay companion runs only, when unit protection is asked for.
+    /// </summary>
+    internal static GridModel UnitKeyed(PsseParseResult raw)
+    {
+        GridModel model = raw.Model;
+        if (raw.MachineKeys.Count != model.AllGenerators.Count)
+            throw new InvalidDataException("adaptive.unitProtection: the RAW case's machine keys do not match its generators, so units cannot be named by <bus>:<id>.");
+        if (model.AllGenerators.All(g => g.Name is not null)) return model;
+        var gens = new List<Generator>(model.AllGenerators.Count);
+        for (int k = 0; k < model.AllGenerators.Count; k++)
+        {
+            Generator g = model.AllGenerators[k];
+            gens.Add(g.Name is null ? g with { Name = IO.Json.UnitProtectionFile.MachineKey(raw.MachineKeys[k].Bus, raw.MachineKeys[k].Id) } : g);
+        }
+        return model.CopyWith(generators: gens, generatorsAreWholeFleet: true);
+    }
+
+    // RC5: every unit the set names must be a unit of the case (fail loud, every unknown unit listed), then the model's own
+    // check (a unique name).
+    private static void BindUnits(PsseParseResult raw, GridModel keyed, Protection.UnitProtectionSet units)
+    {
+        var names = new HashSet<string>(keyed.AllGenerators.Where(g => g.Name is not null).Select(g => g.Name!), StringComparer.Ordinal);
+        var unknown = units.Resolved.Select(u => u.Unit).Where(u => !names.Contains(u)).ToList();
+        if (unknown.Count > 0)
+        {
+            string example = raw.MachineKeys.Count > 0 ? IO.Json.UnitProtectionFile.MachineKey(raw.MachineKeys[0].Bus, raw.MachineKeys[0].Id) : "101:1";
+            throw new InvalidDataException("adaptive.unitProtection: " + string.Join("; ", unknown.Select(u => $"unit '{u}' is not a machine of the RAW case"))
+                + $". A RAW-bound study names a unit by its PSS/E machine key <bus>:<id>, the generator record's bus number and machine ID as written in the RAW file (for example '{example}'; the ID is case-sensitive).");
+        }
+        try { _ = keyed.WithUnitProtection(units); }
+        catch (InvalidDataException ex) { throw new InvalidDataException("adaptive.unitProtection: " + ex.Message); }
+    }
+
+    /// <summary>RC5 wp32b: each user relay bound to the keyed model: a unit by its key (the generator's name in
+    /// <paramref name="keyed"/>), a branch by its index, read at its From bus as written. Every unit and branch must be in
+    /// service in the case.</summary>
+    private static List<GridSim.Core.Dynamics.Plugins.UserRelayBinding> BindRelays(PsseParseResult raw, GridModel keyed,
+        IReadOnlyList<RelayModelAssignment> relays)
+    {
+        var list = new List<GridSim.Core.Dynamics.Plugins.UserRelayBinding>(relays.Count);
+        foreach (RelayModelAssignment a in relays)
+        {
+            string what = $"relay models ({a.Device})";
+            try
+            {
+                if (a.Machine is { } m)
+                {
+                    int gi = ResolveMachine(raw, m, what);
+                    Generator g = raw.Model.Generators[gi];
+                    int k = -1;
+                    for (int j = 0; j < raw.Model.AllGenerators.Count; j++) if (ReferenceEquals(raw.Model.AllGenerators[j], g)) { k = j; break; }
+                    string unit = keyed.AllGenerators[k].Name
+                        ?? throw new InvalidOperationException("internal error: a keyed unit has no name");
+                    list.Add(a.Plugin is { } p ? new GridSim.Core.Dynamics.Plugins.UserRelayBinding(unit, p)
+                        : GridSim.Core.Dynamics.Plugins.UserRelayBinding.ForUnit(unit, a.Declared!));
+                }
+                else
+                {
+                    DynamicsBranchId b = a.Branch!;
+                    int bi = ResolveBranch(raw, b, what);
+                    string label = b.ToString();
+                    list.Add(a.Plugin is { } p ? GridSim.Core.Dynamics.Plugins.UserRelayBinding.ForBranch(bi, b.From, p, label)
+                        : GridSim.Core.Dynamics.Plugins.UserRelayBinding.ForBranch(bi, b.From, a.Declared!, label));
+                }
+            }
+            catch (ArgumentException ex) { throw new InvalidDataException($"{what}: {ex.Message}"); }
+        }
+        return list;
+    }
+
     private static int ResolveMachine(PsseParseResult raw, DynamicsMachineId id, string what)
     {
         if (id is null || id.Id is null) throw new InvalidDataException($"{what}: a machine needs a bus and an ID.");
@@ -340,6 +645,11 @@ public static class DynamicsStudyRunner
         }
         if (e.Kind != DynamicsEventKind.LoadStep && (e.PMw is not null || e.QMvar is not null))
             throw new InvalidDataException($"{what}: only a loadStep event takes pMw and qMvar.");
+        bool faultKind = e.Kind is DynamicsEventKind.SequenceFault or DynamicsEventKind.LineFault;
+        if (!faultKind && (e.FaultType is not null || e.FaultRPu is not null || e.FaultXPu is not null))
+            throw new InvalidDataException($"{what}: only a sequenceFault or lineFault event takes type, rPu and xPu.");
+        if (e.Kind != DynamicsEventKind.LineFault && e.Fraction is not null)
+            throw new InvalidDataException($"{what}: only a lineFault event takes fraction.");
         string b = e.Bus?.ToString(CultureInfo.InvariantCulture) ?? "";
         switch (e.Kind)
         {
@@ -354,6 +664,20 @@ public static class DynamicsStudyRunner
                 int g = ResolveMachine(raw, e.Machine, what);
                 return new(e, new RmsGeneratorTrip(e.AtSeconds, g), e.Machine.ToString(), g);
             }
+            case DynamicsEventKind.SequenceFault:
+            {
+                int bus = Bus();
+                if (e.FaultType is not GridSim.Core.Protection.FaultType t) throw new InvalidDataException($"{what}: a sequenceFault event needs a type.");
+                return new(e, new RmsSequenceFault(e.AtSeconds, bus, t, e.FaultRPu ?? 0.0, e.FaultXPu ?? 0.0), $"bus {b}", null);
+            }
+            case DynamicsEventKind.LineFault:
+            {
+                int j = Branch();
+                if (e.FaultType is not GridSim.Core.Protection.FaultType t) throw new InvalidDataException($"{what}: a lineFault event needs a type.");
+                if (e.Fraction is not double d) throw new InvalidDataException($"{what}: a lineFault event needs a fraction.");
+                return new(e, new RmsBranchSequenceFault(e.AtSeconds, j, d, t, e.FaultRPu ?? 0.0, e.FaultXPu ?? 0.0), e.Branch!.ToString(), null);
+            }
+            case DynamicsEventKind.LineFaultClear: { int j = Branch(); return new(e, new RmsBranchFaultClear(e.AtSeconds, j), e.Branch!.ToString(), null); }
             case DynamicsEventKind.LoadStep:
             {
                 int bus = Bus();
@@ -369,12 +693,17 @@ public static class DynamicsStudyRunner
     /// no machine has one (the held-field path, as the RMS verb takes it).</summary>
     private static List<RmsExciter?>? Exciters(Context ctx)
     {
-        bool userExciters = ctx.Request.UserModels?.Any(a => a.Model.Role == "exciter") == true;   // R4-08
+        bool userExciters = ctx.Request.UserModels?.Any(a => a.Model.Role == "exciter") == true   // R4-08
+            || ctx.Request.PluginModels?.Any(a => a.Model.Role == GridSim.Core.Dynamics.Plugins.UserModelRole.Exciter) == true;   // RC5 WP12
         if (!ctx.Set.Entries.Any(e => e.Exciter is not null) && !userExciters) return null;
         var list = Enumerable.Repeat<RmsExciter?>(null, ctx.Model.Generators.Count).ToList();
         foreach (MachineDynamicsEntry e in ctx.Set.Entries)
             if (e.Exciter is not null) list[e.GeneratorIndex] = e.Exciter.Create();
-        if (userExciters) UserModelOverlay.ApplyExciters(ctx.Request.Raw, list, ctx.Request.UserModels!);
+        if (userExciters) UserModelOverlay.ApplyAllExciters(ctx.Request.Raw, list, ctx.Request.UserModels, ctx.Request.PluginModels);
+        // RC5 WP32: a unit driven by an injection or machine model is converter plant, which takes no exciter.
+        if (ctx.Request.DeviceModels is { Count: > 0 } deviceModels)
+            foreach (DeviceModelAssignment a in deviceModels)
+                if (a.Machine is { } dm) list[ResolveMachine(ctx.Request.Raw, dm, "deviceModels")] = null;
         return list;
     }
 
@@ -527,11 +856,16 @@ public static class DynamicsStudyRunner
         DynamicsEventKind.BranchTrip => "branchTrip",
         DynamicsEventKind.BranchReclose => "branchReclose",
         DynamicsEventKind.MachineTrip => "machineTrip",
+        DynamicsEventKind.SequenceFault => "sequenceFault",
+        DynamicsEventKind.LineFault => "lineFault",
+        DynamicsEventKind.LineFaultClear => "lineFaultClear",
         _ => "loadStep",
     };
 
     private static DynamicsCaseResult EventRow(Context ctx, int index, DynamicsCaseRequest c, IReadOnlyList<ResolvedEvent> events)
     {
+        // WP21 (RC5): the opt-in step schedule or error-controlled step (absent on every existing request: the body below).
+        if (ctx.Request.StepSchedule is not null || ctx.Request.ErrorControl is not null) return SteppedEventRow(ctx, index, c, events);
         IReadOnlyList<DynamicsAppliedEvent> applied = Applied(events, ctx.Request.StepSeconds);
         RmsTransientStability.ObservedStudy run;
         try
@@ -545,7 +879,88 @@ public static class DynamicsStudyRunner
             return new DynamicsCaseResult(index, c.Name, c.Kind, DynamicsDisposition.Failed, "the engine refused the row: " + ex.Message,
                 ctx.Indicative, applied, null, null, null);
         }
+        return JudgeEventRow(ctx, index, c, events, applied, run, null);
+    }
 
+    /// <summary>WP21 (RC5): an events row on the request's step schedule or with the error-controlled step.</summary>
+    private static DynamicsCaseResult SteppedEventRow(Context ctx, int index, DynamicsCaseRequest c, IReadOnlyList<ResolvedEvent> events)
+    {
+        DynamicsStudyRequest rq = ctx.Request;
+        var engineEvents = events.Select(e => e.Engine).ToList();
+        IReadOnlyList<DynamicsAppliedEvent>? applied = rq.StepSchedule is { } given ? AppliedScheduled(events, given, rq.DurationSeconds) : null;
+        RmsTransientStability.ObservedStudy run;
+        DynamicsStepControlEvidence evidence;
+        RmsErrorControlResult<RmsTransientStability.ObservedStudy>? controlled = null;
+        try
+        {
+            if (rq.StepSchedule is { } schedule)
+            {
+                run = RmsTransientStability.StudyEventsObservedScheduled(ctx.Model, ctx.Pf, ctx.Data, engineEvents, ctx.ChannelBuses, schedule,
+                    durationSeconds: rq.DurationSeconds, slipLimitRad: rq.Criteria.SlipLimitRad, exciters: Exciters(ctx));
+                evidence = new DynamicsStepControlEvidence("schedule",
+                    schedule.Windows.Select(w => new DynamicsStepWindow(w.FromSeconds, w.StepSeconds, null)).ToList(),
+                    run.Result.Machines[0].TimeSeconds.Count - 1, null, null, null, null, null);
+            }
+            else
+            {
+                controlled = RmsTransientStability.StudyEventsObservedErrorControlled(ctx.Model, ctx.Pf, ctx.Data, engineEvents, ctx.ChannelBuses,
+                    rq.ErrorControl!, () => Exciters(ctx), durationSeconds: rq.DurationSeconds, slipLimitRad: rq.Criteria.SlipLimitRad);
+                run = controlled.Run;
+                applied = AppliedScheduled(events, controlled.Schedule, rq.DurationSeconds);
+                evidence = new DynamicsStepControlEvidence("errorControl",
+                    controlled.Segments.Select(g => new DynamicsStepWindow(g.FromSeconds, g.StepSeconds, g.ScaledError)).ToList(),
+                    run.Result.Machines[0].TimeSeconds.Count - 1, controlled.ToleranceMet, controlled.MaxScaledError, controlled.Passes,
+                    controlled.Runs, controlled.Note) { Status = RmsErrorControl.ExperimentalNote };
+            }
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        {
+            return new DynamicsCaseResult(index, c.Name, c.Kind, DynamicsDisposition.Failed, "the engine refused the row: " + ex.Message,
+                ctx.Indicative, applied, null, null, null);
+        }
+        DynamicsCaseResult row = JudgeEventRow(ctx, index, c, events, applied, run, evidence);
+        if (controlled is { ToleranceMet: false })
+        {
+            // A run whose step control missed its tolerance is not a settled answer. A loss of synchronism seen in both runs of
+            // the last pass stands (the difference then grows without bound); anything else is INCOMPLETE.
+            bool bothLost = !run.Result.StayedInSynchronism && controlled.CoarseRun is { } coarse && !coarse.Result.StayedInSynchronism;
+            if (row.Disposition == DynamicsDisposition.Unstable && bothLost)
+                row = row with { Reason = row.Reason + "; " + controlled.Note + " (the loss of synchronism is in both runs of the last pass)" };
+            else if (row.Disposition is DynamicsDisposition.Stable or DynamicsDisposition.Unstable)
+                row = row with
+                {
+                    Disposition = DynamicsDisposition.Incomplete,
+                    Reason = "the error-controlled step did not settle: " + controlled.Note + (row.Reason is null ? "" : "; the run itself reads: " + row.Reason),
+                };
+        }
+        return row;
+    }
+
+    /// <summary>WP21: the applied events of a step-schedule run (the kernel's stage rule, on each step's own length).</summary>
+    private static IReadOnlyList<DynamicsAppliedEvent> AppliedScheduled(IReadOnlyList<ResolvedEvent> events, RmsStepSchedule schedule, double duration)
+    {
+        (double[] times, double[] steps) = schedule.Expand(duration);
+        var order = events.Select((e, i) => (e, i)).OrderBy(x => x.e.Request.AtSeconds).ToList();
+        var result = new DynamicsAppliedEvent[events.Count];
+        int group = -1; double last = double.NaN;
+        for (int o = 0; o < order.Count; o++)
+        {
+            (ResolvedEvent e, int i) = order[o];
+            if (!(e.Request.AtSeconds == last)) { group++; last = e.Request.AtSeconds; }
+            (int k, double applied) = RmsStepSchedule.AppliedAt(times, steps, e.Request.AtSeconds);
+            double shift = applied - e.Request.AtSeconds;
+            double dt = steps[Math.Min(k, steps.Length - 1)];
+            result[i] = new DynamicsAppliedEvent(i, o, group, KindName(e.Request.Kind), e.Equipment, e.Engine.Describe(),
+                e.Request.AtSeconds, applied, k, Math.Abs(shift) <= dt * MultiMachineSubtransient.StageTimeToleranceSteps, shift);
+        }
+        return result;
+    }
+
+    /// <summary>The judgement of an events row from its run (the body of <see cref="EventRow"/>, moved here unchanged,
+    /// orchestration only), with the WP21 step evidence (null on the plain path).</summary>
+    private static DynamicsCaseResult JudgeEventRow(Context ctx, int index, DynamicsCaseRequest c, IReadOnlyList<ResolvedEvent> events,
+        IReadOnlyList<DynamicsAppliedEvent>? applied, RmsTransientStability.ObservedStudy run, DynamicsStepControlEvidence? stepControl)
+    {
         // Angle spread over the connected real machines (a tripped machine is left out of the spread from the start).
         var tripped = new HashSet<int>(events.Where(e => e.TrippedSlotGenerator is int).Select(e => ctx.SlotOfGenerator[e.TrippedSlotGenerator!.Value]));
         SubtransientInit.Prepared p = run.Prepared;
@@ -589,7 +1004,7 @@ public static class DynamicsStudyRunner
             disposition = DynamicsDisposition.Incomplete;
             reason = $"the post-event network's power flow did not converge ({post.PowerFlowStatus}); its steady state could not be established, so stability is not claimed";
         }
-        return new DynamicsCaseResult(index, c.Name, c.Kind, disposition, reason, ctx.Indicative, applied, evidence, post, null);
+        return new DynamicsCaseResult(index, c.Name, c.Kind, disposition, reason, ctx.Indicative, applied, evidence, post, null) { StepControl = stepControl };
     }
 
     /// <summary>CLI-27: true when the post-event check ran a power flow and it did not converge. The intact-network answer

@@ -20,7 +20,7 @@ public class HarmonicSourceSetTests
 
     // GR-884: one folder per test run (a fixed name was shared by concurrent test processes, which then read each
     // other's files).
-    private static readonly string RunDir = Path.Combine(Path.GetTempPath(), $"gridsim-harmonic-tests-{Guid.NewGuid():N}");
+    private static readonly string RunDir = TestTemp.Under($"gridsim-harmonic-tests-{Guid.NewGuid():N}");
 
     private static string TempFile(string name)
     {

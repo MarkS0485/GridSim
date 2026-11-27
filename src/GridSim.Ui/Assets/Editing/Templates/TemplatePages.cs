@@ -80,6 +80,18 @@ public static class TemplatePages
         ArgumentNullException.ThrowIfNull(t);
         return t.All.Where(x => x.IsInverter && !x.IsPlaceholder).Select(x => x.Ref).Distinct(StringComparer.Ordinal).ToList();
     }
+
+    /// <summary>RC5: the templates a generator's protectionTemplate can name: every active unitProtection template the case
+    /// can see, by reference (local first, then imported), the filter <see cref="BindableTemplates"/> applies to the
+    /// dynamics templates.</summary>
+    public static IReadOnlyList<string> UnitProtectionTemplates(CaseTemplates t)
+    {
+        ArgumentNullException.ThrowIfNull(t);
+        return t.All.Where(x => x.Kind == UnitProtectionKind && !x.IsPlaceholder).Select(x => x.Ref).Distinct(StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>RC5: the template kind of a unit's own protection class default.</summary>
+    public const string UnitProtectionKind = "unitProtection";
 }
 
 /// <summary>

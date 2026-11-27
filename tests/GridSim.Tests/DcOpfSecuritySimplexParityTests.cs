@@ -111,8 +111,12 @@ public class DcOpfSecuritySimplexParityTests
     [Theory]
     [InlineData("matpower/lib/case9.m", "Optimal", true, false, "40CEC30000000000", "4073B00000000000", 3, 0,
         "8F3E18DD1AE4109E634012FC8B3359169E4006B24B2F3B0EF7EE561C29F1CC5C", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 1.2 eps), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 0 within tol 2.9e-4). 5 taps. Only the binding flow bits move: bindingHash D0109DE1... -> C638F828...
     [InlineData("matpower/lib/case24_ieee_rts.m", "Optimal", true, true, "4101652000000000", "40A6440000000001", 33, 1,
-        "4584CA3159627BDCB67967405B4E19C5234C1FA9F21B30B344DBE10783ED4A09", "D0109DE18956B515DF4668AFF98BE6872A185DC32F56C664B4850CD871FAADDF")]
+        "4584CA3159627BDCB67967405B4E19C5234C1FA9F21B30B344DBE10783ED4A09", "C638F828F59C15AEDD9DB1A158AB4260BE85A13B678217354A8DFE7B4C733CAB")]
     [InlineData("matpower/lib/case30.m", "Optimal", true, false, "40C279FFFFFFFFFF", "4067A66666666665", 6, 0,
         "4D52D51556E87A44C892D1BDEE9545241DC5570BEF422970EB512C75D18C9AE8", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a duplicated
@@ -120,10 +124,20 @@ public class DcOpfSecuritySimplexParityTests
     // their last bits and the LP result with them.
     // costBits and genBits unchanged; 3 of 50 units move, by at most 1.2483951650210656E-09 MW; same 3 binding lines, flows
     // within 5.491074261954054E-11 MW. dispatchHash 75F630A4... -> 89DE3748...; bindingHash 7550D2AF... -> 29BF1C9D...
-    [InlineData("matpower/lib/case145.m", "Optimal", true, true, "416AFE6DB0000000", "411146AC9999999A", 50, 3,
-        "06036F94615716104E9105989FEA342C7EF4D47584FA36AE0B1C8DF5E0BBE108", "46B04EA6787259C5A19B9030F73027054B9879C1FB1251D228FB21C305B6C14A")]
-    [InlineData("matpower/rts/pglib_opf_case73_ieee_rts.m", "Optimal", true, true, "411A17B000000000", "40C0B30000000000", 99, 2,
-        "5CEDBAF86CEABB6AEFB1D9D1F5761AC9540B413FEFDECAA8EC980972B1B916BF", "100A7FE21E193A7B63016693425540837B9A40C97D3A20408A11F7807ADEC967")]
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 53.5 eps), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 3.7e-9 within tol 3.5e-2). 52 taps, 85 Gs buses: demand now Pd + Gs. costBits 416AFE6DB0000000 -> 4170D93078000000 (17666823.5); genBits
+    // 411146AC9999999A -> 411590E1E147AE14 (353336.47 = sum Pd + sum Gs); binding 3 -> 1; both hashes move.
+    [InlineData("matpower/lib/case145.m", "Optimal", true, true, "4170D93078000000", "411590E1E147AE14", 50, 1,
+        "6F7A7BDF1BBBC1F3AF7B9DF5B2029632DF06BC56D9A6796F5A77623EE51C7C69", "01ED5B5E7CF3ED25B94F6C946ADAEAC43D2FEB4235B2C9A4A8BB29A7F1D6742F")]
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 1.7 eps), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 5.8e-11 within tol 8.6e-4). 15 taps. costBits 411A17B000000000 (427500) -> 411A17AFFFFFFFFF (427499.99999999994, one ulp); genBits
+    // unchanged; same count of binding lines; both hashes move.
+    [InlineData("matpower/rts/pglib_opf_case73_ieee_rts.m", "Optimal", true, true, "411A17AFFFFFFFFF", "40C0B30000000000", 99, 2,
+        "84701C59E897F9C78BDE5E506BC11DF47D957CC0BDEE930DF772DBAB39239A58", "1FF9F5A5242017BEFBBB6D8A67ACFBC561D26EE3CB77B6011940781A218425B8")]
     [InlineData("matpower/nesta/pglib_opf_case3_lmbd.m", "Optimal", true, false, "40CEC30000000000", "4073B00000000000", 3, 0,
         "50AE1EADFE31FA104AD694E56F57A511C526F189A95D30A693B56A681D5517D7", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     [InlineData("matpower/nesta/pglib_opf_case5_pjm.m", "Optimal", true, false, "40E86A0000000000", "408F400000000000", 5, 0,
@@ -136,8 +150,13 @@ public class DcOpfSecuritySimplexParityTests
     // costBits "4116178400000001" (361953.00000000006) -> "4116178400000000" (361953); genBits "40BC470F5C28F5C3" (7239.06)
     // -> "40BC470F5C28F5C2" (7239.0599999999995); 8 of 12 units move, by at most 1.5575096767861396E-11 MW; same 7 binding
     // lines, flows within 3.865352482534945E-12 MW. dispatchHash AB7F2B72... -> 3D8F8F0F...; bindingHash A8974D24... -> C83E4DA6...
-    [InlineData("matpower/nesta/pglib_opf_case162_ieee_dtc.m", "Optimal", true, true, "4116178400000001", "40BC470F5C28F5C3", 12, 7,
-        "9721BCBE4FC2C44C1D66D1394AA756D7983A098E63151EC38BB970D8B0E96A84", "DF60E6E326B4F5862701759A95207D3744B7C015E0F1B3966F66C80B25107047")]
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 2.1 eps), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 1.5e-9 within tol 7.2e-4). 31 taps. costBits 4116178400000001 -> 4116178400000000 (361953); genBits unchanged; 7 binding lines;
+    // both hashes move.
+    [InlineData("matpower/nesta/pglib_opf_case162_ieee_dtc.m", "Optimal", true, true, "4116178400000000", "40BC470F5C28F5C3", 12, 7,
+        "4AB556347203469F8A91472E0C56AD7B80DB0B93F3E450BB39015456A9350C03", "0E31B5E9D1C2860D5E7D473FD6F226EC97BE0794655B554002C3D99DE59CFBB3")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a duplicated
     // cell in insertion order (the PTDF matrix's diagonals were summed in the introsort's arbitrary order), so the PTDFs move in
     // their last bits and the LP result with them.
@@ -167,8 +186,14 @@ public class DcOpfSecuritySimplexParityTests
     // 713.8564781392051, gen 18 (bus 75) 221.79 -> 78.08, gen 1 (bus 10) 221.79 -> 97.5, gen 70 (bus 414)
     // 331.5003641607268 -> 431.17, gen 64 (bus 366) 131.27 -> 196.9 (full list in the DOC-11 notes). dispatchHash
     // F48099EF... -> 6FD2F333...; bindingHash 26413F0C... -> FB9FE466...
-    [InlineData("matpower/nesta/pglib_opf_case588_sdet.m", "Optimal", true, true, "4120447EFFFFFFFD", "40C4D28E147AE144", 95, 8,
-        "CB95AC1B9BD03E83991325EFA25D56FEBF3F7D305E98520BC3DBFAEF732B0FE3", "0FB84DCB45FA56EC41DC6E61FDAA24792E7D0C7353A747FF19A2915AA6D0E7EE")]
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 53.8 eps), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 5.5e-8 within tol 1.2e-3). 86 taps; degenerate LP (tied costs), so the vertex differs from HiGHS's at the same
+    // cost. costBits ...FD -> ...FC (533055.4999999995); genBits ...144 -> ...143 (the same sum Pd, summed over another
+    // dispatch); binding 8 -> 6; both hashes move.
+    [InlineData("matpower/nesta/pglib_opf_case588_sdet.m", "Optimal", true, true, "4120447EFFFFFFFC", "40C4D28E147AE143", 95, 6,
+        "627591375D854FA08D97BD1AF30463358D0ADCD81B5B41446D1EA855F4142C31", "FC2D44CE0697AFCED3A80B4703EF9F12FC259689C8E4FBAB5506354EF76A76EA")]
     [InlineData("matpower/dist/case533mt_hi.m", "Optimal", true, false, "40873D6ABBECAABC", "402DBF40F08B17FB", 1, 0,
         "6BB190107FCD0FC61AC245BCE0A587A0CFD96DFEAC4F1B0D90F0ED671D7A2098", "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")]
     [InlineData("matpower/benchmarks/cigre_mv.m", "Optimal", true, false, "40A17A370A3D70A8", "40465EFEC56D5D00", 1, 0,
@@ -195,8 +220,12 @@ public class DcOpfSecuritySimplexParityTests
     // move, by at most 3.410605131648481E-12 MW (gen 246, bus 8872). costBits unchanged "414BDEBBC0000004"; genBits
     // "40F1D63AB851EB87" (73059.67000000003) -> "40F1D63AB851EB88" (73059.67000000004); the same 10 binding lines (flows in
     // their last bits). dispatchHash C50533FB... -> 9DF1077E...; bindingHash 54FEA9E8... -> 7B475CA2...
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 40.8 eps), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 1.4e-8 within tol 8.2e-3). 234 taps, 6 shifts. costBits and genBits unchanged; 10 binding lines; both hashes move.
     [InlineData("matpower/pegase/case1354pegase.m", "Optimal", true, true, "414BDEBBC0000004", "40F1D63AB851EB87", 260, 10,
-        "9413A8D784CD3FF22008D623876005DE405D4539642EBCBDB918B3688908BF1C", "5E6BA53331B1431517C7234AFA4D0DE6EF379C0ED880FC9A11768BE5A6D7FCC5")]
+        "638BE34E60D70C5E3206F0CF3969C21A2159641539A8DEE61588E3EB818F140D", "637FAE8EB978CC42F43A0BC12AD824304FF83A9AFB726363E3D51A4F2EF221EC")]
     // Moved 2026-10 (R305 / N020, authorised by Mark's 2026-10-02 best-judgement ruling): this row priced gb-synthetic's
     // onshore / offshore wind (types "onshore", "offshore") at the 50 GBP/MWh unknown-fuel default, because the old
     // substring cost table knew wind only as "wind". With the one fuel taxonomy they cost 1, like every other wind type.
@@ -221,8 +250,13 @@ public class DcOpfSecuritySimplexParityTests
     // move: gen 7 (bus 12) 1400 -> 0, gen 20 (bus 50) 0 -> 1000, gen 19 (bus 49) 415.50550535473485 -> 1000, gen 12 (bus 29)
     // 500 -> 315.50550535473417, gen 0 and gen 9 in their last bits (4.5e-13 and 1.6e-12 MW); still 4 binding lines.
     // dispatchHash 89A6C8DD... -> 21F9FCD4...; bindingHash D8B84BEF... -> 54CB6707...
-    [InlineData("gb-synthetic", "Optimal", true, true, "41226681E4468732", "40E32F5E6241BEA7", 74, 4,
-        "40B45BBFB853B119032F40D9D3C623C606E0929822D66A678EC1FFDA4DCD4568", "8EFFE16E6CA1ADF2B158752D2F8A995E92BEB7C0116FA09E5C848493527D87F3")]
+    // Moved 2.1.144 (B33, Mark's ruling 2026-11-24: tapped-case DC results may be re-pinned with a maths proof): the DC model
+    // now follows MATPOWER makeBdc (tap ratios, phase shifts, bus Gs as load). Proof (tools/crossval/pf/repin-b33/README.md):
+    // balance and binding flows against the NumPy makeBdc transcription (dcpf_repin_check.py dcopf, flows 7.0 eps (dcopf_optimality_check.py; the case is JSON)), and the cost equals
+    // the HiGHS optimum of the same makeBdc LP (dcopf_optimality_check.py, |diff| 2.9e-9 within tol 3.9e-3). 2137 taps; degenerate LP. costBits ...32 -> ...20 (602944.9458505847); genBits unchanged;
+    // 4 binding lines, 2 unrelievable lines as before; both hashes move.
+    [InlineData("gb-synthetic", "Optimal", true, true, "41226681E4468720", "40E32F5E6241BEA7", 74, 4,
+        "4F5B1899BFA40684F7DEB1579C6AC3C4E2C66C6AA1FCB4CDA308FF6815BCF2EB", "045BFE1602064CF0B673BEF0A76056C281DC3A21B4D059DB1657EA50814EF8ED")]
     public void Structured_security_dispatch_reproduces_the_recorded_original_results(
         string rel, string status, bool feasible, bool constrained, string costBits, string genBits,
         int generators, int binding, string dispatchHash, string bindingHash)

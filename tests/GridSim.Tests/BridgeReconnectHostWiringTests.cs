@@ -188,16 +188,32 @@ public sealed class BridgeReconnectHostWiringTests
     /// connections one at a time when the test asks.</summary>
     private sealed class LoopbackBridge : IDisposable
     {
-        private readonly HttpListener _listener = new();
+        private readonly HttpListener _listener;
         private readonly List<WebSocket> _sockets = new();
 
         public LoopbackBridge()
         {
-            int port;
-            using (var probe = new TcpListener(IPAddress.Loopback, 0)) { probe.Start(); port = ((IPEndPoint)probe.LocalEndpoint).Port; probe.Stop(); }
-            _listener.Prefixes.Add($"http://localhost:{port}/");
-            _listener.Start();
-            Endpoint = new Uri($"ws://localhost:{port}/");
+            // 2.1.074 (agreed with Mark): the OS-assigned port is probed and released before HttpListener can bind it, so another
+            // test process could take it in between (the one flake in the run); a taken port is retried with a fresh one.
+            for (int attempt = 1; ; attempt++)
+            {
+                int port;
+                using (var probe = new TcpListener(IPAddress.Loopback, 0)) { probe.Start(); port = ((IPEndPoint)probe.LocalEndpoint).Port; probe.Stop(); }
+                var candidate = new HttpListener();
+                candidate.Prefixes.Add($"http://localhost:{port}/");
+                try
+                {
+                    candidate.Start();
+                }
+                catch (HttpListenerException) when (attempt < 10)
+                {
+                    candidate.Close();
+                    continue;
+                }
+                _listener = candidate;
+                Endpoint = new Uri($"ws://localhost:{port}/");
+                break;
+            }
         }
 
         public Uri Endpoint { get; }

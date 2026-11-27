@@ -41,7 +41,7 @@ public class Gr183V2SchemaSetOnceTests
 
     private static T WithCase<T>(string manifest, Func<string, T> act)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-gr183-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-gr183-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

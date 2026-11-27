@@ -206,8 +206,8 @@ public static class P28Assessment
         P28PlanningLevels pl = PlanningLevels(nominalKv);
         double pst = Summation(pstSources, alpha);
         double plt = Summation(pltSources, alpha);
-        var vPst = new P28Verdict(pst <= pl.Pst ? G55Outcome.Pass : G55Outcome.Fail, "6.3.4 / Table 2", pst, pl.Pst, $"Pst summated by equation (1) with exponent {alpha:R}.");
-        var vPlt = new P28Verdict(plt <= pl.Plt ? G55Outcome.Pass : G55Outcome.Fail, "6.3.4 / Table 2", plt, pl.Plt, $"Plt summated by equation (1) with exponent {alpha:R}.");
+        var vPst = new P28Verdict(pst <= pl.Pst ? G55Outcome.Pass : G55Outcome.Fail, "6.3.4 / Table 2", pst, pl.Pst, FormattableString.Invariant($"Pst summated by equation (1) with exponent {alpha:R}."));
+        var vPlt = new P28Verdict(plt <= pl.Plt ? G55Outcome.Pass : G55Outcome.Fail, "6.3.4 / Table 2", plt, pl.Plt, FormattableString.Invariant($"Plt summated by equation (1) with exponent {alpha:R}."));
         return (vPst, vPlt, pst, plt);
     }
 

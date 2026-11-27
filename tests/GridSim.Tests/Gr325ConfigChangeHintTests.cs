@@ -16,7 +16,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr325ConfigChangeHintTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-gr325-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-gr325-" + Guid.NewGuid().ToString("N"));
 
     public Gr325ConfigChangeHintTests() => Directory.CreateDirectory(_dir);
 

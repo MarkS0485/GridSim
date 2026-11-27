@@ -30,6 +30,23 @@ public interface IAdaptiveTopology
     IReadOnlyList<bool> MachineOut { get; }
 }
 
+/// <summary>
+/// RC5 stage 3: a topology that can disconnect a machine when its unit's own relay operates. Required only when unit
+/// relays are in the loop (<see cref="AdaptiveSwingProblem.UnitRelays"/>); the existing topologies need not implement it.
+/// </summary>
+public interface IAdaptiveUnitTripTopology
+{
+    /// <summary>Disconnect machine <paramref name="slot"/> (its unit's own relay operated) and return the network that then
+    /// stands, or null when that would leave no connected machine (the run then stops, saying so). A machine that is
+    /// already out changes nothing.</summary>
+    IRmsNetwork? ApplyUnitTrip(int slot);
+
+    /// <summary>True once the scheduled events last applied (<see cref="IAdaptiveTopology.ApplyScheduled"/>) have, together
+    /// with the unit relay trips so far, disconnected every connected machine: the run then stops at that instant, saying
+    /// so, and the network that call returned is not used.</summary>
+    bool NoConnectedMachine => false;
+}
+
 /// <summary>A topology given as a fixed list of pre-built networks (no relay tripping beyond the supplied function).</summary>
 public sealed class StageListTopology : IAdaptiveTopology
 {
@@ -105,6 +122,16 @@ public sealed record AdaptiveSwingResult(
 {
     /// <summary>The fixed label of this integration path in every result.</summary>
     public const string AdaptiveLabel = "adaptive";
+
+    /// <summary>RC5 stage 3: each unit relay stage's behaviour, or null when unit relays were not in the loop (every
+    /// run without them; left out of the JSON then, so such a result's bytes are unchanged).</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<AdaptiveUnitRelayRecord>? UnitRelays { get; init; }
+
+    /// <summary>RC5 stage 3: why the run stopped before its end (a unit trip would have left no connected machine), or
+    /// null when it ran to the end.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public string? StopReason { get; init; }
 }
 
 /// <summary>The inputs of <see cref="AdaptiveSwingKernel.Run"/>. Per-machine arrays are in machine order.</summary>
@@ -138,6 +165,10 @@ public sealed class AdaptiveSwingProblem
     public IRelayCurrentSource? CurrentSource { get; init; }
     /// <summary>The tolerances.</summary>
     public AdaptiveOptions Options { get; init; } = new();
+    /// <summary>RC5 stage 3: each unit's own relays in the loop (opt-in), or null (every existing run). With stages to
+    /// evaluate, <see cref="Topology"/> must implement <see cref="IAdaptiveUnitTripTopology"/> and the network must be the
+    /// sparse full network (bus voltages).</summary>
+    public UnitRelaysInLoop? UnitRelays { get; init; }
 }
 
 /// <summary>
@@ -184,6 +215,10 @@ public static class AdaptiveSwingKernel
             throw new ArgumentException("The network must carry one EMF node per machine and no converter nodes (the adaptive path does not integrate converter plant).");
         int nd = p.Relays?.Count ?? 0;
         if (nd > 0 && p.CurrentSource is null) throw new ArgumentException("Relays in the loop need a current source.");
+        // RC5 stage 3: unit relay stages (0 for every existing run: nothing below that reads nu runs then).
+        int nu = p.UnitRelays?.Count ?? 0;
+        if (nu > 0 && p.Topology is not IAdaptiveUnitTripTopology)
+            throw new ArgumentException("Unit relays in the loop need a topology that can disconnect a machine (IAdaptiveUnitTripTopology).");
         IReadOnlyList<double> sched = p.Topology.ScheduledTimes;
         for (int i = 0; i < sched.Count; i++)
         {
@@ -192,7 +227,7 @@ public static class AdaptiveSwingKernel
             if (i > 0 && !(sched[i] > sched[i - 1])) throw new ArgumentException("Scheduled times must be strictly ascending.");
         }
 
-        var sys = new SwingSystem(p, initial, nd);
+        var sys = new SwingSystem(p, initial, nd, nu);
         var ctl = new AdaptiveStepController(p.Options);
         int dim = sys.Dimension;
         var y = new double[dim];
@@ -212,6 +247,10 @@ public static class AdaptiveSwingKernel
         int accepted = 0, rejected = 0, bisections = 0;
         double minUsed = double.PositiveInfinity, maxUsed = 0.0;
         int rank = 0;
+        var unitState = new UnitRun[nu];
+        for (int k = 0; k < nu; k++) unitState[k] = new UnitRun();
+        string? stopReason = null;
+        var pendingShift = new List<(int Stage, double ShiftDeg)>();
 
         void Record(double t, double[] state)
         {
@@ -267,13 +306,13 @@ public static class AdaptiveSwingKernel
                     if (newClass == RelayClass.Inactive)
                     {
                         state[2 * n + dd] = 0.0; rr.Pickup = null; rr.Min = double.PositiveInfinity; rr.Max = double.NegativeInfinity;
-                        events.Add(new AdaptiveAppliedEvent("relay", "dropout", $"relay {id} drops out at {amps:R} A", t, lowBracket, rank++));
+                        events.Add(new AdaptiveAppliedEvent("relay", "dropout", FormattableString.Invariant($"relay {id} drops out at {amps:R} A"), t, lowBracket, rank++));
                     }
                     else
                     {
                         rr.Pickup ??= t;
                         if (newClass == RelayClass.Timed) rr.Pickup = t;
-                        events.Add(new AdaptiveAppliedEvent("relay", "pickup", $"relay {id} picks up at {amps:R} A ({newClass})", t, lowBracket, rank++));
+                        events.Add(new AdaptiveAppliedEvent("relay", "pickup", FormattableString.Invariant($"relay {id} picks up at {amps:R} A ({newClass})"), t, lowBracket, rank++));
                     }
                     if (newClass != RelayClass.Instant) continue;
                 }
@@ -282,22 +321,108 @@ public static class AdaptiveSwingKernel
                 rr.Tripped = true; rr.TripSeconds = t; rr.TripLow = lowBracket; rr.TripAmps = amps;
                 rr.Pickup ??= t;
                 int branch = p.Relays!.Device(dd).Location.BranchIndex;
-                sys.SetNetwork(p.Topology.ApplyRelayTrip(branch), p.Topology.MachineOut);
-                events.Add(new AdaptiveAppliedEvent("relay", "trip", $"relay {id} trips branch {branch} at {amps:R} A", t, lowBracket, rank++));
+                ChangeNetwork(p.Topology.ApplyRelayTrip(branch), state);
+                events.Add(new AdaptiveAppliedEvent("relay", "trip", FormattableString.Invariant($"relay {id} trips branch {branch} at {amps:R} A"), t, lowBracket, rank++));
             }
             return any;
         }
 
+        // RC5 stage 3: every network change goes through here. Without unit relays (nu = 0) it is exactly the SetNetwork
+        // call it replaces. With a 78 (vector shift) stage in the loop, the bus voltages of the same state are solved on
+        // the network before and after, and a unit whose terminal voltage angle jumps past its pickup is marked to trip at
+        // this instant.
+        void ChangeNetwork(IRmsNetwork net, double[] state)
+        {
+            if (nu == 0 || !p.UnitRelays!.HasVectorShift) { sys.SetNetwork(net, p.Topology.MachineOut); return; }
+            sys.BusVoltages(state);
+            var before = (Complex[])sys.VBus.Clone();
+            sys.SetNetwork(net, p.Topology.MachineOut);
+            sys.BusVoltages(state);
+            for (int k = 0; k < nu; k++)
+            {
+                var e = p.UnitRelays.Get(k);
+                if (e.Stage.Function != GridSim.Core.Protection.UnitRelayFunction.VectorShift || sys.UnitTripped[k] || sys.UnitMachineOut(k)) continue;
+                double shift = UnitRelaysInLoop.ShiftDeg(before[e.BusIndex], sys.VBus[e.BusIndex]);
+                if (shift > e.Stage.Pickup.Value && !pendingShift.Any(x => x.Stage == k)) pendingShift.Add((k, shift));
+            }
+        }
+
+        // RC5 stage 3: unit relay bookkeeping at an event point (as ApplyRelayPoint). Returns false when a trip would leave
+        // no connected machine: the run then stops at this instant, saying so (no continuation is fabricated).
+        bool ApplyUnitPoint(double t, double lowBracket, double[] state)
+        {
+            for (int guard = 0; guard <= 4 * nu + 4 + nu; guard++)
+            {
+                int pick = -1; RelayClass newClass = RelayClass.Inactive; bool trip = false; double quantity = double.NaN;
+                if (pendingShift.Count > 0)
+                {
+                    (pick, quantity) = pendingShift[0];
+                    pendingShift.RemoveAt(0);
+                    if (sys.UnitTripped[pick] || sys.UnitMachineOut(pick)) continue;
+                    newClass = RelayClass.Instant; trip = true;
+                }
+                else
+                {
+                    sys.MeasureUnits(state);
+                    for (int k = 0; k < nu && pick < 0; k++)
+                    {
+                        if (sys.UnitTripped[k] || sys.UnitMachineOut(k)) continue;
+                        RelayClass c = sys.UnitClass(k);
+                        if (c != sys.UnitMode[k]) { pick = k; newClass = c; }
+                        else if (sys.UnitMode[k] == RelayClass.Timed && state[2 * n + nd + k] >= 1.0) { pick = k; newClass = c; trip = true; }
+                    }
+                    if (pick < 0) break;
+                    quantity = p.UnitRelays!.Quantity(pick, sys.Hz, sys.Rocof, sys.PMw, sys.VMag, sys.VTerm);
+                }
+                var e = p.UnitRelays!.Get(pick);
+                UnitRun ur = unitState[pick];
+                string what = $"unit {e.Unit} relay {e.Stage.Device}";
+                string q = quantity.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+                if (!trip)
+                {
+                    sys.UnitMode[pick] = newClass;
+                    if (newClass == RelayClass.Inactive)
+                    {
+                        state[2 * n + nd + pick] = 0.0; ur.Pickup = null;
+                        events.Add(new AdaptiveAppliedEvent("unit-relay", "dropout", $"{what} drops out at {q}", t, lowBracket, rank++));
+                    }
+                    else
+                    {
+                        ur.Pickup = t;
+                        events.Add(new AdaptiveAppliedEvent("unit-relay", "pickup", $"{what} picks up at {q} ({newClass})", t, lowBracket, rank++));
+                    }
+                    if (newClass != RelayClass.Instant) continue;
+                }
+                // Trip: an instantaneous stage on pickup, a timed stage whose fraction reached 1, or a vector shift.
+                IRmsNetwork? net = ((IAdaptiveUnitTripTopology)p.Topology).ApplyUnitTrip(e.Slot);
+                if (net is null)
+                {
+                    stopReason = $"{what} operated at {t.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s, but tripping unit {e.Unit} would leave no connected machine; the run stops here";
+                    events.Add(new AdaptiveAppliedEvent("unit-relay", "stop", stopReason, t, lowBracket, rank++));
+                    return false;
+                }
+                sys.UnitTripped[pick] = true;
+                ur.Tripped = true; ur.TripSeconds = t; ur.TripLow = lowBracket; ur.TripQuantity = quantity;
+                ur.Pickup ??= t;
+                events.Add(new AdaptiveAppliedEvent("unit-relay", "trip", $"{what} trips unit {e.Unit} at {q}", t, lowBracket, rank++));
+                ChangeNetwork(net, state);
+            }
+            return true;
+        }
+
+
         // t = 0: the relays are classified on the undisturbed state (a relay already beyond pickup picks up at 0).
         double now = 0.0;
         ApplyRelayPoint(0.0, 0.0, y, false);
+        // A unit trip at t = 0 that would leave no machine stops the run there, as at every later event point.
+        bool stopped = nu > 0 && !ApplyUnitPoint(0.0, 0.0, y);
         Record(0.0, y);
 
         double h = Math.Min(p.Options.MaxStepSeconds, Math.Max(p.Options.MinStepSeconds, p.Options.InitialStepSeconds));
         int stageIdx = 0;
         long stepGuard = 0;
         const long MaxSteps = 50_000_000;
-        while (now < p.DurationSeconds)
+        while (!stopped && now < p.DurationSeconds)
         {
             if (++stepGuard > MaxSteps) throw new AdaptiveStepException("The run exceeded the step cap; the system may be stiff for this tolerance.");
             double nextStage = stageIdx < sched.Count ? sched[stageIdx] : double.PositiveInfinity;
@@ -311,8 +436,8 @@ public static class AdaptiveSwingKernel
             if (!(err <= 1.0))
             {
                 if (hTry <= p.Options.MinStepSeconds)
-                    throw new AdaptiveStepException($"The step at t = {now:R} s failed the error test at the minimum step {p.Options.MinStepSeconds:R} s "
-                        + (double.IsFinite(err) ? $"(error norm {err:R})." : "(non-finite state)."));
+                    throw new AdaptiveStepException(FormattableString.Invariant($"The step at t = {now:R} s failed the error test at the minimum step {p.Options.MinStepSeconds:R} s ")
+                        + (double.IsFinite(err) ? FormattableString.Invariant($"(error norm {err:R}).") : "(non-finite state)."));
                 rejected++;
                 h = ctl.NextStep(hTry, err, hTry);
                 continue;
@@ -320,11 +445,13 @@ public static class AdaptiveSwingKernel
             accepted++;
             minUsed = Math.Min(minUsed, hTry); maxUsed = Math.Max(maxUsed, hTry);
 
-            // Relay events strictly inside the step.
-            if (nd > 0)
+            // Relay events strictly inside the step (RC5: and unit relay events, numbered after the devices).
+            if (nd > 0 || nu > 0)
             {
-                sys.Currents(yNew);
                 var candidates = new List<(int Device, int Kind, double Hi, double Lo)>();   // Kind 0 = class change, 1 = trip
+                if (nd > 0)
+                {
+                sys.Currents(yNew);
                 var endAmps = (double[])sys.Amps.Clone();
                 for (int d = 0; d < nd; d++)
                 {
@@ -353,6 +480,40 @@ public static class AdaptiveSwingKernel
                         candidates.Add((dev, 1, le.HighSeconds, le.LowSeconds));
                     }
                 }
+                }
+                if (nu > 0)
+                {
+                    sys.MeasureUnits(yNew);
+                    var endClass = new RelayClass[nu];
+                    for (int k = 0; k < nu; k++) endClass[k] = sys.UnitClass(k);
+                    for (int k = 0; k < nu; k++)
+                    {
+                        if (sys.UnitTripped[k] || sys.UnitMachineOut(k)) continue;
+                        int kk = k;
+                        RelayClass atStart = sys.UnitMode[kk];
+                        if (endClass[kk] != atStart)
+                        {
+                            LocatedEvent le = EventLocator.Locate(now, now + hTry, p.Options.EventTimeToleranceSeconds, tm =>
+                            {
+                                ctl.Step(sys, now, y, tm - now, yTmp);
+                                sys.MeasureUnits(yTmp);
+                                return sys.UnitClass(kk) != atStart;
+                            });
+                            bisections += le.Bisections;
+                            candidates.Add((nd + kk, 0, le.HighSeconds, le.LowSeconds));
+                        }
+                        if (atStart == RelayClass.Timed && yNew[2 * n + nd + kk] >= 1.0)
+                        {
+                            LocatedEvent le = EventLocator.Locate(now, now + hTry, p.Options.EventTimeToleranceSeconds, tm =>
+                            {
+                                ctl.Step(sys, now, y, tm - now, yTmp);
+                                return yTmp[2 * n + nd + kk] >= 1.0;
+                            });
+                            bisections += le.Bisections;
+                            candidates.Add((nd + kk, 1, le.HighSeconds, le.LowSeconds));
+                        }
+                    }
+                }
                 double endT = landsOnBoundary ? boundary : now + hTry;
                 var interior = candidates.Where(c => c.Hi < endT).OrderBy(c => c.Hi).ThenBy(c => c.Device).ThenBy(c => c.Kind).ToList();
                 if (interior.Count > 0)
@@ -362,6 +523,7 @@ public static class AdaptiveSwingKernel
                     Array.Copy(yEvt, y, dim);
                     now = first.Hi;
                     ApplyRelayPoint(now, first.Lo, y, true);
+                    if (nu > 0 && !ApplyUnitPoint(now, first.Lo, y)) { Record(now, y); break; }
                     Record(now, y);
                     h = ctl.NextStep(hTry, err, wanted);
                     continue;
@@ -373,11 +535,19 @@ public static class AdaptiveSwingKernel
             if (stageIdx < sched.Count && now == sched[stageIdx])
             {
                 IRmsNetwork net = p.Topology.ApplyScheduled(stageIdx, out string description);
-                sys.SetNetwork(net, p.Topology.MachineOut);
+                if (nu > 0 && p.Topology is IAdaptiveUnitTripTopology { NoConnectedMachine: true })
+                {
+                    stopReason = $"the scheduled event(s) at {now.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s ({description}) would leave no connected machine (scheduled and unit relay trips together); the run stops here";
+                    events.Add(new AdaptiveAppliedEvent("scheduled", "stop", stopReason, now, now, rank++));
+                    Record(now, y);
+                    break;
+                }
+                ChangeNetwork(net, y);
                 events.Add(new AdaptiveAppliedEvent("scheduled", "scheduled", description, now, now, rank++));
                 stageIdx++;
             }
             ApplyRelayPoint(now, now, y, false);
+            if (nu > 0 && !ApplyUnitPoint(now, now, y)) { Record(now, y); break; }
             Record(now, y);
             h = ctl.NextStep(hTry, err, wanted);
         }
@@ -391,10 +561,28 @@ public static class AdaptiveSwingKernel
                 rr.Tripped ? rr.TripSeconds : null, rr.Tripped ? rr.TripLow : null, rr.Tripped ? rr.TripAmps : null,
                 seen ? rr.Min : null, seen ? rr.Max : null));
         }
-        return new AdaptiveSwingResult(AdaptiveSwingResult.AdaptiveLabel, AdaptiveStepController.Scheme, p.Options, accepted, rejected,
+        var result = new AdaptiveSwingResult(AdaptiveSwingResult.AdaptiveLabel, AdaptiveStepController.Scheme, p.Options, accepted, rejected,
             ctl.Evaluations, double.IsInfinity(minUsed) ? 0.0 : minUsed, maxUsed, bisections, times,
             dSeries.Select(s => (IReadOnlyList<double>)s).ToList(), wSeries.Select(s => (IReadOnlyList<double>)s).ToList(),
             inSync, events, relayRecords);
+        if (p.UnitRelays is null) return result;
+        var unitRecords = new List<AdaptiveUnitRelayRecord>();
+        for (int k = 0; k < nu; k++)
+        {
+            UnitRun ur = unitState[k];
+            var e = p.UnitRelays.Get(k);
+            unitRecords.Add(new AdaptiveUnitRelayRecord(e.Unit, e.Stage.Device, ur.Tripped, ur.Pickup, ur.Tripped ? ur.TripSeconds : null,
+                ur.Tripped ? ur.TripLow : null, ur.Tripped ? ur.TripQuantity : null, GridSim.Core.Protection.UnitRelayAssessment.SettingsPhrase(e.Stage))
+            { VoltageMeasuredAt = e.VoltageAt });
+        }
+        return result with { UnitRelays = unitRecords, StopReason = stopReason };
+    }
+
+    private sealed class UnitRun
+    {
+        public double? Pickup;
+        public bool Tripped;
+        public double TripSeconds, TripLow, TripQuantity;
     }
 
     private sealed class RelayRun
@@ -405,11 +593,11 @@ public static class AdaptiveSwingKernel
         public double TripSeconds, TripLow, TripAmps;
     }
 
-    /// <summary>The state-space system: [delta (n), speed deviation (n), relay fractions (nd)].</summary>
+    /// <summary>The state-space system: [delta (n), speed deviation (n), relay fractions (nd), unit relay fractions (nu)].</summary>
     private sealed class SwingSystem : IAdaptiveOde
     {
         private readonly AdaptiveSwingProblem _p;
-        private readonly int _n, _nd;
+        private readonly int _n, _nd, _nu;
         private readonly double _ws;
         private readonly double[] _delta;
         private readonly Complex[] _e, _im, _noConv = [], _noVc = [];
@@ -420,16 +608,78 @@ public static class AdaptiveSwingKernel
         public readonly bool[] Tripped;
         public readonly double[] Amps;
 
-        public SwingSystem(AdaptiveSwingProblem p, IRmsNetwork initial, int nd)
+        // RC5 stage 3: unit relay state and the measurement buffers (empty when nu = 0).
+        public readonly RelayClass[] UnitMode;
+        public readonly bool[] UnitTripped;
+        public readonly double[] Hz, Rocof, PMw, VMag;
+        public readonly double[] VTerm;   // per unit stage: the machine terminal |V_t| of a 27 / 59 behind a unit transformer
+        public readonly Complex[] VBus;
+        private readonly Complex[] _imU;
+
+        public SwingSystem(AdaptiveSwingProblem p, IRmsNetwork initial, int nd, int nu = 0)
         {
             _p = p; _n = p.H.Length; _nd = nd; _ws = 2.0 * Math.PI * p.F0;
             _delta = new double[_n]; _e = new Complex[_n]; _im = new Complex[_n];
             _net = initial; _out = p.Topology.MachineOut.ToArray();
             Mode = new RelayClass[nd]; Tripped = new bool[nd]; Amps = new double[nd];
             Dimension = 2 * _n + nd;
+            _nu = nu;
+            UnitMode = new RelayClass[nu]; UnitTripped = new bool[nu];
+            Hz = new double[nu > 0 ? _n : 0]; Rocof = new double[nu > 0 ? _n : 0]; PMw = new double[nu > 0 ? _n : 0];
+            int buses = nu > 0 ? p.UnitRelays!.BusCount : 0;
+            VMag = new double[buses]; VBus = new Complex[buses];
+            _imU = new Complex[nu > 0 ? _n : 0];
+            VTerm = new double[nu > 0 && p.UnitRelays!.HasTerminalVoltage ? nu : 0];
+            Dimension += nu;
+        }
+
+        public IRmsNetwork Network => _net;
+
+        /// <summary>RC5: whether unit stage k's machine is disconnected.</summary>
+        public bool UnitMachineOut(int k) => _out[_p.UnitRelays!.Get(k).Slot];
+
+        /// <summary>RC5: the class of unit stage k at the last <see cref="MeasureUnits"/>.</summary>
+        public RelayClass UnitClass(int k) =>
+            !_p.UnitRelays!.Beyond(k, Hz, Rocof, PMw, VMag, VTerm) ? RelayClass.Inactive : _p.UnitRelays.Instant(k) ? RelayClass.Instant : RelayClass.Timed;
+
+        /// <summary>RC5: the unit quantities of state <paramref name="y"/> on the network in force: per machine the electrical
+        /// frequency F0 (1 + w), RoCoF F0 dw/dt (the swing equation) and the electrical power in MW; per bus the voltage.</summary>
+        public void MeasureUnits(double[] y)
+        {
+            Array.Copy(y, 0, _delta, 0, _n);
+            SubtransientNetworkInterface.EmfPhasorsInto(_p.Eqpp, _p.Edpp, _delta, _e);
+            _net.SolveInto(_e, _noConv, _imU, _noVc);
+            double f0 = _p.F0, baseMva = _p.UnitRelays!.BaseMva;
+            for (int i = 0; i < _n; i++)
+            {
+                double w = y[_n + i];
+                double pe = _out[i] ? 0.0 : _e[i].Real * _imU[i].Real + _e[i].Imaginary * _imU[i].Imaginary;
+                double dw = _out[i] ? (0.0 - _p.D[i] * w) / (2.0 * _p.H[i]) : (_p.Pm[i] - pe - _p.D[i] * w) / (2.0 * _p.H[i]);
+                Hz[i] = f0 * (1.0 + w);
+                Rocof[i] = f0 * dw;
+                PMw[i] = pe * baseMva;
+            }
+            if (VBus.Length > 0) BusVoltages(y);
+            // RC5: 27 / 59 behind a folded unit transformer read the machine terminal, V_hv + j X_t I, of the same state.
+            if (VTerm.Length > 0) _p.UnitRelays.TerminalVoltages(VBus, _imU, VTerm);
+        }
+
+        /// <summary>RC5: every bus voltage of state <paramref name="y"/> on the network in force into <see cref="VBus"/> /
+        /// <see cref="VMag"/>.</summary>
+        public void BusVoltages(double[] y)
+        {
+            if (_net is not SparseRmsNetwork sparse)
+                throw new InvalidOperationException("Unit relays reading a bus voltage need the sparse full network.");
+            Array.Copy(y, 0, _delta, 0, _n);
+            SubtransientNetworkInterface.EmfPhasorsInto(_p.Eqpp, _p.Edpp, _delta, _e);
+            sparse.SolveBusVoltagesInto(_e, _noConv, VBus);
+            for (int b = 0; b < VBus.Length; b++) VMag[b] = VBus[b].Magnitude;
         }
 
         public int Dimension { get; }
+
+        /// <summary>The rotor angles (the first n states) take the fixed angle scale of the error test.</summary>
+        public int AngleStates => _n;
 
         public IReadOnlyList<bool> MachineOut => _out;
 
@@ -468,6 +718,10 @@ public static class AdaptiveSwingKernel
                 for (int d = 0; d < _nd; d++)
                     dydt[2 * _n + d] = !Tripped[d] && Mode[d] == RelayClass.Timed ? _p.Relays!.Rate(d, Amps[d]) : 0.0;
             }
+            // RC5: a picked-up timed unit stage uses its delay at a constant rate (dropout is located as an event).
+            for (int k = 0; k < _nu; k++)
+                dydt[2 * _n + _nd + k] = !UnitTripped[k] && UnitMode[k] == RelayClass.Timed && !UnitMachineOut(k)
+                    ? 1.0 / _p.UnitRelays!.Get(k).Stage.Delay.Value : 0.0;
         }
     }
 }

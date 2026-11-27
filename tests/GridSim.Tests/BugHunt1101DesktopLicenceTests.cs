@@ -18,7 +18,7 @@ public sealed partial class BugHunt1101WebTests
     // A run folder of 'model' (one exported state), in the layout PresolvedReplay reads.
     private static string MakeRunOf(GridModel model, string caseName)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-bh1101-run-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-bh1101-run-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(dir, "exports"));
         var trace = new SolveTrace();
         PowerFlowResult r = new NewtonRaphsonPowerFlow().Solve(model, new PowerFlowOptions { Trace = trace });

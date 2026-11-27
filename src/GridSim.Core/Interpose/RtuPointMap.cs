@@ -140,7 +140,7 @@ public sealed record RtuPointMap
     {
         null or "ioa" => Iec104PointKey.Ioa,
         "casdu-ioa" => Iec104PointKey.CasduIoa,
-        _ => throw new InvalidDataException($"iec104Key '{Iec104Key}' is not one of \"ioa\" (the default) or \"casdu-ioa\"."),
+        _ => throw new InvalidDataException(FormattableString.Invariant($"iec104Key '{Iec104Key}' is not one of \"ioa\" (the default) or \"casdu-ioa\".")),
     };
 
     private Dictionary<string, RtuPointBinding>? _byAddress;
@@ -165,32 +165,40 @@ public sealed record RtuPointMap
     /// <summary>Load and schema-check a point-map from JSON.</summary>
     public static RtuPointMap Load(string path)
     {
-        string json = File.ReadAllText(path);
+        string json = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         // D-DOC-070: the file must declare its schema; a file with no "schema" member used to load as a point map because
         // the Schema property defaults to SchemaId.
         GridSim.Core.IO.SchemaMember.Require(json, path, SchemaId, "RTU point map");
         RtuPointMap m = JsonSerializer.Deserialize(json, JsonInfo)
-            ?? throw new InvalidDataException($"Not an RTU point-map: {path}");
+            ?? throw new InvalidDataException(FormattableString.Invariant($"Not an RTU point-map: {path}"));
         if (!string.Equals(m.Schema, SchemaId, StringComparison.Ordinal))
-            throw new InvalidDataException($"'{path}' declares schema '{m.Schema}'; this build reads '{SchemaId}'.");
+            throw new InvalidDataException(FormattableString.Invariant($"'{path}' declares schema '{m.Schema}'; this build reads '{SchemaId}'."));
+        // SEC-15: a null list, a null binding or a binding with no address is refused by position; each surfaced as
+        // "Object reference not set to an instance of an object" (or a null dictionary key) naming no field.
+        if ((object?)m.Bindings is null) throw new InvalidDataException(FormattableString.Invariant($"'{path}': \"bindings\" is null; it must be a list."));
+        for (int i = 0; i < m.Bindings.Count; i++)
+        {
+            if (m.Bindings[i] is null) throw new InvalidDataException(FormattableString.Invariant($"'{path}': binding {i} is null."));
+            if (m.Bindings[i].Address is null) throw new InvalidDataException(FormattableString.Invariant($"'{path}': binding {i} has no address."));
+        }
         foreach (RtuPointBinding b in m.Bindings) ValidateDataType(b);   // fail at load, not mid-stream
         // The numbers each value is converted with: a baseKv of 0 turned every voltage into +Inf, and a zero, negative
         // or NaN sigma gave the estimator an infinite or NaN weight.
         foreach (RtuPointBinding b in m.Bindings)
         {
             if (!(double.IsFinite(b.Sigma) && b.Sigma > 0))
-                throw new InvalidDataException($"'{path}': binding '{b.Address}' has sigma {b.Sigma}; it must be a finite number above 0.");
+                throw new InvalidDataException(FormattableString.Invariant($"'{path}': binding '{b.Address}' has sigma {b.Sigma}; it must be a finite number above 0."));
             if (!(double.IsFinite(b.BaseKv) && b.BaseKv > 0))
-                throw new InvalidDataException($"'{path}': binding '{b.Address}' has baseKv {b.BaseKv}; it must be a finite number above 0.");
+                throw new InvalidDataException(FormattableString.Invariant($"'{path}': binding '{b.Address}' has baseKv {b.BaseKv}; it must be a finite number above 0."));
             if (!(double.IsFinite(b.BaseAmps) && b.BaseAmps > 0))
-                throw new InvalidDataException($"'{path}': binding '{b.Address}' has baseAmps {b.BaseAmps}; it must be a finite number above 0.");
+                throw new InvalidDataException(FormattableString.Invariant($"'{path}': binding '{b.Address}' has baseAmps {b.BaseAmps}; it must be a finite number above 0."));
             if (!(double.IsFinite(b.Scale) && b.Scale != 0))
-                throw new InvalidDataException($"'{path}': binding '{b.Address}' has scale {b.Scale}; it must be a finite number other than 0.");
+                throw new InvalidDataException(FormattableString.Invariant($"'{path}': binding '{b.Address}' has scale {b.Scale}; it must be a finite number other than 0."));
         }
         ValidateUniqueAddresses(m.Bindings, path);
         ValidateRegisterLayout(m.Bindings);
         try { _ = m.ResolveIec104Key(); }   // GR-306: an unknown naming fails at load, not at the first frame
-        catch (InvalidDataException ex) { throw new InvalidDataException($"'{path}': {ex.Message}", ex); }
+        catch (InvalidDataException ex) { throw new InvalidDataException(FormattableString.Invariant($"'{path}': {ex.Message}"), ex); }
         return m;
     }
 
@@ -205,11 +213,11 @@ public sealed record RtuPointMap
     {
         var seen = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (RtuPointBinding b in bindings) seen[b.Address] = seen.GetValueOrDefault(b.Address) + 1;
-        List<string> dup = seen.Where(kv => kv.Value > 1).Select(kv => $"'{kv.Key}' ({kv.Value} bindings)").ToList();
+        List<string> dup = seen.Where(kv => kv.Value > 1).Select(kv => FormattableString.Invariant($"'{kv.Key}' ({kv.Value} bindings)")).ToList();
         if (dup.Count > 0)
             throw new InvalidDataException(
-                $"'{source}': {dup.Count} address(es) bound more than once (each native address may be bound once): " +
-                $"{string.Join(", ", dup.Take(20))}{(dup.Count > 20 ? ", ..." : "")}.");
+                FormattableString.Invariant($"'{source}': {dup.Count} address(es) bound more than once (each native address may be bound once): ") +
+                FormattableString.Invariant($"{string.Join(", ", dup.Take(20))}{(dup.Count > 20 ? ", ..." : "")}."));
     }
 
     /// <summary>The highest Modbus register number (registers are addressed 0..65535).</summary>
@@ -234,14 +242,14 @@ public sealed record RtuPointMap
             if (b.DataType is not (RtuRegisterType.U32 or RtuRegisterType.S32 or RtuRegisterType.F32)) continue;
             // ValidateDataType has already proved a non-default type sits on a Modbus register address.
             if (!TryParseModbusRegister(b.Address, out string prefix, out int register))
-                throw new InvalidDataException($"Binding '{b.Address}': {b.DataType} needs a Modbus register address.");
+                throw new InvalidDataException(FormattableString.Invariant($"Binding '{b.Address}': {b.DataType} needs a Modbus register address."));
             if (register >= MaxModbusRegister)
                 throw new InvalidDataException(
-                    $"Binding '{b.Address}': {b.DataType} spans two registers but {register} is the last Modbus register.");
+                    FormattableString.Invariant($"Binding '{b.Address}': {b.DataType} spans two registers but {register} is the last Modbus register."));
             string second = prefix + (register + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (bound.Contains(second))
                 throw new InvalidDataException(
-                    $"Binding '{b.Address}' is {b.DataType} and so also occupies register '{second}', which is bound " +
+                    FormattableString.Invariant($"Binding '{b.Address}' is {b.DataType} and so also occupies register '{second}', which is bound ") +
                     "separately. Two bindings cannot share a register; remove one or change the data type.");
         }
     }
@@ -256,7 +264,7 @@ public sealed record RtuPointMap
         if (b.DataType == RtuRegisterType.AsDecoded) return;
         if (!TryParseModbusRegister(b.Address, out _, out _))
             throw new InvalidDataException(
-                $"Binding '{b.Address}': dataType {b.DataType} applies only to a Modbus register address " +
+                FormattableString.Invariant($"Binding '{b.Address}': dataType {b.DataType} applies only to a Modbus register address ") +
                 "(MB:U<unit>:<fc>:<index> or MB:U<unit>:<fc>:@<register>).");
     }
 

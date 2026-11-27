@@ -288,7 +288,7 @@ public static class PartitionedEngine
                     if (!ok)
                     {
                         Status = NodalStatus.SingularMatrix; FailedAt = t;
-                        Message = $"the nodal matrix is singular at t = {t:R} s (step {s}): a node is floating or the network cannot be solved";
+                        Message = FormattableString.Invariant($"the nodal matrix is singular at t = {t:R} s (step {s}): a node is floating or the network cannot be solved");
                         return;
                     }
                 }

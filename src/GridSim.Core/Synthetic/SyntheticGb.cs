@@ -392,8 +392,8 @@ public static class SyntheticGb
             // is jittered (0.7 to 1.3) and not renormalised, and the 6.6 kV share is dropped in a zone with no 6.6 kV bus,
             // so a zone's built demand can differ from its stated total by a few per cent.
             List<Bus> z33 = buses.Where(b => all33.Contains(b.Id)).ToList();
-            List<Bus> z11 = buses.Where(b => b.BaseKv == 11 && b.Name!.StartsWith(zone.Tag)).ToList();
-            List<Bus> z66 = buses.Where(b => b.BaseKv == 6.6 && b.Name!.StartsWith(zone.Tag)).ToList();
+            List<Bus> z11 = buses.Where(b => b.BaseKv == 11 && b.Name!.StartsWith(zone.Tag, StringComparison.Ordinal)).ToList();
+            List<Bus> z66 = buses.Where(b => b.BaseKv == 6.6 && b.Name!.StartsWith(zone.Tag, StringComparison.Ordinal)).ToList();
             void Spread(List<Bus> targets, double zoneCatMw)
             {
                 if (targets.Count == 0) return;

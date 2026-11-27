@@ -158,7 +158,7 @@ public class KindSpecRegistryTests
     [Fact]
     public void A_missing_kinds_directory_is_refused()
         => Assert.Throws<DirectoryNotFoundException>(() =>
-            KindSpecRegistry.LoadDirectory(Path.Combine(Path.GetTempPath(), "gridsim-no-kinds-" + Guid.NewGuid()), RealSchemas()));
+            KindSpecRegistry.LoadDirectory(TestTemp.Under("gridsim-no-kinds-" + Guid.NewGuid()), RealSchemas()));
 
     // ----- params against a kind -----
 

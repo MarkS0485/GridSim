@@ -66,6 +66,8 @@ __pycache__/
 # Site-specific deployment settings (F05): never committed. See docs/developer/deploy/README.md.
 compose.override.yml
 .env
+# The licence folder the containers mount read-only at /licence (compose.yml, Dockerfile.cli): a licence is never committed.
+/licence/
 
 # NESO and other third-party reference downloads (large binaries, e.g. PowerFactory .pfdx / .pfd): kept on disk, not
 # committed (N126, 2026-10-04).

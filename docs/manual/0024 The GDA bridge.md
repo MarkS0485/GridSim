@@ -7,6 +7,8 @@ it, connecting from the apps, the ZONE, FROM and SRC pickers and the protocol fi
 and queries, and the faults you meet and what each one means. The protocol itself, message by message, is in
 [ch. 9, GDA integration](<../technical/0009 GDA integration.md>).
 
+GDA (Grid Data Analysis) is the author's own tool. It is not public and will not be made public, and GridSim's GDA work exists for the author's own use; it is documented because understanding the interface has value to readers. You do not get GDA, its code or its data lake, and no help is given to reconstruct it. The bridge server and the lake it reads are on the GDA side, in the author's GDA, and are not available; they are described so that the protocol is clear. Writing a bridge client of your own, or a server over your own data that speaks the same protocol, is a legitimate and intended use.
+
 ## Before you start
 
 - **The GDA repository** with its lake under `DataSources/` and the case directories under `NetworkModel/`. The server
@@ -274,7 +276,7 @@ of `state` frames you asked for.
 ## The 169-hour horizon
 
 The bridge replays history and never nowcasts. The rule is one number, 169 hours (7 days and 1 hour), enforced on
-both ends independently. A stamp is too new when it is later than now minus 169 hours; a stamp exactly at that instant
+both ends independently. The horizon is a safety invariant, not a setting. Real-time observation of a national grid is a security matter, so GridSim is built so that it cannot be used for it: not by the public, and not by the author either. It is built into the code paths and the test suite as an invariant ([technical ch. 8, Provenance and invariants](<../technical/0008 Provenance and invariants.md>), `ForwardInferenceGuard`), and there is no option, environment variable or licence that changes it. A stamp is too new when it is later than now minus 169 hours; a stamp exactly at that instant
 or older is accepted.
 
 - **Server.** A `start` or `seek` with an instant newer than the cutoff is rejected with an `error` for the `live`,

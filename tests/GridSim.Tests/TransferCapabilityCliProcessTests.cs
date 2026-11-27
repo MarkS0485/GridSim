@@ -48,7 +48,7 @@ public sealed class TransferCapabilityCliProcessTests
     [Fact]
     public void Real_entry_point_reports_the_thermal_limit_repeatably()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-transfer-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-transfer-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {
@@ -97,7 +97,7 @@ public sealed class TransferCapabilityCliProcessTests
     [Fact]
     public void Invalid_studies_exit_as_input_errors_before_any_solve()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-transfer-invalid-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-transfer-invalid-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {

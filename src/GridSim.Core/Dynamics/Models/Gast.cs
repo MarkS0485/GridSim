@@ -51,7 +51,7 @@ public sealed class Gast : IRmsGovernor
         if (!(temperatureGainPu >= 0.0) || !double.IsFinite(temperatureGainPu)) throw new ArgumentOutOfRangeException(nameof(temperatureGainPu), temperatureGainPu, "GAST: the temperature limiter gain KT must be a finite number, 0 or above.");
         if (!double.IsFinite(turbineDampingPu)) throw new ArgumentOutOfRangeException(nameof(turbineDampingPu), turbineDampingPu, "GAST: the turbine damping DTURB must be finite.");
         if (double.IsNaN(valveMinPu) || double.IsNaN(valveMaxPu) || !(valveMaxPu >= valveMinPu))
-            throw new ArgumentException($"GAST needs VMAX >= VMIN (got VMIN = {valveMinPu}, VMAX = {valveMaxPu}).", nameof(valveMaxPu));
+            throw new ArgumentException(FormattableString.Invariant($"GAST needs VMAX >= VMIN (got VMIN = {valveMinPu}, VMAX = {valveMaxPu})."), nameof(valveMaxPu));
         _r = droopPu;
         _at = ambientLimitPu;
         _kt = temperatureGainPu;
@@ -80,7 +80,7 @@ public sealed class Gast : IRmsGovernor
         ControlBlocks.RequireEquilibriumWithinLimits("GAST", "valve position", mechanicalPowerPu, _valve.Min, _valve.Max, nameof(mechanicalPowerPu));
         if (mechanicalPowerPu > _at)
             throw new ArgumentOutOfRangeException(nameof(mechanicalPowerPu), mechanicalPowerPu,
-                $"GAST: the initial mechanical power {mechanicalPowerPu} pu is above the ambient temperature load limit AT = {_at} pu, so the temperature limit binds and the unit cannot start at equilibrium.");
+                FormattableString.Invariant($"GAST: the initial mechanical power {mechanicalPowerPu} pu is above the ambient temperature load limit AT = {_at} pu, so the temperature limit binds and the unit cannot start at equilibrium."));
         _pref = mechanicalPowerPu;
         _valve.Initialize(mechanicalPowerPu);
         _turbine.Initialize(mechanicalPowerPu);

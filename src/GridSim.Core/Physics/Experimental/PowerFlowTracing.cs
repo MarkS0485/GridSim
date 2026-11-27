@@ -56,7 +56,6 @@ public static class PowerFlowTracing
         IReadOnlyDictionary<int, double> GenToLossMw,
         bool FlowGraphAcyclic);
 
-    /// <summary>Trace <paramref name="result"/> (the solved state of <paramref name="model"/>).</summary>
     /// <summary>Generator k's contribution (MW, in the branch's from-&gt;to sign) to a branch's flow.</summary>
     public sealed record GenBranchFlow(int GenBus, int BranchIndex, string BranchName, double MwFromTo);
 
@@ -68,6 +67,7 @@ public static class PowerFlowTracing
     /// <summary>A generator's signed share of a boundary transfer (MW).</summary>
     public sealed record GenShare(int GenBus, double Mw);
 
+    /// <summary>Trace <paramref name="result"/> (the solved state of <paramref name="model"/>).</summary>
     public static TraceResult Trace(GridModel model, PowerFlowResult result)
     {
         Basis b = BuildBasis(model, result);

@@ -35,7 +35,7 @@ public static class ImpedanceStabilityExport
     public static void WriteJson(string path, GridModel model, ImpedanceStabilityResult result, SolveExportMeta meta)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(model, result, meta));
+        AtomicText.Write(path, /* IO-22 */ ToJson(model, result, meta));
     }
 
     public static string ToJson(GridModel model, ImpedanceStabilityResult r, SolveExportMeta meta)

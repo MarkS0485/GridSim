@@ -124,9 +124,11 @@ public static class AcOptimalPowerFlow
         for (; iter < maxIterations; iter++)
         {
             double scale = totalPd > 0 ? (totalPd + losses) / totalPd : 1.0;
+            // B33: the DC passes run on the reactance-only legacy view (taps 1, shifts 0, Gs 0). The AC solve below already
+            // draws Gs V^2, so it is inside the measured loss; counting Gs in the DC demand too would count it twice.
             dc = passOptions is not null
-                ? DcOptimalPowerFlow.Solve(ContinuationPowerFlow.ScaleLoads(model, scale), passOptions)
-                : DcOptimalPowerFlow.Solve(ContinuationPowerFlow.ScaleLoads(model, scale), costPerGen);
+                ? DcOptimalPowerFlow.Solve(DcDemand.LegacyView(ContinuationPowerFlow.ScaleLoads(model, scale)), passOptions)
+                : DcOptimalPowerFlow.Solve(DcDemand.LegacyView(ContinuationPowerFlow.ScaleLoads(model, scale)), costPerGen);
 
             // N173: an infeasible pass 0 that no later pass can repair ends the run here (see StaysInfeasible).
             if (iter == 0 && StaysInfeasible(model, dc, islands))
@@ -192,9 +194,9 @@ public static class AcOptimalPowerFlow
                 double s = scale[islandOf[b.Id]];
                 buses.Add(b with { Pd = b.Pd * s, Qd = b.Qd * s });
             }
-            dc = passOptions is not null
-                ? DcOptimalPowerFlow.Solve(model.CopyWith(buses: buses), passOptions)
-                : DcOptimalPowerFlow.Solve(model.CopyWith(buses: buses), costPerGen);
+            dc = passOptions is not null   // B33: the legacy DC view, as in the connected loop
+                ? DcOptimalPowerFlow.Solve(DcDemand.LegacyView(model.CopyWith(buses: buses)), passOptions)
+                : DcOptimalPowerFlow.Solve(DcDemand.LegacyView(model.CopyWith(buses: buses)), costPerGen);
 
             // N173: an infeasible pass 0 that no later pass can repair ends the run here (see StaysInfeasible).
             if (iter == 0 && StaysInfeasible(model, dc, islands))

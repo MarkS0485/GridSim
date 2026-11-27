@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unit-protection.schema.json",
+  "title": "GridSim unit protection file (gridsim-unit-protection/1)",
+  "description": "Generating units' own relay settings for a study that binds a case GridSim does not read as a v2 case, for example a PSS/E RAW case in dynamics-study (--unit-protection, or adaptive.unitProtection in the study file). It holds unitProtection templates (the class defaults, in the v2 library template shape and checked against the v2 unitProtection kind spec exactly as a v2 case's local templates are) and one entry per unit: the template it takes and, optionally, the unit's own values on top (a per-unit override, with the same provenance rule as a v2 case's override with a unit member). The file is validated against this schema together with the v2 schema set (schemas/v2), whose template, templateRef, parameter value and provenance definitions it uses. Rules the schema subset cannot express are checked in code (V2CaseLoader): every template is of kind unitProtection and active, its parameters pass the kind spec, a template id@rev is defined once, each unit is listed once and takes a template of this file, an entry with params says why (reason), and after resolution every unit must name a unit of the study's case (unknown units are refused).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "templates", "units"],
+  "properties": {
+    "schema": { "const": "gridsim-unit-protection/1" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "templates": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The unitProtection templates (class defaults), in the v2 library template shape. The class name of gridsim.local.NAME@1 is NAME, of any other template its id@rev.",
+      "items": { "$ref": "library.schema.json#/$defs/template" }
+    },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One entry per unit that carries relays of its own, in the order verdicts and the result list them.",
+      "items": { "$ref": "#/$defs/unit" }
+    }
+  },
+  "$defs": {
+    "unit": {
+      "title": "Unit protection assignment",
+      "description": "A unit, the template it takes, and optionally its own values. Resolution per setting: the unit's own value, else the template's, else no relay (nothing is invented).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "template"],
+      "properties": {
+        "unit": {
+          "type": "string",
+          "pattern": "\\S",
+          "description": "The unit. For a PSS/E RAW-bound study: the PSS/E machine key <bus>:<id>, the generator record's bus number I and machine ID as the RAW reader stores it (quotes removed, surrounding blanks trimmed, case kept: '1' and 'G1' are different machines), for example 101:1. For a model whose generators carry names: the generator name."
+        },
+        "template": { "$ref": "common.schema.json#/$defs/templateRef" },
+        "params": {
+          "type": "object",
+          "description": "The unit's own values (a per-unit override of its template): bare values or the object form with its own provenance. Checked against the unitProtection kind spec after they are laid on the template.",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/presentParamValue" }
+        },
+        "reason": { "type": "string", "pattern": "\\S", "description": "Why the unit's values differ from its template (required with params)." },
+        "provenance": { "$ref": "common.schema.json#/$defs/provenance", "description": "Where the unit's values came from, for each value that does not carry its own; absent: CuratedPlaceholder [VERIFY] quoting the reason." }
+      }
+    }
+  }
+}

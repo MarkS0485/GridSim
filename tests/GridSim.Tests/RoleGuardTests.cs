@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class RoleGuardTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-roleguard-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-roleguard-{Guid.NewGuid():N}");
 
     public RoleGuardTests() => Directory.CreateDirectory(_dir);
 

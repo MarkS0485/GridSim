@@ -13,7 +13,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class InterposeEndpointProcessTests : System.IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-endpoint-{System.Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-endpoint-{System.Guid.NewGuid():N}");
 
     public InterposeEndpointProcessTests() => Directory.CreateDirectory(_dir);
 

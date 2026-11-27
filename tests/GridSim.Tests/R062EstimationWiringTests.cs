@@ -123,7 +123,7 @@ public class R062EstimationWiringTests
         EstimationResult est = new WlsStateEstimator().Estimate(model, set);
         Assert.True(est.Converged);
 
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-r062-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-r062-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -159,7 +159,7 @@ public class R062EstimationWiringTests
     [Fact]
     public void Export_reader_fails_loud_on_a_foreign_document()
     {
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-r062-" + Guid.NewGuid().ToString("N") + ".json");
+        string path = TestTemp.Under("gridsim-r062-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
             File.WriteAllText(path, "{\"schema\":\"gridsim-solve-export/1\"}");

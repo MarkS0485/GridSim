@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "gridsim-gridcode-study-1.schema.json",
+  "title": "GridSim grid-code compliance study (gridsim-gridcode-study/1)",
+  "description": "The study file of gridsim grid-code: one unit of a case checked against the GB Grid Code ECC (Issue 6 Revision 33) or Regulation (EU) 2016/631 (RfG). Paths are relative to the study file. Rules the schema cannot express are checked in code: the unit names one in-service generator, RfG choices lie inside the Regulation's ranges, GB studies give no RfG-only member.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "label", "case", "unit", "pccBus", "code", "moduleType", "technology", "connectionKv", "checks"],
+  "properties": {
+    "schema": { "const": "gridsim-gridcode-study/1" },
+    "label": { "type": "string", "minLength": 1 },
+    "case": { "type": "string", "description": "The case, read as any case argument." },
+    "dynData": { "type": "string", "description": "A gridsim-dynamics/2 file, or a .dyr file for a .raw case, binding every in-service generator." },
+    "unit": {
+      "type": "object", "additionalProperties": false, "required": ["bus"],
+      "properties": { "bus": { "type": "integer" }, "name": { "type": "string" } }
+    },
+    "pccBus": { "type": "integer" },
+    "plantBuses": { "type": "array", "items": { "type": "integer" } },
+    "code": { "enum": ["gb-ecc", "eu-rfg"] },
+    "moduleType": { "enum": ["B", "C", "D"] },
+    "technology": { "enum": ["synchronous", "ppm", "hvdc", "dc-ppm", "ppm-gfm"] },
+    "connectionKv": { "type": "number", "exclusiveMinimum": 0 },
+    "extendedClearingTime": { "type": "boolean", "description": "RfG only: tclear may be 0.14 to 0.25 s." },
+    "frtProfile": {
+      "type": "object", "additionalProperties": false, "description": "RfG only: the TSO's FRT profile.",
+      "required": ["uret", "uclear", "urec1", "urec2", "tclear", "trec1", "trec2", "trec3"],
+      "properties": {
+        "uret": { "type": "number" }, "uclear": { "type": "number" }, "urec1": { "type": "number" }, "urec2": { "type": "number" },
+        "tclear": { "type": "number" }, "trec1": { "type": "number" }, "trec2": { "type": "number" }, "trec3": { "type": "number" }
+      }
+    },
+    "area": { "enum": ["CE", "Nordic", "GB", "IE-NI", "Baltic"] },
+    "fsmMode": { "type": "boolean", "description": "GB: LFSM-O from 50.5 Hz (the unit is in FSM)." },
+    "stepSeconds": { "type": "number", "exclusiveMinimum": 0 },
+    "checks": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/check" } }
+  },
+  "$defs": {
+    "fault": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "type": { "enum": ["3ph", "slg", "ll", "llg"] },
+        "resistancePu": { "type": "number" }, "reactancePu": { "type": "number" },
+        "bus": { "type": "integer" }, "atSeconds": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "stage": {
+      "type": "object", "additionalProperties": false, "required": ["device", "function", "pickup", "delaySeconds"],
+      "properties": {
+        "device": { "type": "string" }, "function": { "enum": ["27", "59", "81U", "81O", "81R"] },
+        "pickup": { "type": "number" }, "delaySeconds": { "type": "number", "minimum": 0 }, "windowSeconds": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "event": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "atSeconds", "generatorIndex"],
+          "properties": { "kind": { "const": "generatorTrip" }, "atSeconds": { "type": "number" }, "generatorIndex": { "type": "integer" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "atSeconds", "bus", "deltaPMw", "deltaQMvar"],
+          "properties": { "kind": { "const": "loadStep" }, "atSeconds": { "type": "number" }, "bus": { "type": "integer" },
+            "deltaPMw": { "type": "number" }, "deltaQMvar": { "type": "number" } } }
+      ]
+    },
+    "check": {
+      "type": "object", "required": ["id"],
+      "properties": {
+        "id": { "enum": ["frt-envelope", "frt-retained-voltage", "frt-recovery", "frt-uv-settings", "q-capability", "lfsm-o", "lfsm-u", "fsm-step", "rocof-settings", "rocof-event", "frequency-relays",
+          "ffci-envelope", "frt-long", "avr-step", "vctrl-step"], "description": "The last four are the gb-ecc extension checks (requirements gb-ecc-issue6-rev33-ext), run only when named." },
+        "fault": { "$ref": "#/$defs/fault" },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "stages": { "type": "array", "items": { "$ref": "#/$defs/stage" } },
+        "pmaxMw": { "type": "number" }, "qmaxMvar": { "type": "number" }, "qminMvar": { "type": "number" },
+        "uqProfile": {
+          "type": "object", "additionalProperties": false, "required": ["citation", "corners"],
+          "properties": {
+            "citation": { "type": "string", "minLength": 1 },
+            "corners": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false,
+              "required": ["voltagePu", "qMinPerPmax", "qMaxPerPmax"],
+              "properties": { "voltagePu": { "type": "number" }, "qMinPerPmax": { "type": "number" }, "qMaxPerPmax": { "type": "number" } } } }
+          }
+        },
+        "frequencyHz": { "type": "number" }, "tEndSeconds": { "type": "number" }, "stepSeconds": { "type": "number" },
+        "thresholdHz": { "type": "number" }, "droop": { "type": "number" }, "pref": { "enum": ["output", "pmax"] }, "pm0Pu": { "type": "number" },
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+        "t1Seconds": { "type": "number" }, "t2Seconds": { "type": "number" }, "dp1PerPmax": { "type": "number" }, "withInertia": { "type": "boolean" },
+        "insensitivityHz": { "type": "number" }, "deadbandHz": { "type": "number" },
+        "limitHzPerSecond": { "type": "number" }, "windowSeconds": { "type": "number" }, "source": { "type": "string" },
+        "durationsSeconds": { "type": "array", "items": { "type": "number", "exclusiveMinimum": 0 }, "description": "frt-long: the dip durations to test (default: the labelled corners of the profile longer than 0.14 s)." },
+        "stageSeconds": { "type": "number", "exclusiveMinimum": 0 }, "afterSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "maxPasses": { "type": "integer", "minimum": 1 }, "bus": { "type": "integer" }, "atSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "leadToLag": { "type": "boolean", "description": "vctrl-step: the step takes the reactive power from maximum leading to maximum lagging (2 s limit); otherwise zero to maximum (1 s)." }
+      }
+    }
+  }
+}

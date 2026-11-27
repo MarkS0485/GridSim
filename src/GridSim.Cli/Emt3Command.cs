@@ -505,7 +505,7 @@ internal static class Emt3Command
         try
         {
             if (!File.Exists(file)) { Console.Error.WriteLine($"error: study file not found: {file}"); return CliExit.InputError; }
-            using JsonDocument doc = JsonDocument.Parse(File.ReadAllBytes(file), new JsonDocumentOptions { AllowTrailingCommas = false });
+            using JsonDocument doc = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(file)), new JsonDocumentOptions { AllowTrailingCommas = false });
             study = Parse(doc.RootElement);
         }
         catch (Exception ex) when (ex is JsonException or InputException or LineConstantsCommand.InputException or IOException or UnauthorizedAccessException)

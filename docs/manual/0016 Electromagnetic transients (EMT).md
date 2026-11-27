@@ -170,7 +170,7 @@ Every line of the file, in order:
 | `- steps: 2,500 @ 20 us (dur 0.05s)` | Step count, the step in microseconds and the requested duration in seconds. |
 | `- source: bus 1, amp 1 pu, 50 Hz` | The one energising source: its bus, its amplitude in pu and its frequency. A DC source prints `DC` where the frequency would be. |
 | `- refactorizations: 5` | The same count as the console's factorisations. |
-| `- peak |probe|: 4.3636` | The peak over all probes and steps, to at most six significant figures (the console prints four). |
+| `- peak \|probe\|: 4.3636` | The peak over all probes and steps, to at most six significant figures (the console prints four). |
 | `- wall: 15.9 ms (156,918 steps/s)` | The integration wall time and the steps per second it implies. |
 | `- rule: Trapezoidal, CDA: on` | The base integration rule and whether CDA ran: `on`, `off (--no-cda)`, or `off (not used under backward Euler)` under `--rule be`, where CDA never acts. |
 | `A forward model trajectory...` | The standing reminder that the output describes the model. |
@@ -423,8 +423,16 @@ Three things set the step you need.
 2. **Sharpness of the event.** A peak reached in a fraction of a cycle needs samples that land on it. The table below
    is the bus 5 overshoot of the worked example, which peaks 0.16 ms after the clearing.
 3. **Line travel time, with `--lines`.** A travelling-wave line has a delay `tau`, which the engine rounds to a whole
-   number of steps (`max(1, round(tau/dt))`). The delay error is up to `dt/2` once `tau` is at least `dt/2`; a line with
-   `tau` below `dt/2` is held at one step, an error of up to `dt - tau`. Choose `dt` at most one tenth of the
+   number of steps (`round(tau/dt)`). The delay error is up to `dt/2`. A line whose `tau` is shorter than the step is
+   modelled as a pi branch of the same line, never stretched: its series inductance `Zc tau` and its charging
+   capacitance `tau / Zc`, half at each end (lossless, as every travelling-wave line: the branch's series R is dropped
+   here too, by design, so that the pi branch is the same lossless line). The run prints how many lines were converted,
+   names the first 20 on stderr by their end buses and branch name, and lists every one in `pi-converted.csv` in the
+   output folder; `summary.md` gives the count. (Up to 2.1.160 such a line was held at one step, which stretched it to `dt/tau`
+   times its electrical length; 2.1.161 to 2.1.168 refused it with exit 1.) The fallback applies to `emt`; `emt-partition` still refuses a cut
+   line shorter than the step, because a cut line is the boundary between partitions. When a travel time is
+   rounded by more than 10 % (a line between one and two steps long: `tau = 1.4 dt` becomes one step, 29 % shorter), the
+   run says so once on stderr, naming the line with the largest rounding. Choose `dt` at most one tenth of the
    shortest `tau` you care about. The charged lines of case30 have `tau` between 78 and 201 microseconds at 50 Hz, so
    `--dt-us 10` gives them 8 to 20 steps of delay.
 
@@ -526,7 +534,9 @@ it, `--amp` sets its amplitude in pu and `--freq` its frequency in Hz (0 is DC).
 ordinary nodes.
 
 **Loads.** By default each bus's demand `Pd`/`Qd` is a constant-impedance shunt at 1 pu: a conductance `Pd/BaseMva`
-plus an inductor for `Qd > 0` or a capacitor for `Qd < 0`. They damp the transient to a physical settling.
+plus an inductor for `Qd > 0` or a capacitor for `Qd < 0`. They damp the transient to a physical settling. Being sized at
+1 pu, a load draws its `Pd` only at 1 pu: a bus at 0.95 pu draws about 90 % of it (the RMS engines size the same
+constant-admittance load at the bus's solved voltage), so an EMT steady state is not the power flow's to the MW.
 `--no-loads` omits them, which leaves a lightly damped network that rings for longer (and, in case14, 8 floating nodes instead
 of 2). A bus with negative demand (generation netted into the load) is modelled as a bounded current source of
 `|Pd|/BaseMva` pu shaped like the source, since a negative conductance is not passive and would diverge.
@@ -680,7 +690,8 @@ What a study can hold (strict `gridsim-emt3/1`; see the [CLI reference](<0019 CL
 - **HVDC** (optional `hvdc`, the R4-19 Core models): VSC stations (two-level average-value, MMC arm-average or MMC sub-module level, with
   the dq current controller and an outer power or DC-voltage loop), line-commutated 6- and 12-pulse bridge groups into an R-L load, and two-pole
   DC lines (Bergeron) between stations that start in a steady state carrying a stated current. Each station and bridge has its own AC
-  source. The partitioned parallel run, the RMS-EMT co-simulation interface and the DC fault cases of the Core remain library APIs.
+  source. The DC fault cases of the Core remain library APIs. The RMS-EMT co-simulation runs an `emt3` study through `gridsim cosim`, and
+  the partitioned parallel run has its own verb, `gridsim emt-partition`, on a single-conductor network (see below).
 - **Outputs**: node voltages, element currents (a line end, a branch phase, an arrester, a source, a machine, a converter filter), flux
   linkages, machine quantities, DC rail voltages and DC currents, with a sample interval.
 
@@ -690,10 +701,10 @@ fixed element order and fixed summation order.
 
 **Order of work in a step**: apply due events; history terms and source values at `t + dt`, in element order; Newton iterations (if
 any nonlinear element); accept and update every history, in element order. A run starts from rest. A source that is not zero at
-`t = 0` switches on at the first step, which shifts the trapezoidal response by half a step; the validated cases start their
+`t = 0` switches on at the first step, which shifts the trapezoidal response by half a step; the verified cases start their
 sources at zero.
 
-**What is validated, and against what.** All oracles are derived in the tests, not read from a tool:
+**What is verified, and against what.** All oracles are derived in the tests, not read from a tool:
 
 - the series RLC response to a sinusoid from rest, and a switched RLC, against their closed forms, with observed order 2 when the
   step is halved;
@@ -727,7 +738,7 @@ sources at zero.
   R4-17 Core tests reached through `gridsim emt3`; the short-circuit traces are bit-identical to the Core call. An example document is
   `docs/examples/emt3/machine-short-circuit.json`.
 
-**What is not validated.** The machine, converter and HVDC models are checked against closed forms and the load-flow link solution only. Nothing has been compared
+**What is not verified.** The machine, converter and HVDC models are checked against closed forms and the load-flow link solution only. Nothing has been compared
 with PSCAD, EMTP or any other tool (no comparator was available; the status is COMPARATOR-UNVERIFIED, and the result summary of a study that uses them
 says so). The saturable transformer inrush waveform is checked only qualitatively (one-sided pulses, once per cycle).
 Not modelled: hysteresis and remanence at zero current (the current-flux curve is single valued), core-limb coupling and a
@@ -740,10 +751,10 @@ enforced on the fitted line alone (a real characteristic admittance and a propag
 grid a decade beyond the band each way); it does not prove the stability of the whole network. The step must not exceed the shortest
 travel time of any line mode.
 
-## Partitioned runs, HVDC and MMC models, and RMS-EMT co-simulation (library API)
+## Partitioned runs, HVDC and MMC models, and RMS-EMT co-simulation
 
-These are typed Core APIs on the three-phase nodal solver (`Dynamics/Emt/Nodal`). The VSC and LCC HVDC stations and the MMC models also run from a study document through the `hvdc` key of `gridsim emt3` (described above); the
-partitioned run and the co-simulation interface have no CLI verb. Nothing here was compared
+These are typed Core APIs on the three-phase nodal solver (`Dynamics/Emt/Nodal`). The VSC and LCC HVDC stations and the MMC models also run from a study document through the `hvdc` key of `gridsim emt3` (described above). The
+co-simulation interface runs through `gridsim cosim` and the partitioned run through `gridsim emt-partition` (both below). Nothing here was compared
 with PSCAD, EMTP or the CIGRE benchmark waveforms (the benchmark parameter sets are public; its expected waveforms are tool output).
 Every check below is against a closed form or the load-flow solution, written out in the test that runs it.
 
@@ -791,6 +802,20 @@ impedance for two travel times (the instant after the step follows `v0 (Gc + Gp)
 equivalent), the difference is 369 V rms in the first 3 ms and 0.2 V from 20 ms on, and the fundamentals agree. The co-simulation is bit-repeatable
 with itself and is not bit-comparable with either parent run.
 
+**The `cosim` verb.** `gridsim cosim <study.json>` reads a `gridsim-cosim/1` document: an inline `emt3` study, the boundary bus, the form
+(`thevenin` or `norton`), the exchange interval in steps, and the RMS side (a source phasor behind a lossless line or a series impedance, with
+scheduled source changes). It builds the `emt3` network, adds the interface at the boundary bus after every element of the study, and runs it.
+`--out` writes the traces and the exchange log as JSON, and `--boundary-csv` writes the exchange log with every number in its exact round-trip
+form. The verb gives the same bits as the library call that builds the network in the same order. The RMS side is the phasor side above, not the RMS
+transient kernel. Flags and keys: [ch. 19](<0019 CLI reference.md#cosim>).
+
+**The `emt-partition` verb.** The engine cuts only single-conductor Bergeron lines, and the `emt3` lines are modal three-phase lines, so
+`gridsim emt-partition <study.json>` has its own `gridsim-emt-partition/1` network: sinusoidal sources, R, L, C and series R-L branches,
+switches with timed events, and Bergeron lines with ground return. The partitions are the connected parts left when the cut lines are removed:
+`--partition auto` cuts every line whose travel time is at least the step, and a `gridsim-emt-cut/1` file names the lines to cut.
+`--threads` sets the worker threads (the result does not depend on it), and `--monolithic` runs the same partitions as one network on the
+incumbent solver, the engine's reference. Flags and keys: [ch. 19](<0019 CLI reference.md#emt-partition>).
+
 ## Limits
 
 - The `emt` verb is single-phase (one node per bus, positive sequence). The three-phase engine (`ThreePhaseEmtEngine`),
@@ -809,8 +834,9 @@ with itself and is not bit-comparable with either parent run.
   state before the event cannot be started from the CLI.
 - The `t = 0` row of voltage probes is zero by construction, not the initial state.
 - The limits of the `emt3` verb are listed in its own section above (nothing compared with a commercial tool; no hysteresis).
-- HVDC and MMC models are reachable through the `hvdc` key of `emt3` (stations, bridge groups, DC lines). The partitioned run and the co-simulation
-  API have no verb. Not built: multi-terminal DC grid dynamics, DC breaker models, wide-band HVDC control replicas, converter dead time and device-level MMC sub-modules (IGBT switching), a PLL, and an RMS side that is the full RMS kernel.
+- HVDC and MMC models are reachable through the `hvdc` key of `emt3` (stations, bridge groups, DC lines). The co-simulation runs through `cosim`
+  with a phasor RMS side only; the partitioned run through `emt-partition` on single-conductor networks only (no `emt3` study, no nonlinear
+  element, no backward-Euler event step). Not built: multi-terminal DC grid dynamics, DC breaker models, wide-band HVDC control replicas, converter dead time and device-level MMC sub-modules (IGBT switching), a PLL, and an RMS side that is the full RMS kernel.
 
 ## See also
 

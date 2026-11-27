@@ -13,6 +13,11 @@ public enum PowerFlowStatus
     /// <summary>A NaN/Inf appeared in the solved state - the linear solve diverged. The "solution" is invalid
     /// and must never be treated as converged, even if a stale mismatch happened to read below tolerance.</summary>
     NonFinite,
+    /// <summary>Stopped early because the largest mismatch rose above <see cref="PowerFlowOptions.DivergeLimitPu"/> (and
+    /// above the mismatch at the start of the pass): the iteration is running away. The state is finite but is not a
+    /// solution. Distinct from <see cref="MaxIterations"/>, which is a run that reached its cap without meeting
+    /// tolerance.</summary>
+    Diverged,
 }
 
 /// <summary>Whether the Newton engines' automatic retry ran, and how it ended (<see cref="PowerFlowResult.NewtonRetry"/>).</summary>
@@ -94,7 +99,7 @@ public sealed class PowerFlowResult
 
     /// <summary>
     /// The bus types the solve ENDED with, aligned with <see cref="BusIds"/> (N071, October 2026): a bus typed PV in the
-    /// model reads <see cref="BusType.Pq"/> here when the reactive-limit loop pinned its generators at a limit (their AVR
+    /// model reads <see cref="GridSim.Core.Model.BusType.Pq"/> here when the reactive-limit loop pinned its generators at a limit (their AVR
     /// no longer holds its voltage), or when it carries no generator (solved as PQ since R283). Set by the two Newton
     /// engines; <c>null</c> from any solver that does not report it (the backward/forward sweep, a presolved state read
     /// from disk), and a caller must then fall back to the model's own types. Informational: it changes no solved number.
@@ -105,7 +110,9 @@ public sealed class PowerFlowResult
     /// Whether the Newton engines' automatic retry ran (<see cref="NewtonShell.SolveWithRetry"/>). It runs only when the
     /// ordinary Newton solve did not converge, so for every solve that converges ordinarily this is
     /// <see cref="NewtonRetryOutcome.NotTried"/> and the numbers are exactly those of the ordinary solve.
-    /// <see cref="Iterations"/> and <see cref="MaxMismatch"/> belong to the attempt whose state is reported.
+    /// <see cref="Iterations"/> and <see cref="MaxMismatch"/> belong to the attempt whose state is reported. A
+    /// <see cref="PowerFlowOptions.Trace"/> always holds the ordinary attempt (the retry runs without a trace), so after
+    /// <see cref="NewtonRetryOutcome.Converged"/> it describes the failed first solve, not this state.
     /// </summary>
     public NewtonRetryOutcome NewtonRetry { get; internal set; }
 

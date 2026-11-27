@@ -51,6 +51,49 @@ public static partial class RmsTransientStability
         double durationSeconds = StudyDefaultDurationSeconds,
         double slipLimitRad = DefaultSlipLimitRad,
         IReadOnlyList<RmsExciter?>? exciters = null)
+        => ObservedCore(model, result, data, events, measuredBusIds, f0, stepSeconds, durationSeconds, slipLimitRad, exciters, null);
+
+    /// <summary>
+    /// WP21 (RC5): <see cref="StudyEventsObserved"/> on a step schedule (<see cref="RmsStepSchedule"/>): the full model takes
+    /// fixed steps inside each window. The bus voltages are recorded at every sample, as without a schedule. A one-window
+    /// schedule is the plain fixed-step run, bit for bit.
+    /// </summary>
+    public static ObservedStudy StudyEventsObservedScheduled(
+        GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
+        IReadOnlyList<RmsEvent> events, IReadOnlyList<int> measuredBusIds, RmsStepSchedule schedule,
+        double? f0 = null, double durationSeconds = StudyDefaultDurationSeconds,
+        double slipLimitRad = DefaultSlipLimitRad,
+        IReadOnlyList<RmsExciter?>? exciters = null)
+    {
+        ArgumentNullException.ThrowIfNull(schedule);
+        return ObservedCore(model, result, data, events, measuredBusIds, f0, schedule.Windows[0].StepSeconds, durationSeconds, slipLimitRad,
+            exciters, schedule);
+    }
+
+    /// <summary>
+    /// WP21 (RC5): <see cref="StudyEvents"/> on a step schedule (<see cref="RmsStepSchedule"/>). A one-window schedule is the
+    /// plain fixed-step run, bit for bit. Refused: an event strictly inside a coarse window, a window boundary off the
+    /// step grid of the window before it, the fuller composite load parts with more than one step size.
+    /// </summary>
+    public static MultiMachineSubtransient.Result StudyEventsScheduled(
+        GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
+        IReadOnlyList<RmsEvent> events, RmsStepSchedule schedule,
+        double? f0 = null, double durationSeconds = StudyDefaultDurationSeconds,
+        double slipLimitRad = DefaultSlipLimitRad,
+        IReadOnlyList<RmsExciter?>? exciters = null)
+    {
+        ArgumentNullException.ThrowIfNull(schedule);
+        return StudyEventsCore(model, result, data, events, f0, schedule.Windows[0].StepSeconds, durationSeconds, slipLimitRad, exciters, null,
+            schedule: schedule);
+    }
+
+    /// <summary>The body of <see cref="StudyEventsObserved"/> (moved here unchanged, orchestration only), with the WP21
+    /// step schedule (null: exactly <see cref="StudyEventsObserved"/>).</summary>
+    private static ObservedStudy ObservedCore(
+        GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
+        IReadOnlyList<RmsEvent> events, IReadOnlyList<int> measuredBusIds,
+        double? f0, double stepSeconds, double durationSeconds, double slipLimitRad,
+        IReadOnlyList<RmsExciter?>? exciters, RmsStepSchedule? schedule)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(result);
@@ -98,8 +141,8 @@ public static partial class RmsTransientStability
         }
 
         MultiMachineSubtransient.Result run = events.Count > 0
-            ? StudyEventsCore(model, result, data, events, f0, stepSeconds, durationSeconds, slipLimitRad, exciters, Observer)
-            : UndisturbedCore(model, result, data, f0, stepSeconds, durationSeconds, slipLimitRad, exciters, Observer);
+            ? StudyEventsCore(model, result, data, events, f0, stepSeconds, durationSeconds, slipLimitRad, exciters, Observer, schedule: schedule)
+            : UndisturbedCore(model, result, data, f0, stepSeconds, durationSeconds, slipLimitRad, exciters, Observer, schedule);
         SubtransientInit.Prepared pp = prepared
             ?? throw new InvalidOperationException("The observed RMS study did not prepare a fleet.");
 
@@ -120,7 +163,8 @@ public static partial class RmsTransientStability
         GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
         double? f0, double stepSeconds, double durationSeconds, double slipLimitRad,
         IReadOnlyList<RmsExciter?>? exciters,
-        Func<SubtransientInit.Prepared, Action<double, IRmsNetwork, Complex[], Complex[]>> observerFor)
+        Func<SubtransientInit.Prepared, Action<double, IRmsNetwork, Complex[], Complex[]>> observerFor,
+        RmsStepSchedule? schedule = null)
     {
         if (!(stepSeconds > 0.0) || !double.IsFinite(stepSeconds))
             throw new ArgumentOutOfRangeException(nameof(stepSeconds), stepSeconds, "The RMS step must be positive and finite.");
@@ -140,6 +184,16 @@ public static partial class RmsTransientStability
         IRmsFieldController?[]? controllers = MapExcitersToFleet(model, data, p, exciters);
         GovernorPlan? governors = MapGovernorsToFleet(model, data, p);
         int connectedMachines = p.Machines.Count - (p.IslandReferences?.Count ?? 0);
+        if (schedule is not null)
+        {
+            // WP21 (RC5): the no-event run on a step schedule.
+            RequireScheduleCapableModels(data, schedule, controllers);
+            return MultiMachineSubtransient.SimulateCore(
+                p.Machines, p.H, p.Damping, p.Pm, p.Efd, p.Delta0, p.Eqp0, p.Edp0, p.Eqpp0, p.Edpp0, p.Network!,
+                nominalHz, stepSeconds, durationSeconds, new List<RmsNetworkStage>(), slipLimitRad, exciters: null, voltageReferencePu: null,
+                mechanicalPower: ScheduledGovernorHook(p, governors), converters: p.Converters, synchronismMachines: connectedMachines,
+                fieldControllers: controllers, machineTrips: null, stepObserver: observerFor(p), unitRelays: null, schedule: schedule);
+        }
         Func<int, double, double>? mechanicalPower = governors is null ? null : GovernorHook(p, governors, stepSeconds);
         return MultiMachineSubtransient.Simulate(
             p.Machines, p.H, p.Damping, p.Pm, p.Efd, p.Delta0, p.Eqp0, p.Edp0, p.Eqpp0, p.Edpp0, p.Network!,

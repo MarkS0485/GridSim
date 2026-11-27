@@ -154,7 +154,7 @@ public static class Flickermeter
 
     private static void Validate(FlickermeterParameters p)
     {
-        void Pos(double v, string n) { if (!(v > 0.0) || !double.IsFinite(v)) throw new ArgumentException($"Flickermeter parameter {n} must be finite and above 0; got {v:R}."); }
+        void Pos(double v, string n) { if (!(v > 0.0) || !double.IsFinite(v)) throw new ArgumentException(FormattableString.Invariant($"Flickermeter parameter {n} must be finite and above 0; got {v:R}.")); }
         Pos(p.SampleRateHz, nameof(p.SampleRateHz)); Pos(p.NominalRmsVolts, nameof(p.NominalRmsVolts)); Pos(p.HighPassCornerHz, nameof(p.HighPassCornerHz));
         Pos(p.LowPassCornerHz, nameof(p.LowPassCornerHz)); Pos(p.K, nameof(p.K)); Pos(p.Lambda, nameof(p.Lambda)); Pos(p.Omega1, nameof(p.Omega1));
         Pos(p.Omega2, nameof(p.Omega2)); Pos(p.Omega3, nameof(p.Omega3)); Pos(p.Omega4, nameof(p.Omega4)); Pos(p.SlidingMeanTauSeconds, nameof(p.SlidingMeanTauSeconds));
@@ -163,12 +163,12 @@ public static class Flickermeter
         foreach ((string name, IReadOnlyList<double> list) in new[] { ("P1sPercentiles", p.P1sPercentiles), ("P3sPercentiles", p.P3sPercentiles), ("P10sPercentiles", p.P10sPercentiles), ("P50sPercentiles", p.P50sPercentiles) })
         {
             if (list is null || list.Count == 0) throw new ArgumentException($"{name} must list at least one percentile point.");
-            foreach (double q in list) if (!(q > 0.0 && q < 100.0)) throw new ArgumentException($"{name}: a percentile point must be above 0 and below 100 (% of time exceeded); got {q:R}.");
+            foreach (double q in list) if (!(q > 0.0 && q < 100.0)) throw new ArgumentException(FormattableString.Invariant($"{name}: a percentile point must be above 0 and below 100 (% of time exceeded); got {q:R}."));
         }
     }
 
     /// <summary>
-    /// The instantaneous flicker sensation (the block 4 output) of a voltage record. The first <paramref name="settleSeconds"/> are
+    /// The instantaneous flicker sensation (the block 4 output) of a voltage record. The first <c>settleSeconds</c> are
     /// discarded by the caller (<see cref="Run"/> does so). Deterministic: a fixed sequence of recursive filters.
     /// </summary>
     public static double[] InstantaneousFlicker(FlickermeterParameters p, IReadOnlyList<double> voltage)

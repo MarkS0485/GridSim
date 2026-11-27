@@ -55,7 +55,8 @@ public sealed class Pss1a
         double lead1Seconds, double lag1Seconds, double lead2Seconds, double lag2Seconds,
         double outputMinPu = double.NegativeInfinity, double outputMaxPu = double.PositiveInfinity)
     {
-        if (outputMaxPu < outputMinPu) throw new System.ArgumentException("Vsmax must be >= Vsmin.", nameof(outputMaxPu));
+        if (!(outputMaxPu >= outputMinPu)) throw new System.ArgumentException("Vsmax must be >= Vsmin.", nameof(outputMaxPu));   // DYN-11: NaN too
+        if (!double.IsFinite(gain)) throw new System.ArgumentOutOfRangeException(nameof(gain), gain, "Ks must be a finite number.");
         _ks = gain;
         _washout = new Washout(washoutSeconds);
         _stage1 = Stage(lead1Seconds, lag1Seconds, "T1", "T2");

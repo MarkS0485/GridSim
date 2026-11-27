@@ -35,7 +35,7 @@ public class WeccCliFamilyRunTests
         // WeccPlantControllerTests); they are left out, the rest of the fixture kept.
         string text = WeccRenewableNetworkTests.Dyr(records);
         text = string.Join("\n", text.Split('\n').Where(l => !l.Contains("'TGOV1'", StringComparison.Ordinal) && !l.Contains("'SEXS'", StringComparison.Ordinal)));
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-wecc-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-wecc-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

@@ -20,7 +20,7 @@ namespace GridSim.Tests.Gda;
 public sealed class PhaseAngleInferedTypedReaderTests : IDisposable
 {
     private static readonly DateTime T0 = new(2026, 9, 14, 0, 0, 0, DateTimeKind.Utc);
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-pa-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-pa-{Guid.NewGuid():N}");
 
     public PhaseAngleInferedTypedReaderTests() => Directory.CreateDirectory(_root);
 

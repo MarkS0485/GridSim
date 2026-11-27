@@ -27,7 +27,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class LimitationFixesStreamAndLinkTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-limfix-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-limfix-" + Guid.NewGuid().ToString("N"));
 
     private static readonly Doc15Frames.Pmu Pmu7 = new(7, "STN_A", new[] { Doc15Frames.Voltage });
     private const uint Soc = 1_700_000_000;

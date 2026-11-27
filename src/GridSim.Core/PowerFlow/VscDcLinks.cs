@@ -17,7 +17,8 @@ public sealed record VscLinkResult(string Name, double CurrentA, VscConverterRes
 /// The steady-state model of a two-terminal VSC HVDC link, PSS/E's VSC DC model.
 ///
 /// <para><b>DC side.</b> One converter holds the DC voltage (TYPE 1, DCSET kV); the other an active power order (TYPE
-/// 2, DCSET MW drawn from its AC bus into the link; negative sends power to the bus). Each converter's losses are
+/// 2, an order in MW drawn from its AC bus into the link; negative sends power to the bus. PSS/E's DCSET is the opposite
+/// sign, positive feeding the AC network, and the RAW reader negates it). Each converter's losses are
 /// max(MINLOSS, ALOSS + BLOSS x |Idc|) (kW, Idc in A), taken from the AC side. With R the DC line resistance and I the
 /// current from the power converter towards the voltage converter: the power converter's AC draw P = (Vdc + R I) I +
 /// loss(|I|), solved for I in the cancellation-free closed form (the root nearest zero); the voltage converter then

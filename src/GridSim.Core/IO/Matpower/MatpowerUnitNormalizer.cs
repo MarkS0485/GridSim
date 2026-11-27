@@ -14,7 +14,7 @@ namespace GridSim.Core.IO.Matpower;
 /// demand in <b>kW / kVAr</b> (not MW / MVAr). The standard <see cref="MatpowerParser"/> reads the
 /// numbers verbatim (correctly — it is not its job to guess units), so parsed as-is these cases are
 /// off by a factor of ~1000 on load and by <c>Zbase</c> on impedance and the power flow
-/// voltage-collapses (a 3.715&nbsp;MW feeder is read as 3715&nbsp;MW ≈ 371&nbsp;p.u.).
+/// voltage-collapses (a 3.715&#160;MW feeder is read as 3715&#160;MW ≈ 371&#160;p.u.).
 /// </para>
 /// <para>
 /// The fix is the textbook per-unit reduction, applied per bus voltage level:
@@ -23,8 +23,8 @@ namespace GridSim.Core.IO.Matpower;
 ///   r_pu  = r_ohm / Zbase,  x_pu = x_ohm / Zbase
 ///   P_mw  = P_kw  / 1000,   likewise Qd, Gs, Bs
 /// </code>
-/// For <c>case33bw</c> (BaseMva = 10, BaseKv = 12.66) this gives Zbase = 16.03&nbsp;Ω, turning an
-/// r of 0.0922&nbsp;Ω into 0.00575&nbsp;p.u. and a 100&nbsp;kW load into 0.1&nbsp;MW.
+/// For <c>case33bw</c> (BaseMva = 10, BaseKv = 12.66) this gives Zbase = 16.03&#160;Ω, turning an
+/// r of 0.0922&#160;Ω into 0.00575&#160;p.u. and a 100&#160;kW load into 0.1&#160;MW.
 /// </para>
 /// <para><b>Heuristic limits.</b> Unit-ness is not recorded in the file, so detection is a guess and
 /// is deliberately <i>conservative</i> — it would rather miss a raw case than corrupt a correct one.
@@ -37,7 +37,7 @@ namespace GridSim.Core.IO.Matpower;
 ///     (&gt; <see cref="DistributionKvCeiling"/> kV) will not be flagged, because the kV gate is
 ///     taken over <i>all</i> buses. The known raw cases are single-voltage feeders, so this is safe
 ///     in practice.</item>
-///   <item>The already-per-unit MV benchmark <c>cigre_mv</c> is <i>not</i> flagged: it has a 110&nbsp;kV
+///   <item>The already-per-unit MV benchmark <c>cigre_mv</c> is <i>not</i> flagged: it has a 110&#160;kV
 ///     source bus (fails the kV gate) and per-unit loads summing to &lt; 1× base (fails the load
 ///     gate) — two layers of protection.</item>
 /// </list>

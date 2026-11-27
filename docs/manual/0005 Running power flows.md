@@ -538,8 +538,8 @@ produces a NaN or infinity is also reported as not converged. The equations, dam
 
 **Generator Q-limits.** Generator buses start as voltage-controlled (PV). After each converged pass the solver
 checks each PV generator's reactive output against its limits with a tolerance of 1e-3 MVAr. A generator past a limit
-is pinned at that limit and its bus becomes a load bus (PQ); the network is re-solved. This repeats for at most 12
-passes (`PowerFlowOptions.MaxQLimitPasses`), and a bus switched this way stays switched. If the 12th pass still
+is pinned at that limit and its bus becomes a load bus (PQ); the network is re-solved. This repeats for at most 100
+passes (`PowerFlowOptions.MaxQLimitPasses`; `pf --max-q-passes` sets it), and a bus switched this way stays switched. If the last pass still
 switched a bus, the solver solves once more and reports the result as not converged. `NR iters` in the report is the
 sum over all passes.
 
@@ -557,6 +557,33 @@ its limit with its bus still outside the deadband (`SteadyStateSolver.TapsSettle
 same form for Q, evaluated at the solved voltage and included in both the mismatch and the Jacobian. A bus without
 one, or with a constant-power ZIP, draws its stated load. How to supply a ZIP model is in
 [ch. 2, Loading networks](<0002 Loading networks.md>).
+
+### Network equivalents with `reduce`
+
+```bash
+gridsim reduce data/matpower/lib/case14.m --keep 1,2,3,4,5 --method xward --out case14-xward.m
+gridsim pf case14-xward.m
+```
+
+`reduce` solves the case, keeps the buses named by `--keep` and replaces the rest with a static equivalent at the
+boundary: `ward` (equivalent branches, shunts and constant-power injections), `xward` (Ward plus a voltage-controlled
+source per boundary bus for the external PV buses) or `rei` (the external generators gathered on one fictitious bus
+through a zero-power-balance network). It prints the boundary, every element and a base-case check: the reduced case,
+solved from a flat start, against the full solve at the boundary. At the base case the two agree to machine precision.
+After a change inside the kept area they differ: on case14 with a 20 % load rise at buses 3 and 4 the boundary voltage
+error is 6.3e-4 pu for `ward`, 3.9e-5 pu for `xward` and 7.0e-5 pu for `rei`. The written case is an ordinary MATPOWER or
+JSON case. See [technical ch. 40](<../technical/0040 Network equivalents.md>) and
+[ch. 19](<0019 CLI reference.md#reduce>).
+
+Two more methods serve other studies. `--method sc` reduces the IEC 60909 sequence networks instead, so the fault studies
+on the reduced case give the full case's short-circuit currents at the kept buses. `--method dynamic` keeps every bus and
+aggregates groups of coherent machines (given with `--groups`, or found with `--coherency r`) into classical machines,
+writing a `gridsim-dynamics/2` file beside the reduced case:
+
+```bash
+gridsim reduce case.json --keep 1,2,3,4,5,7,8 --method sc --out case-sc.json
+gridsim reduce case.json --method dynamic --coherency 2 --xdp 0.3 --out case-dyn.json
+```
 
 ## Pitfalls
 

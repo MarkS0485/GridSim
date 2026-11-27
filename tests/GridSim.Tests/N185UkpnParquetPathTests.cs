@@ -24,7 +24,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class N185UkpnParquetPathTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-n185-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-n185-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {

@@ -38,14 +38,26 @@ public static class SolveImport
         NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals, // tolerate Infinity Qmin/Qmax
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
+        // IO-16: a key given twice (also in another case, "converged": false, "Converged": true) is refused; it was read
+        // last-one-wins, so a document could present an unsolved state as solved (GR-180 hardened the same flag).
+        AllowDuplicateProperties = false,
     });
 
-    public static SolveSnapshot ReadFile(string path) => Read(File.ReadAllText(path));
+    public static SolveSnapshot ReadFile(string path) => Read(GridSim.Core.IO.InputFileLimits.ReadAllText(path));
 
     public static SolveSnapshot Read(string json)
     {
-        RootDto root = JsonSerializer.Deserialize(json, Json.RootDto)
-            ?? throw new InvalidDataException("Empty or invalid solve-export JSON.");
+        RootDto root;
+        // IO-16: malformed JSON (or a repeated key) is the reader's InvalidDataException, as the case loaders report it.
+        try
+        {
+            root = JsonSerializer.Deserialize(json, Json.RootDto)
+                ?? throw new InvalidDataException("Empty or invalid solve-export JSON.");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException($"Solve-export JSON is not valid: {ex.Message}", ex);
+        }
         // Bug hunt 2026-10-29, finding 40: the tag is matched exactly, as every other reader in this folder matches its
         // own. A prefix match read a future "/2" document (or any "gridsim-solve-export/..." text) with /1 semantics and
         // defaults; it is refused, naming the tag this reader knows.
@@ -87,7 +99,7 @@ public static class SolveImport
         PowerFlowStatus status = solve.Converged.Value ? PowerFlowStatus.Converged : PowerFlowStatus.MaxIterations;
         if (!isEstimate && solve.Status is string st)
         {
-            if (!Enum.TryParse(st, ignoreCase: false, out status) || !Enum.IsDefined(status) || int.TryParse(st, out _))
+            if (!Enum.TryParse(st, ignoreCase: false, out status) || !Enum.IsDefined(status) || int.TryParse(st, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
                 throw new InvalidDataException(
                     $"Solve-export solve.status '{st}' is not a power-flow status (expected one of {string.Join(", ", Enum.GetNames<PowerFlowStatus>())}).");
         }

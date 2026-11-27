@@ -136,8 +136,9 @@ public static class MtdcLinks
                 double cosMin = DetMath.Cos(Deg(c.AngleMinDeg)), cosMax = DetMath.Cos(Deg(c.AngleMaxDeg));
                 double CosAt(double t) => (vdc + drop * ia) / (c.Bridges * K * vAc * c.BaseKv * c.TransformerRatio / t);
                 tap = c.Tap;
-                while (CosAt(tap) > cosMin && tap - c.TapStep >= c.TapMin - 1e-12 && c.TapStep > 0) tap -= c.TapStep;
-                while (CosAt(tap) < cosMax && tap + c.TapStep <= c.TapMax + 1e-12 && c.TapStep > 0) tap += c.TapStep;
+                // R2-01: bounded by count, as the two-terminal search (a step below the tap's rounding never moved it).
+                tap = LccDcLinks.MoveTap(tap, c.TapStep, c.TapMin, c.TapMax, -1, t => CosAt(t) > cosMin);
+                tap = LccDcLinks.MoveTap(tap, c.TapStep, c.TapMin, c.TapMax, +1, t => CosAt(t) < cosMax);
                 double cs = CosAt(tap);
                 if (cs > cosMin + 1e-12 || cs < cosMax - 1e-12)
                     throw Fail(link, $"converter {c.Bus} needs a{(rect ? " firing" : "n extinction")} angle of {F(DetMath.Acos(Math.Clamp(cs, -1, 1)) * 180 / Math.PI)} degrees, outside its limits {F(c.AngleMinDeg)}..{F(c.AngleMaxDeg)} with its tap at the limit (VCMOD, VCONVN, MARG and DCPF are not applied)");

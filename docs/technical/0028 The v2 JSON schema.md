@@ -14,7 +14,7 @@ the same model, and the same default Newton solve bit for bit (pinned for the pr
 
 ### Document types
 
-Five schema files and sixteen kind specs make up the family. Every v2 document carries a `"schema"` member that names
+Five schema files and seventeen kind specs make up the family. Every v2 document carries a `"schema"` member that names
 its type and version and is matched exactly.
 
 | Doc type | Schema file | Holds |
@@ -229,14 +229,15 @@ are optional `templateRef` members.
 ### The network file
 
 `network.schema.json` requires `schema` and holds any of the arrays `buses`, `generators`, `demands`, `lines`,
-`transformers`, `oltcs`, `boundaries`, `protections` and (RC3 P8, optional) `motors`. The case's network is the union of the files its manifest lists.
+`transformers`, `oltcs`, `boundaries`, `protections`, (RC3 P8, optional) `motors` and (RC5, optional) the fault
+sequence tables `lineWindings`, `machineZeroSequence` and `zeroSequenceMutuals`. The case's network is the union of the files its manifest lists.
 Values are bare numbers on network elements; the object form `{ v, unit, prov }` belongs to template values. The
 required members are:
 
 | Element | Required | Notable constraints |
 |---|---|---|
 | bus | `id`, `baseKv` | `baseKv` > 0; `type` in `pq pv slack`; `vm` >= 0; `vminPu`, `vmaxPu` > 0; `zip` needs all six of `ap bp cp aq bq cq` |
-| generator | `name`, `bus` | `type` matches `^([a-z][a-z0-9-]*)?$` (the empty string is a unit with no technology); `capacityMva` >= 0; `capacityFactor` in [0, 1]; `voltageSetpoint` > 0; `role` in `pv slack pq`; `qMinMvar` a number or `"-Infinity"`; `qMaxMvar` and `pMaxMw` a number or `"Infinity"`; `converter` block; `subtransientXdPu` and `negativeSeqXPu` > 0 |
+| generator | `name`, `bus` | `type` matches `^([a-z][a-z0-9-]*)?$` (the empty string is a unit with no technology); `capacityMva` >= 0; `capacityFactor` in [0, 1]; `voltageSetpoint` > 0; `role` in `pv slack pq`; `qMinMvar` a number or `"-Infinity"`; `qMaxMvar` and `pMaxMw` a number or `"Infinity"`; `converter` block; `subtransientXdPu` and `negativeSeqXPu` > 0; `protectionTemplate` a unitProtection template reference (RC5) |
 | demand | `name`, `bus`, `pMw` | `powerFactor` in (0, 1] |
 | line | `name`, `from`, `to`, `rPu`, `xPu` | `circuits` integer >= 1; `equipment` in `ohl cable`; `tapRatio` > 0; ratings >= 0 |
 | transformer | `name`, `from`, `to`, `rPu`, `xPu` | `tapRatio` > 0; `windings` needs `from` and `to` in `Delta WyeGrounded WyeUngrounded`; `neutralXPu` members >= 0 |
@@ -287,6 +288,113 @@ model and does not carry them; the load note says so.
 
 Minimum reader: a file with a `motors` member needs a GridSim build that includes RC3 P8 motor acceleration. Earlier
 readers (2.1.067 and before) refuse it as an unknown member, as the schema's closed shapes require.
+
+### Fault sequence tables (RC5)
+
+Three optional arrays hold fault sequence data the elements cannot hold. Each is absent when empty, and a case without
+them loads exactly as before.
+
+| Array | Entry | Reaches |
+|---|---|---|
+| `lineWindings` | `line` (a name in `lines`), `windings` (`from`, `to`), optional `neutralXPu` (`from`, `to`, each >= 0 and only on a `WyeGrounded` side) | the line's `FromWinding` / `ToWinding` and neutral reactances; the line's own `r0Pu` / `x0Pu` (any sign) stay its zero-sequence impedance |
+| `machineZeroSequence` | `generator` (a name in `generators`), `rPu`, `xPu` (pu on the unit's `capacityMva`, not both 0) | `Generator.ZeroSequenceZPu`, stamped as a shunt to earth at the unit's bus |
+| `zeroSequenceMutuals` | `lineA`, `lineB` (two different names in `lines`), `rPu`, `xPu` (pu on the case base) | `GridModel.ZeroSequenceMutuals` |
+
+A line carries windings this way, rather than as a `transformers` element, because the loader builds every line before
+every transformer: a branch with windings placed among lines keeps its place, and so the branch order (and every sum the
+studies form in that order) is the model's. Each name must name exactly one element and be named by one entry at most; a
+coupled line may not also carry windings. The fault studies read a branch with windings by the transformer pairing
+rule whatever its element.
+
+`V2CaseWriter.WriteWithFaultSequence` writes them, after every other array (the short-circuit equivalent's
+`reduce --method sc --out`); `V2CaseWriter.Write` does not, so its output is unchanged. Minimum reader: a GridSim build
+that includes them; earlier readers refuse a file holding one as an unknown member.
+
+### Unit protection (RC5)
+
+A generating unit carries relays of its own, separate from the network's: 81U / 81O under / over frequency, 81R RoCoF,
+78 vector shift, 27 / 59 under / over voltage, 32 reverse power and 40 loss of excitation. Their settings belong to the
+unit (its protection schedule, what was agreed at connection), not to its technology, so two units of one class on one
+site can differ. They are written with the machinery v2 already has for equipment data:
+
+- **Class default: a template of kind `unitProtection`** (`schemas/v2/kinds/unitProtection.kind.json`), local or
+  imported, with the usual per-parameter provenance (`_default` required; a placeholder is CuratedPlaceholder with
+  `[VERIFY]`). A case override with no `unit` member changes the template for every unit that takes it, as for any kind.
+- **Which units take it:** a generator's optional `protectionTemplate` (a pinned template reference), else a binding
+  rule (`bindings`, `matchType` -> template) whose template is a `unitProtection` template, matched on the unit's
+  `type` exactly as dynamics bindings are (exact before prefix, case-insensitive). The unit's own reference wins over a
+  rule. A `unitProtection` rule never binds dynamics, and a dynamics rule never binds protection.
+- **Per-unit override: an override with a `unit` member** (the generator's name). It must name the unit's own
+  `unitProtection` template, carries `params`, `reason` and `"shadow": "explicit"` like any override, and applies to that
+  unit alone. Each value's provenance is its object form's `prov`, else the override's `provenance`, else (the override
+  rule) CuratedPlaceholder `[VERIFY] set by a per-unit override in case '<case>' for unit '<unit>': <reason>`. The merged
+  values are checked against the kind spec; a parameter may be overridden once per unit.
+
+Resolution is per setting: the unit's override, else the template (after any template override), else absent. An absent
+relay is absent: nothing is invented. A stage exists when its pickup resolves, and then its delay must resolve too (from
+either layer); a delay or a 40 diameter with no pickup, or a pickup with no delay, is refused. Within one template or one
+unit's overrides an explicit value wins over `rocofPreset`, which wins over `interfacePreset`; a provenance entry for a
+value a preset supplies is refused (a preset carries its own source).
+
+| Parameter | Unit | Rule | Relay |
+|---|---|---|---|
+| `uv1Pu`, `uv1DelayS`, `uv2Pu`, `uv2DelayS` | pu@system (of the bus nominal voltage), s | pickup in (0, 1); delay >= 0 | 27 stages 1 and 2 |
+| `ov1Pu`, `ov1DelayS`, `ov2Pu`, `ov2DelayS` | pu@system, s | pickup > 1 | 59 stages 1 and 2 |
+| `reversePowerPu`, `reversePowerDelayS` | pu@machine (of `capacityMva`), s | pickup in (0, 1] | 32 |
+| `loe1OffsetPu`, `loe1DiameterPu`, `loe1DelayS` (and `loe2...`) | pu@machine (the unit's own impedance base), s | offset >= 0, diameter > 0 | 40 zones 1 and 2 (offset mho below the R axis) |
+| `uf1Hz`, `uf1DelayS`, `uf2Hz`, `uf2DelayS` | Hz, s | pickup below `relayNominalHz` | 81U stages 1 and 2 |
+| `of1Hz`, `of1DelayS`, `of2Hz`, `of2DelayS` | Hz, s | pickup above `relayNominalHz` | 81O stages 1 and 2 |
+| `rocofHzPerS`, `rocofDelayS` | Hz/s, s | pickup > 0 | 81R (the delay resets when RoCoF falls below the pickup) |
+| `vectorShiftDeg`, `vectorShiftDelayS` | deg, s | pickup in (0, 180) | 78 |
+| `relayNominalHz` | Hz | > 0; absent 50 (code default `UnitProtectionSet.DefaultSettingsNominalHz`) | the nominal the absolute frequency pickups are written for |
+| `rocofPreset` | enum | `legacy`, `legacy-high-impedance`, `modern` | 81R from the ENA settings below |
+| `interfacePreset` | enum | `g99-hv`, `g99-lv` | EREC G99 Issue 2 Table 10.1 interface protection |
+
+The presets, with the sources they cite (each value's provenance note names the document and page):
+
+| Preset | Values | Source |
+|---|---|---|
+| `modern` | 81R 1 Hz/s, 0.5 s definite time | EREC G99 Issue 2 (docs/reference S124) Table 10.1 and note, pp.125-126; EREC G59 Issue 3 Amendment 8 (S135) p.62. Recorded. |
+| `legacy` | 81R 0.125 Hz/s (K2 x 0.125 Hz/s, K2 = 1.0, low-impedance network), delay 0.5 s | Pickup: S135 p.62 and LoM constants note (2) p.63; EREC G59 Issue 3 Amendment 2 (S132) Table 10.5.7.1 p.63. Recorded. Delay: S135 Table 10.5.7.1 p.62, plant commissioned before 01/02/18, settings permitted until 01/09/22, "not to be less than K2 x 0.125 Hz/s and not to be greater than 1.0 Hz/s, time delay 0.5 s"; S132 Table 10.5.7.1 p.63 gives the same 0.5 s for the legacy band (Power Stations >= 5 MW commissioned before 01/08/14; its bare `<5MW` K2 x 0.125 Hz/s row has no time entry, and the delay follows the amended band); reset when RoCoF falls below the threshold (S135 note, p.63). Recorded. |
+| `legacy-high-impedance` | 81R 0.2 Hz/s (K2 = 1.6), delay 0.5 s | As `legacy`, K2 = 1.6 for a high-impedance network (S135 note (2) p.63). Delay as `legacy`, Recorded. |
+| `g99-hv` | 27 0.80 pu 2.5 s; 59 1.10 pu 1.0 s and 1.13 pu 0.5 s; 81U 47.5 Hz 20 s and 47.0 Hz 0.5 s; 81O 52.0 Hz 0.5 s; 81R 1 Hz/s 0.5 s; 50 Hz | S124 Table 10.1, HV column (Types A to C), p.125. Recorded. |
+| `g99-lv` | as `g99-hv` but 59 1.14 pu 1.0 s and 1.19 pu 0.5 s (262.2 V and 273.7 V on 230 V) | S124 Table 10.1, LV column, p.125. Recorded. |
+
+Example (a class default with placeholder values, taken by one unit, whose own sourced underfrequency pickup and the
+modern RoCoF setting go on top; `docs/_captures/v2-schema/inputs/unit-protection` is the full case):
+
+```json
+"localTemplates": [
+  { "id": "gridsim.local.ccgt-placeholder", "rev": 1, "kind": "unitProtection", "status": "active",
+    "title": "Synchronous unit placeholder protection",
+    "params": { "uf1Hz": 47.0, "uf1DelayS": 2.0, "of1Hz": 52.0, "of1DelayS": 2.0 },
+    "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "[VERIFY] generic class default" } } }
+],
+"overrides": [
+  { "template": "gridsim.local.ccgt-placeholder@1", "unit": "CCGT B",
+    "params": { "uf1Hz": { "v": 47.5, "prov": { "tag": "Recorded", "note": "CCGT B protection schedule, rev C" } },
+                "rocofPreset": "modern" },
+    "reason": "CCGT B's own underfrequency pickup and the modern RoCoF setting", "shadow": "explicit" }
+]
+```
+
+with, in the network file, `{ "name": "CCGT B", ..., "protectionTemplate": "gridsim.local.ccgt-placeholder@1" }`.
+
+A case with no `unitProtection` template, no `protectionTemplate` and no per-unit override loads exactly as before: the
+same model object, the same notes, the same solve. Otherwise the set is checked and resolved
+(`GridSim.Core.Protection.UnitProtectionSet`; every problem listed in one refusal naming the manifest), each protected
+unit must be a generator whose name no other generator shares, and the model carries it as `GridModel.UnitProtection`
+(set by `GridModel.WithUnitProtection`, carried by `CopyWith`). The power flow never reads it: a case solves bit for bit
+the same with and without it. A `unitProtection` template is not an asset class (it binds no controller). The load note
+says `unit protection: <n> units with relays of their own (<s> relay stages, <p> with a placeholder setting), <c> unit
+protection templates; the power flow does not use them`. The v2 writer writes it back (the templates as case-local
+templates after the asset classes, each unit's `protectionTemplate`, one per-unit override per unit with values of its
+own, every value in a fixed key order with its own provenance, so a written and reloaded case writes the same bytes); it
+notes and leaves out unit protection it cannot hold exactly (an imported template's `id@rev` name, a name shared with an
+asset class). The v1 writer says it cannot hold it. The protection assessment reads it (technical manual chapter 17).
+
+Minimum reader: a case using the `unitProtection` kind, `protectionTemplate` or an override's `unit` needs GridSim
+2.1.075 or later; earlier readers refuse the unknown kind or member.
 
 ### Asset overlay (gridsim-assets/2)
 
@@ -835,7 +943,7 @@ protection; a failed model validation (`Invalid grid model:`). Their wording is 
 | 12 | A `CuratedPlaceholder` note must contain `[VERIFY]`; a quantity is a number or `{v, unit, prov}`; a template ref is `id@rev`; status is `active` or `placeholder`. | `Provenance_carries_the_VERIFY_rule_for_curated_placeholders`, `Quantity_is_a_number_or_v_unit_prov`, `Template_ref_is_id_at_rev`, `Status_is_active_or_placeholder` |
 | 13 | A kind spec loads with every field; unknown members, schema breaks and semantic breaks are refused; the file is named after its kind; every file problem is reported together. | `KindSpecRegistryTests.A_well_formed_kind_loads_with_every_field`, `An_unknown_member_anywhere_in_a_kind_file_is_refused`, `A_kind_file_breaking_the_schema_is_refused`, `A_kind_file_breaking_a_semantic_rule_is_refused`, `The_file_must_be_named_after_its_kind`, `Every_kind_file_problem_is_reported_together` |
 | 14 | `CheckParams`: complete active params pass; the object form with the exact unit passes; unknown parameter, missing required (active and placeholder), differing unit, unit on a unitless parameter, out of range, wrong type, null in active, value in placeholder and an unknown kind are errors; bounds are inclusive; every problem is reported. | `KindSpecRegistryTests` (`A_complete_active_params_object_passes` through `Every_params_problem_is_reported_not_just_the_first`) |
-| 15 | The kinds folder holds the fifteen listed kinds plus `site` and nothing else; each of the fifteen has the fixed format, is plain ASCII, declares no parameter twice, and uses lower camel case names. | `V2KindSpecStructureTests.The_kinds_folder_holds_the_fifteen_slice3_kinds_and_nothing_unexpected`, `Each_kind_file_has_exactly_the_fixed_format`, `Each_kind_file_is_plain_ascii`, `No_parameter_name_is_declared_twice_within_a_kind_and_names_are_lower_camel_case` |
+| 15 | The kinds folder holds the listed parameter kinds (sixteen since RC5's `unitProtection`) plus `site` and nothing else; each of them has the fixed format, is plain ASCII, declares no parameter twice, and uses lower camel case names. | `V2KindSpecStructureTests.The_kinds_folder_holds_the_sixteen_parameter_kinds_and_the_site_kind_and_nothing_unexpected`, `Each_kind_file_has_exactly_the_fixed_format`, `Each_kind_file_is_plain_ascii`, `No_parameter_name_is_declared_twice_within_a_kind_and_names_are_lower_camel_case` |
 | 16 | Infinity is accepted in `codeDefaults` only as the two named strings on a number; each malformation is reported. | `Infinity_is_accepted_only_as_the_two_named_strings_on_a_number`, `Each_malformation_is_reported` |
 | 17 | Every `codeDefaults` entry resolves to the code value and equals it exactly, one test per kind; one ulp away is a mismatch; bad references are reported; the entry total is pinned. | `V2KindSpecCodeDefaultTests.Every_code_default_resolves_and_equals_the_code_value_exactly`, `A_value_one_ulp_away_is_a_mismatch_because_comparison_is_exact`, `Bad_references_and_wrong_values_are_reported`, `Each_reference_form_resolves_a_known_value_exactly`, `Every_kind_with_code_in_GridSim_today_carries_code_defaults_and_the_total_is_pinned` |
 | 18 | The inconsistency register is pinned value for value, and each registered disagreement really has two values. | `The_inconsistency_register_is_pinned_value_for_value`, `Each_registered_disagreement_really_has_two_different_values_on_one_parameter` |
@@ -1109,7 +1217,7 @@ validate: 0 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0
 [exit 3]
 ```
 
-A folder argument validates every kind spec in it. All sixteen pass:
+A folder argument validates every kind spec in it. Every one passes:
 
 ```
 $ gridsim validate schemas/v2/kinds
@@ -1140,7 +1248,7 @@ validate: 0 of 1 document(s) valid (schemas: src\GridSim.Cli\bin\Release\net10.0
 | `schemas/v2/kind.schema.json` | schema | kind spec format |
 | `schemas/v2/case.schema.json` | schema | case manifest |
 | `schemas/v2/network.schema.json` | schema | network element arrays |
-| `schemas/v2/kinds/*.kind.json` | kind specs | the sixteen parameter contracts and their `codeDefaults` |
+| `schemas/v2/kinds/*.kind.json` | kind specs | the seventeen parameter contracts (sixteen until RC5 added `unitProtection`) and their `codeDefaults` |
 | `data/library/placeholders/unmodelled-sites.json` | library | the 15 placeholder sites |
 | `src/GridSim.Core/IO/Json/Schema/JsonSchemaSubset.cs` | `JsonSchemaSubset`, `SchemaNode` | schema set load: keyword whitelist, shape checks, `$ref` resolution, cycle check, pattern compile, reader options |
 | `src/GridSim.Core/IO/Json/Schema/SchemaValidator.cs` | `SchemaValidator`, `SchemaError` | applies a schema node to a value, collects every error |

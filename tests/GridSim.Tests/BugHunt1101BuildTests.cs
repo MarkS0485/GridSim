@@ -292,9 +292,13 @@ public sealed partial class BugHunt1101WebTests
         string rel = ReadRepo(".github/workflows/release.yml");
         Assert.Contains("prerelease: ${{ steps.version.outputs.prerelease }}", rel, StringComparison.Ordinal);
         Assert.Contains("--title \"GridSim $VERSION $LABEL\" --notes-file notes.md --verify-tag --prerelease", rel, StringComparison.Ordinal);
-        // Both the image push and the NuGet call are skipped for a candidate.
-        Assert.Contains("    needs: [ verify, release ]\n    # Bug #195: a release candidate does not take the final version's image tag in the registry.\n    if: needs.verify.outputs.prerelease == 'false'\n", rel, StringComparison.Ordinal);
-        Assert.Contains("    needs: [ verify, release, sbom ]\n    # Bug #195: a release candidate does not take the final version's package version in the feed.\n    if: needs.verify.outputs.prerelease == 'false'\n", rel, StringComparison.Ordinal);
+        // Both the image push and the package push are skipped for a candidate. Changed with the roadmap groundwork (the
+        // package and the images are built but not published): the image push keeps its candidate condition and gains
+        // the publishing switch, which is off; the `nuget` job no longer carries the condition itself, because it now
+        // only packs, and passes the candidate flag to publish.yml, whose push job refuses a candidate
+        // (Rc5PackagePublishingOffTests pins the switch and the gates).
+        Assert.Contains("    needs: [ verify, release ]\n    # Bug #195: a release candidate does not take the final version's image tag in the registry. The second condition is\n    # the publishing switch: unset or anything but 'true' leaves the job skipped.\n    if: needs.verify.outputs.prerelease == 'false' && vars.GRIDSIM_PUBLISH_PACKAGES == 'true'\n", rel, StringComparison.Ordinal);
+        Assert.Contains("      prerelease: ${{ needs.verify.outputs.prerelease == 'true' }}\n", rel, StringComparison.Ordinal);
         // The tag-equals-version gate is still there, on the numeric part.
         Assert.Contains("tag_version=\"${BASH_REMATCH[1]}\"", rel, StringComparison.Ordinal);
         Assert.Contains("if [[ \"$tag_version\" != \"$props_version\" ]]; then", rel, StringComparison.Ordinal);

@@ -126,7 +126,9 @@ repeated with the stall watch.
 
 **Storage.** Schedule (MW profile), peak shaving (keep the power into a branch between LowMw and HighMw: the request is
 the excess of the flow the branch would carry without the unit, P_branch + P_unit), self-consumption (the bus's demand net
-of PV). The power is limited so the energy stays within [SocMin, SocMax] over the coming step:
+of PV; with two or more self-consumption units on one bus each asks for its share, net x its rating / the sum of their
+ratings, so together they cover the net demand once. Other-mode storage on the bus is not subtracted, and a unit held at
+its own limit does not pass its shortfall to the others). The power is limited so the energy stays within [SocMin, SocMax] over the coming step:
 discharge <= (E - Emin) eta_d / dt, charge <= (Emax - E) / (eta_c dt).
 
 ## 37.5 Outputs and violations

@@ -134,7 +134,7 @@ public sealed class N109UnrelievableLinesTests
         Assert.Equal(LpStatus.Infeasible, dc.SecurityLpStatus);
         Assert.Empty(dc.UnrelievableLines);
 
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n109-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n109-" + Guid.NewGuid().ToString("N"));
         try
         {
             GdaModelWriter.WriteDirectory(m, dir, addGridInfeed: false);

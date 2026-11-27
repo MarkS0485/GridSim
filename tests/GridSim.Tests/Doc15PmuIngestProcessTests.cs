@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Doc15PmuIngestProcessTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc15-cli-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc15-cli-" + Guid.NewGuid().ToString("N"));
 
     public Doc15PmuIngestProcessTests() => Directory.CreateDirectory(_dir);
 

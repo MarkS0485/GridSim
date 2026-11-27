@@ -8,7 +8,11 @@ namespace GridSim.Scripting;
 /// <param name="Out">Where statement output is printed as it happens; null prints nothing.</param>
 /// <param name="Gate">Hosting hook: see <see cref="Session.Gate"/>. Null for the console.</param>
 /// <param name="Limits">Hosting hook: see <see cref="SessionLimits"/>. Null for the console.</param>
-public sealed record RunOptions(string BaseDirectory, TextWriter? Out = null, Func<Statement, Session, string?>? Gate = null, SessionLimits? Limits = null);
+/// <param name="Licence">Hosting hook: see <see cref="Session.Licence"/>. Null checks no licence (the library default).</param>
+/// <param name="ConfineToBaseDirectory">Hosting hook: see <see cref="Session.ConfineToBaseDirectory"/>.</param>
+/// <param name="HideBaseDirectory">Hosting hook: see <see cref="Session.HideBaseDirectory"/>.</param>
+public sealed record RunOptions(string BaseDirectory, TextWriter? Out = null, Func<Statement, Session, string?>? Gate = null, SessionLimits? Limits = null,
+    GridSim.Core.Licensing.LicenceGate? Licence = null, bool ConfineToBaseDirectory = false, bool HideBaseDirectory = false);
 
 /// <param name="RecordJson">The run record (schema gridsim-script-run/1).</param>
 /// <param name="Error">The error that stopped the run, or null when every statement ran.</param>
@@ -44,7 +48,11 @@ public static class Runner
     {
         ArgumentNullException.ThrowIfNull(scriptBytes);
         ArgumentNullException.ThrowIfNull(options);
-        var session = new Session(options.BaseDirectory) { Gate = options.Gate, Limits = options.Limits };
+        var session = new Session(options.BaseDirectory)
+        {
+            Gate = options.Gate, Limits = options.Limits, Licence = options.Licence,
+            ConfineToBaseDirectory = options.ConfineToBaseDirectory, HideBaseDirectory = options.HideBaseDirectory,
+        };
         string scriptSha = Sha256(scriptBytes);
         ScriptException? error = null;
         IReadOnlyList<Statement> statements = [];
@@ -87,6 +95,13 @@ public static class Runner
             w.WriteString("schema", RecordSchema);
             w.WriteString("gridsimVersion", GridSim.Core.BuildInfo.Version);
             w.WriteString("grammarVersion", Grammar.VersionText);
+            // RC5 WP11: only a STUDIES script names its extension (and lists its studies below); a grammar 1 record is unchanged.
+            if (session.StudiesEnabled)
+            {
+                w.WriteStartArray("grammarExtensions");
+                w.WriteStringValue(StudyExtension.Studies);
+                w.WriteEndArray();
+            }
             w.WriteString("scriptSha256", scriptSha256);
             w.WriteString("canonicalScriptSha256", session.CanonicalScriptSha256);
             if (session.ModelSha256 is { } m) w.WriteString("modelSha256", m); else w.WriteNull("modelSha256");
@@ -243,6 +258,8 @@ public static class Runner
                 w.WriteEndObject();
             }
             w.WriteEndArray();
+
+            if (session.StudiesEnabled) StudyExtension.WriteRecord(w, session.StudyRuns);
 
             w.WriteStartArray("variables");
             foreach (KeyValuePair<string, Value> kv in session.Globals.OrderBy(k => k.Key, StringComparer.Ordinal))

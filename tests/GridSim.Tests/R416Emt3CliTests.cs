@@ -30,7 +30,7 @@ public sealed class R416Emt3CliTests : IDisposable
          "outputs":[{"name":"va","kind":"voltage","target":"S","phase":"a"}]}
         """;
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r416-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r416-" + Guid.NewGuid().ToString("N"));
 
     public R416Emt3CliTests() => Directory.CreateDirectory(_dir);
 

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gridsim.local/schemas/usermodel/gridsim-model-assignments-1.schema.json",
+  "title": "gridsim-model-assignments/1: user models bound to machines of a dynamics study (RC5 WP12)",
+  "description": "The sidecar of dynamics-study --model-assignments <file>. Each entry binds one governor or exciter model to one machine, by RAW bus and machine id, in place of the controller its DYR record gives. A declarative entry names a shipped model (model) or a gridsim-model/1 document (file, relative to this file, pinned by sha256). A plug-in entry names a model of the --model-plugins configuration; without that flag it is refused. Every object forbids unknown members; a duplicate member is refused by the parser.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema"],
+  "$defs": {
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bus", "id"],
+      "properties": { "bus": { "type": "integer" }, "id": { "type": "string" } }
+    },
+    "parameters": { "type": "object", "additionalProperties": { "type": "number" } },
+    "branch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to", "circuit"],
+      "properties": { "from": { "type": "integer" }, "to": { "type": "integer" }, "circuit": { "type": "string" } }
+    }
+  },
+  "properties": {
+    "schema": { "const": "gridsim-model-assignments/1" },
+    "userModels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["machine"],
+        "properties": {
+          "machine": { "$ref": "#/$defs/machine" },
+          "model": { "type": "string", "description": "A shipped model id (gridsim user-model list)." },
+          "file": { "type": "string", "description": "A gridsim-model/1 document, relative to this file." },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Required with file: the SHA-256 of its exact bytes." },
+          "parameters": { "$ref": "#/$defs/parameters" },
+          "replacesStabiliser": { "type": "boolean" }
+        },
+        "oneOf": [ { "required": ["model"] }, { "required": ["file", "sha256"] } ]
+      }
+    },
+    "pluginModels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["machine", "model"],
+        "properties": {
+          "machine": { "$ref": "#/$defs/machine" },
+          "model": { "type": "string", "pattern": "^[A-Z0-9_]{1,16}$" },
+          "parameters": { "$ref": "#/$defs/parameters" },
+          "replacesStabiliser": { "type": "boolean" }
+        }
+      }
+    },
+    "deviceModels": {
+      "description": "Injection, machine and load models with no DYR record of their own (RC5 WP32), and user relays (RC5 wp32b). An injection or machine model binds to a unit (bind.machine), a load model to a bus (bind.bus, bind.pMw, bind.qMvar), a relay to a unit (bind.machine) or to a branch (bind.branch, read at its from end as written). The role must be the model's own. A machine model is a contract 2 plug-in; a relay is a contract 2 plug-in or a gridsim-model/1 document of role relay.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "bind"],
+        "properties": {
+          "role": { "enum": ["injection", "machine", "load", "relay"] },
+          "bind": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "machine": { "$ref": "#/$defs/machine" },
+              "branch": { "$ref": "#/$defs/branch" },
+              "bus": { "type": "integer" },
+              "pMw": { "type": "number" },
+              "qMvar": { "type": "number" }
+            }
+          },
+          "plugin": { "type": "string", "pattern": "^[A-Z0-9_]{1,16}$" },
+          "file": { "type": "string", "description": "A gridsim-model/1 document, relative to this file." },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Required with file: the SHA-256 of its exact bytes." },
+          "parameters": { "$ref": "#/$defs/parameters" }
+        },
+        "oneOf": [ { "required": ["plugin"] }, { "required": ["file", "sha256"] } ]
+      }
+    }
+  }
+}

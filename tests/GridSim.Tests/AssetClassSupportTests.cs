@@ -106,7 +106,7 @@ public class AssetClassSupportTests
     [Fact]
     public void Loading_a_case_whose_classes_use_an_unsupported_kind_fails_loud_at_load()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-r073-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-r073-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         try
         {

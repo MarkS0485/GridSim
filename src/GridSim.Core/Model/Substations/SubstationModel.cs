@@ -54,6 +54,40 @@ public sealed record NbLine(string Id, string NodeA, string NodeB, double R, dou
 public sealed record NbTransformer(string Id, string NodeHv, string NodeLv, double R, double X, double B = 0,
     double TapRatio = 1.0, double PhaseShiftDeg = 0.0, double RateAMva = 0);
 
+/// <summary>
+/// WP24: a three-winding transformer between three nodes (HV, MV, LV = windings 1, 2, 3). The pair impedances R12 + jX12,
+/// R13 + jX13 and R23 + jX23 are per unit on the model base, as a RAW file's CZ 1 data. The projection makes a star bus and
+/// one branch per winding with the star impedance Zk = (Zki + Zkj - Zij) / 2 (<see cref="ThreeWindingStar"/>, the PSS/E
+/// reader's expression). <see cref="B"/> is the magnetising susceptance (per unit on the model base) at the star point.
+/// <see cref="Ratio"/> and <see cref="ShiftDeg"/> give each winding's off-nominal ratio and phase shift (on the winding's
+/// branch, winding side, as <see cref="Branch.TapRatio"/>); <see cref="RatedMva"/> each winding's rating (written as
+/// PowerTransformerEnd.ratedS; not used by the power flow). Each list, when given, has three entries.
+/// </summary>
+public sealed record NbTransformer3W(string Id, string NodeHv, string NodeMv, string NodeLv,
+    double R12, double X12, double R13, double X13, double R23, double X23, double B = 0,
+    IReadOnlyList<double>? Ratio = null, IReadOnlyList<double>? ShiftDeg = null, IReadOnlyList<double>? RatedMva = null)
+{
+    /// <summary>The node of winding <paramref name="w"/> (0, 1, 2).</summary>
+    public string NodeOf(int w) => w switch { 0 => NodeHv, 1 => NodeMv, _ => NodeLv };
+
+    /// <summary>Winding <paramref name="w"/>'s ratio (1 when not given).</summary>
+    public double RatioOf(int w) => Ratio is null ? 1.0 : Ratio[w];
+
+    /// <summary>Winding <paramref name="w"/>'s phase shift in degrees (0 when not given).</summary>
+    public double ShiftOf(int w) => ShiftDeg is null ? 0.0 : ShiftDeg[w];
+
+    /// <summary>Winding <paramref name="w"/>'s rating in MVA (0 when not given).</summary>
+    public double RatedMvaOf(int w) => RatedMva is null ? 0.0 : RatedMva[w];
+
+    /// <summary>The star resistances and reactances of the three windings, per unit on the model base.</summary>
+    public (double R1, double R2, double R3, double X1, double X2, double X3) Star()
+    {
+        (double r1, double r2, double r3) = ThreeWindingStar.Split(R12, R23, R13);
+        (double x1, double x2, double x3) = ThreeWindingStar.Split(X12, X23, X13);
+        return (r1, r2, r3, x1, x2, x3);
+    }
+}
+
 /// <summary>A load at one node (MW, MVAr).</summary>
 public sealed record NbLoad(string Id, string Node, double Pd, double Qd = 0);
 
@@ -62,14 +96,15 @@ public sealed record NbGenerator(string Id, string Node, double Pg, double Vg = 
     double Qmin = double.NegativeInfinity, double Qmax = double.PositiveInfinity,
     double Pmin = 0, double Pmax = double.PositiveInfinity, bool Slack = false);
 
-/// <summary>A shunt at one node: the MW / MVAr it draws at 1.0 pu voltage (as <see cref="Bus.Gs"/> / <see cref="Bus.Bs"/>).</summary>
+/// <summary>A shunt at one node at 1.0 pu voltage, as <see cref="Bus.Gs"/> / <see cref="Bus.Bs"/>: Gs the MW it draws, Bs the MVAr it injects (a capacitor is positive).</summary>
 public sealed record NbShunt(string Id, string Node, double Gs, double Bs);
 
 /// <summary>What sits on a terminal.</summary>
-public enum NbEquipmentKind { Line, Transformer, Load, Generator, Shunt }
+/// <remarks>WP24 appends <see cref="Transformer3W"/> at the end, so the earlier values (and every order by kind) are unchanged.</remarks>
+public enum NbEquipmentKind { Line, Transformer, Load, Generator, Shunt, Transformer3W }
 
 /// <summary>One equipment terminal. A branch has two (one to one with its two ends), anything else has one.</summary>
-/// <param name="Id">"equipment.end": a.b for a line, hv.lv for a transformer, t for a one-terminal device.</param>
+/// <param name="Id">"equipment.end": a.b for a line, hv.lv for a transformer, hv.mv.lv for a three-winding transformer, t for a one-terminal device.</param>
 public sealed record NbTerminal(string Id, string EquipmentId, NbEquipmentKind Kind, string End, string Node);
 
 /// <summary>An inconsistent or unresolvable node-breaker description, refused with every problem named.</summary>
@@ -100,12 +135,29 @@ public sealed class SubstationModel
     public string Name { get; init; } = "nodebreaker";
     public double BaseMva { get; init; } = GridModel.DefaultBaseMva;
     public double FrequencyHz { get; init; } = global::GridSim.Core.Dynamics.FrequencyLimits.NominalHz;
-    public IReadOnlyList<Substation> Substations { get; init; } = Array.Empty<Substation>();
+    private IReadOnlyList<Substation> _substations = Array.Empty<Substation>();
+    public IReadOnlyList<Substation> Substations { get => _substations; init => _substations = value; }
     public IReadOnlyList<NbLine> Lines { get; init; } = Array.Empty<NbLine>();
     public IReadOnlyList<NbTransformer> Transformers { get; init; } = Array.Empty<NbTransformer>();
     public IReadOnlyList<NbLoad> Loads { get; init; } = Array.Empty<NbLoad>();
     public IReadOnlyList<NbGenerator> Generators { get; init; } = Array.Empty<NbGenerator>();
     public IReadOnlyList<NbShunt> Shunts { get; init; } = Array.Empty<NbShunt>();
+    /// <summary>WP24: three-winding transformers (empty by default; a file without them is read, projected and written as before).</summary>
+    public IReadOnlyList<NbTransformer3W> Transformers3W { get; init; } = Array.Empty<NbTransformer3W>();
+    /// <summary>Plain provenance notes carried with the file, for example the switches an SCL import assumed closed. No
+    /// calculation reads them. Empty by default, and a file without notes is read and written as before.</summary>
+    public IReadOnlyList<string> Notes { get; init; } = Array.Empty<string>();
+
+    /// <summary>A copy of this model with <paramref name="substations"/> in place of <see cref="Substations"/> and every other
+    /// member carried over unchanged. The copy is member-wise, so a member added later is carried without anyone having to
+    /// remember it (an editor that rebuilt the model by naming each member dropped three-winding transformers).</summary>
+    public SubstationModel WithSubstations(IReadOnlyList<Substation> substations)
+    {
+        ArgumentNullException.ThrowIfNull(substations);
+        var copy = (SubstationModel)MemberwiseClone();
+        copy._substations = substations;
+        return copy;
+    }
 
     /// <summary>Every connectivity node, in substation then declaration order.</summary>
     public IEnumerable<ConnectivityNode> AllNodes => Substations.SelectMany(s => s.Nodes);
@@ -134,6 +186,13 @@ public sealed class SubstationModel
             t.Add(new NbTerminal(x.Id + ".t", x.Id, NbEquipmentKind.Generator, "t", x.Node));
         foreach (NbShunt x in Shunts.OrderBy(x => x.Id, StringComparer.Ordinal))
             t.Add(new NbTerminal(x.Id + ".t", x.Id, NbEquipmentKind.Shunt, "t", x.Node));
+        // WP24: three-winding transformers last, so a model without them lists exactly what it listed before.
+        foreach (NbTransformer3W x in Transformers3W.OrderBy(x => x.Id, StringComparer.Ordinal))
+        {
+            t.Add(new NbTerminal(x.Id + ".hv", x.Id, NbEquipmentKind.Transformer3W, "hv", x.NodeHv));
+            t.Add(new NbTerminal(x.Id + ".mv", x.Id, NbEquipmentKind.Transformer3W, "mv", x.NodeMv));
+            t.Add(new NbTerminal(x.Id + ".lv", x.Id, NbEquipmentKind.Transformer3W, "lv", x.NodeLv));
+        }
         return t;
     }
 
@@ -233,6 +292,23 @@ public sealed class SubstationModel
         foreach (NbLoad x in Loads) { Id("load", x.Id); Node($"load '{x.Id}'", x.Node); Finite($"load '{x.Id}'", x.Pd, x.Qd); }
         foreach (NbGenerator x in Generators) { Id("generator", x.Id); Node($"generator '{x.Id}'", x.Node); Finite($"generator '{x.Id}'", x.Pg, x.Vg, x.Qg); }
         foreach (NbShunt x in Shunts) { Id("shunt", x.Id); Node($"shunt '{x.Id}'", x.Node); Finite($"shunt '{x.Id}'", x.Gs, x.Bs); }
+        foreach (NbTransformer3W x in Transformers3W)
+        {
+            string w = $"three-winding transformer '{x.Id}'";
+            Id("three-winding transformer", x.Id); Node(w, x.NodeHv); Node(w, x.NodeMv); Node(w, x.NodeLv);
+            Finite(w, x.R12, x.X12, x.R13, x.X13, x.R23, x.X23, x.B);
+            if (x.NodeHv == x.NodeMv || x.NodeHv == x.NodeLv || x.NodeMv == x.NodeLv) p.Add($"{w} has two windings on one node.");
+            foreach ((string what, IReadOnlyList<double>? list) in new[] { ("ratio", x.Ratio), ("shiftDeg", x.ShiftDeg), ("ratedMva", x.RatedMva) })
+            {
+                if (list is null) continue;
+                if (list.Count != 3) { p.Add($"{w}: {what} needs three entries (one per winding), not {list.Count}."); continue; }
+                Finite(w, list.ToArray());
+            }
+            if (x.Ratio is { Count: 3 } ratios && ratios.Any(r => !(r > 0))) p.Add($"{w}: every winding ratio must be above 0.");
+            var s = x.Star();
+            if ((s.R1 == 0 && s.X1 == 0) || (s.R2 == 0 && s.X2 == 0) || (s.R3 == 0 && s.X3 == 0))
+                p.Add($"{w}: a winding's star impedance is 0 (the pair impedances cancel); not a transformer GridSim can represent.");
+        }
 
         var terminalCount = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (NbTerminal t in Terminals()) terminalCount[t.Node] = terminalCount.GetValueOrDefault(t.Node) + 1;

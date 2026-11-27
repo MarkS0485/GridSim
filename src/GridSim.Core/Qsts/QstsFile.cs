@@ -19,7 +19,7 @@ public static class QstsFile
     public static QstsStudy Load(string path, GridModel model)
     {
         string text;
-        try { text = File.ReadAllText(path); }
+        try { text = GridSim.Core.IO.InputFileLimits.ReadAllText(path); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         { throw new InvalidDataException($"QSTS file {path}: cannot be read ({ex.Message})."); }
         return Parse(text, Path.GetFileName(path), Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".", model);
@@ -60,6 +60,8 @@ public static class QstsFile
             if (r.Child("profiles") is { } pObj)
                 foreach (string name in pObj.Keys())
                 {
+                    // NUM-02: a profile that is null (or any non-object) is refused by name; it was a NullReferenceException.
+                    if (pObj.Raw(name) is not { ValueKind: JsonValueKind.Object }) throw pObj.Bad(name, "an object");
                     Obj p = pObj.Object(name)!;
                     profiles.Add(ReadProfile(p, name, baseDir));
                 }
@@ -287,7 +289,9 @@ public static class QstsFile
         }
         else
         {
-            string path = Path.IsPathRooted(csv!) ? csv! : Path.Combine(baseDir, csv!);
+            // NUM-01: the CSV is a side file of the study: a network or device path is refused before anything is opened,
+            // a relative path is resolved against the study's folder, and the read stops at SideFile.CsvMaxBytes.
+            string path = GridSim.Core.Security.SideFile.Resolve(csv!, baseDir, $"profile '{name}' {p.Path("csv")}");
             // Bug #162: "header": true | false says outright whether the file's first row names the columns.
             values = ReadCsvColumn(path, p.Raw("column"), p.Path("column"), p.Bool("header"));
         }
@@ -307,7 +311,9 @@ public static class QstsFile
     public static double[] ReadCsvColumn(string path, JsonElement? column, string where, bool? header = null)
     {
         string[] lines;
-        try { lines = File.ReadAllLines(path); }
+        // NUM-01: read through the side-file reader (size limit, a stream that stops there); the file's content is never
+        // quoted in a message (a column chosen by name that is absent no longer lists the header's fields).
+        try { lines = GridSim.Core.Security.SideFile.ReadAllLines(path, GridSim.Core.Security.SideFile.CsvMaxBytes, $"{where}: CSV file {path}"); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         { throw new InvalidDataException($"{where}: CSV file {path} cannot be read ({ex.Message})."); }
         // Fields are split by SplitCsvLine, which honours double-quoted fields (a spreadsheet exports a header such as
@@ -338,7 +344,7 @@ public static class QstsFile
             names = rows[0];   // a column chosen by name: the first row is the header by definition
             hasHeader = true;
             col = Array.IndexOf(names, column.Value.GetString());
-            if (col < 0) throw new InvalidDataException($"{where}: CSV file {path} has no column '{column.Value.GetString()}' (has: {string.Join(", ", names)}).");
+            if (col < 0) throw new InvalidDataException($"{where}: CSV file {path} has no column '{column.Value.GetString()}' in its header row.");
         }
         else
         {

@@ -10,6 +10,8 @@ that the bridge streams ([ch. 24](<0024 The GDA bridge.md>)) and the apps replay
 demand history, or to produce estimated states for a day of your own. Every step refuses data newer than 169 hours,
 so the pipeline reconstructs the past and never nowcasts.
 
+GDA (Grid Data Analysis) is the author's own tool. It is not public and will not be made public, and GridSim's GDA work exists for the author's own use; it is documented because understanding the interface has value to readers. You do not get GDA, its code or its data lake, and no help is given to reconstruct it. Building the smaller parts described here on your own data (an LTDS reader, a demand-replay series, an estimated-state store) is a legitimate and intended use. The lake, and the Python builders that run on the GDA side, are the author's; they are described so that the interface is clear.
+
 ## Before you start
 
 - **The lake.** `$GDA_ROOT` stands for the GDA root: the lake directory that holds `NationalGrid/`, `NESO/` and
@@ -553,7 +555,7 @@ overstates the noise, well above 1 means the class is overconfident. It reports;
 ## The 169-hour horizon
 
 The pipeline reconstructs the past only. The rule is one number, 169 hours (7 days and 1 hour), enforced
-independently at every stage:
+independently at every stage. The horizon is a safety invariant, not a setting. Real-time observation of a national grid is a security matter, so GridSim is built so that it cannot be used for it: not by the public, and not by the author either. It is built into the code paths and the test suite as an invariant ([technical ch. 8, Provenance and invariants](<../technical/0008 Provenance and invariants.md>), `ForwardInferenceGuard`), and there is no option, environment variable or licence that changes it.
 
 - `gridsim gda` picks registers published on or before now minus 169 hours unless you pass `--as-of`.
 - `gridsim gda-replay` rejects a series with any timestamp newer than now minus 169 hours, both when the file is

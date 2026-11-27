@@ -30,7 +30,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class GA7E3Batch3WebTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-ga7e3b3-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-ga7e3b3-" + Guid.NewGuid().ToString("N"));
 
     public GA7E3Batch3WebTests() => Directory.CreateDirectory(_dir);
 

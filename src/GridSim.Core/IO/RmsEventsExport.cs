@@ -25,7 +25,7 @@ namespace GridSim.Core.IO;
 /// Both CSVs start with the caller's header lines, each prefixed "# " (the CLI passes its run header: code version,
 /// machine, run description), followed by a "# provenance:" line. <b>Provenance:</b> a model trajectory, not a record,
 /// so <see cref="ProvenanceTag.Synthetic"/> (the tag every model-output export carries, as the frequency export does);
-/// <paramref name="indicativeNote"/> says in words whether the machine data was synthesised (INDICATIVE) or came from a
+/// <c>indicativeNote</c> says in words whether the machine data was synthesised (INDICATIVE) or came from a
 /// dynamics file. Pure formatting: nothing here changes or recomputes a number of the run.
 /// </summary>
 public static class RmsEventsExport
@@ -36,6 +36,9 @@ public static class RmsEventsExport
     /// <summary>The file names written into the export folder.</summary>
     public const string MachinesCsv = "rms-events-machines.csv";
     public const string ConvertersCsv = "rms-events-converters.csv";
+
+    /// <summary>WP6 (RC5): the device models' states (written only when the run has device models).</summary>
+    public const string DevicesCsv = "rms-devices.csv";
     public const string SummaryJson = "rms-events.json";
 
     /// <summary>The provenance of every RMS event export: a model output (see the class remarks).</summary>
@@ -148,9 +151,9 @@ public static class RmsEventsExport
             for (int c = 0; c < cv.Count; c++)
             {
                 RmsConverterTrace x = cv[c];
-                // The name is quoted only if it holds a comma or a quote (RFC 4180), so a plain name reads as itself.
-                string name = x.Name.Contains(',', StringComparison.Ordinal) || x.Name.Contains('"', StringComparison.Ordinal)
-                    ? "\"" + x.Name.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"" : x.Name;
+                // The name is quoted only if it holds a comma or a quote (RFC 4180), so a plain name reads as itself. B31: the
+                // formula-injection guard (CWE-1236) comes first.
+                string name = CsvName(x.Name);
                 sb.Append(R(t[k])).Append(',').Append(c.ToString(CultureInfo.InvariantCulture)).Append(',').Append(name).Append(',')
                   .Append(x.Bus.ToString(CultureInfo.InvariantCulture)).Append(',')
                   .Append(R(x.TerminalVoltagePu[k])).Append(',').Append(R(x.ActivePowerPu[k])).Append(',')
@@ -159,6 +162,44 @@ public static class RmsEventsExport
             }
         return sb.ToString();
     }
+
+    /// <summary>WP6 (RC5): the device states CSV text (<c>t_s,device,name,model,state,value</c>, one row per state per sample,
+    /// invariant culture, round-trip digits), or null when the run has no device models (no file is written then).</summary>
+    public static string? DevicesCsvText(MultiMachineSubtransient.Result run, IReadOnlyList<string> headerLines, string indicativeNote, int everySteps = 1)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(headerLines);
+        RequireEvery(everySteps);
+        if (run.Devices is not { Count: > 0 } dv) return null;
+        var sb = new StringBuilder();
+        foreach (string h in headerLines) sb.Append("# ").Append(h).Append('\n');
+        sb.Append("# ").Append(ProvenanceLine(indicativeNote)).Append('\n');
+        sb.Append(DevicesHeader).Append('\n');
+        IReadOnlyList<double> t = run.Machines[0].TimeSeconds;
+        for (int k = 0; k < t.Count; k += everySteps)
+            for (int d = 0; d < dv.Count; d++)
+            {
+                RmsDeviceTrace x = dv[d];
+                if (k >= x.Samples.Count) continue;
+                string name = CsvName(x.Name);
+                for (int s = 0; s < x.StateNames.Count; s++)
+                    sb.Append(R(t[k])).Append(',').Append(d.ToString(CultureInfo.InvariantCulture)).Append(',').Append(name).Append(',')
+                      .Append(x.Model).Append(',').Append(x.StateNames[s]).Append(',').Append(R(x.Samples[k][s])).Append('\n');
+            }
+        return sb.ToString();
+    }
+
+    /// <summary>A converter or device name as a CSV cell: the formula-injection guard (B31, CWE-1236), then quoted only when it
+    /// holds a comma or a quote (RFC 4180).</summary>
+    internal static string CsvName(string raw)
+    {
+        string n = CsvFormulaGuard.Neutralise(raw);
+        return n.Contains(',', StringComparison.Ordinal) || n.Contains('"', StringComparison.Ordinal)
+            ? "\"" + n.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"" : n;
+    }
+
+    /// <summary>WP6: the device states CSV column header.</summary>
+    public const string DevicesHeader = "t_s,device,name,model,state,value";
 
     /// <summary>The summary JSON text (schema <see cref="Schema"/>).</summary>
     public static string SummaryJsonText(MultiMachineSubtransient.Result run, IReadOnlyList<int> machineBuses, int islandReferences,

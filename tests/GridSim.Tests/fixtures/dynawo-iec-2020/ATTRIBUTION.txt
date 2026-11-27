@@ -1,0 +1,18 @@
+Dynawo reference curves for the IEC 61400-27-1:2020 Type 4A and Type 4B examples, decimated.
+
+Source: Dynawo, https://github.com/dynawo/dynawo, commit 43812dfbbe1c5245905efaeb4149addcf0affe11
+  dynawo/sources/Models/Modelica/Dynawo/Examples/references/Dynawo.Examples.Wind.IEC.Neplan.WT4ACurrentSource2020_res.csv
+    (sha256 80b2a0294df9242201affe0f3ed090ec29a034c561217059431e2f8b20a5fb4e, 25151 rows)
+  dynawo/sources/Models/Modelica/Dynawo/Examples/references/Dynawo.Examples.Wind.IEC.Neplan.WT4BCurrentSource2020_res.csv
+    (sha256 177d865bea0d4e2e86de35f7273b9a4fd35d32150345bea91b76cbcef12c792a, 25132 rows)
+  produced by the examples dynawo/sources/Models/Modelica/Dynawo/Examples/Wind/IEC/Neplan/WT4ACurrentSource2020.mo and
+  WT4BCurrentSource2020.mo (infinite bus; PRef step at 2 s, xRef step at 4 s, faults at 6 s and 12 s, omegaRef pulse at
+  20 s; 0 to 25 s).
+
+Licence: Mozilla Public License 2.0 (MPL-2.0), Copyright (c) RTE (http://www.rte-france.com). The MPL-2.0 text is at
+https://mozilla.org/MPL/2.0/. These files are a modified form (decimated) of files covered by the MPL-2.0 and remain
+under it.
+
+Change made: only the rows at whole multiples of 0.05 s are kept (501 rows each, 0 to 25 s; the originals are at 1 ms,
+with extra solver rows near events). The columns are renamed from
+wT4xCurrentSource.controlMeasurements.PPu / QPu / UPu to P / Q / U; every value is kept as written.

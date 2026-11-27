@@ -63,11 +63,9 @@ _NOT_RELATIVE = re.compile(r'^(?:[A-Za-z][A-Za-z0-9+.\-]*:|#|/|\?)')
 # other people and are not edited here, so the hook corrects the link on the
 # way through. Every entry must be used on every build: if the docs get fixed
 # and an entry goes stale, the build fails so the entry is removed.
-ANCHOR_FIXES = {
-    # The heading is "PSS/E RAW files", whose anchor is "psse-raw-files".
-    ("manual/0002 Loading networks.md", "pss-e-raw-files"): "psse-raw-files",
-    # There is no "Loading a pre-solved run" heading; this is the section on it.
-    ("manual/0008 The desktop app.md", "loading-a-pre-solved-run"): "replaying-a-run-directory",
+ANCHOR_FIXES: dict = {
+    # Both earlier entries (manual 0002 "pss-e-raw-files", manual 0008 "loading-a-pre-solved-run") were removed in
+    # 2.1.174: the docs now link the right anchors, so the entries no longer matched any link.
 }
 
 # Filled in by on_config.

@@ -168,7 +168,7 @@ mpc.branch = [
 
     private static string TempCase(string generationJson)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-f16-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-f16-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "system.json"), """{ "name": "f16", "baseMva": 100, "frequencyHz": 50 }""");
         File.WriteAllText(Path.Combine(dir, "buses.json"), """

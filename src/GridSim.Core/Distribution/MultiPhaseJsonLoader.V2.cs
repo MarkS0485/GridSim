@@ -63,7 +63,7 @@ public static partial class MultiPhaseJsonLoader
     public static MultiPhaseFeeder LoadAny(string path)
     {
         if (!File.Exists(path)) throw new FileNotFoundException($"three-phase feeder file not found: {path}", path);
-        string text = File.ReadAllText(path);
+        string text = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         return IsV2Text(text) ? ParseV2(text, path) : Parse(text, path);
     }
 

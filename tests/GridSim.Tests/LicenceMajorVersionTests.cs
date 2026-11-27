@@ -184,7 +184,7 @@ public class LicenceMajorVersionTests
         string other = LicenceKey.Encode(Commercial(BuildInfo.MajorVersion + 1), signer);
         // Against a temp licence file, never the real installed one (which a regression that wrote before verifying
         // would have overwritten); the assertion is unchanged: the refusal writes nothing.
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-licence-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-licence-{Guid.NewGuid():N}");
         string path = Path.Combine(dir, "licence" + LicenceGate.FileExtension);
         try
         {

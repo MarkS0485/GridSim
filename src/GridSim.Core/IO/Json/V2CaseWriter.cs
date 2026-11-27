@@ -4,10 +4,11 @@ using System.Text.RegularExpressions;
 using GridSim.Core.Assets;
 using GridSim.Core.Assets.Protection;
 using GridSim.Core.Model;
+using GridSim.Core.Protection;
 
 namespace GridSim.Core.IO.Json;
 
-/// <summary>The outcome of <see cref="V2CaseWriter.Write"/>: the two files written and the notes on what was not carried.</summary>
+/// <summary>The outcome of <see cref="V2CaseWriter.Write(GridModel, string)"/>: the two files written and the notes on what was not carried.</summary>
 public sealed record V2CaseWriteResult(string ManifestPath, string NetworkPath, IReadOnlyList<string> Notes);
 
 /// <summary>
@@ -96,11 +97,32 @@ public static partial class V2CaseWriter
     /// no motors (null or empty) the bytes are exactly those of <see cref="Write(GridModel, string)"/>.
     /// </summary>
     public static V2CaseWriteResult Write(GridModel model, string manifestPath, IReadOnlyList<PlacedMotor>? motors)
+        => WriteCore(model, manifestPath, motors, faultSequence: false);
+
+    /// <summary>
+    /// RC5 (the short-circuit equivalent, <c>reduce --method sc</c>): <see cref="Write(GridModel, string)"/> plus every
+    /// piece of fault sequence data the elements alone cannot hold, so the fault studies on the loaded-back case read
+    /// exactly the model's sequence networks. Three network arrays are added after every other array, each only when it
+    /// has entries: <c>lineWindings</c> (the winding connections and neutral reactances of a branch written as a line,
+    /// which the default writer reports as not written), <c>machineZeroSequence</c> (each generator's
+    /// <see cref="Generator.ZeroSequenceZPu"/>) and <c>zeroSequenceMutuals</c> (<see cref="GridModel.ZeroSequenceMutuals"/>,
+    /// by line name). Every element is written as <see cref="Write(GridModel, string)"/> writes it, in the same order, so
+    /// a model with none of these data gives exactly the default bytes. The numbers are written in their shortest
+    /// round-trip form, so the loaded-back values are the model's to the bit. Refused (<see cref="InvalidDataException"/>,
+    /// naming the element) where the loader would refuse the entry: a one-sided winding, a neutral reactance on a side
+    /// that is not WyeGrounded or below 0, a zero machine impedance, a name an entry needs that two elements share, and a
+    /// mutual coupling on a branch written as a transformer element or carrying windings. A coupling on an out-of-service
+    /// branch (which the fault studies skip, and the writer does not write) is left out, with a note.
+    /// </summary>
+    public static V2CaseWriteResult WriteWithFaultSequence(GridModel model, string manifestPath)
+        => WriteCore(model, manifestPath, null, faultSequence: true);
+
+    private static V2CaseWriteResult WriteCore(GridModel model, string manifestPath, IReadOnlyList<PlacedMotor>? motors, bool faultSequence)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(manifestPath);
         CaseWriterChecks.RefuseReferencesToOmittedBranches(model, "JSON v2 case writer");   // GR-164
-        CaseWriterChecks.RefuseLccLinks(model, "JSON v2 case writer");
+        CaseWriterChecks.RefuseLccLinks(model, "JSON v2 case writer", zeroSequenceCarried: faultSequence);
         string manifestFull = Path.GetFullPath(manifestPath);
         string dir = Path.GetDirectoryName(manifestFull)!;
         string networkName = NetworkFileNameFor(manifestFull);
@@ -117,8 +139,10 @@ public static partial class V2CaseWriter
         // the notes say which); both files then follow the one plan, so a manifest never lists a template the network
         // file does not use as planned, or the other way round.
         Bundles? bundles = PlanBundles(model, notes);
-        byte[] network = NetworkBytes(model, bundles, notes, motors);
-        byte[] manifest = ManifestBytes(model, networkName, bundles);
+        // RC5: the unit protection, when the model carries it and a v2 case can hold it exactly (null otherwise, noted).
+        UnitProtectionSet? unitProtection = PlanUnitProtection(model, bundles, notes);
+        byte[] network = NetworkBytes(model, bundles, notes, motors, unitProtection, faultSequence);
+        byte[] manifest = ManifestBytes(model, networkName, bundles, unitProtection);
         Directory.CreateDirectory(dir);
         // The network file first: a manifest never exists without the file it lists.
         WriteNew(networkFull, network);
@@ -166,7 +190,7 @@ public static partial class V2CaseWriter
     // The manifest
     // ---------------------------------------------------------------------------------------------------------------
 
-    private static byte[] ManifestBytes(GridModel model, string networkName, Bundles? bundles) => Json(w =>
+    private static byte[] ManifestBytes(GridModel model, string networkName, Bundles? bundles, UnitProtectionSet? unitProtection = null) => Json(w =>
     {
         w.WriteStartObject();
         w.WriteString("schema", V2CaseLoader.CaseSchemaTag);
@@ -185,10 +209,12 @@ public static partial class V2CaseWriter
         // N321: the bundles' classes as local templates (library order) and the binding rules (rule order). Both arrays
         // are left out when empty, which the loader reads as empty (a case with no bundle writes exactly what it wrote
         // before N321).
-        if (bundles is not null && bundles.Classes.Count > 0)
+        if ((bundles is not null && bundles.Classes.Count > 0) || unitProtection is { Classes.Count: > 0 })
         {
             w.WriteStartArray("localTemplates");
-            foreach (AssetClass c in bundles.Classes) WriteTemplate(w, c);
+            foreach (AssetClass c in bundles?.Classes ?? Array.Empty<AssetClass>()) WriteTemplate(w, c);
+            // RC5: the unit protection templates after the asset classes (none: the array is exactly as before).
+            foreach (UnitProtectionClass c in unitProtection?.Classes ?? Array.Empty<UnitProtectionClass>()) WriteUnitTemplate(w, c);
             w.WriteEndArray();
         }
         if (bundles is not null && bundles.Rules.Count > 0)
@@ -201,6 +227,13 @@ public static partial class V2CaseWriter
                 w.WriteString("template", LocalRef(className));
                 w.WriteEndObject();
             }
+            w.WriteEndArray();
+        }
+        // RC5: each unit's own values as one per-unit override (none: no overrides member, exactly as before).
+        if (unitProtection is not null && unitProtection.Units.Any(u => HasOwnValues(u.Layer)))
+        {
+            w.WriteStartArray("overrides");
+            foreach (UnitProtectionAssignment u in unitProtection.Units.Where(u => HasOwnValues(u.Layer))) WriteUnitOverride(w, u);
             w.WriteEndArray();
         }
         w.WriteEndObject();
@@ -246,7 +279,8 @@ public static partial class V2CaseWriter
     // The network file
     // ---------------------------------------------------------------------------------------------------------------
 
-    private static byte[] NetworkBytes(GridModel model, Bundles? bundles, List<string> notes, IReadOnlyList<PlacedMotor>? motors = null)
+    private static byte[] NetworkBytes(GridModel model, Bundles? bundles, List<string> notes, IReadOnlyList<PlacedMotor>? motors = null,
+        UnitProtectionSet? unitProtection = null, bool faultSequence = false)
     {
         // Bus types by id, for each generator's role (the loader re-derives bus types from the buses and the roles, so
         // writing the role of the bus a unit sits on reproduces every type exactly; the v1 writer's rule).
@@ -264,8 +298,14 @@ public static partial class V2CaseWriter
 
         // The split: branches [0, split) are lines, [split, n) transformer elements (see the class summary).
         int split = TransformerSplit(branches, out int lostWindings);
+        // RC5: with faultSequence, the data the elements cannot hold, planned (and checked) before anything is written.
+        FaultSequencePlan? plan = faultSequence ? PlanFaultSequence(model, branches, split, branchNames, genNames, notes) : null;
+        if (plan is not null) lostWindings = 0;   // carried in lineWindings
 
         int lostCosts = 0, lostGenTemplates = 0, lostBranchTemplates = 0;
+        // RC5: each protected unit's template by unit name (WithUnitProtection guarantees each names one generator).
+        var unitClass = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (unitProtection is not null) foreach (UnitProtectionAssignment u in unitProtection.Units) unitClass[u.Unit] = u.ClassName!;
         byte[] bytes = Json(w =>
         {
             w.WriteStartObject();
@@ -345,6 +385,8 @@ public static partial class V2CaseWriter
                 if (BitConverter.DoubleToInt64Bits(g.SubtransientXdPu) != 0) Num(w, "subtransientXdPu", g.SubtransientXdPu, at + " SubtransientXdPu");
                 if (BitConverter.DoubleToInt64Bits(g.NegativeSeqXPu) != 0) Num(w, "negativeSeqXPu", g.NegativeSeqXPu, at + " NegativeSeqXPu");
                 if (!g.InService) w.WriteBoolean("inService", false);
+                // RC5: the unit's unit protection template (its own values are per-unit overrides in the manifest).
+                if (g.Name is not null && unitClass.TryGetValue(g.Name, out string? upc)) w.WriteString("protectionTemplate", LocalRef(upc));
                 w.WriteEndObject();
                 if (g.Cost is not null || g.ReactiveCost is not null) lostCosts++;
             }
@@ -536,6 +578,10 @@ public static partial class V2CaseWriter
                 }
                 w.WriteEndArray();
             }
+
+            // RC5: the fault sequence data the elements cannot hold, last, only with faultSequence (WriteWithFaultSequence)
+            // and only when there is any, so every other write is byte-unchanged.
+            if (plan is not null) WriteFaultSequence(w, model, branches, branchNames, genNames, plan);
             w.WriteEndObject();
         });
 
@@ -770,6 +816,152 @@ public static partial class V2CaseWriter
     }
 
     // ---------------------------------------------------------------------------------------------------------------
+    // RC5: the fault sequence data the elements cannot hold (WriteWithFaultSequence)
+    // ---------------------------------------------------------------------------------------------------------------
+
+    /// <summary>What <see cref="WriteWithFaultSequence"/> adds: the in-service branches written as lines that carry
+    /// windings or neutral reactances (indices into the in-service list), the generators with a zero-sequence impedance
+    /// (indices into the whole fleet), and the mutual couplings as pairs of in-service branch indices.</summary>
+    private sealed record FaultSequencePlan(
+        IReadOnlyList<int> WoundLines, IReadOnlyList<int> EarthedMachines, IReadOnlyList<(int A, int B, double RPu, double XPu)> Mutuals);
+
+    /// <summary>Plan and check the fault sequence tables (see <see cref="WriteWithFaultSequence"/> for the refusals).</summary>
+    private static FaultSequencePlan PlanFaultSequence(GridModel model, List<Branch> branches, int split, string[] branchNames,
+        string[] genNames, List<string> notes)
+    {
+        static string R(double v) => v.ToString("R", CultureInfo.InvariantCulture);
+        var lineNames = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < split; i++) lineNames[branchNames[i]] = lineNames.GetValueOrDefault(branchNames[i]) + 1;
+        void UniqueLine(int i, string why)
+        {
+            if (lineNames[branchNames[i]] > 1)
+                throw new InvalidDataException($"line '{branchNames[i]}' ({branches[i].From}-{branches[i].To}) {why}, which a JSON v2 case gives by name, but {lineNames[branchNames[i]]} lines have that name; give each a unique name.");
+        }
+
+        var wound = new List<int>();
+        for (int i = 0; i < split; i++)
+        {
+            Branch b = branches[i];
+            if (!NeedsTransformerElement(b)) continue;
+            string at = $"branch {i} ({b.From}-{b.To})";
+            if (b.FromWinding is not WindingConnection wf || b.ToWinding is not WindingConnection wt)
+                throw new InvalidDataException(b.FromWinding is null && b.ToWinding is null
+                    ? $"{at} has a neutral reactance but no winding connections; the zero-sequence network never reads it. Give both windings or remove it."
+                    : $"{at} has only the {(b.FromWinding is null ? "to" : "from")} winding; give both windings (Delta, WyeGrounded or WyeUngrounded).");
+            foreach ((string side, double xn, WindingConnection wc) in new[] { ("from", b.FromNeutralXPu, wf), ("to", b.ToNeutralXPu, wt) })
+            {
+                if (BitConverter.DoubleToInt64Bits(xn) == 0) continue;
+                if (!(double.IsFinite(xn) && xn >= 0.0))
+                    throw new InvalidDataException($"{at} has the {side} neutral reactance {R(xn)}; a JSON v2 case needs it finite and 0 or above.");
+                if (wc != WindingConnection.WyeGrounded)
+                    throw new InvalidDataException($"{at} has a {side} neutral reactance on a {wc} winding, which has no earthed neutral; the zero-sequence network never reads it.");
+            }
+            UniqueLine(i, "carries winding connections");
+            wound.Add(i);
+        }
+
+        IReadOnlyList<Generator> fleet = model.AllGenerators;
+        var genCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (string n in genNames) genCount[n] = genCount.GetValueOrDefault(n) + 1;
+        var earthed = new List<int>();
+        for (int i = 0; i < fleet.Count; i++)
+        {
+            if (fleet[i].ZeroSequenceZPu is not MachineZeroSequence z) continue;
+            string at = $"generator {i} ('{genNames[i]}', bus {fleet[i].Bus})";
+            if (!double.IsFinite(z.RPu) || !double.IsFinite(z.XPu))
+                throw new InvalidDataException($"{at} has the zero-sequence impedance {R(z.RPu)} + j{R(z.XPu)}, which a JSON v2 case cannot hold.");
+            if (z.RPu == 0.0 && z.XPu == 0.0)
+                throw new InvalidDataException($"{at} has a zero zero-sequence impedance, a shunt to earth of zero impedance; a JSON v2 case refuses it.");
+            if (genCount[genNames[i]] > 1)
+                throw new InvalidDataException($"{at} has a zero-sequence impedance, which a JSON v2 case gives by name, but {genCount[genNames[i]]} generators have that name; give each a unique name.");
+            earthed.Add(i);
+        }
+
+        // Model branch index -> in-service index (the written order), -1 for an out-of-service branch.
+        var pos = new int[model.Branches.Count];
+        for (int l = 0, k = 0; l < model.Branches.Count; l++) pos[l] = model.Branches[l].InService ? k++ : -1;
+        var woundSet = new HashSet<int>(wound);
+        var mutuals = new List<(int A, int B, double RPu, double XPu)>();
+        int skipped = 0;
+        foreach (ZeroSequenceMutual mu in model.ZeroSequenceMutuals)
+        {
+            string at = $"the zero-sequence mutual coupling between lines {mu.FromA}-{mu.ToA} and {mu.FromB}-{mu.ToB}";
+            if (mu.BranchA < 0 || mu.BranchA >= pos.Length || mu.BranchB < 0 || mu.BranchB >= pos.Length)
+                throw new InvalidDataException($"{at} names a branch index outside the model's {pos.Length} branches.");
+            int a = pos[mu.BranchA], b = pos[mu.BranchB];
+            if (a < 0 || b < 0) { skipped++; continue; }
+            if (a >= split || b >= split)
+                throw new InvalidDataException($"{at}: a coupled branch is written as a transformer element, and only lines are coupled.");
+            if (woundSet.Contains(a) || woundSet.Contains(b))
+                throw new InvalidDataException($"{at}: a coupled branch has winding connections, and only lines are coupled.");
+            UniqueLine(a, "is mutually coupled");
+            UniqueLine(b, "is mutually coupled");
+            mutuals.Add((a, b, mu.RPu, mu.XPu));
+        }
+        if (skipped > 0)
+            notes.Add($"{skipped} zero-sequence mutual coupling(s) on an out-of-service branch not written (the branch is not written, and the fault studies skip a coupling on it).");
+        return new FaultSequencePlan(wound, earthed, mutuals);
+    }
+
+    /// <summary>Write the planned tables (each array only when it has entries).</summary>
+    private static void WriteFaultSequence(Utf8JsonWriter w, GridModel model, List<Branch> branches, string[] branchNames,
+        string[] genNames, FaultSequencePlan plan)
+    {
+        if (plan.WoundLines.Count > 0)
+        {
+            w.WriteStartArray("lineWindings");
+            foreach (int i in plan.WoundLines)
+            {
+                Branch b = branches[i];
+                string at = $"branch {i} ({b.From}-{b.To})";
+                w.WriteStartObject();
+                w.WriteString("line", branchNames[i]);
+                w.WriteStartObject("windings");
+                w.WriteString("from", b.FromWinding!.Value.ToString());
+                w.WriteString("to", b.ToWinding!.Value.ToString());
+                w.WriteEndObject();
+                if (BitConverter.DoubleToInt64Bits(b.FromNeutralXPu) != 0 || BitConverter.DoubleToInt64Bits(b.ToNeutralXPu) != 0)
+                {
+                    w.WriteStartObject("neutralXPu");
+                    if (BitConverter.DoubleToInt64Bits(b.FromNeutralXPu) != 0) Num(w, "from", b.FromNeutralXPu, at + " FromNeutralXPu");
+                    if (BitConverter.DoubleToInt64Bits(b.ToNeutralXPu) != 0) Num(w, "to", b.ToNeutralXPu, at + " ToNeutralXPu");
+                    w.WriteEndObject();
+                }
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+        }
+        if (plan.EarthedMachines.Count > 0)
+        {
+            w.WriteStartArray("machineZeroSequence");
+            foreach (int i in plan.EarthedMachines)
+            {
+                MachineZeroSequence z = model.AllGenerators[i].ZeroSequenceZPu!.Value;
+                w.WriteStartObject();
+                w.WriteString("generator", genNames[i]);
+                Num(w, "rPu", z.RPu, $"generator {i} zero-sequence R");
+                Num(w, "xPu", z.XPu, $"generator {i} zero-sequence X");
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+        }
+        if (plan.Mutuals.Count > 0)
+        {
+            w.WriteStartArray("zeroSequenceMutuals");
+            foreach ((int a, int b, double r, double x) in plan.Mutuals)
+            {
+                w.WriteStartObject();
+                w.WriteString("lineA", branchNames[a]);
+                w.WriteString("lineB", branchNames[b]);
+                Num(w, "rPu", r, $"mutual {branchNames[a]} / {branchNames[b]} R");
+                Num(w, "xPu", x, $"mutual {branchNames[a]} / {branchNames[b]} X");
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------------------------------
 
@@ -822,6 +1014,82 @@ public static partial class V2CaseWriter
     }
 
     // A number the loader needs finite: refused, naming it, when it is not.
+    /// <summary>
+    /// RC5: the model's unit protection when a v2 case can hold it exactly, else null with a note naming every reason (and
+    /// nothing of it is written, as for the asset bundles). It is written as case-local templates of kind unitProtection
+    /// (<c>gridsim.local.&lt;name&gt;@1</c>), each unit's <c>protectionTemplate</c>, and one per-unit override per unit
+    /// with values of its own. It cannot be held when a template name cannot be a local template id or is also an asset
+    /// class name (one id for two templates), or a unit takes no template (a per-unit override needs one).
+    /// </summary>
+    private static UnitProtectionSet? PlanUnitProtection(GridModel model, Bundles? bundles, List<string> notes)
+    {
+        if (model.UnitProtection is not { } up) return null;
+        var cannot = new List<string>();
+        var assetNames = new HashSet<string>(bundles?.Classes.Select(c => c.Name) ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+        foreach (UnitProtectionClass c in up.Classes)
+        {
+            if (!LocalName().IsMatch(c.Name))
+                cannot.Add($"unit protection template '{c.Name}' cannot be a local template id ({V2CaseLoader.LocalIdPrefix}<name>, the name being dot-separated segments of letters, digits, '_' and '-')");
+            else if (assetNames.Contains(c.Name))
+                cannot.Add($"unit protection template '{c.Name}' has the name of an asset class, so both would be the one local template {LocalRef(c.Name)}");
+        }
+        foreach (UnitProtectionAssignment u in up.Units)
+            if (u.ClassName is null) cannot.Add($"unit '{u.Unit}' takes no unit protection template, and a v2 per-unit override needs one");
+        if (cannot.Count == 0) return up;
+        notes.Add("the unit protection is not written (a JSON v2 case could not hold it exactly): " + string.Join("; ", cannot) + ".");
+        return null;
+    }
+
+    private static bool HasOwnValues(UnitProtectionLayer l) => l.Settings.Count > 0 || l.RocofPreset is not null || l.InterfacePreset is not null;
+
+    /// <summary>RC5: a unit protection class as a case-local template of kind unitProtection: the numeric settings in the
+    /// fixed key order, then the presets, and the provenance (_default first, then the keys in the same order).</summary>
+    private static void WriteUnitTemplate(Utf8JsonWriter w, UnitProtectionClass c)
+    {
+        w.WriteStartObject();
+        w.WriteString("id", V2CaseLoader.LocalIdPrefix + c.Name);
+        w.WriteNumber("rev", LocalRev);
+        w.WriteString("kind", V2CaseLoader.UnitProtectionKind);
+        w.WriteString("status", "active");
+        w.WriteString("title", c.Name);
+        if (c.Description is not null) w.WriteString("description", c.Description);
+        w.WriteStartObject("params");
+        foreach (string key in UnitProtectionSet.SettingKeys)
+            if (c.Layer.Settings.TryGetValue(key, out double v)) Num(w, key, v, $"unit protection template '{c.Name}' {key}");
+        if (c.Layer.RocofPreset is not null) w.WriteString("rocofPreset", c.Layer.RocofPreset);
+        if (c.Layer.InterfacePreset is not null) w.WriteString("interfacePreset", c.Layer.InterfacePreset);
+        w.WriteEndObject();
+        w.WriteStartObject("provenance");
+        foreach (string key in new[] { AssetClass.DefaultKey }.Concat(UnitProtectionSet.SettingKeys))
+            if (c.Layer.Provenance.TryGetValue(key, out AssetClassProvenance? p)) WriteProvenance(w, key, p);
+        w.WriteEndObject();
+        w.WriteEndObject();
+    }
+
+    /// <summary>RC5: one unit's own values as a per-unit override: each number in the object form with its own provenance,
+    /// the presets as bare strings, the reason it was given (or a stated one), shadow explicit.</summary>
+    private static void WriteUnitOverride(Utf8JsonWriter w, UnitProtectionAssignment u)
+    {
+        w.WriteStartObject();
+        w.WriteString("template", LocalRef(u.ClassName!));
+        w.WriteString("unit", u.Unit);
+        w.WriteStartObject("params");
+        foreach (string key in UnitProtectionSet.SettingKeys)
+        {
+            if (!u.Layer.Settings.TryGetValue(key, out double v)) continue;
+            w.WriteStartObject(key);
+            Num(w, "v", v, $"unit '{u.Unit}' {key}");
+            if (u.Layer.Provenance.TryGetValue(key, out AssetClassProvenance? p)) WriteProvenance(w, "prov", p);
+            w.WriteEndObject();
+        }
+        if (u.Layer.RocofPreset is not null) w.WriteString("rocofPreset", u.Layer.RocofPreset);
+        if (u.Layer.InterfacePreset is not null) w.WriteString("interfacePreset", u.Layer.InterfacePreset);
+        w.WriteEndObject();
+        w.WriteString("reason", string.IsNullOrWhiteSpace(u.Reason) ? $"the unit's own protection settings ({u.Unit})" : u.Reason);
+        w.WriteString("shadow", "explicit");
+        w.WriteEndObject();
+    }
+
     private static void Num(Utf8JsonWriter w, string name, double value, string what)
     {
         if (!double.IsFinite(value))

@@ -297,7 +297,7 @@ public sealed class LiveSim
             if (network.Buses[i].Id != _base.Buses[i].Id)
                 throw new ArgumentException($"LiveSim.ReplaceNetwork: bus {i} is {network.Buses[i].Id}, but the loop's case has {_base.Buses[i].Id} there; the bus order cannot change.", nameof(network));
         if (network.FrequencyHz != _base.FrequencyHz)
-            throw new ArgumentException($"LiveSim.ReplaceNetwork: the network runs at {network.FrequencyHz:R} Hz, the loop at {_base.FrequencyHz:R} Hz.", nameof(network));
+            throw new ArgumentException(FormattableString.Invariant($"LiveSim.ReplaceNetwork: the network runs at {network.FrequencyHz:R} Hz, the loop at {_base.FrequencyHz:R} Hz."), nameof(network));
         if (_assetFleet is not null && network.Generators.Count != _base.Generators.Count)
             throw new InvalidOperationException(
                 "LiveSim.ReplaceNetwork: the authored asset fleet binds units by position among the in-service generators, so the number "
@@ -412,7 +412,7 @@ public sealed class LiveSim
         GridModel solved = _solver.RegulatedModel ?? m;
 
         double demand = m.Buses.Sum(b => b.Pd);
-        double gen = r.PInjMw.Where(p => p > 0).Sum();
+        double gen = SolvedGeneration.GeneratorOutputMw(solved, r);   // NUM-23: the units' output, not the positive net injections
 
         // Feed the solved per-bus voltage + per-bus loading into the asset-aware integrator so U/O-voltage
         // and thermal-overload protections observe real network state (held across the fast sub-steps). Only a

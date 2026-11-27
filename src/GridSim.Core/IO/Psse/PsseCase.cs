@@ -44,6 +44,24 @@ public sealed record PsseReadOptions
     /// the model solved without the bank is the fixed-at-BINIT model. Every other switched shunt stays fixed, noted.
     /// </summary>
     public bool ApplyShuntControl { get; init; }
+
+    /// <summary>
+    /// False (the default): the AREA records give only their names, exactly as before this option existed. True: their
+    /// swing bus (ISW), desired export (PDES, MW) and tolerance (PTOL, MW) are kept as
+    /// <see cref="PsseParseResult.AreaInterchange"/> specs for <see cref="PowerFlow.AreaInterchangePowerFlow"/>, with each
+    /// branch's metered end (<see cref="PsseParseResult.BranchMeteredEnds"/>: the MET field of revision 33 and later, a
+    /// negative J, or NMETR 1 on a two-winding transformer). The model is unchanged.
+    /// </summary>
+    public bool KeepAreaInterchange { get; init; }
+
+    /// <summary>
+    /// False (the default): a unit that regulates a remote bus (IREG) holds VS at its own bus, noted, exactly as before
+    /// this option existed. True: each in-service unit at a PV bus whose IREG names a PQ bus other than its own is also
+    /// returned as a <see cref="PowerFlow.RemoteVoltageControl"/> with target VS
+    /// (<see cref="PsseParseResult.RemoteVoltageControls"/>), and a different note replaces the old one. The model is
+    /// unchanged.
+    /// </summary>
+    public bool RemoteRegulation { get; init; }
 }
 
 /// <summary>The bus-level metadata a RAW file carries that <see cref="GridModel"/> has no place for.</summary>
@@ -128,6 +146,17 @@ public sealed record PsseParseResult(GridModel Model, IReadOnlyList<string> Note
     /// <summary>The RAW record of each generator, position k for <see cref="GridModel.AllGenerators"/>[k].</summary>
     public IReadOnlyList<PsseMachineKey> MachineKeys { get; init; } = Array.Empty<PsseMachineKey>();
 
+    /// <summary>WP3a (RC5): the source reactance ZX (ZSORCE, pu on MBASE) of each generator record, aligned to
+    /// <see cref="MachineKeys"/>; PSS/E's default 1.0 when the field is left off, NaN when it is not a number. The case
+    /// model does not use it; the DYR reader takes it as GENCLS's X'd. Empty when the reader did not record it.</summary>
+    public IReadOnlyList<double> MachineSourceReactances { get; init; } = Array.Empty<double>();
+
+    /// <summary>The source resistance ZR (ZSORCE, pu on MBASE) of each generator record, aligned to
+    /// <see cref="MachineKeys"/>; PSS/E's default 0 when the field is left off, NaN when it is not a number. The case model
+    /// does not use it; the CGMES DY export writes it as the machine's statorResistance. Empty when the reader did not
+    /// record it.</summary>
+    public IReadOnlyList<double> MachineSourceResistances { get; init; } = Array.Empty<double>();
+
     /// <summary>Native load rows, including out-of-service loads and loads on buses omitted from the legacy model.</summary>
     public IReadOnlyList<PsseLoadSource> LoadSources { get; init; } = Array.Empty<PsseLoadSource>();
 
@@ -154,6 +183,22 @@ public sealed record PsseParseResult(GridModel Model, IReadOnlyList<string> Note
     /// <summary>The switched shunts that regulate (<see cref="PsseReadOptions.ApplyShuntControl"/>), in file order; empty
     /// without the option. Steps count blocks switched from BINIT, which the model's bus shunt already holds.</summary>
     public IReadOnlyList<PowerFlow.SwitchedShunt> SwitchedShunts { get; init; } = Array.Empty<PowerFlow.SwitchedShunt>();
+
+    /// <summary>The controlled areas (<see cref="PsseReadOptions.KeepAreaInterchange"/>) in ascending area number: every
+    /// AREA record with a swing bus (ISW) that is in the model and an area with no slack bus. Empty without the option.</summary>
+    public IReadOnlyList<PowerFlow.AreaInterchangeSpec> AreaInterchange { get; init; } = Array.Empty<PowerFlow.AreaInterchangeSpec>();
+
+    /// <summary>The other areas of the model's buses, whose interchange is reported only (the area holding a slack bus,
+    /// an area with ISW 0, an area with no AREA record), in ascending area number. Empty without the option.</summary>
+    public IReadOnlyList<PowerFlow.AreaMembership> AreaReported { get; init; } = Array.Empty<PowerFlow.AreaMembership>();
+
+    /// <summary>The model branches metered at their to end, by index in <see cref="GridModel.Branches"/>; every other
+    /// branch is metered at its from end. Empty without <see cref="PsseReadOptions.KeepAreaInterchange"/>.</summary>
+    public IReadOnlyDictionary<int, Estimation.BranchEnd> BranchMeteredEnds { get; init; } = new Dictionary<int, Estimation.BranchEnd>();
+
+    /// <summary>The remote voltage controls (<see cref="PsseReadOptions.RemoteRegulation"/>), one per controlling bus,
+    /// in the order of the first unit at each bus. Empty without the option.</summary>
+    public IReadOnlyList<PowerFlow.RemoteVoltageControl> RemoteVoltageControls { get; init; } = Array.Empty<PowerFlow.RemoteVoltageControl>();
 }
 
 /// <summary>The text of a written RAW file, the notes on what the format could not carry, and the file's branch order.</summary>

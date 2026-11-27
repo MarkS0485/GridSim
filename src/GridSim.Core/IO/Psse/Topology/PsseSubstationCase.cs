@@ -26,7 +26,7 @@ public static class PsseSubstationCaseReader
             throw new ArgumentException("Expected SHA-256 must contain exactly 64 hexadecimal characters.", nameof(expectedSha256));
 
         string fullPath = Path.GetFullPath(path);
-        byte[] bytes = File.ReadAllBytes(fullPath);
+        byte[] bytes = GridSim.Core.IO.InputFileLimits.ReadAllBytes(fullPath);
         string actual = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
         if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException($"PSS/E source SHA-256 mismatch. Expected {expected.ToLowerInvariant()}, received {actual}.");

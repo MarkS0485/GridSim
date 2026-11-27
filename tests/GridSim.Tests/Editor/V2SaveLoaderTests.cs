@@ -16,7 +16,7 @@ public class V2SaveLoaderTests
     {
         public TempDir()
         {
-            Dir = Path.Combine(Path.GetTempPath(), "gridsim-editor-n327-" + Guid.NewGuid().ToString("N"));
+            Dir = TestTemp.Under("gridsim-editor-n327-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Dir);
         }
 
@@ -102,7 +102,7 @@ public class V2SaveLoaderTests
     [Fact]
     public void The_embedded_kind_specs_equal_the_files_on_disk()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n327-schemas-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n327-schemas-" + Guid.NewGuid().ToString("N"));
         try
         {
             BundledSchemas.WriteV2SchemaFolder(dir);

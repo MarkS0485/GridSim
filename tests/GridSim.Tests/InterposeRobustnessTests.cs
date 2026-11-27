@@ -163,7 +163,7 @@ public class InterposeRobustnessTests
     [Fact]
     public void Load_runs_the_register_layout_check()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"pm-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"pm-{Guid.NewGuid():N}.json");
         try
         {
             File.WriteAllText(path, """
@@ -181,7 +181,7 @@ public class InterposeRobustnessTests
     [Fact]
     public void A_second_window_with_the_same_name_is_kept_under_a_dup_name()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"win-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"win-{Guid.NewGuid():N}");
         try
         {
             var a = new MeasurementSet { Case = "a", TakenUtc = Historical, Measurements = new List<Measurement>() };
@@ -203,7 +203,7 @@ public class InterposeRobustnessTests
     [Fact]
     public void NeverOverwrite_opens_the_requested_name_when_it_is_free()
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"nw-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"nw-{Guid.NewGuid():N}");
         try
         {
             string path = NeverOverwrite.WriteAllText(Path.Combine(dir, "x.txt"), "1");

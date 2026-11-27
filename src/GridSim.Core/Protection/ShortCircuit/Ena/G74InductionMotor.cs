@@ -8,8 +8,10 @@ public enum MotorDecayModel
 {
     /// <summary><c>I(t) = I'' e^{-t/T}</c> with a time constant the data file supplies.</summary>
     Exponential,
-    /// <summary><c>I(t) = q(t) I''</c> with the incumbent IEC 60909-0 asynchronous-motor factor
-    /// <see cref="Iec60909.MotorBreakingFactorQ"/> (rated power per pole pair).</summary>
+    /// <summary><c>I(t) = mu(t) q(t) I''</c>, the IEC 60909-0 asynchronous-motor breaking current: mu
+    /// (<see cref="Iec60909.BreakingFactorMu"/>, from the motor's I''/IrM) times q
+    /// (<see cref="Iec60909.MotorBreakingFactorQ"/>, from the rated power per pole pair). <c>I(0) = I''</c>. IEC gives
+    /// the factors from 0.02 s, so a time between 0 and 0.02 s is refused.</summary>
     Iec60909Q,
 }
 
@@ -30,7 +32,9 @@ public static class G74InductionMotor
         return 1.0 / lockedRotorCurrentRatio;
     }
 
-    /// <summary>The decay factor <c>I(t) / I''</c> for the chosen model (1 at t = 0 for the exponential model).</summary>
+    /// <summary>The time factor for the chosen model: <c>e^{-t/T}</c> for the exponential model (1 at t = 0), and q alone
+    /// for <see cref="MotorDecayModel.Iec60909Q"/>. The study (<see cref="G74Method"/>) multiplies q by the motor's mu,
+    /// which needs its I''/IrM, and uses I'' itself at t = 0.</summary>
     public static double Ratio(MotorDecayModel model, double timeConstantS, double ratedMwPerPolePair, double tSeconds)
     {
         if (!(tSeconds >= 0.0) || !double.IsFinite(tSeconds)) throw new ArgumentOutOfRangeException(nameof(tSeconds), tSeconds, "time must be >= 0");

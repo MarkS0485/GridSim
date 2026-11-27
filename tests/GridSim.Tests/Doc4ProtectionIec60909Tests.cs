@@ -280,7 +280,7 @@ public class Doc4ProtectionIec60909Tests
     [Fact]
     public void D226_cli_grade_chain_json_carries_every_pair_and_the_verdict()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc4-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc4-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

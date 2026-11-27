@@ -168,7 +168,7 @@ public static class NodalSolver
             if (singular)
             {
                 status = NodalStatus.SingularMatrix; failedAt = t;
-                message = $"the nodal matrix is singular at t = {t:R} s (step {s}): a node is floating or the network cannot be solved";
+                message = FormattableString.Invariant($"the nodal matrix is singular at t = {t:R} s (step {s}): a node is floating or the network cannot be solved");
                 break;
             }
 
@@ -250,7 +250,7 @@ public static class NodalSolver
             Array.Copy(rhs0, nst.Rhs, n);
             foreach (NodalElement e in nl) e.StampNewton(v, nst);
             if (!lu.Factor(nst.M))
-                return (NodalStatus.SingularMatrix, $"the Newton iteration matrix is singular at t = {t:R} s (step {step}, iteration {it})", it);
+                return (NodalStatus.SingularMatrix, FormattableString.Invariant($"the Newton iteration matrix is singular at t = {t:R} s (step {step}, iteration {it})"), it);
             Array.Copy(nst.Rhs, dv, n);
             lu.Solve(dv);
             for (int i = 0; i < n; i++) dv[i] -= v[i];     // the full Newton step
@@ -276,6 +276,6 @@ public static class NodalSolver
             if (small && r0 <= np.ResidualAbsTol + np.ResidualRelTol * scale) return (NodalStatus.Completed, "", it);
         }
         return (NodalStatus.NewtonNotConverged,
-            $"the Newton iteration did not converge in {np.MaxIterations} iterations at t = {t:R} s (step {step}); the last residual was {r0:R} A", it);
+            FormattableString.Invariant($"the Newton iteration did not converge in {np.MaxIterations} iterations at t = {t:R} s (step {step}); the last residual was {r0:R} A"), it);
     }
 }

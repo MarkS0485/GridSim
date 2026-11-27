@@ -366,13 +366,15 @@ public static class ElementEditors
     /// <summary>
     /// The editor of <paramref name="grid"/>'s record, whose role is <paramref name="role"/>, or null when the role has
     /// no per-element editor (or the record is an overlay record or a root record such as system.json).
+    /// <paramref name="templateDataRoot"/> (RC5) is the data root the case's library imports are read from, for the
+    /// template pickers (null: the case's local templates and whatever imports resolve without it).
     /// </summary>
-    public static ElementEditorModel? For(CaseAuthoring authoring, string? role, FieldGridModel grid)
+    public static ElementEditorModel? For(CaseAuthoring authoring, string? role, FieldGridModel grid, string? templateDataRoot = null)
     {
         ArgumentNullException.ThrowIfNull(authoring);
         ArgumentNullException.ThrowIfNull(grid);
         if (role is null || grid.IsOverlay || grid.Record.Index < 0 || !Roles.Contains(role, StringComparer.Ordinal)) return null;
-        var c = new EditorContext(authoring, grid);
+        var c = new EditorContext(authoring, grid) { TemplateDataRoot = templateDataRoot };
         return role switch
         {
             CaseRoles.Buses => new BusEditorModel(c),
@@ -428,6 +430,9 @@ internal sealed class EditorContext
 
     /// <summary>The engine's reference index (built once per editor, on first use).</summary>
     public ReferenceIndex Index => _index ??= ReferenceIndex.Build(Session);
+
+    /// <summary>RC5: the data root the case's library imports are read from (the template pickers), or null.</summary>
+    public string? TemplateDataRoot { get; init; }
 
     // ------------------------------------------------------------------ values
 
@@ -624,6 +629,9 @@ internal sealed class EditorContext
         return new EditorField(row, path, depth, label, unit, labelSource, help, helpSource, choices, count, kind);
     }
 
+    /// <summary>RC5: the picker kind of a generator's protectionTemplate.</summary>
+    public const string UnitProtectionPicker = "unitProtection template";
+
     // The picker of a field: a bus reference lists the case's buses, a branch reference its lines and transformers, an
     // asset-class reference its classes (the engine's own reference fields, ReferenceIndex), an enum its values and a
     // boolean true and false. A locked or unknown field has no picker.
@@ -656,6 +664,13 @@ internal sealed class EditorContext
         {
             var all = Index.Classes.Keys.Order(StringComparer.Ordinal).ToList();
             return (Cut(all, name => new EditorChoice(name, name)), all.Count, "asset class");
+        }
+        // RC5: a v2 generator's protectionTemplate lists the unitProtection templates the case can see (active ones only,
+        // as the template link's picker lists the bindable dynamics templates).
+        if (IsV2 && shape.Location.Pointer == "/$defs/generator" && f.Name == "protectionTemplate")
+        {
+            var all = Templates.TemplatePages.UnitProtectionTemplates(Templates.CaseTemplates.Read(Authoring, TemplateDataRoot)).ToList();
+            return (Cut(all, r => new EditorChoice(r, r)), all.Count, UnitProtectionPicker);
         }
         if (f.Kind == FieldKind.Enum)
         {

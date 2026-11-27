@@ -110,7 +110,7 @@ public class PublicExportGateTests
     [Fact]
     public void Convert_public_writes_the_gated_model_and_refuses_without_a_manifest()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-convert-public-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-convert-public-" + Guid.NewGuid().ToString("N"));
         try
         {
             GridModel m = NamedCase9();
@@ -159,7 +159,7 @@ public class PublicExportGateTests
     {
         // gb-full carries no per-element provenance; until a real manifest exists its public export must refuse.
         Assert.False(File.Exists(Path.Combine(CliProcess.Root(), "data", "gb-full", "provenance.json")));
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-convert-public-gb-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-convert-public-gb-" + Guid.NewGuid().ToString("N"));
         try
         {
             string output = Path.Combine(dir, "gb-full.m");

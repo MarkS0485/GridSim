@@ -14,7 +14,7 @@ namespace GridSim.Tests.Gda;
 /// </summary>
 public class GdaDeterministicInputTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-gda-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-gda-{Guid.NewGuid():N}");
 
     public GdaDeterministicInputTests() => Directory.CreateDirectory(_root);
 

@@ -134,7 +134,7 @@ public static class BundledNetworks
         if (!File.Exists(full) || !full.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return true;   // not a manifest: the plain rule
         try
         {
-            using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(full));
+            using var doc = System.Text.Json.JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(full)));
             System.Text.Json.JsonElement root = doc.RootElement;
             if (root.ValueKind != System.Text.Json.JsonValueKind.Object
                 || !(root.TryGetProperty("network", out _) || root.TryGetProperty("assets", out _) || root.TryGetProperty("imports", out _)))

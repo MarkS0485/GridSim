@@ -29,11 +29,6 @@ public sealed class SiteSettingsTests
     public void Nothing_configured_is_fully_neutral()
     {
         SiteSettings s = Read();
-        Assert.Equal("", s.GoogleTagId);
-        Assert.Null(s.GoogleTagBootstrap);
-        Assert.Equal("", s.AnalyticsScriptUrl);
-        Assert.Equal("", s.AnalyticsCollectorUrl);
-        Assert.False(s.HasAnalytics);
         Assert.Equal("", s.ShareImageUrl);
         Assert.Null(s.OrganisationJsonLd);
         Assert.Empty(s.FooterLinks);
@@ -51,9 +46,6 @@ public sealed class SiteSettingsTests
     public void Configured_values_are_carried_through()
     {
         SiteSettings s = Read(
-            ("Site:GoogleTagId", "G-ABC123DEF4"),
-            ("Site:AnalyticsScriptUrl", "https://stats.example.com/a.js"),
-            ("Site:AnalyticsCollectorUrl", "https://stats.example.com"),
             ("Site:ShareImageUrl", "https://www.example.com/og.png"),
             ("Site:OrganisationName", "Example Org"),
             ("Site:OrganisationUrl", "https://www.example.com"),
@@ -61,11 +53,6 @@ public sealed class SiteSettingsTests
             ("Site:FooterLinks:0:Url", "https://code.example.com/gridsim"),
             ("Site:FooterLinks:1:Text", "News"),
             ("Site:FooterLinks:1:Url", "https://news.example.com/"));
-        Assert.True(s.HasAnalytics);
-        Assert.Contains("gtag('config', 'G-ABC123DEF4');", s.GoogleTagBootstrap, StringComparison.Ordinal);
-        Assert.Equal("https://stats.example.com/a.js", s.AnalyticsScriptUrl);
-        Assert.Equal("https://stats.example.com", s.AnalyticsCollectorUrl);
-        Assert.Equal("GridSim", s.AnalyticsSiteName);
         Assert.Equal("https://www.example.com/og.png", s.ShareImageUrl);
         Assert.Equal("{\"@context\":\"https://schema.org\",\"@type\":\"Organization\",\"name\":\"Example Org\",\"url\":\"https://www.example.com\"}",
             s.OrganisationJsonLd);

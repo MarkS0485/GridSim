@@ -13,7 +13,7 @@ public sealed class CgmesProfilesCliProcessTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-r411b-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-r411b-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

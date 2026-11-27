@@ -1,0 +1,91 @@
+{
+  "schema": "gridsim-gridcode-requirements-ext/1",
+  "id": "gb-ecc-issue6-rev33-ext",
+  "extends": "gb-ecc-issue6-rev33",
+  "title": "GB Grid Code, European Connection Conditions (ECC), Issue 6 Revision 33 (11 June 2025): fast fault current injection, faults over 140 ms, excitation and PPM voltage-control performance",
+  "source": "the ECC section of the GB Grid Code as published by NESO (Issue 6 Revision 33, 11 June 2025), the same issue as gb-ecc-issue6-rev33",
+  "pages": "page is null for every value: NESO publishes this section as a Word document, whose page numbers depend on how it is rendered, so each value is located by its clause and figure",
+  "notInIssue": "the GC0111 consultation drafts carried an 'observable within 30 ms' rule and a rule on the average over 30 to 60 ms; neither is in Issue 6 Revision 33, so neither is checked",
+  "ffci": {
+    "clause": "ECC.6.3.16.1.1-.5",
+    "page": null,
+    "moduleTypes": ["B", "C", "D"],
+    "technologies": ["ppm", "dc-ppm", "hvdc"],
+    "gridFormingClause": "ECC.6.3.16.1.1",
+    "gridFormingText": "a unit operating in a Grid Forming Capability mode is under ECC.6.3.19 instead (ECC.6.3.19.5, GBGF fast fault current injection, not transcribed)",
+    "unbalancedClause": "ECC.6.3.16.1.13",
+    "unbalancedText": "for an unbalanced fault the reactive current must rise with the fall in the retained unbalanced voltage up to its maximum; no envelope is given, so this check covers balanced faults only",
+    "inceptionVoltagePu": { "value": 0.9, "clause": "ECC.6.3.16.1.4", "page": null, "figure": null, "figureRead": false },
+    "maxReactiveCurrentPu": { "value": 1.0, "clause": "ECC.6.3.16.1.5", "page": null, "figure": "Figure ECC.6.3.16(b)", "figureRead": false },
+    "retainedVoltageLine": {
+      "clause": "ECC.6.3.16.1.2-.3", "page": null, "figure": "Figure ECC.6.3.16(a)", "figureRead": true,
+      "text": "the two labelled points of the heavy black line (the figure is marked NOT TO SCALE; the line between them is straight as drawn): reactive current IR in pu of the rating against the retained voltage at the connection point. Interpretation: for a pre-fault reactive current above -0.312 pu the line is taken from (0.9 pu, the pre-fault current) to (0.5 pu, 1.0 pu), GridSim's reading of ECC.6.3.16.1.3 (IR shall as a minimum increase with the fall in the retained voltage, and depends on the pre-fault operating condition)",
+      "points": [
+        { "voltagePu": 0.9, "reactiveCurrentPu": -0.312 },
+        { "voltagePu": 0.5, "reactiveCurrentPu": 1.0 }
+      ]
+    },
+    "envelope": {
+      "clause": "ECC.6.3.16.1.4", "page": null, "figure": "Figures ECC.6.3.16(b) and ECC.6.3.16(c)", "figureRead": true,
+      "text": "the edge of the forbidden operating area as a fraction of the increase dIR = IR - IR(pre-fault), from fault inception (the voltage first below 0.9 pu): the labelled points 20, 60, 120 and 140 ms and 0.65 dIR, joined by straight lines as drawn (NOT TO SCALE)",
+      "points": [
+        { "seconds": 0.0, "fraction": 0.0 },
+        { "seconds": 0.02, "fraction": 0.0 },
+        { "seconds": 0.06, "fraction": 0.65 },
+        { "seconds": 0.12, "fraction": 1.0 },
+        { "seconds": 0.14, "fraction": 1.0 }
+      ]
+    },
+    "blocking": { "clause": "ECC.6.3.16.1.8", "page": null, "figure": "Figures ECC.6.3.16(b) and ECC.6.3.16(c)", "figureRead": false,
+      "text": "after fault clearance blocking is permitted (the hatched area), so no envelope applies after clearance" },
+    "maxClearanceSeconds": { "value": 0.14, "clause": "ECC.6.3.16.1.8", "page": null, "figure": null, "figureRead": false },
+    "agreedDeviationsClause": "ECC.6.3.16.1.10",
+    "agreedDeviationsText": "transient or marginal deviations below the shaded area may be agreed with the company; this check does not allow for any"
+  },
+  "frtLong": {
+    "maxDurationSeconds": { "value": 180, "clause": "ECC.A.4A.3", "page": null, "figure": null, "figureRead": false },
+    "hvdcClause": "ECC.6.3.15.9.1.1",
+    "hvdcText": "for HVDC equipment the requirement for dips over 140 ms is set in the Bilateral Agreement; no value is shipped",
+    "profiles": [
+      {
+        "clause": "ECC.6.3.15.9.2.1(a)", "page": null, "figure": "Figure ECC.6.3.15.9(a)", "figureRead": true,
+        "appliesTo": "Type C and D synchronous power generating module", "moduleTypes": ["C", "D"], "technologies": ["synchronous"],
+        "text": "a voltage-duration profile: each point is a dip level and how long it must be ridden through. The labelled corners are transcribed; the figure is marked NOT TO SCALE, so a duration strictly inside a sloped segment has no labelled voltage",
+        "corners": [
+          { "durationSeconds": 0.14, "voltagePu": 0.33 },
+          { "durationSeconds": 1.088, "voltagePu": 0.85 },
+          { "durationSeconds": 180, "voltagePu": 0.85 }
+        ],
+        "sloped": [0]
+      },
+      {
+        "clause": "ECC.6.3.15.9.2.1(b)", "page": null, "figure": "Figure ECC.6.3.15.9(b)", "figureRead": true,
+        "appliesTo": "Type C and D power park module", "moduleTypes": ["C", "D"], "technologies": ["ppm", "ppm-gfm"],
+        "text": "a voltage-duration profile: each point is a dip level and how long it must be ridden through. The labelled corners are transcribed; a duration strictly inside a sloped segment has no labelled voltage",
+        "corners": [
+          { "durationSeconds": 0.14, "voltagePu": 0.15 },
+          { "durationSeconds": 1.2, "voltagePu": 0.80 },
+          { "durationSeconds": 2.5, "voltagePu": 0.80 },
+          { "durationSeconds": 2.5, "voltagePu": 0.85 },
+          { "durationSeconds": 180, "voltagePu": 0.85 }
+        ],
+        "sloped": [0]
+      }
+    ]
+  },
+  "avr": {
+    "clause": "ECC.A.6.2.4.1", "page": null, "figure": null, "figureRead": false,
+    "moduleTypes": ["C", "D"], "technologies": ["synchronous"],
+    "text": "open circuit, a step from 90 % to 100 % of nominal terminal voltage: a damped oscillatory response; the terminal voltage first reaches 100 % in less than 0.6 s and settles within 5 % of the voltage change in less than 3 s",
+    "fromPu": 0.9, "toPu": 1.0, "firstReachSeconds": 0.6, "settleBandFraction": 0.05, "settleSeconds": 3.0
+  },
+  "vctrl": {
+    "clause": "ECC.A.7.2.3.1", "page": null, "figure": null, "figureRead": false,
+    "technologies": ["ppm", "hvdc"],
+    "text": "an on-load step in connection-point voltage: the reactive response commences within 0.2 s (i); 90 % of the change in 1 s for a step from zero to the maximum, 2 s from maximum leading to maximum lagging (ii); within 5 s of reaching 90 %, the peak to peak magnitude of any oscillations less than 5 % of 'the change in steady state maximum Reactive Power' (iv), read here as the steady-state change of the step",
+    "commenceSeconds": 0.2, "ninetyFraction": 0.9, "ninetyZeroToMaxSeconds": 1.0, "ninetyLeadToLagSeconds": 2.0,
+    "oscillationWindowSeconds": 5.0, "oscillationFraction": 0.05,
+    "mvarSecondsClause": "ECC.A.7.2.3.1(i), Figure ECC.A.7.2.3.1a",
+    "mvarSecondsText": "the MVAr-seconds rule compares with a ramp from 0.2 s to 'the required response at 1 second', whose level the figure does not label; not evaluated"
+  }
+}

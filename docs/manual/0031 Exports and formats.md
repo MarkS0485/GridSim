@@ -253,7 +253,7 @@ of the export.
 |---|---|
 | `solver` | `dense-newton`, `sparse-newton` or `bfs`. |
 | `n` | The number of buses solved. |
-| `converged`, `status`, `iterations`, `maxMismatch` | The outcome; `status` is `Converged`, `MaxIterations` or `NonFinite`; `maxMismatch` is the largest power mismatch in per unit. |
+| `converged`, `status`, `iterations`, `maxMismatch` | The outcome; `status` is `Converged`, `MaxIterations`, `Diverged` or `NonFinite`; `maxMismatch` is the largest power mismatch in per unit. |
 | `jacobianOmittedForSize` | True when a dense solve left the Jacobian out because the system exceeds 300 buses. |
 | `slackQNote` | A note on the slack bus reactive output; omitted when there is none. |
 | `ybus[]` | The non-zero admittance entries `{I, J, G, B}` (zero-based bus indices, per unit). Empty for a BFS solve, which forms no Y-bus. |
@@ -1611,6 +1611,7 @@ gridsim losses case14 --json results/exports-docs/losses.json --csv results/expo
 | `exitCode` | The exit code the run ends with. |
 | `summary` | The verb's scalar results, as `{key: value}`. |
 | `tables` | The verb's tables, each an array of `{column: value}` rows. |
+| `timings` | Optional, only with the global switch `--timings`: wall-clock milliseconds per stage (`startup`, `parse`, `build`, `assemble`, `factor`, `solve`, `write`, `total`), counts such as `iterations`, `stages_merged` and `stages_not_measured`. Written last; the rest of the document is unchanged by the switch. |
 
 ```
 $ head -n 26 results/exports-docs/losses.json
@@ -1947,6 +1948,41 @@ $ head -c 520 results/exports-docs/gridviz.json
 - **Case-folder documents for dynamics and protection.** `asset-classes.json` and `protections.json` sit in a case
   folder and are read with it. Each is a bare JSON array, with no `schema` member and no schema id. They are described
   in [chapter 29](<0029 Extending GridSim.md>).
+
+## COMTRADE recordings (.cfg and .dat)
+
+COMTRADE (IEEE C37.111-1999 and -2013) is the common format for disturbance records. GridSim reads a recording
+(`ComtradeReader` in `GridSim.Core.IO.Comtrade`) and writes a simulation trajectory as one (`ComtradeWriter`); both are
+library entry points, with no command-line verb.
+
+- **Configuration file** (`.cfg`): station, device and revision year; the channel counts `TT,nA,mD`; one line per analog
+  channel `An,id,phase,component,unit,a,b,skew,min,max,primary,secondary,P|S` and per status channel `Dn,id,phase,component,normal`;
+  the line frequency; the sampling rates; the start and trigger times `dd/mm/yyyy,hh:mm:ss.ssssss`; the file type; and the
+  time multiplier. A 1991 file (no year, shorter channel lines, no multiplier) is read too. A sample's value is `a x + b`
+  for the stored number x, in the channel's own unit; no primary or secondary conversion is applied.
+- **Data file** (`.dat`): ASCII (`n,timestamp,analog...,status...`), BINARY (16-bit integers), BINARY32 (32-bit integers) or
+  FLOAT32, little-endian: 4-byte sample number, 4-byte time stamp, the analog values, then one 16-bit word per sixteen status
+  channels with the first channel in the lowest bit. The time stamp counts microseconds multiplied by the time multiplier
+  (nanoseconds when the configuration writes its start time to nanosecond precision, more than six decimal places); a file that leaves it
+  empty takes the time from the sampling rates, segment by segment (each rate line covers the samples up to its last
+  sample number, so a recording that samples fast around a fault and slower after is timed correctly). In a file of
+  revision 1999 or later the standard's missing-data codes are read as missing: 0x8000 in a BINARY word, 0x80000000 in a
+  BINARY32 word and 99999 in an ASCII field give NaN, counted in the recording's `MissingValues`; an empty analog field is
+  missing in any revision, and in a 1991 file 0x8000 and 99999 are data. The nanosecond stamps, the per-segment rates and
+  these codes follow C37.111 as GridSim reads it; they have not been checked against the standard's text. A configuration may
+  declare at most 999,999 analog and as many status channels, and no more than it has lines for. A combined `.cff` file
+  is not read.
+- **Writing.** The series is a list of sample times (strictly increasing seconds), analog channels (id, phase, unit, one value
+  per sample) and status channels. ASCII writes every value exactly (a = 1, b = 0), so it reads back bit for bit. BINARY and
+  BINARY32 scale each channel to a = peak / full scale, so a value reads back to within half a count (a / 2); FLOAT32
+  stores the nearest single-precision value (a 2013 file type, as is BINARY32). Times are relative to the first sample, in
+  microseconds, or in a smaller unit through a time multiplier of 0.1, 0.01 and so on when the spacing is finer than a
+  microsecond; a constant spacing is written as one sampling rate, an uneven one as rate 0 with the time stamps carrying
+  the timing. The start time is an option (the writer never reads the clock), so the same series and options write the same
+  bytes. A file that exists is never overwritten.
+
+The reader and writer are checked against files written from the standard's layout and by round trip; no recording from a
+protection relay or a disturbance recorder has been read.
 
 ## Pitfalls
 

@@ -15,7 +15,7 @@ public sealed class PlanningStudyCliProcessTests
 
     private sealed class Workspace : IDisposable
     {
-        public string Root { get; } = Path.Combine(Path.GetTempPath(), "gridsim-planning-" + Guid.NewGuid().ToString("N"));
+        public string Root { get; } = TestTemp.Under("gridsim-planning-" + Guid.NewGuid().ToString("N"));
         public Workspace()
         {
             string fixture = PlanningStudyExpansionTests.FixtureDir();

@@ -269,7 +269,8 @@ public sealed class Doc7ValidationSidecarTests
     [Fact]
     public void N219_override_wins_and_fails_loud_when_it_names_nothing()
     {
-        string forced = Path.Combine("C:", "tools", "py", "python.exe");
+        // R4-11 (2.1.162): a relative GRIDSIM_PYTHON is refused; this was drive-relative (C:tools\py\python.exe).
+        string forced = @"C:\tools\py\python.exe";
         var files = new HashSet<string> { forced };
         IReadOnlyList<PythonLocator.Candidate> c = PythonLocator.Candidates(
             Env(("GRIDSIM_PYTHON", forced), ("PATH", "X"), ("VIRTUAL_ENV", "V")), true, files.Contains, out string? err);
@@ -277,7 +278,7 @@ public sealed class Doc7ValidationSidecarTests
         Assert.Single(c);
         Assert.Equal(forced, c[0].Command);
 
-        c = PythonLocator.Candidates(Env(("GRIDSIM_PYTHON", Path.Combine("C:", "missing", "python.exe"))), true, _ => false, out err);
+        c = PythonLocator.Candidates(Env(("GRIDSIM_PYTHON", @"C:\missing\python.exe")), true, _ => false, out err);
         Assert.Empty(c);
         Assert.Contains("does not exist", err);
 
@@ -289,15 +290,19 @@ public sealed class Doc7ValidationSidecarTests
     [Fact]
     public void N219_active_venv_comes_before_path_and_path_order_is_kept()
     {
-        string venv = Path.Combine("C:", "work", "venv");
+        // R4-11 (2.1.162): a relative VIRTUAL_ENV is skipped; this was drive-relative (C:work\venv).
+        string venv = @"C:\work\venv";
         string venvPy = Path.Combine(venv, "Scripts", "python.exe");
-        string dirA = Path.Combine("C:", "A"), dirB = Path.Combine("C:", "B");
+        // R3-03 (2.1.160): PATH folders must be fully qualified to be searched; these were drive-relative ("C:A").
+        string dirA = @"C:\A", dirB = @"C:\B";
         string pyA = Path.Combine(dirA, "python.exe"), pyB = Path.Combine(dirB, "python.exe");
         var files = new HashSet<string> { venvPy, pyA, pyB };
         IReadOnlyList<PythonLocator.Candidate> c = PythonLocator.Candidates(
             Env(("VIRTUAL_ENV", venv), ("PATH", dirB + ";" + dirA)), true, files.Contains, out string? err);
         Assert.Null(err);
-        Assert.Equal(new[] { venvPy, pyB, pyA, "py", "python", "python3" }, c.Select(x => x.Command).ToArray());
+        // CLI-10 (2.1.159): no bare name on Windows (the pin listed py, python and python3, which Windows can find in the
+        // current folder before PATH); the launcher only by its full path, and none exists in this injected file set.
+        Assert.Equal(new[] { venvPy, pyB, pyA }, c.Select(x => x.Command).ToArray());
         Assert.Equal("VIRTUAL_ENV", c[0].Source);
 
         // Without a venv the first PATH folder that holds an interpreter wins.
@@ -308,13 +313,39 @@ public sealed class Doc7ValidationSidecarTests
     [Fact]
     public void N219_unix_layout_uses_bin_python_and_no_launcher()
     {
-        string venv = Path.Combine("home", "u", "venv");
+        // R4-11 (2.1.162): a relative VIRTUAL_ENV is skipped; this was relative (home/u/venv).
+        string venv = "/home/u/venv";
         string venvPy = Path.Combine(venv, "bin", "python");
-        string dir = Path.Combine("usr", "bin");
+        // R3-03 (2.1.160): a PATH folder must be fully qualified ("/usr/bin"); "usr/bin" would resolve against the current folder.
+        string dir = "/usr/bin";
         var files = new HashSet<string> { venvPy, Path.Combine(dir, "python3") };
         IReadOnlyList<PythonLocator.Candidate> c = PythonLocator.Candidates(
             Env(("VIRTUAL_ENV", venv), ("PATH", dir)), false, files.Contains, out _);
-        Assert.Equal(new[] { venvPy, Path.Combine(dir, "python3"), "python", "python3" }, c.Select(x => x.Command).ToArray());
+        // R3-02 (2.1.160): no bare names on any system (the pin ended with "python", "python3": .NET on Unix resolves a
+        // bare name against the current folder before PATH, the CLI-10 hijack).
+        Assert.Equal(new[] { venvPy, Path.Combine(dir, "python3") }, c.Select(x => x.Command).ToArray());
+    }
+
+    [WindowsFact("the launcher is the literal Windows path C:\\Windows\\py.exe, whose file name only Windows path rules split")]
+    public void R4_01_the_py_launcher_gets_a_version_before_the_script_and_no_shebang_path_search()
+    {
+        var psi = PythonLocator.StartInfo(@"C:\Windows\py.exe", new[] { "crossval.py", "export.json" });
+        Assert.Equal(new[] { "-3", "crossval.py", "export.json" }, psi.ArgumentList.ToArray());
+        Assert.Equal("1", psi.Environment[PythonLocator.LauncherNoSearchVariable]);
+        var plain = PythonLocator.StartInfo(@"C:\Py\python.exe", new[] { "crossval.py" });
+        Assert.Equal(new[] { "crossval.py" }, plain.ArgumentList.ToArray());
+    }
+
+    [Fact]
+    public void R4_11_relative_override_is_refused_and_a_relative_venv_is_skipped()
+    {
+        IReadOnlyList<PythonLocator.Candidate> c = PythonLocator.Candidates(Env(("GRIDSIM_PYTHON", @"tools\python.exe")), true, _ => true, out string? err);
+        Assert.Empty(c);
+        Assert.Contains("relative path", err);
+        c = PythonLocator.Candidates(Env(("VIRTUAL_ENV", "venv"), ("PATH", @"C:\A")), true, _ => true, out err);
+        Assert.Null(err);
+        Assert.DoesNotContain(c, x => x.Source == "VIRTUAL_ENV");
+        Assert.Equal(Path.Combine(@"C:\A", "python.exe"), c[0].Command);
     }
 
     // ---- D-DOC-127 / 126 / 043 / 044 / 045: sidecar contracts (no Python in the test run) ----------------------------
@@ -413,7 +444,7 @@ public sealed class Doc7ValidationSidecarTests
     public void D039_shipped_corpus_passes_conformance_and_a_run_without_allowances_still_fails()
     {
         // Repro (1.95.195): every run of the shipped corpus exited 3 on the three PGLib cases, with 24/24 passing.
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc7-conf-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc7-conf-" + Guid.NewGuid().ToString("N"));
         try
         {
             CliProcess.Result r = CliProcess.RunBuilt("conformance", "--out", Path.Combine(dir, "a"));

@@ -239,6 +239,8 @@ public static class JsonCaseWriter
             notes.Add("the authored asset-dynamics bundle (asset-classes.json / asset-bindings.json) is not written; copy those files across by hand if the written case needs them.");
         if (model.Protections is not null)
             notes.Add("the protection bundle (protections.json) is not written; copy it (and asset-classes.json) across by hand if the written case needs it.");
+        if (model.UnitProtection is { } up)
+            notes.Add($"the unit protection of {up.Units.Count} unit(s) ({up.Classes.Count} unit protection class(es)) is not written; JSON v1 cannot hold it (write a JSON v2 case to keep it).");
         Directory.CreateDirectory(dir);
         Flush(pending);
         return notes;

@@ -24,7 +24,7 @@ public sealed partial class Cf3OpenCodeFindingsTests
 {
     private static string N223TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-cf3-n223-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-cf3-n223-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

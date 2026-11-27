@@ -40,7 +40,7 @@ public static class H0StudyExport
     public static void WriteJson(string path, H0StudyResult result, H0StudyMeta meta)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(result, meta));
+        AtomicText.Write(path, /* IO-22 */ ToJson(result, meta));
     }
 
     public static string ToJson(H0StudyResult result, H0StudyMeta meta)

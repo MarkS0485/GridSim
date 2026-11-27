@@ -10,7 +10,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class DirectoryScanTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-scan-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-scan-{Guid.NewGuid():N}");
 
     public DirectoryScanTests()
     {

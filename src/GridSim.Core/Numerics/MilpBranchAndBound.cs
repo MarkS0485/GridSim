@@ -296,6 +296,22 @@ public static class MilpBranchAndBound
         else
         {
             result = new double[n];
+            // NUM-22: with every column an integer no LP is solved, so the rounded point was taken without evaluating a row.
+            // Rounding moves each column by up to the integrality tolerance, so a row can be broken; such a point is not
+            // an incumbent (reported as an infeasible rounding, as the integers-fixed LP reports it).
+            // A row is broken when the rounding adds more than the tolerance to the relaxation's own residual there; a point
+            // the rounding did not move is the relaxation's and is taken as before.
+            bool moved = false;
+            for (int j = 0; j < n; j++) if (flo[j] != x[j]) { moved = true; break; }
+            if (moved)
+            {
+                var axRounded = new double[lp.Rows];
+                var axRelaxed = new double[lp.Rows];
+                foreach ((int row, int col, double val) in lp.A) { axRounded[row] += val * flo[col]; axRelaxed[row] += val * x[col]; }
+                for (int i = 0; i < lp.Rows; i++)
+                    if (!(Math.Abs(axRounded[i] - lp.B[i]) <= Math.Abs(axRelaxed[i] - lp.B[i]) + o.LpTolerance * (1 + Math.Abs(lp.B[i]))))
+                        return (null, double.NaN, FormattableString.Invariant($"the rounded integer point breaks row {i} by {axRounded[i] - lp.B[i]:R}"), true);
+            }
         }
         for (int j = 0; j < n; j++)
         {

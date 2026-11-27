@@ -94,7 +94,7 @@ public sealed class UiAssetSubTabsTests
     // A temporary copy of a case with some units out of service (never the slack unit).
     private static string OutOfServiceCopy(string relative)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-assets-b2-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-assets-b2-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         var opts = new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
         foreach (string f in Directory.EnumerateFiles(EditorTestSupport.CaseDir(relative), "*.json"))

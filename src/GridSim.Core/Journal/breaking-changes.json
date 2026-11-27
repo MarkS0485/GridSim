@@ -1,0 +1,1796 @@
+{
+  "schema": "gridsim-breaking-changes/1",
+  "rule": "IDs are never reused and run in version order. A CHANGED re-run is explained by Bk when recorded version < Bk.version <= this build's version, and the run's verb is in scope.verbs (or scope.verbs holds *), or one of its flags is in scope.options, or one of its input files has an extension in scope.inputFormats. An empty scope means the change has no command-line route (library or app only). Each entry claims its effect on the fields it moves: a bound (maxAbs and/or maxRel per value), an exact transform (new = factor x old, or a factor range), or a qualitative transition (from -> to, for a status or the exit code). A field outside its claim is EXCEEDS-CLAIM; claims of several IDs on one field add when all are bounds and are AMBIGUOUS otherwise; a field no claim covers is UNEXPLAINED. An entry with no claims explains nothing on its own.",
+  "entries": [
+    {
+      "id": "B1",
+      "version": "2.1.074",
+      "kind": "security",
+      "changelog": "2.1.097",
+      "title": "Script expression depth limits and host limits checked before every statement",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a script whose expression nests deeper than 64 levels or 256 operations, or a web console script that reaches a host limit; no gridsim verb runs scripts"
+      },
+      "magnitude": "such a script is a syntax error or stops at the limit; every script within the limits runs as before. Claim: gridsim-script refuses it with exit 1 (line and column), where the parser could exhaust its stack and end the process",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B2",
+      "version": "2.1.075",
+      "kind": "behaviour",
+      "changelog": "2.1.097",
+      "title": "Newton retry after MaxIterations",
+      "scope": {
+        "verbs": [
+          "*"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a Newton solve stopped by its iteration cap while still converging"
+      },
+      "magnitude": "an outcome change on capped solves only (converged becomes MaxIterations), not a rounding difference",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "Converged",
+          "to": "MaxIterations"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "3"
+        }
+      ]
+    },
+    {
+      "id": "B3",
+      "version": "2.1.083",
+      "kind": "behaviour",
+      "changelog": "2.1.085",
+      "title": "CSVGN1 modelled as an SVC under --dyr-extended --allow-unmodelled",
+      "scope": {
+        "verbs": [],
+        "options": [
+          "--dyr-extended"
+        ],
+        "inputFormats": [],
+        "condition": "a DYR CSVGN1 record read with both --dyr-extended and --allow-unmodelled"
+      },
+      "magnitude": "same start; trajectories differ after a disturbance by the action of the CSVGN1 control. No bound holds for every case: the size depends on the SVC's own data and on the disturbance. So the claim is the qualitative change of model, which no number matches, and every field such a run moves is flagged for review",
+      "claims": [
+        {
+          "field": "*",
+          "kind": "qualitative",
+          "from": "unit held at its power-flow Q",
+          "to": "unit follows its CSVGN1 control"
+        }
+      ]
+    },
+    {
+      "id": "B4",
+      "version": "2.1.095",
+      "kind": "bug-fix",
+      "changelog": "2.1.095",
+      "title": "Storage time series counts a voltage-dependent slack-bus load at the solved voltage",
+      "scope": {
+        "verbs": [
+          "chain"
+        ],
+        "options": [
+          "--bess"
+        ],
+        "inputFormats": [],
+        "condition": "a voltage-dependent load at the slack bus"
+      },
+      "magnitude": "slack output rises by Pd x (load multiplier at the slack voltage - 1): +8.16 MW for 100 MW constant-impedance at 1.04 pu",
+      "claims": [
+        {
+          "field": "*slack*",
+          "kind": "bound",
+          "maxRel": 0.0816
+        }
+      ]
+    },
+    {
+      "id": "B5",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "PSS/E two-winding impedance referred through the winding-2 ratio",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [
+          ".raw",
+          ".rawx"
+        ],
+        "condition": "a two-winding transformer with WINDV2 not 1"
+      },
+      "magnitude": "R and X x w2^2: +10.25 % at 1.05 pu, -9.75 % at 0.95 pu",
+      "claims": [
+        {
+          "field": "*r_pu*|*x_pu*|*resistance*|*reactance*",
+          "kind": "transform",
+          "factorMin": 0.81,
+          "factorMax": 1.21
+        }
+      ]
+    },
+    {
+      "id": "B6",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "DGS two-winding impedance referred to the LV terminal base",
+      "scope": {
+        "verbs": [
+          "dgs-import"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".dgs"
+        ],
+        "condition": "a winding rated off its terminal voltage"
+      },
+      "magnitude": "+9.30 % in R and X for an 11.5 kV winding on an 11 kV terminal",
+      "claims": [
+        {
+          "field": "*r_pu*|*x_pu*|*resistance*|*reactance*",
+          "kind": "transform",
+          "factorMin": 0.81,
+          "factorMax": 1.21
+        }
+      ]
+    },
+    {
+      "id": "B7",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "Battery cell reversible heat sign",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [],
+        "condition": "the battery cell and pack thermal model (library and apps); a chemistry with dU/dT not 0"
+      },
+      "magnitude": "the reversible term changes sign: an LFP cell at 100 A and 25 C heats by 1.49 W where it cooled by 1.49 W. Claim: the exact transform of the reversible term, new = -1 x old; total heat and cell temperature follow it",
+      "claims": [
+        {
+          "field": "*reversible*|*entropic*",
+          "kind": "transform",
+          "factor": -1
+        }
+      ]
+    },
+    {
+      "id": "B8",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "CGMES node-breaker transformer rated voltages against node base voltages",
+      "scope": {
+        "verbs": [
+          "cgmes-study",
+          "cgmes-conform"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".xml",
+          ".zip"
+        ],
+        "condition": "a node-breaker transformer rated off its nodes' base voltages"
+      },
+      "magnitude": "120/10.5 kV on 110/10 kV nodes: ratio +3.90 %, R and X +10.25 %",
+      "claims": [
+        {
+          "field": "*ratio*|*tap*",
+          "kind": "transform",
+          "factorMin": 0.9,
+          "factorMax": 1.1
+        },
+        {
+          "field": "*r_pu*|*x_pu*|*resistance*|*reactance*",
+          "kind": "transform",
+          "factorMin": 0.81,
+          "factorMax": 1.21
+        }
+      ]
+    },
+    {
+      "id": "B9",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "g74 iec60909-q motor breaking current mu q Ik''",
+      "scope": {
+        "verbs": [
+          "g74"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an iec60909-q motor with decay on"
+      },
+      "magnitude": "motor part x mu (-29 % at Ik''/IrM 6.6 and 0.1 s); times between 0 and 0.02 s refused",
+      "claims": [
+        {
+          "field": "*motor*",
+          "kind": "transform",
+          "factorMin": 0.56,
+          "factorMax": 1.0
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B10",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "Negative-sequence network of an RMS sequence fault carries dynamic loads",
+      "scope": {
+        "verbs": [
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".dyr"
+        ],
+        "condition": "an unbalanced RMS fault with a dynamic load"
+      },
+      "magnitude": "Z2 0.0625 pu where it was 0.091 to 0.100 pu beside a 100 MW motor",
+      "claims": [
+        {
+          "field": "*z2*",
+          "kind": "bound",
+          "maxRel": 0.375
+        }
+      ]
+    },
+    {
+      "id": "B11",
+      "version": "2.1.098",
+      "kind": "bug-fix",
+      "changelog": "2.1.098",
+      "title": "Overlapping RMS sequence faults",
+      "scope": {
+        "verbs": [
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [
+          "--events"
+        ],
+        "inputFormats": [],
+        "condition": "two faults in place at the same time, one unbalanced"
+      },
+      "magnitude": "two unbalanced faults refused; a balanced fault now in the unbalanced fault's Z2 and Z0",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B12",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "acscopf re-screens secured outages at the final dispatch",
+      "scope": {
+        "verbs": [
+          "acscopf"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a secured outage that fails its screen at the final dispatch"
+      },
+      "magnitude": "status SecuredOutageFailsScreen and exit 3 where it reported an optimum (case9 at 0.75 ratings)",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "Optimal",
+          "to": "SecuredOutageFailsScreen"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "3"
+        }
+      ]
+    },
+    {
+      "id": "B13",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "acopf-opt tap shadow prices per unit of tau",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [],
+        "condition": "OpfControlValue.MuMin and MuMax of a tap (API only; not printed by the CLI)"
+      },
+      "magnitude": "x 1/tau^2: +23.5 % at tau 0.9, -17.4 % at 1.1. Claim: the exact transform 1/tau^2 at the bound the price belongs to, for taps between 0.9 and 1.1 (factor 1/1.21 to 1/0.81); a tap bound outside that range exceeds the claim",
+      "claims": [
+        {
+          "field": "*mumin*|*mumax*|*mu_min*|*mu_max*",
+          "kind": "transform",
+          "factorMin": 0.8264462809917356,
+          "factorMax": 1.2345679012345678
+        }
+      ]
+    },
+    {
+      "id": "B14",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "AC-OPF interior point converged at the barrier floor",
+      "scope": {
+        "verbs": [
+          "acopf-opt",
+          "acscopf"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a complementarity tolerance below what the barrier can reach"
+      },
+      "magnitude": "a numerical failure becomes converged; runs that converged before are unchanged",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "*Fail*",
+          "to": "Converged|Optimal"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "3",
+          "to": "0"
+        }
+      ]
+    },
+    {
+      "id": "B15",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "OPF refuses a tap control with an impedance correction table",
+      "scope": {
+        "verbs": [
+          "acopf-opt",
+          "acscopf"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a tap control on a transformer with an impedance correction table"
+      },
+      "magnitude": "refused where an optimum was returned",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B16",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "QSTS self-consumption storage shares a bus by rating",
+      "scope": {
+        "verbs": [
+          "qsts",
+          "hosting"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "two or more self-consumption units on one bus"
+      },
+      "magnitude": "two 1 MW units on 1 MW of demand give 0.5 MW each where each gave 1 MW",
+      "claims": [
+        {
+          "field": "*storage*",
+          "kind": "bound",
+          "maxRel": 1.0
+        }
+      ]
+    },
+    {
+      "id": "B17",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "VSC1 DC side balanced after the power converter's current limit",
+      "scope": {
+        "verbs": [
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a VSC1 whose power converter current is clipped"
+      },
+      "magnitude": "10.761 MW at the voltage converter where it was 99.248 MW (bus at 0.1 pu)",
+      "claims": [
+        {
+          "field": "*vsc*",
+          "kind": "bound",
+          "maxRel": 0.9
+        }
+      ]
+    },
+    {
+      "id": "B18",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "Adaptive-step RMS rejects a step with a NaN state",
+      "scope": {
+        "verbs": [
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an adaptive row whose state goes non-finite"
+      },
+      "magnitude": "stops with the minimum-step error where it reported loss of synchronism",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B19",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "REEC_A/B/C s2 and s3 non-windup linked",
+      "scope": {
+        "verbs": [
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".dyr"
+        ],
+        "condition": "VFlag = QFlag = 1 with s3 at a limit"
+      },
+      "magnitude": "Vsel holds near 0.975 pu where it wound up to 1.1 pu",
+      "claims": [
+        {
+          "field": "*vsel*",
+          "kind": "bound",
+          "maxAbs": 0.125
+        }
+      ]
+    },
+    {
+      "id": "B20",
+      "version": "2.1.099",
+      "kind": "bug-fix",
+      "changelog": "2.1.099",
+      "title": "REEC_A/B/C with Tpord = 0 bypass the power-order freeze",
+      "scope": {
+        "verbs": [
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".dyr"
+        ],
+        "condition": "Tpord = 0 and a voltage dip"
+      },
+      "magnitude": "Pord 0.6 pu where it stayed at 0.8 pu during the dip",
+      "claims": [
+        {
+          "field": "*pord*",
+          "kind": "bound",
+          "maxAbs": 0.2
+        }
+      ]
+    },
+    {
+      "id": "B21",
+      "version": "2.1.100",
+      "kind": "bug-fix",
+      "changelog": "2.1.100",
+      "title": "PSS/E VSC DCSET sign (TYPE 2 converter)",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [
+          ".raw",
+          ".rawx"
+        ],
+        "condition": "a VSC link with a TYPE 2 converter"
+      },
+      "magnitude": "the link's direction reverses: a swing of 200 MW plus twice the losses for DCSET = +100",
+      "claims": [
+        {
+          "field": "*vsc*|*dc_link*",
+          "kind": "transform",
+          "factor": -1
+        }
+      ]
+    },
+    {
+      "id": "B22",
+      "version": "2.1.100",
+      "kind": "bug-fix",
+      "changelog": "2.1.100",
+      "title": "DGS ElmShnt capacitor sign",
+      "scope": {
+        "verbs": [
+          "dgs-import"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".dgs"
+        ],
+        "condition": "an ElmShnt capacitor"
+      },
+      "magnitude": "2 x qcapn x V^2 MVAr at the shunt's bus",
+      "claims": [
+        {
+          "field": "*shunt*",
+          "kind": "transform",
+          "factor": -1
+        }
+      ]
+    },
+    {
+      "id": "B23",
+      "version": "2.1.100",
+      "kind": "bug-fix",
+      "changelog": "2.1.100",
+      "title": "REEC_C at SOCmin stops discharge only",
+      "scope": {
+        "verbs": [
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".dyr"
+        ],
+        "condition": "a REEC_C store at or below SOCmin"
+      },
+      "magnitude": "Ipmin -1.2 pu where it was 0; a -0.5 pu charging order now charges",
+      "claims": [
+        {
+          "field": "*ipmin*|*ipcmd*",
+          "kind": "bound",
+          "maxAbs": 1.2
+        }
+      ]
+    },
+    {
+      "id": "B24",
+      "version": "2.1.100",
+      "kind": "bug-fix",
+      "changelog": "2.1.100",
+      "title": "Small-signal RoCoF row includes the inverters' own power",
+      "scope": {
+        "verbs": [
+          "modal"
+        ],
+        "options": [
+          "--enable-inverters"
+        ],
+        "inputFormats": [],
+        "condition": "a grid-forming unit with synthetic inertia"
+      },
+      "magnitude": "actuator pole -40 where it was -20 (x = 1); gb-synthetic has no right-half-plane eigenvalue and exits 0",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "1",
+          "to": "0"
+        }
+      ]
+    },
+    {
+      "id": "B25",
+      "version": "2.1.102",
+      "kind": "bug-fix",
+      "changelog": "2.1.102",
+      "title": "Loss and reactive-power OPF converge when a post-outage block leaves a direction free",
+      "scope": {
+        "verbs": [
+          "acopf-opt",
+          "acscopf"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "the losses or rpo objective with a free post-outage direction"
+      },
+      "magnitude": "a numerical failure becomes converged (feasibility 5e-16 after one projection step on the two-bus cable case)",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "*Fail*|NotConverged",
+          "to": "Converged|Optimal"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "3",
+          "to": "0"
+        }
+      ]
+    },
+    {
+      "id": "B26",
+      "version": "2.1.103",
+      "kind": "behaviour",
+      "changelog": "2.1.103",
+      "title": "Adaptive-step RMS rotor angles get a fixed error scale",
+      "scope": {
+        "verbs": [
+          "dynamics-study"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "every adaptive row"
+      },
+      "magnitude": "rotor angles move by at most 4.4e-6, 3.5e-6 and 1.9e-4 degrees on case14, case39 and case118; 24.0, 21.4 and 16.5 of 53 bits over the run",
+      "claims": [
+        {
+          "field": "*angle*|*delta*",
+          "kind": "bound",
+          "maxAbs": 0.00019
+        },
+        {
+          "field": "*freq*|*hz*",
+          "kind": "bound",
+          "maxAbs": 5.4e-06
+        },
+        {
+          "field": "*mw*",
+          "kind": "bound",
+          "maxAbs": 0.0019
+        }
+      ]
+    },
+    {
+      "id": "B27",
+      "version": "2.1.117",
+      "kind": "behaviour",
+      "changelog": "2.1.117",
+      "title": "EXDC2, IEEEX1, ESAC8B, ESST3A and IEEEG3 modelled under --dyr-extended --allow-unmodelled",
+      "scope": {
+        "verbs": [],
+        "options": [
+          "--dyr-extended"
+        ],
+        "inputFormats": [],
+        "condition": "a DYR EXDC2, IEEEX1, ESAC8B, ESST3A or IEEEG3 record read with both --dyr-extended and --allow-unmodelled"
+      },
+      "magnitude": "same start; trajectories differ after a disturbance by the action of the new exciter or governor. On case14 with these five records and a bus-4 fault cleared after 0.05 s, over 3.15 s: rotor angles relative to bus 1 up to 0.15 rad, speeds up to 0.0142 pu, E'q up to 0.196 pu. No bound holds for every case: the size depends on the controller data and the disturbance. So the claim is the qualitative change of model, and every field such a run moves is flagged for review",
+      "claims": [
+        {
+          "field": "*",
+          "kind": "qualitative",
+          "from": "unit with its field or mechanical power held",
+          "to": "unit follows its EXDC2, IEEEX1, ESAC8B, ESST3A or IEEEG3 control"
+        }
+      ]
+    },
+    {
+      "id": "B28",
+      "version": "2.1.120",
+      "kind": "behaviour",
+      "changelog": "2.1.120",
+      "title": "RMS runs refused when a first-step initialiser meets a disturbance at t = 0",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [],
+        "condition": "API only: an RMS run with a disturbance in force at t = 0 and a model that sets a state from the first step's measurements: GGOV1 reading the electrical power (Rselect 1 or a supervisory load controller); with the caller's voltage references, also ESST4B, bus-fed SCRX, an exciter with a voltage transducer (TR above 0: EXDC2, IEEEX1, ESDC1A, ESAC8B, ESST1A, EXST1) or a stabiliser on electrical power (IEEEST, PSS2A, PSS2B, PSS2C on electrical power, PSS2C with its output logic; a stabiliser on rotor speed alone, with or without the IEEEST voltage cut-off, still runs). No gridsim verb reaches it: the stability verb's fault and events start at 0.1 s or after the first step, and dynamics-study refuses an onset or event time of 0"
+      },
+      "magnitude": "such a run gave a result started from the disturbed network and is now refused (result to refused; an InvalidOperationException through the API, which a CLI verb would report with exit 1 or 2); every run with no disturbance at t = 0 is unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1|2"
+        }
+      ]
+    },
+    {
+      "id": "B29",
+      "version": "2.1.121",
+      "kind": "behaviour",
+      "changelog": "2.1.121",
+      "title": "CMLDBLU1 and CMLDBLU2 refusal reasons reworded under --dyr-extended",
+      "scope": {
+        "verbs": [],
+        "options": [
+          "--dyr-extended"
+        ],
+        "inputFormats": [],
+        "condition": "a DYR CMLDBLU1 or CMLDBLU2 record read with --dyr-extended"
+      },
+      "magnitude": "wording only: the record is still refused with the same exit code and no result; the reason no longer says that motors B to D, the electronic load, the distributed generation, the LTC and the relays are not modelled (they are, through the API) and names what the DYR route still lacks",
+      "claims": [
+        {
+          "field": "(refusal message)",
+          "kind": "qualitative",
+          "from": "CMLDBLU1: GridSim's CMLD is a documented subset (motor A, the static load, the substation transformer and the feeder) built through the API (CompositeLoadData); the record's motors B to D, electronic load, LTC and relays are not modelled and its initialisation rules are not public, so it is not read | CMLDBLU2: GridSim's CMLD is a documented subset (motor A, the static load, the substation transformer and the feeder) built through the API (CompositeLoadData); the record's motors B to D, electronic load, distributed generation, LTC and relays are not modelled and its initialisation rules are not public, so it is not read",
+          "to": "CMLDBLU1: GridSim's CMLD is a documented subset built through the API (CompositeLoadData with its Extensions: motors A to D, the electronic and static loads, the relays, the LTC and DER_A distributed generation); CMLDBLU1 is the first CMLD version and is not read, so give the load through the API | CMLDBLU2: GridSim's CMLD is a documented subset built through the API (CompositeLoadData with its Extensions: motors A to D, the electronic and static loads, the relays, the LTC and DER_A distributed generation); the record is not read because its value order is confirmed by one public source only (the PSS/E data sheet) and GridSim does not do the WECC initialisation it relies on (the substation shunt, the feeder compensation and the starting tap computed from the power flow are data in GridSim), so give the load through the API"
+        }
+      ]
+    },
+    {
+      "id": "B30",
+      "version": "2.1.131",
+      "kind": "behaviour",
+      "changelog": "2.1.131",
+      "title": "Node-breaker CGMES 3.0 export: two-winding tap changers carry the fields CGMES 3.0 requires",
+      "scope": {
+        "verbs": [
+          "cgmes-export"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a node-breaker (gridsim-substations/1) export with --cgmes-version 3.0 of a two-winding transformer with an off-nominal ratio or a phase shift"
+      },
+      "magnitude": "fields added, no number changed: each RatioTapChanger and PhaseTapChangerLinear of a two-winding unit in the 3.0 EQ document gains TapChanger.neutralU (end 1's rated voltage) and TapChanger.ltcFlag false, and a PhaseTapChangerLinear gains xMin and xMax (end 1's reactance in ohms); every value already written is unchanged, and the 2.4.15 documents are byte for byte as before",
+      "claims": [
+        {
+          "field": "(EQ document)",
+          "kind": "qualitative",
+          "from": "two-winding tap changers without TapChanger.neutralU, TapChanger.ltcFlag and PhaseTapChangerLinear.xMin / xMax",
+          "to": "two-winding tap changers with TapChanger.neutralU, TapChanger.ltcFlag false and PhaseTapChangerLinear.xMin = xMax"
+        }
+      ]
+    },
+    {
+      "id": "B31",
+      "version": "2.1.134",
+      "kind": "security",
+      "changelog": "2.1.134",
+      "title": "CSV formula injection: string cells that start with = + - @ TAB or CR get a leading apostrophe",
+      "scope": {
+        "verbs": [
+          "cgmes-shacl",
+          "acopf-opt",
+          "acscopf",
+          "reconfig",
+          "report",
+          "estimate",
+          "estimate-noise-floor",
+          "emt",
+          "bench",
+          "stress",
+          "nminus1-sweep",
+          "conformance",
+          "scenario",
+          "gda-replay",
+          "long-term",
+          "stability"
+        ],
+        "options": [
+          "--csv",
+          "--pv-out"
+        ],
+        "inputFormats": [],
+        "condition": "a CSV result whose string cell (a bus, branch or unit name, a label, a message) starts with =, +, -, @, a tab or a carriage return: the shared --csv writer of every writer verb (including the nminus1/nminus2 --ras ras_actions table), the PV-curve CSV (--pv-out), the screen --csv file, the cgmes-shacl CSV report and the optimisation verbs' CSV reports; from 2.1.135 also the report CSV (text cells and headings), the estimate residuals and HTI files (location), the emt timeseries header (probe names), the case label of the bench, bench --estimate, bench --perf, stress, nminus1-sweep and conformance CSV files, the estimate-noise-floor source, the scenario device and assessment, the gda-replay storage site name, the long-term events cell, the stability converter and device names and the placed-protection device id and reason"
+      },
+      "magnitude": "text only: such a string cell gains a leading apostrophe (CWE-1236), so a spreadsheet shows it as text instead of running it as a formula; numeric cells are written by their type and are unchanged (a negative number keeps its leading minus); a file with no such string cell is byte for byte as before",
+      "claims": [
+        {
+          "field": "(string cells)",
+          "kind": "qualitative",
+          "from": "string cells beginning with = + - @ TAB CR written as they are",
+          "to": "string cells beginning with = + - @ TAB CR are prefixed with an apostrophe (CWE-1236); numeric values unchanged"
+        }
+      ]
+    },
+    {
+      "id": "B32",
+      "version": "2.1.140",
+      "kind": "security",
+      "changelog": "2.1.140",
+      "title": "Web host: the Google tag and analytics script settings removed, and a full Content-Security-Policy",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [],
+        "condition": "the web host (GridSim.Web) only; no gridsim verb is affected. A deployment that set Site:GoogleTagId, Site:AnalyticsScriptUrl, Site:AnalyticsCollectorUrl, Site:AnalyticsSiteName or GridSim:ScriptCspSources, and every response's Content-Security-Policy header"
+      },
+      "magnitude": "configuration and headers only, no number changed: the four Site analytics settings are gone, and a host given any of them, or any GridSim:ScriptCspSources origin, exits at start-up with code 78 naming it; every response's Content-Security-Policy changes from frame-ancestors only to default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors (the GridSim:FrameAncestors value). A page that set its own policy no longer keeps it",
+      "claims": [
+        {
+          "field": "(web host start-up)",
+          "kind": "qualitative",
+          "from": "starts and loads the configured Google tag or analytics script from its origin",
+          "to": "exits with code 78 naming the setting"
+        },
+        {
+          "field": "(Content-Security-Policy header)",
+          "kind": "qualitative",
+          "from": "frame-ancestors <GridSim:FrameAncestors>",
+          "to": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors <GridSim:FrameAncestors>"
+        }
+      ]
+    },
+    {
+      "id": "B33",
+      "version": "2.1.144",
+      "kind": "behaviour",
+      "changelog": "2.1.144",
+      "title": "DC power flow and every DC study use MATPOWER's DC model: tap ratios, phase shifts and bus shunt conductance",
+      "scope": {
+        "verbs": [
+          "dcpf",
+          "ptdf",
+          "lodf",
+          "sensitivity",
+          "dc-contingency",
+          "dcopf",
+          "scopf",
+          "scuc",
+          "transmission-security",
+          "transfer-capability",
+          "planning-study",
+          "probabilistic",
+          "n-1-1",
+          "corrective-sequence"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a case with an in-service transformer tap ratio other than 0 or 1, a non-zero phase shift, or a bus shunt conductance Gs other than 0. A case with none of these is computed by the earlier instructions, bit for bit, and its output (banner and DC wording included) is unchanged"
+      },
+      "magnitude": "DC flows, angles, PTDF/LODF, DC-OPF dispatch and prices move by the effect of the added terms. The input changes are exact (b = 1/(x tap), phase-shift injections, Gs as a constant-power load), but they reach the flows through the inverse of B', so no bound holds for every network (on case145 one branch flow moves by 22,777 MW). Every field such a run moves is flagged for review",
+      "claims": [
+        {
+          "field": "*",
+          "kind": "qualitative",
+          "from": "reactance-only DC model (taps, phase shifts and shunts ignored)",
+          "to": "DC model with tap ratios (b = 1/(x tap)), phase-shift injections and shunt conductance, as MATPOWER makeBdc"
+        }
+      ]
+    },
+    {
+      "id": "B34",
+      "version": "2.1.144",
+      "kind": "behaviour",
+      "changelog": "2.1.144",
+      "title": "PSS/E RAWX and RAW 36 by heading: the induction machine id and H, A, B, D, E are read from the file's own names",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [
+          "rawx",
+          "raw"
+        ],
+        "condition": "a PSS/E RAWX file, or a RAW 36 file whose @! heading names the fields, with induction machine records that carry imid (or hconst, aconst, bconst, dconst, econst), or whose heading uses the short names SC, DC, TC, BC or PC"
+      },
+      "magnitude": "an induction machine's name now carries the file's id instead of 1 for every machine, and a file with two machines at one bus that was refused as 'defined twice' now reads. H, A, B, D and E now take the file's values where they took their defaults, but no power-flow result uses them (they are dynamic data), so no number changes; Rc5B34WideningTests pins the parsed model the same with and without them. A file whose heading uses the short induction-machine names SC, DC, TC, BC or PC, refused before (DCODE defaulted to 2), now reads (from 2.1.148)",
+      "claims": [
+        {
+          "field": "(induction machine id)",
+          "kind": "qualitative",
+          "from": "1 for every induction machine",
+          "to": "the file's imid"
+        },
+        {
+          "field": "(induction machine H, A, B, D, E)",
+          "kind": "qualitative",
+          "from": "defaults (the RAWX names were dropped)",
+          "to": "the file's hconst, aconst, bconst, dconst, econst; read into the record, used by no power-flow result"
+        }
+      ]
+    },
+    {
+      "id": "B35",
+      "version": "2.1.148",
+      "kind": "behaviour",
+      "changelog": "2.1.148",
+      "title": "convert: an output ending in .rawx or .uct is written as PSS/E RAWX or UCTE-DEF, not as a JSON case folder",
+      "scope": {
+        "verbs": [
+          "convert"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a convert whose output path ends in .rawx or .uct"
+      },
+      "magnitude": "output format chosen by extension: such an output was a JSON case folder with that name; it is now a RAWX or UCTE-DEF file",
+      "claims": [
+        {
+          "field": "(convert output format)",
+          "kind": "qualitative",
+          "from": "a JSON case folder named x.rawx or x.uct",
+          "to": "a PSS/E RAWX file (revision 35) for .rawx, a UCTE-DEF file for .uct"
+        }
+      ]
+    },
+    {
+      "id": "B36",
+      "version": "2.1.152",
+      "kind": "behaviour",
+      "changelog": "2.1.152",
+      "title": "Power flow: the default cap on reactive-limit (PV to PQ) passes is 100, not 12",
+      "scope": {
+        "verbs": [
+          "pf"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a pf run, or an API run with the default PowerFlowOptions, with reactive-limit enforcement on and no --max-q-passes, on a case whose reactive-limit loop needs more than 12 passes"
+      },
+      "magnitude": "a case whose loop settles within 12 passes follows the same trajectory and gives the same result; a case that needs 13 to 100 passes was reported NOT CONVERGED (MaxIterations) after 12 and now converges (ACTIVSg10k, ACTIVSg25k, ACTIVSg70k and SyntheticUSA need 12 to 14)",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "MaxIterations",
+          "to": "Converged"
+        }
+      ]
+    },
+    {
+      "id": "B37",
+      "version": "2.1.153",
+      "kind": "behaviour",
+      "changelog": "2.1.153",
+      "title": "Power flow: a pass stops early with status Diverged when its mismatch rises above 10 pu and above its starting mismatch",
+      "scope": {
+        "verbs": [
+          "*"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an AC power-flow solve (Newton, fast-decoupled or Gauss-Seidel) with the default options, that does not converge and whose largest mismatch rises above both 10 pu and the mismatch at the start of the pass; not a solve that converges, nor one run with pf --diverge-limit off"
+      },
+      "magnitude": "a solve that converges is unchanged, bit for bit. A solve that diverged past the limit used to run on to the iteration cap and report MaxIterations (exit 3 from pf); it now stops at the iteration where the limit was passed and reports Diverged (exit 3 from pf, unchanged), with fewer iterations and the state at that iteration",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "MaxIterations",
+          "to": "Diverged"
+        }
+      ]
+    },
+    {
+      "id": "B38",
+      "version": "2.1.156",
+      "kind": "security",
+      "changelog": "2.1.156",
+      "title": "Side files named inside input files: network and device paths refused, relative paths read from the naming file's folder, size limits, content never quoted",
+      "scope": {
+        "verbs": [
+          "qsts",
+          "replay-event",
+          "scenario",
+          "h0-study",
+          "evidence",
+          "fleet",
+          "dynamics-study",
+          "protection-audit"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a QSTS profile csv, an event catalogue's outcome.nesoTraceCsvPath, a model assignment's file or a protection-audit study's case, devices or curves that is a network (UNC), \\\\?\\ or \\\\.\\ path, a reserved device name or a path under /dev, /proc or /sys, a file over its limit (QSTS CSV 64 MiB, trace 512 MiB, model document 16 MiB), a QSTS column chosen by name that is absent, a model document that fails its pin, or a catalogue trace given by a relative path"
+      },
+      "magnitude": "no number changes for a side file that is a local file within its limit. Such a side file on a network or device path, which was opened, is refused (exit 1); an error no longer quotes the side file (the absent column's header fields, the computed hash of a document that failed its pin, a damaged trace line); a catalogue's relative trace is read from the catalogue's folder, not the working folder, so a run started elsewhere can now find it and score an RMSE, and a missing one is said in the replay summary",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        },
+        {
+          "field": "(catalogue trace)",
+          "kind": "qualitative",
+          "from": "a relative nesoTraceCsvPath read from the working folder, a missing one skipped without a word",
+          "to": "read from the catalogue's folder, a missing one named in the summary note (no RMSE)"
+        }
+      ]
+    },
+    {
+      "id": "B39",
+      "version": "2.1.156",
+      "kind": "security",
+      "changelog": "2.1.156",
+      "title": "rpc --listen: a session token on every request, and every file a request names inside the host's working folder",
+      "scope": {
+        "verbs": [
+          "rpc"
+        ],
+        "options": [
+          "--listen"
+        ],
+        "inputFormats": [],
+        "condition": "rpc --listen only (the standard input transport is unchanged): every request, and a load or run-verb that names a file outside the working folder, through a link, or on a network or device path (a comma-list item and the value of --flag=value included)"
+      },
+      "magnitude": "no number changes. The first output line gains token_file; a request without the host's token, or with another, is refused as unauthorised (exit code 2) and ends the connection; a request that names a file outside the working folder, which ran, is refused as a bad argument (exit code 2)",
+      "claims": [
+        {
+          "field": "(rpc --listen request)",
+          "kind": "qualitative",
+          "from": "served without authentication; any local path accepted except a leading network path",
+          "to": "refused as unauthorised without the host's token; a path outside the working folder refused as a bad argument"
+        }
+      ]
+    },
+    {
+      "id": "B40",
+      "version": "2.1.156",
+      "kind": "security",
+      "changelog": "2.1.156",
+      "title": "The licence's bus limit holds at solve time: an rpc case edited past the limit and a dist3ph-mesh case over it are refused",
+      "scope": {
+        "verbs": [
+          "rpc",
+          "dist3ph-mesh"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an rpc --protocol 2 case with any edit (set, add, delete) whose bus count is over the licence's limit, at solve, get of a solved attribute, study or save; a dist3ph-mesh case file whose node count is over the limit and that is not a bundled network"
+      },
+      "magnitude": "no number changes within the limit. Over it, the request or run is refused with the CLI's licence message: licence-refused over rpc, exit 2 from dist3ph-mesh, where it was solved",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "2"
+        }
+      ]
+    },
+    {
+      "id": "B41",
+      "version": "2.1.156",
+      "kind": "security",
+      "changelog": "2.1.156",
+      "title": "A re-run never loads plug-in code, and the plug-in lint allows only listed framework namespaces and assemblies",
+      "scope": {
+        "verbs": [
+          "breaking-change",
+          "dynamics-study",
+          "user-model"
+        ],
+        "options": [
+          "--model-plugins"
+        ],
+        "inputFormats": [],
+        "condition": "breaking-change validate on a journal or imported entry that names --model-plugins or runs user-model check-plugin; a model plug-in that references a framework type outside System, System.Collections.Generic, System.Collections.Immutable, System.Collections.ObjectModel, System.Diagnostics.CodeAnalysis, System.Globalization, System.Runtime.CompilerServices, System.Runtime.Versioning and System.Text (attribute types of System.ComponentModel, System.Diagnostics and System.Reflection excepted), or an assembly outside the allowed list"
+      },
+      "magnitude": "no number changes. A plug-in job that validate re-ran (IDENTICAL or CHANGED) is CANNOT-REPLAY by the replay policy and nothing is loaded; a plug-in using a framework namespace or assembly outside the lists, which loaded, is refused naming it (exit 1)",
+      "claims": [
+        {
+          "field": "*status*",
+          "kind": "qualitative",
+          "from": "IDENTICAL or CHANGED",
+          "to": "CANNOT-REPLAY"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B42",
+      "version": "2.1.157",
+      "kind": "security",
+      "changelog": "2.1.157",
+      "title": "Hostile-file limits: nesting depth in the MATPOWER, Turtle and RDF/XML readers, PSS/E bus numbers and shunt steps, CGMES and COMTRADE sizes",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [
+          ".m",
+          ".raw",
+          ".rawx",
+          ".ttl",
+          ".rdf",
+          ".xml",
+          ".zip",
+          ".cfg"
+        ],
+        "condition": "a MATPOWER expression nested deeper than 64 levels; a Turtle document nested deeper than 256 brackets or an RDF/XML document deeper than 256 elements; a PSS/E case whose highest bus number leaves no room for its three-winding star points; a switched shunt block of more than 1,000 steps under shunt control; a CGMES archive or folder over 1 GiB expanded or 256 MiB in one document, or a folder of more than 10,000 files; a COMTRADE configuration declaring more than 999,999 channels of a kind or more channels than it has lines"
+      },
+      "magnitude": "no number changes for a file within the limits. A file past one is refused with exit 1 and a message naming the limit, where it crashed the process (stack overflow, exit 127), hung, ran out of memory or (CGMES between 1 and 2 GiB, or a folder) was read",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B43",
+      "version": "2.1.157",
+      "kind": "behaviour",
+      "changelog": "2.1.157",
+      "title": "PSS/E: an LCC tap step of 0 is refused, and a RAWX value that would change its record's fields is refused",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [
+          ".raw",
+          ".rawx"
+        ],
+        "condition": "a two-terminal DC converter with STP 0 (or below), which PSS/E does not allow; a RAWX number field holding a separator, blank, slash or quote, or RAWX text holding both quote kinds"
+      },
+      "magnitude": "no number changes for any other case. Such a case was read (an STP 0 link hung the power flow when its tap had to move; a RAWX value of that kind silently shifted or defaulted the record's later fields) and is now refused with exit 1 naming the field",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B44",
+      "version": "2.1.157",
+      "kind": "bug-fix",
+      "changelog": "2.1.157",
+      "title": "COMTRADE reader: nanosecond time stamps, several sampling rates and the missing-data codes",
+      "scope": {
+        "verbs": [],
+        "options": [],
+        "inputFormats": [],
+        "condition": "the library reader (ComtradeReader; no verb reads COMTRADE): a 2013 recording whose start time has more than six decimal places, a recording with several sampling rates and no time stamps, or a recording holding the standard's missing-data codes"
+      },
+      "magnitude": "times of a nanosecond-stamped recording were 1000 times too long and are now right; samples after the first rate segment of a multi-rate recording were timed at the first rate and now follow their own; a missing value (0x8000, 0x80000000, an empty field, 99999 in a 1991 or 1999 ASCII file) was read as data (for example -32768 a + b) and is now NaN, counted in MissingValues. Any other recording reads bit for bit as before",
+      "claims": [
+        {
+          "field": "(COMTRADE times and values)",
+          "kind": "qualitative",
+          "from": "nanosecond stamps read as microseconds; one sampling rate for every sample; missing-data codes read as values",
+          "to": "the stamp unit from the start time's precision; each rate segment timed at its own rate; missing-data codes read as NaN"
+        }
+      ]
+    },
+    {
+      "id": "B45",
+      "version": "2.1.158",
+      "kind": "security",
+      "changelog": "2.1.158",
+      "title": "Side files: the NT prefix, links and a drive letter on Windows, and every study format; rpc --listen time limits",
+      "scope": {
+        "verbs": [
+          "qsts",
+          "replay-event",
+          "scenario",
+          "h0-study",
+          "evidence",
+          "fleet",
+          "dynamics-study",
+          "protection-audit",
+          "reliability-network",
+          "study-case",
+          "cgmes-study",
+          "rpc"
+        ],
+        "options": [
+          "--listen"
+        ],
+        "inputFormats": [],
+        "condition": "a file named inside an input file (now also the raw, dyr, unitProtection, devices and curves of a dynamics study, the case, groups and devices of a network reliability study, the master and groups of a study case, the profile documents of a CGMES study, and a script's DYNAMICS and SCHEMAS) that is an NT-prefixed path (\\??\\), a path that on Windows does not start with a drive letter, a reserved device name with a colon or a superscript digit, a path under /dev, /proc or /sys in any case, or that reaches such a path through a link; an rpc --listen connection silent for 10 s before its first request or for --idle-seconds after it"
+      },
+      "magnitude": "no number changes. Such a side file, which was opened, is refused (exit 1); such an rpc --listen connection, which was held open, is closed; a curves folder holding a link is refused",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B46",
+      "version": "2.1.159",
+      "kind": "behaviour",
+      "changelog": "2.1.159",
+      "title": "CLI contract: an unwritable output exits 1, a report named .csv is refused, the study verbs take the global switches, a UTF-8 BOM is accepted on JSON inputs",
+      "scope": {
+        "verbs": [
+          "stress",
+          "chain",
+          "nminus1-sweep",
+          "bench",
+          "storage",
+          "estimate",
+          "harmonic-pf",
+          "export",
+          "qsts",
+          "breaking-change",
+          "transmission-security",
+          "motor-start",
+          "dynamics-study",
+          "corrective-sequence",
+          "emt-line",
+          "arc-flash",
+          "cable-rating",
+          "cable-size",
+          "transfer-capability",
+          "cgmes-study",
+          "restoration-study",
+          "reliability-study",
+          "probabilistic",
+          "reliability-network",
+          "harmonic-assess",
+          "connection-assess",
+          "grid-code",
+          "flicker",
+          "filter-design",
+          "planning-study",
+          "study-case",
+          "case-diff",
+          "result-diff",
+          "report"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an output that cannot be written (read-only, locked, access denied, full disk), on any verb; stress, chain, nminus1-sweep, bench or storage given --out <name>.csv; estimate with --max-iter below 1 or --tol not above 0; harmonic-pf with spectra that are not a JSON object; a study verb (dynamics-study, cable-rating and the others dispatched with them) with --cpu, --gpu, --frequency-hz or --name=value; a JSON input with a UTF-8 byte order mark; export of a case whose scene values do not fit a 32-bit float; a null QSTS profile. The verbs listed are those whose refusals this entry claims; an unwritable output of any other verb exits 1 the same way"
+      },
+      "magnitude": "no number changes. Exit codes and messages: an unwritable output exits 1 naming it (it was an internal error and the runtime's crash code); --out <name>.csv on a report verb exits 2 before anything is written (it crashed, or on Linux wrote one corrupt file); estimate's bad --max-iter or --tol exits 2 before its folder is made; harmonic-pf's malformed spectra and export's non-finite scene exit 1; a study verb runs with --cpu or --name=value where it said the verb did not exist or gave its usage (exit 2), and refuses --gpu (exit 2); a JSON input with a BOM is read where it was refused (exit 1)",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "2"
+        }
+      ]
+    },
+    {
+      "id": "B47",
+      "version": "2.1.159",
+      "kind": "security",
+      "changelog": "2.1.159",
+      "title": "Telemetry guard: a profiler variable stops GridSim only while a profiler switch is 1; crossval never starts a bare-name Python on Windows",
+      "scope": {
+        "verbs": [
+          "*"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an environment with CORECLR_PROFILER*, CORECLR_NOTIFICATION_PROFILERS or their DOTNET_ forms set and every profiler switch off, or a profiler switch set to a value other than 1 (such as true); the DOTNET_ENABLE_PROFILING or DOTNET_ profiler variables with a switch on; crossval on Windows with no interpreter found by GRIDSIM_PYTHON, VIRTUAL_ENV, PATH or the py launcher's install folders"
+      },
+      "magnitude": "no number changes. A profiler path with profiling off, which exited 78, now starts; a switch set to true, which exited 78, now starts (the runtime takes it as off); the DOTNET_ spellings with a switch on now exit 78 like the CORECLR_ ones; crossval on Windows with no interpreter found exits 77 where it would start a bare py, python or python3 (which Windows can find in the current folder)",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "78",
+          "to": "0"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "78"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "77"
+        }
+      ]
+    },
+    {
+      "id": "B48",
+      "version": "2.1.160",
+      "kind": "security",
+      "changelog": "2.1.160",
+      "title": "Review of 2.1.157 to 2.1.159: HVDC tap steps below 1e-6 refused and the tap search bounded; rpc --listen token first with an absolute first-request deadline; profiler switches on unless read as 0; no bare interpreter names; more hostile-file routes closed",
+      "scope": {
+        "verbs": [
+          "rpc",
+          "crossval"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".raw",
+          ".rawx",
+          ".xml",
+          ".cfg"
+        ],
+        "condition": "an LCC or multi-terminal DC converter with a tap step below 1e-6 (any reader, refused by GridModel.Validate); a PSS/E J or K field of -2147483648; a RAWX cell with a line break or control character; a single CIM .xml over 256 MiB; a cgmes-study listing documents over 1 GiB in all; a COMTRADE sample number above 2147483647; a side file reached through a link to an ancestor of /dev, /proc or /sys; an rpc --listen request without the token (now checked before the id), or a connection that does not complete its first request within the deadline; a profiler switch set to a value the runtime reads as non-zero other than 1 (2, ff, 0x2, -1, 1x) with a profiler path set (exit 78 where it started); crossval on Linux or macOS, or with only relative PATH folders, where only a bare python or python3 was left (exit 77 where it started one)"
+      },
+      "magnitude": "no number changes for a valid case: the tap search takes the same steps as before for every real step. Such an input, which was read (or hung, or was an internal error), is refused with exit 1 naming it; such a connection is closed",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "78"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "77"
+        }
+      ]
+    },
+    {
+      "id": "B49",
+      "version": "2.1.161",
+      "kind": "bug-fix",
+      "changelog": "2.1.161",
+      "title": "Correctness: IEC 60909 K_T c_max from the LV side, distance relays on a collapsed loop voltage, harmonic series-capacitor scaling, probabilistic probabilities over converged samples, QSTS devices at constant power, no tap steps on an open transformer, saturation points in either order, motor RK4 sub-steps",
+      "scope": {
+        "verbs": [
+          "iec60909",
+          "protection-eval",
+          "protection-grade",
+          "protection-check",
+          "fault",
+          "harmonics",
+          "harmonic-pf",
+          "probabilistic",
+          "qsts",
+          "hosting",
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [
+          "--corrections"
+        ],
+        "inputFormats": [],
+        "condition": "iec60909 --corrections with a transformer whose LV side is at or below 1 kV; a distance relay whose loop voltage collapses (a bolted fault at the relay point); a harmonic study with a line of negative X or a branch of negative B; a probabilistic AC load flow with samples that do not converge; a QSTS or hosting study with PV, storage or a load addition on a bus with a voltage-dependent load; an OLTC or flow control on an out-of-service transformer; an exciter record with E1 above E2; an induction motor load stepped beyond RK4's stability bound, 2.5 / (decay + 2 pi f |1 - w|) (a stalled slow motor above about 7.3 ms at 50 Hz or 6.1 ms at 60 Hz; a stalled fast motor such as the WECC CMLD motor A above about 4.7 ms at 60 Hz, so at the 5 ms default)"
+      },
+      "magnitude": "K_T x 1.05 / 1.10 (-4.5 %) on an LV-side transformer at or below 1 kV, maximum Ik'' at its LV board up to about +4.5 %; a collapsed distance loop is decided by its memory voltage (a bus fault behind the relay no longer trips zone 1); a series capacitor's harmonic impedance falls by h^2 at order h; violation probabilities rise by up to the failed share and such a run is INCOMPLETE (exit 3); PV, storage and load additions keep their set power (a 1 MW PV unit at 0.95 pu on a constant-impedance bus injected 0.9025 MW); every other case, h = 1, an ascending saturation pair and a step inside the RK4 bound (at the 5 ms default every motor with decay + 2 pi f |1 - w| at or below 500 1/s) are unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(IEC 60909 corrected currents)",
+          "kind": "qualitative",
+          "from": "K_T with c_max of the higher-voltage side",
+          "to": "K_T with c_max of the low-voltage side (IEC 60909-0:2016, 6.3.3)"
+        },
+        {
+          "field": "(distance, harmonic, probabilistic, QSTS, tap and motor results)",
+          "kind": "qualitative",
+          "from": "rounding-noise distance verdicts; X and B scaled by h whatever their sign; probabilities over all samples, COMPLETE with failed samples; devices scaled by the bus ZIP; open transformers stepped; E1 above E2 refused; unbounded motor RK4 step",
+          "to": "memory-polarised direction on a collapsed loop; capacitive X and inductive B scaled by 1/h; probabilities over converged samples, INCOMPLETE with failed samples; devices at constant power; open transformers held; either order; RK4 sub-steps within its bound"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "3"
+        }
+      ]
+    },
+    {
+      "id": "B50",
+      "version": "2.1.161",
+      "kind": "behaviour",
+      "changelog": "2.1.161",
+      "title": "Cases that gave a wrong answer refused by name: a fault with no source, an AC-OPF with unmodelled devices, a fast-decoupled solve with an X = 0 branch, two voltage-controlling VSCs on one bus, a converter started above Imax, an EMT line shorter than the step",
+      "scope": {
+        "verbs": [
+          "fault",
+          "protection-check",
+          "protection-eval",
+          "protection-grade",
+          "acopf-full",
+          "scopf",
+          "stability",
+          "dynamics-study",
+          "emt"
+        ],
+        "options": [
+          "--engine"
+        ],
+        "inputFormats": [],
+        "condition": "a fault on a bus whose island has no synchronous or converter source; acopf-full or scopf on a case with DC links, FACTS devices, static var compensators or induction machines; --engine fdxb or fdbx with an in-service branch of X = 0; two VSC converters in AC voltage control on one bus; an RMS converter unit whose solved current is above Imax x rating; an EMT travelling-wave line with a travel time shorter than the step"
+      },
+      "magnitude": "such a case, which gave a number, is refused naming the element: exit 1, except an RMS converter started above Imax, which takes the exit code of the R252 start refusals it follows (2 in stability); every other case is unchanged",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "2"
+        }
+      ]
+    },
+    {
+      "id": "B51",
+      "version": "2.1.162",
+      "kind": "security",
+      "changelog": "2.1.162",
+      "title": "Review of 2.1.157 to 2.1.160: py launcher without the shebang search, relative interpreter paths refused, HVDC tap ranges the search cannot cover refused, JSON writer exceptions are defects, collision-free token-file names",
+      "scope": {
+        "verbs": [
+          "crossval",
+          "rpc"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".raw",
+          ".rawx"
+        ],
+        "condition": "crossval through the py launcher, or with a relative GRIDSIM_PYTHON or VIRTUAL_ENV; an LCC or multi-terminal DC converter whose tap range needs more than 10,000 steps (any reader, refused by GridModel.Validate); a JSON exception raised while writing a result; rpc --listen token files of two machines whose cleaned names agree, or of the 2.1.156 to 2.1.158 shape"
+      },
+      "magnitude": "no number changes for a valid case. Such a converter or GRIDSIM_PYTHON, which was accepted, is refused with exit 1 naming it",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B52",
+      "version": "2.1.163",
+      "kind": "behaviour",
+      "changelog": "2.1.163",
+      "title": "Review of 2.1.161: emt short-line refusal is exit 1; converter start at Imax within 1e-9; QSTS near-cancellation refused",
+      "scope": {
+        "verbs": [
+          "emt",
+          "stability",
+          "dynamics-study",
+          "qsts",
+          "hosting"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "emt --lines with a travelling-wave line shorter than the step (exit 2, now 1); an RMS converter whose solved current is within a relative 1e-9 above Imax x rating (refused, now starts); a QSTS bus whose devices cancel a voltage-varying load to within 1e-9 of it (re-based, now refused)"
+      },
+      "magnitude": "no number changes for a valid case: the exit code of one refusal changes, a start a few ulps above the limit is accepted, and a near-cancellation that gave a noise-dominated ZIP is refused with exit 1",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "2",
+          "to": "1"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B53",
+      "version": "2.1.164",
+      "kind": "behaviour",
+      "changelog": "2.1.164",
+      "title": "CLI lows: case9 --ticks runs the live loop; count, noise, coverage and trip-time flags range-checked; derived CSV names in the same-file check; reconfig re-read checked",
+      "scope": {
+        "verbs": [
+          "bench",
+          "batchsolve",
+          "estimate",
+          "transient",
+          "reconfig"
+        ],
+        "options": [
+          "--ticks",
+          "--runs",
+          "--count",
+          "--n",
+          "--noise",
+          "--coverage-vm",
+          "--coverage-inj",
+          "--coverage-flow",
+          "--trip-at",
+          "--csv"
+        ],
+        "inputFormats": [],
+        "condition": "case9 with --ticks; bench --estimate with --runs below 1 or with --out, --parallel or --note; batchsolve with --count, --n or --runs below 1; estimate --synth with a negative --noise or a --coverage-* outside 0..1; transient with a negative --trip-at; two result flags where one names a file the CSV writer derives from the other; reconfig on a .m case whose buses changed between the two reads"
+      },
+      "magnitude": "no number changes for a valid run: case9 --ticks N runs the live loop instead of one report, and the other command lines, which ran or silently ignored a flag, are refused with exit 2 (1 for reconfig)",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "2"
+        }
+      ]
+    },
+    {
+      "id": "B54",
+      "version": "2.1.165",
+      "kind": "security",
+      "changelog": "2.1.165",
+      "title": "IO lows: repeated JSON keys refused on solve-export and harmonic-source reads; case-folder links that lead out refused; @! titles refused by the RAW writer and RAWX; more reads under the input-file limit",
+      "scope": {
+        "verbs": [
+          "convert",
+          "pf",
+          "harmonics"
+        ],
+        "options": [],
+        "inputFormats": [
+          ".rawx",
+          ".cfg"
+        ],
+        "condition": "a solve-export or harmonic source set that gives a key twice or is not valid JSON; a v2 case folder whose listed file is reached through a link that leads out of the folder; a case named, or a RAWX TITLE1 / TITLE2, beginning with @!; a COMTRADE data file or JSON schema, overlay, unit-protection, provenance or boundary file over 256 MiB"
+      },
+      "magnitude": "no number changes for a valid file: such inputs, which loaded (or were written), are refused with exit 1",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B55",
+      "version": "2.1.166",
+      "kind": "bug-fix",
+      "changelog": "2.1.166",
+      "title": "NUM lows: OLTC numbers, tiny impedances, a second sweep slack and huge QSTS runs refused; live and export generation is the units' output; slack note by bus id; MILP rounding checked",
+      "scope": {
+        "verbs": [
+          "pf",
+          "qsts",
+          "hosting",
+          "export",
+          "uc"
+        ],
+        "options": [
+          "--area-interchange"
+        ],
+        "inputFormats": [],
+        "condition": "an OLTC record with a tap step of 0 or less, MinTap above MaxTap, a negative dead band or a non-finite number; a branch whose admittance is not finite; the backward/forward sweep with a second slack bus; a QSTS study of more than 100,000,000 steps; any live run or export scene (generation); a solve whose slack breaches its reactive limits (the note); an area interchange with a DC link or FACTS device across an area boundary (a note); an all-integer MILP whose rounding breaks a row; a replay telemetry cell of NaN or Infinity"
+      },
+      "magnitude": "the live frame's generation and the export scene's GenGw rise by the load on generator buses (generation less losses now equals demand); the slack note names the bus id and every breaching slack; the rest are refusals with exit 1 or a new note; every other number is unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        },
+        {
+          "field": "(live and export generation)",
+          "kind": "qualitative",
+          "from": "positive net injections",
+          "to": "unit output"
+        }
+      ]
+    },
+    {
+      "id": "B56",
+      "version": "2.1.167",
+      "kind": "bug-fix",
+      "changelog": "2.1.167",
+      "title": "DYN lows: empty or oversized RMS schedules, NaN model constants, zero X'' and a bus left with nothing connected refused; IEEEG3 reference is a power; TSGB sizing counts base device inertia",
+      "scope": {
+        "verbs": [
+          "stability",
+          "dynamics-study",
+          "transient"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "an RMS step schedule over a run shorter than half its step; a run of more than 100,000,000 steps; a NaN or infinite time constant, droop or gain in an older control block or governor, or a NaN saturation point; X''d or X''q not finite and above 0; an event stage whose branch trip leaves a bus with nothing connected; IEEEG3 with a23 other than 1 given a reference; TSGB sizing with device inertia in the base configuration"
+      },
+      "magnitude": "with a23 = 1 and no base device inertia every number is unchanged bit for bit; IEEEG3 with a23 other than 1 holds its initial power where it moved to a23 x it, and the TSGB synthetic inertia falls by the base device inertia; the rest are refusals",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B57",
+      "version": "2.1.168",
+      "kind": "behaviour",
+      "changelog": "2.1.168",
+      "title": "ANA and SEC lows: protection-audit exits 3 for an inadequate breaker or an incomplete audit; bus outages take their devices; SCOPF checks the reference unit after branch outages; inputs range-checked",
+      "scope": {
+        "verbs": [
+          "protection-audit",
+          "nminus1",
+          "nminus2",
+          "n-1-1",
+          "acscopf",
+          "protection-eval",
+          "uc",
+          "dynamics-study",
+          "replay-event",
+          "interpose",
+          "report"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "protection-audit with a breaker NOT ADEQUATE or no gradable pair; a bus outage of a bus with a DC link, FACTS device, SVC, induction machine or OLTC record; an AC-SCOPF branch outage whose reference unit leaves its range; a UC column returned a hair under 1; an exhaustive N-k above 20,000,000 combinations; a short-circuit data file bus that is not a whole number; a machine id with surrounding blanks; a device configuration or event catalogue with out-of-range numbers or null members; a Markdown report with HTML or Markdown in a name"
+      },
+      "magnitude": "the audit exit code moves from 0 to 3 for those audits; those bus-outage rows and SCOPF outages change; the rest are refusals or text; every other number is unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "3"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "1"
+        }
+      ]
+    },
+    {
+      "id": "B58",
+      "version": "2.1.169",
+      "kind": "behaviour",
+      "changelog": "2.1.169",
+      "title": "Rulings 14-19: short EMT lines become pi branches; one-sided saturation curves accepted; CGMES total 512 MiB; DOTNET_DiagnosticPorts refused; COMTRADE missing-data codes from revision 1999",
+      "scope": {
+        "verbs": [
+          "emt",
+          "stability",
+          "dynamics-study",
+          "cgmes-study",
+          "cgmes-shacl"
+        ],
+        "options": [
+          "--lines"
+        ],
+        "inputFormats": [
+          ".dyr",
+          ".cfg",
+          ".zip"
+        ],
+        "condition": "emt --lines with a travelling-wave line shorter than the step; an exciter with exactly one saturation SE of 0, or a GENROU / machine with S(1.0) = 0 and S(1.2) above 0; a CGMES bundle expanding to more than 512 MiB; a non-empty DOTNET_DiagnosticPorts; a COMTRADE 1991 file holding 99999 or 0x8000, or a start time with nanosecond precision in a file before 2013"
+      },
+      "magnitude": "such runs, which were refused, give a result (the short line as its pi branch; the curve starting at the SE 0 point); a 1991 COMTRADE value of 99999 or 0x8000 is data, not missing; a bundle between 512 MiB and 1 GiB and a run with a diagnostic port set are refused; every other case is unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "1",
+          "to": "0"
+        },
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "78"
+        }
+      ]
+    },
+    {
+      "id": "B59",
+      "version": "2.1.173",
+      "kind": "behaviour",
+      "changelog": "2.1.173",
+      "title": "Review B7: COMPlus_DiagnosticPorts refused; emt reports pi-converted lines by bus and branch and lists them in the output folder; WP27 JSON writes a non-finite number as null; BINARY32 missing-data code from revision 1999",
+      "scope": {
+        "verbs": [
+          "emt",
+          "harmonic-pf",
+          "harmonic-se",
+          "gic",
+          "cosim",
+          "emt-partition",
+          "qv-modal",
+          "stability",
+          "dynamics-study"
+        ],
+        "options": [
+          "--lines"
+        ],
+        "inputFormats": [
+          ".cfg"
+        ],
+        "condition": "a non-empty COMPlus_DiagnosticPorts; emt --lines with a travelling-wave line shorter than the step; a harmonic-pf, harmonic-se, gic, cosim, emt-partition or qv-modal result holding a NaN or infinite number; a dynamics JSON machine with saturationS10 0 and saturationS12 above 0, or an exciter with exactly one saturation SE of 0; a COMTRADE BINARY32 file declaring revision 1991 holding 0x80000000"
+      },
+      "magnitude": "a run with COMPlus_DiagnosticPorts set is refused (exit 78); emt's stderr notes for pi-converted lines change wording (a count line, the first 20 lines by end buses and branch name, then 'and N more'), and such a run's output folder gains pi-converted.csv and a summary.md line; a non-finite number in those JSON results is written as null where it was an internal error; the dynamics notes gain the ruling 15 note; a 1991 BINARY32 value of 0x80000000 is data, not missing; every number of every other run is unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "0",
+          "to": "78"
+        }
+      ]
+    },
+    {
+      "id": "B60",
+      "version": "2.1.174",
+      "kind": "bug-fix",
+      "changelog": "2.1.174",
+      "title": "cosim and emt-partition write a NaN or infinite time or trace sample as null",
+      "scope": {
+        "verbs": [
+          "cosim",
+          "emt-partition"
+        ],
+        "options": [],
+        "inputFormats": [],
+        "condition": "a cosim or emt-partition run whose time axis or a trace holds a NaN or infinite value"
+      },
+      "magnitude": "such a run writes its JSON result with null at each non-finite sample, where it was an internal error (crash log) with no result; every finite sample, and every other run, is unchanged bit for bit",
+      "claims": [
+        {
+          "field": "(exit code)",
+          "kind": "qualitative",
+          "from": "*",
+          "to": "0"
+        }
+      ]
+    }
+  ]
+}

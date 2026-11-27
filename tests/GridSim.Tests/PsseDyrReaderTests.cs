@@ -20,7 +20,7 @@ public class PsseDyrReaderTests
 
     private static MachineDynamicsSet Load(PsseDyrResult r, PsseParseResult raw)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-dyr-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-dyr-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -38,7 +38,9 @@ public class PsseDyrReaderTests
         PsseDyrResult r = PsseDyrReader.Read(Dyr(), raw, "case14", new PsseDyrOptions { SourceName = "case14.dyr" });
         Assert.Equal(5, r.Machines);
         Assert.Equal(11, r.Records.Count);
-        Assert.Empty(r.Notes);
+        // DYN-05 (re-pinned, ruling 12): the only note is the HYGOV approximation the reader now states (no model change).
+        string note = Assert.Single(r.Notes);
+        Assert.StartsWith("HYGOV for machine '1' at bus 2 (line 11) approximated:", note, StringComparison.Ordinal);
         MachineDynamicsSet set = Load(r, raw);
         Assert.Equal(5, set.Entries.Count);
         Assert.True(set.AllRecorded);

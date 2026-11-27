@@ -89,7 +89,7 @@ public static class SmallSignalExport
     public static void WriteJson(string path, string label, SmallSignalModel model, ModalResult modal, int? exitCode = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(label, model, modal, exitCode));
+        AtomicText.Write(path, /* IO-22 */ ToJson(label, model, modal, exitCode));
     }
 
     // ---- Phase 0.1: the document as named types ----------------------------------------------------------------------

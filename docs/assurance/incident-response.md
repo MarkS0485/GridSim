@@ -1,6 +1,6 @@
 # Incident-response runbook
 
-**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This is the incident-response and recovery runbook
+This is the incident-response and recovery runbook
 for the GridSim state estimator and its services, mapping to CAF Objective D1 (Response and recovery
 planning) and D2 (Lessons learned). It is the runbook that `caf-mapping.md` section 7.1 cites.
 CAF v4.0 (released 6 August 2025) strengthens D1: response plans must be tested, and their scope must extend
@@ -56,9 +56,16 @@ also written as its own `action=security` audit entry at the detection site:
   copy. It raises no incident by itself: a denial's baseline severity is below Significant and `IncidentPolicy` sets
   no burst threshold for `AccessDenied`, so watch for a run of them in the forwarded log (or in
   `gridsim audit show`). Only a host with an audit log records it
-  (`Audit:LogPath`, which needs the resident estimator); a host without one refuses the request and records nothing.
+  (`Audit:LogPath`, with or without the resident estimator; a host without one opens its log for each denial and
+  appends one entry); a host with no `Audit:LogPath` refuses the request and records nothing. The dashboard's live session,
+  its actions and the workbench studies are gated too (operation names start `dashboard.`); a denial there is one entry as well.
   A rising rate from one subject suggests probing of the solve surface, or a deployment whose callers lack
   their `GridSim.<role>` role claims; one write failure is reported on the host's standard error, not in the log.
+
+- **A bridge reconnect step.** When `GridSim:BridgeReconnect` is on and a bridge stream is lost, the web host
+  writes one `AvailabilityDegraded` entry for each attempt scheduled, each attempt that fails or succeeds, and the give-up
+  (exception type names only, never the endpoint). A run of failed attempts followed by a give-up means the bridge is down or
+  unreachable; check the bridge host and the network before the operator restarts the session.
 
 - **A distrusted source applied (since 2026-11-01).** An operator applied the distrusted-source control (section 4)
   to a run with `gridsim estimate --distrust`, `gridsim serve --distrust` or the web host's
@@ -228,7 +235,7 @@ CAF v4.0 requires that the plan is exercised and that its scope extends to suppl
   [`tabletop-cve-exercise.md`](tabletop-cve-exercise.md). The second walks a `SuspectedFdia` and an
   audit-verify-failure scenario end to end - detection, raising, significance assessment, quarantine, replay
   recovery, the 72-hour timeline, and the post-incident review. Each exercise's result and date are recorded against
-  this document. As at 2026-11-01 the first script is written and neither exercise has been held, so the plan is
+  this document. The first script is written and neither exercise has been held yet, so the plan is
   written but untested (`caf-mapping.md` section 9, item 17).
 - **Supplier and upstream incidents are in scope.** The GDA data lake is GridSim's primary upstream supplier,
   and an incident originating there (a poisoned or tampered upstream feed, an integrity failure in the lake)

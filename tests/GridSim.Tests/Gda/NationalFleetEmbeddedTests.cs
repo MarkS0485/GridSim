@@ -15,7 +15,7 @@ public class NationalFleetEmbeddedTests : IDisposable
 
     public NationalFleetEmbeddedTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "gridsim-fleet-emb-" + Guid.NewGuid().ToString("N"));
+        _root = TestTemp.Under("gridsim-fleet-emb-" + Guid.NewGuid().ToString("N"));
         string neso = Path.Combine(_root, "NESO", "RAWData");
 
         // One connected 1000 MW TEC unit so the fleet is never empty.

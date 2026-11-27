@@ -9667,7 +9667,7 @@ the new work is in new commands and new library entry points. Requirements, veri
   record) turns the retry off.
 - Large sparse solves are 4 to 7 times faster, measured on an EPYC 7763 server (case_ACTIVSg2000 306 -> 46 ms,
   case3375wp 560 -> 83 ms). The cloud benchmark results for RC-3 and for this change are in
-  `docs/developer/benchmarks/server-results/hyperstack-2026-11/`.
+  `docs/developer/benchmarks/history/hyperstack-2026-11/`.
 - GPU paths are documented as deterministic run to run but not bit-identical to the CPU contract (different algorithms
   and reduction order), with the measured envelope; they are held to solver tolerance, not to the CPU cross-check gate.
   `gpucheck` now calls workstation NVIDIA parts (Quadro, RTX A-series, RTX Ada and RTX PRO) workstation GPUs in its FP64
@@ -9731,3 +9731,2915 @@ Known limits: the new work is tested on small analytical, constructed and synthe
 text are labelled AWAITING STANDARD TEXT, and DGS acceptance on real PowerFactory exports and the ENTSO-E conformity
 bundle are awaiting files. No commercial-tool comparison has been made and no parity is claimed. Bugs to
 mark@gridsimdigitaltwin.co.uk.
+
+## [2.1.074]
+
+### Security
+- Scripting: an expression or condition nests at most 64 deep (brackets, minus signs, `NOT`, function arguments) and is at
+  most 256 operations deep. A deeper one is a syntax error naming its line and column, so a script can no longer exhaust
+  the parser's stack and end the process (GHSA-38hc-fggf-q864). Every script within these limits means what it did.
+- Scripting hosts: the cancellation and limits a host sets are checked before every statement, block and loop iteration,
+  not only before simple statements. New optional limits: statements, blocks and loop iterations per session, output
+  characters per session (checked as output is produced) and the size of an open interactive block. The web console sets
+  them (200000, 4 M characters, 64 KB); `gridsim-script` and the desktop console set none, and their run records are
+  byte-identical (GHSA-2h96-qcc2-c9gh).
+- Web: opening a live solver session on the dashboard needs Operator, and driving it (play, step, speed, step size, trip)
+  needs Operator and the harmonics study Analyst; a workbench study needs Analyst. These are the bands of `/ws/sim` and
+  `POST /api/solve`; each refusal is shown on the page and audited. Watching a raw replay or a bridge feed needs no role.
+- Web: the loopback anonymous default (Operator on an instance that answers only loopback names) is granted per request,
+  and only to a request that came straight from a loopback address with no `X-Forwarded-*` or `Forwarded` header. A
+  request relayed by a reverse proxy is an anonymous Viewer. A role set with `GridSim:AnonymousRole` is unchanged.
+- Web console: `SELECT ENGINE ... SCHEMAS` is refused and a `DYNAMICS` file must lie in the folder of a model the catalogue
+  lists; the page lists models by paths relative to its folder, and messages name that folder as "the base folder", not
+  its absolute path.
+- `gridsim-script` and the desktop script console check a loaded model against the licence's bus limit exactly as the
+  command line does, with the same message. `gridsim-script --confine` refuses any path outside the base folder, and
+  network, device and linked paths; without it paths behave as before.
+- `gridsim rpc --listen`: a request line is read only up to the line limit; a line over it, or one that is not a JSON
+  object, ends the connection after its error response; network and device paths are refused in `load` and `run-verb`
+  arguments. The standard input transport is unchanged.
+- CGMES archives are refused when their entries expand to more than 2 GB in all; a PSS/E multi-terminal DC record no
+  longer allocates from its counts before its lines are read.
+- Deployment guide: a reverse proxy in front of an instance left at the loopback default must pass `Host $host`.
+- Web: each client is limited to 600 requests a minute on `/api` and `/console` (429 with `Retry-After`); set
+  `GridSim:MaxRequestsPerClientPerMinute` to change it, 0 to switch it off. A caller whose address is unknown is not limited.
+- Web: a host with `Audit:LogPath` and no resident estimator now keeps its own audit log and records every access denial in
+  it (it used to refuse the setting). A bridge reconnect attempt, success and give-up are recorded as `AvailabilityDegraded`
+  security events in the host's audit log when it keeps one.
+- Web, opt-in: `Auth:RequireKeyProtection=true` stops start-up when the key ring would be stored unencrypted;
+  `GridSim:ScriptCsp=report-only|enforce` (with `GridSim:ScriptCspSources`) sends a `script-src 'self'` policy. Both are off by default.
+- Container: `compose.yml` runs the web container with a read-only root file system (`/tmp` in memory, the key volume
+  writable), no Linux capabilities and `no-new-privileges`.
+- Case and study files (MATPOWER, PSS/E RAW and SEQ, UCTE, multi-phase and lossless JSON, measurement sets, solve exports,
+  QSTS, scenarios, PMU maps, RTU point maps, GDA time series and the case geography files) larger than 256 MiB are
+  refused, naming the file, before they are read into memory.
+- Tests: one assertion changed because a host with `Audit:LogPath` and no resident estimator now starts (a missing log folder
+  is still refused), and the bridge test server retries a taken port instead of failing.
+- Tests: new tests also cover the audit log after a killed run, the file size cap, the request limit, the compose settings,
+  the own-log denial audit, the reconnect audit, the key ring requirement and the script policy.
+- Tests: new tests cover the parser limits on a small stack, the hosting limits inside blocks, confinement, the licence
+  gate in script hosts, the web console's file settings and budgets, the page gate, the dashboard session gate, the
+  per-request loopback default, the CGMES running total, the PSS/E counts and the rpc TCP transport.
+- Compliance: the role-based access-control control (`rbac`, CAF B2) is recorded Achieved, so `gridsim compliance` and
+  `/compliance` list four controls not yet Achieved instead of five. The supply-chain and secure-SDLC descriptions say
+  plainly which releases went through the release workflow.
+- Tests: two assertions in the compliance attestation tests follow `rbac` being Achieved (the list of controls not
+  Achieved, and the control the report check names).
+
+## [2.1.075]
+
+### Added
+- Per-unit protection: a generating unit can carry relays of its own (27 / 59 under / over voltage, 32 reverse power,
+  40 loss of excitation, 81U / 81O under / over frequency, 81R RoCoF, 78 vector shift), with settings that belong to the
+  unit. In a JSON v2 case the class default is a template of the new kind `unitProtection`; a generator takes it with
+  the new optional member `protectionTemplate` or by a binding rule, and one unit's own values go on top through an
+  override with the new optional member `unit`. Each value keeps its provenance; resolution is the unit's value, then
+  the template's, then no relay (nothing is invented). Presets give the ENA settings with their sources:
+  `rocofPreset` `legacy` (K2 x 0.125 Hz/s), `legacy-high-impedance` (0.2 Hz/s) and `modern` (1 Hz/s, 0.5 s), and
+  `interfacePreset` `g99-hv` / `g99-lv` (EREC G99 Issue 2 Table 10.1).
+- The case editor shows a generator's `protectionTemplate` with its dynamics template.
+- `protection-check` and the protection assessment judge every unit's own relays with the unit's own settings; each
+  verdict names the unit, the relay stage and whether each setting is a placeholder or sourced, and where it came from.
+  `trip` lists the units' frequency relays on its trajectory. A delayed stage beyond its pickup on a fault snapshot or a
+  trajectory summary is reported not checkable, never as a trip.
+- Cases without unit protection load, solve and report exactly as before; the v2 writer writes unit protection back and
+  the v1 writer says it cannot hold it.
+- Unit relays in the RMS loop (library, opt-in): `RmsTransientStability.StudyEventsAdaptiveWithUnitRelays` and
+  `DynamicsAdaptiveRequest.UnitProtection` run each unit's own 81U / 81O, 81R, 27 / 59, 32 and 78 stages in the
+  variable-step RMS path; an operating stage disconnects its unit and the run continues. Definite-time stages reset on
+  dropout; 40 is listed as not evaluated (the swing model has no field model). Off by default: every existing adaptive
+  result is byte-identical.
+- `dynamics-study --unit-protection <file>` (or `adaptive.unitProtection` with `path` and `sha256` in the study file)
+  puts the units' own relays in the adaptive rows of a PSS/E RAW-bound study. The file is the new
+  `gridsim-unit-protection/1` document (`schemas/unitprotection/unit-protection.schema.json`): `unitProtection`
+  templates and one entry per unit with its template and, optionally, its own values, reason and provenance, checked and
+  resolved exactly as unit protection in a v2 case. A unit is named by its PSS/E machine key `<bus>:<id>` (the RAW
+  generator record's bus number and machine ID, for example `101:1`); a unit the case does not have is refused. The
+  result gains `unitProtection` (the file's identity, its units and every unit trip) and
+  `effectiveOptions.adaptive.unitProtection`. A study without it is byte-identical to before.
+- Core: `UnitProtectionFile` reads and checks a unit protection file; a RAW-bound dynamics study binds unit protection to
+  its machines by `<bus>:<id>`.
+- The case editor offers a generator's `protectionTemplate` as a picker over the case's active `unitProtection`
+  templates.
+- Unit relays in the full-model RMS engine (library, opt-in): `RmsTransientStability.StudyEventsWithUnitRelays` runs
+  each unit's own 81U / 81O, 81R, 27 / 59, 32, 78 and loss of excitation (40) stages in the fixed-step engine with flux
+  decay and exciters. 40 reads the apparent impedance at the machine terminals every step against the unit's two offset
+  mho zones (offset and diameter in pu of the unit rating) and their delays, so a field failure trips its unit while a
+  normal fault-and-clear does not. A stage operates at the first step at least its delay after pickup (never early,
+  one-step resolution); its unit leaves at the next step and the run continues; a trip of the last machine ends the run
+  with the reason. Stages the engine cannot evaluate are listed with the reason (for example 40 on a unit with no
+  rating, or 78 with a delay). Off by default: every existing number is unchanged.
+- Loss of excitation (40) on a unit whose step-up transformer is folded into the machine (`unitTransformerXPu`) is
+  judged at the machine terminal, the generator side of the transformer: V_t = V_hv + j X_t I, so the apparent impedance
+  is the one at the network bus plus j X_t (pu of the unit rating). The full-model run evaluates it (it was listed not
+  evaluated) and the steady-state check reads the terminal (it read the network bus). Units without a unit transformer
+  are unchanged; the variable-step RMS path still lists 40 as not evaluated (no field model).
+- Under / over-voltage stages (27 / 59) on a unit whose step-up transformer is folded into the machine
+  (`unitTransformerXPu`) read the machine terminal voltage, where their VTs are, |V_t| = |V_hv + j X_t I| (the same
+  terminal as 40), in the steady-state check and in both RMS runs (variable-step and full model); they read the network
+  bus, the transformer's HV side, before. A steady-state verdict states the terminal voltage and the HV bus voltage, and
+  is not checkable on a fault snapshot (no unit current there); a run record gains `VoltageMeasuredAt` naming the
+  voltage read (absent for a stage that reads the network bus). Units without a unit transformer are unchanged.
+- Tests: new tests check the terminal voltage behind a unit transformer against an independent phasor calculation in
+  the steady-state check and both RMS runs, a 59 that trips on the terminal while the HV bus is inside its pickup,
+  units without a unit transformer reading the network bus as before, and pin the bits of all three paths.
+- `dynamics-study` with unit protection also re-runs each events row on the full-model engine with the units' relays
+  acting; the result's `unitProtection` gains `fullModel` (the rule, the stages not evaluated, every trip and each row's
+  stage records). The study's rows and status are unchanged.
+- Tests: new full-model kernel digest tests pin full-model runs taken before the change (held field, and SEXS exciters
+  with TGOV1 governors, with every step's field voltage, plus the dynamics-study rows); new tests cover a field failure
+  tripping 40, a fault-and-clear not tripping it, frequency, RoCoF, voltage and vector-shift stages on the full model,
+  the last-machine end, quiet relays changing nothing and repeat and parallel determinism. New tests check the terminal
+  impedance behind a unit transformer against an independent phasor calculation (steady state and the run's solved
+  state), a field-failure trip behind a unit transformer, and pin that run's bits.
+- Tests: the full-model test of the stages not evaluated now expects loss of excitation on the unit with a unit
+  transformer to be evaluated (two records, four stages not evaluated instead of six), approved by the maintainer: with
+  the transformer folded into the machine, the terminal voltage V_hv + j X_t I is an exact linear function of the solved
+  bus voltage and current, so the limitation the test pinned no longer exists. Every other assertion is unchanged.
+- Tests: the new kind is added to the kind-file list (the kinds-folder test now names sixteen parameter kinds), the
+  template kind count moves from 16 to 17 and the code-default total from 595 to 596 (the kind's one code default,
+  `relayNominalHz` = 50 Hz), and the generator editor's expected v2 field order gains `protectionTemplate`. New
+  unit relay loop tests pin the adaptive evidence digest taken before the change. New tests cover the unit protection
+  file, RAW machine keys, `dynamics-study --unit-protection` and the `protectionTemplate` picker. No existing
+  test assertion was loosened.
+
+### Changed
+- The `legacy` and `legacy-high-impedance` RoCoF presets now set a 0.5 s definite-time delay (it was 0 s, marked as a
+  `[VERIFY]` placeholder). Source: EREC G59 Issue 3 Amendment 8 Table 10.5.7.1, p.62 (the legacy band for plant under
+  5 MW commissioned before 01/02/18: not less than K2 x 0.125 Hz/s and not more than 1.0 Hz/s, time delay 0.5 s), and
+  EREC G59 Issue 3 Amendment 2 Table 10.5.7.1, p.63 (the same 0.5 s for its legacy band). The delay resets when RoCoF
+  falls below the threshold. The delay's provenance is now Recorded, not a placeholder. A study using these presets now
+  trips 0.5 s later than before; the presets are new in this unreleased version, so no released result changes.
+- `dynamics-study` applies unit protection (`--unit-protection`) to the full-model engine without the study's
+  `adaptive` member (it was refused): the units' relays act in the full-model re-run of each events row, reported under
+  `unitProtection.fullModel` with `effectiveOptions.unitProtection`, the same `fullModel` as with the `adaptive` member.
+  Core: `DynamicsStudyRequest.UnitProtection`. A study without unit protection is byte-identical to before.
+- Tests: three test changes, each approved by the maintainer. The `UnitProtectionTests` legacy preset test now expects
+  the 0.5 s delay, Recorded and citing S135 p.62, instead of a 0 s placeholder (renamed; pickup and K2 assertions
+  unchanged), because that is the delay the cited G59 tables state for the band. The `UnitRelayAssessmentTests`
+  trajectory test now gives its instantaneous stage an explicit 0 s RoCoF delay of its own instead of the legacy preset
+  and drops the placeholder text assertion, because the preset is no longer instantaneous; it still checks an
+  instantaneous stage against a delayed one with the same margin. The `dynamics-study` unit protection refusal test now
+  expects a study without the `adaptive` member to run and report `unitProtection.fullModel`, because the full-model run
+  takes nothing from the adaptive run, so the refusal guarded no dependency; a new test checks that run gives the same
+  bits twice and the same `fullModel` member as with the `adaptive` member. Every other assertion is unchanged.
+
+### Fixed
+- The vector shift (78) stage of the unit relays in the RMS loop reads the bus voltage angle through GridSim's
+  deterministic maths, so it gives the same result on every CPU and runtime.
+- The Newton engines' automatic retry from a DC-angle start no longer runs when the iteration cap stops a solve that
+  is still converging: a cap of 0 is never retried, and a solve stopped by the cap after two or more steps whose last
+  step at least halved its mismatch is reported as it ended (status `MaxIterations`). Before, a small cap could spend
+  a second iteration budget: case9 with `MaxIterations = 2` and `Tolerance = 1e-4` was reported converged after four
+  Newton steps. Only solves that hit the cap change; every converged result and every stalled solve the retry is for
+  (case13659pegase, pglib case162_ieee_dtc, case240_pserc, case3_lmbd) is unchanged.
+- The Newton DC-angle retry never runs when `MaxIterations` is 1 or less (a cap of 1 used to be retried). One step gives
+  no evidence of a stall: a cap-1 solve is typically a warm start (for example a state estimate) that converges in one
+  iteration and never reaches the retry, and when it fails a DC-angle restart would both exceed the user's iteration
+  cap and discard the warm start. The solve is reported as it ended (status `MaxIterations`). Every result that
+  converged is unchanged.
+- The power-flow trace after a converged retry is documented: it holds the failed first attempt, while the result's
+  state, iterations and mismatch are the retry's.
+- The variable-step RMS run with unit relays stops, with the reason, when a scheduled machine trip would leave no
+  connected machine after unit relay trips; it used to integrate on with every machine disconnected.
+- The variable-step RMS run with unit relays stops at t = 0, with the reason, when a unit trip on the initial state
+  would leave no connected machine; it used to state the stop and integrate to the end anyway.
+- A reverse-power (32) stage on a unit with no rating (MBase 0) is listed as not evaluated in both RMS runs, as the
+  steady-state check already lists it not checkable; it used to operate on any negative electrical power.
+- The unit relay rule stated in RMS results describes 27 / 59 and 40 behind a folded unit transformer (the machine
+  terminal on the transformer's generator side) and the 32 rule above.
+- Tests: new tests cover the retry at iteration caps of 0 and 2 on case9 and case14 (including the case9 cap-2,
+  `Tolerance = 1e-4` case), the run-end stall rule, the bundled stalled cases still retried, the two no-machine stops
+  and 32 on a unit with no rating in both RMS runs.
+- Tests: two tests that used case9 at `MaxIterations = 1` as a retried solve now expect no retry (status `MaxIterations`,
+  retry not tried), approved by the maintainer; a new test checks that a solve converging in exactly one iteration at cap
+  1 is reported converged with no retry. The test that the retry is not run without a single-slack island used a cap of
+  1 only to make the first solve fail; it now uses two islands, one loaded beyond its transferable power, so the first
+  solve stalls at the default cap and the island guard is still reached (same `Unavailable` assertion; its check that the
+  unloaded model converges with room to iterate no longer applies to the new fixture); a new test checks that two
+  islands at a cap of 1 are not retried. Approved by the maintainer.
+- Refusal and evidence text that carries a number is written in the invariant culture (cable sizing factors and checks,
+  probabilistic and reliability refusals, EMT, co-simulation and partition messages, adaptive RMS relay events, small-signal
+  residual notes, G5/5 and P28 notes, ANSI duty, the licence bus-limit message and others), so a library caller on a
+  comma-decimal machine reads the same characters as the command line.
+- `gridsim-script` pins the invariant culture at start-up, as the command line and the other hosts do, so its output,
+  session files and run records read the same on every machine.
+- The adaptive RMS evidence takes its list of unit relay stages not evaluated from the first row in row order, not the
+  first row to finish, so a parallel study reports it independently of thread timing. Every row reports the same list
+  today: no result changes.
+- Tests: new guards read GridSim.Scripting, `gridsim-script`, the desktop app, the WPF app and the case editor with the
+  same platform-dependent maths rules as the numerical assemblies; refuse a direct CPU-specific intrinsic call (other
+  than its IsSupported probe) in any GridSim assembly; check that the runtime builds |z| (`Complex.Abs`,
+  `Complex.Magnitude`) from exact and correctly rounded operations only; and check refusal text under a comma-decimal
+  culture and the script console's culture pin.
+- Documentation: user-facing text says "verified" where a result is checked against analytic, published or
+  independent references, and keeps "validated" for comparison with real power systems (which GridSim does not
+  claim): the `gda-replay` and `experimental` help, the EMT, power-flow and battery chapters and the experimental
+  panel description. `docs/README.md` names 2.1.073 RC-4 as the latest release, the RC4 benchmark page states the
+  MATPOWER reader fix as the changelog does, and a moved benchmark path is corrected.
+
+## [2.1.076]
+
+### Changed
+- Documentation: the README, the RC-4 note and the file-formats chapter now match the code. CGMES has command-line verbs (`cgmes-study`, `cgmes-export`, `cgmes-conform`, and `convert` to RDF/XML); role-based access control is enforced on the web solve surface; the web host and the desktop app drive the bridge reconnect when it is switched on; `dist3ph-mesh` is listed beside the radial `dist3ph`; and the PSS/E RAW, DYR, SEQ, UCTE and DGS interfaces, the short-circuit duty verbs, placed devices, arc flash, cable studies, `emt3`, user models, `modal-full`, the workbench, scripting, probabilistic and reliability studies are in the feature lists.
+- Documentation: the dynamic-model library is described as a PSS/E-compatible subset and lists the models it holds. The RC-4 note and the README say that placed devices evaluate phase overcurrent (50, 51) only and accept 21, 67, 50N and 51N as not evaluated, and that DNP3 and IEC 61850 GOOSE are link-framing scaffolding that cannot be selected.
+
+## [2.1.077]
+
+### Added
+- PSS/E RAW revision 36: a revision 36 file is read by the `@!` heading line above each record group, which places the fields by name, so a case reads to the same model as its revision 35 equivalent. The revision 36 NAME, DROOPNAME and rating-table names are dropped, and its droop control, rating table, load type and interface sections are read past and noted. A group with no heading line, a terminator with no section label, an unknown section and a branch with BYPASS 1 are refused.
+- PSS/E RAWX (JSON) import: a `.rawx` file, or any RAW path holding a RAWX document, is read by field name into the same model as the RAW file with the same data. The common sections are read (caseid, bus, load, fixshunt, generator, acline, sysswd, transformer, area, zone, owner, swshunt, indmach); other sections that hold rows are refused naming them.
+- PSS/E SEQ revisions 33 to 36: the generator, load, branch, mutual, transformer, switched shunt, fixed shunt, induction machine, system-wide and non-conventional source layout. Machine X'd, X2 and Z0, line and mutual zero-sequence data and transformer zero-sequence paths (connection codes 1 to 4 and 11 to 14) are applied; codes and data GridSim has no element for are refused or counted as unmodelled.
+- COMTRADE (IEEE C37.111-1991, 1999 and 2013): `ComtradeReader` reads a configuration file with an ASCII, BINARY, BINARY32 or FLOAT32 data file, and `ComtradeWriter` writes a simulation trajectory (times and named channels) as one, ASCII exactly and binary to half a count.
+- Tests: revision 36, RAWX, SEQ layout and COMTRADE tests, with fixtures written from the published release notes and format descriptions; a revision 36 case, a RAWX case and its revision 35 equivalent read to the same model bit for bit.
+
+### Changed
+- Documentation: manual chapters 2 and 31, technical chapter 10 and the README describe the revision 36, RAWX, SEQ and COMTRADE interfaces and their limits.
+
+## [2.1.078]
+
+### Added
+- RMS unbalanced and impedance faults: `RmsSequenceFault` puts a three-phase, single line to ground, line to line or double line to ground fault on a bus, bolted or through a fault impedance R + jX, and `RmsBranchSequenceFault` puts it a fraction along a line (`RmsBranchFaultClear` clears it). They use the positive-sequence method of PSS/E and PowerFactory RMS: the fault point carries an equivalent shunt built from the negative- and zero-sequence Thevenin impedances there, recomputed at every branch or machine trip. A three-phase fault with no impedance is the bolted `RmsBusFault`, bit for bit.
+- `RmsTransientStability.StudyEventsWithFaults` reports, at every step a sequence fault is in place, the sequence currents into it, the sequence and phase voltages, the phase currents and its Z2 and Z0; `CriticalClearingBracketSequenceFault` searches the critical clearing time of a sequence fault.
+- `stability --rms --events` takes `sfault:TYPE:BUS[:R:X]@t`, `lfault:TYPE:BRANCH:FRACTION[:R:X]@t` and `lclear:BRANCH@t` (TYPE `3ph`, `slg`, `ll` or `llg`), prints each fault point and, with `--events-out`, writes `rms-fault-points.csv`. `dynamics-study` takes `sequenceFault`, `lineFault` and `lineFaultClear` events. Scripts take `FAULT BUS name TYPE [WITH R n PU X n PU]` on the RMS SUBTRANSIENT and GOVERNED engines.
+- Tests: at the fault instant the RMS fault currents, Z2, Z0 and phase voltages equal the static unbalanced and three-phase fault studies; a zero-impedance three-phase fault reproduces the bolted fault bit for bit; a single machine against a stiff source matches the hand-derived electrical power during each fault and orders the critical clearing times three-phase, double line to ground, line to line, single line to ground; dense and sparse power flows, parallel runs and the three SIMD modes give the same bits.
+
+### Changed
+- Documentation: technical chapter 24, manual chapters 15, 19 and 35 and the README describe the unbalanced and impedance RMS faults and their scope (a positive-sequence representation: no negative-sequence braking torque or per-phase detail).
+
+## [2.1.079]
+
+### Added
+- Standard dynamic-model library: the GENCLS classical machine (a constant voltage behind X'd, its flux states held exactly), GENTPJ (the six-state machine with the stator-current saturation term Kis), the exciters ESST1A, EXST1, SCRX and ESDC1A, and the stabilisers IEEEST, PSS2A and PSS2B. Limits follow IEEE Std 421.5: non-windup regulator limits, the ST1 ceiling Vt VRMAX - KC IFD, the input limiter, the field current limiter, bus-fed and solid-fed SCRX with its crowbar, quadratic dc exciter saturation, and the stabiliser output limits and voltage cut-offs. Each starts at rest at the solved operating point. The stabilisers read rotor speed or electrical power, and any exciter (the existing SEXS, IEEET1, EXAC1, ESAC1A and ESST4B included) takes one of them through `RmsExciter.WithLibraryStabiliser`.
+- `gridsim-dynamics/2` files take the new models: exciter models ESST1A, EXST1, SCRX and ESDC1A, stabiliser models IEEEST, PSS2A and PSS2B, and a machine `model` of GENTPJ (with `saturationKis`) or GENCLS.
+- PSS/E DYR: with `PsseDyrOptions.ExtendedLibrary` (gridsim: `--dyr-extended`) the reader maps GENCLS (X'd from the RAW record's ZSORCE reactance), ESST1A, EXST1, SCRX, ESAC1A, ESDC1A, IEEEST, PSS2A and PSS2B in their PSS/E record order, checked against the public PSS/E model library data sheets and NREL PowerSystems.jl or PowerWorld. A GENTPJ record is refused by name, because its record order is not public; GENTPJ comes from a `gridsim-dynamics/2` file. Without it the reader maps exactly what it did before. The RAW reader records each generator's ZX (`PsseParseResult.MachineSourceReactances`).
+- Tests: each model holds a flat start to rounding alone and in the RMS kernel; step responses agree with a SciPy reference integration (`tests/tooling/dynamic-library-reference.py`) and converge on it at first order in the step; every limit engages at its exact level; GENTPJ with Kis = 0 is GENROU bit for bit; DYR records map value by value and re-read to the same document; dense and sparse power flows, parallel runs and the three SIMD modes give the same bits.
+
+### Changed
+- Documentation: technical chapter 24, manual chapters 2, 15 and 19, the schema notes and the README describe the extended library and its scope. A saturated GENTPJ uses GENROU's saturation form with Kis added, not PSS/E's scaled reactances; IEEEST has no second-order filter terms; the stabilisers read speed and electrical power only; and the under-excitation limiter input of ESST1A is not modelled.
+
+## [2.1.080]
+
+### Added
+- Governors GGOV1 (the GE general governor-turbine model: electrical-power, valve-stroke, governor-output or isochronous droop, the PID governor, the load limiter with its exhaust temperature measurement, the acceleration limiter, the rate- and position-limited actuator, the fuel-speed switch, the supervisory load controller and the turbine rating base) and WSIEG1 (the WECC modified IEEE type 1 steam governor with its nonlinear gate-to-flow table and IBLOCK limit initialisation). Each starts at rest at the solved operating point. In the RMS study a governor that reads the electrical power is given each machine's start-of-step power; every other governor runs exactly as before. IEEEG1 was already in the library.
+- Dynamic loads in the RMS study: a third-order induction motor (PSS/E CIM5 and CIMW with a single cage; constant-power-law or CIMW polynomial load torque), a ZIP load with exponential recovery (Karlsson and Hill), and a documented subset of the WECC composite load CMLD (motor A, the static load, the substation transformer and the feeder; not motors B to D, the electronic load, distributed generation, the tap changer or the relays). A study takes them through `RmsLoadedMachineData`; each load takes its part of the bus load, starts at the solved voltage and draws its power there, with the reactive difference a shunt at the bus. With no dynamic load every number is unchanged.
+- `gridsim-dynamics/2` files take governor models GGOV1 and WSIEG1 (the `ggov1...` and `wsieg1...` parameters).
+- PSS/E DYR, with `--dyr-extended`: GGOV1, WSIEG1 and the CIM5BL induction motor load in their PSS/E record order, checked against the PSS/E model library data sheets and NREL PowerSystems.jl or the PowerWorld model pages. Refused by name: GGOV1 with a transport delay, a speed deadband or a negative Dm; WSIEG1 with a second shaft or a deadband; CIM5BL with a double cage, saturation or the under-voltage relay; the CIM5 subsystem forms; CIMWBL (one public source orders its last four values) and CMLDBLU1 and CMLDBLU2 (GridSim's CMLD is a smaller subset, built through the API). Without the option the reader maps exactly what it did before.
+- Tests: each governor and load holds a flat start alone and in the RMS kernel within derived bounds; step responses agree with SciPy integrations added to `tests/tooling/dynamic-library-reference.py`; GGOV1's droop settles at the analytical power and valve stroke and its load limiter at Ldref; the motor starts at the equivalent circuit's slip and torque, stalls below the analytical breakdown voltage and settles at the circuit's slip above it; DYR records map value by value; a study with no dynamic load is the historical one bit for bit; dense and sparse power flows, parallel runs and the three SIMD modes give the same bits.
+
+### Changed
+- Documentation: technical chapter 24, manual chapters 2, 15 and 19, the schema notes and the README describe the new governors and dynamic loads and their scope. The README no longer lists GGOV1 and WSIEG1 among the models GridSim does not have.
+
+## [2.1.081]
+
+### Added
+- Placed protection devices are evaluated on fault phasors by two new verbs. `protection-eval` measures every device in a `gridsim-devices/1` file on one three-phase, single line to ground, line to line or double line to ground fault at a bus or along a line: phase overcurrent (50/51) on the largest phase current, earth fault (50N/51N) on the residual current, directional overcurrent with quadrature (67), zero-sequence (67N) or negative-sequence (67Q) polarisation, distance (21) with mho or quadrilateral zones on its phase and earth loops, and the dual-slope biased line differential (87L). `protection-grade` runs the coordination checks over every bus: the grading margin of each device against its upstream backup, zone 1 not reaching the far bus, zone 2 covering it, zone 1 coverage along the line and earth-fault sensitivity, with every check that could not be made listed with its reason.
+- The device file takes optional `distance`, `directional` and `differential` settings (each only with its own function) and the function `87`. The schema stays `gridsim-devices/1`; every existing file reads exactly as before, and `sc-trace`, `fault-line`, `protection-audit` and the RMS in-loop relays are unchanged (a 21, 67, 50N, 51N or 87 is still listed there as not evaluated).
+- Core: `GridSim.Core.Protection.Placed` (`FaultPhasors`, `DistanceCharacteristics`, `PlacedElementEvaluator`, `PlacedCoordination`).
+- Tests: hand-derived cases for each element (apparent impedance along a line with resistance, mho and quadrilateral boundary points, the quadrature and zero-sequence direction angles, the residual current and IEC 60255-151 time of a single line to ground fault, the earth loop with k0 from the line, the line to line b-c loop, the 87L operate and restrain points), grading margins for 51N and 21 pairs in series, the older verbs bit for bit with and without the new settings, refusals, and repeat-run and culture invariance.
+
+### Changed
+- Documentation: technical chapter 26, manual chapters 12 and 19 and the README describe the new verbs and their scope. Not modelled: fault resistance in the static unbalanced fault, mutual-coupling compensation, teleprotection, power swing blocking, load encroachment, switch-onto-fault, CVT transients, 87T, 87B and line charging compensation; a 21 or 87 on a transformer is refused.
+
+## [2.1.082]
+
+### Changed
+- PSS/E sequence files: a non-empty LOAD section in a revision 33 or later file is refused with an error that names the section, because its field layout and units are not confirmed. An empty section is read as before.
+- Documentation: the README states which dynamic models follow a SciPy reference integration (EXST1, ESDC1A, ESST1A, IEEEST, PSS2A, GGOV1, WSIEG1, the induction motor, the ZIP recovery load and the CMLD subset), says the extended DYR models need `--dyr-extended`, and describes the RMS fault method as the balanced (positive-sequence) method of PSS/E and PowerFactory.
+- Tests: the SMIB critical clearing times are checked against the classical equal-area figure derived in the test, and the step-response tolerance of the dynamic library tests is derived in their comments.
+
+## [2.1.083]
+
+### Added
+- RMS models for static var compensators, STATCOMs and HVDC links: CSVGN1 (the PSS/E static var compensator: two lead-lag stages, the thyristor lag, the reactor range RMIN to MBASE and the fixed capacitor bank CBASE), STATCOM1 (a voltage-regulating STATCOM with a slope, a PI regulator, a current lag and capacitive and inductive current limits, so its output falls with V at the limit where an SVC's falls with V squared), LCC1 (a quasi-steady two-terminal LCC link after CDC4T: the DC current lag, the measured DC voltage, the power or current order with C0 and the VDCOL, the minimum firing angle with the inverter taking the current at the margin, blocking below VBLOCK and recovery after TBLOCK along the CRAMP and VRAMP ramps) and VSC1 (a P and Q controlled two-terminal VSC link with active and reactive lags, optional AC voltage control, a current limit with reactive or active priority, and the DC voltage converter delivering the power less the line and converter losses). Order changes during a run are given as order steps.
+- An SVC or STATCOM held as a generator takes its model through `SubtransientInit.MachineData.Facts`; a compensator, a STATCOM-mode FACTS device or a link of the case takes it by name through the new `RmsLoadedMachineData` constructor with a device list. Each starts on its power-flow state. With no device data the RMS study leaves these devices out, exactly as before, and every number is unchanged.
+- Device states are recorded per sample (`MultiMachineSubtransient.Result.Devices`) and `stability --rms --events --events-out` writes them to `rms-devices.csv` when the run has device models. `dynamics-study` takes an optional `devices` list.
+- PSS/E DYR, with `--dyr-extended`: CSVGN1 on a unit and CDC4T on a two-terminal DC line (its record starts with the quoted DC line name), in their published record orders. Refused by name: SVSMO1, SVSMO2, SVSMO3, CSVGN3 to CSVGN6, CSTCON and CSTATT (records not confirmed from two public sources; the STATCOM is API only), VSCDCT (record order not public; the VSC model is API only), CDC1T, CDC6, CDC6T, CDC7T and CDCMC, and a CDC4T with a non-zero VBYPAS, VUNBY, TBYPAS, RSVOLT, RSCUR or TCMODE. Without the option the reader is unchanged, error for error.
+- Tests: the flat start of every model, analytical steady states (the SVC droop point, the SVC and STATCOM at their limits, the STATCOM slope point), the SVC's linearised time constant, the LCC and VSC order steps against the closed-form lag response, LCC blocking and the recovery ramp, the VSC current limit and DC power balance, the DYR mapping and refusals, the pre-WP6 DYR errors and RMS bits pinned, and repeat, parallel and three-SIMD-mode runs giving the same bits.
+
+### Changed
+- Documentation: technical chapter 24, manual chapters 15 and 19 and the README describe the new models and their scope.
+
+## [2.1.084]
+
+### Added
+- `acopf-opt`: the full AC optimal power flow with a choice of objective: cost (as `acopf-full`), losses, or reactive power optimisation (`rpo`: the losses with every unit off the slack bus held at its case output). Units without a cost curve are accepted for the losses and `rpo` objectives. A `gridsim-opf-controls/1` file adds continuous transformer taps (by branch name, or every OLTC) and bus shunts as controls. After the continuous optimum each control is rounded to its step grid and the problem is solved again with the controls fixed; if that fails, one control at a time is flipped to its other neighbour, and a run where nothing works is reported as "rounded point infeasible" with the continuous optimum.
+- `acscopf`: a preventive or corrective AC security-constrained OPF over branch outages. The base case and each secured outage are network blocks of one interior point problem; preventive holds every unit off the slack bus at its base-case output after the outage, corrective lets it move by its ramp (`--ramp-mw` or a `gridsim-opf-ramps/1` file). Outages enter by constraint generation with an AC Newton screen; islanding outages are listed and not secured.
+- `reconfig`: distribution feeder reconfiguration for loss reduction by branch exchange (best improvement, deterministic tie-breaking), with optional switchable list, rating check and stop rules. On case33bw it reaches the published optimum (139.55 kW, branches 7, 9, 14, 32 and 37 open).
+- `MatpowerParser.ParseWithOpenBranches` reads a MATPOWER case keeping its status 0 branches out of service (the default reader still drops them); `reconfig` uses it so a feeder's open ties are there to close. The losses and reactive power objectives stop at tolerances of 1e-12 (the cost objective keeps MATPOWER's 1e-6).
+- `--out <file.csv|file.json>` on the three verbs writes the result as one table (`record,element,field,value`); the verbs are not on the shared `--json`/`--csv` writer list.
+- Core: `GridSim.Core.Analysis.Opf` (`AcOpfExtended`, `OpfControlSet`, `OpfRounding`, `AcScopf`, `OptimisationReport`) and `GridSim.Core.Analysis.Reconfiguration.FeederReconfiguration`. `AcOpfExtended` is a copy of the `acopf-full` interior point method; with no controls and the cost objective it gives the same bits as `acopf-full`. `acopf-full` and `scopf` are unchanged.
+- Tests: the copy against `acopf-full` bit for bit on case9 and case30, hand-derived two-bus cases (a reactive source, a tap with the rounding flip, a shunt with rounding), the tap and shunt derivatives against finite differences, SciPy loss optima for case9 and case30 and the case9 reactive power optimum, the two-bus SCOPF pair (preventive, and corrective with 30 and 60 MW ramps), constraint generation on case9 with ratings scaled by 0.75, the case33bw swap sequence and final configuration, tie-breaking and refusals, and repeat-run and culture invariance of the result files.
+
+### Changed
+- Documentation: technical chapter 29, manual chapters 6 and 19 and the README describe the new verbs and their scope. Not modelled: phase-shifter angle controls, angle-difference limits, discrete unit Q steps, mixed-integer optimality of the rounding; in the SCOPF, generator outages, N-2, post-outage tap and shunt control and PV/PQ switching inside the OPF blocks; in reconfiguration, unbalanced feeders and time series.
+
+## [2.1.085]
+
+### Changed
+- BREAKING CHANGE (B3): with `--dyr-extended --allow-unmodelled`, CSVGN1 records that were skipped before 2.1.083 are now modelled as SVCs, so results on that opt-in path changed in 2.1.083 (not in this release). Before, a CSVGN1 unit with no model and no inertia was held at its power-flow reactive power as a constant. It now follows the CSVGN1 control: the start is the same, and the results differ after a disturbance. Runs without both options are unchanged bit for bit.
+- An SVC or STATCOM bound to a network device now reports its power-flow reactive power as drawn power at its bus, as the LCC and VSC converters already do. This is defensive only: the power flow refuses an SVC or a shunt FACTS device at a generator bus (`CheckFactsBuses`), so no solvable case has a device and a generator on one bus and no case was affected or ever counted a Q twice. Every result is unchanged.
+- The LCC1 start is refused when the converter equations differ from the power flow's powers by more than 1e-9 (1 + |P|) MW, the power flow's AC/DC settling tolerance. Every case that started before still starts.
+- Documentation: the STATCOM1 current in technical chapter 24 reads V/|V|; the README sentence on the dynamic-model library is split in two.
+- Tests: a compensator and a STATCOM report their injection as drawn power (the power flow refuses either at a generator bus); the LCC start residual is asserted within its bound and a larger gap is refused; the placed-protection coordination test asserts its four G2 and G3 checks and the protection-grade exit code; the SMIB critical clearing time comment gives the SLG bounds and calls the X'q floor an estimate.
+
+## [2.1.086]
+
+### Added
+- `grid-code`: a grid-code compliance suite for one unit against the GB Grid Code European Connection Conditions (Issue 6 Revision 33) or Regulation (EU) 2016/631 (RfG). Checks: `frt-envelope` (the FRT voltage-against-time line on the RMS engine, with a three-phase or unbalanced sequence fault at the PCC), `frt-retained-voltage`, `frt-recovery` (converter units), `frt-uv-settings`, `q-capability` (a sub-model with the PCC as the slack at each test voltage), `lfsm-o`, `lfsm-u` and `fsm-step` (governor frequency injection, and a network variant for converter units), `rocof-settings`, `rocof-event` and `frequency-relays`. Each result gives the clause, the value, the limit, a signed margin and the verdict COMPLIANT, NON-COMPLIANT or INCOMPLETE. The study file is `gridsim-gridcode-study/1` (`schemas/gridcode`), the result `gridsim-gridcode/1`, written with `--out`; `--list` prints the requirement sets and checks. The verb is not on the shared `--json`/`--csv` writer list.
+- Requirement data ships as embedded `gridsim-gridcode-requirements/1` files, one per edition, every value with its clause. GB values are fixed; RfG values are the TSO's choices, refused outside the Regulation's ranges (Tables 3.1, 3.2, 7.1, 7.2, 4, 5, 8 and 9, Art. 13(2) and 15(2)(c)), with the 0.14 to 0.25 s clearing time only on request. RfG Table 2 is carried for all five synchronous areas.
+- Core: `GridSim.Core.Compliance.GridCode` (`FrtProfile`, `RfgRanges`, `GridCodeRequirements`, `GridCodeChecks`, `FrequencyInjection`, `GridCodeStudy`).
+- Tests: the GB lines bit for bit and every GB table read back, the RfG refusals, undervoltage settings against the line, the retained-voltage reactance, the FRT boundary on a two-machine RMS case (on the line: pass; 10 % deeper: not demonstrated, margin -0.021649484536082453), converter recovery from its trace, reactive capability against the two-bus closed form, LFSM-O and FSM against the exact governor response, RoCoF and frequency relay settings, never-a-silent-pass cases, bit-identity with a direct observed RMS run, and byte-identical documents across runs, cultures and CLI invocations.
+
+### Changed
+- Documentation: new technical chapter 39; manual chapters 15 and 19 and the README describe the suite and its scope. Not covered: the PPM reactive polygons of Figures ECC.6.3.2.4 to .6 (user-supplied only), faults over 140 ms and fast fault current injection, voltage control and AVR performance, unbalanced voltages away from the fault point, and the active-power recovery of synchronous units. The verdicts are study evidence, not a compliance certificate.
+
+## [2.1.087]
+
+### Fixed
+- Third round of review fixes. The 2.1.085 entries above were corrected: the SVC and STATCOM Draw change is defensive and affected no solvable case (the entry had said a device Q was counted twice), and the BREAKING CHANGE line now describes the old CSVGN1 behaviour as it was.
+- The grid-code requirement files are stored with no line-ending conversion (`-text` in `.gitattributes`, as for `models/`), so the `requirementsSha256` in a grid-code result is the same on Windows and Linux checkouts.
+- The LCC1 start bound gives each component its own scale (P by 1 + |P|, Q by 1 + |Q|) with 10 times the power flow's settling tolerance as margin. A start that was accepted before is still accepted.
+- Documentation: a doc comment in `MatpowerParser` moved back above the method it describes.
+- Tests: the AC-SCOPF on case9 at 0.7 ratings is not optimal (the claim in technical chapter 29); the constraint-generation test pins the secured set and the objective; the requirement bytes and hashes are pinned.
+
+## [2.1.088]
+
+### Changed
+- `grid-code` `frt-envelope` gives PASS only for a test on the line. A fault whose lowest PCC voltage stays more than 1e-3 pu above Uret is milder than the line and is now NOT DEMONSTRATED (it was a PASS). A voltage below the line after clearing is NOT DEMONSTRATED when the unit stays connected; a unit that loses synchronism or is tripped by its own relay after a fault on the line is a FAIL.
+- GB `frt-envelope` and `frt-recovery` check the ECC.6.3.15.8 pre-fault conditions: the unit at its rated MW (P = Pmax, not at the slack bus) and 1.0 pu at the PCC (to 1e-3 pu). A run that misses either is NOT DEMONSTRATED with the reason. The maximum leading power factor is not imposed, and the result says so.
+- A unit whose own relay stages the RMS run does not evaluate (a converter unit's relays) is NOT EVALUATED for staying connected in `frt-envelope` and for riding through in `rocof-event`; before, it could pass.
+- GB `lfsm-o` is read 10 s after the step (ECC.6.3.7.1.2(iii)), and any other `tEndSeconds` is refused; in the network variant the run must end 10 s after the first event. GB `lfsm-u` carries a note that the requirement set gives it no response time.
+- `fsm-step` refuses a step smaller than dP1 fn s, the smallest step a governor at droop s needs to reach dP1 (s the given `droop`, else the code's largest: 0.25 Hz for GB). The `droop` input now sizes this bound.
+- Documentation: technical chapter 39 and manual chapter 15 state what the FRT check shows and what it does not (the voltage after clearing is the network's own recovery), that GB LFSM-O is read at 10 s, that the 1.0 pu test voltage for GB type B reactive capability is GridSim's choice, and no longer claim a frequency-withstand check of RMS events.
+- Tests: a single machine against an infinite bus on the GB type D line, inside and outside its equal-area critical clearing time (pass, and fail on lost synchronism), a unit relay trip, a converter whose relays are not evaluated, an unbalanced fault judged on its smallest phase voltage (1/sqrt 3), GB LFSM-U, a GB LFSM-O failure at 10 s and the refused later read, the FSM step bound, `rocof-event` on a two-machine case with a closed-form RoCoF (fail, pass, not demonstrated), and the LFSM-O network variant; converter recovery is pinned to its hand value (0.05 pu).
+
+## [2.1.089]
+
+### Added
+- `reduce`: Ward, extended Ward and REI network equivalents. `gridsim reduce <case> --keep <ids|file> --method ward|xward|rei [--rei-groups gen|gen,load] [--out <case.m|case.json>]` solves the case with reactive limits off, keeps the named buses and replaces the external network with boundary elements: equivalent branches "EQ:i-j", row-sum shunts and constant-power injections (Ward); plus one PV source "XW:b" per boundary bus for the external PV buses (extended Ward, built from the complex Y with the external PV buses grounded, not the B'' matrix of the 1980 paper); or the external generators (and optionally loads) gathered on a fictitious bus through a zero-power-balance network, then Ward (REI). It prints the boundary, the elements, the notes and a base-case check (the reduced case solved from a flat start against the full solve), and writes the reduced case through the existing MATPOWER or v2 JSON writer. Refused by name: a slack outside the kept set, an external network not connected to the boundary, a phase shifter in it (non-reciprocal equivalent), ZIP loads, HVDC, FACTS, SVCs, induction machines, OLTCs, flow controls or boundaries touching it, and a non-converged base. Not on the shared `--json`/`--csv` writer list.
+- Core: `GridSim.Core.PowerFlow.Equivalents` (`NetworkReduction`, `WardMath`, `ReductionSpec`, `ReducedNetwork`). The Kron reduction (`SparseKronReduction`) is called unchanged; the transferred currents come from the same elimination on the matrix bordered by the injection column.
+- Tests: on case14 keeping buses 1 to 5, the equivalent admittance, injections, XW admittances and REI bus against an independent NumPy implementation; the reduced residual at the full voltages equal to the full residual to round-off and below 1e-12 pu; the reduced case from a flat start within 1e-12 pu of the full voltages, with flows and slack to 1e-9; a three-bus hand case; the REI zero-power-balance node voltage within its derived round-off bound; the pinned perturbation errors (20 % load rise at buses 3 and 4: 6.33e-4, 3.94e-5 and 6.97e-5 pu at the boundary); the bordered reduction bit for bit against the plain one; the refusals; byte-identical written cases across runs and cultures; and `reduce --out` then `pf` to 1e-10.
+
+### Changed
+- Documentation: new technical chapter 40; manual chapters 5 and 19 and the README describe the verb, the equations, the error figures and the scope (no dynamic or short-circuit equivalents, no external phase shifters or controls, unlimited or summed external reactive limits; not compared with PSS/E or PowerFactory equivalents).
+
+## [2.1.090]
+
+### Added
+- CGMES diagram layout, geographical location, short-circuit and dynamics profiles for bus-branch cases: `gridsim cgmes-export <case> --dir <folder> --profiles dl,gl,sc,dy [--geo <gridsim-geo.json>] [--dyr <file.dyr>]` writes the case as `<case>_EQ.xml` (the same bytes as `convert` writes) and each named profile as its own CGMES 2.4.15 document with an `md:FullModel` header. DL: one Diagram (orientation negative) with one point per bus. GL: WGS 84 Locations of the lines whose buses have sites in the new `gridsim-geo/1` sidecar (x = longitude, y = latitude); a site no such line touches is refused. SC: line and transformer zero-sequence impedances in ohms, winding connections (D, Y, Yn) with the neutral reactance, and machine X''d, X2 and zero-sequence impedance in per unit, each ohm value the double that reads back to the model's bits. DY: GENROU, GENSAL, GENCLS, SEXS, SCRX and TGOV1 as their IEC 61970-302 classes; any other model is refused by name. CGMES 3.0 is refused for this route.
+- Core: `CgmesExtraProfiles`, `CgmesDiagramLayout` (read with bounding-box scaling and orientation, and `Apply`), `GeoSidecar` and `CgmesGeographicalLocation` (read; other coordinate systems refused), `CgmesShortCircuitProfile.Apply` (returns a new model; refusals by name), `CgmesDynamicsProfile.Read` (DY to DYR records in PSS/E order, then the existing DYR reader; GovHydro1, unknown, user-defined and proprietary classes refused by name), `CgmesVocabulary.ExtraProfileUris` (the published 2.4.15 and 3.0 profile URIs) and `CimBridgeResult.BranchIndexOfMrid`.
+- `cgmes-shacl`: `gridsim cgmes-shacl <bundle.zip|folder> --shapes <folder|file> [--rdfs <folder|file>] [--profile-filter ...] [--report <file.csv|file.json>]` runs the user's SHACL shape files (for example the ENTSO-E CGMES-AP files) on a CGMES bundle with a native SHACL Core subset (no third-party library): class, node, subject and object targets, property, inverse and sequence paths, and the core value, cardinality, range, string, list, logical and property-pair constraints. Every SHACL-SPARQL constraint and target and every other component is listed as not run by name. Exit 0 conforms, 1 a result, 2 usage, 3 the shapes, the RDFS or the bundle cannot be read. Not on the shared `--json`/`--csv` writer list.
+- Core: `GridSim.Core.IO.Cim.Shacl` (`RdfGraph`, `RdfXmlReader`, `TurtleReader`, `ShaclValidator`, `ShaclReport`).
+- Tests: the existing CGMES writer, node-breaker export and `cgmes-conform` report pinned to their 2.1.089 bytes; the eight profile URIs; DL, GL, SC and DY round trips to the bits (SC: 60.70275 and 328.509 ohm on case9 line 4-5, the IEC 60909 SLG current at bus 5 equal to the bit, a Yn transformer with a 10 ohm neutral; DY: the same records and the same dynamics document byte for byte); the foreign DL scaling by hand; the refusals; hand-derived SHACL results, the Turtle subset, and reports identical across runs, file orders and cultures.
+
+### Changed
+- Documentation: technical chapter 32, manual chapter 19 and the README describe the profiles, the SHACL checker and their scope.
+
+## [2.1.091]
+
+### Added
+- Core object model `GridSim.Core.Api`: `CaseEditor` holds an immutable case with an ordered edit log and a revision; elements (bus, generator, load, branch, shunt) are keyed in model order (PSS/E machine and branch identities for a RAW case, else the model name or `G<bus>`, `<from>-<to>`); every write replaces element records with `with`, all values of a write are checked first and a refused write changes nothing. `LoadFlowView` reads a power-flow result by bus id and branch.
+- `gridsim rpc --protocol 2` (`gridsim-rpc/2`): every level 1 operation answered identically apart from the label, plus `elements`, `get` (with the solved branch flows on request), `set`, `edits`, `study` (pf, nminus1, nminus2, iec60909, fault, acopf-full, dcopf, scopf, stability on the case as edited; an edited case is written as a JSON v2 case, read back and written again, and studied only when the two writes are byte-identical) and `save` (RAW 33/34/35 or JSON v2, never over other content; confined to the working folder over `--listen`). Without the flag, and with `--protocol 1`, every byte is unchanged.
+- Python: `gridsim.ModelSession`, `Case`, `Element` and `LoadFlowResult` over protocol level 2, and `gridsim.psspy`, a psspy-style layer for a listed subset of calls (read, fnsl, busdat, machine and branch changes, subsystem arrays, dyre_new, strt, run and the disturbance calls) with GridSim's own ierr codes; every other psspy name raises NotImplementedError with the reason. Standard library only.
+- Scripting: `GRAMMAR 1 WITH STUDIES` turns on the STUDIES extension: `STUDY CONTINGENCY`, `STUDY SHORTCIRCUIT BUS`, `STUDY OPF`, `REPORT STUDY` and the readings `VIOLATIONS`, `WORST LOADING`, `OBJECTIVE OF STUDY`, `IK OF BUS ... IN STUDY` (unit KA) and `P OF GENERATOR ... IN STUDY`, running the Core code and defaults of nminus1, iec60909 and acopf-full on the plant as edited. The run record gains `grammarExtensions` and `studies` only for such a script; grammar 1 is unchanged.
+- The RC5 verbs `protection-eval`, `protection-grade`, `acopf-opt`, `acscopf`, `reconfig`, `grid-code`, `reduce` and `cgmes-shacl` write the shared `--json` / `--csv` result files (the five with an `--out` of their own keep it). The files of the existing writer verbs are unchanged byte for byte.
+
+### Changed
+- `cgmes-shacl` exit codes now match `cgmes-conform`: 3 when the bundle does not conform (was 1), 1 when the shapes, the RDFS or the bundle cannot be read (was 3). The verb is new in this release series and unreleased.
+- Documentation: new technical chapter 41; manual chapter 19 (rpc level 2, the Python object model and the psspy table, the writer list and the RC5 verbs' result files), manual chapter 35 (the STUDIES extension) and the README.
+- Tests: rpc level 1 transcripts byte for byte with and without `--protocol 1`; an edit then solve against `pf` on the file edited by text, and the undo against the original, bit for bit; studies of edited copies against `pf` on the original (case9, case118, a RAW 35 case); refusals and confined saves; the existing writer verbs' JSON and CSV files hashed against 2.1.090; each STUDY against the Core calls and those against the CLI verbs, bit for bit; Python tests of the object model and the psspy layer (a stepped dynamic run equal to one run). The `cgmes-shacl` exit-code assertions follow the change above.
+
+## [2.1.092]
+
+### Added
+- Model plug-ins: a .NET plug-in interface for dynamic models (contract version 1, `GridSim.Core.Dynamics.Plugins`). A plug-in assembly carries `[GridSimModelPlugin(1)]` and one `IUserModelFactory` class per model, in the role exciter, governor, stabiliser, injection (a generator-bound current source) or load. Plug-ins load only from the assemblies a `gridsim-plugins/1` configuration lists, and only when that file is named: each path must resolve inside the configured root (no `..` escape, no absolute path outside, no network or device path, no symbolic link or junction), its bytes must hash to the pinned SHA-256 (the same bytes are checked and loaded), and the listed ids must be unique and differ from the shipped models. Every entry is checked before anything is loaded, into one collectible load context per configuration.
+- A determinism lint run on the assembly's metadata before loading: it refuses, naming the member and the referencing type, threads, tasks, async, timers and locks; clocks; `Random`, `Guid.NewGuid`, `Object.GetHashCode` and `HashCode`; enumerating `Dictionary` and `HashSet` through their own `GetEnumerator`, `Keys` and `Values`, concurrent collections and `Hashtable`; file, network, console and process access, `System.Environment`, `AppContext` and `AppDomain`, P/Invoke, unsafe code, reflection emit and `Assembly`, `MethodBase` and `MethodInfo`; `System.Math` other than Abs, Min, Max, Sqrt, Floor, Ceiling, Round, Sign, Clamp and CopySign; `MathF`, vectors, intrinsics, `float` and `decimal`. When a model is bound, two instances stepped side by side for 200 steps (with a 0.01 pu input step at step 100) must agree bit for bit, or it is refused as "not deterministic (replay differs at step k)". This is a lint, not a sandbox: a plug-in runs with the user's rights.
+- `dynamics-study --model-assignments <file>` (`gridsim-model-assignments/1`): the command line's route to user models. It binds shipped or file declarative models, and with `--model-plugins <config>` plug-in models, to machines by RAW bus and id, as governor or exciter. The coverage of a plug-in record reads `SUPPORTED (PLUGIN, sha256:<assembly hash>, OUTSIDE THE VERIFIED CONTRACT)`, and the result's provenance gains `modelAssignments` and `plugins` (model, role, assembly, SHA-256, contract version, parameter values and the label). Without the new flags the result is byte-identical. A plug-in assignment without `--model-plugins` is refused. `rpc` refuses both plug-in routes over `--listen`.
+- `gridsim user-model check-plugin <config>` loads a configuration under every rule, binds each listed model at its defaults (the replay check) and prints its role, assembly hash and status.
+- Declarative models (`gridsim-model/1`) gain the roles `injection` (input `vm`, outputs `ip` and `iq` on the unit's MBASE) and `load` (input `vm`, outputs `p` and `q` as multiples of the load's P and Q), started from `p0`, `q0` and `v0`, and the `expr` block: an expression of `in0` to `in7` and `@Param` with `+ - * /`, unary minus, brackets, `min`, `max`, `abs`, `sqrt`, `exp` (DetMath) and `clamp`, compiled once to a fixed left-to-right evaluation order, with a declared output unit; a non-finite result refuses the step, naming the block. Injection and load models reach the RMS network by one route for plug-ins and documents: `SubtransientInit.MachineData.UserInjection` for a generator, `UserDynamicLoadData` in `RmsLoadedMachineData.Loads` for a load. A declarative document that names neither new role nor `expr` parses, hashes and runs exactly as before.
+- Core: `GridSim.Core.Security.PathConfinement` (the scripting `--confine` rule, moved; `GridSim.Scripting.PathConfinement` forwards to it with the same signatures), `ModelInstance.EvaluateHeld`, `DeclarativeInjection`, `DeclarativeLoad`, `PluginLoader`, `PluginVerifier`, `PluginReplay`, `PluginModel`, `PluginGovernorData`, `PluginFieldController`, `PluginStabiliser`, `UserDeviceModel`, `DynamicsStudyRequest.PluginModels`, `UserModelOverlay.ApplyAll` and the schemas `gridsim-plugins-1` and `gridsim-model-assignments-1`.
+- Tests: a sample plug-in (SAMPLE_TGOV1, SAMPLE_SEXS) and an `expr` TGOV1 bit for bit against the coded TGOV1 and SEXS at three step sizes, on IEEE 9 and in the dynamics study on the 14-bus fixture (through the API and the CLI); a constant-power plug-in injection at its closed-form two-bus operating point (0.0500837105807799 rad, 0.9987460731103327 pu) held to 1e-12 pu for 1 s; a declarative constant-impedance load against the static load and the closed-form faulted voltage 0.33081894288367963 pu to 1e-12; the `expr` grammar; a clock read refused by the lint and a shared static refused by the replay; every loading rule refused with nothing loaded; the shipped library, its hashes and its listing unchanged.
+
+### Changed
+- The refusal texts for an unknown role, an unknown block member and a block outside the catalogue list the new roles, members and `expr`. Valid documents are unaffected.
+- Documentation: technical chapter 24, manual chapters 15 and 19 and the README describe the plug-in contract, how to write a plug-in, the loading rules, the new roles and the `expr` block, and what is out of scope.
+
+## [2.1.093]
+
+### Added
+- PSS/E RAW reading records each generator's ZSORCE resistance ZR (`PsseParseResult.MachineSourceResistances`, per unit on MBASE; 0 when the field is left off). The case model does not use it, and every solved result is unchanged.
+- `CgmesDynamicsProfile.ArmatureResistancesOf`, `CgmesExtraOptions.MachineArmatureResistances` and `CgmesMachineKey.Ra`, so the DY profile carries the armature resistance.
+- `ShaclOutcome` (pass, fail, not run), `ShaclReport.Outcome` and `ShaclReport.Verdict`; the JSON report and the `cgmes-shacl` result files gain `verdict`.
+
+### Fixed
+- CGMES DY export wrote `statorResistance` = 0 for every machine. It now writes the RAW file's ZR, which is exact: PSS/E's machine models take the armature resistance from ZR on MBASE, and the bus-branch document's ratedS is MBase. The export needs ZR for every in-service machine and refuses a negative or non-numeric one. On import, `statorResistance` must equal the machine's ZR (0 when none is given) and is otherwise refused by name, for GENROU, GENSAL and GENCLS alike. The DY profile is new in this release series and unreleased.
+- `cgmes-shacl` could report a pass, or a false violation, for a constraint that holds a part the checker does not run. A shape inside sh:node, sh:or or sh:and with an unsupported component (sh:closed, sh:qualifiedValueShape, sh:sparql and the others) counted as passing, and the same shape inside sh:not gave a violation. A shape with a part not run now never passes. sh:node, sh:not, sh:and, sh:or and sh:xone follow three-valued logic and are decided only when the parts not run cannot change the answer; otherwise the outer constraint is listed as not run. The verdict is "conforms", "does not conform" or "not determined". `cgmes-shacl` exits 0 only for "conforms", and 3 for both other verdicts. The verb is unreleased.
+
+### Changed
+- Documentation: technical chapter 40 states the extended-Ward support path plainly (it stands in for the external PV buses' voltage support, with unlimited Q), gives the REI V_0 rounding bound counted from the operations (15.83 u T / |sum y| for two machines, with T including the y_R V_R term), and gives the Ward error reduction on the case14 example as 9 to 16 times. Technical chapter 32 and manual chapter 19 describe the three SHACL verdicts, the exit codes and the DY statorResistance.
+- Tests: the REI V_0 check uses the counted bound; the extended-Ward and REI comparison asserts only the order, not a fitted ratio; the WP10 DY tests pass the armature resistances. New tests pin one CGMES attribute literal per PSS/E CON position for GENROU, GENSAL, GENCLS, SEXS, SCRX and TGOV1, with every value in a record distinct; check ZR written and read back, and refused when it does not match; and check the SHACL outcomes of sh:closed and sh:qualifiedValueShape, alone and nested in sh:not, sh:node, sh:and, sh:or and sh:xone, and the `cgmes-shacl` exit for "not determined".
+
+## [2.1.094]
+
+### Added
+- `gridsim rpc --protocol 2`: `get` reads a generator's solved output, `p_solved_mw` and `q_solved_mvar` (by name, read only), from the pf solve of the case as it stands: the bus net injection plus the bus load at the solved voltage, shared between several units at a bus by `SolvedGeneration.UnitOutput`.
+- Python: `LoadFlowResult.generator(key)` (the solved P and Q of one unit), `ModelSession.host_token`, and `psspy.last_error()` (why the last dynamic call returned ierr 9).
+- Core: `CaseEditor.AttributeDifference`, which names the first object model attribute that differs between two models, doubles compared bit for bit.
+
+### Changed
+- Level 2 rpc handles carry a random token of the host instance: `case-<token>-1`, `case-<token>-2`, ... (16 hexadecimal digits), and the level 2 `hello` gains `host` (the token). A handle issued by another host, or by the same program before a restart, is refused as "not issued by this host", and a release of it releases nothing. Level 1 (`gridsim-rpc/1`, the default) is unchanged byte for byte: its handles are still `case-1`, `case-2`, ... and its hello has no `host`. Level 2 is new in this release series and unreleased, so this changes no released output; it does mean that level 2 transcripts now differ between runs in the handle and the hello.
+- A level 2 `study` of an edited case now also compares every object model attribute of the JSON v2 copy, as read back, with the held case, bit for bit, and is refused naming the first difference. The write-read-write comparison it already made is described as what it is: it shows the writer and reader agree (idempotent); it does not on its own show the copy is the held model.
+- psspy layer: every mapped call names its public source (the PSS/E 34 API manual section, or a public example call), and a layout no source confirms is refused rather than guessed.
+  - `writerawversion(vernum, out, ofile)` and `strt(option, outfile)` take PSS/E's argument order (the earlier forms had the last two arguments swapped). `writerawversion` writes only with `out` 0 (to a file).
+  - `rawd_2` accepts only the keyword form `rawd_2(sid, all, out=0, ofile=...)`; a positional status or option array is ierr 9.
+  - `readrawx` returns ierr 9: no public source confirms its arguments. Open a RAWX file with `ModelSession.open`.
+  - `fnsl` returns 0 when the solve ran, converged or not, as PSS/E does; `solved()` reports convergence. It returned 1 for "not converged", which clashed with ierr 1 "element not found".
+  - `loddt2` takes PSS/E's strings: 'MVA', 'IL', 'YL', 'TOTAL' with 'NOM' or 'ACT'. It answers only for a bus that holds exactly one load record with that id, and only for a constant-power load; 'ACT' needs a solve and a bus voltage of at least 0.7 pu (PSS/E's default PQBRAK). The 'O_' units, 'LDDGN', 'YNEG' and 'YZERO' are ierr 9.
+  - `loddt2` and `load_chng_5` with id '1' on a bus that holds more than one load record are ierr 9 (the object model aggregates loads per bus); an id the file does not hold at the bus is ierr 1.
+  - `load_chng_5` accepts a fifth `lodtyp` argument; a value other than blank is ierr 9.
+  - `macdat` 'P', 'Q' and 'MVA' and `amachreal` 'PGEN' and 'QGEN' return the machine's solved output (ierr 3 before a solve), not its set-point. A unit that shares its bus with another in-service unit is ierr 9.
+  - `brnmsc` takes PSS/E's 'P', 'Q' and 'MVA'; the percent loadings are ierr 9 and 'MW'/'MVAR' (not PSS/E strings) ierr 2. `abrnreal` adds 'MVA' and 'MXPCTMVARATA' (the larger end MVA as a percentage of rate A); its current-based percentages are ierr 9.
+  - The subsystem arrays honour `flag`: `abusint`/`abusreal` 1 or 2, `amachint`/`amachreal`/`amachchar` 1 to 4, `abrnint`/`abrnreal`/`abrnchar` 3 or 4 with entry 1 (GridSim does not tell a line from a two-winding transformer, so flags 1, 2, 5 and 6 are ierr 9). A flag for "all" elements is answered only when the RAW file has no IDE 4 bus, which the reader drops. The defaults are PSS/E's (flag 1).
+  - `dist_bus_fault` divides the fault admittance by the case's own system base, read from the RAW or RAWX file, not by 100 MVA. Units 2 and 3 remain ierr 9.
+  - `run` with no event recorded returns only the undisturbed time series from 0 to `tpause`. dynamics-study needs one event, so a branch trip is placed one step after `tpause` and the samples after `tpause` are cut off; the row no longer ends with a sample after a trip nobody asked for.
+  - The dynamic calls check an edited case before running it: the case is written as RAW 33, read back and compared attribute by attribute (bit for bit), then written again and compared byte for byte (apart from the two title lines). A case that does not survive is ierr 9 with the reason in `last_error()`.
+- Documentation: manual chapter 19 (rpc, Python and the psspy table), technical chapter 41 and the README describe the host token, the solved generator attributes, the study and save checks, case ownership and every psspy change, each psspy call with its source.
+- Tests: new `Rc5ReviewFix6Tests`: the attribute comparison (a JSON v2 round trip of case9 is equal; one unit in the last place of one Pg, and -0 for +0, are found and named); two simultaneous level 2 hosts refusing each other's handles with nothing released; a handle from before a restart refused by the new host; level 1 handles unchanged; a generator's solved output equal to the solve's bus injection bit for bit at the two unloaded generator buses of case9; save refusing a linked sibling `.network.json` over `--listen` and never writing through a link.
+- Tests: `Rc5Wp11RpcV2ProcessTests`: the level 1 load and solve lines are pinned in full, built from the documented built-in identity and the pf verb's result file; the level 2 transcripts read their handle from the load answer; the injection-versus-branch-flow check uses a rounding bound derived from the operations (32 u T) in place of 1e-9.
+- Tests (Python): new `test_case_ownership.py` (two simultaneous sessions and a restarted host at both levels; the same report through `GridSim.run` and `Session.run_verb` with `--out`). `test_psspy.py`: the run-in-steps test now compares with a dynamics-study file written by hand and run by the CLI, and checks that later events never change earlier samples; new tests for the case base in `dist_bus_fault`, the `loddt2` strings and a bus with two loads, solved machine output, `fnsl` on a solve that does not converge, the writing calls and the refused layouts, and the RAW 33 check before a dynamic run.
+
+### Fixed
+- Python sessions: a level 1 `CaseHandle` or level 2 `Case` belongs to the session that loaded it and to that session's host instance. Used with another session, or after its session's host restarted, it is refused before anything is sent, and `release()` of it marks nothing released. Before, every host's first case was `case-1`, so a handle from another session or an earlier host could solve or release a different case.
+- `Session.run_verb` refused `--out` for every verb. It now shares the one-shot wrapper's check, so `--out` passes for the verbs whose own output it names (`OWN_OUT_VERBS`), as `GridSim.run` allows.
+- Security: the level 2 `save` over `--listen` checked only the path it was given. For a JSON v2 case it also writes the sibling `.network.json`; every file written is now checked (confined to the host's working folder, and not a symbolic link or junction). Every target is refused if a link already stands at its name, and files are created new, so a dangling link placed at a target name is never written through, over `--listen` or not.
+
+## [2.1.095]
+
+### Changed
+- BREAKING CHANGE (B4, bug fix): the storage time series (`chain --bess`, `StorageTimeSeries.Run`) now counts the slack bus's own load at the solved slack voltage, by the same rule as the solver and `SolvedGeneration`. Before, a voltage-dependent (ZIP) load at the slack bus was counted at its nominal Pd, so the step's slack output was understated by Pd x (multiplier at the slack voltage - 1). For a constant-impedance 100 MW load at a slack held at 1.04 pu the slack output rises by 8.16 MW (100 x 1.04^2 = 108.16 MW in place of 100 MW). Only a voltage-dependent load at the slack bus is affected; constant-power loads, and loads at any other bus, give the same bits as before.
+- `DcPowerFlow.SolveBatch` groups models into families by hashing each B' structure once, so grouping is linear in the number of models even when every model has its own topology (it compared each new family's template with every later model). The families, their order, their members and every result are the same bits as before.
+- Documentation: manual chapters 19, 27 and 28 and technical chapter 27 describe the crossval checks, the default report template for a verb result, the family grouping and the slack output rule.
+- Tests: new `Rc5ExternalReviewTests` (the storage slack output with a constant-impedance load at the slack bus; DC batch family assignments equal to a pairwise scan, and results equal to the single solve, on a mixed-topology batch and on over a hundred distinct topologies; the default report template for verb results, in process and through the CLI; the crossval checks in the source).
+- Tests (Python): new `tools/crossval/tests/test_crossval_checks.py` (run with `python -m unittest discover -s tools/crossval/tests`; needs neither NumPy nor pandapower): an empty result, one missing bus, one duplicated bus, an unknown bus, the exit code; the reactive-limit comparison with -10 / +10 MVAr limits.
+
+### Fixed
+- `crossval.py` refuses an export whose result does not hold exactly one row per model bus (empty, a bus missing, a bus listed twice, or a bus the model lacks), with exit 3 and the ids named. Before, it compared only the rows present, so such an export could pass; `buses_compared` is now always the model's bus count.
+- `crossval.py` keeps which reactive limit each tool pinned. One tool at Qmax and the other at Qmin is a disagreement; before, the boundary rule measured the distance to the nearer of the two limits, so a unit at +10 MVAr in one tool and -10 MVAr in the other could pass as a boundary case. A boundary case now needs one tool pinned and the other free, measured from the free tool's output to the limit in dispute.
+- `gridsim report --template-for` failed on every verb `--json` result (`gridsim-cli-result/1`), whose tables are arrays of rows. It now writes a template that binds each table's rows, with a summary of the verb, the exit code and the summary values. Templates for workbench results are unchanged byte for byte.
+
+## [2.1.096]
+
+### Changed
+- The lint also refuses: members of `System.Double` other than the exact ones (so `double.Sin`, `double.Exp`, `double.FusedMultiplyAdd` and the rest of its maths, and its parsing and formatting); `System.Half`; `Parse`/`TryParse` on the integer types and `System.Convert`; `GetHashCode` on any type but the numbers, bool, char and enums (so `StringComparer`, `EqualityComparer`, string, tuple and object hash codes); `IEnumerable`, `IEnumerable<T>`, `ICollection`, `ICollection<T>` and the dictionary and set interfaces, LINQ, the enumerator and key/value collection types of `Dictionary` and `HashSet` and `HashSet.CopyTo`, `ImmutableHashSet`, `ImmutableDictionary`, frozen and specialised collections, and the JSON, XML and serialisation namespaces; `OperatingSystem`, the current culture (`CultureInfo.CurrentCulture` and its relatives, `NumberFormatInfo.CurrentInfo`, `RegionInfo.CurrentRegion`), `TimeZoneInfo`, `JitInfo`, `GCSettings`, `RuntimeFeature` and weak references; `System.Type`, the `System.Reflection` namespace (its attribute types excepted), expression trees and `Delegate.DynamicInvoke`. The lint checks names, not data flow. Text formatted with the current culture without naming it (interpolation, `ToString()` without a provider, culture-sensitive comparison) is not refused. Nor is a framework method that takes `IReadOnlyCollection<T>` or `object` and enumerates a dictionary or set handed to it. Plug-ins that keep the contract, including the samples, pass unchanged.
+- The replay check runs each model from two operating points: one instance alone from each, then two fresh instances side by side, one from each point. Each paired instance must repeat its solo run bit for bit. It now catches a static written in `Initialize` and read in `Step`, which two instances at the same point cannot show. Models that keep the contract bind unchanged. No numerical result changes: the check only accepts or refuses a model.
+- Documentation: technical chapter 24 and manual chapters 15 and 19 list exactly what the lint checks and what it does not, and describe the two-point replay.
+- Tests: new `Rc5ReviewFix7PluginIsolationTests` with plug-in projects `HostileDenylist`, `HostileStatic`, `HostileCore`, `HazardSample` and `LeakSample`. Plug-ins that try to change the lists, write host statics or reach Core outside the open namespaces are each refused before anything loads. Each named hazard is refused in compiled IL, naming its method. A set-point leaked through a static passes a same-point replay and is refused by the two-point replay. `rpc --listen` refuses both plug-in routes at level 1 (the `=` form included), and the stdio host does not apply that rule. `Rc5Wp12UserModelRouteTests` reads the lists through an internal view for its order check, and names the RMS goldens its no-opt-in test rests on. `Rc5Wp8GridCodeTests` T12 expects `grid-code --json` to exit 0 with a `gridsim-cli-result/1` file, as it has done since `grid-code` joined the shared writer in 2.1.091.
+
+### Security
+- Model plug-ins: the determinism lint's lists are now private immutable arrays. Before, they were public arrays, so a loaded plug-in could change them.
+- Model plug-ins may use GridSim.Core only in the namespaces `GridSim.Core.Dynamics.Models`, `GridSim.Core.Dynamics.Plugins` and `GridSim.Core.Numerics`, checked by name and by the assembly each type reference resolves to. In those namespaces the loader's own types (`PluginConfig`, `PluginLoader`, `PluginSet`, `PluginVerifier`, `PluginReplay`, `PluginDenylist`) and `SimdCapabilities`/`SimdTier` are refused. Before, all of GridSim.Core was open, including its file-writing `Save` and `Write` methods and its public static arrays.
+- The lint reads field tokens. A plug-in may not write a static field of another assembly (`stsfld`) or take its address (`ldsflda`). It may read one (`ldsfld`) only when the field holds a number, bool, char or string, so no host array or object can be written through. It also refuses an `IgnoresAccessChecksTo` attribute (defined or referenced), `UnsafeAccessor`, and any method without a body of its own (extern).
+- `rpc --listen` also refuses the attached form `--model-plugins=<file>`. `dynamics-study` does not accept that form today, so this guards a later change to its option parsing.
+
+## [2.1.097]
+
+Release candidate RC-5 of GridSim 2.1 (versions 2.1.074 to 2.1.097), built on RC-4 (2.1.073) and the RC-4-Fixes
+security release (2.1.074). Windows x64, Linux x64 and macOS arm64, self-contained, no .NET install needed. Every RC-4
+command, flag, default and exit code is unchanged except as listed under Changed, first of all the four BREAKING
+CHANGEs: none is at rounding level, and none touches a solve that converges within its iteration cap. The new work is in
+new verbs, options, model types and event kinds. Requirements, verification and known limits: RC5.md.
+
+### Changed
+- BREAKING CHANGE (B2, 2.1.075): a Newton power flow stopped by `MaxIterations` while it is still converging is no longer
+  retried from a DC-angle start, and a cap of 1 or less is never retried, so such a solve is reported `MaxIterations`
+  where RC-4 could report it converged. Magnitude: an outcome change on capped solves only, not a rounding difference.
+  case9 from flat start at `MaxIterations = 2` and `Tolerance = 1e-4` is now `MaxIterations`; RC-4 reported it converged
+  after four Newton steps. Every solve that converges within its cap, and every stalled solve the retry is for, gives
+  the same bits as RC-4.
+- Correction to the 2.1.075 entry: that change was listed under Fixed without a BREAKING CHANGE line. It changes a
+  result RC-4 reported, so it is a BREAKING CHANGE, stated in the entry above. The 2.1.075 text is left as it was.
+- BREAKING CHANGE (B3, 2.1.083, as described in 2.1.085 and corrected in 2.1.087): with `--dyr-extended --allow-unmodelled`
+  a CSVGN1 record is modelled as an SVC. Before, the unit was held at its power-flow reactive power. Magnitude: the start
+  is the same and the trajectories differ after a disturbance by the action of the CSVGN1 control; a modelling change
+  on an opt-in path, not a rounding difference. Runs without both options are unchanged bit for bit.
+- BREAKING CHANGE (B4, bug fix, 2.1.095): the storage time series counts a voltage-dependent load at the slack bus at the
+  solved slack voltage. Magnitude: the slack output rises by Pd x (load multiplier at the slack voltage - 1), 8.16 MW
+  for a constant-impedance 100 MW load at 1.04 pu. Constant-power loads and loads at other buses are unchanged.
+- BREAKING CHANGE (B1, 2.1.074): Script hosts: expressions deeper than 64 levels or 256 operations are a syntax error, and a host's limits
+  are checked before every statement, block and loop iteration, so a web console script that reaches its budget stops
+  there. `gridsim-script` and the desktop console set no limits and their run records are byte-identical.
+- Version 2.1.097. RC5.md is the release note. The README, the documentation index, both Contents pages, the site
+  navigation (technical chapters 39, 40 and 41) and the wiki pages name 2.1.097 RC-5 as the latest release; the wiki
+  CLI quick reference lists the new verbs.
+
+### Added
+- Per-unit generator protection (27/59, 32, 40, 81U/81O, 81R, 78) in the steady-state checks and both RMS engines,
+  with ENA and EREC G99 presets and `gridsim-unit-protection/1` for RAW-bound dynamics studies.
+- Unbalanced and impedance RMS faults on buses and lines; GENCLS, GENTPJ, ESST1A, EXST1, SCRX, ESAC1A, ESDC1A, IEEEST,
+  PSS2A, PSS2B, GGOV1 and WSIEG1; dynamic loads; CSVGN1, STATCOM1, LCC1 and VSC1; DYR mapping under `--dyr-extended`.
+- `protection-eval` and `protection-grade` (50/51, 50N/51N, 67, 21, 87L and coordination checks); `acopf-opt`,
+  `acscopf` and `reconfig`; `grid-code`; `reduce`; `cgmes-export --profiles dl,gl,sc,dy` and `cgmes-shacl`.
+- PSS/E RAW 36, RAWX, SEQ 33 to 36 and COMTRADE.
+- `GridSim.Core.Api`, `rpc --protocol 2`, Python `ModelSession` and `psspy`, and `GRAMMAR 1 WITH STUDIES`.
+- .NET model plug-ins (contract 1) behind a hash-pinned, confined configuration, a determinism lint and a two-point
+  replay check; declarative `injection` and `load` roles and the `expr` block.
+
+### Security
+- The RC-4-Fixes advisories (GHSA-38hc-fggf-q864, GHSA-2h96-qcc2-c9gh) and the 2.1.074 web, input and container
+  hardening; level 2 rpc handle ownership and confined saves (2.1.094); plug-in isolation (2.1.096).
+
+## [2.1.098]
+
+### Changed
+- BREAKING CHANGE (B5, bug fix): PSS/E RAW two-winding transformers refer R and X through the winding-2 ratio, as PSS/E
+  does (Z x w2^2, with w2 in per unit of the bus-J base; PSS/E PAG eq. 4.21b). This applies for every CW and CZ, and to
+  the base of an impedance correction table. Magnitude: R and X rise by 10.25 % for WINDV2 = 1.05 pu and fall by 9.75 %
+  for 0.95 pu. A unit with w2 = 1 is unchanged bit for bit, and so are three-winding units.
+- BREAKING CHANGE (B6, bug fix): DGS import refers a two-winding transformer's impedance to its LV terminal base, x
+  (utrn_l / uknom of the LV terminal)^2. Magnitude: +9.30 % in R and X for an 11.5 kV winding on an 11 kV terminal. A
+  winding rated at its terminal voltage is unchanged bit for bit.
+- BREAKING CHANGE (B7, bug fix): the battery cell's reversible heat is -I T dU/dT with discharge-positive current
+  (Bernardi, Pawlikowski and Newman 1985). It had the opposite sign. Magnitude: the reversible term changes sign, so a
+  cell with dU/dT below 0 heats on discharge where it was cooled. For an LFP cell (dU/dT = -0.05 mV/K) at 100 A and
+  25 C that is +1.49 W where it was -1.49 W, and cell temperatures follow. A chemistry with dU/dT = 0 is unchanged.
+- BREAKING CHANGE (B8, bug fix): the CGMES node-breaker reader applies a transformer's rated voltages against its nodes'
+  base voltages, as the bus-branch import already does: tap x n1/n2 and R, X x n2^2 (B / n2^2), n = ratedU / node kV.
+  Magnitude: for a 120 / 10.5 kV unit on 110 / 10 kV nodes the ratio rises by 3.90 % (x 1.038961) and R and X by
+  10.25 %. A unit rated at its node voltages, which is what GridSim's own export writes, is unchanged bit for bit.
+- BREAKING CHANGE (B9, bug fix): `g74` with an `iec60909-q` motor gives the IEC 60909-0 motor breaking current mu q Ik'',
+  with mu from the motor's own Ik''/IrM, and Ik'' at time 0. Before, it used q alone, and q at 0.02 s for every time up to
+  0.02 s. Magnitude: the motor part falls by the factor mu (0.707 at Ik''/IrM = 6.6 and 0.1 s, so -29 %); at time 0 a
+  motor below 0.78 MW per pole pair now gives Ik'' (0.6705 Ik'' before at 0.05 MW per pole pair). A time or `--tb`
+  between 0 and 0.02 s with such a motor and decay on is refused (exit 1), because IEC gives no factor there. Exponential
+  motors, synchronous machines and `--no-decay` runs are unchanged.
+- BREAKING CHANGE (B10, bug fix): the negative-sequence network of an RMS sequence fault carries each dynamic load by its
+  Norton admittance (as the positive sequence does; for an induction motor its locked-rotor admittance), with that share
+  taken out of the bus's constant load admittance. Magnitude: Z2 at the fault falls where a motor load is near it; with
+  a 100 MW motor load (X' = 0.2 pu on 120 MVA) beside a j0.1 pu source, Z2 is 0.0625 pu where it was 0.091 to 0.100 pu
+  (45 to 59 % high), and
+  line-to-line and earth-fault currents and trajectories change with it. Studies without dynamic loads, and three-phase
+  sequence faults, are unchanged bit for bit.
+- BREAKING CHANGE (B11, bug fix): in an RMS event study, two unbalanced sequence faults in place at the same time are
+  refused, naming the first, because one equivalent shunt per fault cannot represent a cross-country fault. A bolted bus
+  fault or a three-phase sequence fault in place beside an unbalanced fault is now in the unbalanced fault's negative-
+  and zero-sequence networks, which is exact. Magnitude: such event lists were accepted before; the unbalanced fault's
+  Z2 and Z0 now include the balanced fault's shunt, and an earth fault that had no earth path of its own now draws
+  current through the balanced fault (a single line to ground fault one j0.1 pu line from a three-phase fault through
+  j0.05 pu: Z0 = j0.35 pu, where before it drew nothing). Event lists with one fault at a time are unchanged bit for bit.
+- The HYGOV governor's description says plainly that it is GridSim's simplified hydro governor (droop from the actual
+  gate, linear water column), not the PSS/E HYGOV structure. No output changes.
+- PSS/E RAW import lists the number of load (IDE 1) buses that have an in-service machine. Its PG + jQG is solved as a
+  fixed injection, as before.
+- Tests: `CoreReviewFixTests` (new). `Rc5Wp2RmsSequenceFaultTests` overlapping-fault test updated to the new contract:
+  the overlapping line-to-line fault is shown refused, and the line fault is made three-phase, with the derivation in
+  the test.
+
+## [2.1.099]
+
+### Changed
+- BREAKING CHANGE (B12, bug fix): `acscopf` screens every secured outage again at the final dispatch (in corrective mode
+  with the unit outputs of that outage's block). An outage's block lets the unit voltages move after the outage and the
+  screen holds them, so a secured outage can still fail its screen. Such a run now ends with the new status
+  `SecuredOutageFailsScreen`, lists the outages in `AcScopfResult.UnresolvedSecuredOutages`, prints no optimum and
+  exits 3, where it reported a secured optimum and exited 0. Magnitude: case9 with every RateA x 0.75 was "Optimal"
+  with outages 7 and 8 secured; at that dispatch outage 7 leaves branch 5-6 at 115.35 MVA against 112.5 and outage 8
+  puts bus 4 at 1.1021 pu, so it now ends `SecuredOutageFailsScreen` [7,8]. The rounds, the secured set and the final
+  OPF are unchanged bit for bit; a run whose secured outages pass is unchanged.
+- BREAKING CHANGE (B13, bug fix): the `acopf-opt` tap shadow prices (`OpfControlValue.MuMin` and `MuMax` of a tap) are per
+  unit of the ratio tau. They were per unit of u = 1/tau, the variable the interior point method uses. Magnitude: x
+  1/tau^2, so +23.5 % at tau = 0.9 and -17.4 % at 1.1 (x 1.108 at 0.95). API only: the CLI and the report files do not
+  print them. Shunt prices and every other number are unchanged.
+- BREAKING CHANGE (B14, bug fix): the AC-OPF interior point method (`acopf-opt`, `acscopf`) ends as converged at the barrier
+  floor when the barrier parameter falls below machine epsilon while feasibility, gradient and cost change already meet
+  their tolerances. Before, that was a numerical failure. It happens when the complementarity tolerance is below what
+  the barrier can reach (about 2.2e-15 x inequalities / centring): case9 losses with a complementarity tolerance of
+  1e-15 failed at iteration 18 and now converge there, 2.3157971721728 MW (SciPy 2.3157971721609). Every run that
+  converged before is unchanged bit for bit, because the ordinary convergence test comes first.
+- BREAKING CHANGE (B15, bug fix): `acopf-opt` and `acscopf` refuse a tap control on a transformer whose OLTC (or reactive
+  power flow control) has an impedance correction table, naming it. The OPF holds the impedance at its case value, so
+  the optimum was for the wrong impedance. Magnitude: such cases are refused where they returned an optimum.
+- BREAKING CHANGE (B16, bug fix): QSTS self-consumption storage. Two or more self-consumption units on one bus share the
+  bus's net demand in proportion to their ratings. Before, each asked for the whole net demand. Magnitude: on a bus
+  with 1 MW of demand and two 1 MW units, each unit now gives 0.5 MW and the bus draws 0; before, each gave 1 MW and the
+  bus exported 1 MW. A lone unit on its bus is unchanged bit for bit.
+- BREAKING CHANGE (B17, bug fix): VSC1 (RMS). The DC voltage converter is driven by the power the power converter actually
+  exchanges, |V| Id after its current limit (0 below its voltage floor), so the DC side balances. Before, it delivered
+  the filtered power order whatever the power converter could exchange. Magnitude: a 100 MW order with the power
+  converter's bus at 0.1 pu and Imax 1.1 pu gives 10.761 MW at the voltage converter, where it gave 99.248 MW. A run
+  in which the power converter's current is never clipped is unchanged bit for bit. The voltage converter's own
+  current limit is still not fed back (a fault at its bus); that case is outside the model and is stated as such.
+- BREAKING CHANGE (B18, bug fix): the adaptive-step RMS run rejects a step with a NaN in any state. The error norm's
+  running maximum used to forget a NaN followed by a finite value, so the step was accepted and the run ended as loss of
+  synchronism. Magnitude: such runs now stop with the minimum-step error "(non-finite state)". Every finite run is
+  unchanged bit for bit.
+- BREAKING CHANGE (B19, bug fix): REEC_A, REEC_B and REEC_C link the non-windup of s2 and s3, as the WECC model description
+  says (and as REEC_D already did): when s3 is at a limit and pushes into it, s3 stops, and so does s2 if it pushes the
+  same way. Magnitude: with VFlag = QFlag = 1 and a sustained Q error, Vsel now holds where s3 reaches Iqmax (about
+  0.975 pu in the regression case) instead of winding up to Vmax (1.1 pu), so Iqcmd recovers sooner after the error
+  reverses. Runs in which s3 never reaches its limit are unchanged bit for bit.
+- BREAKING CHANGE (B20, bug fix): REEC_A, REEC_B and REEC_C with Tpord = 0 bypass the power order's freeze during a voltage
+  dip, as the WECC model description says; the Pmax and Pmin limits still apply. Magnitude: with Pref stepped from 0.8
+  to 0.6 pu in a dip, Pord is 0.6 pu after the rate limiter's step, where it stayed at 0.8 for the whole dip. Data with
+  Tpord above 0 is unchanged.
+
+### Added
+- State estimation: `EstimationOptions.LnrDetection` (off by default) also tests the largest normalised residual when
+  the chi-square test passes, and removes a removable row above the threshold. The chi-square test loses power as the
+  degrees of freedom grow; on case14's full set an active flow wrong by 8 sigma passes it and is now found. Off, every
+  result is unchanged bit for bit. `EstimationResult.MaxNormalizedResidual` and `MaxNormalizedResidualMeasurement`
+  report the largest finite normalised residual of the final pass whenever it was computed (NaN and null otherwise).
+- Tests: `CoreReviewFix2Tests` (new). `Rc5Wp7OptimisationTests` T11 updated to the new AC-SCOPF contract: case9 at 0.75
+  ratings now ends `SecuredOutageFailsScreen` with outages 7 and 8 unresolved, with the screen figures in the test.
+
+## [2.1.100]
+
+### Changed
+- BREAKING CHANGE (B21, bug fix): the PSS/E RAW reader and writer use PSS/E's sign for a VSC power converter's DCSET (TYPE
+  2): a positive DCSET feeds power into the AC network at the converter bus. It was read as power drawn from the bus.
+  This reverses the direction of every VSC link read from a RAW file with a TYPE 2 converter. Magnitude: DCSET = +100
+  at bus A now injects 100 MW at bus A and the far converter draws 100 MW plus the losses; before, bus A drew 100 MW
+  and the far converter delivered it less the losses, a swing of 200 MW plus twice the losses at each end. A RAW file
+  written by GridSim and read back by GridSim keeps the same link, because the writer negates it too. Links built
+  through the API (`VscConverter.DcSetpoint`, the MW drawn) are unchanged.
+- BREAKING CHANGE (B22, bug fix): the DGS importer maps an `ElmShnt` capacitor of `qcapn` MVAr to Bs = +qcapn, a capacitor
+  that injects qcapn MVAr at 1 pu. It was Bs = -qcapn, which made it a reactor. Magnitude: 2 x qcapn x V^2 MVAr at the
+  shunt's bus (a 12 MVAr capacitor injects 12 MVAr at 1 pu, where it absorbed 12).
+- BREAKING CHANGE (B23, bug fix): REEC_C at or below SOCmin stops discharge only, as the EPRI model description gives it:
+  Ipmax goes to 0 and Ipmin keeps -Ipmax from the current limit, so the store can still charge. Both limits went to 0
+  before, so a store at SOCmin could never charge again. Magnitude: with Imax = 1.2 pu, Ipmin is -1.2 pu at SOCmin
+  where it was 0, and a charging order of -0.5 pu gives Ipcmd = -0.5 pu (SOC rising at 0.05 per second with T = 10 s)
+  where it gave 0. Nothing changes while SOC is between its limits, nor at SOCmax, nor for REEC_A and REEC_B.
+- BREAKING CHANGE (B24, bug fix): small-signal analysis with inverters (`modal --enable-inverters`,
+  `SmallSignalAssembler.FromSolvedCaseWithInverters`). The COI rate of change of frequency read by a grid-forming
+  unit's synthetic-inertia term now includes the inverters' own power, as the machines' speed rows give it. It held
+  the machine terms only. Magnitude: one machine (H = 5 s, D = 0) with a grid-forming unit of tau = 0.05 s and
+  synthetic inertia x Base M_T / f0 has its actuator pole at -(1 + x) / tau, -40 at x = 1, where it was -20.
+  On data/gb-synthetic, `modal --enable-inverters` now finds no right-half-plane eigenvalue and exits 0, where the
+  missing term gave two and exit 1. Units with no synthetic inertia (the class default) are unchanged bit for bit.
+
+### Fixed
+- Docs: the bus shunt convention (Bs is the MVAr injected at 1 pu) and the VSC DCSET sign are stated in the API docs
+  and in the manual's PSS/E chapter. The known-limitations chapter records that the adaptive RMS step control scales
+  rotor angles by their absolute value, so its angle tolerance loosens on a long off-frequency run (about 93 times
+  after 60 s at 0.5 % off 50 Hz).
+- Tests: `CoreReviewFix3Tests` (new). Pinned values moved to the corrected contracts, with the derivation beside each:
+  `DgsImportTests` capacitor Bs +12 (was -12); `WeccRenewableModelTests` REEC_C Ipmin at SOCmin -1.2 (was 0);
+  `PsseVscTests.Case()` writes the TYPE 2 DCSET as minus the order drawn, so every expected value of `PsseVscTests` and
+  `PsseFactsTests` stands; `N179N180ModalExportAndMessagesTests` defective-matrix export test keeps
+  data/gb-synthetic, which is still defective, with exit code 0 and no right-half-plane eigenvalue (was 1 and 2).
+
+## [2.1.101]
+
+Release candidate RC-5 of GridSim 2.1 (versions 2.1.074 to 2.1.101), re-cut on top of the core-review fixes of 2.1.098
+to 2.1.100. It supersedes the earlier RC-5 cut, v2.1.097-RC-5. Windows x64, Linux x64 and macOS arm64, self-contained,
+no .NET install needed. Every RC-4 command, flag, default and exit code is unchanged except as listed under Changed in
+2.1.097, and the BREAKING CHANGE (bug fix) entries of 2.1.098, 2.1.099 and 2.1.100, each with its magnitude.
+Requirements, verification and known limits: RC5.md.
+
+### Changed
+- Version 2.1.101. RC5.md describes the re-cut: the core-review bug fixes are set out by area in its BREAKING CHANGE
+  section with their magnitudes, and its known limits add the adaptive-step angle tolerance, the VSC1 voltage
+  converter limit and QSTS storage in other modes. The README, the documentation index and the wiki pages name
+  2.1.101 RC-5 as the latest release.
+
+## [2.1.102]
+
+### Changed
+- BREAKING CHANGE (B25, bug fix): the losses and reactive power objectives of `acopf-opt` and `acscopf` now converge when a
+  post-outage block of the security-constrained problem leaves a direction of its state free (for example a slack
+  unit's voltage after the outage). Only the barrier holds such a direction, and the interior point step closes just
+  a tenth of the remaining gap to the barrier centre per iteration, so the equality residual fell by only 0.81 per
+  iteration and the barrier reached machine epsilon first. These runs ended as a numerical failure (`acscopf`
+  NotConverged, exit 3). When the barrier floor is reached with the gradient and cost-change tests met but not
+  feasibility, the point is now projected onto the power-balance equations by Newton steps and held to the same
+  1e-12 tolerances. If the projection does not meet them, the run still ends as a numerical failure, and the message
+  says why. Magnitude: on the two-bus cable case (cable outage), round 2 went from a numerical failure at iteration 18
+  with feasibility 7e-9 (a 7e-7 pu mismatch) to converged, with feasibility 5e-16 after one projection step that moved
+  the block by 1.4e-7 pu. The base loss is 0.25292247083168 MW against SciPy's 0.25292247083157 MW. Runs that
+  converged before are unchanged bit for bit, and so is the cost objective (`acopf-full` and the cost path of
+  `acopf-opt`).
+- Version 2.1.102.
+
+### Fixed
+- Docs: technical chapter 29 explains the barrier-floor feasibility correction, why the 1e-12 tolerance stays, and
+  the accuracy it guarantees.
+- Tests: `LossOpfCableConvergenceTests` (new). They check the round-2 loss against an independent SciPy optimum and
+  the reported states against the power-flow equations.
+
+## [2.1.103]
+
+### Changed
+- BREAKING CHANGE (B26): the variable-step (adaptive) RMS integration now gives rotor angles a fixed error scale,
+  `atol + rtol * 1 rad`, in place of `atol + rtol * |delta|`. Rotor angles are absolute and drift while the frequency
+  is off nominal (about 94 rad after 60 s at a 0.5 % offset), so the old scale loosened as they drifted, about 93 times
+  at 94 rad, and depended on where the angle reference sat. Every adaptive step sequence can change. Magnitude, against
+  2.1.102 on case14, case39 and case118 (GENROU machines, a load step to a 0.5 % offset, 120 s, default tolerances):
+  rotor-angle differences move by at most 4.4e-6 degrees (case14), 3.5e-6 degrees (case39) and 1.9e-4 degrees
+  (case118, 3.4e-6 rad), frequency by at most 1.2e-7, 1.1e-7 and 5.4e-6 Hz, and electrical power by at most 1.4e-5,
+  5.8e-5 and 1.9e-3 MW. Over the run the angles agree to 24.0, 21.4 and 16.5 of 53 bits (worst sample, up to 7e10
+  ulps), and at 120 s to 37.0, 33.9 and 30.2 bits (3.5e4 to 5.7e6 ulps). The 2.1.102 error of the same runs against a
+  converged reference is larger: up to 1.2e-3 degrees on case118. With `rtol 1e-8` the angles move by at most 2.1e-6
+  degrees. Accepted steps fall slightly (case118: 2462 to 2444 at the defaults, 3733 to 3683 at `rtol 1e-8`). No
+  stability verdict and no critical clearing time bracket changed. The largest angle spread, read at the accepted
+  steps, moved by at most 6.7e-4 degrees (case39). The fixed-step rows and every non-adaptive result are unchanged bit
+  for bit.
+- Version 2.1.103.
+
+### Fixed
+- Docs: technical chapter 36 describes the fixed angle scale and why a centre-of-inertia scale was not used; manual
+  chapter 19 states the error test of the adaptive rows.
+- Tests: `G4AdaptiveAngleToleranceTests` (new). Offsetting every angle by 2 pi k gives the identical step sequence, bit
+  for bit, and the swing kernel takes the same steps 2 pi k away. `UnitRelayInLoopTests` and
+  `UnitTransformerVoltageRelayTests` pin a SHA-256 of adaptive output; both hashes are re-captured, with the reason
+  beside each. Every other pinned value in them is unchanged.
+
+## [2.1.104]
+
+### Added
+- Run journal (off by default): `--journal <file.jsonl>`, `GRIDSIM_JOURNAL=<file>` or the per-user config file
+  `GridSim/journal.json` (`gridsim-journal-config/1`; `GRIDSIM_JOURNAL_CONFIG` names another) record each run as one
+  JSON line (`gridsim-journal/1`) when it ends: the command line, the SHA-256 of every input file and case-folder file,
+  the path and SHA-256 of every output, the exit code and the build. `GRIDSIM_JOURNAL=off` switches it off. Many runs
+  may write one journal at once; it rotates into segments at 64 MiB. `--journal-snapshot` also keeps each input in a
+  content-addressed, read-only snapshot store beside the journal. A run is byte for byte the same with the journal on
+  or off: same stdout, stderr, exit code and output files, and result files do not show the switch.
+- `gridsim breaking-change validate`: re-runs the journaled jobs on this build, in parallel (`--parallel N`), each as a
+  fresh single-threaded process in a scratch folder with every output path rewritten into it, and compares every output
+  with the recorded one bit for bit. Each entry is IDENTICAL, CHANGED (each field that moved, with its largest absolute,
+  relative and ulp difference and its fewest agreeing bits, and the breaking change that explains it, or UNEXPLAINED),
+  CANNOT-REPLAY with the reason, or SKIPPED-SAME-BUILD (recorded by this very build). Fields that carry only build or run
+  identity are left out of the comparison, from a list derived from the result schemas. A change matched to a
+  breaking change is EXPLAINED only when it lies within what that change claims (a bound from its measured magnitude,
+  an exact transform, or a status or exit-code transition); otherwise it is EXCEEDS-CLAIM, or AMBIGUOUS when claims
+  cannot be combined, and flagged like UNEXPLAINED. The report is the same for
+  every `--parallel` and lists entries in journal order. Exit 0 all identical, 3 anything changed, 1 anything that
+  cannot be re-run, 2 usage. `--since`, `--verb` and `--case` select entries.
+- `gridsim breaking-change import <dir|files>` builds journal entries from existing `--json` result files
+  (`gridsim-cli-result/1`), hashing their inputs at import, so results kept from an earlier release can be checked now.
+- `gridsim breaking-change list` prints the breaking-change map built into the release: every BREAKING CHANGE since
+  RC-4 with an ID (B1 to B26), the release it landed in, the verbs, options and input formats it can affect, and its
+  claimed effect on the fields it moves.
+- `breaking-change` writes its reports through the shared `--json` / `--csv` / `--out` writer.
+- Docs: manual chapters 3 and 19, the new technical chapter 42 (run journal and breaking-change validation) and the
+  README.
+
+### Changed
+- Docs: each BREAKING CHANGE bullet since RC-4 in this changelog now carries its ID after the label, as in
+  `BREAKING CHANGE (B5, bug fix):`. The 2.1.074 script limits bullet of 2.1.097 is labelled as BREAKING CHANGE B1. No
+  other wording changed.
+- Version 2.1.104.
+
+### Fixed
+- Tests: `RunJournalTests`, `BreakingChangeValidateTests`, `BreakingChangeMapTests`, `BreakingChangeClaimTests`, the census classes
+  `BreakingChangeCensus1Tests` to `BreakingChangeCensus4Tests` and `BreakingChangeCensusCoverageTests` (new). The pinned
+  writer-verb list in `CliResultWriterTests` gains `breaking-change`; no existing writer output changes.
+
+## [2.1.105]
+
+**RC-5 is a BREAKING CHANGE release.** Release candidate RC-5 of GridSim 2.1 (versions 2.1.074 to 2.1.105), re-cut on
+top of the loss-objective OPF fix (2.1.102), the adaptive-step angle scale (2.1.103) and the run journal (2.1.104). It
+supersedes the earlier RC-5 cuts, v2.1.097-RC-5 and v2.1.101-RC-5. Windows x64, Linux x64 and macOS arm64,
+self-contained, no .NET install needed. Twenty-six changes since RC-4, B1 to B26, can change a result, an outcome or
+an exit code that RC-4 gave; they are listed below, each with its magnitude, and set out in a table in RC5.md with
+why each was made, who it affects and how to keep the old behaviour where that is possible. Any change to a numerical
+path is labelled BREAKING, because no test can prove that a change has no effect on every path a user may run; the
+measurements give a change's size, never whether to label it. Everything else in RC-5 is additive, in new verbs,
+options, model types and event kinds. `gridsim breaking-change import` and `validate` check your own results against
+this list. Requirements, verification and known limits: RC5.md.
+
+### Changed
+- BREAKING CHANGE (B1, security, 2.1.074): script expressions deeper than 64 levels or 256 operations are a syntax
+  error, and script host limits are checked before every statement, block and loop iteration.
+- BREAKING CHANGE (B2, 2.1.075): a Newton solve stopped by its iteration cap while still converging is not retried
+  from a DC start (case9 at `MaxIterations = 2`: `MaxIterations`, where RC-4 reported converged).
+- BREAKING CHANGE (B3, 2.1.083): with `--dyr-extended --allow-unmodelled` a CSVGN1 unit follows its SVC control after
+  a disturbance instead of holding its power-flow Q.
+- BREAKING CHANGE (B4, bug fix, 2.1.095): the storage time series counts a voltage-dependent slack-bus load at the
+  solved voltage (+8.16 MW for 100 MW constant-impedance at 1.04 pu).
+- BREAKING CHANGE (B5, bug fix, 2.1.098): PSS/E two-winding R and X x w2^2 (+10.25 % at WINDV2 = 1.05 pu).
+- BREAKING CHANGE (B6, bug fix, 2.1.098): DGS two-winding impedance on the LV terminal base (+9.30 % for 11.5 kV on
+  11 kV).
+- BREAKING CHANGE (B7, bug fix, 2.1.098): battery cell reversible heat -I T dU/dT (LFP at 100 A, 25 C: +1.49 W where
+  it was -1.49 W).
+- BREAKING CHANGE (B8, bug fix, 2.1.098): CGMES node-breaker transformer ratings against node base voltages (ratio
+  +3.90 %, R and X +10.25 % for 120 / 10.5 kV on 110 / 10 kV).
+- BREAKING CHANGE (B9, bug fix, 2.1.098): `g74` `iec60909-q` motor breaking current mu q Ik'' (-29 % at Ik''/IrM 6.6
+  and 0.1 s); times between 0 and 0.02 s refused.
+- BREAKING CHANGE (B10, bug fix, 2.1.098): RMS sequence faults carry dynamic loads in Z2 (0.0625 pu where it was 0.091
+  to 0.100 pu).
+- BREAKING CHANGE (B11, bug fix, 2.1.098): two overlapping unbalanced RMS faults are refused; a balanced fault beside
+  an unbalanced one is in its Z2 and Z0.
+- BREAKING CHANGE (B12, bug fix, 2.1.099): `acscopf` re-screens secured outages (case9 at 0.75 ratings:
+  `SecuredOutageFailsScreen` [7, 8], exit 3, where it was optimal, exit 0).
+- BREAKING CHANGE (B13, bug fix, 2.1.099): `acopf-opt` tap shadow prices per unit of tau, x 1/tau^2 (API only).
+- BREAKING CHANGE (B14, bug fix, 2.1.099): the AC-OPF interior point method converges at the barrier floor where it
+  reported a numerical failure.
+- BREAKING CHANGE (B15, bug fix, 2.1.099): a tap control on a transformer with an impedance correction table is
+  refused.
+- BREAKING CHANGE (B16, bug fix, 2.1.099): QSTS self-consumption units on one bus share its demand by rating (0.5 MW
+  each where each gave 1 MW).
+- BREAKING CHANGE (B17, bug fix, 2.1.099): VSC1 balances its DC side after the current limit (10.761 MW where it gave
+  99.248 MW).
+- BREAKING CHANGE (B18, bug fix, 2.1.099): the adaptive-step RMS run rejects a step with a NaN state.
+- BREAKING CHANGE (B19, bug fix, 2.1.099): REEC_A, REEC_B and REEC_C link the s2 and s3 non-windup (Vsel near 0.975 pu
+  where it reached 1.1 pu).
+- BREAKING CHANGE (B20, bug fix, 2.1.099): REEC_A, REEC_B and REEC_C with Tpord = 0 bypass the power-order freeze in a
+  dip (Pord 0.6 pu where it held 0.8 pu).
+- BREAKING CHANGE (B21, bug fix, 2.1.100): PSS/E VSC DCSET sign (TYPE 2): the link reverses, a swing of 200 MW plus
+  twice the losses for DCSET = +100.
+- BREAKING CHANGE (B22, bug fix, 2.1.100): DGS `ElmShnt` capacitors are capacitors (2 x qcapn x V^2 MVAr swing).
+- BREAKING CHANGE (B23, bug fix, 2.1.100): REEC_C at SOCmin stops discharge only (Ipmin -1.2 pu where it was 0).
+- BREAKING CHANGE (B24, bug fix, 2.1.100): the small-signal RoCoF row includes the inverters' own power (pole -40
+  where it was -20; data/gb-synthetic exits 0 where it exited 1).
+- BREAKING CHANGE (B25, bug fix, 2.1.102): loss and reactive-power OPF converge when a post-outage block leaves a
+  direction free (feasibility 5e-16 where the run failed at 7e-9).
+- BREAKING CHANGE (B26, 2.1.103): adaptive-step RMS rotor angles get a fixed error scale (at most 1.9e-4 degrees,
+  5.4e-6 Hz and 1.9e-3 MW on case14, case39 and case118; 16.5 of 53 bits at worst over the run).
+- The breaking-change map built into the release carries a claim for every entry: B1 (exit 1 from `gridsim-script`),
+  B7 (the reversible heat negated) and B13 (x 1/tau^2 for taps between 0.9 and 1.1) state their exact effect; B3
+  cannot be bounded, so its claim is the qualitative change of model and every field such a run moves is flagged for
+  review. The map's SHA-256 changes with it.
+- Version 2.1.105. RC5.md opens with the release-wide BREAKING CHANGE banner and the table of B1 to B26, says how to
+  check your own results, and rewrites its known-limits entry on the adaptive angle tolerance, which 2.1.103 fixed. The
+  README, the documentation index and the wiki pages name 2.1.105 RC-5 as the latest release.
+
+### Fixed
+- Docs: the 2.1.097 entry counts four BREAKING CHANGEs (B1 is labelled too). Technical chapter 42 describes the claims
+  of B1, B3, B7 and B13.
+- Tests: the map hash pinned in `BreakingChangeMapTests` moves with the map.
+
+## [2.1.106]
+
+### Added
+- `pf --area-interchange <file.json>` (`gridsim-area-interchange/1`): area interchange control, tie lines only. Each
+  controlled area holds its net export at the desired value, within its tolerance, by moving the units at its swing bus
+  (shared by Pmax - Pmin, within their limits). Each tie is measured at its metered end, so its losses fall on the area
+  at the far end from the meter, as in PSS/E. An area whose units all reach a limit reads AT LIMIT. The area holding the
+  slack bus is reported, not controlled.
+- `pf --remote-vreg-file <file.json>` (`gridsim-remote-vreg/1`): a PV bus holds the voltage of a PQ bus by moving its own
+  set point between solves (secant steps, set point in [0.8, 1.2] pu, to 1e-8 pu). A bus that reaches its reactive
+  limit reads AT Q LIMIT. Two buses regulating one bus, a PV or slack regulated bus, and a regulated bus in another
+  island are refused by name.
+- Global switches `--area-control` and `--remote-vreg` give `pf` the same data from a PSS/E RAW file: the AREA records
+  (ISW, PDES, PTOL) with each branch's metered end (MET, a negative J, or NMETR on a two-winding transformer), and each
+  unit's IREG and VS. Without them the model and the parse notes are unchanged.
+- Python psspy: `aareaint` (`NUMBER`, `SWING`) and `aareareal` (`PDES`, `PTOL`, and `PINT`, the solved net interchange),
+  read from the RAW file, for the whole case.
+- Both controls run as outer loops around the unchanged engines, so dense and sparse solves agree to the bit, and the
+  returned state is the plain solve of the adjusted set points. The `pf` result file gains `areas` and `remote_vreg`
+  tables only when the options are given; without them the `pf --json` result is byte for byte as in 2.1.105 (hashed
+  for a revision 33 RAW file, case14 and case118).
+- Tests: `Rc5Wp13AreaControlTests` (closed forms for lossless and lossy ties, metered ends, AT LIMIT, the remote
+  regulation chain and its reactive limit, refusals, RAW options, and `pf --json` for case14 and case118 hashed against
+  2.1.105) and `python/tests/test_psspy_areas.py`.
+- Version 2.1.106.
+
+### Changed
+- The psspy refusal message for `bsys` now says that subsystem selection is not mapped (the area arrays read the whole
+  case).
+
+
+## [2.1.107]
+
+### Added
+- `breaking-change validate`: a job that moved under a breaking change with no bound now reads `UNBOUNDED (Bn)`, once
+  for the job, with every moved field and its largest absolute and relative change. It is no longer EXCEEDS-CLAIM.
+  B3 is the one such change. It is raised only for a job recorded with both `--dyr-extended` and
+  `--allow-unmodelled` whose DYR input holds a CSVGN1 record. When the DYR cannot be inspected, B3 is assumed and the
+  entry says so. Any other job is judged without B3.
+- `breaking-change validate --accept B3`: acknowledges those jobs. They read `REVIEWED (B3)`, the report records it
+  (summary `accepted_now`, table `reviews`), and so does `<journal name>.accept.json` beside the journal. Later runs
+  read REVIEWED only for the same job with no field moved further than accepted. A new job, a new field or a larger
+  movement reads UNBOUNDED again. Only a change with no bound can be accepted; another ID exits 2.
+- `breaking-change validate` exit code 4, review needed: the only changes are UNBOUNDED and nothing else is wrong.
+  EXCEEDS-CLAIM, AMBIGUOUS and UNEXPLAINED still exit 3, a run that cannot be re-run still exits 1, and REVIEWED
+  counts as nothing wrong (exit 0). The summary gains `changed_unbounded`, `changed_reviewed` and `accepted_now`; the
+  console counts line ends with `unbounded=N reviewed=N`.
+- Tests: `Rc5BreakingChangeUnboundedTests` (a B3 job is UNBOUNDED, a job outside the condition never is, accept then
+  re-run is REVIEWED with exit 0, a larger movement, a new field or a new job is flagged again, the exit codes, and the
+  CLI end to end).
+- Tests: `Rc5Wp13AreaControlTests` gains revision 30 and revision 34 RAW files with a transformer tie, hashed without
+  the options (parse notes, the converted model, `pf --json` and the `pf` console), console hashes for the revision 33
+  file, case14 and case118, the provenance of the 2.1.105 pins, a reported-area case, and two remote controls where
+  the second frees the first from its reactive limit.
+- Version 2.1.107.
+
+### Changed
+- `pf --area-control`: an AREA record with PTOL 0 MW or less, or whose swing bus (ISW) has no in-service unit, is now
+  reported with a note instead of stopping the run (it exited 1 before). The other areas are controlled as before.
+- Remote voltage regulation: a control at its reactive limit (AT Q LIMIT) is looked at again after every solve, and
+  released when another control's step brings its unit off the limit. Before, it stayed frozen for the rest of the
+  solve. A case with a single control, or with no control at a limit, is unchanged.
+- Python psspy: `aareaint` and `aareareal` now answer only what a public source confirms, flag 1 with `NUMBER` and
+  `PINT`. Flag 2 and the strings `SWING`, `PDES` and `PTOL` return ierr 9.
+
+### Fixed
+- The 2.1.106 entry said every `pf` output was unchanged without the new options. What was checked is the
+  `pf --json` result for three cases; it now says so.
+- Tests: `Rc5Wp13AreaControlTests` test 1 asserts the derived bound 2 x 100 x MaxMismatch + 4 ulp (from the first
+  pass's own mismatch) for the dispatch, the tie flow and both exports; test 6 derives its bounds from the solve's
+  remaining voltage error and mismatch through stated sensitivities. `python/tests/test_psspy_areas.py` checks the new
+  refusals.
+
+## [2.1.108]
+
+### Added
+- `acopf-opt`: phase-shifter angles as OPF controls. The controls file takes `"pst": [{"branch": ..., "minDeg": ..,
+  "maxDeg": .., "stepDeg": ..}]`; the range and step default to the branch's PSS/E COD 3 control, and a step of 0 keeps
+  the angle continuous. The angle is the MATPOWER shift, entering the transfer admittances only, with its gradient and
+  Hessian in the interior point method. The report lists it as `pst` in degrees, with shadow prices per degree.
+- `acopf-opt --rounding neighbours`: solves every floor/ceil combination of the discrete controls (at most 12, in
+  Gray-code order) and keeps the best feasible one; ties go to the lowest combination index. It is optimal over those
+  neighbours, not a global mixed-integer optimum. The default rounding (`flip`) is unchanged.
+- `acscopf` generator and N-2 outages: `AcScopfOptions.Outages` (`ScopfOutage`: branches and units), `--outages FILE`
+  (`gridsim-scopf-outages/1`), `--n2 pairs|FILE` and `--max-outages` (default cap 5000 pairs). A removed unit is held at
+  0 in its block with no coupling row, so the slack units (preventive) or the units within their ramps (corrective)
+  take up its output. A unit at a slack bus cannot be taken out. The screen of an outage that removes a unit also fails
+  when the slack bus's output leaves its units' range. Ids in the result are list positions, and each outage has a
+  label.
+- `tools/crossval/opf/pst_two_line.py`: the SciPy and mpmath reference for the phase-shifter loss minimum.
+- Tests: `Rc5Wp14OpfScopfTests` (the phase-shifter loss minimum against SciPy, the angle derivatives against finite
+  differences on case9, neighbours rounding against a direct enumeration, the hand-derived generator outages,
+  preventive and corrective, the slack-unit refusal, one-branch outages bit-identical to `Contingencies` on case9,
+  N-2 against an equivalent N-1, pair order and the cap, the outage file, the CLI). Existing `acopf-opt` and `acscopf`
+  outputs on case9 and case30 are pinned by hash to the 2.1.107 build.
+- Version 2.1.108. Without the new options, the `acopf-opt` result files and console output on case9 and case30 (all
+  three objectives, and case9 with a shunt control) and the `acscopf` ones on case9 (preventive and corrective) are
+  byte-identical to 2.1.107.
+
+## [2.1.109]
+
+### Added
+- Object model: adding and deleting elements. `CaseEditor.Add(kind, key, values)` adds a bus (an unused id, `base_kv`
+  required), a generator (`bus:id`), a load or fixed shunt (on a bus with none: GridSim holds one load and one shunt per
+  bus), or a branch (`from-to:circuit`, `x` required; `tap` or `shift_deg` makes it a transformer).
+  `CaseEditor.Delete(kind, key, cascade)` removes one; a bus with branches, units, a load or a shunt needs `cascade`,
+  which deletes them first (branches, units, load, shunt), and a branch named by a tap changer, flow control or mutual
+  record needs `cascade` too. A PQ bus that gets an in-service unit becomes PV, and a PV bus left with none becomes PQ;
+  the last unit at a slack bus stays. Every change is logged under one revision. Existing keys keep their elements; a
+  delete moves only the indices after it. A refused add or delete changes nothing.
+- `gridsim rpc --protocol 2`: the `add` and `delete` operations, with `set`'s reply and handle check. They are served
+  at level 2 but not listed by `hello`, whose list is unchanged.
+- Python: `Case.add(kind, key, **values)` and `Case.delete(kind, key, cascade=False)`.
+- `gridsim.psspy`: `bus_data_4`, `load_data_6`, `machine_data_4`, `plant_data_4`, `branch_data_3`,
+  `two_winding_data_6`, `shunt_data`, `purgbrn`, `purgmac`, `purgload`, `purgshunt`, `abuscplx` (`VOLTAGE`),
+  `amachcplx` (`PQGEN`), `abrncplx` (`RX`), `inibus`/`nxtbus`, `inimac`/`nxtmac` and `inibrn`/`nxtbrn`, each with two
+  public sources for its argument order. `load_data_7` and `extr` are refused with the reason.
+- Scripts (`GRAMMAR 1 WITH STUDIES`): `STUDY SCOPF AS c`, the `scopf` verb's DC preventive SCOPF with its defaults, read
+  by `OBJECTIVE OF STUDY c` and `SECURED OF STUDY c`. `SCOPF` and `SECURED` are not reserved words.
+- Tests: `Rc5Wp15ObjectModelAddDeleteTests` (an added two-bus case equals the case built directly and the closed-form
+  solution, delete undoes add, cascade order, bus types, key stability, one load per bus, the validity check, tap changer
+  records, the rpc operations, and the level 1 and level 2 transcripts pinned by hash to 2.1.108),
+  `Rc5Wp15ScriptPinTests` (script run records pinned by hash to 2.1.108), `Rc5Wp15ScopfStudyTests`,
+  `python/tests/test_psspy_add_delete.py`.
+- Version 2.1.109. Level 1 and level 2 rpc responses to every existing operation, and scripts without `STUDY SCOPF`,
+  are byte-identical to 2.1.108 apart from the version they name.
+
+## [2.1.110]
+
+### Changed
+- `acscopf` generator outages (`--outages`, `AcScopfOptions.Outages`): the lost output is shared by governor droop, as
+  PSS/E ACCC's dispatch by governor droop and PowerFactory's primary control do. Each remaining synchronous unit with a
+  dispatch range takes a fixed share of the removed units' output, in proportion to its MVA base (the weights of the
+  contingency screen's `GovernorDroop` mode). In each outage block a unit off the reference bus is held to its base output
+  plus its share (preventive) or may move by its ramp from there (corrective); the reference bus's units take their own
+  shares and the change in losses. Every unit's Pmin .. Pmax holds in every block, so the optimum keeps the reserve each
+  unit needs. The screen shares the same way, and fails when a unit's share takes it outside its range or the reference
+  bus's P or Q leaves its units' range. The slack bus no longer takes the whole lost output. Results of generator-outage
+  runs change; branch outages are unchanged.
+- `acscopf`: an outage of every unit at a slack bus is accepted. The reference moves to the bus of the largest remaining
+  unit, as in the contingency screen, in the outage block and in its screen. Taking out every unit is refused.
+- `gridsim rpc --protocol 2`: `hello` lists `add` and `delete`, after `save`.
+
+### Fixed
+- `acopf-opt`: a problem with no feasible point is reported as such. When the feasibility measure stops falling while the
+  multipliers grow and the iteration then breaks down, the status is `Infeasible` (not `NumericalFailure`) and the
+  message names the constraints whose multipliers grew. `acopf-opt case30 --objective rpo` is one: with the five units off
+  the slack bus held at their case output, no point meets the ratings (an independent phase-1 check needs them raised by
+  2.49 %; 6-8 and 21-22 at their ratings, bus 7 at Vmin, buses 25 and 29 at Vmax). The command still exits 3 with no
+  result file; stderr says "no solution: infeasible".
+- The message refusing controls in the AC-SCOPF names phase-shifter controls as well as taps and shunts.
+
+### Added
+- Scripts (`GRAMMAR 1 WITH STUDIES`): `STUDY RMS DYNAMICS "f.dyr" FAULT BUS "b" AT t CLEAR AT t FOR t AS r` and
+  `STUDY CCT DYNAMICS "f.dyr" FAULT BUS "b" AT t FOR t AS c`. They build the request the `dynamics-study` verb builds and
+  run it through the same Core runner, so their numbers are the verb's. Readings: `STABLE OF STUDY r` (1 or 0),
+  `FINAL FREQUENCY OF STUDY r` (HZ), `MIN VOLTAGE OF BUS "b" IN STUDY r` (PU), `CCT OF STUDY c` (S). The case must be a
+  PSS/E .raw file. The new words are read in place and are not reserved.
+- `tools/crossval/opf/case30_rpo_phase1.py`: the SciPy phase-1 check of case30's held-dispatch problem.
+- Tests: `Rc5Wp14ReviewFixTests` (case30 rpo infeasible with its binding constraints, the one screen routine, and pins
+  for tap controls, the Flipped status, `acscopf --objective losses` and CSV results); `Rc5Wp14OpfScopfTests` T5 to T7
+  rewritten for droop sharing and the reference move, at the 1e-12 settings with their bounds derived;
+  `Rc5Wp15DynamicStudyTests` (STUDY RMS and CCT bit for bit against the verb). The level 2 `hello` lists in
+  `Rc5Wp11RpcV2ProcessTests` and `python/tests/test_model.py` gain `add` and `delete`.
+- Version 2.1.110. Branch-outage `acscopf` runs, every `acopf-opt` run that converges, level 1 rpc and scripts without the
+  new studies are byte-identical to 2.1.109.
+
+## [2.1.111]
+
+### Added
+- RMS multi-terminal DC grids (MTDC1): `MtdcGridDynamicsData` binds a multi-terminal DC link of the case by name (the
+  `dynamics-study` device kind `mtdc`). Each DC bus holds its energy in its capacitance and its voltage follows the power
+  its converters send in less what its lines and ground take; the DC lines are the link's resistances. Each converter is
+  set to a power order, voltage droop or DC voltage control, and has VSC1's AC side (current limit with priority, reactive
+  power held or under AC voltage control). The run starts on the power flow's multi-terminal solution. `rms-devices.csv`
+  lists each DC bus voltage and each converter's DC power and reactive state.
+- Averaged MMC (MMC1) on an MTDC1 converter: `Mmc1Data` (N, C_SM, L_arm and an optional energy controller), after
+  Saad et al. (IEEE Trans. Power Delivery, 2013). Its equivalent capacitance 6 C_SM / N joins its DC bus; with the energy
+  controller on, its stored energy is kept apart and returned to its starting value.
+- VSC1: `Vsc1Data.DcFollowsLimitedPower` (`dcFollowsLimitedPower` in `dynamics-study`), off by default. When on, the DC
+  voltage converter's own current limit is fed back to the DC side: it delivers what its limit allows and the power
+  converter's power is cut to that plus the losses.
+- Tests: `Rc5Wp16MtdcMmcTests` (the energy ramp, bit for bit with power-of-two values; a two-terminal DC line against its
+  closed form and the power flow's MTDC solution; droop sharing; the flat start; the MMC's capacitance and energy
+  controller; the VSC1 voltage converter limit; MTDC1 in the RMS study, repeated and in parallel; refusals; and pins of
+  existing RMS results, the VSC1 trace and the DYR refusals taken from the 2.1.110 build).
+
+### Changed
+- Version 2.1.111. Every existing output is unchanged: without the new device kind or flag the RMS study is the same bit
+  for bit, and SVSMO1 to 3, CSVGN3 to 6, CSTCON, CSTATT and VSCDCT stay refused by name with the same reasons, since no
+  second public source confirms their record order.
+
+## [2.1.112]
+
+### Changed
+- `acopf-opt`: the status `Infeasible` is reported as "likely infeasible (the signature of a problem with no feasible
+  point)". The signature (the feasibility measure stalled while the complementarity grew, then a breakdown) is evidence
+  of an empty feasible set, not a proof. The message names "the constraints with the largest multipliers", which is what
+  it lists. The CLI reference documents the three failure lines of `acopf-opt` on stderr, including
+  `no solution: likely infeasible`.
+- psspy (Python): `purgbrn`, `purgmac`, `purgload`, `purgshunt`, `abuscplx`, `amachcplx`, `abrncplx` and `inimac` return
+  PSS/E's own ierr codes for every condition the API manual names (for example `purgbrn` 2 for a branch not found,
+  `purgload` 2 for no load at the bus and 3 for another id, `abuscplx` 6 for a string PSS/E does not have, `inimac` 2 for a
+  bus that is not a generator bus). A request PSS/E would answer and GridSim cannot returns 9, or 11 in `abrncplx`, where
+  PSS/E's 9 means an invalid string. The other psspy calls keep GridSim's codes.
+- psspy `two_winding_data_6` reads WN1BUS (intgar[8]): a new transformer is held from its winding-one bus, so WINDV1 and
+  ANG1 sit at that bus as in PSS/E. WN1BUS that is neither end, or a call that would put winding one on the other end of
+  a transformer already held, returns ierr 9 instead of setting the ratio and shift on the wrong side.
+- Object model: the islands without a slack that a structural edit leaves are accepted only while they exist. After every
+  accepted edit the accepted set is the islands of the model as it then stands, so a `set` that opens a branch and makes
+  an island is refused even when an earlier edit had made the same island and a later one closed it.
+- Docs: the governor-droop share of an AC-SCOPF generator outage is in proportion to each synchronous unit's effective
+  MVA base (MBASE, or the system base when it has none); power-flow-only and converter-interfaced units take no share.
+
+### Fixed
+- Two refusals of the MTDC1 data (`Mmc1Data` with N below 1, an MTDC1 control mode that is not defined) are
+  `ArgumentException`s that name the member in the message.
+- VSC1 with `DcFollowsLimitedPower` (opt-in, new in 2.1.111): under a sustained limit of the DC voltage converter the
+  power converter's cap now holds on every step. Before, the previous step's cap fed the next step's limit test, so the
+  cap was released on about two steps in three while the limit still bound, and the DC side did not balance on those
+  steps. Without the flag nothing changes.
+- MTDC1 droop: the droop order uses the DC voltage at the start of the step, so the loop is explicit and is stable on a DC
+  bus on its own exactly when the step is below 2 H V0 / Kd. A run whose step reaches that limit at any free droop bus is
+  refused, naming the bus and the limit, instead of growing without bound. The docs state the limit.
+- Docs: the multi-terminal DC power flow uses PSS/E's line-commutated converter equations, and MTDC1 runs every converter
+  as a lossless voltage-source converter from that solution (README, manual 15). Backward Euler for the DC network is
+  justified against trapezoidal as well as forward Euler (trapezoidal is A-stable but not L-stable and rings on the fast
+  DC modes).
+
+### Added
+- Tests: `Rc5Wp15ReviewFixTests` (an island reopened by a `set` is refused; one left by a structural edit is accepted until
+  closed), `Rc5Wp16MtdcCliTests` (the `mtdc` device of a `dynamics-study` file through the command line, bit for bit
+  against the same study through the API, and its refusals), `python/tests/test_psspy_api_codes.py` (each PSS/E code and
+  WN1BUS). `Rc5Wp14ReviewFixTests` and `python/tests/test_psspy_add_delete.py` follow the new wording and codes.
+- Tests: `Rc5Wp16MtdcMmcTests` gains a 60-step check of the VSC1 cap and DC balance on every step and a check of the
+  droop step limit; its flat-start bounds are re-derived with the per-unit rounding of the DC voltages (1.5e-9 pu of
+  power, 5e-11 pu of voltage), and the energy-ramp bound counts the reference's own roundings (5.4e-15).
+- Version 2.1.112.
+
+## [2.1.113]
+
+### Added
+- Distance protection (`protection-eval`, `protection-grade`): optional members of a device's `distance` object. A device
+  file without them gives exactly the output it gave before.
+  - `scheme`: DUTT, PUTT, POTT and DCB with the 21 at the other end of the line, with channel and coordination times.
+    `protection-eval` prints each end's aided trip time and adds the columns `scheme`, `aided` and `aided_trip_s`.
+  - A zone may be `reverse` (it looks behind the relay and sends the DCB block).
+  - `mutual`: zero-sequence mutual compensation of the earth loops from a parallel line between the same two buses, with
+    k0m given or taken from the case's mutual data.
+  - `loadEncroachment`: a load blinder that blocks phase loops in the load region; `protection-grade` adds check G6 (a zone
+    reaching the prefault load point) for a 21 that has one.
+  - `sotf`: switch-onto-fault on zone 2 or on phase current, for a fault marked with `protection-eval --energised true`.
+  - `powerSwing`: two-blinder power-swing blocking, run by `protection-eval --swing <trace.csv>` on a bus-voltage trace.
+  - `onTransformer`: a 21 on a two-winding transformer. It measures the transformer's impedance on its own side. Phase
+    loops need a shift that is a multiple of 30 degrees; earth loops need no shift and an explicit k0.
+- Tests: `Rc5Wp17DistanceSchemeTests` (scheme truth table and end-to-end POTT and DCB, mutual compensation with derived
+  bounds, load blinder and G6, power-swing blocking checked on every sample at 1 Hz and 3 Hz slip, switch-onto-fault,
+  distance through YNyn0, tapped and Yd1 transformers, the reader and refusals, the CLI) and `Rc5Wp17BitIdentityTests`
+  (the WP4 fixtures and case9 protection verbs hashed from the 2.1.112 build).
+- Version 2.1.113.
+
+### Changed
+- Docs: the CLI reference for `sc-trace` points to `protection-eval` for the functions it lists as not evaluated.
+
+## [2.1.114]
+
+### Added
+- Transformer and busbar differential protection (`protection-eval`, `protection-grade`): two optional members of an `87`
+  device. A device file without them gives exactly the output it gave before, and an 87 with a `differential` setting on
+  a transformer is still refused with the same words.
+  - `transformerDifferential` (87T) on a two-winding transformer: vector groups YNd1, Yd11, Dyn1, Dyn11, YNyn0, Yy0 and
+    Dd0, settings in pu of the transformer rating, and the dual-slope bias of the 87L. The star side is turned to match the
+    delta side and its zero sequence is removed; a YN side of a clock-0 unit has its zero sequence removed. The case's
+    phase shift and windings must agree with the group. A CT may sit on a link branch further out, which puts the
+    transformer's bus inside the zone. Fundamental phasors only: no inrush or harmonic restraint.
+  - `busDifferential` (87B): a zone of buses with CTs on the branches that leave it, currents scaled to the largest CT,
+    bias `sum` or `max`, single or dual slope, and an optional check zone. Units, loads and shunts at a zone bus count as
+    one feeder per bus.
+  - `protection-grade` adds G7 (every branch leaving an 87B zone has a CT; a missing one is named and the element is not
+    evaluated) and G8 (an 87T or 87B does not operate for any fault of the study outside its zone).
+- The three-phase fault result carries its fault current as a phasor, for the busbar differential. No existing output
+  uses it.
+- Tests: `Rc5Wp18DifferentialTests` (matrix identities, through-fault stability in every phase within derived rounding
+  bounds, the zero-sequence and matrix-assignment demonstrations, internal faults, busbar KCL against the engine's fault
+  current, bias, check zone, G7, G8, refusals, the CLI) and `Rc5Wp18BitIdentityTests` (Core and CLI outputs and refusal
+  texts hashed from the 2.1.113 build).
+- Version 2.1.114.
+
+## [2.1.115]
+
+### Changed
+- Distance protection (`protection-eval`, `protection-grade`; unreleased since 2.1.113):
+  - Switch-onto-fault acts only for the relays on the branch marked as closed onto the fault. A relay on another line
+    keeps its zone timers, so an adjacent line's zone 2 stays selective. `--energised true` with `--bus` is a usage
+    error, since no line is closed.
+  - DCB has a carrier stop: the remote end sends the block only when its reverse zone picks up and its zone 1 or zone 2
+    does not. A reverse zone that also covers a close-in internal fault no longer blocks the trip.
+  - `protection-eval --swing` also reads a `dynamics-study` result file as it is: its `busVoltage N` channels give the
+    same trace, bit for bit, as the CSV columns `vm_N` and `va_N`. The study must hold one fixed-time case.
+- psspy `two_winding_data_6`: a transformer already held keeps its stored winding one when WN1BUS is not given, in either
+  order of the ends, as PSS/E does (it was refused with ierr 9 when the call named the other end first with a winding
+  voltage or an angle). METBUS must be one of the two ends (ierr 9 otherwise), as in `branch_data_3`.
+- Docs: a reverse zone trips on its own `timeS` as a time-delayed back-up and enters grading like any zone (this was
+  already the behaviour); `sotf.windowS` is checked but does not change a static result, since every energised fault lies
+  inside the window; the swing trace's relay current uses the case's fixed tap, so a moving tap changer is not followed.
+- Tests: `Rc5Wp17ReviewFixTests` (switch-onto-fault on an adjacent line, the DCB carrier stop, a reverse-zone trip, the
+  dynamics-study result read as a swing trace bit for bit and through the CLI, the `--energised` refusal); a droop
+  run 1 % below and 1 % above the explicit step limit, with derived decay and growth bounds; the 60-step VSC1 test's
+  bounds derived in its comment; python psspy METBUS and stored-winding-one checks.
+- Version 2.1.115.
+
+## [2.1.116]
+
+### Changed
+- Transformer and busbar differentials (`protection-eval`, `protection-grade`; unreleased since 2.1.114):
+  - An 87T on a transformer whose case gives no winding data (either winding missing) is refused unless the group is
+    `YNyn0`. The fault study passes zero sequence through such a unit, so a YNd or Dyn 87T would have tripped on an
+    external earth fault.
+  - An `hvCt` or `lvCt` link is refused when the bus it puts inside the zone carries a load, shunt or unit, whose
+    current no CT measures.
+  - A fault along a branch at fraction 0 or 1 counts as a fault at that end bus when G8 and the evaluation decide
+    whether it lies inside an 87T or 87B zone, as the fault study already applies it.
+- Docs: for YNyn0, both I - J/3 on each side and CTC(11) on both star windings balance with ideal CTs.
+- Tests: `Rc5Wp18DifferentialTests` T4 and T5 now check the four CT feeders alone against 0 and against the engine's fault
+  current, within the network's own KCL residual; T2 and T2b count the transformer's CT pair once, so they assert the
+  derived 64 u bound; new T9 (no winding data), T10 (loaded inside bus) and T11 (fraction 0 and 1).
+- Version 2.1.116.
+
+## [2.1.117]
+
+### Added
+- Exciters EXDC2 and IEEEX1 (the IEEE dc commutator types DC2 and 1, on ESDC1A's data; EXDC2's regulator limits scale
+  with the terminal voltage), ESAC8B (the AC8B exciter with a PID regulator) and ESST3A (the compound-source static exciter
+  with its inner field-voltage loop, reading the terminal voltage and current); the stabiliser PSS2C (PSS2B with a fourth
+  lead-lag and an output logic on the electrical power); and the IEEEG3 hydro governor. Each is a `gridsim-dynamics/2`
+  template model (`dc1a...`, `ac8b...`, `st3a...`, `pss2c...` and `ieeeg3...` parameters) and runs in the RMS study.
+- PSS/E DYR, with `--dyr-extended`: the EXDC2, IEEEX1, ESAC8B, ESST3A and IEEEG3 records are read, value by value; each
+  record order is given in the same order by two public sources (the PSS/E 33 model library data sheets, and ANDES,
+  NREL PowerSystems.jl or PowerWorld). PSS2C, ESAC7B, HYGOV4 and GENQEC records are refused by name with the reason
+  (their order or structure has one public source or none). ESAC7B, HYGOV4 and GENQEC are not modelled.
+- Without `--dyr-extended` the reader is unchanged: these nine models are reported as models it does not map, with the
+  same message as before.
+
+### Changed
+- BREAKING CHANGE (B27, 2.1.117): with `--dyr-extended --allow-unmodelled`, an EXDC2, IEEEX1, ESAC8B, ESST3A or IEEEG3
+  record used to be left out (the unit ran with its field or mechanical power held); it is now modelled. The start is the
+  same; results differ after a disturbance. On case14 with these five records and a bus-4 fault cleared after 0.05 s,
+  over 3.15 s: rotor angles relative to bus 1 differ by up to 0.15 rad, speeds by up to 0.0142 pu and E'q by up to
+  0.196 pu. No bound holds for every case, so `breaking-change validate` reports an affected job as UNBOUNDED (B27).
+  Runs without both options, or without one of these records, are unchanged bit for bit. A PSS2C, ESAC7B, HYGOV4 or
+  GENQEC record is still left out, now with its reason in the notes.
+- `AcExciter`'s inverse of the rectifier regulation is shared with ESAC8B (the same arithmetic; EXAC1 and ESAC1A results
+  are unchanged).
+- Docs: technical chapter 24 (the new models, their DYR sources, what is refused and what is not modelled), manual
+  chapters 2, 15 and 19, the README library line and `schemas/schemaNotes.md`.
+- Tests: `Rc5Wp19ControllerLibraryTests` (flat starts, the EXDC2 ceiling at `Vt VRMAX`, the ESAC8B two-lag closed form and
+  SciPy chain, the ESAC8B integral ramp, the ESST3A source voltage, the IEEEG3 water column, PSS2C = PSS2B and
+  IEEEX1 = ESDC1A bit for bit, SciPy step responses, the DYR mapping and refusals); `Rc5Wp19BitIdentityTests` (the default
+  reader's message, the default and extended CLI runs and the extended document, hashed from the 2.1.116 build);
+  `tests/tooling/dynamic-library-reference.py` cases 15 to 19.
+- Version 2.1.117.
+
+## [2.1.118]
+
+### Fixed
+- The transformer differential (87T) with a CT on a link branch now also refuses an inside bus that carries an HVDC
+  converter (LCC, VSC or multi-terminal), a static var compensator or a FACTS device. The power flow injects at such a
+  bus, and no CT measures that current, so it would read as differential current. It is refused by name, as a load,
+  shunt or unit there already was.
+- ESST3A and EXDC2 finish their initialisation on the first step's terminal measurements. An RMS run that passes its own
+  voltage references and has a disturbance in force at t = 0 is now refused for these two models, as the automatic
+  references already were. Schedule the disturbance after t = 0. Other runs are unchanged bit for bit.
+- The ESAC8B DYR refusal for KE = 0 now gives the true reason: PSS/E's handling of KE = 0 for ESAC8B is not confirmed
+  by a public source. The rule that PSS/E computes KE at initialisation is sourced for the DC exciters only.
+
+### Changed
+- `breaking-change validate` knows B27 (2.1.117): a job run with both `--dyr-extended` and `--allow-unmodelled` whose
+  DYR holds an EXDC2, IEEEX1, ESAC8B, ESST3A or IEEEG3 record is reported UNBOUNDED (B27) and can be accepted with
+  `--accept B27`. Other jobs never are.
+- Docs: technical chapter 24 says that ANDES swaps the limits of EXDC2 (constant) and IEEEX1 (Vt-scaled), and why
+  GridSim's choice matches IEEE DC2, HYPERSIM (PSS/E 34.2) and OpenIPSL; the ESAC8B KE = 0 reason in chapter 24 and
+  manual chapter 2; the psspy `two_winding_data_6` WN1BUS rule now cites the PSS/E API's "no input" default
+  (`getdefaultint`) in the docstring and manual chapter 19.
+- Tests: `Rc5Wp18DifferentialTests` T10 adds a VSC terminal, an SVC, an LCC converter, a multi-terminal converter and a
+  STATCOM at the inside bus; T4 and T5 bound the CT sum by the measured prefault and fault-state KCL residuals at the bus
+  plus 40 u S, in place of an unproven LU bound. `Rc5Wp17ReviewFixTests` adds a DCB end-to-end test (external faults
+  behind the remote end, every fault type, the block holds) and drops two apparent-impedance asserts whose 1e-9 ohm
+  bound was not derived. `Rc5Wp19ReviewFixTests` (new) covers the t = 0 refusal; `Rc5BreakingChangeB27Tests` (new)
+  covers B27 in validate; `BreakingChangeMapTests` pins 27 entries and the new map hash; `Rc5BreakingChangeUnboundedTests`
+  expects B27 beside B3 where both apply.
+- Version 2.1.118.
+
+## [2.1.119]
+
+### Added
+- Fuller WECC composite load (CMLD) through the API: `CompositeLoadData.Extensions` (a `CompositeLoadExtensions`) adds
+  motors B and C (the third-order motor of motor A, each with its own fraction, loading factor and parameters), motor D
+  (`AcMotorParameters`: the WECC single-phase air-conditioner performance model with its run and stall curves, two-part
+  stall and restart, thermal relay, under-voltage relay and contactors), the electronic load (`ElectronicLoadParameters`,
+  the WECC specification's tripping and partial recovery), two-stage under-voltage relays on the three-phase motors
+  (`MotorUnderVoltageRelay`) and the substation tap changer (`CompositeLoadLtcParameters`: Tdel, Ttap, band, step and
+  limits). The equations follow the public WECC Composite Load Model Specification (2015, re-issued 2021). With
+  `Extensions` null a composite load is the WP3b subset, bit for bit.
+- Not included: distributed generation in the composite load, the frequency terms, motor D's voltage lag and inverse-time
+  stall, relay reconnection, line-drop compensation, and the CMLDBLU1, CMLDBLU2 and CIMWBL DYR records (still refused).
+- Docs: technical chapter 24 (CMLD extensions), manual chapter 15 and the README describe the fuller composite load.
+- Tests: `Rc5Wp20CompositeLoadTests` (new: flat start, motor D's curves, the stall, restart, relay, contactor, thermal and
+  tap-changer timers, the electronic load's pseudocode, motors B and C bit-equal to motor A, a SciPy step response at first
+  order, refusals and a case14 RMS run) and `Rc5Wp20BitIdentityTests` (new: the subset's bits pinned from the 2.1.118
+  build); `tests/tooling/dynamic-library-reference.py` adds case 20.
+- Version 2.1.119.
+
+## [2.1.120]
+
+### Changed
+- BREAKING CHANGE (B28, 2.1.120): an RMS run with a disturbance in force at t = 0 is now refused when a model sets a
+  state from the first step's measurements, because those come from the disturbed network. A run that gave a result
+  is refused instead (result to refused, exit 1 or 2, reached through the library API only: no gridsim verb starts a run
+  with a disturbance in force at t = 0); every run with no disturbance at t = 0 is unchanged bit for bit.
+  The models: GGOV1 reading the electrical power (Rselect 1 or a supervisory load controller), which sets Pref, Pmwset
+  and its power transducer from the first step's power; and, with the caller's voltage references through the API
+  (automatic references already refused every field controller), ESST4B, bus-fed SCRX, every library exciter with a
+  voltage transducer (TR above 0: EXDC2, IEEEX1, ESDC1A, ESAC8B, ESST1A, EXST1) and a library stabiliser on electrical
+  power or terminal voltage (IEEEST, PSS2A, PSS2B, PSS2C). 2.1.118 did the same for ESST3A and EXDC2. A stabiliser on
+  rotor speed alone reads a state, which no network change moves at t = 0, and still runs. Schedule the disturbance
+  after t = 0.
+
+### Fixed
+- `breaking-change validate` no longer raises B3 or B27 for a job that read no DYR file, such as a `pf` run or a run
+  whose `--dyn-data` is a JSON file, even when it carries `--dyr-extended --allow-unmodelled`. The change is assumed
+  only when the DYR cannot be inspected: a recorded DYR input whose bytes could not be read, or a `dynamics-study` job,
+  whose DYR is named inside the study file.
+- The transformer differential (87T) with a CT on a link branch no longer refuses an inside bus that carries a FACTS
+  device with no shunt element (ShuntMaxMva 0) and no UPFC series element there. Such a device injects nothing at the
+  bus. A UPFC whose terminal end is the inside bus is still refused.
+- Docs: manual chapter 19 narrows when B3 is assumed and says B27 follows the same rules; technical chapter 24 lists
+  every model the t = 0 refusal covers; technical chapter 26 says which FACTS devices stop an 87T zone.
+- Tests: `Rc5FirstStepInitialisationTests` (new) covers the t = 0 refusal per model, the models that still run, and
+  GGOV1. `Rc5BreakingChangeUnboundedTests` and `Rc5BreakingChangeB27Tests` cover a job with no DYR input (not raised),
+  an unreadable DYR input and a `dynamics-study` job (assumed); the CLI test's `pf` job is no longer unbounded and
+  accepts nothing. `Rc5Wp17ReviewFixTests` adds the DCB external-fault case with 150 MW of prefault load in each
+  direction: the block holds, so the carrier stop is unchanged. `Rc5Wp18DifferentialTests` adds T12 (a UPFC terminal
+  at the inside bus is refused; FACTS devices with no shunt element are accepted) and its T4/T5 comments say what the
+  CT-sum check covers: the CT end, sign and ratio. `BreakingChangeMapTests` pins 28 entries and the new map hash.
+- Version 2.1.120.
+
+## [2.1.121]
+
+### Added
+- Distributed generation in the WECC composite load (through the API): `CompositeLoadExtensions.Generation`, a
+  `CompositeLoadGeneration`, puts a DER_A unit (the existing DER_A model, unchanged) at the far-end node. It starts at a
+  given share of the far-end load power, at its power factor, so the bus still draws its power-flow P and Q; its current
+  enters every internal network solve and its states advance from the far-end voltage. Without `Generation` every
+  composite load is unchanged bit for bit.
+
+### Changed
+- BREAKING CHANGE (B29, 2.1.121): with `--dyr-extended`, the CMLDBLU1 and CMLDBLU2 refusal reasons are reworded. The
+  records are still refused, with the same exit code and no result. The old reasons said motors B to D, the electronic
+  load, the distributed generation, the LTC and the relays are not modelled, which is no longer true (they are, through
+  the API). The new CMLDBLU2 reason says what the DYR route still lacks: a second public source for the value order, and
+  the WECC initialisation of the substation shunt, feeder compensation and starting tap. CMLDBLU1 is refused by name as
+  the first CMLD version. Old message to new message, wording only.
+- The composite load's timers (motor D's stall, restart and under-voltage timers, the three-phase motor relays and the
+  tap changer) count whole steps and act on the step where the count times the step reaches the delay. Summing the step
+  lengths could act one step late when the step is not a power of two, for some delays (30 s at 0.005 s after 6001
+  steps, 0.1 s at 0.01 s after 11). With steps that are powers of two the counts agree, except for a delay within 4 ulps
+  above a whole number of steps.
+- A composite load is refused when its start would set off a part with no disturbance: the low-side voltage outside the
+  tap changer's band, or the far-end voltage below a three-phase motor relay's setting, motor D's under-voltage setting
+  or motor D's `Vc1off`. Motor D's contactors, when in use, are refused with a reconnection voltage below its drop
+  voltage or at 0.
+- Docs: technical chapter 24 (distributed generation, the timer rule, the quiet start, the GridPACK comparison: GridPACK
+  holds motor D's admittance only below Vbrk, GridSim in every run state, the CMLD DYR reasons), manual chapters 2 and
+  15, and the README (distributed generation; the SciPy check of the fuller CMLD covers voltages above Vbrk and Vd1).
+- Tests: `Rc5Wp20PartBTests` (new: the generation's flat start and bit-equality with a separate DER_A, the quiet-start and
+  contactor refusals, timers at 0.005 s and 0.01 s, the CMLD DYR reasons, the SciPy step response at 34 sample times
+  with its bounds stated, and the part A pieces pinned to the 2.1.120 bits); `tests/tooling/dynamic-library-reference.py`
+  adds case 20b; `BreakingChangeMapTests` pins 29 entries and the new map hash.
+- Version 2.1.121.
+
+## [2.1.122]
+
+### Changed
+- The DCB carrier stop now comes from the loops of the faulted phases at the remote end (single line to ground: the
+  earth loop a; line to line: the loop bc; double line to ground: bc, b and c; three-phase: every loop). Under heavy
+  prefault load a healthy-phase loop at the remote end can sit inside its forward zone 2 during an external fault
+  behind it (from about 200 MW across the test line); it used to stop the block, so the local end tripped at the
+  coordination time. Where no faulted-phase loop is measured (an earth fault seen by phase loops only, or earth loops
+  not released), any loop's forward pickup stops the carrier, as before. DCB came in 2.1.113, after the last tag.
+- An RMS run with a disturbance in force at t = 0 no longer refuses IEEEST on rotor speed with a voltage cut-off (VCU
+  or VCL above 0). The cut-off reads the terminal voltage on every step but holds no state, and the stabiliser's states
+  start from speed. A stabiliser is refused only when its first step sets a state from a network measurement: an input
+  on electrical power, or the PSS2C output logic. Each library stabiliser says so (`ReadsNetworkInputsAtStart`). This
+  narrows the 2.1.120 refusal, which no tag carries.
+- Motor D's contactors, when in use, now need `Vc2on` at or above `Vc1off`. With `Vc2on` below `Vc1off`, a steady
+  voltage between the two dropped part of motor D on one step and reconnected some of it on the next, without end. The
+  WECC defaults (0.5, 0.4, 0.6, 0.5) meet the rule.
+
+### Fixed
+- `breaking-change validate` checks a re-run that newly exits 1 or 2 against the exit-code claims of the breaking
+  changes that can explain the job before it reports CANNOT-REPLAY. A claimed refusal is CHANGED on `(exit code)`
+  alone, with its recorded outputs not compared, and the claim check explains it. Before, such a job was always
+  CANNOT-REPLAY, so an exit-code claim of 1 or 2 could never be matched.
+- A re-run that newly exits 2 with no claim now reads `replay exit 2 (usage error or refused run)`. It used to say the
+  command line was no longer accepted, which is wrong when a verb such as `stability` reports a refused run with exit 2.
+- B28 in the breaking-change map is now scoped to the API only. No CLI verb starts a run with a disturbance in force at
+  t = 0 (the `stability` fault and events come at 0.1 s or after the first step, and `dynamics-study` refuses an onset
+  or event time of 0), so B28 explains no journal job. Its condition now matches the CHANGELOG: a stabiliser on
+  electrical power or terminal voltage, and a stabiliser on rotor speed still runs.
+- `breaking-change validate` no longer assumes B3 or B27 for a `dynamics-study` job. That verb refuses
+  `--allow-unmodelled` and reads its DYR without the extended library, so neither change can act on it.
+- Docs: manual chapter 19 (exit-code claims, the `dynamics-study` case of B3, and that no re-run CLI job reaches B3
+  or B27 today, since `validate` does not re-run `stability`), technical chapter 24 (the t = 0 refusal
+  per stabiliser, API only; the contactor rule), technical chapter 42 (the exit-code claims and the CANNOT-REPLAY
+  reasons; the map runs B1 to B29). The 2.1.121 entry above no longer says its contactor check stopped the alternating
+  drop and reconnection, and says summed timers could act one step late for some delays.
+- Tests: `Rc5ReviewFix2120BreakingChangeTests`, `Rc5ReviewFix2120DcbTests` (the external-fault block swept from 0 to
+  205 MW in each direction, within 3 % of the power flow's transfer limit) and `Rc5ReviewFix2120StabiliserTests` (new);
+  `Rc5BreakingChangeUnboundedTests` drops the `dynamics-study` assumed case; `Rc5Wp20PartBTests` adds a far-end current
+  balance with an independent DER_A, the `Vc2on` refusals and corrected bounds in the SciPy ratio comment, and the part A
+  fixtures of it and `Rc5Wp20CompositeLoadTests` take `Vc2on` 0.45 (was 0.4, now refused); `BreakingChangeMapTests`
+  pins the new map hash.
+- Version 2.1.122.
+
+## [2.1.123]
+
+### Added
+- `gridsim long-term <case> <long-term.json> [--out <long-term.csv>]`: long-term (quasi-steady-state) simulation. Each
+  step is a power flow with one system frequency: governed units share an imbalance by their droops
+  (df = -dP / beta, beta = D + sum 1/R), and the loop stops when the reference bus is within a set tolerance of its
+  allocation. The slow elements step on from each equilibrium: single-area AGC (forward Euler), tap changer timers
+  (first and later delays, counted in whole steps, the tap changer itself from the case) and exponential recovery loads
+  (Karlsson and Hill). Disturbances (branch trip, generator trip, load step, set point) land on the first step at or
+  after their time. A failed power flow stops the run with "loss of short-term equilibrium" and the time (exit 3). The
+  input is `gridsim-long-term/1`; the result is one CSV row per step. Not on the shared `--json`/`--csv` writer.
+- A step schedule for the full RMS model: fixed steps of a different size in each window
+  (`RmsTransientStability.StudyEventsScheduled`, `StudyEventsObservedScheduled`, `dynamics-study`
+  `integration.stepSchedule`). A window must be a whole number of its own steps, and an event inside a coarser window
+  is refused. A one-window schedule is the fixed-step run bit for bit.
+- An error-controlled step for the full RMS model (`RmsErrorControl`, `StudyEventsErrorControlled`,
+  `StudyEventsObservedErrorControlled`, `dynamics-study` `integration.errorControl`). It cuts the run into segments that
+  start at every event, runs each schedule and the same schedule with every step halved, and halves the step of any
+  segment where the six machine states differ by more than the tolerance. Whole runs are repeated instead of single steps
+  taken back, so no model needs a state snapshot. The run returned is an ordinary schedule run. In `dynamics-study` a
+  row that misses the tolerance is INCOMPLETE, unless both runs of the last pass lost synchronism.
+- Docs: technical chapter 43 (new), technical chapter 24 (the integrator and its limits), manual chapters 15 and 19, the
+  README.
+- Tests: `Rc5Wp21LongTermTests`, `Rc5Wp21StepScheduleTests`, `Rc5Wp21ErrorControlTests`, `Rc5Wp21DynamicsStudyTests` and
+  `Rc5Wp21BitIdentityTests` (digests taken from the 2.1.122 build before the change).
+- Version 2.1.123.
+
+## [2.1.124]
+
+### Added
+- A weekly check of the .NET SDK and runtime: when global.json is behind the latest .NET 10.0 SDK, one issue is opened
+  or updated with the new version, its release date, whether it is a security release and its CVE ids, and it is
+  closed once global.json is current. The fix reaches users by rebuilding and releasing, since the builds carry the
+  .NET runtime.
+- Dependabot now also watches the SDK in global.json, weekly, and stays active while the other update pull requests
+  are paused.
+- Docs: SECURITY.md and RC5.md say how runtime updates are tracked.
+- Version 2.1.124.
+
+## [2.1.125]
+
+### Added
+- Four GB Grid Code checks in `grid-code`, run only when a study names them (`code` `gb-ecc`):
+  - `ffci-envelope`: fast fault current injection (ECC.6.3.16) on the same FRT run as `frt-envelope`. The unit's
+    reactive current, in pu of its rating, must stay on or above the edge of the forbidden area of Figures
+    ECC.6.3.16(b)/(c), from inception (the PCC first below 0.9 pu) until clearance, towards the target of Figure
+    ECC.6.3.16(a). Balanced faults only.
+  - `frt-long`: faults over 140 ms (ECC.6.3.15.9). Each labelled point of the voltage-duration profile is tested as a
+    dip held at the PCC by staged fault reactances. It is NOT DEMONSTRATED unless the PCC stays within 1e-3 pu of the
+    profile's voltage. Durations on the sloped parts of the NOT TO SCALE figures are NOT EVALUATED.
+  - `avr-step`: the ECC.A.6.2.4.1 open-circuit step from 90 % to 100 %, with the machine's flux equations at zero stator
+    current: the voltage must first reach 100 % in under 0.6 s and settle within 5 % of the change in under 3 s.
+  - `vctrl-step`: the ECC.A.7.2.3.1 reactive response of a PPM or HVDC converter to a voltage step made by the study's
+    events: commencement within 0.2 s, 90 % within 1 s or 2 s, and oscillation under 5 % for 5 s. The MVAr-seconds rule
+    is NOT EVALUATED, because its figure labels no level.
+- The requirement file `gb-ecc-issue6-rev33-ext` (`gridsim-gridcode-requirements-ext/1`), read from Issue 6 Revision
+  33, with every value's clause and figure, and figure-read values marked. A result that runs an extension check records
+  its hash as `requirementsExtSha256`. `grid-code --list` showed the extension checks on a new last line (moved to
+  `--list-ext` in 2.1.126).
+- `StepResponseMetrics`: crossing times by linear interpolation, overshoot, settling time and oscillation peak to peak,
+  read from a sampled trace.
+- Docs: technical chapter 39, manual chapters 15 and 19, the README, the study schema.
+- Tests: `Rc5Wp22GridCodeExtTests`, including hashes of existing `grid-code` results taken from the 2.1.123 build
+  before the change.
+- Version 2.1.125.
+
+### Changed
+- `grid-code`: the error for an unknown check id also listed the extension check ids, and `grid-code --list` printed them
+  on a fourth line. Both outputs are in tagged releases, so this was a change to existing output; 2.1.126 restores both
+  byte for byte and lists the extension checks under `--list-ext`. Every existing result file is unchanged.
+
+## [2.1.126]
+
+### Added
+- `grid-code --list-ext`: the GB extension requirement set and its check ids (`ffci-envelope`, `frt-long`, `avr-step`,
+  `vctrl-step`).
+- A study that runs an extension check adds a scope note naming which of the "not covered" topics it takes up. The
+  "not covered" note itself is unchanged.
+- `RmsErrorControlOptions.SafetyFactor` (`dynamics-study` `integration.errorControl.safetyFactor`, default 0.5): a
+  segment is accepted when its scaled difference is at most this share of the tolerance.
+
+### Changed
+- The error-controlled step of the full RMS model is EXPERIMENTAL: opt-in and not part of the verified contract. Its
+  error figure is a first-order step-doubling estimate, not a bound, and a run can cost up to 2 x `maxPasses` full
+  simulations (24 with the defaults). It now compares every recorded state (each converter's voltage, powers and
+  currents and each network device's states, besides the machine states) and applies the safety factor. Results that use
+  it carry the label (`stepControl.status`, `effectiveOptions.integration.errorControlStatus`). It is unreleased, so no
+  tagged result changes.
+- POTT: the permissive is keyed by the remote end's faulted-phase loops, as the DCB carrier stop has been since 2.1.122.
+  Under heavy prefault load a healthy-phase loop inside the remote zone 2 no longer sends it on an external fault. POTT
+  is in no tag, so no tagged result changes.
+- `ffci-envelope`: samples are judged only after 20 ms from inception, where the forbidden area of Figures
+  ECC.6.3.16(b)/(c) starts (before, a unit in steady state met the edge with a margin of exactly 0). For a pre-fault
+  reactive current above -0.312 pu the target line of Figure ECC.6.3.16(a) starts at the pre-fault current, GridSim's
+  reading of ECC.6.3.16.1.3, marked as such in the requirement file and the result notes.
+- `frt-long` uses the tolerances of `frt-envelope`: with a trip, a dip more than 1e-9 pu below the profile is NOT
+  DEMONSTRATED (it was 1e-3 pu); a trip in a milder test (the whole dip more than 1e-3 pu above the profile) is FAIL (it
+  was NOT DEMONSTRATED); a unit that stays connected through a dip below the profile passes, with a note.
+- `vctrl-step`: commencement is read from the unit's reactive current and must exceed 1 % of its steady change, so a
+  passive move of Q = V Iq with no control action no longer counts.
+- `avr-step`: the reference steps to the value that holds 1.0 pu in steady state (1.0 plus the exciter's steady error),
+  so a proportional AVR is judged against the voltage it was set to. A settling time is the sample after the last one
+  outside the band (it read up to one step early).
+- `long-term`: a frequency loop that runs out of passes stops the run with "numerical failure" and the time, not "loss
+  of short-term equilibrium". The AGC integrator is frozen in the direction its units cannot follow while every one is
+  at its limit (no windup).
+- `long-term`: the frequency loop keeps the frequencies seen on each side of the balance and bisects when a step would
+  leave them. A unit reaching or leaving a limit puts a kink in the balance, and the plain step could jump across it and
+  cycle without settling (seen when a load step that had driven a unit to Pmax was removed). A step inside the bracket is
+  the plain step, so runs that settled before give the same bits.
+- A step schedule with more than one step size refuses user and plug-in models (a user injection, a user dynamic load,
+  a user or plug-in field controller) in the library API too, as `dynamics-study` already did. An event inside a coarse
+  window is reported before the window grid is checked.
+
+### Fixed
+- The composite load's distributed-generation check names `Der` in its message instead of passing a member name as the
+  parameter name.
+- B28 in the breaking-change map no longer says a stabiliser on terminal voltage is refused (since 2.1.122 only one on
+  electrical power, or the PSS2C output logic, is); the 2.1.120 entry above is reached through the library API only.
+- Docs: manual chapters 15 and 19, technical chapters 24, 26, 39 and 43.
+- Tests: `Rc5ReviewFix2122PottTests` and `Rc5ReviewFixWp21Tests` (new); `Rc5ReviewFix2120BreakingChangeTests` (an
+  EXPLAINED change gives exit 3, as validate returns for any CHANGED result), `Rc5ReviewFix2120DcbTests` (the old-rule
+  check must run), `Rc5ReviewFix2120StabiliserTests` (IEEEST cut-off bit equality), `Rc5Wp20PartBTests` (the
+  tautological bus-current check removed; the case14 "2.1.120 bits" pin re-taken on a scratch build of 2.1.120 with the
+  fixture's `Vc2on` 0.45), `Rc5Wp21ErrorControlTests`, `Rc5Wp21StepScheduleTests` and `Rc5Wp21LongTermTests` (observed
+  figures recorded, comment corrected), `Rc5Wp22GridCodeExtTests` (FFCI margin pinned and derived, staging pass counts,
+  the new verdict rules, AVR steady state 1.0 pu, `--list-ext`), `BreakingChangeMapTests` (map hash).
+- Version 2.1.126.
+
+## [2.1.127]
+
+### Added
+- `breaking-change validate` re-runs the dynamics verbs `stability`, `long-term` (when `--out` names its CSV), `trip`
+  and `modal`, as it already re-ran `dynamics-study`. Their results are the RMS event export (`--events-out`), the
+  classical trajectory and the trip and small-signal exports (`--export`), and the long-term CSV. A console-only run
+  has no result file and is still not re-run.
+- The run journal hashes every file a dynamics input names inside itself: a `dynamics-study` file's RAW case, DYR, unit
+  protection file, device file and curves folder; each user model file a `--model-assignments` file names; each
+  assembly a `--model-plugins` configuration names. With `--journal-snapshot` they are kept in the snapshot store
+  (never a plug-in assembly). A re-run reads them where they were when their bytes are unchanged, else places the input
+  and every file it names in its scratch folder in the same layout. A file that is gone or changed with no snapshot makes
+  the job CANNOT-REPLAY, naming the file.
+- A plug-in job is re-run only when every assembly its configuration names is there with its pinned SHA-256. Otherwise
+  it is CANNOT-REPLAY (`plug-in assembly missing` or `plug-in assembly changed`, naming the file), and no re-run starts.
+- The fields of the dynamics result files that carry only identity are left out of the comparison: the host, build and
+  time fields of `run-metadata.json` (and of a report's `<report>.run-metadata.json`), and the run header lines at the
+  top of a CSV (time, build, runtime, machine, processor, SIMD tier and backend). The run description and provenance
+  lines of a CSV are still compared.
+
+### Changed
+- `breaking-change validate`: the other dynamics verbs now say why they are not re-run, in place of "not yet
+  classified": `transient`, `emt`, `replay-event`, `scenario`, `h0-study` and `evidence` (their summary or time series
+  carries wall time or the run header, and markdown is compared byte for byte), `impedance-stability` (its export carries
+  the time and host), `replay` and `fit-frequency` (no result file) and `fleet` (no two-run census yet).
+- `breaking-change validate`: B3 and B27 are raised only for a job whose DYR holds one of their records. A DYR that
+  cannot be read no longer raises them as "assumed"; the job is CANNOT-REPLAY (`input unreadable`) before it is re-run.
+  No study result changes.
+- `breaking-change validate`: a v2 case manifest (`gridsim-case/2`) is now resolved by the same code as the dynamics
+  inputs that name files: read in place when the manifest and every file it names still have their recorded bytes, else
+  placed with all its files in the scratch folder in the same layout, each from where it was or from the snapshot store.
+  The outcome of a manifest job is unchanged.
+- `breaking-change validate`, known limit: a `stability` job given its case folder with a relative `--dir` names the
+  folder as typed in its run description, and the re-run names its full path, so the job shows CHANGED on the run
+  description alone. Give the folder as a full path, or the case positionally.
+
+### Fixed
+- Docs: manual chapter 19, technical chapter 42, RC5.md.
+- Tests: `Rc5DynamicsReplayTests`, `Rc5DynamicsReplayPolicyTests` and `BreakingChangeDynamicsCensusTests` (new);
+  `Rc5ReviewFix2120BreakingChangeTests` (the journaled stability job is now re-run and IDENTICAL, where it was
+  CANNOT-REPLAY "not yet classified"), `Rc5BreakingChangeUnboundedTests` and `Rc5BreakingChangeB27Tests` (an unreadable
+  DYR raises nothing, where it raised "assumed").
+- Version 2.1.127.
+
+## [2.1.128]
+
+### Added
+- IEC 61400-27-1 style wind turbine models, Type 4A and Type 4B, with Dynawo's 2020 structure: the generator
+  system, the active power control (4B with the aerodynamic power lag and the two-mass drive train), the reactive power
+  control in its five modes with the fault, post-fault and normal states, the current limiter with reactive or active
+  priority and voltage-dependent limit tables, the PLL and the grid protection. They are implemented from public
+  open-source implementations (Dynawo, MPL-2.0) and the CGMES DY definitions; they are not checked against the
+  IEC 61400-27-1 text, which was not used. The parameter names are the CGMES 2.4.15 DY names, or Dynawo's 2020 names
+  where CGMES has none.
+- `dynamics-study`: an optional `iec61400` list binds a unit of the case to one of these turbines in place of its DYR
+  records. The unit's coverage row reads BOUND with the model's description, and `effectiveOptions.iec61400` gives the
+  source note. Without the list the study and its output are unchanged.
+- API: `SubtransientInit.MachineData.Iec61400` and `DynamicsStudyRequest.Iec61400Units`.
+
+### Fixed
+- Docs: technical chapter 24, manual chapters 15 and 19, README.
+- Tests: `Rc5Wp23Iec61400Tests` (new).
+- Version 2.1.128.
+
+## [2.1.129]
+
+### Added
+- `cgmes-export <case> --model bus-branch --cgmes-version 3.0` writes a bus-branch case as CGMES 3.0 EQ, TP, SSH and SV
+  documents, each with its 3.0 profile header, `IdentifiedObject.mRID` on every identified object and each attribute in
+  the profile the CGMES 3.0 RDFS gives it. The values are those of the 2.4.15 document, and GridSim's CIM reader reads
+  the same model back from either. With `--profiles` the DL, GL, SC and DY profiles are written in 3.0 too; the 3.0
+  short-circuit profile holds the machine r0, x0, r2 and x2 in ohms, as CGMES 3.0 does. (One attribute was not in its
+  3.0 profile here: `PowerTransformerEnd.connectionKind`, an Equipment attribute in 3.0, was written in the 3.0 SC
+  document; it is left out of it from 2.1.130.) Library:
+  `CgmesBusBranch30Writer` and a `CgmesExtraProfiles.Write` overload for its result.
+- Node-breaker three-winding transformers: an optional `transformers3w` list in `gridsim-substations/1`, projected as a
+  star bus and three branches with the PSS/E reader's star impedances, and written by the node-breaker CGMES export as a
+  PowerTransformer with three ends. `ThreeWindingStar` holds the star formula.
+- `cgmes-shacl --census <shapes>` lists every SHACL feature a shapes set uses, its count and whether the checker runs it,
+  with the number of SHACL-SPARQL constraints. Library: `ShaclValidator.Census`.
+
+### Changed
+- A `gridsim-substations/1` file with an unknown member is refused as before; the list of allowed members in the message
+  now names `transformers3w`.
+
+### Fixed
+- Docs: technical chapter 32, manual chapter 19, README.
+- Tests: `Rc5Wp24Cgmes30Tests` (new); `Rc5Wp23Iec61400Tests` caches its JSON options in one static field (analyzer rule
+  CA1869), with the same settings, so its asserts are unchanged.
+- Version 2.1.129.
+
+## [2.1.130]
+
+### Security
+- `breaking-change validate` never takes a plug-in assembly from the snapshot store, whatever the journal says. A
+  journal edited to mark an assembly as kept, with a store object holding its bytes, used to let a re-run place that
+  assembly; the job is now CANNOT-REPLAY (`plug-in assembly missing`) when the assembly is gone.
+
+### Added
+- The run journal records a dynamics study's curves folder itself by its file list, so a curve file added later is seen,
+  also when the folder was empty when the run was recorded. An absolute curves folder is listed again where it is on a
+  re-run and must hold exactly the recorded files; a relative one is placed holding exactly them.
+- The Python package wraps `breaking-change` (`GridSim.breaking_change`), which is on the CLI's writer list.
+- `cgmes-shacl` lists every SHACL-SPARQL constraint it meets as NOT CHECKED with its shape, also when its target selects
+  nothing; one that applies makes the verdict "not determined", never "conforms". GridSim has no SPARQL engine.
+
+### Changed
+- IEC 61400 Type 4 turbines: the protection measures frequency through Dynawo's Derivative block (the terminal angle's
+  derivative lagged by tffilt / 20) in place of the plain one-step difference. With tffilt = 0 the result is as before.
+- `cgmes-export --model bus-branch --cgmes-version 3.0`: every ACLineSegment carries its `ConductingEquipment.BaseVoltage`
+  and sits in a `Line` container of its own; the EQ header names the CoreEquipment-EU profile only (nothing of
+  Operation-EU is written). The 3.0 SC document leaves `PowerTransformerEnd.connectionKind` out (an Equipment attribute in
+  CGMES 3.0) and lists the omission. The 2.4.15 documents are unchanged.
+- Node-breaker CGMES 3.0 export: a three-winding unit's tap changers carry `TapChanger.neutralU`, `ltcFlag` and, on a
+  linear phase changer, `xMin` and `xMax`, as CGMES 3.0 requires. The 2.4.15 document is unchanged.
+- The `GeneratingUnit.normalPF` omission now reads "the case holds none" (distributed-slack factors are a solve option,
+  not model data).
+
+### Fixed
+- `breaking-change validate`: a `dynamics-study` job with `--model-assignments` showed CHANGED on
+  `provenance.modelAssignments.file`, which names the file by its name alone; it replays IDENTICAL.
+- Docs: the CGMES 3.0 shape claims now name the four "Simple" CGMES-AP files they were judged on; the "Complex" files hold
+  SHACL-SPARQL constraints, are NOT CHECKED and find more on case14. Dynawo does ship reference curves for its Neplan
+  WT4A and WT4B 2020 examples; the technical chapter now says so and why they cannot be compared with the model as built
+  (reference steps the model has no input for, a controller state held at a limit, no voltage phase in the files, and
+  Dynawo's ElecSystem, not built). The protection tables `tuover`, `tuunder`, `tfover` and `tfunder` follow Dynawo's 2020
+  tables under the CGMES names. Technical chapters 24, 32 and 42, manual chapter 19, README, Python README.
+- Tests: `Rc5Batch2VerifyJournalTests`, `Rc5Batch2VerifyIec61400Tests` (with a decimated copy of Dynawo's WT4A and WT4B
+  2020 reference curves, MPL-2.0) and `Rc5Batch2VerifyCgmesTests` (new). `Rc5Wp15ScriptPinTests`: the pins held only in
+  the folder they were taken in (the script's case path reached the record's statement text and script hashes); the
+  path is now replaced in every spelling and the script hashes checked then masked, and the pins re-taken from the 2.1.126
+  build, with no change of record. `BreakingChangeValidateTests` T6 fails when no link or junction can be made, where it
+  returned early. `Rc5BreakingChangeUnboundedTests` and `Rc5BreakingChangeB27Tests` assert the exact verdict for an
+  unreadable DYR. `Rc5ReviewFix2120BreakingChangeTests`: a test renamed to what it asserts. `Rc5DynamicsReplayPolicyTests`
+  expects the curves folder entry. `Rc5Wp23Iec61400Tests`: the fault-band refusal checked by its message, `iqmax`
+  against its decimal value, the post-fault command at every step, the study disposition exactly. `Rc5Wp24Cgmes30Tests`:
+  the public shape files pinned by name and SHA-256, with the Complex Equipment file checked NOT CHECKED.
+- Version 2.1.130.
+
+## [2.1.131]
+
+### Added
+- `pf --engine fdxb|fdbx|gs`: the fast-decoupled load flow (XB and BX, B' and B'' built as MATPOWER's makeB.m builds
+  them) and Gauss-Seidel (MATPOWER's gausspf.m order, with `--gs-accel` for an acceleration factor), as opt-in engines.
+  They use Newton's convergence test and its reactive-limit loop. They do not run with the outer-loop controls (exit 2)
+  or on a case with HVDC, FACTS, static var compensators or induction machines (exit 1). Without `--engine` (or with
+  `newton`) `pf` is unchanged, byte for byte. Core: `FastDecoupledPowerFlow`, `FdlfVariant`, `FdlfMatrices`,
+  `GaussSeidelPowerFlow`.
+- `qv-modal <case> [--modes N] [--out file.json]`: QV modal analysis (Gao, Morison and Kundur, 1992): the eigenvalues of
+  the reduced Jacobian J_R = J_QV - J_Qtheta J_Ptheta^-1 J_PV at the Newton power flow, smallest first, with the buses
+  that participate most in each mode. Its result file is its own JSON (`gridsim-qv-modal/1`). Core: `QvModalAnalysis`.
+- psspy `solv` runs Gauss-Seidel. `fdns`, `fncl` and `nsol` stay refused, with a reason that names the fast-decoupled
+  route (`case.study("pf", "--engine", "fdxb")`): PSS/E's decoupled Newton methods are not confirmed to match GridSim's
+  fast-decoupled load flow, so nothing is substituted.
+- `tools/crossval/pf/fdlf_gs.py`: pandapower's fdpf, gausspf and makeB on a MATPOWER case file, and the QV modal
+  eigenvalues by SciPy.
+
+### Changed
+- BREAKING CHANGE (B30, behaviour): node-breaker `cgmes-export --cgmes-version 3.0` writes, on each two-winding tap
+  changer, `TapChanger.neutralU` (end 1's rated voltage) and `TapChanger.ltcFlag` false, and on a linear phase changer
+  `PhaseTapChangerLinear.xMin` and `xMax` (the magnitude of end 1's reactance in ohms, a flat curve), as CGMES 3.0 requires. Magnitude:
+  fields added to the 3.0 EQ document; no number changes and every value written before is unchanged. The 2.4.15
+  documents are unchanged byte for byte.
+
+### Fixed
+- Analyzer findings in code added in 2.1.129 and 2.1.130 (a static method, `Regex.Count`); no behaviour change.
+- Tests: `Rc5Wp25FdlfGsQvModalTests` and `Rc5Wp25Cgmes2wTapChangerTests` (new). `BreakingChangeMapTests`: 30 entries and
+  the new map hash. `Rc5Batch2VerifyCgmesTests`: `Regex.Count` in place of `Regex.Matches(...).Count`, same asserts.
+- Docs: technical chapters 3, 29, 32 and 42, manual chapter 19, README.
+- Version 2.1.131.
+
+## [2.1.132]
+
+### Added
+- `nminus1 --ras <file>` and `nminus2 --ras <file>`: user-authored remedial action schemes (special protection schemes)
+  run inside each contingency. A `gridsim-ras/1` file holds named schemes with arming conditions (`outage`,
+  `preFlowAbove`, `preFlowBelow`, `preVoltageBelow`, `preVoltageAbove`, `always`), triggers (`loadingAbove` against
+  rating A, B or C, `flowAbove`, `voltageBelow`, `voltageAbove`, `notConverged`, with `all` or `any` logic) and actions
+  (`tripGenerator`, `tripBranch`, `closeBranch`, `shedLoad`, `setGeneratorP`, `switchShunt`, `setTap`), with a priority
+  and an operation limit. Level by level, every armed scheme whose triggers hold operates and the state is solved again,
+  up to `maxLevels` (default 5); each contingency ends `SECURE AFTER RAS`, `VIOLATIONS AFTER RAS`, `NOT CONVERGED AFTER
+  RAS` or `RAS LOOP`. The screen's own table is kept, a second table gives the schemes and the final state, and the
+  verdict is judged after the schemes. The result file gains the scheme columns and a `ras_actions` table. Elements are
+  named by the object model's keys (PSS/E `bus:id` and `from-to:circuit` on a RAW case). Steady state only: no time
+  delays and no dynamic simulation. Without `--ras` both verbs are unchanged, byte for byte. Core:
+  `ContingencyAnalysis.ScreenWithRas`, `ScreenBranchSetsWithRas`, `ScreenNMinusKWithRas`, `RasFile`, `RasSet`,
+  `RasContingencyResult`.
+- Tests: `Rc5Wp26RasTests` (new).
+- Docs: manual chapters 11 and 19, technical chapter 23, README.
+- Version 2.1.132.
+
+## [2.1.133]
+
+### Added
+- `harmonic-pf <case> --spectra <file.json>`: the coupled harmonic power flow from the CLI, on the study network of
+  `harmonics`, with the sources of a `gridsim-harmonics/1` file and an optional Norton coupling admittance `g + j b h` at
+  each source bus (`--norton-g`, `--norton-b`; 0 by default, the plain penetration solve). Prints the THD per bus over the
+  solved fundamental; `--out` writes |V_h| and its angle per bus and order, the iteration count and the convergence flag
+  (`gridsim-harmonic-pf/1`). Experimental: the coupling is an assumed model.
+- `harmonic-se <case> <measurements.json>`: harmonic state estimation from metered bus voltage phasors in a new
+  `gridsim-harmonic-meas/1` file (dated, strict; branch currents are not read). Per order: the estimated injections, the
+  voltage at every bus, each measurement's residual and normalised residual, the observability flag and a chi-square test
+  at 99 % with `2 (m - s)` degrees of freedom. Exit 3 for an unobservable order or suspected bad data. Experimental.
+  Core: `HarmonicStateEstimateAnalysis`, `HarmonicMeasurementSet`.
+- `cosim <study.json>`: RMS-EMT co-simulation of an inline `emt3` study against an RMS phasor source (a source behind a
+  lossless line or a series impedance, with scheduled changes) through the Core interface, Thevenin or Norton form, with
+  the exchange interval in steps. `--out` writes the traces and the exchange log (`gridsim-cosim/1`), `--boundary-csv`
+  the exchange log with exact round-trip numbers. Core: an `Emt3Runner.Run(study, extend)` overload that lets the verb
+  add the interface after the study's elements.
+- `emt-partition <study.json>`: the partitioned parallel EMT run on a single-conductor network of its own
+  (`gridsim-emt-partition/1`: sources, R, L, C and series R-L branches, switches, Bergeron lines), cut at the lines named
+  in a `gridsim-emt-cut/1` file or, with `--partition auto`, at every line whose travel time is at least the step.
+  `--threads` does not change the result; `--monolithic` runs the same partitions as one network on the incumbent solver.
+  `emt3` is unchanged: its modal three-phase lines cannot be cut.
+- `breaking-change validate` re-runs the four new verbs (`cosim --boundary-csv` is rewritten into the scratch folder like
+  an output flag).
+- None of the four verbs is on the shared `--json`/`--csv` writer; each writes its own JSON with `--out`.
+- Tests: `Rc5Wp27HarmonicCosimVerbsTests` (new).
+- Docs: manual chapters 16, 17 and 19, technical chapters 19 and 21, README.
+- Version 2.1.133.
+
+## [2.1.134]
+
+### Security
+- BREAKING CHANGE (B31, security): CSV formula injection (CWE-1236). A string cell of a CSV result that starts with
+  `=`, `+`, `-`, `@`, a tab or a carriage return (a bus, branch or unit name, a label, a message) is written with a
+  leading apostrophe, so a spreadsheet shows it as text instead of running it as a formula. Magnitude: text only, and
+  only in such cells; numeric cells are written by their type and are unchanged (a negative number keeps its minus), so
+  a file with no such string cell is byte for byte as before. Covers the shared `--csv` writer of every writer verb
+  (including the `--ras` `ras_actions` table), the PV-curve CSV (`--pv-out`), the `screen --csv` file, the `cgmes-shacl`
+  CSV report and the CSV reports of `acopf-opt`, `acscopf` and `reconfig`. Core: `CsvFormulaGuard`. From 2.1.135 it also
+  covers every other CSV writer (see 2.1.135).
+
+### Fixed
+- `qv-modal`: a mode is judged on the real part of its eigenvalue, so a complex pair with a positive real part is stable
+  (J_R is not symmetric, so a stable state can have one) and prints as `a + jb`; it used to read NOT STABLE and exit 3.
+- `qv-modal` and `QvModalAnalysis` refuse a case with HVDC links, FACTS devices, static var compensators or induction
+  machines (exit 1): the reduced Jacobian is built from the network alone, so it would describe a different system.
+- psspy `solv`: after a solve that did not converge, branch flows and machine outputs are not served (ierr 3).
+- `nminus1`/`nminus2 --ras`: `closeBranch` never puts back the contingency's own outaged branch (it is skipped, "the
+  branch is the contingency's outage"); a level where every action was skipped ends the run, so a state the schemes
+  cannot change is no longer reported as RAS LOOP; both tables print the screen's lost load and generation,
+  reference-move, 'base only' and worsened base-case violation lines; a base case that does not converge is told apart
+  from other failures by its own exception type (`RasBaseCaseException`).
+- The `gridsim-ras/1` reader refuses a key given twice in one object, a `setTap` ratio outside 0.5 to 2 and a
+  `switchShunt` step above 100000 Mvar.
+- `harmonic-se`: the chi-square threshold is the exact quantile (the degrees of freedom are always even), 13.2767 at 4
+  degrees of freedom; it was the Wilson-Hilferty approximation, 0.22 % high there. Core: `ChiSquare.QuantileEven`.
+  An unobservable order is recognised from the singular Gram matrix itself, not from the message text.
+- `cosim --boundary-csv` writes through the output policy, so the run journal records the log and `breaking-change
+  validate` compares it.
+
+### Changed
+- `harmonic-pf` and `harmonic-se` print `[EXPERIMENTAL]` on the headline and write `"experimental": true` in the result
+  file, as `dist3ph` and `pmu-ingest` do.
+- psspy `fdns` and `nsol` refusals say PSS/E's methods are not confirmed to match GridSim's fast-decoupled load flow.
+- Docs: psspy `fdns`, `fncl` and `nsol` are refused, not engines (technical ch. 3, code comments). The CGMES 3.0 `xMin`/`xMax`
+  of a phase changer is the magnitude of the end's reactance (ch. 32). The harmonic-se normalised residual is described
+  as it is: its square follows chi-square with 2 degrees of freedom. The emt-partition `threads` field is provenance.
+  The RAS levels, skipped actions, file checks and table lines (manual ch. 11 and 19). harmonic-pf and harmonic-se are
+  marked experimental in ch. 19.
+- Tests: `Rc5Wp26ReviewFixTests`, `Rc5Wp27ReviewFixTests` and `CsvFormulaInjectionTests` (new); `BreakingChangeMapTests` (B31,
+  map pin); `Rc5Wp10CgmesProfilesTests` (3.0 pin moved for B30, with the proof that only the B30 lines changed); python `test_psspy_solv.py` (new);
+  `Rc5Wp25FdlfGsQvModalTests` (T2/T3 bounds derived per case, coupled devices refused), `Rc5Wp25Cgmes2wTapChangerTests`
+  (ratios and shifts read back), `Rc5Wp26RasTests` (T11 messages, T13 edited scheme file, test 2 bound),
+  `Rc5Wp27HarmonicCosimVerbsTests` (experimental label, exact quantile, RMS-side closed form in T5).
+- Version 2.1.134.
+
+## [2.1.135]
+
+### Security
+- BREAKING CHANGE (B31, security): the CSV formula-injection guard (CWE-1236) now covers every CSV writer, not only the
+  shared writer. The same rule: a string cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return gets a
+  leading apostrophe; numbers are written by type and never change. Newly covered: the `report` CSV (text cells and
+  headings; a cell written from a JSON number is left as it is, so a negative number keeps its minus), the `estimate`
+  `residuals.csv`, `hti-removals.csv` and `hti-corrections.csv` location cell, the `emt` `timeseries.csv` probe header, the
+  case label of the `bench`, `bench --estimate`, `bench --perf`, `stress`, `nminus1-sweep` and `conformance` CSV files,
+  the `estimate-noise-floor` source, the `scenario` device and assessment, the `gda-replay` storage site name, the
+  `long-term` events cell, the `stability` converter and device names (`rms-events-converters.csv`, `rms-devices.csv`)
+  and the placed-protection CSV device id and reason. Magnitude: text only, and only in such cells; a file with no such
+  cell is byte for byte as before (pinned for `report`, `estimate` and `emt`).
+
+### Added
+- `gic`: geomagnetically induced currents for a uniform geoelectric field, by the DC network method of the NERC GIC
+  application guide (2013). A new `gridsim-gic/1` file gives the substations (coordinates, ground resistance, buses), the
+  transformers (grounded-wye/delta, grounded-wye/grounded-wye, autotransformer, delta/grounded-wye or open; DC winding
+  resistance; an optional reactive-loss factor k; an optional blocking device) and line ohms. The verb reports the
+  substation neutral currents, each transformer's per-phase currents, its effective GIC |I_H + I_X/a| and its reactive loss
+  k V I_eff, the line currents, and with `--direction-sweep` each transformer's largest effective GIC over field
+  directions at 1 V/km. Distances by the guide's WGS84 formulas, or a 111.2 km-per-degree sphere, which is what the
+  guide's worked example uses. Its own JSON with `--out` (with the gic file's SHA-256); not on the shared writer.
+  Core: `GicFile`, `GicDistances`, `GicNetwork`, `GicSolver`.
+
+### Changed
+- Docs: technical chapter 44 (new), manual chapter 19 (`gic`), README.
+- Tests: `Rc5Wp28GicTests` and `CsvFormulaInjectionWritersTests` (new).
+- Version 2.1.135.
+
+## [2.1.136]
+
+### Added
+- `motor-start`: reduced-voltage starting methods. `start.method` now also takes `starDelta`, `autotransformer`,
+  `reactor`, `softStarter` and `vfd`, each with a `starter` object: star-delta with a switch speed or time and an
+  open-transition dead time; an autotransformer tap; a series reactor in pu or ohms; a soft-starter voltage ramp with an
+  optional current limit; a constant-V/f drive with a frequency ramp, an efficiency and an optional current limit that
+  pauses the ramp. The result adds `starterSamples` and `starterTransitions`; a star-delta switch below the breakdown
+  speed is noted as a transition current peak.
+- `motor-start`: group starting. A `group` array starts several motors, each at its own time and by its own method, on
+  one network solved each step with every connected motor; the result reports each motor and the deepest bus dip.
+- Core: `MotorStarter`, `MotorStartRunner.RunGroup` and the group request and result records. `MotorStartMethod` gains
+  its new values after `DirectOnLine`, so the existing value keeps its number.
+
+### Changed
+- A direct-on-line study without a starter runs exactly as before: its results are byte for byte those of 2.1.135
+  (pinned on four existing fixtures).
+- Docs: manual chapter 19 (`motor-start`), README.
+- Tests: `Rc5Wp29MotorStartMethodsTests` and `Rc5Wp29MotorStartCliTests` (new).
+- Version 2.1.136.
+
+## [2.1.137]
+
+### Added
+- `scl-import`: imports the substation section of an IEC 61850 SCL file (SSD, SCD and the other SCL kinds) into the
+  node-breaker model and writes a `gridsim-substations/1` file. Connectivity nodes, circuit breakers, disconnectors (earth
+  switches when one terminal is grounded), lines and cables, generators, infeeding lines (as a slack generator), and two-
+  and three-winding power transformers are mapped; current and voltage transformers are kept as measurement points, and a
+  current transformer in series merges its two nodes. Impedances, set points, loads and switch states come from a new
+  `gridsim-scl-params/1` file keyed by SCL path. Every other type code is refused by name, with the whole import. The
+  Communication, IED and DataTypeTemplates sections are read past and counted, GOOSE control blocks are listed by name, and
+  unread elements of the substation section are listed as NOT IMPORTED. Its own output with `--out`; not on the shared
+  writer.
+- Safe reading of untrusted SCL: a file with a DTD is refused (no entity is declared, expanded or fetched), elements nest
+  at most 64 deep, and the file size is capped.
+- Core: `SclReader`, `SclParams`, `SclImporter` (`GridSim.Core.IO.Scl`).
+
+### Changed
+- `scl-import` runs are re-run by `breaking-change validate` (its SCL and params files are hashed as inputs).
+- Docs: technical chapter 45 (new), manual chapter 19 (`scl-import`), README.
+- Tests: `Rc5Wp30SclImportTests` (new), with OpenSCD's public sample `valid2007B4.scd` (Apache-2.0) as a fixture.
+- Version 2.1.137.
+
+## [2.1.138]
+
+### Security
+- The desktop app and the web app now check at start-up that telemetry is off, and exit with code 78 if it might not
+  be. The check runs before anything else and refuses: an app assembly without the build marker `TelemetryOff=true`
+  (stamped on every assembly by `Directory.Build.targets`); a loaded telemetry library (Application Insights, the
+  OpenTelemetry exporters, Azure Monitor, Sentry, Datadog and the others listed in technical chapter 35), also one
+  loaded later; an environment variable that would switch on an exporter (`OTEL_EXPORTER_*`, `OTEL_*_EXPORTER` other
+  than `none`, `APPLICATIONINSIGHTS_CONNECTION_STRING`, `APPINSIGHTS_INSTRUMENTATIONKEY`, `SENTRY_DSN`, `DD_API_KEY`,
+  `DD_TRACE_ENABLED=true` and the rest), or `AVALONIA_TELEMETRY_OPTOUT` set to anything but 1 or true; and any error
+  in the check itself. It writes one line naming the reason to the error stream and the trace log, and shows no
+  dialog. An app started without any of these behaves exactly as before.
+- Core: `TelemetryGuard` (`GridSim.Core.Diagnostics`).
+
+### Changed
+- Docs: manual chapters 8 and 9 and technical chapter 35 (Telemetry), CONTRIBUTING, the CAF mapping.
+- Tests: `TelemetryGuardTests` (new).
+- Version 2.1.138.
+
+## [2.1.139]
+
+### Security
+- Offline operation: GridSim starts, runs and stops with no internet connection; it needs one only to be downloaded.
+  The licence check is offline, there is no update check, crash reporting or run-time package fetch, and the web app
+  serves every script, style and image itself. The only network use is in features the user starts: `interpose`,
+  `rpc`, `pmu-ingest --live`, and bridge sessions to an endpoint set by hand. Technical chapter 35 lists every network
+  call site.
+
+### Changed
+- Docs: manual chapters 8 and 9 and technical chapter 35 (Offline operation), the CAF mapping.
+- Tests: `OfflineOperationTests` (new): a source scan for network APIs outside the user-started features, no external
+  origin in the served pages, and `pf case14` with every proxy pointed at an address that answers nothing (a
+  proxy-based check, not a network-isolation proof).
+- Version 2.1.139.
+
+## [2.1.140]
+
+### Security
+- BREAKING CHANGE (B32): the web host's Google tag and analytics script settings are removed, and every answer carries a
+  full Content-Security-Policy. `Site:GoogleTagId`, `Site:AnalyticsScriptUrl`, `Site:AnalyticsCollectorUrl` and
+  `Site:AnalyticsSiteName` are gone, with the page-view call to the analytics script; a host given any of them, or an
+  origin in `GridSim:ScriptCspSources`, exits at start-up with code 78 naming it. The Content-Security-Policy changes
+  from `frame-ancestors 'none'` to `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src
+  'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`
+  (framing still follows `GridSim:FrameAncestors`). Styles keep `'unsafe-inline'` for the pages' inline style
+  attributes; the pages have no inline script. No number or CLI result changes.
+- The telemetry guard now also checks the web policy as soon as the configuration is read: the policy must keep
+  `connect-src 'self'` and no third-party script origin may be configured.
+- `compose.yml` no longer maps `GRIDSIM_GOOGLE_TAG_ID`, `GRIDSIM_ANALYTICS_SCRIPT_URL` or `GRIDSIM_ANALYTICS_COLLECTOR`.
+
+### Changed
+- Docs: manual chapters 3, 9 and 26, technical chapter 35 (Telemetry, Offline operation, Limits), the deployment guide,
+  the CAF mapping, the Cyber Essentials note and the NIS gap assessment.
+- Tests: `Rc5WebPolicyTests` (new). `BugHunt1101WebSecurityTests` (`B179_*`), `WebHostTests` and `SiteSettingsTests`
+  updated for the removed settings and the new policy; `BreakingChangeMapTests` re-pinned for B32.
+- Version 2.1.140.
+
+## [2.1.141]
+### Added
+- `dist-opt`, distribution optimisation, a new verb in three modes. Each search is deterministic (fixed order, no random
+  numbers, ties to the lowest index). Settings come from a `gridsim-distopt/1` file (`--params`), read strictly.
+  - `capplace`: shunt capacitor placement and sizing on a balanced case. The objective is annual loss cost plus bank
+    cost (after Grainger and Lee, IEEE Trans. PAS-100(3), 1981). A bank is a constant admittance on the bus shunt. The
+    search is greedy by marginal benefit, then a neighbour confirmation (3^m power flows, refused above 8 banks). It is
+    a heuristic.
+  - `vvo`: volt/VAr optimisation over OLTC taps (on the MinTap + k x StepPu grid) and switched capacitor banks. The
+    objective is losses, or demand (CVR, ZIP loads). It uses discrete coordinate descent (taps first), then the same
+    confirmation. An infeasible start first minimises the voltage violation. The result is a local discrete optimum.
+  - `phase-balance`: moves single-phase loads between phases on a `dist3ph-mesh` case. On the phase-power proxy the
+    search is exhaustive up to 12 movable loads (lexicographically smallest optimum), and greedy above that. The
+    head-branch neutral current and the unbalance factor come from one `Newton3Ph` solve before and one after.
+- Core: `GridSim.Core.Analysis.DistributionOptimisation` (`CapacitorPlacement`, `VoltVarOptimisation`,
+  `PhaseBalancing`, `DistOptCommon`, `DistOptReport`). The result table uses the optimisation verbs' format
+  (`gridsim-optimisation-result/1`, verb `dist-opt`).
+- `dist-opt` is in `ReplayPolicy.StudyVerbs`: the case and `--params` are hashed as input tokens, and `--out` is the
+  only output. It is not on the shared `--json`/`--csv` writer.
+- Docs: technical 29 (new section, source map, limits), manual 6, CLI reference (section and group table), README.
+
+### Added
+- `line-constants --cable <cables.json>`: series impedance and shunt admittance of buried single-core cables with core,
+  sheath and armour (`gridsim-cableconstants/1`). Schelkunoff surface impedances with natively computed complex Bessel
+  functions (I0, I1, K0, K1; power series below |z| = 2, Steed/Temme and Lentz continued fractions with the Wronskian
+  above), Ametani's loop-to-conductor transform, earth return by Wedepohl and Wilcox's closed form (warning outside its
+  range) or the exact Pollaczek integral by fixed-order quadrature, coaxial capacitance with dielectric loss, and bonding
+  both ends, single point or ideal cross-bonding. Every stage is written (primitive Z and P, conductor Y, bonded phase Z,
+  C and G, transposition average, sequence constants, per-unit). Verified against SciPy/mpmath Bessel values, the DC,
+  skin-effect and coaxial closed forms, and an independent 30-digit mpmath calculation of the same formulas. The overhead
+  path is unchanged.
+
+### Changed
+- `line-constants`: the unknown-flag message also lists `--cable`.
+
+### Added
+- Model plug-ins, contract 2 (`[GridSimModelPlugin(2)]`): two new roles, appended to `UserModelRole` so the five contract 1
+  roles keep their numbers. `IUserMachine` is a Norton source with a constant admittance (system base), initialised at the
+  power-flow P0 + jQ0, V0 and MBASE, its source current read from its states and stepped once per step from the terminal
+  voltage; it runs on the injection route (`MachineData.UserInjection` holding a model of role machine). `IUserRelay` is
+  evaluated at every step start from that step's solve (step number and size, time, unit bus |V|, the machine's electrical
+  frequency and its rate of change, P, Q, speed) and trips its unit through the built-in unit relays' path; it is bound to a
+  unit by name (`UserRelayBinding`) and run by the new `RmsTransientStability.StudyEventsWithUserRelays` (API only). Every
+  contract 1 interface is unchanged and a contract 1 plug-in loads as before. A `gridsim-plugins/1` entry may say
+  `"contract": 1 | 2`, which must match the assembly; a machine or relay model needs contract 2. Loading keeps the confined
+  path, the SHA-256 pin, the determinism lint (a relay reading the clock is refused) and the replay check (new probes for the
+  two roles). Relay records name the device `PLUGIN:<id>` and carry the plug-in provenance with OUTSIDE THE VERIFIED CONTRACT.
+- `dynamics-study`: the `--model-assignments` file takes `deviceModels`, injection, machine and load models with no DYR record
+  of their own (`DynamicsStudyRequest.DeviceModels` on the API): an injection model (plug-in or declarative document) or a
+  machine plug-in drives a unit as converter plant on its own bus, replacing its DYR machine, exciter and governor; a load
+  model (plug-in or declarative) takes part of a bus load. The reader notes name each model and where it is bound (a
+  plug-in's with OUTSIDE THE VERIFIED CONTRACT, a declarative model's without), and the result's provenance gains
+  `deviceModels` only when the file gives them. Relay entries are refused by name. Not with `adaptive`, `stepSchedule` or
+  `errorControl`. `breaking-change validate` journals each declarative `deviceModels[].file` so a re-run re-checks its hash.
+- Without contract 2 plug-ins, `deviceModels` or user relays every result is unchanged.
+
+### Changed
+- `gic` (docs and tests): the guide's worked example is now checked against an independent re-derivation of its
+  currents (exact rational nodal analysis), to rounding. The guide's printed Tables B-6 and B-7 stay as reference checks:
+  B-6 agrees to its printed digit; eight cells of B-7 are one printed unit off (up to 0.006 A), for a reason the guide's
+  figures do not show. Technical chapter 44 states that three-winding transformers are not supported.
+- `motor-start`: a star-delta, autotransformer or reactor start whose initial speed is at or above the switch speed is
+  refused (it would be direct-on-line), and so is a VFD start above the drive's starting frequency ratio f0/fn (a flying
+  restart, not modelled). With an open-transition dead time, the "transition current peak" note is on the reconnection in
+  delta. In a group, a starter stage change after a motor's outcome is decided is now recorded, with a note.
+  `reactorROhm`/`reactorXOhm` on any method but `reactor` are refused under their own names.
+- `scl-import`: a switch with no state in the params file is refused, each named. The new `--assume-closed` takes such
+  switches as closed and records each in the written file's new optional `notes` member. Equipment inside an unread
+  element (a `Function` or `SubFunction`) is refused by name instead of being dropped. A series current transformer
+  across two voltage levels is refused. Loads follow the SCL node order, so the params file's order no longer matters.
+  The params file is range-checked (`vPu`, `tapRatio` above 0; branch impedance not 0; ratings at least 0; min not above
+  max). Voltages written in V or MV are converted to kV with one rounding.
+- `gridsim-substations/1`: optional `notes` (array of strings), read when present and written only when the model has
+  notes, so every existing file reads and writes as before. Core: `SubstationModel.Notes`.
+- Docs: technical chapters 44, 45 and 32, manual chapter 19, README (GIC line), SECURITY.md.
+- Tests: `Rc5Wp28GicTests`, `Rc5Wp29MotorStartMethodsTests`, `Rc5Wp29MotorStartCliTests`, `Rc5Wp30SclImportTests`
+  (programme-added; reworked as the reviews asked).
+- Correction to the 2.1.135 entry: the B31 bullet's "placed-protection CSV device id and reason" is the Core API's `PlacedElementEvaluator.ToCsv`; no CLI verb writes that CSV.
+
+## [2.1.142]
+### Added
+- `reduce --method sc`: the short-circuit equivalent (`ShortCircuitEquivalent`). The positive-, negative- and
+  zero-sequence networks of the IEC 60909 studies are Kron-reduced onto the boundary and written as equivalent branches
+  (with zero-sequence data, or delta/delta windings where the zero sequence is not coupled) and one fictitious source per
+  boundary bus (a branch and a synchronous machine carrying the positive-sequence row sum; a grounded-wye/delta winding
+  carrying the zero-sequence one). The fault studies on the reduced case give the full case's Ik'' at every kept bus for
+  three-phase, line-to-line and earth faults; zero-sequence mutual couplings inside the external network are captured
+  exactly. Prints the external network's Thevenin impedances per sequence and an IEC 60909 three-phase check.
+- `reduce --method dynamic`: the coherency-based dynamic equivalent (`CoherencyGrouping`, `InertialAggregation`). Groups
+  from `--groups FILE` or Chow's slow-coherency grouping (`--coherency R`); each group becomes one classical (GENCLS)
+  machine by the inertial method of Germond and Podmore (H and D rating-weighted, X'd the parallel combination referred to
+  the common bus); a group on several buses is moved to a new bus through ideal transformers absorbed into the branch
+  stamps, so the base-case power flow is preserved exactly. `--xdp` gives every machine its classical X'd; `--out` also
+  writes a `gridsim-dynamics/2` file beside the case. Exciters, governors and stabilisers are not aggregated.
+- `EquivalentMethod.ShortCircuit` and `EquivalentMethod.Dynamic` (appended); `NetworkReduction.Reduce` refuses them by
+  name. Ward, extended Ward and REI are unchanged.
+- `reduce`: the usage and error texts list the new methods and flags.
+
+### Added
+- PSS/E RAW revision 36 can be written: the revision 35 records under the revision 36 header, each record group under an
+  `@!` heading line naming its fields. The fields revision 36 added (names, DROOPNAME, BYPASS, the new sections) are left
+  to their defaults, since no public source gives their positions. `convert out.raw --raw-revision 36`,
+  `PsseRawWriter.Write(model, 36)`, rpc `save` format `raw36`, psspy `writerawversion(36)`. Revisions 33 to 35 are
+  written exactly as before; 33 stays the default.
+- PSS/E RAWX can be written (`PsseRawxWriter`, `convert out.rawx`, rpc `save` format `rawx`): revision 35, the same
+  records as a RAW revision 35 file, every number the same round-trip token, so it reads back bit for bit.
+- The RAWX reader also reads the two-terminal DC (`twotermdc`), VSC DC (`vscdc`), multi-terminal DC (`ntermdc` with
+  `ntermdcconv`, `ntermdcbus`, `ntermdclink`), FACTS (`facts`), impedance correction (`impcor`), multi-section line
+  (`msline`) and inter-area transfer (`iatransfer`) sections, through the RAW reader's records. These were refused by
+  name before; RAWX files without them read as before. RAWX induction machine fields `imid`, `hconst`, `aconst`,
+  `bconst`, `dconst`, `econst` are now accepted names (aliases); before, `imid` was ignored and the id defaulted to 1.
+- UCTE-DEF can be written (`UcteWriter`, `convert out.uct`), version 02 format, in the reader's columns. Values come
+  back to the precision of the fixed columns (half a unit in the last written decimal), bit for bit when the case came
+  from a UCTE file. HVDC, FACTS, SVCs, induction machines, ZIP loads, two units at one bus, a bus outside the ten UCTE
+  voltage levels and a bus shunt with no transformer to carry it are refused by name.
+- PSS/E SEQ load records (revision 33 and later) stay refused: no second public source confirms the layout.
+
+## [2.1.143]
+### Fixed
+- Single-line diagram, node-breaker files: saving after a switch edit no longer drops three-winding transformers. The edit now copies the model member by member, so every member of the file is kept, including any added later. New round-trip tests fill every member, run every edit command, save, read the file back and compare every member the command did not touch. (Three-winding transformers in node-breaker files came after the last release candidate, so no released output changes.)
+
+### Tests
+- Test runs no longer leave temporary folders behind. Every test makes its temporary folders and files through one shared helper (tests/Shared/TestTemp.cs, linked into GridSim.Tests, GridSim.App.Tests and GridSim.Scripting.Tests). The helper records each path and deletes it when the test process ends, and the next run sweeps whatever a killed run left. A guard test refuses any test file that makes a temporary path another way. Pre-existing tests were edited for this cleanup only: each temporary-path expression was replaced by a helper call that returns the same path. No assertion or expected value changed.
+
+## [2.1.144]
+### Changed
+- BREAKING CHANGE (B33): the DC power flow and everything built on it now use MATPOWER's DC model (`makeBdc`): transformer tap ratios (b = (1/x)/tap; a tap of 0 is read as 1), phase shifts as injections (the flow on a shifted branch is b (theta_from - theta_to - phi), a positive shift from-to-to) and bus shunt conductance Gs as a constant-power load. Resistance, charging and shunt susceptance Bs are still ignored, voltages are 1 pu and the model is lossless. A network with no tap other than 0 or 1, no phase shift and no Gs is computed by the earlier instructions, bit for bit, and keeps the earlier `dcpf` banner and `transmission-security` DC wording, so its output is byte-identical. Moved: `dcpf`, `ptdf`, `lodf`, `sensitivity otdf`/`psdf`, `dc-contingency`, `dcopf` (with `--costs` and `--prices`), `scopf` (and scripting STUDY OPF), `scuc`, `transmission-security`, `transfer-capability`, the planning-study modes, `probabilistic` (DC evaluator and convolution) and the N-1-1 corrective redispatch. Not moved: the Newton DC-start seed and the inner DC passes of `acopf`, which keep the reactance-only view so the AC results are unchanged. Sizes from an independent NumPy transcription of makeBdc on `dcpf`: case14 up to 0.703 MW and 0.313 deg; case57 1.286 MW; case118 2.365 MW; case300 3.523 MW; the GB reduced network 236.8 MW; GBnetwork 13.56 MW; case145 22,777 MW (481.7%). No bound holds for every network, so the claim is the change of model.
+- BREAKING CHANGE (B34): the RAWX reader takes an induction machine's id from the file's `imid` field, and its H, A, B, D and E from `hconst`, `aconst`, `bconst`, `dconst` and `econst`. Before, the reader dropped those names: every induction machine read from RAWX got the id 1, so a file with two machines at one bus was refused ("defined twice"), and H to E were left at their defaults. The same names apply to a RAW 36 file whose `@!` heading uses them. No power-flow number changes: the power-flow reader uses none of H to E (they are dynamic data); a test pins that the parsed model is the same with and without them. From 2.1.148 a RAW 36 or RAWX heading that uses the short induction-machine names SC, DC, TC, BC or PC also reads; before, such a file was refused.
+- `dcpf` prints "shunt Gs X MW" on an island line only when the island has Gs. An island with Gs but no generator counts as unsupplied. New fields `DcIsland.ShuntLoadMw` and `DcIslandBalance.ShuntLoadMw` (appended, default 0); `DcOptimalPowerFlow.IslandDispatch.LoadMw` (the island "demand" `dcopf` prints) is now Pd + Gs.
+- A negative or non-finite tap ratio, or a non-finite phase shift or Gs, on an in-service DC branch or bus is refused, naming the branch or bus. A negative tap was ignored by the DC model before.
+- Verification: the DC results match an independent NumPy transcription of MATPOWER `makeBdc`/`rundcpf` to a normwise bound of 4096 machine epsilons (`tools/crossval/pf/dcpf_fidelity.py`, method in `fixtures/dcpf-fidelity/README.md`). A per-entry bound is not used: two NumPy solvers that differ only in pivot order already disagree by up to 5e4 eps on case300's near-zero flows.
+- Tests: `Rc5WpDcFidelityTests` (new). Re-pinned on tapped cases, each value proved against the independent NumPy makeBdc transcription under the owner's B33 ruling (`tools/crossval/pf/repin-b33/`): the case14 `dcpf` stdout fixture (new banner and numbers), the case14 `lodf` stdout fixture, the case14 `dcpf` branch and bus CSVs, and seven `DcOpfSecuritySimplexParityTests` rows (case24_ieee_rts, case145, pglib case73, case162, case588, case1354pegase, gb-synthetic). `DcPowerFlowAndPvCurveTests` (pre-existing): the case300 KCL check now counts Gs (Pg - Pd - Gs = sum of outflows). That changes the assertion's form, not a pinned value; it is algebraically MATPOWER's balance and is allowed under the test-change-with-proof ruling. `BreakingChangeMapTests` and `Rc5BreakingChangeUnboundedTests` (pre-existing) register B33 and B34. Fixtures of tap-free cases, case9 included, are unchanged.
+## [2.1.145]
+### Added
+- Declarative user models (`gridsim-model/1`) gain the `relay` role: inputs `vm`, `f` (Hz), `p`, `q`, `dfdt` (Hz/s), `speed`
+  and `i`, output `trip` (0, or the whole-number reason code to trip with), no initialisation inputs. Two blocks join the
+  closed catalogue: `ontimer` (an on-delay timer counted in whole steps by the built-in unit relay stages' rule, initialised
+  with 0) and `latch` (a seal-in). A declarative relay runs by the same route as a relay plug-in (`UserRelayBinding.ForUnit`,
+  device `USER:<id>`); its records carry its id, document hash and order digest, without the OUTSIDE THE VERIFIED CONTRACT label.
+- Branch-trip relays: a relay plug-in or a declarative relay may be bound to a branch (`UserRelayBinding.ForBranch`, the
+  branch index and the bus at the end it reads). It reads |V| at that end and the |I|, P and Q flowing into the branch there
+  (no frequency or speed: NaN for a plug-in, and a declarative relay that reads them is refused on a branch); its trip opens
+  the branch from the next step, built as a scheduled branch trip is. `UnitRelayStudy.BranchRelays` lists the records.
+- Relay inputs (contract 2) also carry |I| (`RelayInputs.CurrentPu`).
+- `dynamics-study`: `deviceModels` entries of role `relay` in the `--model-assignments` file (`DynamicsStudyRequest.RelayModels`)
+  bind a relay plug-in or a declarative relay to a unit (`bind.machine`) or a branch (`bind.branch`, read at its `from` end).
+  Each events row is re-run on the full-model engine with the relays acting, as additional evidence (`userRelays.fullModel`,
+  or inside `unitProtection.fullModel` with unit protection); `provenance.relayModels` names each relay. The study's own rows,
+  status and exit code are unchanged. A declarative relay's file is journalled, so `breaking-change validate` re-checks its hash.
+  Not with `adaptive`, `stepSchedule` or `errorControl`.
+- Without relays every result is unchanged.
+
+### Changed
+- Diagnostic wording (refusals of bad input, not results): an assembly declaring a plug-in contract other than 1 or 2 is refused with "...; this build implements contracts 1 and 2." (v2.1.105-RC-5 said "contract 1", which is no longer true). The declarative format's refusals of an unknown role and an unknown block type now list every role and block this build reads, `relay`, `ontimer` and `latch` included. No result changes, so no B-ID.
+- A contract 1 model whose factory gives a role number outside the five contract 1 roles is read and refused when bound, as in v2.1.105-RC-5, not refused at load.
+- Tests: the temporary-folder helper now records, sweeps and deletes only direct children of the temporary folder whose names survive normalisation unchanged. On Windows a name such as " " or "..." resolves to the temporary folder itself, and the end-of-run sweep could have deleted all of it; no test used such a name. New `TestTempContainmentTests`.
+
+## [2.1.146]
+### Added
+- Containers: a new `Dockerfile.cli` builds an image of the `gridsim` command line tool. It is published with the release's
+  self-contained `linux-x64` profile on the pinned SDK 10.0.404 image and runs on `runtime-deps:10.0.15`, pinned by
+  digest. The image installs no packages and runs as the unprivileged `app` user. It works in `/work` and runs the
+  `gridsim` entry point, showing the help by default. It takes the same `SOURCE_REVISION` / `SBOM_SHA256` / `SOURCE_TREE`
+  build arguments as the web image.
+- Containers: both images set `GRIDSIM_LICENCE_FILE=/licence/licence.gridsim`. `compose.yml` mounts
+  `${GRIDSIM_LICENCE_DIR:-./licence}` at `/licence` read-only and maps `GRIDSIM_LICENCE_KEY` to `Licence__Key`. With
+  nothing mounted, or an empty folder, the program runs at the free tier and starts as usual. No licence is built into
+  an image. `.dockerignore` keeps `licence/`, `*.gridsim`, `.env` and private keys out of the build context, and
+  `.gitignore` ignores `/licence/`.
+- Licensing: installing a licence to a file that cannot be written (for example the read-only `/licence` mount) is now
+  refused with an error naming the file (`gridsim licence import` exits 2). Before, it ended with an unhandled I/O
+  error.
+- The SDK's usage telemetry is switched off (`DOTNET_CLI_TELEMETRY_OPTOUT=1`) in the build stage of both images.
+
+### Docs
+- Docs: the manual chapter 6 code fences that swallowed the end of the chapter now close properly; three broken in-page links (PSS/E RAW files, replaying a run) point at real headings; table cells that held a literal pipe inside code (technical chapters 1, 2, 3, 5, 6, 7, 11, 14, 17, 19, 21, 24, 29, 30, 33, 39, manual chapters 10, 15, 16, 19, 21 and the archive reference) are escaped so the tables render in full. Not a breaking change.
+
+### Added
+- JSON v2 network files can hold three optional fault-sequence arrays: `lineWindings` (winding connections and neutral
+  reactances of a branch kept among the lines, so the branch order is kept), `machineZeroSequence` (machine
+  zero-sequence impedances) and `zeroSequenceMutuals` (zero-sequence mutual couplings between named lines). The loader
+  reads them into the model and refuses, by name, an entry naming no element or an ambiguous one. A case without them
+  loads exactly as before. Older readers refuse a file holding one as an unknown member.
+- `V2CaseWriter.WriteWithFaultSequence` writes them. `V2CaseWriter.Write` is unchanged, and for a model without such
+  data both writes give the same bytes.
+
+### Changed
+- `reduce --method sc --out x.json` now writes every sequence field, so the written case gives the in-memory
+  equivalent's fault currents bit for bit. The verb reads the file back and prints `reload check` (three-phase,
+  line-to-line, single- and double-line-to-earth Ik'' at the kept buses), also in result files as `max_reload_ikpp_rel`.
+  `--method sc --out x.m` is refused (exit 2): MATPOWER holds no X''d or sequence data.
+- `reduce --method sc` Thevenin report: a boundary bus with no path in a sequence is reported infinite on its own; the
+  other buses keep finite values. Before, one such bus made every bus infinite in that sequence.
+
+## [2.1.147]
+### Changed
+- `breaking-change validate` raises B33 only for a job that can have been moved by it: a job that runs the DC model on a case with an in-service tap ratio other than 0 or 1, a non-zero phase shift or a bus Gs. Validate loads the job's case before the re-run, from the bytes the re-run reads, and decides with `DcPowerFlow.UsesMakeBdcTerms`. A tap-free case is computed by the earlier instructions bit for bit, so a change there now reads UNEXPLAINED instead of "UNBOUNDED (B33), review needed". `nminus1` (AC in every mode) and `sensitivity --kind tap|dvdq|effectiveness` never raise B33. A job whose case cannot be found or read is CANNOT-REPLAY (`input unreadable`), as an unreadable DYR is for B3 and B27. `planning-study` jobs are still raised whatever their master case holds, because a project can add or change branches.
+### Fixed
+- Docs: the eleven `dcpf` transcripts of tap-free cases (six `docs/_captures` files, manual ch. 2 and 6, technical ch. 28 and 29) show the reactance-only banner the build prints for them; the manual's `dcpf` output template shows both banners and when each is printed. "No tap other than 1" reads "other than 0 or 1" (DcPowerFlow, DistributionFactors, technical ch. 29, the fidelity and re-pin READMEs). Technical ch. 29 states what was checked (an independent NumPy transcription of MATPOWER `makeBdc`, to a normwise bound of 4096 eps) and that pandapower equivalence was not run, so is not verified.
+- Tests: `Rc5B33ValidateScopeTests` and `Rc5B34WideningTests` (new).
+
+### Changed
+- `dist-opt capplace`: with more than 8 banks placed, the neighbour confirmation now covers the 8 banks the greedy search
+  changed last and the result names the others (`unconfirmed` rows, `unconfirmed_banks` in the summary, one console
+  line). It used to refuse with exit 1 after the whole greedy search had run, so the stock "every PQ bus" setup was
+  refused at fine steps or low costs.
+- `dist-opt` (capplace, vvo): the objective tie follows from the solve: 2 x buses x tolerance x base MVA (MW), in the
+  objective's unit (x energy value x hours per year in capplace), plus 8 ulp of the larger objective. It was an absolute
+  1e-9, below the solver noise of a capplace objective in money per year.
+- `dist-opt vvo`: an OLTC with an impedance correction table (PSS/E TAB) takes its R and X from the table at every trial
+  ratio other than the case's own, as the steady-state tap loop does, and the result notes it. The table was ignored.
+- `dist-opt` (capplace, vvo): the trial power flows are plain Newton solves, which do not regulate OLTCs or transformer
+  flow controls. A case with an OLTC outside the VVO controls (in capplace, any OLTC) or a transformer flow control is now
+  refused by name instead of being solved with those devices held at their case settings.
+- `dist-opt phase-balance`: the exhaustive search is capped on the number of assignments (at most 3^12 = 531 441), not on
+  the number of loads, so the documented bound holds for any phase count and loads held to fewer phases allow more loads.
+  The greedy route puts a generating load (negative power) on the heaviest phase; it used to go to the lightest.
+- `line-constants --cable`: the cross-bonding wording now says "the same metallic layers (a sheath, and an armour on all or
+  none)", which is what is checked, instead of "the same build".
+- Tests: `Rc5Wp33ReviewFixTests` (bounded confirmation, refusals, TAB, assignment cap, generating loads, CVR demand at a
+  derived tolerance, B31 on the dist-opt CSV) and `Rc5Wp35ReviewFixTests` (low-frequency R1 limit, cross-bonding with
+  armour).
+
+### Fixed
+- dynamics-study: an injection or machine model (`deviceModels`, or `DynamicsStudyRequest.DeviceModels`) on a unit whose DYR record has a governor no longer stops the study at initialisation. The unit's DYR governor is not used, as its exciter already was not. Studies without device models are unchanged.
+- Plug-in loading: an assembly named as an assembly GridSim grants its internals to (an `InternalsVisibleTo` target of a GridSim assembly, such as GridSim.Tests; the names are read from the attributes, ignoring case) is refused before anything loads.
+- Plug-in loading: a factory's role is read once, so the role check and the loaded definition see the same value.
+- Plug-in replay check: a relay is replayed with a branch's inputs (no frequency, rate of change or speed) as well as a unit's.
+- Diagnostic wording changes (no B-ID, per the accuracy ruling):
+  - a contract 1 model whose factory gives a role number that is no contract 1 role is named "number <n> (not a role of contract 1)", not "load" (in refusals, and in `user-model plugins` listings of such a model);
+  - "an injection, load or machine model is needed" (UserDeviceModel.FromPlugin);
+  - "a generator takes an injection or machine model";
+  - dynamics-study `--model-plugins` without `--model-assignments` now says where each kind of model is bound.
+
+Release workflow: the NuGet package (GridSim.Core) and the two container images (web, command line tool) are roadmap items. The release builds all three on every tag, candidates included (package packed, signed and attested; web image and the new CLI image from Dockerfile.cli built and probed) and keeps them as workflow artefacts (package-core, image-web, image-cli), but nothing is pushed: the push jobs run only when the repository variable GRIDSIM_PUBLISH_PACKAGES is 'true' (unset) and never for a release candidate. The documentation now says plainly that containers and the package are planned, not published, pending broader validation, and that shipping GridSim as a code library also needs a safe way to handle licences. Not a BREAKING CHANGE (workflow and docs only, no numeric output).
+
+## [2.1.148]
+Not a breaking change for numbers: no solver, writer or numeric path touched; every default output stays bit-identical.
+It is a behaviour change at start-up (new refusals), so it goes under Changed/Security:
+
+- Telemetry guard in every app. The `gridsim` CLI and the WPF dashboard (`GridSim.Wpf`) now run
+  `TelemetryGuard.EnforceAtStartup` first, as the Avalonia desktop app and the web app already did, with the same exit
+  code 78. The CLI checks `gridsim`, `GridSim.Core`, `GridSim.Gda`, `GridSim.Gpu`; the WPF app gets a `Program.Main`
+  (its `StartupObject`) that runs the guard and then WPF's generated `App.Main`, and checks `GridSim.Wpf`, `GridSim.Ui`,
+  `GridSim.Core`.
+- The guard now also refuses the ways an APM agent is injected into a process: `DOTNET_STARTUP_HOOKS`,
+  `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`, `DOTNET_HOSTINGSTARTUPASSEMBLIES`, `DOTNET_ADDITIONAL_DEPS` (whenever set);
+  any `CORECLR_PROFILER*` or `CORECLR_NOTIFICATION_PROFILERS*` variable; `CORECLR_ENABLE_PROFILING` /
+  `CORECLR_ENABLE_NOTIFICATION_PROFILERS` other than empty or 0; and the agent assemblies
+  `Microsoft.AspNetCore.ApplicationInsights.HostingStartup`, `OpenTelemetry.AutoInstrumentation`, `Dynatrace`,
+  `OneAgent`, `AppDynamics`, `Instana`, `Serilog.Sinks.ApplicationInsights`, `Serilog.Sinks.Datadog`. `dotnet watch`,
+  Hot Reload and profiler-based coverage tools therefore make the apps exit 78; use `dotnet run` (and coverlet).
+- The web host's telemetry check now reads the Content-Security-Policy it actually serves
+  (`SecurityHeaders.ServedPolicy`: the security headers, then the script policy, composed from configuration), not the
+  `SecurityHeaders.Policy` constant. A malformed `GridSim:FrameAncestors`, `GridSim:Hsts` or `GridSim:ScriptCsp` now
+  stops start-up at the guard (exit 78, the line naming the setting) instead of an unhandled exception a few lines later.
+- Offline audit: the source scan now covers .cs, .razor, .cshtml, .js, .css, .html and .axaml, the browser's own
+  network calls, and absolute URLs in scripts and styles (`OfflineOperationCoverageTests`); the inventory in technical
+  ch. 35 lists the settings that put a configured URL in a page (`Site:ShareImageUrl`, `Site:OrganisationUrl`,
+  `Site:OrganisationLogoUrl`, `Site:FooterLinks`, `Sso:Authority`, `Sso:PublicOrigin`) and the licence file path.
+- The SLD member round-trip test now also compares get-only members set in a constructor and names the computed ones.
+
+### Changed
+- BREAKING CHANGE (B35): `convert` picks the output format from the output's extension for `.rawx` and `.uct` too. An
+  output ending in `.rawx` is written as PSS/E RAWX (revision 35) and one ending in `.uct` as UCTE-DEF. Before (up to
+  v2.1.105-RC-5) both were written as a JSON case folder with that name. Other extensions are unchanged.
+- Part of B34 (see 2.1.144): the PSS/E revision 36 heading reader and the RAWX reader accept the
+  induction machine's short code names SC, DC, TC, BC and PC (the PSS/E 35 RAW comment heading's and PowSyBl's
+  FIELD_NAMES_33_35 names) for SCODE, DCODE, TCODE, BCODE and PCODE. Before, these names were dropped, so DCODE took its
+  default 2 (a standard design, refused as unmodelled, or read past with `--allow-unmodelled`) and PCODE its default 1.
+  Files that use the long names read as before. Names only; no formula changed.
+- UCTE-DEF writing (new in 2.1.142, not yet released): a UCTE case written back with its source read now keeps each
+  unchanged transformer's rated voltages, nominal power and `##R` record as the file's text, and the file's G and B at a
+  node whose shunt is unchanged. So it reads back to the same model bit for bit when the file writes its numbers as
+  plain decimals; before, rated voltages off the bus levels (400/225 kV on 380/220 kV nodes) and multi-step taps came
+  back only to the five du columns. `convert x.uct y.uct` uses the read as the source. A transformer changed after the
+  read, and a case from another format, still come back to the column precision.
+- UCTE-DEF writing: synthesised node codes start with the country's UCTE code character, named by
+  `UcteWriteOptions.Country` or `convert --ucte-country <CC>` (for example `FR`), under that country's `##Z` block. They
+  were X codes under `##ZXX`, which UCTE reserves for X-nodes (boundary nodes); PowSyBl, for one, turns X-nodes into
+  dangling lines. Every other code character is some country, so GridSim does not choose one: with no country given, a
+  case that needs synthesised codes is refused (exit 1), naming the flag; `XX` or a name that is not a UCTE country
+  exits 2. A `.uct` input keeps its own codes, X-nodes included.
+- UCTE-DEF writing: the transformer nominal power column (35-39) is written: rating A, or the system base when rating A
+  is 0 (it was left blank). With a source read, a kept transformer's own value is written.
+- RAWX writing: text is escaped only where JSON requires it, so `&`, `<`, `>`, `+` and `'` are written as they are (not
+  as `\u0026` and the like). The JSON is unchanged in meaning.
+- Docs: the UCTE writer's claims are corrected to what is now true (`UcteWriter` remarks, file-formats chapter, known
+  limitations, CLI reference for `convert` and `--ucte-country`).
+- Tests: `Rc5Wp34ReviewFixTests` (new). `PsseRev30AndSeqTests`: one test renamed (name only, per the WP34 ruling):
+  `The_writer_still_writes_only_revisions_33_34_and_35` is now `The_writer_refuses_revision_30_naming_the_revisions_it_writes`.
+  `Rc5Wp34WritersTests` (WP34's own, unreleased): the case14 UCTE test now gives the country `FR` and expects `F0000121`
+  and `F0001451` for `X0000121` and `X0001451`, as ruling (4) requires; nothing else in it changed.
+
+The old CHANGELOG 2.1.142 UCTE sentence "bit for bit when the case came from a UCTE file" was untrue for most real
+transformers. It is now true for plain-decimal files. Suggested replacement for that 2.1.142 sentence (the coordinator's
+call whether to edit the old entry): "Values come back to the precision of the fixed columns (half a unit in the last
+written decimal); a UCTE case written back with its source read keeps the file's transformer fields and comes back bit
+for bit (from 2.1.1xx)."
+- Telemetry and injection guard: strict everywhere, by the owner's ruling. `dotnet watch`, Hot Reload and profiler-based coverage tools inject into the process the way an APM agent does, so GridSim exits 78 under them too.
+
+## [2.1.149]
+### Changed
+- Telemetry guard in every app: the case editor (`GridSim.SchemaEditor`) and the script console (`gridsim-script`)
+  now run `TelemetryGuard.EnforceAtStartup` first, before `--version` and help, with the same exit code 78. The editor
+  checks `GridSim.SchemaEditor` and `GridSim.Core`. The console checks `gridsim-script`, `GridSim.Scripting` and
+  `GridSim.Core`.
+- The guard also refuses the environment settings of APM agents: `DD_AGENT_HOST`, `DD_TRACE_AGENT_URL`,
+  `NEW_RELIC_APP_NAME`, `DT_TENANT` and `DT_CONNECTION_POINT` set to anything; any variable whose name starts with
+  `APPDYNAMICS_`; `DD_PROFILING_ENABLED` set to anything but empty, 0 or false; and `DD_ENV` or `DD_SERVICE`, each on
+  its own, whatever `DD_TRACE_ENABLED` says (strict everywhere). Names that only contain one (`DDENV`, `MY_DD_ENV`) are
+  allowed. Elastic APM and Honeycomb were already covered by `ELASTIC_APM_SERVER_URL(S)` and
+  `HONEYCOMB_API_KEY`. The full list is in technical ch. 35, section Telemetry.
+- The guard is strict everywhere, development included: `dotnet watch`, Hot Reload, an IDE's browser refresh and
+  profiler-based coverage tools make every GridSim app exit with code 78, by design. CONTRIBUTING has a new section,
+  "Developing with the telemetry guard", on how to work without them.
+- UCTE-DEF writing (new in 2.1.142, not yet released): a case written back with its source read keeps each branch's
+  status code. In service that is 0 (real), 1 (equivalent) or 2 (busbar coupler). A branch switched out after the read
+  gets the matching out-of-operation code: 8, 9 or 7. Before, an equivalent element was written as status 0, so one
+  with a negative R or X was refused when the file was read back, and a coupler that was switched out was written as 8.
+  The source's own out-of-operation records (status 7, 8 or 9), which the reader skips, are now written back as the
+  file had them and in their places, together with a skipped transformer's `##R` record. Before, they were dropped.
+  Without a source read, every element is written as real (0 in service, 8 out), except a branch with a negative R or
+  X, which is written as an equivalent element (1, or 9 out of service), the only kind UCTE-DEF lets carry a negative
+  impedance. The notes name each such branch, and the file now reads back (before, the reader refused it).
+- Tests: `TelemetryGuardConsoleAppsTests`, `TelemetryGuardApmAgentTests`, `UcteStatusRoundTripTests` (new).
+
+## [2.1.150]
+### Fixed
+- Batch 4 verification (2.1.135 to 2.1.149, the first test run of that code, on the .NET 10.0.15 runtime):
+  - The UCTE-DEF writer (2.1.142) computed phase-shifter angles with the platform's `Math.Tan`, `Math.Cos`, `Math.Sin`
+    and `Math.Atan2`; it now uses the deterministic maths module like every other numeric path. The
+    `harmonic-pf` verb (2.1.133) took bus angles from `Complex.Phase`; it now uses `DetMath.Phase`. Both are unreleased.
+  - `convert` to a .uct file read its own output back by calling the UCTE reader directly; the read-back now goes
+    through the CLI's one UCTE loading place, as every other format's read-back does.
+  - THIRD-PARTY-NOTICES lists `Microsoft.NET.ILLink.Tasks` at 10.0.15, the version the 10.0.404 SDK restores.
+- Tests: the star-delta CLI test (2.1.136) used a 10 s horizon, but the motor's torque margin in star is about
+  0.028 pu, so it reaches the 0.8 pu switch speed only at 16.24 s (derived independently); the test now runs 20 s. The
+  WP34 Python real-host tests stop the rpc host before deleting their temporary folder, as the other psspy tests do.
+- Bit identity on the 10.0.15 runtime: every digest and bit-identity pin passes unchanged, including
+  `FullModelKernelDigest`, the 2.1.135 direct-on-line motor-start pins and the bundled-case writer round trips. The
+  overhead `line-constants` console, `--json` and `--csv` outputs on the R404 geometries are byte-identical to a
+  build from before the cable-constants work (2.1.140), apart from the `tool` version stamp.
+
+## [2.1.151]
+
+### Added
+- `pf --max-q-passes <N>`: the number of reactive-limit passes (PV buses switched to PQ at their limits), default 12.
+  The large ACTIVSg and SyntheticUSA cases need 12 to 14; with the default they stop with the mismatch already below
+  1e-8 pu and report not converged.
+- `pf --q-revert`: a bus held at a reactive limit may return to PV control when its voltage allows. SyntheticUSA
+  settles in 6 passes with it.
+- Without either option `pf` is byte-identical to 2.1.150. Not a breaking change; no B-ID.
+
+### Fixed
+- Tests: the byte-pinned RC5 tests compare line endings as CRLF (shared helper `Rc5LineEndings`), so the pins taken on
+  Windows hold on Linux. The writers are unchanged, so released Linux output is unchanged. `Rc5Wp15ScriptPinTests`
+  normalises the path separator after its placeholder. `Rc5Wp11RpcV2ProcessTests` asserts the portable path refusals
+  off Windows, where `..\x` and `\server\share` are ordinary file names.
+- README: states again that the distrusted-source control is not yet reachable from the CLI or the apps (the sentence
+  `ReadmeHonestyTests` pins had moved with the harmonic verbs in 2.1.133).
+- Tests: `Rc5LinuxQPfOptionsTests` (new).
+
+## [2.1.152]
+
+### Changed
+- BREAKING CHANGE (B36): the default cap on reactive-limit passes (PV buses switched to PQ at their limits) is 100,
+  not 12 (`PowerFlowOptions.MaxQLimitPasses`, and the default of `pf --max-q-passes`). Why: the large real cases
+  (ACTIVSg10k, ACTIVSg25k, ACTIVSg70k and SyntheticUSA) need 12 to 14 passes, so with 12 they stopped with the
+  mismatch already below 1e-8 pu and reported NOT CONVERGED; with the cap at 100 they converge (checked on SyntheticUSA,
+  the 70k and the 25k case). Size of the change: a case whose loop settles within 12 passes follows the same trajectory
+  and gives the same result, bit for bit. Only a case that needs 13 to 100 passes changes: it was reported NOT
+  CONVERGED (status `MaxIterations`, exit status 3 from `pf`) and now converges, with the exit status and the report
+  changed to match. Who is affected: any run with reactive-limit enforcement on and the default options (`pf`, the
+  library, the scripting `solver` profile) on such a case. To keep the old behaviour: `pf --max-q-passes 12`, or set
+  `MaxQLimitPasses` to 12. The Q-limit algorithm itself is unchanged, and `--q-revert` stays opt-in.
+- The documented default (CLI reference, power-flow chapters, glossary, the solver-profile schema) is 100.
+
+### Fixed
+- Tests: `Rc5LinuxQPfOptionsTests` and `ContingencyCorrectnessTests` pin the default cap at 100 (the pins held 12); the
+  breaking-change map tests count B36 and its map hash.
+
+## [2.1.153]
+
+### Changed
+- BREAKING CHANGE (B37): an AC power-flow pass (Newton, fast-decoupled, Gauss-Seidel) now stops early, with the new status
+  `Diverged`, when its largest mismatch rises above both 10 pu and the mismatch it started from. Before, it ran on to
+  the iteration cap and reported `MaxIterations`. `pf` prints `DIVERGED` instead of `NOT CONVERGED`; the exit status is
+  3, as for any run that did not converge, so no exit-code contract changes (the status carries the difference). Why:
+  above 10 pu the simulation is fundamentally broken and no starting point will fix it, so the iterations after that
+  point only spend time. The limit is not lower on purpose: a lower default would cut off plausible-but-wrong states
+  (the synthetic 90,000-bus case peaked at 4.1 pu) that are useful evidence of a model error. The starting mismatch is
+  part of the test because a flat start on a large case can itself be above 10 pu. Users who know their models can
+  lower the limit to save time. Size of the change: a solve that converges is unchanged, bit for bit; the check only
+  reads the mismatch already computed and stops the loop. Only a run that did not converge and rose above the limit
+  changes: fewer iterations, the state at the iteration that stopped it, and status `Diverged` in place of
+  `MaxIterations`. Who is affected: anyone who reads the status of a failed solve, or who used the state of a run that
+  diverged past 10 pu. To keep the old behaviour: `pf --diverge-limit off` (library: `DivergeLimitPu =
+  double.PositiveInfinity`).
+- `pf --diverge-limit <X>` sets the limit in pu (above 0); `pf --max-iter <N>` sets the iteration cap (100 by default,
+  10000 for `--engine gs`). The backward/forward sweep (radial feeders) tests the voltage change, not the power
+  mismatch, and has no divergence stop. `PowerFlowOptions.DivergeLimitPu` and `PowerFlowStatus.Diverged` are new, and the solver
+  profile has a `divergeLimitPu` entry.
+
+### Fixed
+- Tests: `Rc5B37DivergeStopTests` (new); the breaking-change map tests count B37 and its map hash; the code-default
+  registry count is 597 (the new `solverProfile.divergeLimitPu`).
+
+## [2.1.154]
+
+### Added
+- Global switch `--timings`: per-stage wall-clock timing, for benchmark runs. A verb's `--json` result gains a final
+  `timings` block (`startup`, `parse`, `build`, `assemble`, `factor`, `solve`, `write`, `total`, in milliseconds; counts
+  such as `iterations`; `stages_merged` and `stages_not_measured`), and a short table goes to stderr when the run ends.
+  Measured: `pf`, `dcpf`, `dcopf`, `acopf`, `cpf`, `iec60909`, `nminus1`, `estimate`, `stability`, `dynamics-study`,
+  `crossval` and `harmonics`. Where a verb's code path calls one solver entry point, the figure for `solve` is the
+  combined build, assembly, factorisation and solve, and the block says so. Every other verb reports `startup`,
+  `parse` (where it loads a case through the shared loader), `write` and `total`, and lists the other stages as not
+  measured. The stopwatches are in the CLI layer only (`StageTimer`), around existing calls and the stopwatches the
+  estimate, crossval and harmonics code already had; no numerical code changes. Without the switch every output is
+  byte for byte what it was (the new tests compare stdout, stderr and the result file with and without it).
+  `StageTimingsProcessTests` is new.
+
+## [2.1.155]
+
+### Fixed
+- `--timings` startup figure: `StageTimer` read the local clock (`DateTime.Now`), which the no-local-clock guard
+  (`BugHunt1029IoTests.BH78`) forbids. It now takes the elapsed time from the UTC clock against the process start time
+  converted to UTC; the figure is the same, and the guard is unchanged.
+- Tests: the two script-record pins in `Rc5Wp15ScriptPinTests` were stale. They were missed when B36 (2.1.152) changed
+  the default Q-limit pass cap from 12 to 100, which the run record reports as `maxQLimitPasses`. Re-pinned; the only
+  difference in either record is that one reported default (12 to 100), and no numerical result changed.
+
+## [2.1.156]
+
+### Changed
+- BREAKING CHANGE (B38): a file named inside an input file (a side file) is held to one rule, `SideFile` in Core: a
+  QSTS profile's `csv`, an event catalogue's `nesoTraceCsvPath`, a model assignment's `file` and a protection-audit
+  study's `case`, `devices` and `curves`. A network (UNC) path, a `\\?\` or `\\.\` path, a reserved device name on
+  Windows and a path under `/dev`, `/proc` or `/sys` elsewhere are refused before anything is opened, so an input file
+  never makes GridSim open a network connection or a device. A relative path is resolved against the naming file's
+  folder; a local absolute path is still accepted. The file is read through a stream that stops at a limit for its
+  kind (a QSTS CSV 64 MiB, a trace 512 MiB, a model document 16 MiB), and a refusal never quotes the file. Why: a study
+  or catalogue from someone else could name a share on another host (an outbound SMB connection carrying the user's
+  credentials), read any local file into an error message, or name an endless device. Size of the change: no number
+  changes for a side file that is a local file within its limit. What changes: such a side file on a network or device
+  path, which was opened, is refused (exit 1); a QSTS column chosen by name that is absent no longer lists the header's
+  fields; a model document that fails its pin is refused naming the pin only, not the file's hash; a catalogue's
+  relative trace path is read from the catalogue's folder, not the working folder (a run started elsewhere could find
+  no trace and give no RMSE, or a different file), and a named trace that is missing is said in the replay summary
+  instead of being skipped without a word; a damaged line of a catalogue's trace is named by its number, not quoted.
+  A trace given with `--trace` is the user's own file and is read as before.
+- BREAKING CHANGE (B39): `rpc --listen` needs a session token on every request, and every file a request names must
+  lie inside the host's working folder. The host draws a random token when it starts listening and writes it to a new
+  file only the user can read (`GridSim/rpc/rpc-<process id>.token` in the per-user local application-data folder);
+  the first output line gains `token_file`, the file's path (the token is never printed). A request without the token,
+  or with another, gets an `unauthorised` error and ends the connection. The rule of `save` now applies to the case of
+  `load`, the verb of `run-verb` and every value of its arguments (the value of `--flag=value` and each item of a comma
+  list too): inside the working folder, through no link, never a network or device path. A network path after a comma
+  (`bench --cases case9,\\host\share\x.m`) was not caught before. Why: loopback is shared by every user of a machine,
+  and `run-verb` reached any file the host user could write, child processes and the network, with no authentication.
+  Size of the change: no number changes. A client of `--listen` must read the token file and send `"token"` with each
+  request; a request that names a file outside the working folder, which ran, is refused (exit code 2). The standard
+  input transport (what the Python package uses) is unchanged.
+- BREAKING CHANGE (B40): the licence's bus limit holds at solve time, not only at load. Over `rpc --protocol 2`, a
+  case that has been edited (`set`, `add`, `delete`) is a user network, whatever it was loaded from, and is checked
+  again before `solve`, the solved attributes of `get`, `study` and `save`; `dist3ph-mesh <case.json>` checks its own
+  case format (one bus per node) as `--from-dist3ph` already did. Why: a case could be loaded within the limit, grown
+  past it with `add` and solved, and a meshed case of any size ran at the free tier. Size of the change: no number
+  changes within the limit. Over it, such a request is refused with the CLI's licence message (`licence-refused`,
+  exit code 2), as the same network is refused on the command line. The Core API stays ungated, by design.
+- BREAKING CHANGE (B41): a re-run never loads plug-in code, and the plug-in lint is an allow list of framework
+  namespaces. `breaking-change validate` refuses any job that names `--model-plugins` or runs `user-model
+  check-plugin` (`CANNOT-REPLAY: not replayable: --model-plugins loads plug-in code, and a re-run never loads code`),
+  whatever the state of its assemblies, an imported result file's entry included; the replay policy matches its
+  refused options without regard to case. The lint allows a framework type only in `System`,
+  `System.Collections.Generic`, `System.Collections.Immutable`, `System.Collections.ObjectModel`,
+  `System.Diagnostics.CodeAnalysis`, `System.Globalization`, `System.Runtime.CompilerServices`,
+  `System.Runtime.Versioning` and `System.Text`, and the attribute types of `System.ComponentModel`,
+  `System.Diagnostics` and `System.Reflection`; a referenced assembly must be one of the few that hold them. Why: a
+  journal line or an imported result folder carries its own command line, so a plug-in configuration and its DLL could
+  arrive with it and run when the user only ran `validate`; and the deny list left file routes open
+  (`System.Formats.Tar`, `DataSet.WriteXml`, `TextWriterTraceListener`, `ResourceWriter`). Size of the change: no
+  number changes. A plug-in job that `validate` re-ran (IDENTICAL or CHANGED) is now CANNOT-REPLAY; a plug-in that
+  uses a framework namespace outside the list, which loaded, is refused naming it. A plug-in stays trusted code.
+
+### Fixed
+- Tests: `BugHunt1125SecurityTests` (new). The plug-in replay pins in `Rc5DynamicsReplayTests` and
+  `Rc5Batch2VerifyJournalTests` read IDENTICAL or "plug-in assembly changed / missing" because plug-in jobs were
+  re-runnable; B41 makes them never re-runnable, so they now read the policy's refusal, and the model-assignments
+  replay test binds the shipped TGOV1 instead of the plug-in sample. The plug-in job left the dynamics census, which
+  covers re-run jobs only. The `rpc --listen` tests send the token. The breaking-change map tests count B38 to B41 and
+  the map hash.
+
+## [2.1.157]
+
+### Changed
+- BREAKING CHANGE (B42): hostile-file limits. Every recursive reader has a depth limit and every count a file gives is
+  checked before anything is sized from it: a MATPOWER expression nested deeper than 64 parentheses or `sqrt` calls
+  (real cases use two or three; a run of unary signs is now a loop), a Turtle document nested deeper than 256 `[ ]` or
+  `( )` brackets, an RDF/XML document nested deeper than 256 elements (checked in a streaming pass before the tree is
+  built), a PSS/E case whose highest bus number leaves no room for the star points of its three-winding transformers
+  (the star base is computed in 64-bit arithmetic: in 32-bit it wrapped to 0 for a bus number of 1,410,065,408 or more
+  and the reader never returned), a switched shunt block of more than 1,000 steps under shunt control, a CGMES archive
+  or unzipped folder that expands past 1 GiB in all or 256 MiB in one document (it was 2 GiB and 512 MiB, and the folder
+  form had no limits at all; the folder is also held to 10,000 files), and a COMTRADE configuration that declares more
+  than 999,999 channels of a kind or more channels than it has lines (the channel sum and the sample size are now in
+  64-bit arithmetic). Why: each could kill the process with a stack overflow (exit 127, no message), hang it, or exhaust
+  memory from a small file. Size of the change: no number changes for a file within the limits, which are far above every
+  real case in the repository and the published test systems; a file past one is refused with exit 1 naming the limit.
+  The limits are listed in technical chapter 10, "Reader limits".
+- BREAKING CHANGE (B43): PSS/E: a two-terminal DC converter with a tap step STP of 0 is refused (PSS/E requires a
+  positive step), and the firing-angle tap search guards against a zero step as the multi-terminal code already did
+  (NUM-20: it never ended). A RAWX value of a number field that holds a separator, blank, slash or quote, and RAWX text
+  that holds both quote kinds, are refused naming the field (IO-10: the value was written into a RAW line and re-read,
+  so it shifted every later field or ended the record early, silently). Size of the change: no number changes for any
+  other case; such a case, which was read (or hung), is refused with exit 1. Surrounding blanks of a RAWX number given
+  as text are dropped.
+- BREAKING CHANGE (B44): COMTRADE reader (library; no verb reads COMTRADE). A 2013 recording whose start time is written
+  to more than six decimal places has nanosecond time stamps (it was read as microseconds, so its times were 1000 times
+  too long); a recording without time stamps is timed segment by segment through its sampling rates (every sample used
+  to take the first rate); the standard's missing-data codes (0x8000 in a BINARY word, 0x80000000 in a BINARY32 word, an
+  empty analog field, 99999 in a 1991 or 1999 ASCII file) are read as NaN and counted in the new
+  `ComtradeRecording.MissingValues` (they were read as values, for example -32768 a + b). Any other recording reads bit
+  for bit as before. Not changed: when a recording gives both time stamps and a sampling rate, the stamps are still used.
+
+### Fixed
+- MATPOWER reader: blank lines and `...` continuation lines are read in linear time (IO-05: 80,000 blank lines took 20 s
+  and 320,000 or 20,000 continuation lines did not finish in a minute); the indexed-assignment scan no longer runs over
+  following blank lines at every line start, and continued statements are built in one buffer. No result changes.
+- DGS import: a fixed numeric attribute (`outserv`, `uknom`, ...) that is not a number is refused naming its line, table
+  and column, exit 1 (IO-09: it was an internal error and a crash log); a whole number written as a real (`1.0`, `1e0`)
+  is accepted where an integer is read.
+- Tests: `BugHunt1125HostileFileTests` (new). `Rc4FixesSecurityTests` pins the new CGMES limits (the pin held 2 GiB,
+  the limit this release lowers); the breaking-change map tests count B42 to B44 and the map hash.
+
+## [2.1.158]
+
+### Changed
+- BREAKING CHANGE (B45): the side-file rule of 2.1.156 is tightened after review, and `rpc --listen` gains time limits.
+  A side file on an NT object-manager path (`\??\UNC\...`, `\??\GLOBALROOT\...`) was not caught and is refused; on
+  Windows the resolved path must start with a drive letter, so every NT, device or network spelling fails; a link
+  anywhere on the path is read one hop at a time without being followed, and one that leads to a network or device path
+  is refused before anything opens it (the check used to follow the final link, which could itself make the network
+  call, and did not look at links higher up); `CON:`, `NUL:x` and the superscript names `COM¹` to `LPT³` are device
+  names; `/DEV/tty` is a device path (macOS volumes ignore case). The rule now covers every study format that names
+  files: the RAW, DYR, unit protection, devices and curves of `dynamics-study` (no link inside a curves folder), the
+  case, groups and devices of `reliability-network`, the master and groups of `study-case`, the profile documents of
+  `cgmes-study`, and a script's `DYNAMICS` file and `SCHEMAS` folder. Case files named by a study may be up to 256 MiB.
+  `rpc --listen`: a connection must send its first request within 10 s, and is closed after `--idle-seconds` (default
+  120; 0 never) without a request, so a peer that connects and sends nothing cannot hold the endpoint; the token file
+  is removed on Ctrl+C, a termination signal and the console closing as well as on `shutdown`, a stale one from a host
+  that has gone is removed at start, and its folder is set to 0700 on every start outside Windows. On Windows a value
+  such as `v:5` (an `emt --probe`) is taken as a drive-relative path only when that drive exists. The `--listen`
+  plug-in refusal matches without regard to case. Size of the change: no number changes; such a side file, which was
+  opened, is refused (exit 1), and such a connection is closed.
+
+### Fixed
+- Plug-in lint: `System.Text.Encoding.Extensions` is on the allowed assembly list (it holds encodings of the allowed
+  `System.Text` namespace).
+- Tests: `BugHunt1125SecurityTests` gains the review's cases (NT prefix, links, device names, Unix token modes, the
+  import route of SEC-27 end to end, an edited bundled case refused at solve, a comma list with one outside item, the
+  idle timeout and a drive-shaped probe value). The breaking-change map tests count B45 and the map hash.
+
+## [2.1.159]
+
+### Changed
+- BREAKING CHANGE (B46): the CLI contract and robustness (rulings 6 and 7). An output that cannot be written (read-only,
+  locked by another program, access denied, a full disk) ends the run with exit 1 and one line naming it (`error: could
+  not write the output ...`), through one shared path in the process-wide handler; about ninety writers used to crash with
+  "internal error", a crash log and the runtime's crash code (CLI-02). `stress`, `chain`, `nminus1-sweep`, `bench` and
+  the storage report refuse `--out <name>.csv` with exit 2 before anything is written, because the table beside the
+  report is `<name>.csv` too (CLI-04: a sharing-violation crash on Windows, one corrupt file elsewhere). `estimate`
+  refuses `--max-iter` below 1 and `--tol` not above 0 with exit 2 before its run folder is made (CLI-05). `harmonic-pf`
+  refuses spectra that are not a JSON object with exit 1 (CLI-06). The study verbs dispatched before the general argument
+  handling (`dynamics-study`, `transmission-security`, `cable-rating`, `planning-study`, `study-case`, `breaking-change`
+  and the others with them) take `--cpu` before or after the verb, apply `--frequency-hz`, refuse `--gpu` naming it, and
+  split `--name=value` (CLI-07: "unknown command" or the usage line). A JSON input read as bytes is accepted with a UTF-8
+  byte order mark (ANA-04 and every other byte reader: Windows PowerShell 5.1 and Notepad write one); the bytes are not
+  changed, so a file's SHA-256 identity is the same. `export` refuses a case whose scene does not fit 32-bit floats,
+  naming the value (SEC-07). A null QSTS profile (NUM-02), a swing-trace channel that is not an object (ANA-09) and a
+  connection rule that is not an object (ANA-24) are refused by name; each was an internal error. Size of the change: no
+  number changes; only exit codes and messages, as listed.
+- BREAKING CHANGE (B47): the telemetry guard (Mark's ruling on SEC-08) treats a profiler as active only when a profiler
+  switch (`CORECLR_ENABLE_PROFILING`, `CORECLR_ENABLE_NOTIFICATION_PROFILERS`, or their `DOTNET_` forms) is 1 (written 1
+  or 0x1); the variables that name a profiler (`CORECLR_PROFILER*`, `CORECLR_NOTIFICATION_PROFILERS`, and now the
+  `DOTNET_` forms) stop GridSim only while such a switch is on. A machine with a profiler path left set machine-wide by a
+  security agent, an APM installer or IDE tooling, and profiling off, could not start any command (exit 78) and now
+  starts; a switch set to `true`, which the runtime takes as off, no longer stops it. `crossval` on Windows no longer
+  falls back to the bare names `py`, `python` and `python3`, which Windows looks up in the current folder before PATH
+  (CLI-10): the launcher is taken by its full path from its two install folders, and with nothing found the verb exits
+  77. Size of the change: no number changes.
+
+### Fixed
+- Licence lines (`licence status`, the footers, the refusals) are written in the invariant culture: a Thai or Saudi
+  locale printed the expiry in its own calendar and some locales grouped digits with a non-ASCII space (SEC-03).
+- The SLD editor's working copies are made in user-only temporary folders (0700 outside Windows) (SEC-04).
+- Run journal: only an entry of the journal's own schema sets the next sequence number, and a journal whose last number
+  is the largest possible is refused with a named error instead of wrapping to negative numbers (SEC-05). A snapshot
+  object is written to a temporary name, flushed and moved into place, and one cut short by a crash is replaced by the
+  next snapshot of the same input (SEC-06).
+- Tests: `BugHunt1125ContractTests` (new). `TelemetryGuardAllAppsTests` follows the ruling (a profiler path with
+  profiling off starts; `true` is not on; the `DOTNET_` spellings are listed) and `Doc7ValidationSidecarTests` the
+  Windows candidate list without bare names. The breaking-change map tests count B46 and B47 and the map hash.
+
+## [2.1.160]
+
+### Changed
+- BREAKING CHANGE (B48): the review of 2.1.157 and 2.1.158. An LCC or multi-terminal DC converter's tap step must be
+  at least 1e-6 (PSS/E's default is 0.00625), refused in `GridModel.Validate` so every reader and a model built in code
+  are held to it; a step of 0, or one below the rounding of the tap (1e-17), never moved the tap search, and a tiny
+  representable one (1e-12) took about 1e11 steps. The search itself now moves through at most 10,000 positions and
+  stops when a step no longer changes the tap; for every real step it takes the same steps as before, bit for bit
+  (R2-01). `rpc --listen` checks the token before anything else in a request (a request with an id of the wrong type was
+  answered, and kept the connection, without it), gives a new connection an absolute deadline to complete its first
+  request (a trickle of bytes no longer extends it), and starts the idle limit only between requests (R2-03). The token
+  file is `rpc-<machine>-<process id>-<random>.token`, and a host sweeps only its own machine's stale files (the folder can
+  be a home folder shared by a cluster's nodes, where another node's process ids mean nothing) (R2-04). Also refused, each
+  with exit 1 and a message naming it, where it was read, hung or was an internal error: a side file reached through a
+  link to an ancestor of a device folder (`d -> /`, then `d/dev/zero`) (R2-02); a single CIM `.xml` case over the 256 MiB
+  input-file limit, and a `cgmes-study` whose listed documents exceed the 1 GiB running total of the archive routes
+  (R2-05); a RAWX cell holding a line break or another control character (R2-06); a COMTRADE sample number above
+  2,147,483,647, which wrapped to a negative number (R2-07); a PSS/E J or K field of -2147483648 (R2-09). Size of the
+  change: no number changes for a valid case.
+  Also from the review of 2.1.159: a profiler switch is off only when it is unset, empty or reads as 0 the way the runtime
+  reads it (a hex DWORD, strtoul-style), and on for anything else (R3-01: 2, 10, ff, 0x2, -1 and 1x load a profiler and
+  were taken as off, so a profiler path with such a switch started GridSim with the agent loaded); `true` still reads as 0.
+  `crossval` starts no bare interpreter name on any system and skips relative PATH folders (R3-02, R3-03: .NET on Linux
+  and macOS, like Windows, looks in the current folder before PATH), and finds `py.exe` on PATH (R3-13); the macOS CPU
+  name is read with `/usr/sbin/sysctl` by its full path (R3-04). A JSON input that cannot be read ends any verb with exit
+  1 and its message, not an internal error (R3-08). `--out <name>.CSV` is refused like `.csv` on every system (R3-07).
+
+### Fixed
+- COMTRADE: samples without time stamps are timed through the rate segments in amortised constant time, with the same
+  times (R2-08: a walk from the first segment for every sample was samples x segments).
+- The shared output-failure handler no longer crashes when stdout is a closed pipe, and treats an aggregate as a file
+  failure only when every exception in it is one (R3-06). A snapshot object move that a scanner holds briefly is retried,
+  and a damaged object that cannot be replaced is reported (R3-05). The study-verb finder skips the global switches in any
+  order (R3-10). The planning completion record and the bundled case-size hint are read culture- and BOM-safely (R3-11,
+  R3-12).
+- MATPOWER gencost: the row-length check is made in 64-bit arithmetic (R2-15). The CGMES folder total counts the bytes
+  actually read (R2-13). The `rpc --listen` drive check reads the local drive list instead of probing the drive (R2-11).
+- Tests: the linear-time test compares timings at two sizes (R2-10), and the hang tests run in a child process or call
+  the bounded search directly, so a regression is killed instead of left spinning; new cases for each item above. The
+  breaking-change map tests count B48 and the map hash.
+
+## [2.1.161]
+
+### Changed
+- BREAKING CHANGE (B49): correctness fixes from the bug hunt of 2026-11-25 that change numbers. IEC 60909 `--corrections`
+  takes c_max in K_T from the network on the transformer's LOW-voltage side (IEC 60909-0:2016, 6.3.3; it took the higher
+  of the two sides): a transformer with its LV side at or below 1 kV now uses 1.05, not 1.10, so its K_T falls by a factor
+  1.05 / 1.10 (-4.5 %; 1.0146 to 0.9684 for an 11/0.4 kV, 1 MVA, 5 % unit) and the maximum Ik'' at its LV board rises by up
+  to about 4.5 % (ANA-03); other transformers are unchanged. A placed distance relay (`protection-eval`,
+  `protection-grade`) whose loop voltage has collapsed (at or below 1e-6 of nominal: a bolted fault at the relay point)
+  takes its direction from the prefault (memory) voltage and sees the fault in every zone of that direction (reported as
+  Z = 0 with a "close-in fault" reason): a bus fault behind the relay no longer trips zone 1 on rounding noise, and a
+  fault just in front of it trips zone 1; the generic 21 of `protection-check` and `fault` reports such an end as not
+  measured and wraps its angle test to (-180, 180] (ANA-02). Every fault with a real impedance between it and the relay is
+  measured as before. Harmonic Y(h): a series capacitor (a line with X < 0) scales as X / h and a negative branch B as
+  B / h, not h (a series capacitor's impedance was h squared too large at order h); a transformer's negative star-leg X
+  still scales by h, and h = 1 is unchanged bit for bit (ANA-07). The probabilistic load flow takes every probability over
+  the converged samples (each failed sample, the heaviest draws, counted as "no violation"; the exceedance and voltage
+  probabilities rise by up to the failed share) and a run with failed samples is INCOMPLETE (exit 3) with the failed count
+  in its reason; a run in which every sample converges is unchanged bit for bit (ANA-20). QSTS and hosting keep PV,
+  storage and load additions at constant power on a bus with a voltage-dependent load (they were scaled by its ZIP: a
+  1 MW PV unit at a constant-impedance bus at 0.95 pu injected 0.9025 MW while the records said 1 MW); a bus without a
+  varying ZIP is unchanged bit for bit (NUM-04). The tap-changer loops (the case solve and QSTS) no longer step the tap of
+  an out-of-service transformer, which ran it to a limit, counted QSTS tap operations and reported it pinned (NUM-05). An
+  exciter's two saturation points are taken in either order (IEEE 421.5's own order, E1 above E2, was refused; the fit is
+  the same curve, and the ascending order is unchanged bit for bit) (DYN-01). The induction motor (CIM5BL and the
+  composite load motors) takes a step beyond RK4's stability bound for its rotor EMF in equal sub-steps (a stalled motor
+  at a 10 ms step at 50 Hz, or a half cycle at 60 Hz, diverged); a step inside the bound is unchanged bit for bit. At the
+  5 ms default that is every motor with decay + 2 pi f |1 - w| at or below 500 1/s; a stalled fast motor at 60 Hz (the
+  WECC CMLD motor A, about 527 1/s) is now taken in two sub-steps (DYN-03).
+- BREAKING CHANGE (B50): cases that gave a wrong answer are refused by name, exit 1. A fault (`fault`, `protection-check`,
+  `protection-eval`) on a bus whose island has no fault source, which was "fed" by its loads, as `iec60909` refuses it
+  (ANA-05); the full AC-OPF (`acopf-full`, `scopf`) on a case with DC links, FACTS devices, static var compensators or
+  induction machines, which it optimised without them, naming each kind and count (ANA-06); the fast-decoupled engines
+  (`--engine fdxb|fdbx`) on a branch with X = 0, which ended in an internal LU message (NUM-03); two VSC converters in AC
+  voltage control on one bus, each of which was credited with the bus's whole reactive power (NUM-21); an RMS converter
+  unit whose solved current is above Imax x its rating, which was clamped from t = 0 (DYN-04, as R252 refuses a machine
+  controller started outside its limits, and with R252's exit code: 2 in `stability`); an EMT travelling-wave line whose travel time is shorter than the step, which
+  was stretched to one step (DYN-18, as the partitioned engine refuses it). Size of the change: such a case, which gave a
+  number, is refused; every other case is unchanged.
+
+### Fixed
+- ANA-01: the 87T check reads the three-winding star points as bus IDs (it used them as list positions, so a CIM case
+  whose star bus number equals the bus count failed with an index error, and on other numberings a two-winding unit could
+  be refused or a three-winding leg accepted).
+- DYN-02: one exciter saturation point with SE 0 and the other above 0 is still refused; the message now says the two
+  readings of such data differ and that GridSim does not choose between them (the convention is Mark's call).
+- DYN-05 / DYN-06 (no model change): a mapped HYGOV record gets a `note:` that its linear water column is an
+  approximation of PSS/E's nonlinear penstock (exact at full gate, the water time overstated by 1 / g0 below it), and an
+  RMS study prints a `note:` for each machine whose AVR regulates the HV bus because its unit transformer is folded in.
+- Docs: CLI reference (protection-eval, fault, pf engines, qsts, probabilistic, iec60909 `--corrections`), manual ch. 2,
+  6, 15 and 16, technical ch. 19.
+- Tests: `BugHunt1125CorrectnessTests` (new). `AcExciterTests` and `ProbabilisticTests` re-pinned (the refusal of the
+  standard's saturation order, and the all-sample denominator, are what these fixes change). The breaking-change map
+  tests count B49 and B50 and the map hash.
+
+## [2.1.162]
+
+### Changed
+- BREAKING CHANGE (B51): the review of 2.1.157 to 2.1.160. `crossval` starts the `py` launcher with `-3` before the
+  script and `PYLAUNCHER_NO_SEARCH_PATH=1` in its environment, so the script's `#!/usr/bin/env python3` line no longer
+  sends the launcher on a search that looks in the current folder first (R4-01); a relative `GRIDSIM_PYTHON` path is
+  refused with exit 1 and a relative `VIRTUAL_ENV` is skipped (R4-11). An LCC or multi-terminal DC converter whose tap
+  range needs more than 10,000 steps (0.51 to 1.5 at 1e-5 is about 99,000) is refused by `GridModel.Validate` with exit
+  1 naming it; the tap search stopped quietly after 10,000 positions and could settle on a tap the full search would not
+  choose (R4-03). A JSON exception raised while writing a result (an object cycle, the maximum depth) is a defect again,
+  with its crash log, not "a JSON input could not be read" (R4-02); an aggregate of file and JSON reading failures
+  together is an input failure, exit 1 (R4-09). The `rpc --listen` token file's machine part carries 8 hex digits of the
+  SHA-256 of the machine name (node_1 and node1 gave the same name and swept each other's live files), and token files of
+  the 2.1.156 to 2.1.158 shape `rpc-<process id>.token` are swept when no process of that id runs (R4-06); a response
+  write to a peer that has stopped reading ends at the idle limit (R4-08). Size of the change: no number changes for a
+  valid case.
+
+### Fixed
+- COMTRADE: a sample's rate segment is found by binary search on precomputed segment starts, with the same arithmetic,
+  so the times are the same bits; sample numbers out of order, or a rate of 0 before the sample's segment, no longer fall
+  back to a walk over every segment (R4-04).
+- Journal snapshots: the move is retried only on a sharing or lock violation; any other failure is recorded at once as
+  `snapshotSkipped: "write-failed"` (it was retried and called "busy"); the four reasons are documented in the journal
+  entry and technical ch. 42 (R4-05).
+- Doc comments moved back to their members (R4-07); a CIM input over the size limit is named as the CIM / CGMES input
+  (R4-12). R4-10: the RAW line splitter breaks on `\r` and `\n` only, so U+0085, U+2028 and U+2029 cannot split a record
+  and need no refusal.
+- Tests: `BugHunt1125Review4Tests` (new). `Doc7ValidationSidecarTests` and the R2-04 token-name test re-pinned (their
+  paths were relative, and the host part now carries the hash). The breaking-change map tests count B51 and the map hash.
+
+## [2.1.163]
+
+### Changed
+- BREAKING CHANGE (B52): the review of 2.1.161. `emt --lines` with a travelling-wave line shorter than the step ends with
+  exit 1, as B50 states (it was the usage code 2) (R5-02). An RMS converter whose solved current is at its limit to within
+  a relative 1e-9 starts (a unit dispatched at Imax x rating could land a few ulps above it and be refused) (R5-05). QSTS
+  refuses devices that cancel a voltage-varying load to within 1e-9 of it, as it refuses exact cancellation (the re-based
+  ZIP was 1e9 times larger and its voltage dependence was rounding) (R5-12). Size of the change: no number changes for a
+  valid case.
+
+### Fixed
+- `emt`: when a travelling-wave line's travel time is rounded to whole steps by more than 10 %, the run says so once on
+  stderr, naming the line with the largest rounding (R5-06).
+- The generic 21's verdict text is formatted in the invariant culture (R5-10).
+- Docs and comments: the ANA-02 threshold explains that the loop voltage decides even when the loop current is itself a
+  rounding residue (R5-01); the motor RK4 bound is 2.5 / (decay + 2 pi f |1 - w|), so at the 5 ms default a stalled fast
+  motor at 60 Hz (the WECC CMLD motor A) is taken in two sub-steps, and the 2.1.161 entry and B49 say so (R5-04); the
+  harmonic sign rule is not applied by the three-phase builder yet, and a net-capacitive compensated branch is scaled as a
+  pure capacitor (R5-08, R5-09).
+- Tests: the Rc5Wp17 / Rc5Wp18 re-pin proofs are asserted (with the close-in rows removed, each text hashes to the 2.1.160
+  text with the same rows removed; the Wp18 loops' voltage is rounding, about 1.9e-16 pu, their current a residue of about
+  3.7e-10 pu) (R5-01); every B50 refusal's exit code through the built CLI, `BugHunt1125RefusalExitTests` (R5-02); gb-full
+  in travelling-wave mode at a 10 us step is pinned again (R5-03); `BugHunt1125Review5Tests` (new). The breaking-change map
+  tests count B52 and the map hash.
+
+## [2.1.164]
+
+### Changed
+- BREAKING CHANGE (B53): the CLI lows of the 25 November bug hunt. `case9 --ticks N` runs the live loop as every other
+  case does (it printed one report and ignored the switch) (CLI-11). `bench --estimate` refuses `--runs` below 1 and the
+  flags of the other bench modes it never read (`--out`, `--parallel`, `--note`) (CLI-12); `batchsolve` refuses `--count`,
+  `--n` and `--runs` below 1 instead of replacing them with 1 (CLI-13); `estimate --synth` refuses a negative `--noise` and a
+  `--coverage-*` outside 0..1, and `transient` a negative `--trip-at` (CLI-14), each exit 2 before any work. Two result flags
+  where one names a file the CSV writer derives from the other (`--csv a.csv --out a-summary.csv`) are refused, with the
+  platform's path rule (CLI-21). `reconfig` refuses a `.m` case whose buses changed between the gated load and the re-read
+  that keeps its open branches, and the re-read takes `--frequency-hz` (CLI-20). Size of the change: no number changes for
+  a valid run; such command lines, which ran or silently ignored a flag, now refuse with exit 2 (1 for `reconfig`).
+
+### Fixed
+- `trip <case> <bus>`: on a case whose generators have no names (MATPOWER, the built-in IEEE cases) the unit is chosen by
+  its bus number, and the refusal lists the generator buses (it listed nothing) (CLI-15).
+- The JSON result verbs (`harmonic-pf`, `harmonic-se`, `gic`, `cosim`, `emt-partition`, `qv-modal`) build the document in
+  memory and move it into place from a temporary sibling, so a failure part way leaves no half-written file to block the
+  next run (CLI-17).
+- `gridsim --help` no longer points at the header of Program.cs; the CLI reference's "Output files" states the
+  never-overwrite rule of the study verbs and its two exit codes (CLI-19).
+- `rpc --listen` also sweeps stale token files of the 2.1.160-2.1.161 name shape for this machine, and the CLI reference
+  says the older shapes are swept best effort on a shared home folder (R6-03, R6-05).
+- Tests: `BugHunt1125LowsCliTests` (new). The DYN-18 re-pin proof in `EmtUntappedBitIdentityTests` now states the shortest
+  line and asserts it (R6-02): its travel time is about 5.2 ns, so at 20 us it was stretched about 3,800 times (the
+  2.1.163 notes and REVIEW-B6 put it at about 1.6 us; the R5-03 lines-fine step is this 5.2 ns); a test name and the Wp17 / Wp18 proof
+  comments corrected (R6-09). The breaking-change map tests count B53 and the map hash.
+
+## [2.1.165]
+
+### Changed
+- BREAKING CHANGE (B54): the IO lows of the 25 November bug hunt. A solve-export read back, or a harmonic source set, that
+  gives a key twice is refused (it was read last-one-wins, and the
+  solve-export reader is case-insensitive, so `"converged": false, "Converged": true` read as converged), and malformed JSON
+  in either is the reader's invalid-data error (IO-16). A v2 case folder (and the case editor) refuses a listed file that
+  reaches out of the folder through a symbolic link or junction (IO-17). The PSS/E RAW writer refuses a case name, and the
+  RAWX reader a TITLE1 / TITLE2, that begins with `@!`, which the RAW reader takes as a heading line (IO-20). The COMTRADE
+  data file and the JSON schema, kind, overlay, unit-protection, provenance, PyPSA boundary and case-editor reads now pass
+  the 256 MiB input-file limit (IO-14). The DNP3 encoder refuses an address outside 0..65535 (IO-25). Size of the change:
+  no number changes for a valid file; such inputs, which loaded, now refuse with exit 1.
+
+### Fixed
+- COMTRADE ASCII data that ends in the DOS end-of-file mark (0x1A) is read (IO-13).
+- A DGS file that is not DGS stops collecting problems at 1,000 and its message lists 50, then "... and N more" (IO-15).
+- MATPOWER files with CR-only line endings are read line by line (everything after the first `%` was lost) (IO-18).
+- The frequency export writes a non-finite value as the named literal, as the other result exports do, instead of failing
+  after the run (IO-21).
+- The solve, estimate, frequency, H0, harmonic, impedance-stability, small-signal and harmonic-source exports write through
+  a temporary sibling and a move, so a failure part way leaves the earlier file, not a truncated one (IO-22).
+- The case editor's save gate stages its copy in a user-only temporary folder (0700 on Linux and macOS) (IO-26).
+- Tests: `BugHunt1125LowsIoTests` (new). The breaking-change map tests count B54 and the map hash.
+
+## [2.1.166]
+
+### Changed
+- BREAKING CHANGE (B55): the NUM lows of the 25 November bug hunt. Refused by name, exit 1: an OLTC record with a tap step
+  of 0 or less, MinTap above MaxTap, a negative dead band or a non-finite number (NUM-16); a branch whose impedance is so
+  small that its admittance is not finite (R = X = 1e-320 ended in an internal LU message) (NUM-08); the backward/forward
+  sweep on a model with a second slack bus, which was neither held nor checked (NUM-14); a QSTS study of more than
+  100,000,000 steps (NUM-17). The live loop's frame generation (and so its losses figure) is the units' output, the bus
+  injection plus the load at the solved voltage on every generator bus, not the sum of positive net injections: it rises
+  by the load that sits on generator buses (NUM-23, as the `--once` report already reads it); `export`'s scene `GenGw`
+  is read the same way (SEC-07, the part deferred from 2.1.159). An OLTC on a branch stored
+  with a tap ratio of 0 (the line convention, built through the Core API) steps from 1.0, not from 0 (NUM-06). The MILP
+  solver no longer takes an all-integer rounding that breaks a row as its incumbent (NUM-22). A replay telemetry cell of NaN
+  or Infinity is "no value" (the frame falls back to the model), as an empty cell is, and the file passes the input-file
+  limit (NUM-12). The slack reactive-limit note names the bus id (it printed the solver's position) and lists every slack
+  that breaches its limits (NUM-07). An area-interchange run with a DC link or FACTS device across an area boundary says
+  that its transfer is not counted as interchange (NUM-25). Size of the change: for a valid case, only the live frame's
+  generation and losses, the export scene's GenGw, the slack note's bus number, and the stated API cases move; the rest are refusals.
+
+### Fixed
+- The sparse LU's array growth works in long and refuses a factor past the largest array, instead of looping for ever past
+  2^30 entries (NUM-09).
+- Culture-invariant numbers in the synthetic measurement set's saved note and in several validation messages (NUM-11).
+- Two quadratic scans made linear: the multi-phase loader's duplicate bus-name test and the sweep's PV set point (NUM-13).
+- The LCC tap search refuses, rather than stops silently at, a search still moving at its 10,000-position cap (only a model
+  that skipped GridModel.Validate can reach it) (R6-04).
+- Docs and comments: the GDA replay's storage hour of day is UTC (NUM-24, as the storage manual states).
+- Tests: `BugHunt1125LowsNumTests` (new); `BugHunt1125HostileFileTests` re-pinned for R6-04 (the cap now refuses). The
+  breaking-change map tests count B55 and the map hash.
+
+## [2.1.167]
+
+### Changed
+- BREAKING CHANGE (B56): the DYN lows of the 25 November bug hunt. Refused by name: an RMS step schedule over a run
+  shorter than half its step, which expanded to no step and read index -1 (DYN-09); a run of more than 100,000,000 steps,
+  whose count wrapped negative (DYN-10); NaN (and infinite) time constants, droops and gains in the older control blocks and
+  governors and in the round-rotor saturation points, which ran with every output NaN or the machine silently unsaturated
+  (DYN-11); a machine with X''d or X''q not a finite reactance above 0 in the subtransient initialisation (DYN-12); an RMS
+  event stage whose branch trip leaves a bus with nothing connected, now named with the bus and the tripped branches (it
+  failed with the fault network's "singular" message in a study with no fault) (DYN-17). IEEEG3's SetReference takes a
+  mechanical power, as Initialize does and as every other governor's does (it took a gate, so with a23 other than 1 the
+  equilibrium moved) (DYN-13). The TSGB sizer counts device inertia already in the base configuration toward the
+  requirement and keeps it in its trial runs, so the reported synthetic inertia is what must be added (DYN-22). Size of the
+  change: with a23 = 1 and no base device inertia every number is unchanged bit for bit; the rest are refusals.
+
+### Fixed
+- Numbers in the AC exciter, GAST, ESST4B, PSS2C, RMS frequency and round-rotor machine refusals are formatted in the
+  invariant culture (DYN-16).
+- Docs: the EMT manual says what the 1 pu load sizing means for a bus away from 1 pu (DYN-19).
+- Tests: `BugHunt1125LowsDynTests` (new). The breaking-change map tests count B56 and the map hash.
+
+## [2.1.168]
+
+### Changed
+- BREAKING CHANGE (B57): the ANA and SEC lows of the 25 November bug hunt. `protection-audit` exits 3 when a breaker is
+  NOT ADEQUATE or the audit is Incomplete (no pair could be graded); both exited 0 (ANA-21). A bus outage in the N-1 /
+  N-k screens takes the DC links, FACTS devices, static var compensators, induction machines and OLTC records on that bus
+  out with it, named in the row's note (they referred to a bus no longer in the model) (ANA-11). The AC-SCOPF screen checks
+  the reference bus's P and Q against its units after a branch-only outage too (ANA-27). Unit commitment reads a
+  unit on or started above one half, not at exactly 1.0 (ANA-25). An exhaustive N-k screen of more than 20,000,000
+  combinations is refused, naming the count, before any solve (ANA-18). The IEC 61363, G74 and ANSI data files refuse a bus
+  number that is not a whole number (ANA-15). A dynamics study's machine ids are trimmed once when read, so "1 " and "1"
+  are one machine everywhere (ANA-22). A device configuration file is range-checked where it is read, and an event
+  catalogue's RoCoF window and response services are validated (SEC-35); a null event, loss, action or RTU binding is
+  refused by position (SEC-15). Size of the change: the audit's exit code, the bus-outage rows of cases with such devices,
+  SCOPF outages whose reference unit leaves its range and UC units returned a
+  hair under 1 move; the rest are refusals or text.
+
+### Fixed
+- Feeder reconfiguration says when the start itself breaks a voltage limit and every swap was refused on voltage, instead
+  of calling the start a local optimum (ANA-26). The two harmonic entry points name an unknown candidate source bus and a
+  feeder with no source (ANA-12). Relay verdict and watch-list text is culture-invariant (ANA-13). The G74 report labels its
+  IEC Ib(tb) reference as taking induction motors with mu only (ANA-14). `AcOpfIpmResult.LossesMw` says it includes shunt
+  conductance (ANA-16).
+- Security and robustness: the audit log, its lock, anchor, signature and forwarded copies are created 0600 off Windows,
+  and the anchor and signature temporary files have random names created new (SEC-09, SEC-10 in part); GRIDSIM_JOURNAL is
+  trimmed before its network test (SEC-11); licence resolution never stops start-up on a malformed GRIDSIM_LICENCE_FILE and
+  reads at most 64 KiB (SEC-13); a licence file of comment lines only is "no licence installed" (SEC-14); audit
+  verification fails an entry longer than 4 MiB by name (SEC-16); a journal rotation name clash keeps the file under a
+  `.dupN` name instead of blocking every later append (SEC-18); one line rule for audit outcomes and reasons (SEC-19); the
+  IEC 104 collision table holds at most 65,536 addresses per link and counts the rest (SEC-21); a dispatch on a model with
+  no slack bus is refused by name (SEC-23); invariant numbers in asset, protection, RTU and status-lamp messages (SEC-24);
+  the Markdown report neutralises HTML and Markdown in names (SEC-25); a NaN loading holds passive plant's thermal state,
+  and a missing network delegate reads "no value" (SEC-29); the accept file records and accepts NaN and infinite sizes
+  (SEC-30); the synthetic GB builder's zone test is ordinal (SEC-31); a zero phasor gives no angle row and a zero reference
+  refuses the superframe (SEC-32); repeated CSV headers are matched by occurrence and large integers by their text (SEC-33);
+  the FRT check refuses a fault trace it cannot join to the PCC trace (SEC-34).
+- Tests: `BugHunt1125LowsAnaSecTests` and `BugHunt1125JsonVerbFuzzTests` (new; the second is the R3-08 one-off over the
+  JSON verbs); `LicenceFileTokenTests` re-pinned for SEC-14. The breaking-change map tests count B57 and the map hash.
+
+## [2.1.169]
+
+### Changed
+- BREAKING CHANGE (B58): Mark's rulings 14 to 19 on the bug hunt's open questions. `emt --lines` models a travelling-wave
+  line whose travel time is shorter than the step as a pi branch of the same line (series L = Zc tau, charging C = tau /
+  Zc, half at each end), never stretched, and names each such line on stderr with a provenance note; 2.1.161 to 2.1.168
+  refused such a run with exit 1 (ruling 14, DYN-18). An exciter saturation pair with one SE of 0 (EXDC2's E1 = 0,
+  SE1 = 0) is read as the curve that starts at that point, A = E1 and B = SE2 E2 / (E2 - E1)^2, and a machine with
+  S(1.0) = 0 and S(1.2) above 0 as the curve that starts at 1.0 pu; both were refused, and the DYR reader says so in its
+  notes (ruling 15, DYN-02). The CGMES expanded total is 512 MiB (was 1 GiB) (ruling 17, R2-12). A non-empty
+  `DOTNET_DiagnosticPorts` stops every app at the telemetry guard (exit 78), as the other injection variables do (ruling
+  18, R3-09). COMTRADE: 0x8000 and 99999 are missing-data codes in a file of revision 1999 or later only (a 1991 file's
+  99999 or 0x8000 is data), and a start time with nanosecond precision gives nanosecond stamps in any revision; these
+  rules and the per-segment rates follow C37.111 as GridSim reads it, not checked against the standard's text (ruling 19,
+  IO-11, R2-14). Size of the change: a run with such a short line, such saturation data or a 1991 file holding those codes
+  gives a result where it was refused or read the code as missing; a bundle between 512 MiB and 1 GiB, and a run with a
+  diagnostic port set, are refused; every other case is unchanged bit for bit.
+
+### Fixed
+- Docs: the licensing manual states clock rollback as a known limit (ruling 16, SEC-02: no change for GA); the EMT manual,
+  the COMTRADE format section, the reader-limits table (with the 8 to 12 times memory multiplier) and the telemetry-guard
+  lists say the above.
+- Tests: `BugHunt1125RulingsTests` (new). Re-pinned with proofs in the commit: BugHunt1125CorrectnessTests (DYN-18,
+  DYN-02), BugHunt1125RefusalExitTests (DYN-18), EmtUntappedBitIdentityTests (DYN-18), PostRc3BatchCRefusalTests (DYN-02),
+  Rc4FixesSecurityTests (R2-12). The breaking-change map tests count B58 and the map hash.
+
+## [2.1.170]
+
+### Documentation
+- New pages on determinism: "Understanding GridSim determinism" (an overview), manual ch. 36 "Determinism and
+  reproducibility" and technical ch. 46 "Determinism - specification and evidence", with their rows in the two contents
+  pages and the site navigation. Technical chapters 44 (geomagnetically induced currents) and 45 (IEC 61850 SCL import)
+  are added to the site navigation, where they were missing.
+- Technical ch. 8: the statement that no test compares a parallel screen with a sequential one at the bit level is
+  narrowed to the loss sweep; the N-1 screens are compared (`ContingencyParallelBitIdentityTests`).
+
+## [2.1.171]
+
+### Documentation
+- GDA (Grid Data Analysis) is described as the author's own tool, not public and not part of GridSim, in manual ch. 22,
+  23 and 24, technical ch. 9 and the glossary (which named it Grid Data Archive); building the smaller parts on your own
+  data (an LTDS reader, a demand-replay series, a bridge client, an estimated-state store) is a legitimate use. The
+  169-hour horizon is explained as a safety invariant, not a setting, with no option, variable or licence that changes
+  it; manual ch. 23 gains a section on it.
+
+## [2.1.172]
+
+### Added
+- GridSim.Core ships its XML documentation file for IntelliSense: `GridSim.Core.xml` is built beside the assembly and
+  packed with it. A member or parameter without a comment is not an error (CS1591 and CS1573 are off, in Core only); a
+  malformed comment still fails the build.
+
+### Fixed
+- Documentation comments in GridSim.Core (comments only, no code change): malformed XML, ambiguous references to
+  overloaded members (now naming the overload), references to parameters a member does not have, references that did not
+  resolve, two duplicated parameter tags, and four summaries that sat on the wrong member.
+
+## [2.1.173]
+
+### Changed
+- BREAKING CHANGE (B59): review fixes R7-01 to R7-10. A non-empty `COMPlus_DiagnosticPorts` stops every app at the telemetry guard
+  (exit 78), as `DOTNET_DiagnosticPorts` does: the runtime reads the setting under either prefix (R7-01). `emt --lines`
+  reports the lines it models as pi branches with one count line first, then the first 20 by their end buses and branch
+  name (not EMT node numbers), then "and N more"; the full list is written to `pi-converted.csv` in the output folder and
+  the count to `summary.md` (R7-03). The harmonic-pf, harmonic-se, gic, cosim, emt-partition and qv-modal JSON results
+  write a NaN or infinite number as null, where it was an internal error (R7-05, CLI-17). A dynamics JSON file with
+  saturationS10 0 and saturationS12 above 0, or an exciter with one saturation SE of 0, gets the ruling 15 note the DYR
+  reader gives (R7-06). A COMTRADE BINARY32 value of 0x80000000 is missing only from revision 1999, as the BINARY code
+  is (R7-09). Size of the change: such runs are refused, report differently or give a result where they crashed; every
+  number of every other run is unchanged bit for bit.
+
+### Documentation
+- Determinism: the cross-vendor statement carries the Zen 1 exception; the forced AVX-512 CI leg needs a runner with
+  AVX-512 and reports NOT CHECKED otherwise; the files that record wall time (`summary.md` of emt and transient,
+  planning-study's `evidence.json`) are listed as differing between runs, with the advice to hash the result JSON; the
+  culture guarantee is stated for the CLI and the web host (R7-04, R7-10).
+- Manual ch. 16: the pi fallback applies to `emt`, not `emt-partition`, and drops the series R by design (R7-07, R7-08).
+  Technical ch. 35 and manual ch. 8 and 9 name `COMPlus_DiagnosticPorts`.
+- data/gb-full/README.md: a note on the short stub lines (1,744 shorter than 20 us, about 595 with a surge
+  impedance above 1 kOhm), which EMT models as pi branches at normal steps.
+
+### Fixed
+- Tests: `ReviewB7FixesTests` (new). The gb-full EMT `lines-fine` pin (5.2 ns step, 10.5 us simulated) is replaced by a
+  gb-full `lines` pin at the default 20 us through the pi fallback (R7-02). The breaking-change map tests count B59 and
+  the map hash.
+
+## [2.1.174]
+
+### Fixed
+- BREAKING CHANGE (B60): `cosim` and `emt-partition` write a NaN or infinite sample of the time axis or a trace as null
+  (Wp27CliSupport.Series), where a diverged run's series ended in an internal error and a crash log with no result
+  (R8-01, the rest of CLI-17's NaN-to-null contract). Size of the change: such a run now gives its result with null at
+  each non-finite sample; every finite sample, and every other run, is unchanged bit for bit.
+- LICENSE.md: GDA is "Grid Data Analysis" (it read "Grid Data Archive"). No other licence text changes.
+- data/gb-full/README.md: 590 of the short stub lines have a surge impedance above 1 kOhm (recomputed; the note said
+  about 595); data/bundled.sha256 regenerated.
+- Tests: `ReviewB7FixesTests` gains a NaN-series writer test and a check that the two verbs write no raw series value.
+  The breaking-change map tests count B60 and the map hash.
+
+## [Unreleased]
+
+### Added
+- Build status: GridSim now reports whether it is a supported release build. The `gridsim-cli-result/1` document
+  written by `--json` has a new top-level `buildStatus` after `tool`, the run journal line (`gridsim-journal/1`) has
+  `buildStatus` after `commit`, and the rpc `hello` result has `build_status` after `tool`. The value is `RELEASE` for a
+  release build that names its exact release checkout (the release workflow injected the SBOM hash, the source tree
+  was clean, and the stamped commit is a full git commit) and `UNSUPPORTED BUILD` for every other build (`BuildStatus`
+  in GridSim.Core). The compliance verdict stays a separate statement, reported by `gridsim compliance verify`; it does
+  not decide the build status. An additive field: readers that ignore
+  unknown fields are unaffected, every other byte of these documents is unchanged, and no computed value changes.
+  `buildStatus` is listed as build identity in `volatile-fields.json`, so `breaking-change validate` across builds
+  ignores it. `gridsim --version` is unchanged.
+- Tests: `BuildStatusFieldTests` (new). The result-file byte-identity helpers of the WP11, WP25, WP26 and WP27 tests
+  leave out the `buildStatus` line as they leave out the `tool` line (their pinned hashes are unchanged); the pinned
+  protocol 1 `hello` line gains `build_status`.
+- MCP server (`mcp/gridsim-mcp`): prefers GridSim's own build status and keeps its own cross-check, the commit GridSim
+  names against the shipped list of published release commits (`RELEASE-COMMITS`, beside `RELEASE-SHA256SUMS`; the
+  program hash and the compliance verdict are reported, not decisive); a disagreement is UNSUPPORTED BUILD with the reason. Refusals say only that a verb, flag or
+  location is not available through the GridSim MCP server.
+- MCP server: planner and student tools `import_model` (convert, dgs-import, scl-import, with the note lines and the
+  round-trip statement), `line_parameters`, `study_case_run`, `report_render`, `explain_solve` (the solve export
+  summarised) and `break_it` (a guided failure on a copy, with GridSim's message and the matching Troubleshooting
+  entry); skills `gridsim-teach`, `gridsim-construct` and `gridsim-validate` beside `gridsim-study`; lesson prompts;
+  resources for the starter cases and, from a checkout, the Troubleshooting index and technical ch. 2, 13 and 24.
+  `scl-import` joins the allowlist.

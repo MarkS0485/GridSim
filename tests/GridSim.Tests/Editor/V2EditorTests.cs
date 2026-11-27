@@ -26,7 +26,7 @@ public class V2EditorTests
     {
         public TempDir()
         {
-            Dir = Path.Combine(Path.GetTempPath(), "gridsim-editor-v2-" + Guid.NewGuid().ToString("N"));
+            Dir = TestTemp.Under("gridsim-editor-v2-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Dir);
         }
 

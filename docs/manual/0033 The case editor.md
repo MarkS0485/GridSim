@@ -355,7 +355,9 @@ check; once that file has unsaved changes it cannot be saved until L normalises 
 
 F9 runs the same checks over every file without writing. `--check` does so from the command line. Exit codes: 0 the
 check passed; 1 the case cannot be read (a missing folder or file, malformed JSON); 2 a usage error, a licence refusal
-or a console that is not interactive; 3 the check found errors.
+or a console that is not interactive; 3 the check found errors; 78 the telemetry guard refused to start (the editor runs
+it before anything else, like every GridSim app; see
+[technical ch. 35, section Telemetry](<../technical/0035 Deployment and security.md#telemetry>)).
 
 ## v2 documents
 

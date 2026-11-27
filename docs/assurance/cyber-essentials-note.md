@@ -1,6 +1,6 @@
 # Cyber Essentials note
 
-**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This is a short self-assessed note mapping GridSim to the
+This is a short self-assessed note mapping GridSim to the
 five technical controls of the NCSC Cyber Essentials scheme. It is deliberately brief, because Cyber Essentials is a
 scheme about an organisation's operational IT environment (the boundary firewalls, the user accounts, the patched
 estate), not about a software component. Most of its five controls are therefore the deploying party's
@@ -29,16 +29,20 @@ secure-configuration baseline lives in `docs/developer/deploy/` and technical ch
 answers only the host names in `AllowedHosts` (default the loopback names), sends `Content-Security-Policy:
 frame-ancestors 'none'`, `X-Frame-Options`, `X-Content-Type-Options` and `Referrer-Policy` on every answer and HSTS on
 HTTPS outside Development, and `pmu-ingest` UDP and `interpose` listen on loopback by default. The
-Content-Security-Policy covers framing only (no script policy), and the nginx example adds no headers of its own. Host
+default Content-Security-Policy covered framing until 2.1.140; since then it restricts scripts, styles, images, fonts and
+connections to the app's own origin (styles keep `'unsafe-inline'` for inline style attributes). A `script-src 'self'`
+policy is also available as an option (`GridSim:ScriptCsp`, `report-only` or `enforce`), and the nginx example adds no
+headers of its own. `compose.yml` runs the web container
+with a read-only root file system, no Linux capabilities and `no-new-privileges`. Host
 OS hardening remains deploying-party.
 
 ## 3. User access control
 
 **Status: Partially achieved (engine-side), maturing under the assurance effort.** The web host authenticates
 (cookie sign-in and a single sign-on consumer), and the production configuration's replay-only gate leaves the solve
-surface unmapped. A role-based access-control gate (`OperationRole`, `IdentityContext`, `RoleGuard`) is built and tested, and since
-2026-11-01 the web host enforces it on `POST /api/solve` and every `/ws/sim` control frame, writing each denial to its
-audit log when it has one; the dashboard's own sessions are not role-gated. Account provisioning, directory services and privileged-account management at the
+surface unmapped. A role-based access-control gate (`OperationRole`, `IdentityContext`, `RoleGuard`) is built and tested, and the web host
+enforces it on `POST /api/solve`, every `/ws/sim` control frame and the dashboard's live sessions and actions, writing each denial to its audit log when `Audit:LogPath` is set. It also limits each client
+to 600 requests a minute on `/api` and `/console` by default. Account provisioning, directory services and privileged-account management at the
 organisation level are deploying-party.
 
 ## 4. Malware protection
@@ -48,14 +52,15 @@ deploying party's. The engine-side contribution is release integrity. At RC-1 th
 an Authenticode signature and the NuGet package an author signature, from a self-signed certificate whose thumbprint a
 deployer checks (or which a deployer imports to validate the signature), and `SHA256SUMS.txt` and the SHA-256 values
 in `RC1.md` are published. The Linux files are not signed and rest on the checksums alone, and no RC-1 file carries the
-build-provenance attestation the release workflow is written to add (see `slsa-provenance.md`). The signatures let a
+build-provenance attestation the release workflow adds; RC-3 and RC-4 were built and published by that workflow
+(see `slsa-provenance.md`). The signatures let a
 Windows deployer confirm a download is the signed file before trusting it, which reduces the chance of running a
 tampered or substituted binary. The embedded build identity (`BuildProvenance` / `ComplianceAttestation`) names the build but is
 not an integrity check: it covers no file bytes.
 
 ## 5. Security update management
 
-**Status: Partially achieved (engine-side).** Dependency updates are watched by Dependabot and a known-vulnerable
+**Status: Partially achieved (engine-side).** Dependency vulnerabilities are watched by Dependabot alerts (dependency updates are made by hand) and a known-vulnerable
 dependency fails the build (NuGet audit on every build, and the vulnerable-package gate in CI). Each fix follows the
 slice discipline (fix, test, CHANGELOG `Security` bullet, version bump), so the update trail is in the record. The
 builds are self-contained and carry the .NET 10 runtime, so a .NET security update reaches a deployer only through a

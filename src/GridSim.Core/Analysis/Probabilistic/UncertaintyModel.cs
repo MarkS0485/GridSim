@@ -33,13 +33,13 @@ public abstract record UncertainDistribution
     internal static void RequireFinite(double v, string what)
     {
         if (!double.IsFinite(v))
-            throw DomainRefusal.Mark(new ArgumentException($"{what} must be a finite number (got {v:R})."));
+            throw DomainRefusal.Mark(new ArgumentException(FormattableString.Invariant($"{what} must be a finite number (got {v:R}).")));
     }
 
     internal static void RequirePositive(double v, string what)
     {
         RequireFinite(v, what);
-        if (!(v > 0.0)) throw DomainRefusal.Mark(new ArgumentException($"{what} must be above 0 (got {v:R})."));
+        if (!(v > 0.0)) throw DomainRefusal.Mark(new ArgumentException(FormattableString.Invariant($"{what} must be above 0 (got {v:R}).")));
     }
 
     /// <summary>p clamped into the open interval (0, 1) (the one-grid-step nudge the Gaussian inverse uses).</summary>
@@ -203,7 +203,7 @@ public record DiscreteDistribution : UncertainDistribution
         }
         if (merged.Count == 0) throw DomainRefusal.Mark(new ArgumentException("A discrete distribution needs at least one atom."));
         if (Math.Abs(sum - 1.0) > 1e-9)
-            throw DomainRefusal.Mark(new ArgumentException($"The atom probabilities must sum to 1 (got {sum:R})."));
+            throw DomainRefusal.Mark(new ArgumentException(FormattableString.Invariant($"The atom probabilities must sum to 1 (got {sum:R}).")));
         _atoms = merged.Select(kv => (kv.Key, kv.Value)).ToArray();
         _cum = new double[_atoms.Length];
         double c = 0.0;
@@ -260,7 +260,7 @@ public sealed record TwoStateDistribution : DiscreteDistribution
         RequireFinite(capacity, "capacity"); RequireFinite(availability, "availability");
         if (capacity < 0.0) throw DomainRefusal.Mark(new ArgumentException("The capacity must not be negative."));
         if (availability < 0.0 || availability > 1.0)
-            throw DomainRefusal.Mark(new ArgumentException($"The availability must lie in [0, 1] (got {availability:R})."));
+            throw DomainRefusal.Mark(new ArgumentException(FormattableString.Invariant($"The availability must lie in [0, 1] (got {availability:R}).")));
         return new[] { (0.0, 1.0 - availability), (capacity, availability) };
     }
     /// <inheritdoc />

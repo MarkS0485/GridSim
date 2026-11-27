@@ -98,7 +98,7 @@ public sealed class BergeronEnd : NodalElement
     internal override void Validate(double dt, int nodeCount)
     {
         if (_line.TravelSeconds < dt * (1.0 - 1e-12))
-            throw new ArgumentException($"travel time {_line.TravelSeconds:R} s is shorter than the step {dt:R} s; a Bergeron line decouples only when the step does not exceed its travel time");
+            throw new ArgumentException(FormattableString.Invariant($"travel time {_line.TravelSeconds:R} s is shorter than the step {dt:R} s; a Bergeron line decouples only when the step does not exceed its travel time"));
         double q = _line.TravelSeconds / dt;
         double rq = Math.Round(q);
         if (Math.Abs(q - rq) < 1e-9) q = rq;

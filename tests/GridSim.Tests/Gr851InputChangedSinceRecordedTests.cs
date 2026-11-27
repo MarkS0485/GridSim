@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr851InputChangedSinceRecordedTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-gr851-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-gr851-{Guid.NewGuid():N}");
 
     public Gr851InputChangedSinceRecordedTests() => Directory.CreateDirectory(_dir);
 

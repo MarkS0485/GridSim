@@ -31,6 +31,11 @@ internal static class UserModelCommand
             }
             return CliExit.Ok;
         }
+        if (sub.Equals("check-plugin", StringComparison.OrdinalIgnoreCase))
+        {
+            if (a.Count != 3) return Usage("usage: gridsim user-model check-plugin <plugins.json>");
+            return CheckPlugin(a[2]);
+        }
         if (!sub.Equals("check", StringComparison.OrdinalIgnoreCase))
             return Usage($"unknown user-model subcommand '{sub}'. Use: list, check.");
         if (a.Count != 3) return Usage("usage: gridsim user-model check <model.json | LIBRARY-ID>");
@@ -83,6 +88,36 @@ internal static class UserModelCommand
         {
             ModelBlock b = doc.Blocks.First(x => x.Id == id);
             Console.WriteLine($"    {n++,2}. {b.Type,-10} {b.Id}  <- {string.Join(", ", b.Inputs.Select(r => r.ToString()))}");
+        }
+        return CliExit.Ok;
+    }
+
+    /// <summary>RC5 WP12: load a <c>gridsim-plugins/1</c> configuration under every rule (confinement, hash pin, attribute,
+    /// determinism lint), bind each listed model at its declared defaults (the replay check), and print what a result that used
+    /// it would record. Exit 0 every model passed; 1 a refusal (printed, naming the entry).</summary>
+    private static int CheckPlugin(string config)
+    {
+        GridSim.Core.Dynamics.Plugins.PluginSet set;
+        var bound = new List<GridSim.Core.Dynamics.Plugins.PluginModel>();
+        try
+        {
+            set = GridSim.Core.Dynamics.Plugins.PluginLoader.Load(config);
+            foreach (GridSim.Core.Dynamics.Plugins.PluginModelDefinition d in set.Models) bound.Add(new GridSim.Core.Dynamics.Plugins.PluginModel(d));
+        }
+        catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"error: user-model: {config}: {ex.Message}");
+            return CliExit.InputError;
+        }
+        Console.WriteLine($"Plug-in configuration {Path.GetFileName(set.Config.ConfigPath)}: {bound.Count.ToString(Inv)} model(s), contract {GridSim.Core.Dynamics.Plugins.PluginContract.Version.ToString(Inv)}");
+        Console.WriteLine($"  configuration sha256: {set.Config.ConfigSha256}");
+        foreach (GridSim.Core.Dynamics.Plugins.PluginModel m in bound)
+        {
+            Console.WriteLine($"  {m.Id,-16} {m.Definition.RoleText,-10} {m.Definition.AssemblyName} sha256:{m.Hash}");
+            Console.WriteLine($"    status: SUPPORTED (PLUGIN, sha256:{m.Hash}, {GridSim.Core.Dynamics.Plugins.PluginContract.OutsideLabel})");
+            Console.WriteLine($"    checks: path confined, hash pinned, determinism lint clean, replay of {GridSim.Core.Dynamics.Plugins.PluginReplay.Steps.ToString(Inv)} steps bit-identical");
+            foreach (GridSim.Core.Dynamics.Plugins.PluginParameter p in m.Definition.Parameters)
+                Console.WriteLine($"    {p.Name,-8} = {p.Default.ToString("R", Inv),-10} {p.Unit,-4} {(p.Min is double lo ? ">= " + lo.ToString("R", Inv) : "")}{(p.Min is not null && p.Max is not null ? ", " : "")}{(p.Max is double hi ? "<= " + hi.ToString("R", Inv) : "")}");
         }
         return CliExit.Ok;
     }

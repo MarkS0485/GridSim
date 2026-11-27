@@ -4,6 +4,7 @@ using GridSim.Cli.Interpose;
 using HC = GridSim.Core.Qsts;
 using GridSim.Core.Abstractions;
 using GridSim.Core.Analysis;
+using GridSim.Core.Analysis.Ras;
 using GridSim.Core.Assets;
 using GridSim.Core.Diagnostics;
 using GridSim.Core.Dynamics;
@@ -111,6 +112,12 @@ using GridSim.Gda.Ukpn;
 //                               -> fit the swing model's nadir / recovery constants to a measured loss-of-infeed trace (R079)
 //                                 (--scale F, --seed N, --out DIR, --oltc N, --iters N, --worst)
 
+// The telemetry guard runs before anything else, --version and help included. It exits with code 78 (one line on stderr
+// and the trace log) when the build marker is missing, a telemetry assembly is loaded or loads later, or an exporter or
+// agent-injection variable is set; see GridSim.Core.Diagnostics.TelemetryGuard. The entry assembly (gridsim) is always
+// checked for the marker, and so is every GridSim assembly the CLI references.
+GridSim.Core.Diagnostics.TelemetryGuard.EnforceAtStartup("gridsim", ["gridsim", "GridSim.Core", "GridSim.Gda", "GridSim.Gpu"], foreignEntryAllowed: false);
+
 // GridSim is a data/evidence tool: every number we parse from a flag and every number we write to a
 // CSV/JSON must be locale-independent. Pin the whole process to InvariantCulture up front so a
 // comma-decimal machine can't (a) parse "--dt-ms 0.5" as 5.0 or (b) emit "1,2340" into a CSV that the
@@ -120,6 +127,14 @@ System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureIn
 
 string baseDir = AppContext.BaseDirectory;
 var rest = args.ToList();
+
+// 2.1.154: --timings (StageTimer.cs) is taken off the command line first, so nothing else (journal, output policy, flag
+// checks, a result file's "args") sees it, and the clock starts. Without it nothing here does anything.
+args = StageTimer.Take(args, rest);
+
+// RC5: the run journal (technical ch. 42, off by default). --journal <file> and --journal-snapshot are taken off the
+// command line here, before anything reads it, so the output policy, result files and crash logs never see them.
+args = JournalRecorder.Take(args, rest);
 
 // D-DOC-072: the one output policy (CliFiles, user manual ch. 19 "Output files"). Record, before anything runs, what this
 // command line reads: every existing file it names (other than the value of an output flag), every case folder it names,
@@ -232,11 +247,42 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) =>
         Console.Error.WriteLine($"error: {ore.Message}");
         Environment.Exit(CliExit.Usage);
     }
+    // CLI-02 (ruling 6): a file that cannot be read or written (read-only, locked by another program, access denied, a
+    // full disk) is the environment, not a defect. The verbs open their outputs through CliFiles and about ninety sites
+    // let an IOException or UnauthorizedAccessException escape; this one shared path ends every such run with exit 1
+    // and a clear message (the manual's "a requested output that cannot be written"), naming the output when the message
+    // names one, instead of "internal error", a crash log and the runtime's crash code. A missing path was handled above.
+    // R3-06: an aggregate is a file failure only when every exception in it is one (a defect beside it still crashes loudly
+    // with its log), and the flush is guarded (a closed stdout pipe threw inside this handler).
+    // R4-02 / R4-09: one classifier (CliFailures) for both: a JsonException counts only when thrown while reading (it
+    // carries the reader's position; one thrown while writing a result is a defect), and an aggregate of file and JSON
+    // reading failures together is an input failure too.
+    (CliFailures.Kind failureKind, Exception? failure) = CliFailures.Classify(e.ExceptionObject);
+    if (failureKind is CliFailures.Kind.File or CliFailures.Kind.Mixed)
+    {
+        try { Console.Out.Flush(); } catch (IOException) { }
+        string? output = CliFiles.WrittenPathIn(failure!.Message);
+        Console.Error.WriteLine(output is not null
+            ? $"error: could not write the output '{output}': {failure.Message}"
+            : $"error: a file could not be read or written: {failure.Message}");
+        Environment.Exit(CliExit.InputError);
+    }
+    // R3-08: a JSON input that cannot be read is bad input, not a defect: exit 1 with the message, as an
+    // InvalidDataException is reported, for a verb that has no catch of its own.
+    if (failureKind is CliFailures.Kind.Json)
+    {
+        try { Console.Out.Flush(); } catch (IOException) { }
+        Console.Error.WriteLine($"error: a JSON input could not be read: {failure!.Message}");
+        Environment.Exit(CliExit.InputError);
+    }
     // F08: any other unhandled exception is a defect. It still crashes loudly (the runtime prints the stack and exits
     // non-zero; nothing here calls Exit), but first a crash log is written and its path printed, on every run, not
     // only on an --audit-log run.
     CrashReport.Write(e.ExceptionObject, args);
 };
+
+// RC5: a journaled run hashes its inputs now and writes its entry when the process exits (nothing without a journal).
+JournalRecorder.Start(baseDir);
 
 // Software licence (LICENSE.md), resolved once, fully offline - no network call, ever. Precedence:
 // GRIDSIM_LICENCE env var, then the installed %LOCALAPPDATA%\GridSim\licence.gridsim file, then the free
@@ -266,6 +312,84 @@ if (importLicencePath is not null)
 
 var licenceGate = GridSim.Core.Licensing.LicenceGate.Resolve();
 Gated.Init(licenceGate, baseDir);
+
+// CLI-07: the study verbs below are dispatched before the general argument handling further down (the '=' normaliser and
+// the global switches), so "gridsim --cpu cable-rating s.json" said the verb did not exist and "--out=r.json" was a usage
+// error. For them, here: a global switch before the verb is skipped to find the verb, --cpu is taken off (these verbs run
+// on the CPU), --frequency-hz is applied (it reaches every MATPOWER file the study loads), --gpu is refused naming
+// itself, and "--name=value" is split as everywhere else. Every other switch is left on the line for the verb to judge.
+{
+    string[] earlyVerbs =
+    [
+        "breaking-change", "transmission-security", "motor-start", "dynamics-study", "corrective-sequence", "emt-line", "arc-flash",
+        "cable-rating", "cable-size", "transfer-capability", "cgmes-study", "restoration-study", "reliability-study", "probabilistic",
+        "reliability-network", "harmonic-assess", "connection-assess", "grid-code", "flicker", "filter-design", "planning-study",
+        "study-case", "case-diff", "result-diff", "report",
+    ];
+    // R3-10: one loop, any order of the global switches before the verb.
+    int v = 0;
+    while (v < rest.Count)
+    {
+        if (rest[v] == "--cpu" || rest[v] == "--gpu" || rest[v].StartsWith("--gpu=", StringComparison.Ordinal)
+            || rest[v].StartsWith("--frequency-hz=", StringComparison.Ordinal)) v++;
+        else if (rest[v] == "--frequency-hz" && v + 1 < rest.Count) v += 2;
+        else break;
+    }
+    if (v < rest.Count && earlyVerbs.Contains(rest[v], StringComparer.OrdinalIgnoreCase))
+    {
+        string earlyVerb = rest[v].ToLowerInvariant();
+        rest.Insert(0, rest[v]);
+        rest.RemoveAt(v + 1);
+        for (int i = 1; i < rest.Count; i++)
+        {
+            string tok = rest[i];
+            if (!tok.StartsWith("--", StringComparison.Ordinal)) continue;
+            int eq = tok.IndexOf('=');
+            if (eq <= 0 || tok.StartsWith("--gpu=", StringComparison.Ordinal)) continue;
+            rest[i] = tok[..eq];
+            rest.Insert(i + 1, tok[(eq + 1)..]);
+            i++;
+        }
+        rest.RemoveAll(t => t == "--cpu");
+        if (rest.FirstOrDefault(t => t == "--gpu" || t.StartsWith("--gpu=", StringComparison.Ordinal)) is string gpuToken)
+        {
+            Console.Error.WriteLine($"error: {earlyVerb} runs on the CPU and does not take {gpuToken}.");
+            Environment.Exit(CliExit.Usage);
+        }
+        int fi = rest.IndexOf("--frequency-hz");
+        if (fi > 0)
+        {
+            if (fi + 1 >= rest.Count || rest[fi + 1].StartsWith("--", StringComparison.Ordinal))
+                FailFlag<double>("--frequency-hz", "", "a nominal frequency in Hz (for example 50 or 60)");
+            string fv = rest[fi + 1];
+            if (!double.TryParse(fv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double fHz)
+                || !double.IsFinite(fHz) || !(fHz > 0.0))
+                FailFlag<double>("--frequency-hz", fv, "a finite nominal frequency above 0 Hz (for example 50 or 60)");
+            rest.RemoveRange(fi, 2);
+            if (rest.Contains("--frequency-hz"))
+            {
+                Console.Error.WriteLine("error: --frequency-hz given more than once; a run declares one nominal frequency.");
+                Environment.Exit(CliExit.Usage);
+            }
+            Gated.DeclaredFrequencyHz = fHz;
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                if (!Gated.DeclaredFrequencyApplied)
+                    Console.Error.WriteLine($"warning: --frequency-hz {fHz.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} had no effect: this run " +
+                        "loaded no MATPOWER .m file (a JSON case folder carries its own frequencyHz, a built-in case name its own frequency).");
+            };
+        }
+    }
+}
+// RC5: re-run journaled jobs on this build and report bit for bit what moved (validate), import result files into a
+// journal (import), or print the breaking-change map (list). Its own flags are checked by the verb.
+if (rest.Count > 0 && rest[0].Equals("breaking-change", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);
+    Environment.ExitCode = BreakingChangeCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);
+    return;
+}
 if (rest.Count > 0 && rest[0].Equals("transmission-security", StringComparison.OrdinalIgnoreCase))
 {
     Environment.ExitCode = TransmissionSecurityCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
@@ -278,7 +402,11 @@ if (rest.Count > 0 && rest[0].Equals("motor-start", StringComparison.OrdinalIgno
 }
 if (rest.Count > 0 && rest[0].Equals("dynamics-study", StringComparison.OrdinalIgnoreCase))
 {
-    Environment.ExitCode = DynamicsStudyCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    {
+        using var studyTimer = StageTimer.Begin("solve");   // 2.1.154: --timings; the case load inside it is timed as parse and left out of this
+        StageTimer.Merged("build", "assemble", "factor", "solve");
+        Environment.ExitCode = DynamicsStudyCommand.Run(rest, baseDir, path => LoadCaseArgument(path, baseDir));
+    }
     return;
 }
 if (rest.Count > 0 && rest[0].Equals("corrective-sequence", StringComparison.OrdinalIgnoreCase))
@@ -364,6 +492,14 @@ if (rest.Count > 0 && rest[0].Equals("connection-assess", StringComparison.Ordin
     CliOutput.Finish(args);
     return;
 }
+// RC5 WP8: grid-code compliance suite (GB Grid Code ECC Issue 6 Rev 33, RfG 2016/631); its own --out document.
+if (rest.Count > 0 && rest[0].Equals("grid-code", StringComparison.OrdinalIgnoreCase))
+{
+    CliOutput.TakeFlags(rest);   // RC5 WP11: --json / --csv through the shared writer (this verb's own --out is left to it)
+    Environment.ExitCode = GridCodeCommand.Run(rest, path => LoadCaseArgument(path, baseDir), baseDir);
+    CliOutput.Finish(args);
+    return;
+}
 if (rest.Count > 0 && rest[0].Equals("flicker", StringComparison.OrdinalIgnoreCase))
 {
     CliOutput.TakeFlags(rest);   // RC4: --json / --csv through the shared writer (this verb's own --out is left to it)
@@ -425,6 +561,8 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--all",
     "--all-gen",
     "--all-gsps",
+    "--raw-revision",  // RC5 WP34: convert, the revision of a .raw output
+    "--ucte-country",  // RC5 WP34 review: convert, the country of synthesised UCTE-DEF node codes
     "--gb-services",   // D-DOC-185: trip adds the GB DC / DM / DR arrest layer (GbResponseServices.Typical), scaled
     "--band",          // F (R079): trip's nadir band over the unfitted swing constants (FrequencySensitivitySweep)
     "--envelope",      // F (R095): trip --asset-dynamics, the nadir / RoCoF envelope over asset-class parameters (AssetEnvelope.Sweep)
@@ -486,12 +624,22 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--fault-type",    // F21: protection-check --fault-bus study type: 3ph (default), slg, ll, dlg
     "--distributed-slack", // F22: pf shares the slack among units by participation factors: pmax, pg or equal
     "--switched-shunts",   // F22: pf regulates discrete switched shunts from a gridsim-switched-shunts/1 file
+    "--area-interchange",  // WP13 (RC5): pf controls area interchange from a gridsim-area-interchange/1 file
+    "--remote-vreg-file",  // WP13 (RC5): pf regulates remote bus voltages from a gridsim-remote-vreg/1 file
     "--breaker",       // F21: iec60909 breaker ratings kV,making kA,breaking kA,withstand kA[,seconds[,asym kA]] (CheckBreaker)
     "--branches",      // F21: iec60909 per-branch fault currents (three-phase)
     "--kind",          // R4-03: sensitivity --kind otdf|psdf|tap|dvdq|effectiveness
     "--devices", "--curves", "--fractions", "--fraction", // R4-07: placed protection devices, curve data, fault-line positions
+    "--xf", "--types", // RC5 WP4: protection-eval fault reactance (pu) and protection-grade fault types
+    "--swing", "--energised", // RC5 WP17: protection-eval power-swing trace and switch-onto-fault energisation
+    "--controls", "--ramp-mw", "--ramp-file", // RC5 WP7: acopf-opt control file; acscopf corrective ramps
+    "--rounding", "--outages", "--n2", "--max-outages", // WP14 (RC5): acopf-opt rounding mode; acscopf general outages, N-2 pairs and their cap
+    "--keep", "--rei-groups", // RC5 WP9: reduce, the buses kept and the REI groups
+    "--groups", "--coherency", "--xdp", // RC5 WP31: reduce --method dynamic, the coherent groups file, the number of groups to find, the classical X'd
+    "--switchable", "--respect-ratings", "--min-gain-mw", "--max-swaps", // RC5 WP7: reconfig switch set, ratings (no value), stop rules
     "--allow-non-loopback", // R4-05: rpc --listen beyond loopback, on purpose (no value)
     "--length-km", "--base-kv", "--base-mva", // R4-04: line-constants per-unit output
+    "--cable",         // RC5 WP35: line-constants reads a gridsim-cableconstants/1 file of buried single-core cables
     "--pin-floating",  // R4-15: dist3ph-mesh pins a reference on an unreferenced component (a switch, no value)
     "--at",            // fault-simultaneous: the fault buses and types, <bus>:<3ph|slg|ll|dlg>[,...]
     "--from-dist3ph", "--switch-z-pu", // dist3ph-mesh: lift a dist3ph feeder file (and the per-unit impedance given to a closed switch) instead of reading a mesh case
@@ -499,12 +647,22 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--sequence", // substation-state: a gridsim-switching-sequence/1 file of ordered open and close steps
     "--open", "--close", "--unspecified", "--numbering", "--emit", // R4-11: substation-state switch states, policy, numbering, projected case
     "--cgmes-version", "--sv", "--archive", // R4-11b: cgmes-export edition and SV source; cgmes-study ZIP bundle
+    "--profiles", "--geo", "--dyr", // RC5 WP10: cgmes-export DL/GL/SC/DY profiles, the gridsim-geo/1 sidecar, the DYR records
+    "--shapes", "--rdfs", "--profile-filter", "--report", // RC5 WP10: cgmes-shacl shapes, RDFS closure, profile filter, report file
+    "--max-q-passes", "--q-revert", "--diverge-limit", // RC5 linux-q: pf reactive-limit passes (default 100) and the opt-in revert rule (no value); B37: pf divergence stop (pu or off)
+    "--engine", "--gs-accel", "--modes", // RC5 WP25: pf engine (newton, fdxb, fdbx, gs) and Gauss-Seidel acceleration; qv-modal mode count
+    "--gic", "--field", "--direction-sweep", // RC5 WP28: gic sidecar file, uniform field N,E (V/km), direction sweep step
+    "--orders", "--norton-g", "--norton-b", "--boundary-csv", "--partition", "--monolithic", // RC5 WP27: harmonic-pf orders and Norton coupling; cosim boundary log; emt-partition cut and single-network form
+    "--model", "--census", // WP24: cgmes-export --model bus-branch (CGMES 3.0 bus-branch documents); cgmes-shacl --census (the SHACL features a shapes set uses)
+    "--params",        // RC5 WP30: scl-import, the gridsim-scl-params/1 file of electrical values
+    "--assume-closed", // RC5 WP30 review: scl-import takes a switch with no stated state as closed and records it (no value)
     "--accept-unconfirmed", "--strict", // R4-11c: dgs-import uses UNCONFIRMED attribute mappings (no value); exits 3 when the import is incomplete (no value)
     "--all-buses",     // F21: iec60909 duty at every bus with a base kV
     "--corrections",   // F21: iec60909 applies the impedance-correction factors K_G / K_S / K_SO / K_T
     "--rated-pf",      // F21: iec60909 --corrections: the generators' rated power factor (required)
     "--no-unit-oltc",  // F21: iec60909 --corrections: unit transformers without OLTC (K_SO instead of K_S)
     "--post-fault-rating", // F20: nminus1 / nminus2 / n-1-1 judge outage states against rating A (default), B or C
+    "--ras",           // RC5 WP26: nminus1 / nminus2 remedial action schemes (a gridsim-ras/1 file)
     "--prices",        // F19: dcopf also reports nodal prices (LMPs) and line shadow prices
     "--candidates",
     "--cascade",
@@ -580,6 +738,8 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--alarms",
     "--audit-log",
     "--audit-anchor",   // D-DOC-062: the anchor file of --audit-log
+    "--journal",          // RC5: the run journal (taken off the command line before this gate; listed for completeness)
+    "--journal-snapshot", // RC5: keep the run's inputs in the journal's snapshot store
     "--anchor-head",
     "--anchor-count",
     "--pss",
@@ -775,10 +935,13 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
     "--freq",
     "--frequency-hz",  // N187 (D2): the nominal frequency of every MATPOWER .m file this run loads (global)
     "--allow-unmodelled",   // Tranche A: a PSS/E .raw file with in-service devices GridSim does not model is read (global)
+    "--dyr-extended",       // WP3a (RC5): a PSS/E .dyr file is also read for the extended model library (global)
     "--psse-revision",      // Tranche A: the revision of a PSS/E .raw file that does not state it (global)
     "--seq-data",           // Tranche A: a PSS/E .seq file applied to every .raw file this run loads (global)
     "--tap-control",        // Tranche A: a PSS/E .raw file's voltage-control taps (COD 1) are applied (global)
     "--shunt-control",      // Tranche A: a PSS/E .raw file's voltage-control switched shunts (MODSW 1) switch (global)
+    "--area-control",       // WP13 (RC5): pf controls a PSS/E .raw file's area interchange (AREA ISW, PDES, PTOL) (global)
+    "--remote-vreg",        // WP13 (RC5): pf holds a PSS/E .raw file's remote regulated buses (IREG) at VS (global)
     "--rule",
     "--no-cda",
     "--event",
@@ -792,7 +955,7 @@ var knownFlags = new HashSet<string>(StringComparer.Ordinal)
 // working install would otherwise get exit 2 from the self-referential unknown-flag message below.
 if (rest.Contains("--help") || rest.Contains("-h"))
 {
-    Console.WriteLine("gridsim <verb> [args] - GridSim CLI. See docs/manual/0019 CLI reference.md (or the header of Program.cs) for the full flag list.");
+    Console.WriteLine("gridsim <verb> [args] - GridSim CLI. See docs/manual/0019 CLI reference.md (the CLI reference) for the full flag list, or gridsim help <verb>.");
     // R068: the complete verb list (CliHelpContractTests checks it against the dispatch and the manual).
     Console.WriteLine("run:        (none)=live UK model, <case|file.m>, --dir <path>, --mpc <file.m>, --once");
     Console.WriteLine("cases:      a built-in name, a JSON case folder, a MATPOWER .m file or a PSS/E .raw file (revisions 30, 33, 34, 35;");
@@ -803,7 +966,7 @@ if (rest.Contains("--help") || rest.Contains("-h"))
     Console.WriteLine("contingency: trip, screen, nminus1 (n-1), nminus2 (n-2), n-1-1 (nminus1minus1), nminus1-sweep, stress,");
     Console.WriteLine("            chain, cycle, corrective-sequence");
     Console.WriteLine("dynamics:   transient, freq, replay, replay-event, scenario, h0-study, fleet, evidence, domains, stability,");
-    Console.WriteLine("            modal, modal-full, fit-frequency, emt, emt-line, emt3, impedance-stability, inertia-placement, dynamics-study,");
+    Console.WriteLine("            modal, modal-full, fit-frequency, emt, emt-line, emt3, emt-partition, cosim, impedance-stability, inertia-placement, dynamics-study,");
     Console.WriteLine("            motor-start, user-model");
     Console.WriteLine("analysis:   harmonics, fault, iec60909, g74, ansi-sc, sc-dc, sc-61363, protection-check, physics-check, conformance, ptdf, lodf, dcpf, dcopf, acopf,");
     Console.WriteLine("            acopf-full, scuc, scopf, transmission-security, cpf, taps, restore, losses, grade, dist3ph,");
@@ -811,12 +974,13 @@ if (rest.Contains("--help") || rest.Contains("-h"))
     Console.WriteLine("            study-case, case-diff, result-diff, report, probabilistic,");
     Console.WriteLine("            restoration-study, reliability-study, reliability-network, arc-flash, cable-rating, cable-size,");
     Console.WriteLine("            sensitivity, qv-curve, pv-contingency, dc-contingency, fault-level-n1, line-constants, dist3ph-mesh,");
-    Console.WriteLine("            devices-check, fault-line, sc-trace, protection-audit, fault-series, fault-simultaneous, substation-state,");
-    Console.WriteLine("            cgmes-export, cgmes-conform, dgs-import,");
-    Console.WriteLine("            harmonic-assess, flicker, filter-design, connection-assess,");
+    Console.WriteLine("            devices-check, fault-line, sc-trace, protection-audit, protection-eval, protection-grade, fault-series, fault-simultaneous,");
+    Console.WriteLine("            substation-state, acopf-opt, acscopf, reconfig, dist-opt, reduce, long-term, qv-modal,");
+    Console.WriteLine("            cgmes-export, cgmes-conform, cgmes-shacl, dgs-import, scl-import,");
+    Console.WriteLine("            harmonic-assess, harmonic-pf, harmonic-se, flicker, filter-design, connection-assess, grid-code, gic,");
     Console.WriteLine("            experimental, estimate, estimate-noise-floor, crossval");
     Console.WriteLine("data:       gda, gda-replay, synth, export, serve, rpc, interpose, convert, validate, zonal, pmu-ingest, pmu-estimate");
-    Console.WriteLine("tools:      bench, simdcheck, gpucheck, batchsolve, licence, audit, compliance, ref, help");
+    Console.WriteLine("tools:      bench, simdcheck, gpucheck, batchsolve, licence, audit, compliance, ref, breaking-change, help");
     // F09: every verb has its own help (its section of the CLI reference, compiled into the binary).
     Console.WriteLine("verb help:  gridsim <verb> --help (or gridsim help <verb>) prints the verb's usage, flags, defaults and exit codes.");
     // F10: the shared result writer.
@@ -826,6 +990,7 @@ if (rest.Contains("--help") || rest.Contains("-h"))
     Console.WriteLine("            acopf-full is the full AC optimal power flow (voltages, reactive power and branch MVA limits).");
     Console.WriteLine("global: --importLicence <file.gridsim> installs a software licence (see the licence verb).");
     Console.WriteLine("global: --version prints the release number and the git commit of this build.");
+    Console.WriteLine("global: --journal <file.jsonl> records the run in a run journal (see breaking-change).");
     Environment.Exit(0);
 }
 
@@ -958,6 +1123,25 @@ if (rest.Remove("--allow-unmodelled"))
     };
 }
 
+// WP3a (RC5): --dyr-extended reads a PSS/E .dyr file given with --dyn-data for the extended model library as well (GENCLS,
+// ESST1A, EXST1, SCRX, ESAC1A, ESDC1A, IEEEST, PSS2A, PSS2B; GENTPJ is refused by name); without it those models are refused
+// as before.
+// Global like --allow-unmodelled; when the run reads no .dyr file, a warning says the flag had no effect.
+if (rest.Remove("--dyr-extended"))
+{
+    if (rest.Contains("--dyr-extended"))
+    {
+        Console.Error.WriteLine("error: --dyr-extended given more than once.");
+        Environment.Exit(2);
+    }
+    Gated.DyrExtended = true;
+    AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+    {
+        if (!Gated.DyrLoaded)
+            Console.Error.WriteLine("warning: --dyr-extended had no effect: this run read no PSS/E .dyr file.");
+    };
+}
+
 // Tranche A (October 2026): --tap-control applies a PSS/E .raw file's automatic voltage control by tap (COD 1): every
 // in-service controlled winding becomes an on-load tap changer the solve's tap loop steps from the file's ratio, and a
 // case that does not converge from the file's taps is solved from a ramp start (SteadyStateSolver.LoadRampStages =
@@ -996,6 +1180,30 @@ if (rest.Remove("--shunt-control"))
     {
         if (!Gated.PsseLoaded)
             Console.Error.WriteLine("warning: --shunt-control had no effect: this run loaded no PSS/E .raw file.");
+    };
+}
+
+// WP13 (RC5): --area-control keeps a PSS/E .raw file's area interchange data (AREA ISW, PDES, PTOL, and each branch's
+// metered end) and --remote-vreg its remote voltage regulation (a unit whose IREG names another bus holds that bus at VS).
+// pf then controls them as it would a --area-interchange or --remote-vreg-file file. Without them nothing changes: the
+// model is the same either way, and the IREG note is the old one. Global, given once; when the run loads no .raw file, or
+// no pf run reads the data, a warning says the flag had no effect.
+foreach (string sw in new[] { "--area-control", "--remote-vreg" })
+{
+    if (!rest.Remove(sw)) continue;
+    if (rest.Contains(sw))
+    {
+        Console.Error.WriteLine($"error: {sw} given more than once.");
+        Environment.Exit(2);
+    }
+    bool area = sw == "--area-control";
+    if (area) Gated.ApplyAreaControl = true; else Gated.ApplyRemoteRegulation = true;
+    AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+    {
+        if (!Gated.PsseLoaded)
+            Console.Error.WriteLine($"warning: {sw} had no effect: this run loaded no PSS/E .raw file.");
+        else if (!(area ? Gated.AreaControlRead : Gated.RemoteRegulationRead))
+            Console.Error.WriteLine($"warning: {sw} had no effect: only pf reads it.");
     };
 }
 
@@ -1370,6 +1578,25 @@ if (rest.Contains("--outage-dispatch"))
         Environment.Exit(2);
     }
     rest.RemoveRange(rest.IndexOf("--outage-dispatch"), 2);
+}
+// RC5 WP26: --ras FILE gives nminus1 and nminus2 a set of remedial action schemes (gridsim-ras/1), run inside each
+// contingency (RasCli). Refused on every other verb, and with the options it does not combine with, rather than ignored.
+// Without it the two verbs run exactly as before.
+string? rasPath = null;
+if (rest.Contains("--ras"))
+{
+    if (!(rest.Count > 0 && rest[0].ToLowerInvariant() is "nminus1" or "n-1" or "nminus2" or "n-2"))
+    {
+        Console.Error.WriteLine($"error: --ras applies to nminus1 and nminus2 only (got '{(rest.Count > 0 ? rest[0] : "no verb")}').");
+        Environment.Exit(2);
+    }
+    rasPath = FlagString(rest, "--ras")!;
+    if (outageDispatch != OutageDispatch.ReferenceBus)
+    {
+        Console.Error.WriteLine("error: --ras runs with the reference-bus dispatch only; drop --outage-dispatch or --ras.");
+        Environment.Exit(2);
+    }
+    rest.RemoveRange(rest.IndexOf("--ras"), 2);
 }
 
 // F19 (October 2026): --costs belongs to dcopf and acopf, --prices to dcopf and (N121, October 2026) acopf. Refused on
@@ -1775,6 +2002,21 @@ if (rest.Count > 0 && (rest[0].Equals("nminus1", StringComparison.OrdinalIgnoreC
         }
         nminus1BatchedLanes = lanes;
     }
+    if (rasPath is not null)
+    {
+        // RC5 WP26: the screen with remedial action schemes (RasCli); the plain screen below is not touched.
+        if (nminus1BatchedLanes is not null)
+        {
+            Console.Error.WriteLine("error: nminus1 --ras screens the outages one by one; drop --batched-lanes or --ras.");
+            Environment.Exit(2);
+        }
+        string? rasCase = SingleCasePositional("nminus1", rest);
+        GridModel rm = LoadSelected("nminus1", SelectCase("nminus1", rasCase, rest, baseDir, "data/uk", () => LoadUkDefault(baseDir)));
+        Environment.ExitCode = RasCli.RunNMinus1(rm, RasCli.Load("nminus1", rasPath, rm, rasCase), outBranch, outGen, outBus, postFaultRating,
+            StudySolverOnBackend(rm), ContingencyAnalysis.StudyOptions with { PerBusVoltageLimits = busVlimits, PostFaultRating = postFaultRating });
+        CliOutput.Finish(args);
+        return;
+    }
     GridModel mm = LoadSelected("nminus1", SelectCase("nminus1", SingleCasePositional("nminus1", rest), rest, baseDir,
         "data/uk", () => LoadUkDefault(baseDir)));
     RunNMinus1(mm);
@@ -1786,6 +2028,17 @@ if (rest.Count > 0 && (rest[0].Equals("nminus2", StringComparison.OrdinalIgnoreC
 {
     // The boolean flag comes off first, so Positionals cannot take the token after it for the flag's value.
     bool exhaustive = rest.Remove("--exhaustive");
+    if (rasPath is not null)
+    {
+        // RC5 WP26: the pair screen with remedial action schemes (RasCli); the plain screen below is not touched.
+        string? rasCase = SingleCasePositional("nminus2", rest);
+        GridModel rm = LoadSelected("nminus2", SelectCase("nminus2", rasCase, rest, baseDir, "data/uk", () => LoadUkDefault(baseDir)));
+        RasSet rasSet = RasCli.Load("nminus2", rasPath, rm, rasCase);
+        Environment.ExitCode = RasCli.RunNMinus2(rm, rasSet, FlagCount(rest, "--candidates", 20, 1), exhaustive, FlagCount(rest, "--top", 20, 0),
+            postFaultRating, () => StudySolverOnBackend(rm), ContingencyAnalysis.StudyOptions with { PerBusVoltageLimits = busVlimits, PostFaultRating = postFaultRating });
+        CliOutput.Finish(args);
+        return;
+    }
     GridModel mm = LoadSelected("nminus2", SelectCase("nminus2", SingleCasePositional("nminus2", rest), rest, baseDir,
         "data/uk", () => LoadUkDefault(baseDir)));
     RunNMinus2(mm, FlagCount(rest, "--candidates", 20, 1), exhaustive, FlagCount(rest, "--top", 20, 0));
@@ -2142,6 +2395,8 @@ if (rest.Count > 0 && rest[0].Equals("stability", StringComparison.OrdinalIgnore
     MachineDynamicsSet? classicalDyn = dynData is not null && !rms ? LoadDynDataOrExit("stability", dynData, sm) : null;
     try
     {
+        using var stabilityTimer = StageTimer.Begin("solve");   // 2.1.154: --timings; the whole study (its build, matrices and integration are not split)
+        StageTimer.Merged("build", "assemble", "factor", "solve");
         if (rms) RunRmsStability(sm, label, screen, faultBus, clearMs, avr, pss, dynData, rmsEvents, clearByTrip, eventsOut, eventsEvery);
         else if (screen) RunStabilityScreen(sm, label, classicalDyn);
         else RunStability(sm, label, faultBus, clearMs, sExport, classicalDyn);
@@ -2206,7 +2461,14 @@ if (rest.Count > 0 && rest[0].Equals("export", StringComparison.OrdinalIgnoreCas
     // N079 (Ruling R1): the default output goes under results/ in the current directory (it was beside the executable).
     string outPath = exportOut ?? DefaultResultsPath("gridviz.json");
     GridModel m = LoadSelected("export", SelectCase("export", exportCase, rest, baseDir, "data/uk", () => LoadUkDefault(baseDir)));
-    VizScene scene = VizExport.Build(m, FlagCount(rest, "--frames", 72, 0));
+    VizScene scene;
+    try { scene = VizExport.Build(m, FlagCount(rest, "--frames", 72, 0)); }
+    catch (InvalidDataException ex)   // SEC-07: a value the scene cannot hold, refused by name (it was an internal error)
+    {
+        Console.Error.WriteLine($"error: export: {ex.Message}");
+        Environment.Exit(CliExit.InputError);
+        return;
+    }
     VizExport.Write(scene, CliFiles.Output(outPath, "gridviz scene"));   // GR-694: through the one output policy (an input of the run, a protected case folder or an existing folder is refused)
     Console.WriteLine($"Exported {scene.Buses.Length} buses, {scene.Branches.Length} branches, {scene.Frames.Length} frames -> {Path.GetFullPath(outPath)}");
     return;
@@ -2280,9 +2542,82 @@ if (rest.Count > 0 && (rest[0].Equals("fault-series", StringComparison.OrdinalIg
 
 // RC4 R4-07: placed protection devices, fault along a line, short-circuit trace and the coordination audit.
 if (rest.Count > 0 && (rest[0].Equals("devices-check", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("fault-line", StringComparison.OrdinalIgnoreCase)
-    || rest[0].Equals("sc-trace", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("protection-audit", StringComparison.OrdinalIgnoreCase)))
+    || rest[0].Equals("sc-trace", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("protection-audit", StringComparison.OrdinalIgnoreCase)
+    || rest[0].Equals("protection-eval", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("protection-grade", StringComparison.OrdinalIgnoreCase)))
 {
     Environment.ExitCode = ProtectionDevicesCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+
+// RC5 WP21: long-term (quasi-steady-state) simulation (a new verb; no existing study is changed). Its result file is its
+// own CSV (--out); it is not on the shared --json/--csv writer list.
+if (rest.Count > 0 && rest[0].Equals("long-term", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = LongTermCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+
+// RC5 WP28: geomagnetically induced currents for a uniform field (a new verb; no existing study changes). Its result file is
+// its own JSON (--out); it is not on the shared --json/--csv writer list.
+if (rest.Count > 0 && rest[0].Equals("gic", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = GicCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+
+// RC5 WP27: the coupled harmonic power flow, harmonic state estimation, RMS-EMT co-simulation and the partitioned EMT run
+// (new verbs over unchanged Core studies). Each writes its own JSON (--out); none is on the shared --json/--csv writer list.
+if (rest.Count > 0 && rest[0].Equals("harmonic-pf", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = HarmonicPfCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("harmonic-se", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = HarmonicSeCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("cosim", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CoSimCommand.Run(rest);
+    return;
+}
+if (rest.Count > 0 && rest[0].Equals("emt-partition", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = EmtPartitionCommand.Run(rest);
+    return;
+}
+
+// RC5 WP25: QV modal analysis (a new verb; no existing study is changed). Its result file is its own JSON (--out); it is not
+// on the shared --json/--csv writer list.
+if (rest.Count > 0 && rest[0].Equals("qv-modal", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = QvModalCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+
+// RC5 WP9: Ward, extended Ward and REI network equivalents (a new verb; no existing study is changed).
+if (rest.Count > 0 && rest[0].Equals("reduce", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = ReduceCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    CliOutput.Finish(args);   // RC5 WP11: write the result files, if asked for (its own --out stays the reduced case)
+    return;
+}
+
+// RC5 WP33: distribution optimisation (capacitor placement, volt/VAr optimisation, phase balancing). A new verb; nothing
+// else changes. It writes its own result table (--out); it is not on the shared --json/--csv writer list.
+if (rest.Count > 0 && rest[0].Equals("dist-opt", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = DistOptCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
+    return;
+}
+
+// RC5 WP7: loss and reactive power OPF with taps and shunts, AC-SCOPF, feeder reconfiguration.
+if (rest.Count > 0 && (rest[0].Equals("acopf-opt", StringComparison.OrdinalIgnoreCase) || rest[0].Equals("acscopf", StringComparison.OrdinalIgnoreCase)
+    || rest[0].Equals("reconfig", StringComparison.OrdinalIgnoreCase)))
+{
+    Environment.ExitCode = OptimisationCommands.Run(rest, path => LoadCaseArgument(path, baseDir));
     CliOutput.Finish(args);   // F10: write the result files, if asked for
     return;
 }
@@ -2306,7 +2641,7 @@ if (rest.Count > 0 && rest[0].Equals("substation-state", StringComparison.Ordina
 // RC4 R4-11 part B: CGMES per-profile export and the bundle conformity run (new verbs; cgmes-study is unchanged but for --archive).
 if (rest.Count > 0 && rest[0].Equals("cgmes-export", StringComparison.OrdinalIgnoreCase))
 {
-    Environment.ExitCode = CgmesExportCommand.Run(rest);
+    Environment.ExitCode = CgmesExportCommand.Run(rest, path => LoadCaseArgument(path, baseDir));
     CliOutput.Finish(args);   // F10: write the result files, if asked for
     return;
 }
@@ -2316,10 +2651,24 @@ if (rest.Count > 0 && rest[0].Equals("dgs-import", StringComparison.OrdinalIgnor
     Environment.ExitCode = DgsImportCommand.Run(rest);
     return;
 }
+// RC5 WP30: IEC 61850 SCL substation section into the node-breaker model (a new verb; nothing else changes). It writes its
+// own gridsim-substations/1 file (--out); it is not on the shared --json/--csv writer list.
+if (rest.Count > 0 && rest[0].Equals("scl-import", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = SclImportCommand.Run(rest);
+    return;
+}
 if (rest.Count > 0 && rest[0].Equals("cgmes-conform", StringComparison.OrdinalIgnoreCase))
 {
     Environment.ExitCode = CgmesExportCommand.RunConform(rest);
     CliOutput.Finish(args);   // F10: write the result files, if asked for
+    return;
+}
+// RC5 WP10: native SHACL Core subset conformity run on a CGMES bundle (a new verb; cgmes-conform is unchanged). --report is its own file.
+if (rest.Count > 0 && rest[0].Equals("cgmes-shacl", StringComparison.OrdinalIgnoreCase))
+{
+    Environment.ExitCode = CgmesShaclCommand.Run(rest);
+    CliOutput.Finish(args);   // RC5 WP11: write the result files, if asked for
     return;
 }
 
@@ -2576,7 +2925,16 @@ if (rest.Count > 0 && rest[0].Equals("bench", StringComparison.OrdinalIgnoreCase
     if (rest.Remove("--perf"))
         RunPerfBench(rest, FlagCount(rest, "--runs", 20, 1), FlagString(rest, "--out"), baseDir, FlagString(rest, "--note"));
     else if (rest.Remove("--estimate"))
-        RunBenchEstimate(rest, FlagInt(rest, "--runs", 3), baseDir);
+    {
+        // CLI-12: at least one run, and the flags of the other two bench modes are refused rather than ignored.
+        foreach (string unused in new[] { "--out", "--parallel", "--note" })
+            if (rest.Contains(unused))
+            {
+                Console.Error.WriteLine($"error: bench --estimate does not use {unused} (it writes results/bench-estimate/); it would be silently ignored.");
+                Environment.Exit(CliExit.Usage);
+            }
+        RunBenchEstimate(rest, FlagCount(rest, "--runs", 3, 1), baseDir);
+    }
     else
         RunBench(FlagCount(rest, "--runs", 10, 1), FlagCount(rest, "--parallel", 0, 0), FlagString(rest, "--out"), baseDir,
             gpuSpec, FlagString(rest, "--note"), FlagString(rest, "--cases"));   // D-DOC-058: the vendor, not just "a GPU"
@@ -2802,7 +3160,7 @@ if (rest.Count > 0 && rest[0].Equals("impedance-stability", StringComparison.Ord
 {
     int selector = rest.Count == 0 ? 0 : rest[0] is "--dir" or "-d" || rest[0].Equals("--mpc", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
     bool knownSelector = rest.Count == 0 || selector == 2 || rest[0].EndsWith(".m", StringComparison.OrdinalIgnoreCase)
-        || rest[0].EndsWith(".raw", StringComparison.OrdinalIgnoreCase)
+        || (rest[0].EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || rest[0].EndsWith(".rawx", StringComparison.OrdinalIgnoreCase))
         || rest[0].EndsWith(".uct", StringComparison.OrdinalIgnoreCase)
         || rest[0].ToLowerInvariant() is "case9" or "ieee9" or "case14" or "case30" or "case57" or "case118" or "case300"
             or "case145" or "case24" or "rts" or "cigre" or "uk";
@@ -2823,7 +3181,7 @@ if (rest.Count >= 2 && rest[0] is "--dir" or "-d")
     model = Gated.Dir(rest[1]);
 else if (rest.Count >= 1 && rest[0].EndsWith(".m", StringComparison.OrdinalIgnoreCase))
     model = Gated.Matpower(rest[0]);   // Gated.Matpower also auto-fixes raw ohm/kW distribution files (R021)
-else if (rest.Count >= 1 && rest[0].EndsWith(".raw", StringComparison.OrdinalIgnoreCase))
+else if (rest.Count >= 1 && (rest[0].EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || rest[0].EndsWith(".rawx", StringComparison.OrdinalIgnoreCase)))
     model = Gated.Psse(rest[0]);       // Tranche A: a PSS/E RAW file (revisions 30, 33, 34, 35)
 else if (rest.Count >= 1 && rest[0].EndsWith(".uct", StringComparison.OrdinalIgnoreCase))
     model = Gated.Ucte(rest[0]);       // Tranche A: a UCTE-DEF file
@@ -2834,7 +3192,7 @@ else
     string name = rest.Count > 0 ? rest[0].ToLowerInvariant() : "uk";
     model = name switch
     {
-        "case9" or "ieee9" => doExport ? IeeeCases.Case9() : PrintAndExitCase9(),
+        "case9" or "ieee9" => doExport || ticks > 0 ? IeeeCases.Case9() : PrintAndExitCase9(),   // CLI-11: --ticks N runs the live loop, as on every other case
         "case14" => IeeeCases.Case14(),
         "case30" => IeeeCases.Case30(),
         "case57" => IeeeCases.Case57(),
@@ -2878,15 +3236,42 @@ static string ExportFileStem(string caseArgument)
     bool isPath = t.Contains('/') || t.Contains('\\')
         || t.EndsWith(".m", StringComparison.OrdinalIgnoreCase)
         || t.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-        || t.EndsWith(".raw", StringComparison.OrdinalIgnoreCase)
+        || (t.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || t.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase))
         || t.EndsWith(".uct", StringComparison.OrdinalIgnoreCase)
         || Directory.Exists(t);
     if (!isPath) return caseArgument;
     string name = Path.GetFileName(t.Replace('\\', '/').TrimEnd('/').Split('/')[^1]);
     if (name.EndsWith(".m", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-        || name.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".uct", StringComparison.OrdinalIgnoreCase))
+        || (name.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase)) || name.EndsWith(".uct", StringComparison.OrdinalIgnoreCase))
         name = Path.GetFileNameWithoutExtension(name);
     return name.Length > 0 ? name : caseArgument;
+}
+
+// WP2 (RC5): the fault point of each sequence fault of an RMS event study, at the first step it is in place (t = 0+) and
+// at its last step: sequence and phase currents into the fault, phase voltages, and the stage's Z2 and Z0. Pu on the
+// system base, phase-a reference (b and c are the faulted phases of a line-to-line or double line to ground fault).
+void PrintFaultPoints(RmsFaultStudyResult traced)
+{
+    static string P(double v) => v.ToString("0.0000", System.Globalization.CultureInfo.InvariantCulture);
+    static string Z(System.Numerics.Complex z) => double.IsFinite(z.Real) && double.IsFinite(z.Imaginary)
+        ? $"{P(z.Real)} {(z.Imaginary < 0 ? "-" : "+")} j{P(Math.Abs(z.Imaginary))}" : "infinite (no earth path)";
+    Console.WriteLine("fault points (positive-sequence representation; pu on the system base):");
+    foreach (RmsFaultTrace f in traced.Faults)
+    {
+        Console.WriteLine($"  {f.Description}");
+        RmsFaultSample? first = f.Samples.FirstOrDefault(s => s.Energised);
+        if (first is null) { Console.WriteLine("    never energised (the line was tripped throughout)"); continue; }
+        foreach ((string label, RmsFaultSample s) in new[] { ("t = 0+", first!), ("last", f.Samples[^1]) })
+        {
+            if (!s.Energised) { Console.WriteLine($"    {label} ({s.TimeSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} s): line tripped, no fault current"); continue; }
+            (double ia, double ib, double ic) = s.PhaseCurrentsPu;
+            (double va, double vb, double vc) = s.PhaseVoltagesPu;
+            Console.WriteLine($"    {label} ({s.TimeSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)} s): |I1| {P(s.I1.Magnitude)}  |I2| {P(s.I2.Magnitude)}  |I0| {P(s.I0.Magnitude)}"
+                + $"  |Ia| {P(ia)}  |Ib| {P(ib)}  |Ic| {P(ic)}  |Va| {P(va)}  |Vb| {P(vb)}  |Vc| {P(vc)}");
+        }
+        bool earth = f.Type is GridSim.Core.Protection.FaultType.SingleLineToGround or GridSim.Core.Protection.FaultType.DoubleLineToGround;
+        Console.WriteLine($"    Z2 {Z(first.Z2Pu)}  Z0 {(earth ? Z(first.Z0Pu) : "not used")}");
+    }
 }
 
 // One traced solve on the picked raw engine, dumped to JSON (--enableExport).
@@ -2991,7 +3376,7 @@ void RunTransientBatch(List<string> a, string root)
     double tripMw = FlagDouble(a, "--trip", 0);
     // GR-675: a trip is a loss of 0 MW or more (a negative trip used to run as a gain).
     if (tripMw < 0) FailFlag<double>("--trip", tripMw.ToString("R", System.Globalization.CultureInfo.InvariantCulture), "a loss of 0 MW or more");
-    double tripAt = FlagDouble(a, "--trip-at", 0);
+    double tripAt = FlagDoubleNonNegative(a, "--trip-at", 0);   // CLI-14: a trip time of 0 s or more
     double tripWin = FlagDouble(a, "--trip-window", 2.0);
     // GR-701 (remaining part, October 2026): --trip-at and --trip-window place and frame the trip, so without a trip
     // above 0 MW they did nothing and the run reported no trip as if the timing had been honoured. Refused (exit 2),
@@ -3544,7 +3929,7 @@ void WriteScenarioCsvs(string outDir, ScenarioMatrix matrix, string desc)
         foreach (string h in RunInfo.HeaderLines(desc)) csv.WriteLine("# " + h);
         csv.WriteLine("inertia_gvas,device,corner,rocof_hz_s,nadir_hz,settle_hz,lfdd_at_risk,assessment");
         foreach (ScenarioCell c in matrix.Cells)
-            csv.WriteLine($"{c.InertiaGvaS:F0},{c.Device},{c.Corner},{c.RocofHzPerS:F4},{c.NadirHz:F3},{c.SettleHz:F3},{c.LfddAtRisk},\"{c.Assessment}\"");
+            csv.WriteLine($"{c.InertiaGvaS:F0},{CsvText(c.Device)},{c.Corner},{c.RocofHzPerS:F4},{c.NadirHz:F3},{c.SettleHz:F3},{c.LfddAtRisk},\"{CsvText(c.Assessment)}\"");
     }
     using (var csv = new StreamWriter(CliFiles.Output(Path.Combine(outDir, "risk-curve.csv"), "risk-curve.csv")))
     {
@@ -3927,7 +4312,7 @@ void WriteEvidenceMd(string outDir, EvidenceReport report, string desc)
 
 // gda-replay (--series <ts.json> | --synth [--start yyyy-MM-dd] [--steps N] [--step-min M])
 //            [--case <name>] [--export-every N] [--out dir]
-//   The historical state estimator: replay a demand time-series through the validated solver, reconstructing
+//   The historical state estimator: replay a demand time-series through the verified solver, reconstructing
 //   the grid state at each PAST timestamp. Horizon-guarded - it can only ever reconstruct history.
 void RunGdaReplay(List<string> a, string root)
 {
@@ -4076,7 +4461,7 @@ void RunGdaReplay(List<string> a, string root)
         for (int i = 0; i < result.StorageSteps!.Count; i++)
             foreach (GridSim.Core.Storage.SiteStepRecord sr in result.StorageSteps[i])
                 scsv.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"{i},{sr.Name},{sr.RequestedMw:F3},{sr.DeliveredMw:F3},{sr.AuxiliaryMw:F4},{sr.Soc:F5},{sr.TemperatureC:F2},{(sr.Limited ? 1 : 0)}"));
+                    $"{i},{CsvText(sr.Name)},{sr.RequestedMw:F3},{sr.DeliveredMw:F3},{sr.AuxiliaryMw:F4},{sr.Soc:F5},{sr.TemperatureC:F2},{(sr.Limited ? 1 : 0)}"));
     }
     Console.WriteLine($"\n  -> {Path.GetFullPath(outDir)}");
     if (result.NonConverged > 0) Environment.ExitCode = 3;
@@ -5108,6 +5493,29 @@ void RunEmt(List<string> a, string root)
     // engine; it used to escape unhandled. It is a usage error: exit 2 with the reason (1.95.060). D-DOC-024 / 025:
     // the engine's network and probe refusals arrive here too; the C# parameter-name suffix is dropped.
     catch (ArgumentException ex) { Console.Error.WriteLine($"emt: {CliExit.UserMessage(ex)}"); Environment.ExitCode = 2; return; }
+    // R5-02 (DYN-18): a network the engine cannot represent at this step (a travelling-wave line shorter than the step) is an
+    // input the run cannot use: exit 1.
+    catch (InvalidDataException ex) { Console.Error.WriteLine($"error: emt: {ex.Message}"); Environment.ExitCode = CliExit.InputError; return; }
+    // DYN-18 (ruling 14): each travelling-wave line shorter than the step was modelled as a pi branch, with a provenance
+    // note (stderr; stdout unchanged). R7-03: the count first, then the first EmtPiNoteLimit lines named by their end
+    // buses and branch name (not EMT node numbers), then "and N more"; the full list goes to pi-converted.csv in --out
+    // and the count to summary.md (below).
+    const int EmtPiNoteLimit = 20;
+    IReadOnlyList<GridSim.Core.Dynamics.Emt.PiConvertedLine> piLines = engine.PiConvertedLines;
+    if (piLines.Count > 0)
+    {
+        Console.Error.WriteLine(FormattableString.Invariant(
+            $"emt: note: {piLines.Count} travelling-wave line(s) shorter than the step {dt:R} s are modelled as a pi branch of the same line (series L = Zc tau, charging C = tau / Zc split between the ends; provenance: GridSim's pi fallback, not stretched to one step); the full list is written to pi-converted.csv in the output folder."));
+        foreach (GridSim.Core.Dynamics.Emt.PiConvertedLine pc in piLines.Take(EmtPiNoteLimit))
+            Console.Error.WriteLine(FormattableString.Invariant(
+                $"emt: note:   {pc.Describe()}: travel time {pc.TauSeconds:R} s; it is modelled as a pi branch of the same line."));
+        if (piLines.Count > EmtPiNoteLimit)
+            Console.Error.WriteLine(FormattableString.Invariant($"emt: note:   and {piLines.Count - EmtPiNoteLimit} more."));
+    }
+    // R5-06: a travel time rounded to whole steps by more than 10 % is said once, naming the line (stderr; stdout unchanged).
+    if (engine.LargestTravelTimeRounding > EmtEngine.TravelTimeRoundingNoteThreshold)
+        Console.Error.WriteLine(FormattableString.Invariant(
+            $"emt: note: travelling-wave line {engine.LargestTravelTimeRoundingLine}'s travel time is rounded to whole steps by {100.0 * engine.LargestTravelTimeRounding:F1} % (the largest in this run); a shorter --dt-us reduces it."));
     // R026: nodes with no resistive path to a reference are pinned at 0 V in the starting-state solve; say how many.
     if (engine.InitialConditionFloatingNodes > 0)
         Console.Error.WriteLine($"emt: {engine.InitialConditionFloatingNodes} floating node(s) pinned at 0 V in the initial-condition solve.");
@@ -5144,10 +5552,28 @@ void RunEmt(List<string> a, string root)
         events = eventRecords.ToArray(),
     });
 
+    // R7-03: the run's own record of every line modelled as a pi branch (only when there is one, so other runs' folders
+    // are unchanged).
+    if (piLines.Count > 0)
+    {
+        using var piCsv = new StreamWriter(CliFiles.Output(Path.Combine(outDir, "pi-converted.csv"), "pi-converted.csv"));
+        foreach (string h in RunInfo.HeaderLines(desc)) piCsv.WriteLine("# " + h);
+        piCsv.WriteLine("element_id,from_bus,to_bus,branch,tau_seconds,step_seconds");
+        foreach (GridSim.Core.Dynamics.Emt.PiConvertedLine pc in piLines)
+        {
+            int at = -1;
+            for (int k = 0; k < net.SeriesBranchIds.Count; k++) if (net.SeriesBranchIds[k].ElementId == pc.Id) { at = k; break; }
+            string fromBus = at >= 0 ? net.SeriesBranchIds[at].From.ToString(inv) : "";
+            string toBus = at >= 0 ? net.SeriesBranchIds[at].To.ToString(inv) : "";
+            piCsv.WriteLine(string.Join(",", pc.Id.ToString(inv), fromBus, toBus, CsvText(pc.Describe()),
+                pc.TauSeconds.ToString("R", inv), pc.StepSeconds.ToString("R", inv)));
+        }
+    }
+
     using (var csv = new StreamWriter(CliFiles.Output(Path.Combine(outDir, "timeseries.csv"), "timeseries.csv")))
     {
         foreach (string h in RunInfo.HeaderLines(desc)) csv.WriteLine("# " + h);
-        csv.WriteLine("t_seconds," + string.Join(",", res.ProbeNames));
+        csv.WriteLine("t_seconds," + string.Join(",", res.ProbeNames.Select(CsvText)));
         foreach (EmtPoint pt in res.Points)
             csv.WriteLine(pt.TSeconds.ToString("G9", inv) + "," + string.Join(",", pt.Probe.Select(x => x.ToString("G9", inv))));
     }
@@ -5159,7 +5585,8 @@ void RunEmt(List<string> a, string root)
     string cdaText = cdaApplied ? "on" : noCda ? "off (--no-cda)" : "off (not used under backward Euler)";
     File.WriteAllText(CliFiles.Output(Path.Combine(outDir, "summary.md"), "summary.md"),
         $"# EMT run: {caseLabel}\n\n- steps: {st.Steps:N0} @ {dtUs} us (dur {duration}s)\n- source: bus {sourceBus}, amp {amp} pu, {srcKind}\n" +
-        $"- refactorizations: {st.Refactorizations}\n- peak |probe|: {st.MaxProbeAbs:G6}\n- wall: {st.WallMs:F1} ms ({sps:N0} steps/s)\n- rule: {rule}, CDA: {cdaText}\n\n" +
+        $"- refactorizations: {st.Refactorizations}\n- peak |probe|: {st.MaxProbeAbs:G6}\n- wall: {st.WallMs:F1} ms ({sps:N0} steps/s)\n- rule: {rule}, CDA: {cdaText}\n" +
+        (piLines.Count > 0 ? $"- travelling-wave lines modelled as pi branches (shorter than the step): {piLines.Count:N0} (listed in pi-converted.csv)\n" : "") + "\n" +
         "A forward model trajectory, not a claim about the real grid.\n");
 
     Console.WriteLine($"emt {caseLabel}: {st.Steps:N0} steps @ {dtUs}us, {st.Refactorizations} factorization(s), peak |probe| {st.MaxProbeAbs:G4}, {st.WallMs:F0} ms -> {outDir}");
@@ -5382,6 +5809,8 @@ void RunHarmonics(List<string> a, string root, bool export, string? exportPath)
         // R063: the order-by-order scan only samples integer orders; the fine sweep finds the true peak between them.
         sweep = HarmonicFrequencySweep.DrivingPoint(m, scanBus, opt);
         harmonicClock.Stop();
+        StageTimer.Add("solve", harmonicClock.Elapsed.TotalMilliseconds);   // 2.1.154: --timings reuses this clock (the whole study)
+        StageTimer.Merged("build", "assemble", "factor", "solve");
     }
     catch (SingularHarmonicNetworkException ex)
     {
@@ -5756,6 +6185,16 @@ void RunImpedanceStability(List<string> a, string root, bool export, string? exp
 
 void RunEstimate(List<string> a, string root)
 {
+    // CLI-05: --tol above 0 and --max-iter of at least 1, checked before the output folder is created (the Core options
+    // object threw ArgumentOutOfRangeException, an internal error, after the run folder had been made).
+    {
+        double tolChecked = FlagDouble(a, "--tol", 1e-8);
+        if (!(tolChecked > 0)) FailFlag<double>("--tol", a[FlagIndex(a, "--tol") + 1], "a finite number above 0");
+        FlagCount(a, "--max-iter", 30, 1);
+        // CLI-14: the synthetic set's noise scale is 0 or more and each coverage is a fraction from 0 to 1.
+        FlagDoubleNonNegative(a, "--noise", 1.0);
+        foreach (string cov in new[] { "--coverage-vm", "--coverage-inj", "--coverage-flow" }) FlagFraction(a, cov, 1.0);
+    }
     // Gather the space-separated --phaseangle tuples and REMOVE them from the arg list before PositionalArg
     // runs, so the extra BUS:ANGLE:UTC:FREQ tokens are not mistaken for the positional case id.
     string? phaseAngleSpec = GatherContiguousValues(a, "--phaseangle");
@@ -5821,6 +6260,7 @@ void RunEstimate(List<string> a, string root)
     {
         // A GDA/JSON case directory (has system.json) loads via the same loader the app and
         // crossval use - so gb-spine/gb-full materialisations can be estimated on directly.
+        using var parseTimer = StageTimer.Begin("parse");   // 2.1.154: --timings
         bool isCaseDir = Directory.Exists(caseName) && File.Exists(Path.Combine(caseName, "system.json"));
         model = isCaseDir ? Gated.Dir(caseName) : LoadNamed(caseName, root);
     }
@@ -5836,6 +6276,7 @@ void RunEstimate(List<string> a, string root)
     PowerFlowResult? truth = null;
     try
     {
+        using var inputTimer = StageTimer.Begin("parse");   // 2.1.154: --timings; the measurements, read or sampled (a synthetic set solves a truth state first)
         if (synth)
         {
             IPowerFlowSolver raw = backend.Solver(model);
@@ -6199,6 +6640,8 @@ void RunEstimate(List<string> a, string root)
     }
 
     estimateClock.Stop();
+    StageTimer.Add("solve", estimateClock.Elapsed.TotalMilliseconds);   // 2.1.154: --timings reuses this clock
+    StageTimer.Merged("build", "assemble", "factor", "solve");
     string host = $"{Environment.MachineName} / {System.Runtime.InteropServices.RuntimeInformation.OSDescription}";
     var meta = new SolveExportMeta(caseLabel, RunInfo.Backend, RunInfo.GitCommit, DateTime.UtcNow.ToString("o"),
         estimateClock.Elapsed.TotalMilliseconds, host);   // D-DOC-140
@@ -6227,7 +6670,7 @@ void RunEstimate(List<string> a, string root)
         foreach (MeasurementResidual r in est.Residuals)
         {
             Measurement m = r.Measurement;
-            csv.WriteLine($"{m.Kind},{m.Describe()},{m.Value:G17},{m.Sigma:G6},{r.Predicted:G17},{r.Residual:E6},{r.NormalizedResidual:F3},{r.IsCritical}");
+            csv.WriteLine($"{m.Kind},{CsvText(m.Describe())},{m.Value:G17},{m.Sigma:G6},{r.Predicted:G17},{r.Residual:E6},{r.NormalizedResidual:F3},{r.IsCritical}");
         }
     }
 
@@ -6249,7 +6692,7 @@ void RunEstimate(List<string> a, string root)
         {
             Measurement m = bad.Identified.Measurement;
             htiCsv.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                $"{bad.Pass},{m.Kind},{m.Describe()},{m.Value:G17},{m.Sigma:G6},{HtiErrorColumns(m.Kind, bad.Identified.EstimatedError, model.BaseMva)},{bad.Identified.TestStatistic:G17}"));
+                $"{bad.Pass},{m.Kind},{CsvText(m.Describe())},{m.Value:G17},{m.Sigma:G6},{HtiErrorColumns(m.Kind, bad.Identified.EstimatedError, model.BaseMva)},{bad.Identified.TestStatistic:G17}"));
         }
         // N061: with --hti-correct, the in-place corrections in their own file (original value, corrected value).
         if (htiCorrect)
@@ -6263,7 +6706,7 @@ void RunEstimate(List<string> a, string root)
             {
                 Measurement m = c.Identified.Measurement;
                 corrCsv.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                    $"{c.Pass},{m.Kind},{m.Describe()},{m.Value:G17},{c.CorrectedValue:G17},{m.Sigma:G6},{HtiErrorColumns(m.Kind, c.Identified.EstimatedError, model.BaseMva)},{c.Identified.TestStatistic:G17}"));
+                    $"{c.Pass},{m.Kind},{CsvText(m.Describe())},{m.Value:G17},{c.CorrectedValue:G17},{m.Sigma:G6},{HtiErrorColumns(m.Kind, c.Identified.EstimatedError, model.BaseMva)},{c.Identified.TestStatistic:G17}"));
             }
         }
     }
@@ -6539,7 +6982,7 @@ void RunEstimateNoiseFloor(List<string> a, string root)
         csv.WriteLine("source,kind,count,spread_robust,spread_std,bias,suggested_sigma_scale,miscalibrated");
         foreach (NoiseFloorClass c in report.Classes)
             csv.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                $"{c.Source},{c.Kind},{c.Count},{c.SpreadRobust:G17},{c.SpreadStd:G17},{c.Bias:G17},{c.SuggestedSigmaScale:G17},{c.Miscalibrated}"));
+                $"{CsvText(c.Source)},{c.Kind},{c.Count},{c.SpreadRobust:G17},{c.SpreadStd:G17},{c.Bias:G17},{c.SuggestedSigmaScale:G17},{c.Miscalibrated}"));
     }
 
     Console.WriteLine();
@@ -6619,6 +7062,8 @@ void RunCrossval(List<string> a, string root)
         var firstSolveClock = System.Diagnostics.Stopwatch.StartNew();   // D-DOC-140
         PowerFlowResult r = raw.Solve(m, opt);
         firstSolveClock.Stop();
+        StageTimer.Add("solve", firstSolveClock.Elapsed.TotalMilliseconds);   // 2.1.154: --timings reuses this clock (the first solve)
+        StageTimer.Merged("build", "assemble", "factor", "solve");
         // N243 (Mark's machine-epsilon rule): the comparison needs GridSim's TIGHTEST converged state, not the state at
         // the everyday 1e-8 pu stopping test. Newton checks the mismatch before each step, so it stops with a residual
         // just under the tolerance (up to about 1e-9 pu on the bundled cases), and the state then differs from the
@@ -6786,14 +7231,8 @@ static (int code, string stdout, string stderr, string? python, string source) R
         string exe = cand.Command;
         try
         {
-            var psi = new System.Diagnostics.ProcessStartInfo(exe)
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            };
-            foreach (string x in args) psi.ArgumentList.Add(x);
+            // R4-01: the py launcher gets -3 before the script and no shebang PATH search (PythonLocator.StartInfo).
+            System.Diagnostics.ProcessStartInfo psi = GridSim.Cli.PythonLocator.StartInfo(exe, args);
             using var p = System.Diagnostics.Process.Start(psi);
             if (p is null) continue;
             // Read both pipes concurrently: pandapower fills stderr with chatter while case118/300 diffs fill
@@ -7575,6 +8014,18 @@ static double FlagDoubleNonNegative(List<string> a, string name, double dflt)
     return FailFlag<double>(name, a[i + 1], "a number that is finite and 0 or more");
 }
 
+// CLI-14: a fraction from 0 to 1 (a coverage). Same rules as FlagDouble, and the value must lie in [0, 1].
+static double FlagFraction(List<string> a, string name, double dflt)
+{
+    int i = FlagIndex(a, name);
+    if (i < 0) return dflt;
+    if (FlagValueMissing(a, i)) return FailFlag<double>(name, "", "a fraction from 0 to 1");
+    if (double.TryParse(a[i + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v)
+        && v >= 0.0 && v <= 1.0)
+        return v;
+    return FailFlag<double>(name, a[i + 1], "a fraction from 0 to 1");
+}
+
 static int FlagInt(List<string> a, string name, int dflt)
 {
     int i = FlagIndex(a, name);
@@ -7873,13 +8324,14 @@ static string? OnePositional(string verb, string noun, List<string> a)
 // missing-path / CaseLoadException family (input error, exit 1 through the process-wide handler).
 GridModel LoadCaseArgument(string arg, string root)
 {
+    using var parseTimer = StageTimer.Begin("parse");   // 2.1.154: --timings, the case load
     // A JSON case folder (it has a system.json) wins first, exactly as the other verbs' isCaseDir checks do.
     if (Directory.Exists(arg) && File.Exists(Path.Combine(arg, "system.json"))) return Gated.Dir(arg);
     // A MATPOWER file. Gated.Matpower takes it as a path; a bare name that is not a file here is looked up under
     // data/matpower (and its subfolders) there, so "case33bw.m" finds data/matpower/dist/case33bw.m.
     if (arg.EndsWith(".m", StringComparison.OrdinalIgnoreCase)) return Gated.Matpower(arg);
     // Tranche A: a PSS/E RAW file (revisions 33, 34, 35), taken as a path.
-    if (arg.EndsWith(".raw", StringComparison.OrdinalIgnoreCase)) return Gated.Psse(arg);
+    if ((arg.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || arg.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase))) return Gated.Psse(arg);
     // Tranche A: a UCTE-DEF file, taken as a path.
     if (arg.EndsWith(".uct", StringComparison.OrdinalIgnoreCase)) return Gated.Ucte(arg);
     try { return LoadNamed(arg, root); }
@@ -7966,6 +8418,7 @@ static bool SameFolder(string x, string y)
 // the verb and the name); a missing or unloadable file escapes to the process-wide handler (exit 1).
 static GridModel LoadSelected(string verb, (string Label, Func<GridModel> Load) sel)
 {
+    using var parseTimer = StageTimer.Begin("parse");   // 2.1.154: --timings, the case load
     try { return sel.Load(); }
     catch (ArgumentException ex)
     {
@@ -8553,8 +9006,8 @@ List<(string Label, Func<GridModel> Load, int SortKey)> BuildCases(string root)
             string stem = Path.GetFileNameWithoutExtension(f);
             if (known.Contains(stem)) continue;      // already an embedded classic
             // A rough size hint for ordering, parsed from the case number in the name.
-            int busHint = new string(stem.Where(char.IsDigit).ToArray()) is { Length: > 0 } d
-                ? int.Parse(d[..Math.Min(6, d.Length)]) : 0;
+            int busHint = new string(stem.Where(char.IsAsciiDigit).ToArray()) is { Length: > 0 } d
+                ? int.Parse(d[..Math.Min(6, d.Length)], System.Globalization.CultureInfo.InvariantCulture) : 0;
             string path = f;
             cases.Add((stem, () => Gated.Matpower(path), busHint));
         }
@@ -8600,7 +9053,7 @@ void RunDcOpf(List<string> a, string root)
         // InvalidDataException. Only InvalidOperationException was caught on this path (the --costs / --prices path
         // below caught both), so that refusal crashed the verb. Invalid case data is an input error: exit 1, as the
         // other path already gave.
-        try { res = GridSim.Core.Analysis.DcOptimalPowerFlow.Solve(m, enforceLineLimits: !noLimits); }
+        try { using var solveTimer = StageTimer.Begin("solve"); res = GridSim.Core.Analysis.DcOptimalPowerFlow.Solve(m, enforceLineLimits: !noLimits); }
         catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException)
         { Console.Error.WriteLine($"[dcopf] {ex.Message}"); Environment.ExitCode = CliExit.InputError; return; }
     }
@@ -8610,11 +9063,12 @@ void RunDcOpf(List<string> a, string root)
         {
             EnforceLineLimits = !noLimits, UseGeneratorCosts = costs is not null, ComputePrices = prices,
         };
-        try { res = GridSim.Core.Analysis.DcOptimalPowerFlow.Solve(m, opts); }
+        try { using var solveTimer = StageTimer.Begin("solve"); res = GridSim.Core.Analysis.DcOptimalPowerFlow.Solve(m, opts); }
         catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException)
         { Console.Error.WriteLine($"[dcopf] {ex.Message}"); Environment.ExitCode = 1; return; }
     }
 
+    StageTimer.Merged("build", "assemble", "factor", "solve");
     // Money units: the fuel-type merit order is in GBP; a cost curve is in the case's own currency (MATPOWER's are
     // usually $/h), so with --costs the figures are labelled "cost units".
     string money = costs is null ? "GBP" : "cost units";
@@ -8817,6 +9271,7 @@ void RunCpf(List<string> a, string root)
     // printed lambda is the same bits before and after; the change is the definition, not a number.
     IPowerFlowSolver cpfSolver = ContingencyAnalysis.WithOltcLoop(backend.NewtonSolver(m));
     PowerFlowOptions cpfOptions = ContingencyAnalysis.StudyOptions;
+    var cpfTimer = StageTimer.Begin("solve");   // 2.1.154: --timings, the stepping and bisection walk (every solve it makes)
     // TracePvCurve runs the very loop MaxLoadability runs (its MaxLambda is the same bits), recording each point.
     GridSim.Core.Analysis.PvCurve? curve = pvOut is null ? null
         : GridSim.Core.Analysis.ContinuationPowerFlow.TracePvCurve(m, cpfSolver, cpfOptions, step, minStep, maxSteps);
@@ -8826,6 +9281,9 @@ void RunCpf(List<string> a, string root)
     GridSim.Core.Analysis.LoadabilityWalkEnd walkEnd;
     if (curve is not null) { lambda = curve.MaxLambda; walkEnd = curve.WalkEnd!; }
     else (lambda, walkEnd) = GridSim.Core.Analysis.ContinuationPowerFlow.MaxLoadabilityWithEnd(m, cpfSolver, cpfOptions, step, minStep, maxSteps);
+    cpfTimer.Dispose();
+    StageTimer.Merged("build", "assemble", "factor", "solve");
+    StageTimer.Count("solves", walkEnd.Solves);   // power-flow solves the walk made (cpf has no single iteration count)
     if (curve is not null)
     {
         WritePvCurveCsv(pvOut!, "lambda", new[] { (m.Name, curve.BusIds, (IReadOnlyList<(double, double[])>)curve.Points.Select(p => (p.Lambda, p.Vm)).ToList()) });
@@ -8898,12 +9356,23 @@ void WritePvCurveCsv(string path, string multiplierColumn, IEnumerable<(string C
     }
 }
 
-// A CSV field: quoted (with doubled quotes) when it holds a comma, a quote or a line break.
-static string CsvField(string s) =>
-    s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r')
-        ? "\"" + s.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"" : s;
+// A CSV string field: the formula-injection guard (CWE-1236), then quoted (with doubled quotes) when it holds a comma, a
+// quote or a line break; the shared writer's rule.
+static string CsvField(string s) => GridSim.Cli.CliResultWriter.CsvField(s);
 
-// pf <case> [--distributed-slack pmax|pg|equal] [--switched-shunts <file.json>] [--top 12]
+// B31 (CWE-1236): a STRING cell of an inline CSV writer (a case label, a name, a probe or location text) passes the
+// formula-injection guard and nothing else: a leading apostrophe when it starts with = + - @ TAB or CR. The writer's own
+// quoting is unchanged, and numbers never come here (they are formatted by type), so an ordinary file is byte for byte as
+// before.
+static string CsvText(string s) => GridSim.Core.IO.CsvFormulaGuard.Neutralise(s);
+
+// pf <case> [--distributed-slack pmax|pg|equal] [--switched-shunts <file.json>] [--area-interchange <file.json>]
+//    [--remote-vreg-file <file.json>] [--top 12]
+// WP13 (RC5): --area-interchange (or --area-control on a .raw file) holds each controlled area's net export at its desired
+// value by moving the units at the area's swing bus (AreaInterchangePowerFlow); --remote-vreg-file (or --remote-vreg on a
+// .raw file) holds a remote bus at its target by moving a PV bus's set point (RemoteVoltagePowerFlow). The wrappers nest:
+// engine, distributed slack, switched shunts, remote voltage, area interchange. Area interchange and --distributed-slack
+// both move unit P, so together they are refused (exit 2).
 // F22 (October 2026): one AC power flow on the selected engine (the shared dense / sparse rule), 100 iterations with
 // reactive limits on (the fault and protection verbs' set), printed: convergence, losses, the voltage range and the
 // --top lowest voltages. --distributed-slack shares the real-power balance among the units by participation factors
@@ -8912,10 +9381,41 @@ static string CsvField(string s) =>
 // shunts not settled; 1 load or input-file error; 2 usage.
 void RunPf(List<string> a, string root)
 {
-    const string usage = "gridsim pf <case> [--distributed-slack pmax|pg|equal] [--switched-shunts <file.json>] [--top 12]";
-    RequireVerbFlags("pf", a, "--distributed-slack", "--switched-shunts", "--top");
+    const string usage = "gridsim pf <case> [--distributed-slack pmax|pg|equal] [--switched-shunts <file.json>] [--area-interchange <file.json>] [--remote-vreg-file <file.json>] [--top 12] [--engine newton|fdxb|fdbx|gs] [--gs-accel 1.0] [--max-q-passes 100] [--q-revert] [--max-iter 100] [--diverge-limit 10|off]";
+    // RC5 linux-q: --q-revert is a switch (no value), taken off first so it is not read as the next token's flag value.
+    bool qRevert = a.RemoveAll(t => t == "--q-revert") > 0;
+    RequireVerbFlags("pf", a, "--distributed-slack", "--switched-shunts", "--area-interchange", "--remote-vreg-file", "--top", "--engine", "--gs-accel", "--max-q-passes", "--max-iter", "--diverge-limit");
+    // The reactive-limit loop stops after this many PV/PQ passes (the library default, 100, without the flag). A case that
+    // needs more reports not converged although its mismatch is tiny; --max-q-passes sets the cap, --q-revert lets a
+    // limited bus return to PV when its voltage allows, which settles the large cases in about half the passes.
+    int maxQPasses = FlagCount(a, "--max-q-passes", new PowerFlowOptions().MaxQLimitPasses, 1);
+    // B37: the divergence stop. --diverge-limit X (pu, above 0) sets the limit; --diverge-limit off runs every pass to the
+    // iteration cap, as before. --max-iter N sets that cap (the engine's own default without it: 100, Gauss-Seidel 10000).
+    double divergeLimit = PowerFlowOptions.DefaultDivergeLimitPu;
+    if (FlagString(a, "--diverge-limit") is { } dl)
+    {
+        if (string.Equals(dl, "off", StringComparison.OrdinalIgnoreCase)) divergeLimit = double.PositiveInfinity;
+        else if (!(double.TryParse(dl, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out divergeLimit)
+                   && double.IsFinite(divergeLimit) && divergeLimit > 0.0))
+            FailFlag<double>("--diverge-limit", dl, "a number above 0 (pu), or off");
+    }
+    // RC5 WP25: --engine picks the fast-decoupled (XB, BX) or Gauss-Seidel engine by name. Without it (or with newton) the
+    // engine is the shared rule's, exactly as before.
+    string? engineName = FlagString(a, "--engine")?.ToLowerInvariant();
+    if (engineName is not null and not ("newton" or "fdxb" or "fdbx" or "gs"))
+        FailFlag<string>("--engine", engineName, "newton, fdxb, fdbx or gs");
+    bool altEngine = engineName is "fdxb" or "fdbx" or "gs";
+    double gsAccel = FlagDouble(a, "--gs-accel", 1.0);
+    if (FlagIndex(a, "--gs-accel") >= 0 && engineName != "gs")
+    {
+        Console.Error.WriteLine("pf: --gs-accel is the Gauss-Seidel acceleration factor; it needs --engine gs.");
+        Environment.Exit(2);
+    }
+    if (!(gsAccel > 0.0 && gsAccel < 2.0)) FailFlag<double>("--gs-accel", gsAccel.ToString("R", System.Globalization.CultureInfo.InvariantCulture), "above 0 and below 2");
     string? ds = FlagString(a, "--distributed-slack");
     string? ssPath = FlagString(a, "--switched-shunts");
+    string? aiPath = FlagString(a, "--area-interchange");
+    string? rvPath = FlagString(a, "--remote-vreg-file");
     int top = FlagCount(a, "--top", 12, 0);
     if (top < 0) FailFlag<int>("--top", top.ToString(System.Globalization.CultureInfo.InvariantCulture), "0 or more");
     ParticipationRule? rule = ds?.ToLowerInvariant() switch
@@ -8951,28 +9451,96 @@ void RunPf(List<string> a, string root)
         shunts = fileBanks;
     }
 
-    IPowerFlowSolver solver = backend.Solver(m);
+    // WP13 (RC5): area interchange and remote voltage regulation, from a file or from the .raw file's data.
+    AreaInterchangeFile? aiFile = null;
+    IReadOnlyList<RemoteVoltageControl>? rvControls = null;
+    try
+    {
+        if (aiPath is not null) aiFile = ControlFiles.ReadAreaInterchange(File.ReadAllText(aiPath), Path.GetFileName(aiPath));
+        if (rvPath is not null) rvControls = ControlFiles.ReadRemoteVoltage(File.ReadAllText(rvPath), Path.GetFileName(rvPath));
+    }
+    catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine($"pf: {(aiFile is null && aiPath is not null ? "--area-interchange" : "--remote-vreg-file")}: {ex.Message}");
+        Environment.ExitCode = 1;
+        return;
+    }
+    if (Gated.AreasOf(m) is { } rawAreas)
+    {
+        Gated.AreaControlRead = true;
+        if (aiFile is not null)
+        {
+            Console.Error.WriteLine("pf: --area-interchange and --area-control both give area interchange data; give one.");
+            Environment.Exit(2);
+        }
+        aiFile = new AreaInterchangeFile(rawAreas.Areas, rawAreas.Reported, Array.Empty<MeteredEndEntry>());
+    }
+    if (Gated.RemoteControlsOf(m) is { } rawControls)
+    {
+        Gated.RemoteRegulationRead = true;
+        if (rvControls is not null)
+        {
+            Console.Error.WriteLine("pf: --remote-vreg-file and --remote-vreg both give remote voltage controls; give one.");
+            Environment.Exit(2);
+        }
+        rvControls = rawControls;
+    }
+    if (aiFile is not null && rule is not null)
+    {
+        Console.Error.WriteLine("pf: area interchange control and --distributed-slack both move unit real power; give one.");
+        Environment.Exit(2);
+    }
+
+    // RC5 WP25: the fast-decoupled and Gauss-Seidel engines are not checked with the outer-loop controls, so together they
+    // are refused (exit 2).
+    if (altEngine && (rule is not null || shunts is not null || rvControls is not null || aiFile is not null))
+    {
+        Console.Error.WriteLine($"pf: --engine {engineName} does not run with --distributed-slack, switched shunts, remote voltage control or area interchange; use the Newton engine for those.");
+        Environment.Exit(2);
+    }
+    IPowerFlowSolver solver = engineName switch
+    {
+        "fdxb" => new FastDecoupledPowerFlow(FdlfVariant.XB),
+        "fdbx" => new FastDecoupledPowerFlow(FdlfVariant.BX),
+        "gs" => new GaussSeidelPowerFlow(gsAccel),
+        _ => backend.Solver(m),
+    };
     DistributedSlackPowerFlow? dsp = null;
     SwitchedShuntPowerFlow? ssp = null;
+    RemoteVoltagePowerFlow? rvp = null;
+    AreaInterchangePowerFlow? aip = null;
     PowerFlowResult r;
     try
     {
         if (rule is ParticipationRule pr) solver = dsp = new DistributedSlackPowerFlow(solver, pr);
         if (shunts is not null) solver = ssp = new SwitchedShuntPowerFlow(solver, shunts);
-        r = solver.Solve(m, new PowerFlowOptions { MaxIterations = 100, EnforceQLimits = true });
+        if (rvControls is not null) solver = rvp = new RemoteVoltagePowerFlow(solver, rvControls);
+        if (aiFile is not null)
+        {
+            IReadOnlyDictionary<int, GridSim.Core.Estimation.BranchEnd> metered = Gated.AreasOf(m) is { } ra ? ra.MeteredEnds : aiFile.ResolveMeteredEnds(m);
+            solver = aip = new AreaInterchangePowerFlow(solver, aiFile.Areas, metered, aiFile.ReportAreas);
+        }
+        // Gauss-Seidel needs far more iterations than Newton; MATPOWER's own cap for it is 1000. 10000 is used here.
+        using var solveTimer = StageTimer.Begin("solve");   // 2.1.154: --timings; one solver call builds, assembles, factors and solves
+        r = solver.Solve(m, new PowerFlowOptions { MaxIterations = FlagCount(a, "--max-iter", engineName == "gs" ? 10000 : 100, 1), EnforceQLimits = true, MaxQLimitPasses = maxQPasses, RevertQLimits = qRevert, DivergeLimitPu = divergeLimit });
     }
-    catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
+    catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or InvalidDataException)
     {
         Console.Error.WriteLine($"pf: {ex.Message}");
         Environment.ExitCode = 1;
         return;
     }
+    StageTimer.Merged("build", "assemble", "factor", "solve");
+    StageTimer.Count("iterations", r.Iterations);   // the Q-limit pass count is not on the result, so it is not reported
 
     Console.WriteLine($"Power flow - {m.Name} ({m.BusCount} buses)"
         + (dsp is not null ? $"  [distributed slack, factors by {ds!.ToLowerInvariant()}]" : "")
-        + (ssp is not null ? $"  [{shunts!.Count} switched shunt(s)]" : ""));
+        + (ssp is not null ? $"  [{shunts!.Count} switched shunt(s)]" : "")
+        + (rvp is not null ? $"  [{rvControls!.Count} remote voltage control(s)]" : "")
+        + (aip is not null ? $"  [{aiFile!.Areas.Count} controlled area(s)]" : "")
+        + (altEngine ? $"  [engine {engineName}{(engineName == "gs" ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $", acceleration {gsAccel:R}") : "")}]" : ""));
     // D-DOC-150: a converged sweep is labelled by its own test (the voltage step), not left to read as a mismatch test.
-    Console.WriteLine($"  {(r.Converged ? r.ConvergedLabel() : $"NOT CONVERGED ({r.Status})")} in {r.Iterations} iteration(s), mismatch {r.MaxMismatch:E2} pu   "
+    Console.WriteLine($"  {(r.Converged ? r.ConvergedLabel() : r.Status == PowerFlowStatus.Diverged ? "DIVERGED" : $"NOT CONVERGED ({r.Status})")} in {r.Iterations} iteration(s), mismatch {r.MaxMismatch:E2} pu   "
         + $"losses {r.TotalLossMw:F3} MW / {r.TotalLossMvar:F3} MVAr");
     // The Newton engines' automatic DC-angle-start retry (runs only after an ordinary solve failed): say that it ran.
     if (r.NewtonRetryNote is { } retryNote) Console.WriteLine($"  {retryNote}");
@@ -8997,13 +9565,28 @@ void RunPf(List<string> a, string root)
                 + $"{s.AddedMvar(ssp.LastSteps[i]),9:F2} MVAr at 1 pu   V {(bi >= 0 ? r.Vm[bi] : double.NaN):F4} pu (band {s.VminPu}-{s.VmaxPu})");
         }
     }
+    if (rvp is not null)
+    {
+        Console.WriteLine($"  remote voltage: {rvp.LastPasses} pass(es), {(rvp.Settled ? "settled" : "NOT SETTLED")}" + (rvp.LastNote is { } rn ? $": {rn}" : ""));
+        foreach (RemoteVoltageOutcome o in rvp.LastControls)
+            Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"      bus {o.GeneratorBus} -> bus {o.RegulatedBus}: {o.StatusText}   V {o.RegulatedVpu:F6} pu (target {o.TargetVpu:F6})   set point {o.SetPointPu:F6} pu"));
+    }
+    if (aip is not null)
+    {
+        Console.WriteLine($"  area interchange: {aip.LastPasses} pass(es), {(aip.Settled ? "settled" : "NOT SETTLED")}" + (aip.LastNote is { } an ? $": {an}" : ""));
+        foreach (AreaInterchangeOutcome o in aip.LastAreas)
+            Console.WriteLine(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"      area {o.Area}: {o.StatusText}   export {o.ExportMw:F3} MW")
+                + (o.DesiredExportMw is double d ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $" (desired {d:F3}, tolerance {o.ToleranceMw:F3})   adjusted {o.AdjustmentMw:F3} MW") : ""));
+    }
     if (top > 0 && r.Vm.Length > 0)
     {
         Console.WriteLine($"  lowest voltages:");
         foreach (int i in Enumerable.Range(0, r.Vm.Length).OrderBy(i => r.Vm[i]).ThenBy(i => i).Take(top))
             Console.WriteLine($"      bus {r.BusIds[i],-6} {r.Vm[i]:F4} pu  {r.VaDeg[i],9:F3} deg");
     }
-    bool ok = r.Converged && (ssp is null || ssp.ShuntsSettled);
+    bool ok = r.Converged && (ssp is null || ssp.ShuntsSettled) && (rvp is null || rvp.Settled) && (aip is null || aip.Settled);
     if (!ok) Environment.ExitCode = 3;
 
     // N122 (October 2026): the result file, from the same values the console shows but complete (every bus, every
@@ -9021,6 +9604,12 @@ void RunPf(List<string> a, string root)
     if (dsp is not null)
         prep.Set("slack_passes", dsp.LastPasses).Set("slack_imbalance_mw", dsp.LastImbalanceMw).Set("slack_note", dsp.LastNote);
     if (ssp is not null) prep.Set("shunt_passes", ssp.LastPasses).Set("shunt_note", ssp.LastNote);
+    // WP13 (RC5): written only with the options, so a run without them writes exactly what it did before.
+    if (rvp is not null) prep.Set("remote_vreg_passes", rvp.LastPasses).Set("remote_vreg_settled", rvp.Settled).Set("remote_vreg_note", rvp.LastNote);
+    if (aip is not null) prep.Set("area_passes", aip.LastPasses).Set("area_settled", aip.Settled).Set("area_note", aip.LastNote);
+    // RC5 WP25: written only with --engine, so a run without it writes exactly what it did before.
+    if (engineName is not null) prep.Set("engine", engineName);
+    if (engineName == "gs") prep.Set("gs_acceleration", gsAccel);
     CliResultTable pbuses = prep.Table("buses", "bus", "vm_pu", "va_deg", "p_inj_mw", "q_inj_mvar");
     for (int i = 0; i < r.Vm.Length; i++) pbuses.Row(r.BusIds[i], r.Vm[i], r.VaDeg[i], r.PInjMw[i], r.QInjMvar[i]);
     if (dsp is not null)
@@ -9037,6 +9626,16 @@ void RunPf(List<string> a, string root)
             SwitchedShunt s = shunts[i];
             st.Row(s.Name ?? "", s.Bus, ssp.LastSteps[i], s.MinSteps, s.MaxSteps, s.AddedMvar(ssp.LastSteps[i]), s.VminPu, s.VmaxPu);
         }
+    }
+    if (rvp is not null)
+    {
+        CliResultTable rt = prep.Table("remote_vreg", "generator_bus", "regulated_bus", "target_pu", "regulated_pu", "set_point_pu", "status");
+        foreach (RemoteVoltageOutcome o in rvp.LastControls) rt.Row(o.GeneratorBus, o.RegulatedBus, o.TargetVpu, o.RegulatedVpu, o.SetPointPu, o.StatusText);
+    }
+    if (aip is not null)
+    {
+        CliResultTable at = prep.Table("areas", "area", "status", "export_mw", "desired_mw", "tolerance_mw", "error_mw", "adjustment_mw");
+        foreach (AreaInterchangeOutcome o in aip.LastAreas) at.Row(o.Area, o.StatusText, o.ExportMw, o.DesiredExportMw, o.ToleranceMw, o.ErrorMw, o.AdjustmentMw);
     }
     prep.Complete();
 }
@@ -9059,17 +9658,22 @@ void RunDcpf(List<string> a, string root)
     if (m is null) return;
 
     GridSim.Core.Analysis.DcPowerFlowResult r;
-    try { r = GridSim.Core.Analysis.DcPowerFlow.Solve(m); }
+    try { using var solveTimer = StageTimer.Begin("solve"); r = GridSim.Core.Analysis.DcPowerFlow.Solve(m); }   // 2.1.154: --timings
     catch (InvalidOperationException ex) { Console.Error.WriteLine($"dcpf: {ex.Message}"); Environment.ExitCode = 1; return; }
+    StageTimer.Merged("build", "assemble", "factor", "solve");
 
-    Console.WriteLine($"DC power flow - {m.Name} ({m.BusCount} buses, {m.Branches.Count} branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]");
+    // B33: a network with no tap other than 0 or 1, no phase shift and no Gs is solved by the reactance-only
+    // instructions, so it keeps the earlier banner and its stdout is byte-identical.
+    Console.WriteLine(GridSim.Core.Analysis.DcPowerFlow.UsesMakeBdcTerms(m)
+        ? $"DC power flow - {m.Name} ({m.BusCount} buses, {m.Branches.Count} branches)  [linear: series reactance with tap ratios, phase shifts and shunt conductance Gs (MATPOWER makeBdc); R, charging and Bs ignored; |V| = 1 pu; lossless]"
+        : $"DC power flow - {m.Name} ({m.BusCount} buses, {m.Branches.Count} branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]");
     int dead = 0;
     foreach (GridSim.Core.Analysis.DcIslandBalance isl in r.Islands)
     {
-        bool unsupplied = !isl.HasGeneration && isl.LoadMw != 0.0;
+        bool unsupplied = !isl.HasGeneration && (isl.LoadMw != 0.0 || isl.ShuntLoadMw != 0.0);   // B33: Gs is load too
         if (unsupplied) dead++;
         Console.WriteLine($"  island ref bus {isl.ReferenceBusId,-6} {isl.BusCount,5} buses  demand {isl.LoadMw,10:N1} MW  scheduled generation {isl.ScheduledGenerationMw,10:N1} MW  " +
-            $"reference injects {isl.ReferenceInjectionMw,10:N1} MW" + (unsupplied ? "  NO GENERATION: load cannot be supplied" : ""));
+            $"reference injects {isl.ReferenceInjectionMw,10:N1} MW" + (isl.ShuntLoadMw != 0.0 ? $"  shunt Gs {isl.ShuntLoadMw,10:N1} MW" : "") + (unsupplied ? "  NO GENERATION: load cannot be supplied" : ""));
     }
     int rated = 0, over = 0;
     for (int l = 0; l < m.Branches.Count; l++)
@@ -9213,10 +9817,10 @@ void RunZonal(List<string> a, string root)
 // and nothing written (exit 1, as the RAW writer's refusals).
 void RunConvert(List<string> a, string root)
 {
-    const string usage = "gridsim convert <input.m|input.raw|input.uct|case-dir|case> <output.m|output.raw|output.xml|output.json|output-dir> [--public [--provenance <manifest.json>]]";
+    const string usage = "gridsim convert <input.m|input.raw|input.uct|case-dir|case> <output.m|output.raw|output.rawx|output.uct|output.xml|output.json|output-dir> [--raw-revision 33|34|35|36] [--ucte-country <CC>] [--public [--provenance <manifest.json>]]";
     // --json / --csv (F10) are taken off the argument list by the shared result writer before this runs; convert does
     // not take --out (its second positional argument is the output), so --out is refused here.
-    RequireVerbFlags("convert", a, "--json", "--csv", "--public", "--provenance");
+    RequireVerbFlags("convert", a, "--json", "--csv", "--public", "--provenance", "--raw-revision", "--ucte-country");
     // Export pack slice 2 (October 2026): --public writes only what a provenance manifest traces to published sources
     // (PublicExportGate). --public takes no value, so it is taken off before Positionals (which would swallow the token
     // after it); --provenance names the manifest and means nothing without --public.
@@ -9228,6 +9832,11 @@ void RunConvert(List<string> a, string root)
         Environment.ExitCode = 2;
         return;
     }
+    // RC5 WP34: --raw-revision picks the RAW revision of a .raw output (33, the default, to 36).
+    string? rawRevisionArg = FlagString(a, "--raw-revision");
+    // RC5 WP34 review: --ucte-country names the country of the node codes a .uct output synthesises (UCTE reserves X for
+    // boundary X-nodes, and every other code character is a country, so GridSim does not choose one).
+    string? ucteCountryArg = FlagString(a, "--ucte-country");
     List<string> pos = Positionals(a).Skip(1).ToList();
     if (pos.Count != 2) { Console.Error.WriteLine("usage: " + usage); Environment.ExitCode = 2; return; }
     string input = pos[0], output = pos[1];
@@ -9235,6 +9844,40 @@ void RunConvert(List<string> a, string root)
     bool toV2 = output.EndsWith(".json", StringComparison.OrdinalIgnoreCase);   // N299: a JSON v2 case manifest
     bool toRaw = output.EndsWith(".raw", StringComparison.OrdinalIgnoreCase);   // export pack: PSS/E RAW revision 33
     bool toCgmes = output.EndsWith(".xml", StringComparison.OrdinalIgnoreCase); // export pack: CGMES RDF/XML
+    bool toRawx = output.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase); // RC5 WP34: PSS/E RAWX (JSON), revision 35
+    bool toUcte = output.EndsWith(".uct", StringComparison.OrdinalIgnoreCase);  // RC5 WP34: UCTE-DEF
+    if (ucteCountryArg is not null)
+    {
+        if (!toUcte)
+        {
+            Console.Error.WriteLine("error: convert: --ucte-country sets the country of synthesised UCTE-DEF node codes and is read only with an output ending in .uct.");
+            Environment.ExitCode = 2;
+            return;
+        }
+        if (!GridSim.Core.IO.Ucte.UcteWriter.CountryCodes.ContainsKey(ucteCountryArg))
+        {
+            Console.Error.WriteLine("error: convert: --ucte-country: " + GridSim.Core.IO.Ucte.UcteWriter.CountryRefusal(ucteCountryArg));
+            Environment.ExitCode = 2;
+            return;
+        }
+    }
+    int rawRevision = 33;
+    if (rawRevisionArg is not null)
+    {
+        if (!toRaw)
+        {
+            Console.Error.WriteLine("error: convert: --raw-revision sets the revision of a PSS/E RAW output and is read only with an output ending in .raw.");
+            Environment.ExitCode = 2;
+            return;
+        }
+        if (!int.TryParse(rawRevisionArg, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out rawRevision)
+            || !GridSim.Core.IO.Psse.PsseRawWriter.WritableRevisions.Contains(rawRevision))
+        {
+            Console.Error.WriteLine($"error: convert: --raw-revision is '{rawRevisionArg}'; the RAW writer writes revisions {string.Join(", ", GridSim.Core.IO.Psse.PsseRawWriter.WritableRevisions)}.");
+            Environment.ExitCode = 2;
+            return;
+        }
+    }
     if (File.Exists(output) || (Directory.Exists(output) && Directory.EnumerateFileSystemEntries(output).Any()))
     {
         Console.Error.WriteLine($"error: convert refuses to overwrite '{output}' (it exists{(Directory.Exists(output) ? " and is not empty" : "")}); choose a new output.");
@@ -9298,7 +9941,7 @@ void RunConvert(List<string> a, string root)
             m = parsed.Model;
             dcLines = parsed.DcLines;
         }
-        else if (input.EndsWith(".raw", StringComparison.OrdinalIgnoreCase)) m = Gated.Psse(input);   // Tranche A
+        else if ((input.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || input.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase))) m = Gated.Psse(input);   // Tranche A
         else if (input.EndsWith(".uct", StringComparison.OrdinalIgnoreCase)) m = Gated.Ucte(input);   // Tranche A
         else if (Gated.IsCimInput(input)) m = Gated.Cim(input);   // RC4 wiring: CIM / CGMES (.xml, .zip or a folder of profiles), the importers the desktop uses
         else m = LoadNamed(input, root);
@@ -9339,9 +9982,39 @@ void RunConvert(List<string> a, string root)
     IReadOnlyList<string> notes;
     GridSim.Core.IO.Psse.PsseWriteResult? rawWritten = null;
     GridSim.Core.IO.Cim.CgmesWriteResult? cgmesWritten = null;
+    GridSim.Core.IO.Ucte.UcteWriteResult? ucteWritten = null;
     try
     {
-        if (toCgmes)
+        if (toUcte)
+        {
+            // RC5 WP34: UCTE-DEF. Refuses (InvalidDataException) before writing anything. A .uct input still as read is
+            // written with its own node codes and transformer fields (its read is the source); anything else synthesises
+            // node codes in the --ucte-country country.
+            GridSim.Core.IO.Ucte.UcteParseResult? ucteSource = Gated.LastUcteRead is { } lastRead && ReferenceEquals(lastRead.Model, m) ? lastRead : null;
+            ucteWritten = GridSim.Core.IO.Ucte.UcteWriter.Write(m, new GridSim.Core.IO.Ucte.UcteWriteOptions { Source = ucteSource, Country = ucteCountryArg });
+            string full = Path.GetFullPath(output);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write))
+            using (var sw = new StreamWriter(fs))
+                sw.Write(ucteWritten.Text);
+            var all = new List<string>(ucteWritten.Notes);
+            if (dcLines.Count > 0) all.Add($"{dcLines.Count} DC line(s) (mpc.dcline) not written: UCTE-DEF has no DC line element.");
+            notes = all;
+        }
+        else if (toRawx)
+        {
+            // RC5 WP34: PSS/E RAWX (JSON), revision 35; the same records as a RAW revision 35 output.
+            rawWritten = GridSim.Core.IO.Psse.PsseRawxWriter.Write(m);
+            string full = Path.GetFullPath(output);
+            Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+            using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write))
+            using (var sw = new StreamWriter(fs))
+                sw.Write(rawWritten.Text);
+            var all = new List<string>(rawWritten.Notes);
+            if (dcLines.Count > 0) all.Add($"{dcLines.Count} DC line(s) (mpc.dcline) not written: a MATPOWER DC line has no PSS/E RAWX record.");
+            notes = all;
+        }
+        else if (toCgmes)
         {
             cgmesWritten = GridSim.Core.IO.Cim.CgmesWriter.Write(m);   // refuses (InvalidDataException) before writing anything
             string full = Path.GetFullPath(output);
@@ -9355,7 +10028,7 @@ void RunConvert(List<string> a, string root)
         }
         else if (toRaw)
         {
-            rawWritten = GridSim.Core.IO.Psse.PsseRawWriter.Write(m);
+            rawWritten = GridSim.Core.IO.Psse.PsseRawWriter.Write(m, rawRevision);
             string full = Path.GetFullPath(output);
             Directory.CreateDirectory(Path.GetDirectoryName(full)!);
             using (var fs = new FileStream(full, FileMode.CreateNew, FileAccess.Write))
@@ -9400,7 +10073,7 @@ void RunConvert(List<string> a, string root)
     // F10: what was converted, the notes, and (below) the round-trip proof. A failed proof is a finished result too
     // (exit 3), written with the first difference.
     CliResult? rep = CliOutput.Report;
-    rep?.Set("input", input).Set("output", output).Set("format", toCgmes ? "cgmes" : toRaw ? "psse-raw" : toMatpower ? "matpower" : toV2 ? "json-v2" : "json")
+    rep?.Set("input", input).Set("output", output).Set("format", toUcte ? "ucte-def" : toRawx ? "psse-rawx" : toCgmes ? "cgmes" : toRaw ? "psse-raw" : toMatpower ? "matpower" : toV2 ? "json-v2" : "json")
         .Set("buses", m.BusCount).Set("generators", m.AllGenerators.Count).Set("out_of_service_generators", m.OutOfServiceGenerators.Count)
         .Set("branches", m.Branches.Count);
     CliResultTable? repNotes = rep?.Table("notes", "note");
@@ -9420,10 +10093,13 @@ void RunConvert(List<string> a, string root)
     GridModel back;
     try
     {
-        back = toCgmes
+        back = toUcte
+            // RC5 WP34: the UCTE reader at the input's frequency (UCTE-DEF carries none); an internal check, no licence count.
+            ? Gated.ReadBackUcte(output, m.FrequencyHz)
+            : toCgmes
             // Export pack: the CIM reader with the SV starting voltages and the ratings, on the input's system base.
             ? Gated.ReadBackCgmes(output, m.BaseMva)
-            : toRaw
+            : toRaw || toRawx
             // Export pack: the RAW reader with tap and shunt control applied, so the written controls and static var
             // compensators are rebuilt (an internal check: no licence count).
             ? Gated.ReadBackPsse(output)
@@ -9446,6 +10122,8 @@ void RunConvert(List<string> a, string root)
     GridModel expected = rawWritten is not null ? GridSim.Core.IO.Psse.PsseRawWriter.InFileOrder(m, rawWritten)
         // Export pack: the CGMES read-back numbers buses 1..n in model order and lists lines, then transformers.
         : cgmesWritten is not null ? GridSim.Core.IO.Cim.CgmesWriter.InFileOrder(m, cgmesWritten)
+        // RC5 WP34: the UCTE read-back numbers buses 1..n in model order and lists in-service lines, then transformers.
+        : ucteWritten is not null ? GridSim.Core.IO.Ucte.UcteWriter.InFileOrder(m, ucteWritten)
         : m;
     PowerFlowResult r1 = ContingencyAnalysis.CreateStudySolver(expected).Solve(expected, ContingencyAnalysis.StudyOptions);
     PowerFlowResult r2 = ContingencyAnalysis.CreateStudySolver(back).Solve(back, ContingencyAnalysis.StudyOptions);
@@ -9856,17 +10534,19 @@ void RunAcOpf(List<string> a, string root)
         // D-DOC-004: as in dcopf, the DC passes refuse invalid generator data (Pmin above Pmax) with
         // InvalidDataException, which this path (no --costs, with or without --prices) did not catch, so the run crashed.
         // Invalid case data is an input error: exit 1, as the --costs path already gave.
-        try { r = GridSim.Core.Analysis.AcOptimalPowerFlow.Solve(m, costPerGen: null, lossToleranceMw: lossTol, maxIterations: maxIter, computePrices: prices); }
+        try { using var solveTimer = StageTimer.Begin("solve"); r = GridSim.Core.Analysis.AcOptimalPowerFlow.Solve(m, costPerGen: null, lossToleranceMw: lossTol, maxIterations: maxIter, computePrices: prices); }
         catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException)
         { Console.Error.WriteLine($"[acopf] {ex.Message}"); Environment.ExitCode = CliExit.InputError; return; }
     }
     else
     {
-        try { r = GridSim.Core.Analysis.AcOptimalPowerFlow.Solve(m, costPerGen: null, lossToleranceMw: lossTol, maxIterations: maxIter, useGeneratorCosts: true, computePrices: prices); }
+        try { using var solveTimer = StageTimer.Begin("solve"); r = GridSim.Core.Analysis.AcOptimalPowerFlow.Solve(m, costPerGen: null, lossToleranceMw: lossTol, maxIterations: maxIter, useGeneratorCosts: true, computePrices: prices); }
         catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException)
         { Console.Error.WriteLine($"[acopf] {ex.Message}"); Environment.ExitCode = 1; return; }
     }
 
+    StageTimer.Merged("build", "assemble", "factor", "solve");
+    StageTimer.Count("iterations", r.Iterations);   // the outer loss-correction iterations
     Console.WriteLine($"ACOPF (DC dispatch + AC loss loop) - {m.Name} ({m.BusCount} buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]");
     // N109 (Ruling R1, Mark delegated 2026-10-04): the final DC pass left out rated lines no dispatch can relieve; name
     // them whatever the outcome (they stay over their rating at the dispatch below). Printed only when there are some.
@@ -10737,8 +11417,12 @@ void RunIec60909(List<string> a, string root)
         m = cr.Model;
     }
 
-    GridSim.Core.Protection.ShortCircuit.Iec60909.Duty DutyAt(int b) => type switch
+    GridSim.Core.Protection.ShortCircuit.Iec60909.Duty DutyAt(int b)
     {
+      using var dutyTimer = StageTimer.Begin("solve");   // 2.1.154: --timings, summed over every duty calculation
+      StageTimer.Merged("build", "assemble", "factor", "solve");
+      return type switch
+      {
         // N353 (CF5): the peak method passes to the unbalanced duties too (default B: the call is exactly the old one).
         "ll" => GridSim.Core.Protection.ShortCircuit.Iec60909.LineToLine(m, b, objective, f0Hz: m.FrequencyHz, breakTimeSeconds: tb, faultDurationSeconds: tk,
             peakFactorMethod: peakMethod),
@@ -10748,7 +11432,8 @@ void RunIec60909(List<string> a, string root)
             peakFactorMethod: peakMethod),
         _ => GridSim.Core.Protection.ShortCircuit.Iec60909.ThreePhase(m, b, objective, f0Hz: m.FrequencyHz, breakTimeSeconds: tb, faultDurationSeconds: tk,
             peakFactorMethod: peakMethod),
-    };
+      };
+    }
     string typeName = type switch { "3ph" => "three-phase", "ll" => "line-to-line", "slg" => "single-line-to-earth", _ => "double-line-to-earth" };
 
     if (allBuses)
@@ -10932,7 +11617,7 @@ void RunG74(List<string> a, string root)
         GridSim.Core.Protection.ShortCircuit.Ena.G74BusResult r = GridSim.Core.Protection.ShortCircuit.Ena.G74Method.Compute(m, b, data, opt);
         if (r.Status == GridSim.Core.Protection.ShortCircuit.Ena.G74Status.Ok)
         {
-            Console.WriteLine($"  bus {b}: Ik'' = {R(r.IkppKa)} kA   ip = {R(r.PeakIpKa)} kA (kappa {R(r.Kappa)}, IEC 60909 peak)   steady = {R(r.SteadyKa)} kA   IEC Ib(tb) = {R(r.IecIbKa)} kA");
+            Console.WriteLine($"  bus {b}: Ik'' = {R(r.IkppKa)} kA   ip = {R(r.PeakIpKa)} kA (kappa {R(r.Kappa)}, IEC 60909 peak)   steady = {R(r.SteadyKa)} kA   IEC Ib(tb) = {R(r.IecIbKa)} kA (induction motors taken with mu only, no q)");   // ANA-14
             for (int i = 0; i < r.Times.Count; i++) Console.WriteLine($"    break at {R(r.Times[i])} s: {R(r.BreakKa[i])} kA");
             Console.WriteLine($"    break at tb {R(tb)} s: {R(r.BreakAtTbKa)} kA");
             foreach (GridSim.Core.Protection.ShortCircuit.Ena.G74Contribution c in r.Contributions)
@@ -11575,7 +12260,7 @@ void RunDistributionFactors(List<string> a, string root)
 void RunExperimental(List<string> a, string root)
 {
     // Umbrella for opt-in, provenance-tagged experimental models. Everything here is UNVALIDATED AT
-    // SCALE by design and off the validated paths: a subcommand or a bare listing.
+    // SCALE by design and off the standard solver paths: a subcommand or a bare listing.
     string? sub = a.Count > 1 ? a[1] : null;
 
     void Banner() => Console.Error.WriteLine(
@@ -12001,7 +12686,7 @@ void RunConformance(List<string> a, string root)
         foreach (GridSim.Core.Physics.LawResult l in report.Laws)
         {
             string res = double.IsNaN(l.Residual) ? "" : l.Residual.ToString("E6", System.Globalization.CultureInfo.InvariantCulture);
-            csv.WriteLine($"{caseName},{model.BusCount},true,{gate},{l.Number},\"{l.Name}\",{l.Status},{res},{l.Unit},{l.Tolerance},{RunInfo.GitCommit}");
+            csv.WriteLine($"{CsvText(caseName)},{model.BusCount},true,{gate},{l.Number},\"{l.Name}\",{l.Status},{res},{l.Unit},{l.Tolerance},{RunInfo.GitCommit}");
         }
     }
 
@@ -12352,6 +13037,9 @@ void RunProtectionCheck(List<string> a, string root)
         Console.WriteLine(faultBus is null
             ? $"  not evaluated on a steady snapshot: {string.Join("; ", notCheckable)}"
             : $"  not evaluated without a trajectory or the needed sequence data: {string.Join("; ", notCheckable)}");
+    // RC5 per-unit protection: every unit's own relays, each with the unit, the relay stage and the grade and source of its
+    // settings. Printed only when the case gives unit protection (every other case prints exactly what it did).
+    if (m.UnitProtection is { } unitProt) UnitRelaySection(pcr, unitProt, rep.Verdicts);
 
     Console.WriteLine();
     if (operating.Count == 0)
@@ -12425,6 +13113,33 @@ void RunProtectionCheck(List<string> a, string root)
 
 // F10: the relay-verdict table shared by protection-check and fault: one row per verdict, from the fields the console
 // table prints (time_to_trip_s is empty when the element has no trip time; 0 or less is instantaneous).
+// RC5 per-unit protection: the unit relay table of protection-check (console and result file).
+static void UnitRelaySection(CliResult? pcr, GridSim.Core.Protection.UnitProtectionSet units, IEnumerable<GridSim.Core.Protection.RelayVerdict> verdicts)
+{
+    var unitVerdicts = verdicts.Where(v => v.UnitStage is not null).ToList();
+    Console.WriteLine($"  unit relays ({units.Units.Count} unit(s) with protection of their own, {unitVerdicts.Count} relay stage(s)):");
+    Console.WriteLine("  | unit | relay | function | verdict | quantity | pickup | delay | settings |");
+    Console.WriteLine("  |------|-------|----------|---------|----------|--------|-------|----------|");
+    foreach (GridSim.Core.Protection.RelayVerdict v in unitVerdicts)
+    {
+        string verdict = v.Confidence == GridSim.Core.Protection.ProtectionConfidence.NotCheckable ? "not checkable" : v.Operate ? "WOULD OPERATE" : "holds";
+        string q = v.Confidence == GridSim.Core.Protection.ProtectionConfidence.NotCheckable ? "-" : $"{v.Quantity:F3} {v.Unit}";
+        Console.WriteLine($"  | {v.LocationName} | {v.Device} | {v.Function} | {verdict} | {q} | {v.Pickup:F3} | {v.UnitStage!.Delay.Value:0.###} s | {GridSim.Core.Protection.UnitRelayAssessment.SettingsPhrase(v.UnitStage)} |");
+    }
+    foreach (GridSim.Core.Protection.RelayVerdict v in unitVerdicts.Where(v => v.Confidence == GridSim.Core.Protection.ProtectionConfidence.NotCheckable))
+        Console.WriteLine($"    {v.LocationName} {v.Device}: {v.Basis}");
+    if (pcr is null) return;
+    CliResultTable t = pcr.Table("unit_relays", "unit", "device", "function", "operate", "checkable", "quantity", "unit_of_quantity", "pickup",
+        "delay_s", "pickup_grade", "pickup_layer", "pickup_source", "delay_grade", "delay_layer", "delay_source", "basis");
+    foreach (GridSim.Core.Protection.RelayVerdict v in unitVerdicts)
+    {
+        GridSim.Core.Protection.UnitRelayStage st = v.UnitStage!;
+        t.Row(v.LocationName, v.Device, v.Function, v.Operate, v.Confidence != GridSim.Core.Protection.ProtectionConfidence.NotCheckable,
+            v.Quantity, v.Unit, v.Pickup, st.Delay.Value, st.Pickup.Grade, st.Pickup.Layer, st.Pickup.Provenance.Note,
+            st.Delay.Grade, st.Delay.Layer, st.Delay.Provenance.Note, v.Basis);
+    }
+}
+
 static void RelayVerdictTable(CliResult rep, string name, IEnumerable<GridSim.Core.Protection.RelayVerdict> verdicts)
 {
     CliResultTable t = rep.Table(name, "device", "function", "location", "quantity", "unit", "pickup", "time_to_trip_s", "basis");
@@ -14267,7 +14982,7 @@ void RunBenchEstimate(List<string> a, int runs, string root)
             double meanMs = sw.Elapsed.TotalMilliseconds / n;
 
             Console.WriteLine($"| {caseLabel,-12} | {model.BusCount,5} | {set.Measurements.Count,6} | {name,-7} | {r.Iterations,5} | {meanMs,9:F1} |");
-            csv.WriteLine($"{caseLabel},{model.BusCount},{set.Measurements.Count},{r.Observability.StateSize},{name},{r.Converged},{r.Iterations},{meanMs:F2},{n},{RunInfo.GitCommit}");
+            csv.WriteLine($"{CsvText(caseLabel)},{model.BusCount},{set.Measurements.Count},{r.Observability.StateSize},{name},{r.Converged},{r.Iterations},{meanMs:F2},{n},{RunInfo.GitCommit}");
             if (!r.Converged) estTally.RunFailed($"{caseLabel} {name}: estimate {r.Status}");
         }
     }
@@ -14284,7 +14999,7 @@ void RunPerfBench(List<string> rest, int runs, string? outPath, string root, str
 {
     outPath ??= DefaultResultsPath("perf-baseline.md");   // N079: was docs/developer/benchmarks/perf-baseline.md; --out docs/developer/benchmarks/perf-baseline.md refreshes the committed copy
     // D-DOC-072: the report and its CSV through the one output policy (CliFiles creates the folder).
-    using var file = new StreamWriter(CliFiles.Output(outPath, "report")) { AutoFlush = true };
+    using var file = new StreamWriter(CliFiles.ReportWithCsv(outPath, "report")) { AutoFlush = true };
     using var csv = new StreamWriter(CliFiles.Output(Path.ChangeExtension(outPath, ".csv"), "report CSV")) { AutoFlush = true };
     void Emit(string line) { Console.WriteLine(line); file.WriteLine(line); }
 
@@ -14318,7 +15033,7 @@ void RunPerfBench(List<string> rest, int runs, string? outPath, string root, str
     void Row(string path, string caseLabel, int buses, string metric, double value, string fmt = "F3")
     {
         Emit($"| {path} | {caseLabel} | {buses} | {metric} | {value.ToString(fmt)} |");
-        csv.WriteLine($"{path},{caseLabel},{buses},{metric},{value:F4},{runs},{RunInfo.GitCommit}");
+        csv.WriteLine($"{path},{CsvText(caseLabel)},{buses},{metric},{value:F4},{runs},{RunInfo.GitCommit}");
     }
 
     var pfOpt = new PowerFlowOptions { MaxIterations = 100, EnforceQLimits = false };
@@ -14385,7 +15100,7 @@ void RunBench(int runs, int parallel, string? outPath, string root, string? gpuV
         FailFlag<string>("--cases", casesArg, "a comma list of at least one case");
     outPath ??= DefaultResultsPath("benchmark-results.md");   // N079: was docs/developer/benchmarks/benchmark-results.md; --out docs/developer/benchmarks/benchmark-results.md refreshes the committed copy
     // D-DOC-072: every output goes through the one policy (CliFiles): parent folder created, never an input of the run.
-    using var file = CliFiles.CreateText(outPath, "bench report");
+    using var file = new StreamWriter(CliFiles.ReportWithCsv(outPath, "bench report"));
     using var csv = CliFiles.CreateText(Path.ChangeExtension(outPath, ".csv"), "bench CSV");
     file.AutoFlush = true;
     csv.AutoFlush = true;
@@ -14572,7 +15287,7 @@ void RunBench(int runs, int parallel, string? outPath, string root, string? gpuV
                 after[idx] = () =>
                 {
                     Emit($"| {c.Label} | {m.BusCount} | {m.Generators.Count} | {m.Branches.Count} | {Cell(r)} |");
-                    csv.WriteLine($"{eng.Name},{c.Label},{m.BusCount},{m.Generators.Count},{m.Branches.Count},{r.conv},{r.iters},{r.mism:E3},{r.meanMs:F2},{r.nRuns},{RunInfo.GitCommit}");
+                    csv.WriteLine($"{eng.Name},{CsvText(c.Label)},{m.BusCount},{m.Generators.Count},{m.Branches.Count},{r.conv},{r.iters},{r.mism:E3},{r.meanMs:F2},{r.nRuns},{RunInfo.GitCommit}");
                     Record(c.Label, eng.Name, r.note.Length > 0 ? r.note : (r.conv ? $"{r.meanMs:F0}ms" : "NO"));
                     // D-DOC-012: a cell that did not converge, ran out of memory or threw is a failed solve.
                     if (!r.conv) benchTally.RunFailed($"{c.Label} on {eng.Name}: {(r.note.Length > 0 ? r.note : "did not converge")}");
@@ -14678,7 +15393,7 @@ void RunNMinus1Sweep(List<string> a, int parallel, int sample, string? outPath, 
     int dop = parallel <= 0 ? Environment.ProcessorCount : parallel;
     outPath ??= DefaultResultsPath("nminus1-sweep.md");
     // D-DOC-072: the report and its CSV through the one output policy (CliFiles creates the folder).
-    using var file = new StreamWriter(CliFiles.Output(outPath, "report")) { AutoFlush = true };
+    using var file = new StreamWriter(CliFiles.ReportWithCsv(outPath, "report")) { AutoFlush = true };
     using var csv = new StreamWriter(CliFiles.Output(Path.ChangeExtension(outPath, ".csv"), "report CSV")) { AutoFlush = true };
     void Emit(string s) { Console.WriteLine(s); file.WriteLine(s); }
 
@@ -14726,7 +15441,7 @@ void RunNMinus1Sweep(List<string> a, int parallel, int sample, string? outPath, 
         if (!baseCase.Converged)
         {
             Emit($"| {label} | {m.BusCount} | {m.Branches.Count} | BASE FAIL: the base case did not converge ({string.Join("; ", baseCase.Violations)}) | | | | | | | |");
-            csv.WriteLine($"{label},{m.BusCount},{m.Branches.Count},0,0,0,0,0,0,False,{RunInfo.GitCommit},base-not-converged,0");
+            csv.WriteLine($"{CsvText(label)},{m.BusCount},{m.Branches.Count},0,0,0,0,0,0,False,{RunInfo.GitCommit},base-not-converged,0");
             notSecure++;
             continue;
         }
@@ -14758,7 +15473,7 @@ void RunNMinus1Sweep(List<string> a, int parallel, int sample, string? outPath, 
         if (baseCase.Violations.Count > 0 || secure < screened) notSecure++;
 
         Emit($"| {label}{(sampled ? " (sampled)" : "")} | {m.BusCount} | {nb} | {screened} | {secure} | {viol} | {islanded} | {notSolved} | {sps:F0} | {sw.Elapsed.TotalSeconds:F1} | {baseCase.Violations.Count} |");
-        csv.WriteLine($"{label},{m.BusCount},{nb},{screened},{secure},{viol},{islanded},{sps:F1},{sw.Elapsed.TotalSeconds:F2},{sampled},{RunInfo.GitCommit},{baseCase.Violations.Count},{notSolved}");
+        csv.WriteLine($"{CsvText(label)},{m.BusCount},{nb},{screened},{secure},{viol},{islanded},{sps:F1},{sw.Elapsed.TotalSeconds:F2},{sampled},{RunInfo.GitCommit},{baseCase.Violations.Count},{notSolved}");
 
         if (losses)
         {
@@ -14905,9 +15620,10 @@ void RunCycle(List<string> a, string root, bool holdSteady, bool pipeline)
 // outages in one launch instead of one locked single solve each.
 void RunBatchSolve(List<string> a)
 {
-    int count = Math.Max(1, FlagInt(a, "--count", 64));
-    int n = Math.Max(1, FlagInt(a, "--n", 64));
-    int runs = Math.Max(1, FlagInt(a, "--runs", 5));
+    // CLI-13: a count of 0 or less is refused (exit 2); it was silently replaced by 1.
+    int count = FlagCount(a, "--count", 64, 1);
+    int n = FlagCount(a, "--n", 64, 1);
+    int runs = FlagCount(a, "--runs", 5, 1);
     if ((long)count * n * n > int.MaxValue)
     {
         Console.Error.WriteLine("error: count*n*n exceeds the single-dispatch limit; reduce --count/--n (chunk it).");
@@ -15014,7 +15730,7 @@ void RunStress(List<string> a, double from, double to, double step, int parallel
     int dop = parallel <= 0 ? Environment.ProcessorCount : parallel;
     outPath ??= DefaultResultsPath("stress.md");
     // D-DOC-072: the report and its CSV through the one output policy (CliFiles creates the folder).
-    using var file = new StreamWriter(CliFiles.Output(outPath, "report")) { AutoFlush = true };
+    using var file = new StreamWriter(CliFiles.ReportWithCsv(outPath, "report")) { AutoFlush = true };
     using var csv = new StreamWriter(CliFiles.Output(Path.ChangeExtension(outPath, ".csv"), "report CSV")) { AutoFlush = true };
     void Emit(string s) { Console.WriteLine(s); file.WriteLine(s); }
 
@@ -15091,7 +15807,7 @@ void RunStress(List<string> a, double from, double to, double step, int parallel
             Console.Error.WriteLine($"error: [stress] {label}: no load point from {factors[0].ToString("0.00##", System.Globalization.CultureInfo.InvariantCulture)} converged; there is no loadability to report.");
         }
         Emit($"| {label} | {baseM.BusCount} | {maxLoad} | {vmin} | {note} |");
-        csv.WriteLine($"{label},{baseM.BusCount},{maxLoad},{vmin},{RunInfo.GitCommit}");
+        csv.WriteLine($"{CsvText(label)},{baseM.BusCount},{maxLoad},{vmin},{RunInfo.GitCommit}");
         if (pvOut is not null && lastOk >= 0)
         {
             // F18: every converged point up to the reported one (all of them converged, by the walk's rule).
@@ -15138,7 +15854,7 @@ void RunChain(List<string> a, int steps, string mode, double rampPct, string? ou
         "case118", () => LoadNamed("case118", root));
     outPath ??= DefaultResultsPath($"chain-{CaseFileTag(caseArg)}.md");
     // D-DOC-072: the report and its CSV through the one output policy (CliFiles creates the folder).
-    using var file = new StreamWriter(CliFiles.Output(outPath, "report")) { AutoFlush = true };
+    using var file = new StreamWriter(CliFiles.ReportWithCsv(outPath, "report")) { AutoFlush = true };
     using var csv = new StreamWriter(CliFiles.Output(Path.ChangeExtension(outPath, ".csv"), "report CSV")) { AutoFlush = true };
     void Emit(string s) { Console.WriteLine(s); file.WriteLine(s); }
 
@@ -15259,7 +15975,7 @@ static bool IsGridSimCaseManifest(string path)
 {
     try
     {
-        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(path));
+        using var doc = System.Text.Json.JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(path)));
         return doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object
             && doc.RootElement.TryGetProperty("schema", out System.Text.Json.JsonElement tag)
             && tag.ValueKind == System.Text.Json.JsonValueKind.String
@@ -15274,7 +15990,7 @@ static bool IsGridVizScene(string path)
 {
     try
     {
-        using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllBytes(path));
+        using var doc = System.Text.Json.JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(path)));
         System.Text.Json.JsonElement root = doc.RootElement;
         return root.ValueKind == System.Text.Json.JsonValueKind.Object
             && root.TryGetProperty("buses", out System.Text.Json.JsonElement b) && b.ValueKind == System.Text.Json.JsonValueKind.Array
@@ -15291,7 +16007,7 @@ static bool NamesNoCase(string arg) =>
     !Directory.Exists(arg)
     && !arg.EndsWith(".m", StringComparison.OrdinalIgnoreCase)
     && !arg.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-    && !arg.EndsWith(".raw", StringComparison.OrdinalIgnoreCase)
+    && !(arg.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || arg.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase))
     && !arg.EndsWith(".uct", StringComparison.OrdinalIgnoreCase)
     && !BuiltInCases.Names.Contains(arg.ToLowerInvariant());
 
@@ -15302,7 +16018,7 @@ static bool IsCaseArgument(string arg, string root)
     return Directory.Exists(arg)
         || arg.EndsWith(".m", StringComparison.OrdinalIgnoreCase)
         || arg.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
-        || arg.EndsWith(".raw", StringComparison.OrdinalIgnoreCase)
+        || (arg.EndsWith(".raw", StringComparison.OrdinalIgnoreCase) || arg.EndsWith(".rawx", StringComparison.OrdinalIgnoreCase))
         || arg.EndsWith(".uct", StringComparison.OrdinalIgnoreCase)
         || BuiltInCases.Names.Contains(arg.ToLowerInvariant());
 }
@@ -15351,7 +16067,7 @@ GridModel LoadNamed(string name, string root) => name.ToLowerInvariant() switch
     // imports). A v1 case is still a folder, and stays the default everywhere.
     var j when j.EndsWith(".json", StringComparison.Ordinal) => Gated.V2Case(name, root),
     // Tranche A (October 2026): a PSS/E RAW file (revisions 33, 34, 35), taken as a path.
-    var r when r.EndsWith(".raw", StringComparison.Ordinal) => Gated.Psse(name),
+    var r when r.EndsWith(".raw", StringComparison.Ordinal) || r.EndsWith(".rawx", StringComparison.Ordinal) => Gated.Psse(name),
     // Tranche A (October 2026): a UCTE-DEF file, taken as a path.
     var u when u.EndsWith(".uct", StringComparison.Ordinal) => Gated.Ucte(name),
     // D-DOC-130: an UnknownCaseException (an ArgumentException, as before) so every load handler can tell "names no case
@@ -15454,7 +16170,9 @@ void RunNMinus1(GridModel model)
         Console.WriteLine($"Post-fault loading judged against rating {(postFaultRating == PostFaultRating.RateB ? "B (short-term)" : "C (emergency)")}, "
             + "rating A where a branch has none; the base case against rating A (NETS SQSS v2.10 2.9.1 / 5.1.8).");
     Console.WriteLine(new string('=', 74));
+    var nm1Timer = StageTimer.Begin("solve");   // 2.1.154: --timings, the base case solve and every outage solve
     ContingencyResult? baseCase = ContingencyBaseCase("nminus1", model);
+    nm1Timer.Dispose();
     if (baseCase is null) return;
     PrintContingencyBaseCase(baseCase);
     Console.WriteLine("Outage                          Status        MaxLoad  WorstBnd  Vmin   Vmax");
@@ -15463,6 +16181,7 @@ void RunNMinus1(GridModel model)
     // D04: the study solver (OLTC loop) and options; D03: netted against the base case.
     PowerFlowOptions studyOptions = ContingencyAnalysis.StudyOptions with { PerBusVoltageLimits = busVlimits, PostFaultRating = postFaultRating };
     var raw = new List<ContingencyResult>();
+    nm1Timer = StageTimer.Begin("solve");
     // N349 (CF5): with --batched-lanes the branch outages go through the batched sweep, bit-identical to ScreenBranches
     // with the study solver (the OLTC loop on the sparse engine: oltcLoop true is exactly CreateStudySolver).
     if (outBranch && nminus1BatchedLanes is int lanesUsed)
@@ -15478,6 +16197,8 @@ void RunNMinus1(GridModel model)
     if (outGen || outBus)
         raw.AddRange(ContingencyAnalysis.ScreenElementOutages(model, ContingencyAnalysis.SingleOutages(model, false, outGen, outBus),
             StudySolverOnBackend(model), studyOptions, outageDispatch));   // N124: reference (default), droop or inertia; GR-213 backend
+    nm1Timer.Dispose();
+    StageTimer.Merged("build", "assemble", "factor", "solve");
     var results = ContingencyAnalysis.NetAgainstBase(raw, baseCase);
     int insecure = 0, islanded = 0, notSolved = 0;
     foreach (ContingencyResult c in results.OrderByDescending(c => c.Converged ? 0 : 2).ThenByDescending(c => c.Violations.Count))
@@ -15763,9 +16484,12 @@ void RunScreen(GridModel model, int top, string? csvPath = null)
     }
 }
 
-static string Csv(string s) => s.Contains(',') || s.Contains('"')
-    ? "\"" + s.Replace("\"", "\"\"") + "\""
-    : s;
+// A CSV string field (a name): the formula-injection guard (CWE-1236), then quoted when it holds a comma or a quote.
+static string Csv(string s)
+{
+    s = GridSim.Core.IO.CsvFormulaGuard.Neutralise(s);
+    return s.Contains(',') || s.Contains('"') ? "\"" + s.Replace("\"", "\"\"") + "\"" : s;
+}
 
 void RunDomains(GridModel model)
 {
@@ -15956,15 +16680,15 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
 
     var byBus = IeeeCases.Wscc9TransientReactancePu;   // WSCC-9 X'd
     bool wscc9 = label == "WSCC-9";
-    var data = new List<SubtransientInit.MachineData>();
+    var machineData = new List<SubtransientInit.MachineData>();
     foreach (Generator gen in model.Generators)
     {
         // F23: a machine the dynamics file binds takes the file's data (its own GENROU parameters, damping, saturation and
         // governor); every other machine keeps the synthesised, indicative data below, exactly as before.
-        if (dyn?.For(data.Count) is { } fileEntry) { data.Add(fileEntry.Data); continue; }
+        if (dyn?.For(machineData.Count) is { } fileEntry) { machineData.Add(fileEntry.Data); continue; }
         double xdp = wscc9 && byBus.TryGetValue(gen.Bus, out double v) ? v : GridSim.Cli.CliDefaults.SyntheticXdpPu;
         // Typical GENROU ratios off X'd - a synthesised, clearly-indicative machine.
-        data.Add(new SubtransientInit.MachineData(
+        machineData.Add(new SubtransientInit.MachineData(
             H: gen.H, Damping: GridSim.Cli.CliDefaults.SyntheticMachineDamping,
             Xd: GridSim.Cli.CliDefaults.GenrouXdOverXdp * xdp, Xdp: xdp, Xdpp: GridSim.Cli.CliDefaults.GenrouXdppOverXdp * xdp,
             Xq: GridSim.Cli.CliDefaults.GenrouXqOverXdp * xdp, Xqp: GridSim.Cli.CliDefaults.GenrouXqpOverXdp * xdp,
@@ -15975,7 +16699,16 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
     // WECC (expansion): a converter unit the DYR file gives a WECC renewable chain (REGC_A + REEC_A/B/C) carries it in its
     // data; the study then drives it with that chain (and treats it as converter plant whatever its case type).
     if (dyn is not null)
-        foreach (var kv in dyn.Renewables) data[kv.Key] = data[kv.Key] with { Renewable = kv.Value };
+        foreach (var kv in dyn.Renewables) machineData[kv.Key] = machineData[kv.Key] with { Renewable = kv.Value };
+    // WP3b (RC5): the dynamic loads the DYR file gives (CIM5BL) ride with the machine data to every RMS study below; with none
+    // the studies get the plain list, exactly as before.
+    // WP6 (RC5): an SVC unit the DYR file gives a CSVGN1 record carries it in its data (it is then converter plant).
+    if (dyn is not null)
+        foreach (var kv in dyn.Facts) machineData[kv.Key] = machineData[kv.Key] with { Facts = kv.Value };
+    IReadOnlyList<SubtransientInit.MachineData> data = dyn is { DynamicLoads.Count: > 0 } ? new RmsLoadedMachineData(machineData, dyn.DynamicLoads) : machineData;
+    // WP6 (RC5): the DC line models the DYR file gives (CDC4T) join as network devices; with none the data above is unchanged.
+    if (dyn is { NetworkDevices.Count: > 0 })
+        data = new RmsLoadedMachineData(machineData, dyn.DynamicLoads, dyn.NetworkDevices);
 
     var genBuses = new List<int>();
     foreach (Generator gg in model.Generators) if (!genBuses.Contains(gg.Bus)) genBuses.Add(gg.Bus);
@@ -16011,6 +16744,8 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
         foreach (MachineDynamicsEntry e in dyn.Entries)
             if (e.Exciter is not null) { exciters[e.GeneratorIndex] = e.Exciter.Create(); fileExciters++; }
     }
+    // DYN-06 (no model change): an AVR that holds the HV bus because the unit transformer is folded into its machine.
+    foreach (string hvNote in RmsTransientStability.HvBusRegulationNotes(model, exciters)) Console.Error.WriteLine("note: " + hvNote);
 
     Console.WriteLine($"GridSim  -  RMS TRANSIENT STABILITY (salient/subtransient GENROU)  *  {label}");
     Console.WriteLine(new string('=', 66));
@@ -16050,6 +16785,21 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
     }
     if (pfOnly + held > 0)
         Console.WriteLine($"{pfOnly} power-flow-only + {held} zero-inertia units held as constant injections");
+    if (dyn is not null && (dyn.Facts.Count > 0 || dyn.NetworkDevices.Count > 0))
+    {
+        // WP6 (RC5): the device models from the dynamics file, each in the converter traces and rms-devices.csv.
+        Console.WriteLine($"{dyn.Facts.Count + dyn.NetworkDevices.Count} device model(s) from the dynamics file (in the converter traces):");
+        foreach (var kv in dyn.Facts)
+            Console.WriteLine($"  {model.Generators[kv.Key].Name ?? "unit"} @ bus {model.Generators[kv.Key].Bus}: {kv.Value.Model}");
+        foreach (RmsNetworkDeviceData dv in dyn.NetworkDevices)
+            Console.WriteLine($"  {dv.Kind} '{dv.DeviceName}': {dv.Model}");
+    }
+    if (data is RmsLoadedMachineData withLoads)
+    {
+        Console.WriteLine($"{withLoads.Loads.Count} dynamic load(s) from the dynamics file (in the converter traces, as injections):");
+        foreach (DynamicLoadData dl in withLoads.Loads)
+            Console.WriteLine($"  {dl.Name ?? dl.Model} @ bus {dl.BusId}: {dl.Model}, {dl.PMw.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} MW + j{dl.QMvar.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} Mvar");
+    }
     Console.WriteLine();
 
     try
@@ -16061,12 +16811,20 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
             double lastAt = rmsEvents.Max(e => e.AtSeconds);
             double duration = Math.Max(GridSim.Cli.CliDefaults.RmsDurationS, lastAt + GridSim.Cli.CliDefaults.RmsDurationS);
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            MultiMachineSubtransient.Result r = RmsTransientStability.StudyEvents(model, pf, data, rmsEvents,
+            // WP2 (RC5): a list with a sequence fault (sfault / lfault) runs the traced study, whose run is the same bits as
+            // StudyEvents, and reports the fault point; every other list runs StudyEvents exactly as before.
+            bool seqFaults = rmsEvents.Any(e => e is RmsSequenceFault or RmsBranchSequenceFault);
+            RmsFaultStudyResult? traced = seqFaults
+                ? RmsTransientStability.StudyEventsWithFaults(model, pf, data, rmsEvents,
+                    stepSeconds: GridSim.Cli.CliDefaults.RmsStepS, durationSeconds: duration, exciters: exciters)
+                : null;
+            MultiMachineSubtransient.Result r = traced is not null ? traced.Result : RmsTransientStability.StudyEvents(model, pf, data, rmsEvents,
                 stepSeconds: GridSim.Cli.CliDefaults.RmsStepS, durationSeconds: duration, exciters: exciters);
             Console.WriteLine($"events ({rmsEvents.Count}), over {duration:0.###} s:");
             foreach (var e in rmsEvents.OrderBy(e => e.AtSeconds)) Console.WriteLine($"  {e.Describe()}");
             Console.WriteLine((r.StayedInSynchronism ? "STABLE (the connected machines stay in synchronism)" : "UNSTABLE (loss of synchronism)")
                 + $"  *  {sw.Elapsed.TotalSeconds:F1} s");
+            if (traced is not null) PrintFaultPoints(traced);
             // GR-084: the converter current fixed point that did not settle on some steps is surfaced beside the verdict (the
             // verdict reads synchronism only, and the run carried on with the last iterate on those steps).
             if (r.ConverterIterationFailures > 0)
@@ -16100,6 +16858,12 @@ void RunRmsStability(GridModel model, string label, bool screen, int? faultBusAr
                     string? convText = GridSim.Core.IO.RmsEventsExport.ConvertersCsvText(r, labels.GeneratorBuses, islandRefs, header, indicativeNote, eventsEvery);
                     if (convText is not null)
                         File.WriteAllText(CliFiles.Output(Path.Combine(eventsOut, GridSim.Core.IO.RmsEventsExport.ConvertersCsv), "RMS events converters CSV"), convText);
+                    string? devText = GridSim.Core.IO.RmsEventsExport.DevicesCsvText(r, header, indicativeNote, eventsEvery);
+                    if (devText is not null)   // WP6: the device models' states, only when the run has device models
+                        File.WriteAllText(CliFiles.Output(Path.Combine(eventsOut, GridSim.Core.IO.RmsEventsExport.DevicesCsv), "RMS devices CSV"), devText);
+                    if (traced is not null)   // WP2: the fault-point trace, only for a list with a sequence fault
+                        File.WriteAllText(CliFiles.Output(Path.Combine(eventsOut, GridSim.Core.IO.RmsFaultPointsExport.FileName), "RMS fault points CSV"),
+                            GridSim.Core.IO.RmsFaultPointsExport.CsvText(traced, header));
                     File.WriteAllText(CliFiles.Output(Path.Combine(eventsOut, GridSim.Core.IO.RmsEventsExport.SummaryJson), "RMS events summary"),
                         GridSim.Core.IO.RmsEventsExport.SummaryJsonText(r, labels.GeneratorBuses, islandRefs, rmsEvents, label,
                             model.FrequencyHz, GridSim.Cli.CliDefaults.RmsStepS, duration, indicative, indicativeNote, eventsEvery));
@@ -16937,6 +17701,26 @@ void RunTrip(GridModel model, string? genName, string? exportPath)
             Environment.Exit(2);
         }
         Generator? match = genMatches.Count == 1 ? genMatches[0] : null;
+        // CLI-15: a case whose units carry no names (MATPOWER, the built-in IEEE cases) takes the unit's bus number.
+        bool noNames = model.Generators.All(g => string.IsNullOrWhiteSpace(g.Name));
+        if (match is null && noNames)
+        {
+            List<Generator> onBus = int.TryParse(genName, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int busNo)
+                ? model.Generators.Where(g => g.Bus == busNo).ToList() : [];
+            if (onBus.Count > 1)
+            {
+                Console.Error.WriteLine($"error: trip '{genName}': bus {busNo} of {model.Name} holds {onBus.Count} unnamed generators, so a bus number cannot pick one.");
+                Environment.Exit(2);
+            }
+            if (onBus.Count == 1) match = onBus[0];
+            else
+            {
+                Console.Error.WriteLine($"error: trip '{genName}' matched no generator in {model.Name}. Its generators have no names, so give the " +
+                    "bus number of one: " + string.Join(", ", model.Generators.Select(g => g.Bus.ToString(System.Globalization.CultureInfo.InvariantCulture)).Distinct().Take(20)) +
+                    (model.Generators.Select(g => g.Bus).Distinct().Count() > 20 ? ", ..." : "") + ".");
+                Environment.Exit(2);
+            }
+        }
         if (match is null)
         {
             Console.Error.WriteLine($"error: trip '{genName}' matched no generator in {model.Name}. Available: " +
@@ -17194,6 +17978,18 @@ void RunTrip(GridModel model, string? genName, string? exportPath)
         Console.WriteLine($"  {v.Device,-4} {v.Function,-20} "
             + (v.Confidence == GridSim.Core.Protection.ProtectionConfidence.NotCheckable ? "not evaluated: " : v.Operate ? "WOULD OPERATE: " : "holds: ")
             + v.Basis);
+    // RC5 per-unit protection: each unit's own frequency relays on the same trajectory, with its own settings. Printed only
+    // when the case gives unit protection.
+    if (model.UnitProtection is { } unitProt)
+    {
+        Console.WriteLine();
+        Console.WriteLine("Unit protection on this trajectory (each unit's own settings; every unit sees this centre-of-inertia frequency):");
+        foreach (GridSim.Core.Protection.RelayVerdict v in GridSim.Core.Protection.UnitRelayAssessment.AssessTrajectory(
+                     unitProt, GridSim.Core.Protection.ProtectionTrajectory.FromFrequencyResponse(resp), cfg.NominalHz))
+            Console.WriteLine($"  {v.LocationName} {v.Device,-5} "
+                + (v.Confidence == GridSim.Core.Protection.ProtectionConfidence.NotCheckable ? "not evaluated: " : v.Operate ? "WOULD OPERATE: " : "holds: ")
+                + v.Basis);
+    }
 
     if (!string.IsNullOrEmpty(exportPath))
     {

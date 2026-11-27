@@ -21,7 +21,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class PmuEstimateTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-pmu-estimate-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-pmu-estimate-" + Guid.NewGuid().ToString("N"));
 
     public PmuEstimateTests() => Directory.CreateDirectory(_dir);
 

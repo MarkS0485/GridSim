@@ -22,13 +22,13 @@ namespace GridSim.Core.IO.Json.Overlay;
 ///   requires a parent has one, and no parent chain loops;</item>
 ///   <item>refs: every role is declared by the kind, with the target type the kind gives it, every required role is
 ///   given, and every reference resolves: another record by id (of one of the role's recordKinds, never itself), and
-///   when the case is known (<paramref name="targets"/> given) a bus by id and a line, transformer, generator or
+///   when the case is known (<c>targets</c> given) a bus by id and a line, transformer, generator or
 ///   demand by a name exactly one element of that type carries.</item>
 ///   </list>
 /// </item>
 /// </list>
 /// The second layer is skipped when the first finds anything: its checks assume the shape the schema guarantees.
-/// Without <paramref name="targets"/> (a lone overlay file given to the <c>validate</c> verb), references to the
+/// Without <c>targets</c> (a lone overlay file given to the <c>validate</c> verb), references to the
 /// case's elements are not resolved; the loader always resolves them.
 /// </summary>
 public static class V2AssetChecker

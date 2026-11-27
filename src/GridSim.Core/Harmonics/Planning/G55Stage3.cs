@@ -126,7 +126,7 @@ public static class G55Stage3
         {
             sourcesUsed = req.NewUserSources.Select(src =>
             {
-                foreach (HarmonicComponent c in src.Spectrum) if (c.Order % 3 == 0 && c.MagnitudePercent != 0.0) omitted.Add($"bus {src.Bus} order {c.Order} at {c.MagnitudePercent:R} %");
+                foreach (HarmonicComponent c in src.Spectrum) if (c.Order % 3 == 0 && c.MagnitudePercent != 0.0) omitted.Add(FormattableString.Invariant($"bus {src.Bus} order {c.Order} at {c.MagnitudePercent:R} %"));
                 return src with { Spectrum = src.Spectrum.Where(c => c.Order % 3 != 0).ToArray() };
             }).ToArray();
         }
@@ -201,7 +201,7 @@ public static class G55Stage3
             rows.Add(new G55Stage3Row(h, plPcc, bgPcc, hPcc, minTransferred, limitingBus, mult, limInc, vInc, limTotal, vTot, resonant, alpha, incOk, totOk));
         }
         if (usedAssumedRemote)
-            assumptions.Add($"Remote-node background taken at {req.AssumedRemoteBackgroundFraction:R} of each node's planning level (declared by the caller, not measured).");
+            assumptions.Add(FormattableString.Invariant($"Remote-node background taken at {req.AssumedRemoteBackgroundFraction:R} of each node's planning level (declared by the caller, not measured)."));
         assumptions.Add("Fundamental voltage taken as 1 pu at every node; distortion is a ratio to the nominal fundamental.");
         if (omitted.Count > 0)
             assumptions.Add("Triplen components omitted (zero sequence, not represented by the balanced model; use the three-phase study): " + string.Join("; ", omitted) + ".");

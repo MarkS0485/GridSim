@@ -15,6 +15,15 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/GridSim.App.Tests/GridSim.App.Tests.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.BadSample/GridSim.ModelPlugin.BadSample.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.Contract2Clock/GridSim.ModelPlugin.Contract2Clock.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.Contract2Sample/GridSim.ModelPlugin.Contract2Sample.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.HazardSample/GridSim.ModelPlugin.HazardSample.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.HostileCore/GridSim.ModelPlugin.HostileCore.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.HostileDenylist/GridSim.ModelPlugin.HostileDenylist.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.HostileStatic/GridSim.ModelPlugin.HostileStatic.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.LeakSample/GridSim.ModelPlugin.LeakSample.csproj" />
+    <Project Path="tests/GridSim.ModelPlugin.Sample/GridSim.ModelPlugin.Sample.csproj" />
     <Project Path="tests/GridSim.Scripting.Tests/GridSim.Scripting.Tests.csproj" />
     <Project Path="tests/GridSim.Tests/GridSim.Tests.csproj" />
   </Folder>

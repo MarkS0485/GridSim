@@ -37,7 +37,7 @@ public class HarmonicNetworkDataTests
     [Fact]
     public void JsonGridLoader_reads_the_new_line_fields_additively()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-harmonic-case-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-harmonic-case-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "system.json"), "{ \"name\": \"t\", \"baseMva\": 100, \"frequencyHz\": 50 }");
         // Moved 2026-10 (Q13, authorised): R179 makes bus baseKv required, and this fixture relied on the silent

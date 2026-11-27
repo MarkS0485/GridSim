@@ -223,7 +223,7 @@ named `Transformer`.
 | `TargetVpu` | pu | 1.0 | Voltage target. |
 | `MinTap`, `MaxTap` | ratio | 0.9, 1.1 | Tap range. |
 | `StepPu` | ratio | `Oltc.DefaultStepPu` = 0.0125 | One tap step (1.25 percent). |
-| `DeadbandPu` | pu | 0.01 | No movement while `|Vm - Target| <= Deadband`. |
+| `DeadbandPu` | pu | 0.01 | No movement while `\|Vm - Target\| <= Deadband`. |
 
 `Validate` gives a warning, never an error, for an OLTC whose `ControlsBus` does not exist, whose `Transformer` names no
 branch, that controls the higher-`BaseKv` winding, or that controls a bus that is not an end of the transformer. The

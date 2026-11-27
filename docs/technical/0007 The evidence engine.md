@@ -580,13 +580,13 @@ Gate and window:
 
 | Name | Value | Unit | Meaning | Source symbol |
 |---|---|---|---|---|
-| RoCoF tolerance | `0.15` | fraction of `|rec|` | Reproduced bound; threshold set in code, no external derivation | `ReplayTolerance.RocofRelTol` |
+| RoCoF tolerance | `0.15` | fraction of `\|rec\|` | Reproduced bound; threshold set in code, no external derivation | `ReplayTolerance.RocofRelTol` |
 | Nadir tolerance | `0.15` | Hz | Reproduced bound | `ReplayTolerance.NadirAbsToleranceHz` |
 | RMSE warning | `0.05` | Hz | Demotes `Reproduced` to `Marginal` | `ReplayTolerance.RmseWarnHz` |
 | Marginal band | `2` | x tolerance | Upper edge of `Marginal` (0.30 and 0.30 Hz) | literal in `ReplayValidator.Validate` |
 | Post-event tail | `30` | s | Window runs this far past the last event | `ReplayValidator.PostEventTailSeconds` |
 | Inertia-inference window | `5` | s | Losses at or before this time set the inferred inertia | `rocofWindowSeconds` in `ReplayValidator.Validate` |
-| Zero-RoCoF guard | `1e-9` | Hz/s | Below it the relative error becomes `|simRocof|` and the inferred inertia infinite | literal in `Validate`, `InertiaEstimator` |
+| Zero-RoCoF guard | `1e-9` | Hz/s | Below it the relative error becomes `\|simRocof\|` and the inferred inertia infinite | literal in `Validate`, `InertiaEstimator` |
 | Envelope slack | `1e-9` | Hz | Widening of the nadir bracket | `ReplayResult.RecordedNadirInEnvelope` |
 | Integration step | `0.02` | s | Forward Euler step, the 20 ms upsampler grid | `DynamicsConfig.StepSeconds` |
 | Base duration | `30` | s | Before extension | `DynamicsConfig.DurationSeconds` |
@@ -643,7 +643,7 @@ Schema ids: `gridsim-event-catalog/1`, `gridsim-evidence/1`. Wire formats are in
 | The scenario gate throws unless `Reproduced` | `ScenarioEngineTests.The_gate_throws_when_the_baseline_is_not_reproduced`, `H0StudyEngineTests.The_gate_throws_when_the_baseline_is_not_reproduced` |
 | Cells and risk points replay the full loss window | `ScenarioEngineTests.Risk_curve_no_device_uses_the_full_loss_window` |
 | The nadir worsens monotonically as inertia falls; the device lifts the nadir and cuts RoCoF at every level | `ScenarioEngineTests.The_risk_curve_worsens_monotonically_as_inertia_falls`, `The_device_lifts_the_nadir_and_cuts_rocof_at_every_level` |
-| The matrix has `|inertia| x |devices| x |corners|` cells | `ScenarioEngineTests.The_matrix_has_a_cell_per_inertia_times_device_times_corner` |
+| The matrix has `\|inertia\| x \|devices\| x \|corners\|` cells | `ScenarioEngineTests.The_matrix_has_a_cell_per_inertia_times_device_times_corner` |
 | Corners change the nadir and, for a single-step loss, not the RoCoF | `ScenarioEngineTests.Corners_bracket_the_nadir_but_not_the_initial_rocof` |
 | Inertia is N-additive and equals the closed form `f0 / (2 E) * deltaP` | `FleetDynamicsTests.Intrinsic_inertia_is_N_additive` |
 | A staggered fleet delivers less FFR at the nadir and has a deeper nadir, also when the loss lands after the stagger window | `FleetDynamicsTests.Fast_response_is_non_additive_when_staggered`, `Stagger_is_relative_to_the_event_not_absolute_time` |

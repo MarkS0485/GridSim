@@ -19,7 +19,7 @@ namespace GridSim.Core.Dynamics.Distributed;
 /// integrated with classical <b>RK4</b> for first-swing accuracy - the refinement the domain-reduced
 /// kernel defers. A fault is a window [<see cref="Fault.OnSeconds"/>, <see cref="Fault.ClearSeconds"/>)
 /// during which a different reduced admittance <see cref="Fault.YFaulted"/> applies (e.g. all-zero for a
-/// bolted terminal fault => Pe = 0), after which the network returns to <paramref name="yReduced"/>. The window's
+/// bolted terminal fault => Pe = 0), after which the network returns to <c>yReduced</c>. The window's
 /// edges are read with the RMS integrator's R249 tolerance (N047): an RK4 sample within a millionth of a step of an
 /// edge counts as having reached it, so the one-ulp rounding of an edge formed as onset + clearing never decides
 /// whether a sample sees the fault.

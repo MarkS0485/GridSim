@@ -96,7 +96,12 @@ public static class StorageTimeSeries
             // D-DOC-137 (October 2026): a step whose power flow did not converge has no state, so its slack output and its
             // losses are NaN, as its voltages already were. They used to carry the non-converged iterate's numbers, which
             // the storage report printed as if they were a solved state. A converged step's values are the same bits.
-            double slackMw = pf.Converged && slackIdx >= 0 ? pf.PInjMw[slackIdx] + busById[pf.BusIds[slackIdx]].Pd : double.NaN;
+            // The slack's own load is the load it draws at its solved voltage (LoadAtVoltage, the rule SolvedGeneration and
+            // the solver use): a voltage-dependent load at the slack bus used to be counted at its nominal Pd. A
+            // constant-power load returns the stored Pd untouched, so those cases keep their bits.
+            double slackMw = pf.Converged && slackIdx >= 0
+                ? pf.PInjMw[slackIdx] + LoadAtVoltage.Mw(busById[pf.BusIds[slackIdx]], pf.Vm[slackIdx]).PMw
+                : double.NaN;
             records.Add(new StorageStepRecord(step, hour, factor, demand, price, pf.Converged,
                 pf.Converged ? pf.Vm.Min() : double.NaN, pf.Converged ? pf.Vm.Max() : double.NaN,
                 pf.Converged ? pf.TotalLossMw : double.NaN, slackMw, siteRecords));

@@ -47,7 +47,7 @@ public class FixKlSolveImportTests
 {
     private static string Case9Export(Action<System.Text.Json.Nodes.JsonObject> edit)
     {
-        string path = Path.Combine(Path.GetTempPath(), "fixkl-io03-" + Guid.NewGuid().ToString("N") + ".json");
+        string path = TestTemp.Under("fixkl-io03-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
             var m = GridSim.Core.IO.IeeeCases.Case9();

@@ -11,8 +11,16 @@ public static class ModelFormat
     /// <summary>The one supported document format.</summary>
     public const string Id = "gridsim-model/1";
 
-    /// <summary>The model roles: where a model plugs into the dynamics engine.</summary>
-    public static readonly IReadOnlyList<string> Roles = new[] { "exciter", "governor", "stabiliser", "generic" };
+    /// <summary>The model roles: where a model plugs into the dynamics engine. RC5 WP12 adds <c>injection</c> (a generator-bound
+    /// current source) and <c>load</c> (a bus load model); a document that names neither parses exactly as before.</summary>
+    public static readonly IReadOnlyList<string> Roles = new[] { "exciter", "governor", "stabiliser", "generic", "injection", "load" };
+
+    /// <summary>RC5 wp32b: the <c>relay</c> role (<see cref="DeclarativeRelay"/>), read beside <see cref="Roles"/>. It is kept out of
+    /// that list; the refusal of an unknown role names it as well.</summary>
+    public const string RelayRole = DeclarativeRelay.Role;
+
+    /// <summary>True for a role this build reads: one of <see cref="Roles"/>, or <see cref="RelayRole"/>.</summary>
+    public static bool IsRole(string role) => Roles.Contains(role) || role == RelayRole;
 }
 
 /// <summary>The three kinds of reference.</summary>
@@ -57,7 +65,14 @@ public sealed record ModelTable(IReadOnlyList<double> X, IReadOnlyList<double> Y
 
 /// <summary>One block: an operation from the closed catalogue with its wiring.</summary>
 public sealed record ModelBlock(string Id, string Type, IReadOnlyList<ModelRef> Inputs,
-    IReadOnlyList<KeyValuePair<string, ModelRef>> Params, string? Signs, ModelTable? Table, string Path);
+    IReadOnlyList<KeyValuePair<string, ModelRef>> Params, string? Signs, ModelTable? Table, string Path)
+{
+    /// <summary>RC5 WP12: the expression text of an <c>expr</c> block (null for every other block).</summary>
+    public string? Expr { get; init; }
+
+    /// <summary>RC5 WP12: the declared output unit of an <c>expr</c> block (null for every other block).</summary>
+    public string? UnitText { get; init; }
+}
 
 /// <summary>One step of the initialisation block.</summary>
 public abstract record ModelInitStep(string Path);
@@ -133,7 +148,7 @@ public sealed class ModelDocument
         JsonDocument doc;
         try
         {
-            doc = JsonDocument.Parse(utf8.ToArray(), new JsonDocumentOptions
+            doc = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(utf8.ToArray()), new JsonDocumentOptions
             {
                 CommentHandling = JsonCommentHandling.Disallow,
                 AllowTrailingCommas = false,
@@ -234,8 +249,8 @@ public sealed class ModelDocument
                 throw Bad("$.format", $"'{format}' is not supported; this build reads {ModelFormat.Id}.");
             string id = Name(m["id"], "$.id");
             string role = Str(m["role"], "$.role");
-            if (!ModelFormat.Roles.Contains(role))
-                throw Bad("$.role", $"'{role}' is not a role (use one of {string.Join(", ", ModelFormat.Roles)}).");
+            if (!ModelFormat.IsRole(role))
+                throw Bad("$.role", $"'{role}' is not a role (use one of {string.Join(", ", ModelFormat.Roles.Append(ModelFormat.RelayRole))}).");
             string source = Str(m["source"], "$.source");
             if (string.IsNullOrWhiteSpace(source)) throw Bad("$.source", "a public source for the structure is required.");
 
@@ -358,7 +373,7 @@ public sealed class ModelDocument
 
     private static ModelBlock Block(JsonElement e, string path)
     {
-        var d = Members(e, path, new[] { "id", "type" }, new[] { "inputs", "params", "signs", "table" });
+        var d = Members(e, path, new[] { "id", "type" }, new[] { "inputs", "params", "signs", "table", "expr", "unit" });
         var inputs = new List<ModelRef>();
         if (d.TryGetValue("inputs", out JsonElement ie))
         {
@@ -386,7 +401,11 @@ public sealed class ModelDocument
                 Str(td["xUnit"], path + ".table.xUnit"), Str(td["yUnit"], path + ".table.yUnit"));
         }
         return new ModelBlock(Name(d["id"], path + ".id"), Str(d["type"], path + ".type"), inputs, pars,
-            d.TryGetValue("signs", out JsonElement se) ? Str(se, path + ".signs") : null, table, path);
+            d.TryGetValue("signs", out JsonElement se) ? Str(se, path + ".signs") : null, table, path)
+        {
+            Expr = d.TryGetValue("expr", out JsonElement xe) ? Str(xe, path + ".expr") : null,
+            UnitText = d.TryGetValue("unit", out JsonElement ue) ? Str(ue, path + ".unit") : null,
+        };
     }
 
     private static ModelInitStep InitStep(JsonElement e, string path)

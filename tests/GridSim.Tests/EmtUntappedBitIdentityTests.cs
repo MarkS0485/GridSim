@@ -73,8 +73,9 @@ public class EmtUntappedBitIdentityTests
         for (int k = 0; k < Math.Min(20, net.SeriesBranchIds.Count); k++)
             probes.Add(new EmtProbe("i" + k, EmtProbeKind.BranchCurrent, net.SeriesBranchIds[k].ElementId));
 
-        const double dt = 20e-6;
-        EmtResult res = new EmtEngine(net, dt).Simulate(new EmtCase(net, dt, 0.04, probes, events));
+        // R7-02: every mode runs 2,000 steps of 20 us (the R5-03 "lines-fine" mode at the shortest travel time is retired).
+        const double dt = 20e-6, duration = 0.04;
+        EmtResult res = new EmtEngine(net, dt).Simulate(new EmtCase(net, dt, duration, probes, events));
 
         var bytes = new List<byte>();
         foreach (EmtPoint p in res.Points)
@@ -105,7 +106,19 @@ public class EmtUntappedBitIdentityTests
     // (C = 0.40 uF/km) times its published length, 354.6 -> 148.1 MVAr at 1 pu (data/gb-full/README.md). The network
     // changed, so its solved numbers do. The untapped-engine identity this test guards is unchanged (the same network
     // through both engines); only the network moved. Before F963983E884043B4..., after 618B0F32C4A8207B....
-    [InlineData("gb-full", "lines", "03334BF15CE25754061D18963A61E837F5A35489BF5654D6FAA3BB1FC965F89B")]
+    // DYN-18 (re-pinned, 2.1.161; proof corrected, R6-02): gb-full [lines] is no longer a digest. Its shortest travelling-
+    // wave line has a travel time of about 5.2 ns (measured and asserted below; it is the R5-03 step), and the engine used to
+    // stretch every line shorter than the 20 us step to one whole step (the shortest about 3,800 times its electrical
+    // length, inductance and charging alike; 25->91, at 12.7 us and 1.58 times, is only the first one refused in element
+    // order), so the pinned 03334BF1... trajectory was of a different network. Such a line is now refused, as the partitioned engine refuses it: see the test below.
+    // R7-02 (review B7): ruling 14 makes every line shorter than the step its pi branch, so gb-full [lines] runs at the
+    // default 20 us again (about 1,744 lines converted: the stub lines of data/gb-full/README.md) and is pinned here,
+    // through the pi fallback, as ruling 14 says the bit-identity pins stay. It replaces the R5-03 "lines-fine" pin
+    // (4D38821075C6BE69...), which ran 2,000 steps at the artefact 5.2 ns travel time: 10.5 us of simulated time, in which
+    // the waves on most lines never reached the far end (the longest travel time is 490 us), at about 360 MB of history
+    // buffers. Recorded at 2.1.173 (the first build that runs it); a regression pin of the current engine, not a pre-R078
+    // recording. The pi branch itself is proved bit for bit against an explicit pi network (BugHunt1125CorrectnessTests).
+    [InlineData("gb-full", "lines", "7E518B188BE4898B60123A854810A0B53E5805A730A03A286C44C43280818103")]
     // Moved 2026-10 (D-DOC-026, docs-session finding, Ruling R1: Mark delegated 2026-10-04): CsrMatrix.Builder now sums a
     // duplicated cell in insertion order; this digest recorded the introsort's arbitrary order in the node rows over
     // 16 entries. Same network and elements; only the rounding of the nodal-matrix diagonals moves. Before
@@ -146,5 +159,27 @@ public class EmtUntappedBitIdentityTests
     {
         string actual = TrajectoryDigest(Load(caseName), mode);
         Assert.True(expected == actual, $"{caseName} [{mode}]: EMT trajectory digest {actual} differs from the pinned pre-R078 digest {expected}.");
+    }
+
+    // Re-pinned (ruling 14): the 2.1.161 refusal is replaced by the pi branch of the same line. The facts of the proof are
+    // still asserted; the run now builds, with every line shorter than 20 us converted and none longer.
+    [Fact]
+    public void Gb_full_travelling_wave_lines_shorter_than_the_step_are_pi_branches()
+    {
+        // R6-02: the facts the re-pin proof states: lines shorter than the step exist, the shortest about 5.2 ns.
+        GridModel gb = Load("gb-full");
+        EmtNetwork net = EmtNetwork.FromGridModel(gb, new EmtBuildOptions(
+            new[] { new EmtSourceSpec(gb.Generators[0].Bus, Rs: 0, AmplitudePu: 1.0, FrequencyHz: 0.0) }, IncludeLoads: true, UseTravellingWaveLines: true));
+        double shortest = net.Elements.OfType<BergeronLine>().Min(l => l.TauSeconds);
+        Assert.True(shortest > 5.0e-9 && shortest < 5.5e-9, $"shortest travel time {shortest} s");
+        Assert.True(20e-6 / shortest > 3_000, "the shortest line was stretched by far more than 1.58 times at 20 us");
+        var engine = new EmtEngine(net, 20e-6);
+        int shorter = net.Elements.OfType<BergeronLine>().Count(l => l.TauSeconds < 20e-6 * (1.0 - 1e-12));
+        Assert.True(shorter > 0);
+        Assert.Equal(shorter, engine.PiConvertedLines.Count);
+        // R7-02: the counts the data note in data/gb-full/README.md states (lines shorter than 20 us; of those, surge
+        // impedance above 1 kOhm on the line's own voltage base).
+        Assert.Equal(1744, shorter);
+        Assert.All(engine.PiConvertedLines, p => Assert.True(p.TauSeconds < 20e-6));
     }
 }

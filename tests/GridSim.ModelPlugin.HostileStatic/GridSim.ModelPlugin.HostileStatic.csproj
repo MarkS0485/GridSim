@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- RC5 REVIEW-FIX-7: a hostile model plug-in that tries to write static fields of other assemblies, used by Rc5ReviewFix7PluginIsolationTests. It references GridSim.Core
+       for the contract only (Private=false: Core is not copied beside it). The test project does not reference it, so building
+       the tests does not build it; the solution build does, and the tests read its DLL from bin/<Configuration>/net10.0. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.Core\GridSim.Core.csproj" Private="false" />
+  </ItemGroup>
+
+</Project>

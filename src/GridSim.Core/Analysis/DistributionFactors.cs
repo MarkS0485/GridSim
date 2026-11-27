@@ -11,12 +11,18 @@ namespace GridSim.Core.Analysis;
 /// the workhorses of operations and markets ("which line does each generator load", instant N-1
 /// screening, the basis for redispatch).
 ///
-/// DC linearisation (the standard convention): only the series reactance is used - R, line charging,
-/// taps and phase shifts are ignored, and voltage magnitudes are 1 pu. Branch susceptance b_l = 1/X_l;
-/// the reduced nodal susceptance B' (slack row/col removed) is factored once, then PTDF column k
+/// DC linearisation (MATPOWER's <c>makeBdc</c> convention, B33): voltage magnitudes are 1 pu, there are no losses,
+/// and R, line charging and the shunt susceptance Bs are ignored. Branch susceptance b_l = (1/X_l)/tap_l (a tap of 0
+/// is read as 1; a negative or non-finite tap is refused by name). A phase shift phi_l (radians, positive from-to-to,
+/// the AC model's sign) makes the branch flow b_l (theta_from - theta_to - phi_l): an injection of +b_l phi_l at the
+/// from bus and -b_l phi_l at the to bus on the right-hand side of B' theta = P. A bus shunt conductance Gs (MW drawn
+/// at 1 pu, MATPOWER's GS) is a constant-power load. Shifts and Gs enter <see cref="DcFlows"/> and the DC solve only;
+/// PTDF and LODF are responses to unit injections and depend on b alone. A model with no tap other than 0 or 1, no
+/// phase shift and no Gs is computed by exactly the instructions of the reactance-only model, bit for bit.
+/// The reduced nodal susceptance B' (slack row/col removed) is factored once, then PTDF column k
 /// (injection at bus k, withdrawal at the slack) is one solve B' x = e_k. LODF for an outage of line k
 /// is one transfer solve, LODF[l,k] = Phi[l,k] / (1 - Phi[k,k]); when 1 - Phi[k,k] -> 0 the outage
-/// islands the system (line k is a bridge), reported in <see cref="RadialOutages"/> rather than divided.
+/// islands the system (line k is a bridge), reported in <c>RadialOutages</c> rather than divided.
 /// PTDF and LODF are dimensionless (MW per MW); <see cref="DcFlows"/> returns MW.
 ///
 /// <para><b>Islands (N034, October 2026).</b> A network made of several electrically separate parts (DC islands:
@@ -49,7 +55,13 @@ public sealed class DistributionFactors
     private readonly int _nr;        // reduced size: the bus count minus one reference per island
     private readonly int[] _from;    // per branch: from bus index (or -1 for out-of-service)
     private readonly int[] _to;
-    private readonly double[] _b;    // per branch: susceptance 1/X (0 for out-of-service)
+    private readonly double[] _b;    // per branch: susceptance (1/X)/tap (0 for out-of-service)
+    // B33. Null unless some in-service branch has a phase shift (MATPOWER's Pbusinj per full bus index, and Pfinj per
+    // branch, both per unit), or some bus has a shunt conductance (Gs in MW per full bus index). Null tables leave
+    // every computation on the reactance-only instructions.
+    private readonly double[]? _shiftInjPu;
+    private readonly double[]? _flowOffsetPu;
+    private readonly double[]? _gsMw;
     // Bus id -> model index of its FIRST occurrence (R005). Replaces a linear Array.IndexOf per lookup, which made
     // DcFlows O(injections x buses); first-occurrence keeps IndexOf's answer exactly, even for a duplicated id.
     private readonly Dictionary<int, int> _firstIndexOfBus;
@@ -65,10 +77,12 @@ public sealed class DistributionFactors
     public IReadOnlyList<DcIsland> Islands { get; }
 
     private DistributionFactors(SparseLuFactorization bPrime, int[] redOf, int n, int nr,
-        int[] from, int[] to, double[] b, IReadOnlyList<int> busIds, int slackId, IReadOnlyList<DcIsland> islands)
+        int[] from, int[] to, double[] b, IReadOnlyList<int> busIds, int slackId, IReadOnlyList<DcIsland> islands,
+        double[]? shiftInjPu, double[]? flowOffsetPu, double[]? gsMw)
     {
         _bPrime = bPrime; _redOf = redOf; _n = n; _nr = nr;
         _from = from; _to = to; _b = b;
+        _shiftInjPu = shiftInjPu; _flowOffsetPu = flowOffsetPu; _gsMw = gsMw;
         BusIds = busIds; SlackBusId = slackId; Islands = islands;
         _firstIndexOfBus = new Dictionary<int, int>(busIds.Count);
         for (int i = 0; i < busIds.Count; i++) _firstIndexOfBus.TryAdd(busIds[i], i);
@@ -90,8 +104,8 @@ public sealed class DistributionFactors
         return FromPrepared(p, fact);
     }
 
-    /// <summary><see cref="Build"/> with B' factored under the OPT-IN diagonal-preference pivot rule (see
-    /// <see cref="SparseLuFactorization.Factor"/>); 0 is exactly <see cref="Build"/>. Used only by
+    /// <summary><see cref="Build(GridModel, int?)"/> with B' factored under the OPT-IN diagonal-preference pivot rule (see
+    /// <see cref="SparseLuFactorization.Factor"/>); 0 is exactly <see cref="Build(GridModel, int?)"/>. Used only by
     /// <see cref="DcPowerFlow.Solve(GridModel, double)"/>.</summary>
     internal static DistributionFactors Build(GridModel model, int? slackBusId, double diagonalPreference)
     {
@@ -102,17 +116,18 @@ public sealed class DistributionFactors
     }
 
     /// <summary>
-    /// Everything <see cref="Build"/> derives from a model before the factorisation: the reduced nodal susceptance B'
-    /// (built in exactly <see cref="Build"/>'s stamp order) and the index maps. <see cref="Build"/> is
+    /// Everything <see cref="Build(GridModel, int?)"/> derives from a model before the factorisation: the reduced nodal susceptance B'
+    /// (built in exactly <see cref="Build(GridModel, int?)"/>'s stamp order) and the index maps. <see cref="Build(GridModel, int?)"/> is
     /// <c>FromPrepared(p, SparseLu.Factor(p.BPrime))</c>, so a caller that factors many B' matrices of one structure
     /// together (the batched DC power flow, <see cref="DcPowerFlow.SolveBatch"/>) and hands each factorisation back
-    /// through <see cref="FromPrepared"/> gets exactly the object <see cref="Build"/> would have made, provided its
+    /// through <see cref="FromPrepared"/> gets exactly the object <see cref="Build(GridModel, int?)"/> would have made, provided its
     /// factorisation is bit-identical to <see cref="SparseLu.Factor(CsrMatrix)"/>'s.
     /// </summary>
     internal sealed record Prepared(CsrMatrix BPrime, int[] RedOf, int N, int Nr, int[] From, int[] To, double[] B,
-        int[] BusIds, int SlackBusId, IReadOnlyList<DcIsland> Islands)
+        int[] BusIds, int SlackBusId, IReadOnlyList<DcIsland> Islands,
+        double[]? ShiftInjectionPu = null, double[]? FlowOffsetPu = null, double[]? GsMw = null)
     {
-        /// <summary>The error <see cref="Build"/> throws when B' cannot be factorised.</summary>
+        /// <summary>The error <see cref="Build(GridModel, int?)"/> throws when B' cannot be factorised.</summary>
         internal InvalidOperationException SingularError() => new(
             $"DC susceptance is singular even with one reference bus per island ({Islands.Count} island(s)); "
             + "PTDF/LODF cannot be formed for this network.");
@@ -120,10 +135,11 @@ public sealed class DistributionFactors
 
     /// <summary>The factors from a <see cref="Prepare"/> result and the factorisation of its B'.</summary>
     internal static DistributionFactors FromPrepared(Prepared p, SparseLuFactorization fact)
-        => new(fact, p.RedOf, p.N, p.Nr, p.From, p.To, p.B, p.BusIds, p.SlackBusId, p.Islands);
+        => new(fact, p.RedOf, p.N, p.Nr, p.From, p.To, p.B, p.BusIds, p.SlackBusId, p.Islands,
+            p.ShiftInjectionPu, p.FlowOffsetPu, p.GsMw);
 
-    /// <summary>The model-to-matrix half of <see cref="Build"/> (see <see cref="Prepared"/>); throws as
-    /// <see cref="Build"/> does for a network the DC model cannot represent.</summary>
+    /// <summary>The model-to-matrix half of <see cref="Build(GridModel, int?)"/> (see <see cref="Prepared"/>); throws as
+    /// <see cref="Build(GridModel, int?)"/> does for a network the DC model cannot represent.</summary>
     internal static Prepared Prepare(GridModel model, int? slackBusId = null)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -149,6 +165,7 @@ public sealed class DistributionFactors
         var from = new int[m];
         var to = new int[m];
         var b = new double[m];
+        double[]? shiftInj = null, flowOffset = null;
         var builder = new CsrMatrix.Builder(nr);
         for (int l = 0; l < m; l++)
         {
@@ -165,8 +182,30 @@ public sealed class DistributionFactors
                     $"DC model: in-service branch {l} ('{br.Name ?? $"{br.From}-{br.To}"}', {br.From}->{br.To}) has zero reactance inside a meshed part of "
                     + "the network; the reactance-only DC model cannot represent it (infinite susceptance) and leaving it out would compute "
                     + "PTDF/LODF on a different topology. Give it a small reactance (1e-4 pu) or merge its two buses.");
-            double bl = 1.0 / br.X;
+            // B33: b = (1/X)/tap, MATPOWER makeBdc's order. A tap of exactly 1 (or 0, MATPOWER's "a line") takes the
+            // reactance-only expression itself, so a tap-free branch gets the same instruction and the same bits.
+            double tap = br.TapRatio;
+            if (tap < 0.0 || !double.IsFinite(tap))
+                throw new InvalidOperationException(FormattableString.Invariant(
+                    $"DC model: in-service branch {l} ('{br.Name ?? $"{br.From}-{br.To}"}', {br.From}->{br.To}) has tap ratio {tap}; a tap ratio must be 0 (a line) or a finite number above 0."));
+            double bl = tap == 1.0 || tap == 0.0 ? 1.0 / br.X : (1.0 / br.X) / tap;
             from[l] = f; to[l] = t; b[l] = bl;
+
+            // B33: a phase shift is MATPOWER's Pfinj = b (-shift pi/180) on the branch and Pbusinj = Cft' Pfinj on its
+            // two buses. A shift of exactly 0 adds nothing, and the tables stay null while no branch has one.
+            double shiftDeg = br.PhaseShiftDeg;
+            if (shiftDeg != 0.0)
+            {
+                if (!double.IsFinite(shiftDeg))
+                    throw new InvalidOperationException(FormattableString.Invariant(
+                        $"DC model: in-service branch {l} ('{br.Name ?? $"{br.From}-{br.To}"}', {br.From}->{br.To}) has phase shift {shiftDeg} degrees; a phase shift must be a finite number."));
+                shiftInj ??= new double[n];
+                flowOffset ??= new double[m];
+                double pfinj = bl * (-shiftDeg * Math.PI / 180.0);
+                flowOffset[l] = pfinj;
+                shiftInj[f] += pfinj;
+                shiftInj[t] -= pfinj;
+            }
 
             // Real nodal-susceptance stamp B += A^T diag(b) A, with every reference row/col omitted. With one island
             // that is the slack's alone, exactly as before: the same stamps, in the same order, with the same values.
@@ -180,8 +219,22 @@ public sealed class DistributionFactors
             }
         }
 
+        // B33: bus shunt conductance, a constant-power load of Gs MW (MATPOWER: Pbus -= Gs / baseMVA). Null when every
+        // bus has Gs exactly 0.
+        double[]? gsMw = null;
+        for (int i = 0; i < n; i++)
+        {
+            double gs = model.Buses[i].Gs;
+            if (gs == 0.0) continue;
+            if (!double.IsFinite(gs))
+                throw new InvalidOperationException(FormattableString.Invariant(
+                    $"DC model: bus {model.Buses[i].Id} has shunt conductance Gs {gs} MW; it must be a finite number."));
+            gsMw ??= new double[n];
+            gsMw[i] = gs;
+        }
+
         CsrMatrix bp = builder.Build();
-        return new Prepared(bp, redOf, n, nr, from, to, b, busIds, busIds[referenceIndices[0]], islands);
+        return new Prepared(bp, redOf, n, nr, from, to, b, busIds, busIds[referenceIndices[0]], islands, shiftInj, flowOffset, gsMw);
     }
 
     /// <summary>
@@ -285,10 +338,16 @@ public sealed class DistributionFactors
                 if (reference < 0) reference = comp[0];
             }
             refs[k] = reference;
-            double loadMw = 0.0;
+            double loadMw = 0.0, shuntMw = 0.0;
             var ids = new int[comp.Count];
-            for (int j = 0; j < comp.Count; j++) { ids[j] = model.Buses[comp[j]].Id; loadMw += model.Buses[comp[j]].Pd; }
-            islands[k] = new DcIsland(model.Buses[reference].Id, ids, hasGen[k], loadMw);
+            for (int j = 0; j < comp.Count; j++)
+            {
+                Bus bus = model.Buses[comp[j]];
+                ids[j] = bus.Id;
+                loadMw += bus.Pd;
+                if (bus.Gs != 0.0) shuntMw += bus.Gs;   // B33: the island's shunt conductance load
+            }
+            islands[k] = new DcIsland(model.Buses[reference].Id, ids, hasGen[k], loadMw, shuntMw);
         }
 
         // The primary island's reference first, then the others in island order.
@@ -353,7 +412,7 @@ public sealed class DistributionFactors
 
     /// <summary>LODF column for an outage of branch <paramref name="outageBranch"/>: each monitored
     /// branch's flow change per unit of the outaged branch's pre-outage flow. Diagonal is -1; an
-    /// islanding (bridge) outage returns an all-NaN column and is listed in <see cref="RadialOutages"/>.</summary>
+    /// islanding (bridge) outage returns an all-NaN column and is listed in <c>RadialOutages</c>.</summary>
     public double[] LodfColumn(int outageBranch)
     {
         int m = _from.Length;
@@ -423,18 +482,47 @@ public sealed class DistributionFactors
             if (i < 0 || _redOf[i] < 0) continue;
             rhs[_redOf[i]] += mw / baseMva;
         }
+        // B33: MATPOWER's Pbus = Sbus - Pbusinj - Gs/baseMVA. Applied only when the model has a shift or a Gs, and only
+        // after the whole loop above, so a model with neither keeps the old instructions and summation order exactly.
+        if (_shiftInjPu is not null || _gsMw is not null)
+        {
+            for (int i = 0; i < _n; i++)
+            {
+                int r = _redOf[i];
+                if (r < 0) continue;
+                if (_shiftInjPu is not null) rhs[r] -= _shiftInjPu[i];
+                if (_gsMw is not null) rhs[r] -= _gsMw[i] / baseMva;
+            }
+        }
         return rhs;
     }
 
     // Branch flows (MW) from a full angle vector: b_l * (theta_from - theta_to) * base, zero for a branch the DC model
-    // leaves out (out of service, zero reactance, or an end bus missing).
+    // leaves out (out of service, zero reactance, or an end bus missing). B33: with a phase shift in the model, MATPOWER's
+    // (Bf theta + Pfinj) * base, which is b_l * (theta_from - theta_to - phi_l) * base.
     private double[] FlowsFromTheta(double[] theta, double baseMva)
     {
         var f = new double[_from.Length];
-        for (int l = 0; l < _from.Length; l++)
-            if (_from[l] >= 0) f[l] = _b[l] * (theta[_from[l]] - theta[_to[l]]) * baseMva;
+        if (_flowOffsetPu is null)
+        {
+            for (int l = 0; l < _from.Length; l++)
+                if (_from[l] >= 0) f[l] = _b[l] * (theta[_from[l]] - theta[_to[l]]) * baseMva;
+        }
+        else
+        {
+            for (int l = 0; l < _from.Length; l++)
+                if (_from[l] >= 0) f[l] = (_b[l] * (theta[_from[l]] - theta[_to[l]]) + _flowOffsetPu[l]) * baseMva;
+        }
         return f;
     }
+
+    /// <summary>The DC series susceptance of <paramref name="branch"/> (per unit): (1/X)/tap, MATPOWER makeBdc's b; 0 for
+    /// a branch the DC model leaves out. The one definition DcScopf's flow rows and the phase-shifter sensitivity use.</summary>
+    internal double BranchSusceptance(int branch) => _b[branch];
+
+    /// <summary>The DC flow offset of <paramref name="branch"/> from its phase shift (per unit, MATPOWER's Pfinj =
+    /// -b phi): the flow is <c>b (theta_from - theta_to) + offset</c>. 0 for a branch with no shift.</summary>
+    internal double BranchFlowOffsetPu(int branch) => _flowOffsetPu is null ? 0.0 : _flowOffsetPu[branch];
 
     /// <summary>
     /// The PTDF-transpose product (F19, nodal prices): for every bus k, <c>sum_l w_l PTDF[l, k]</c>, the weighted sum of
@@ -493,4 +581,6 @@ public sealed class DistributionFactors
 /// <param name="HasGeneration">True when at least one generator sits on the island. False marks a dead island: no
 /// source can supply its load, and its reference exists only to keep the DC matrix non-singular.</param>
 /// <param name="LoadMw">The island's total demand (sum of bus Pd, MW).</param>
-public sealed record DcIsland(int ReferenceBusId, IReadOnlyList<int> BusIds, bool HasGeneration, double LoadMw);
+/// <param name="ShuntLoadMw">The island's total bus shunt conductance load (sum of bus Gs, MW at 1 pu; B33). The DC model
+/// treats it as a constant-power load, so the island's generation must meet <c>LoadMw + ShuntLoadMw</c>.</param>
+public sealed record DcIsland(int ReferenceBusId, IReadOnlyList<int> BusIds, bool HasGeneration, double LoadMw, double ShuntLoadMw = 0.0);

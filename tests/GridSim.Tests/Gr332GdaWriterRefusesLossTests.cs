@@ -12,7 +12,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr332GdaWriterRefusesLossTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-gr332-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-gr332-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {

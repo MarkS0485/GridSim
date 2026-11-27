@@ -71,7 +71,7 @@ public sealed class RestorationReliabilityCliProcessTests
 
     private static string NewDirectory()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-p8a-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-p8a-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         return directory;
     }

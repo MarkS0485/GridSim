@@ -101,6 +101,13 @@ public sealed class BackwardForwardSweep : IPowerFlowSolver
         int slack = -1;
         for (int i = 0; i < n; i++) if (model.Buses[i].Type == BusType.Slack) { slack = i; break; }
         if (slack < 0) throw new InvalidDataException("BackwardForwardSweep needs a slack (source) bus.");
+        // NUM-14: the sweep roots at one slack and treats every other bus as a load bus, but no slack-typed bus is checked
+        // for mismatch, so a second slack was neither held nor checked and the result could read Converged. Refused, as
+        // the distributed-slack solver refuses it (automatic selection already requires exactly one slack).
+        for (int i = slack + 1; i < n; i++)
+            if (model.Buses[i].Type == BusType.Slack)
+                throw new InvalidDataException(FormattableString.Invariant(
+                    $"BackwardForwardSweep holds one slack bus; this model has another at bus {model.Buses[i].Id} (the first is bus {model.Buses[slack].Id}). Use a Newton engine, or make one of them a PV bus."));
 
         // Net constant-power injection per bus (generation - demand), p.u.; loads draw, gens inject.
         var sLoad = new Complex[n];                        // power DRAWN at the bus (load - gen), nominal load
@@ -352,7 +359,9 @@ public sealed class BackwardForwardSweep : IPowerFlowSolver
                 if (!hasGen) continue;                     // no reactive source => can't regulate; leave as PQ
                 // The setpoint by the one shared rule (R037): the last generator listed at the bus, as Newton. This
                 // used to take the HIGHEST Vg, so the engines disagreed whenever co-located units differed.
-                double vset = VoltageSetpoint.ForBus(model, model.Buses[i].Id)!.Value;
+                // NUM-13: the last unit of the per-bus list (model order), which is VoltageSetpoint.ForBus's rule without its
+                // scan of the whole fleet once per PV bus.
+                double vset = unitsAt[i]![^1].Vg;
                 if (!opt.EnforceQLimits)
                 {
                     // Limits off (R036): hold the setpoint with unlimited reactive output, exactly as Newton does

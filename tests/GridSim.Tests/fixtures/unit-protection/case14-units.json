@@ -1,0 +1,41 @@
+{
+  "schema": "gridsim-unit-protection/1",
+  "title": "case14 unit protection (test fixture)",
+  "description": "RC5: unit protection for the PSS/E case14 test case, naming its machines by their PSS/E keys <bus>:<id>. Hand-written test values, not any unit's protection schedule; case14 runs at 60 Hz, so the settings say relayNominalHz 60.",
+  "templates": [
+    {
+      "id": "gridsim.local.sync-test",
+      "rev": 1,
+      "kind": "unitProtection",
+      "status": "active",
+      "title": "Synchronous unit test protection",
+      "description": "A quiet class default: frequency stages far from 60 Hz.",
+      "params": {
+        "uf1Hz": 50.0,
+        "uf1DelayS": 1.0,
+        "of1Hz": 70.0,
+        "of1DelayS": 1.0,
+        "relayNominalHz": 60
+      },
+      "provenance": {
+        "_default": { "tag": "CuratedPlaceholder", "note": "[VERIFY] test class default, not any unit's protection schedule" }
+      }
+    }
+  ],
+  "units": [
+    {
+      "unit": "1:1",
+      "template": "gridsim.local.sync-test@1"
+    },
+    {
+      "unit": "2:1",
+      "template": "gridsim.local.sync-test@1",
+      "params": {
+        "uf1Hz": { "v": 59.99, "prov": { "tag": "Synthetic", "note": "test value standing in for this unit's schedule" } },
+        "uf1DelayS": 0.2
+      },
+      "reason": "unit 2:1 has its own underfrequency stage",
+      "provenance": { "tag": "Synthetic", "note": "test values standing in for this unit's schedule" }
+    }
+  ]
+}

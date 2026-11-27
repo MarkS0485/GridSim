@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// the GDA public lake.</summary>
 public class QuarantineLiveStoreTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-quar-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-quar-" + Guid.NewGuid().ToString("N"));
 
     private static MeasurementSet Sample() => new()
     {

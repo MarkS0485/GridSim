@@ -296,7 +296,7 @@ what varies is which jobs ran. Pin a study by running it directly (`nminus1`, `s
 the cycle.
 - `LossAllocationTests.Parallel_agrees_with_sequential` compares outage and convergence, and `DeltaLossMw` within 1e-6 MW.
 
-No test compares a parallel screen with a sequential one at the bit level, for the contingency screens or the loss sweep.
+No test compares a parallel screen with a sequential one at the bit level for the loss sweep (the N-1 screens are compared, `ContingencyParallelBitIdentityTests` above).
 
 ### Dense and sparse Newton-Raphson
 

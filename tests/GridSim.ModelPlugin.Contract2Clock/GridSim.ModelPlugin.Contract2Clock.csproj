@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- RC5 WP32: a contract 2 relay plug-in that reads the wall clock, which the determinism lint must refuse before anything
+       loads (Rc5Wp32UserMachineRelayTests). It references GridSim.Core for the contract only (Private=false). The test project
+       does not reference it; the solution build builds it, and the tests read its DLL from bin/<Configuration>/net10.0. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GridSim.Core\GridSim.Core.csproj" Private="false" />
+  </ItemGroup>
+
+</Project>

@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 public sealed class R415dDist3phMeshFromFeederCliTests : IDisposable
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r415d-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r415d-" + Guid.NewGuid().ToString("N"));
 
     public R415dDist3phMeshFromFeederCliTests() => Directory.CreateDirectory(_dir);
 

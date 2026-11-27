@@ -35,7 +35,8 @@ public sealed record FuseSetting(string MeltCurveId, string ClearCurveId, double
 /// before lockout (<see cref="Shots"/>.Count = <see cref="RecloseIntervalsSeconds"/>.Count + 1); a fuse has a
 /// <see cref="Fuse"/> setting; a breaker carries a <see cref="Rating"/> for the <c>CheckBreaker</c> margin. Any device may
 /// also carry a rating. <see cref="Function"/> is the ANSI device number: 50 and 51 (phase overcurrent) are evaluated;
-/// 50N, 51N, 67 and 21 are accepted and listed as not evaluated (the audit says why).
+/// 50N, 51N, 67, 21 and 87 are accepted and listed as not evaluated by the three-phase trace and audit (the audit says
+/// why); the placed-element evaluation (GridSim.Core.Protection.Placed) evaluates them all.
 /// </summary>
 public sealed record PlacedDevice(
     string Id,
@@ -54,4 +55,18 @@ public sealed record PlacedDevice(
 {
     public double CtRatio => CtPrimaryA / CtSecondaryA;
     public bool IsEvaluatedFunction => Function is "50" or "51" or "";
+
+    /// <summary>The distance zones of a 21 (optional; read only by the placed-element evaluation, protection-eval and
+    /// protection-grade).</summary>
+    public DistanceSetting? Distance { get; init; }
+    /// <summary>The directional element of a 67 (optional; read only by the placed-element evaluation).</summary>
+    public DirectionalSetting? Directional { get; init; }
+    /// <summary>The biased differential of an 87 (optional; read only by the placed-element evaluation).</summary>
+    public DifferentialSetting? Differential { get; init; }
+    /// <summary>RC5 WP18: the transformer differential of an 87 (optional).</summary>
+    public TransformerDifferentialSetting? TransformerDifferential { get; init; }
+    /// <summary>RC5 WP18: the busbar differential of an 87 (optional).</summary>
+    public BusDifferentialSetting? BusDifferential { get; init; }
+    /// <summary>The VT ratio (primary over secondary volts); 0 when no VT is given.</summary>
+    public double VtRatio => VtSecondaryV > 0.0 ? VtPrimaryV / VtSecondaryV : 0.0;
 }

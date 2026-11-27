@@ -54,7 +54,7 @@ internal static class DcOpfCosted
         }
         var pmin = model.Generators.Select(gen => gen.Pmin).ToArray();
         var pmax = model.Generators.Select(gen => double.IsInfinity(gen.Pmax) ? DcOptimalPowerFlow.UnboundedPmaxMw : gen.Pmax).ToArray();
-        double demand = model.Buses.Sum(b => b.Pd);
+        double demand = DcDemand.TotalMw(model);   // B33: Pd + Gs
 
         // Balance feasibility first (the same test as the merit-order path): demand inside [sum Pmin, sum Pmax].
         double sumMin = pmin.Sum();

@@ -39,6 +39,8 @@ public sealed record HarmonicSourceSet
         // An authored input: a misspelt key ("fundamentalCurrent") is refused rather than defaulted (it loaded a source
         // with 0 current that injected nothing).
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+        // IO-16: a key given twice is refused rather than read last-one-wins.
+        AllowDuplicateProperties = false,
         TypeInfoResolver = System.Text.Json.Serialization.Metadata.JsonTypeInfoResolver.Combine(
             GridSim.Core.IO.Json.InitMemberDefaults.Resolver, HarmonicSourceSetJsonContext.Default),
     };
@@ -70,7 +72,7 @@ public sealed record HarmonicSourceSet
     /// <summary>Load a set from JSON, rejecting unknown schemas and non-historical timestamps.</summary>
     public static HarmonicSourceSet Load(string path, DateTime? utcNow = null)
     {
-        string json = File.ReadAllText(path);
+        string json = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         // D-DOC-070: the file must declare its schema; a file with no "schema" member used to load as a set because the
         // Schema property defaults to SchemaId.
         SchemaMember.Require(json, path, SchemaId, "harmonic source set");
@@ -79,6 +81,11 @@ public sealed record HarmonicSourceSet
         {
             s = JsonSerializer.Deserialize(json, JsonInfo)
                 ?? throw new InvalidDataException($"Not a harmonic source set: {path}");
+        }
+        catch (JsonException ex)
+        {
+            // IO-16: malformed JSON or a repeated key is the file's data error, as the case loaders report it.
+            throw new InvalidDataException($"Harmonic source set '{path}' is not valid JSON: {ex.Message}", ex);
         }
         catch (ArgumentException ex)
         {
@@ -112,7 +119,7 @@ public sealed record HarmonicSourceSet
     public void Save(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, JsonSerializer.Serialize(this, JsonInfo));
+        AtomicText.Write(path, /* IO-22 */ JsonSerializer.Serialize(this, JsonInfo));
     }
 
     /// <summary>

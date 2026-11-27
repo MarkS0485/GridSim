@@ -29,7 +29,7 @@ Bundled third-party network DATA (as opposed to code) is listed under "Bundled n
 | K4os.Compression.LZ4 | 1.3.8 | MIT | Copyright (c) Milosz Krajewski | Parquet.Net | https://github.com/MiloszKrajewski/K4os.Compression.LZ4 |
 | Microsoft.IO.RecyclableMemoryStream | 3.0.1 | MIT | Copyright (c) Microsoft Corporation | Parquet.Net | https://github.com/Microsoft/Microsoft.IO.RecyclableMemoryStream |
 | CommunityToolkit.HighPerformance | 8.4.2 | MIT | Copyright (c) .NET Foundation and Contributors | Parquet.Net | https://github.com/CommunityToolkit/dotnet |
-| Microsoft.NET.ILLink.Tasks | 10.0.12 | MIT | (c) Microsoft Corporation. All rights reserved. | .NET single-file analysis (build time only) | https://github.com/dotnet/dotnet |
+| Microsoft.NET.ILLink.Tasks | 10.0.15 | MIT | (c) Microsoft Corporation. All rights reserved. | .NET single-file analysis (build time only) | https://github.com/dotnet/dotnet |
 | Microsoft.AspNetCore.App.Internal.Assets | 10.0.12 | MIT | Copyright (c) .NET Foundation and Contributors | GridSim.Web (Blazor framework scripts) | https://github.com/dotnet/aspnetcore |
 | Avalonia | 11.3.22 | MIT | Copyright 2013-2026 (c) The AvaloniaUI Project | GridSim.App (Avalonia desktop app) | https://github.com/AvaloniaUI/Avalonia |
 | Avalonia.Themes.Fluent | 11.3.22 | MIT | Copyright 2013-2026 (c) The AvaloniaUI Project | GridSim.App | https://github.com/AvaloniaUI/Avalonia |

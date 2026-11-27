@@ -401,7 +401,8 @@ public static class Iec60909
     /// The model is per unit on nominal voltages, so the voltage ratios of the formulas (Un/UrG, UrTLV/UrTHV) are taken
     /// as 1: a generator rated at its bus's nominal voltage and a unit transformer on nominal ratios. GridSim carries no
     /// generator rated power factor, so <paramref name="ratedPowerFactor"/> is required from the caller (never assumed).
-    /// c_max is the IEC Table 1 maximum factor at the element's bus nominal voltage (the higher of a transformer's two).
+    /// c_max is the IEC Table 1 maximum factor at the element's bus nominal voltage; for K_T it is the factor of the
+    /// network on the transformer's LOW-voltage side (IEC 60909-0:2016, 6.3.3), so an x/0.4 kV unit takes 1.05.
     /// Converter-interfaced and power-flow-only units are not corrected (they are current sources / not sources).
     /// [VERIFY]: whether the standard also corrects the zero-sequence impedances and the minimum-current case; here
     /// R0 / X0 of a transformer are corrected with K_T, and the correction is offered for the maximum case only.
@@ -476,7 +477,11 @@ public static class Iec60909
                 continue;
             }
             double xT = Math.Abs(br.X) * br.RateAMva / model.BaseMva;
-            double c = Math.Max(CMax(br.From), CMax(br.To));
+            // ANA-03: IEC 60909-0:2016 6.3.3 relates c_max in K_T to the nominal voltage of the network connected to the
+            // low-voltage side of the network transformer. It used to take the higher of the two sides' factors, so a unit
+            // with its LV side at or below 1 kV took 1.10 instead of 1.05 (K_T 4.8 % too high on an 11/0.4 kV, 5 % unit).
+            double kvF = kvOf.GetValueOrDefault(br.From), kvT = kvOf.GetValueOrDefault(br.To);
+            double c = CMax(kvF <= kvT ? br.From : br.To);
             double k = TransformerCorrectionKt(xT, c);
             branches.Add(br with { R = k * br.R, X = k * br.X, R0 = k * br.R0, X0 = k * br.X0 });
             applied.Add(new CorrectionApplied("transformer", name, "K_T", k));

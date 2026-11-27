@@ -8,7 +8,7 @@ namespace GridSim.Core.Diagnostics;
 /// to the log can check the log still holds everything the last run left in it.
 ///
 /// <para><b>Why.</b> The hash chain on its own cannot tell a log that lost its last entries (tail truncation) from a
-/// log that never had them: the shorter file still verifies. <see cref="AuditRunRecorder.Start"/> used to open the log
+/// log that never had them: the shorter file still verifies. <see cref="AuditRunRecorder.Start(string, string, string, ProvenanceTag, string?)"/> used to open the log
 /// with no anchor, so the CLI (<c>--audit-log</c>) appended new entries to a tail-truncated log without noticing, and
 /// the truncation was then buried under fresh, valid entries. Now every run writes the anchor (entry count and head
 /// hash) after it appends, and the next run opens the log against it: a log with fewer entries than the anchor, or a
@@ -85,8 +85,10 @@ public static class AuditAnchorFile
         ArgumentException.ThrowIfNullOrWhiteSpace(anchorPath);
         string line = Format(anchor) + "\n";
         string full = Path.GetFullPath(anchorPath);
-        string temp = full + ".tmp";
-        using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+        // SEC-09 / SEC-10: a random temporary name created new (a planted "<file>.tmp" link is never followed), 0600 off
+        // Windows.
+        string temp = UserOnlyFile.TempSibling(full);
+        using (var fs = new FileStream(temp, UserOnlyFile.Options(FileMode.CreateNew, FileAccess.Write, FileShare.None)))
         {
             fs.Write(Encoding.ASCII.GetBytes(line));
             fs.Flush(flushToDisk: true);

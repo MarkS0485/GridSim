@@ -104,7 +104,7 @@ public sealed class FdLine : NodalElement
     {
         for (int m = 0; m < _modes.Length; m++)
             if (_modes[m].DelaySeconds < dt * (1.0 - 1e-12))
-                throw new ArgumentException($"mode '{_modes[m].Name}' has a travel time of {_modes[m].DelaySeconds:R} s, shorter than the step {dt:R} s; the step must not exceed the shortest travel time.");
+                throw new ArgumentException(FormattableString.Invariant($"mode '{_modes[m].Name}' has a travel time of {_modes[m].DelaySeconds:R} s, shorter than the step {dt:R} s; the step must not exceed the shortest travel time."));
         _dt = dt;
         int nm = _modes.Length;
         _ringLen = new int[nm]; _qFloor = new int[nm]; _qFrac = new double[nm];

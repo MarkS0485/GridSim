@@ -90,8 +90,8 @@ public static class ComplianceManifest
             "Residual-cloaked FDIA detection, including PMU-anchored feasible-point checks",
             "FdiaScreenTests, FdiaCloakedAttackTests, FdiaProtectedAnchorTests", ComplianceStatus.Achieved),
         new ComplianceControl("rbac", "B2",
-            "Role-based access-control gate (RoleGuard) enforced by the web host on POST /api/solve and every /ws/sim control, with denials audited through the host's audit log (partial: the Blazor dashboard's own sessions are not role-gated, and a host without the resident estimator has no audit log, so its denials are refused but not audited; replay-only remains the production control)",
-            "RoleGuardTests, CafB2RoleGateWebTests", ComplianceStatus.PartiallyAchieved),
+            "Role-based access-control gate (RoleGuard) enforced by the web host on POST /api/solve and every /ws/sim control, with the dashboard's live sessions and actions, the workbench studies and the script console gated too, and denials audited through the host's audit log when Audit:LogPath is set, with or without the resident estimator; a host with no Audit:LogPath still refuses a denied call; replay-only remains the production control",
+            "RoleGuardTests, CafB2RoleGateWebTests, Rc4FixesSecurityTests, AccessDenialAuditOwnLogTests", ComplianceStatus.Achieved),
         new ComplianceControl("secrets", "B3",
             "Secret-store seam with a one-file-per-secret directory backend (Secrets:Directory) for the key-ring certificate password; no secret in the audit log",
             "SecretStoreTests, NoSecretInAuditTests, DirectorySecretStoreTests", ComplianceStatus.Achieved),
@@ -110,10 +110,10 @@ public static class ComplianceManifest
         // manifest is an inventory maintained in source; it must say what holds, so both are PartiallyAchieved, with the
         // gap named in brackets as for every other partial control, until a release is made through release.yml.
         new ComplianceControl("supply-chain", "A3/A4",
-            "Per-project lock files restored in locked mode on CI with the SDK pinned by global.json, per-release SBOMs injected into the shipped builds, vulnerable-package gate, signing pinned to the (self-signed) release certificate, signed build-provenance attestation of every release file (release.yml only: no published release has yet been made through it, so no published file carries the attestation or an in-workflow SBOM hash)",
+            "Per-project lock files restored in locked mode on CI with the SDK pinned by global.json, per-release SBOMs injected into the shipped builds, vulnerable-package gate, signing pinned to the (self-signed) release certificate, signed build-provenance attestation of every release file (release.yml only: RC-3 and RC-4 were built through it; RC-1 was built by hand without it)",
             "WorkflowContractTests, ThirdPartyNoticesTests, SupplyChainManifestTests, WorkflowReleaseGateTests", ComplianceStatus.PartiallyAchieved),
         new ComplianceControl("secure-sdlc-attestation", "A4.b",
-            "Compliance attestation bound to the build identity (version, commit, SDK, SBOM); only a release build (a 64-hex SBOM hash, a known commit and a clean source tree) can attest compliance; download integrity via the provenance attestation (a release build does not by itself prove the full test matrix passed: only a release made through release.yml, which gates on the matrix, does, and none has been published yet)",
+            "Compliance attestation bound to the build identity (version, commit, SDK, SBOM); only a release build (a 64-hex SBOM hash, a known commit and a clean source tree) can attest compliance; download integrity via the provenance attestation (a release build does not by itself prove the full test matrix passed: only a release made through release.yml, which gates on the matrix, does; RC-3 and RC-4 were made through it, RC-1 was not)",
             "ComplianceAttestationTests", ComplianceStatus.PartiallyAchieved),
     };
 

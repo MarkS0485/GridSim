@@ -25,4 +25,10 @@
     <ProjectReference Include="..\..\tools\UiSmoke\UiSmoke.csproj" />
   </ItemGroup>
 
+  <!-- Temporary folders and files: every test makes them through TestTemp, which deletes them at the end of the run.
+       One source file shared by every test project. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\TestTemp.cs" Link="Shared\TestTemp.cs" />
+  </ItemGroup>
+
 </Project>

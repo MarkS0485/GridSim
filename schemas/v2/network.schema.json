@@ -17,7 +17,10 @@
     "oltcs": { "type": "array", "items": { "$ref": "#/$defs/oltc" } },
     "boundaries": { "type": "array", "items": { "$ref": "#/$defs/boundary" } },
     "protections": { "type": "array", "items": { "$ref": "#/$defs/protection" } },
-    "motors": { "type": "array", "items": { "$ref": "#/$defs/motor" }, "description": "RC3 P8: placed induction motors for the motor acceleration study (motor-start). Optional; absent = none, and the case loads and solves exactly as without it. The rows are carried beside the power-flow model, never inside it: no existing study connects them. Readers built before this member (GridSim 2.1.067 and earlier) refuse a file containing it as an unknown member." }
+    "motors": { "type": "array", "items": { "$ref": "#/$defs/motor" }, "description": "RC3 P8: placed induction motors for the motor acceleration study (motor-start). Optional; absent = none, and the case loads and solves exactly as without it. The rows are carried beside the power-flow model, never inside it: no existing study connects them. Readers built before this member (GridSim 2.1.067 and earlier) refuse a file containing it as an unknown member." },
+    "lineWindings": { "type": "array", "items": { "$ref": "#/$defs/lineWinding" }, "description": "Fault sequence data a line element cannot hold: winding connections (and neutral earthing reactances) on a branch kept in the lines array, so the branch order of the case is kept. Written by the short-circuit equivalent (reduce --method sc), whose equivalent branches block or shunt the zero sequence. Optional; absent = none, and the case loads exactly as without it. Readers built before this member refuse a file containing it as an unknown member." },
+    "machineZeroSequence": { "type": "array", "items": { "$ref": "#/$defs/machineZeroSequence" }, "description": "Machine zero-sequence impedances to earth (a grounded neutral), as PSS/E sequence data gives them. Optional; absent = none, and the case loads exactly as without it. Readers built before this member refuse a file containing it as an unknown member." },
+    "zeroSequenceMutuals": { "type": "array", "items": { "$ref": "#/$defs/zeroSequenceMutual" }, "description": "Zero-sequence mutual couplings between two lines over their whole length, as PSS/E sequence data gives them. Optional; absent = none, and the case loads exactly as without it. Readers built before this member refuse a file containing it as an unknown member." }
   },
   "$defs": {
     "name": {
@@ -111,7 +114,8 @@
         "inService": { "type": "boolean" },
         "pMinMw": { "type": "number", "description": "Minimum real output, MW (v1 pMinMw, F24). Absent = 0." },
         "pMaxMw": { "anyOf": [ { "type": "number" }, { "enum": ["Infinity"] } ], "description": "Maximum real output, MW (v1 pMaxMw, F24). Absent = capacityMva. A number, or the string \"Infinity\" for no upper limit (N101: the same rule as v1)." },
-        "qOutputMvar": { "type": "number", "description": "Scheduled reactive output, MVAr (v1 qOutputMvar, F24). Absent = 0." }
+        "qOutputMvar": { "type": "number", "description": "Scheduled reactive output, MVAr (v1 qOutputMvar, F24). Absent = 0." },
+        "protectionTemplate": { "$ref": "common.schema.json#/$defs/templateRef", "description": "RC5: the unitProtection template (the unit protection class default) of the relays this unit carries itself; wins over a case binding rule whose template is a unitProtection template. Absent and no such rule matching: the unit carries no relays of its own and every study is unchanged. Readers built before this member (GridSim 2.1.073 and earlier) refuse it as an unknown member." }
       }
     },
 
@@ -207,6 +211,62 @@
           }
         },
         "inService": { "type": "boolean" }
+      }
+    },
+
+    "lineWinding": {
+      "title": "Line winding connections",
+      "description": "The winding connections of the named element of the lines array, for the zero-sequence network (Branch.FromWinding / ToWinding, and Branch.FromNeutralXPu / ToNeutralXPu). The fault studies read a branch with windings by the transformer pairing rule (YNyn a series path, YNd and dYN a shunt to earth, every other pairing blocks), whatever its element. The line's own r0Pu / x0Pu are its zero-sequence impedance, of any sign (an equivalent's impedances need not be physical); absent, Z0 = Z1. The loader also checks: the line exists, once, and is named by one entry only; a neutral reactance sits only on a WyeGrounded side.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line", "windings"],
+      "properties": {
+        "line": { "$ref": "#/$defs/name" },
+        "windings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from", "to"],
+          "properties": {
+            "from": { "$ref": "#/$defs/windingConnection" },
+            "to": { "$ref": "#/$defs/windingConnection" }
+          }
+        },
+        "neutralXPu": {
+          "description": "Neutral earthing reactance of each side, per unit on the case base. Only on a WyeGrounded side.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "from": { "type": "number", "minimum": 0 },
+            "to": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "machineZeroSequence": {
+      "title": "Machine zero-sequence impedance",
+      "description": "The named generator's zero-sequence impedance to earth rPu + j xPu, per unit on its capacityMva (Generator.ZeroSequenceZPu; any grounding impedance included as 3 Zn). The zero-sequence network stamps it as a shunt to earth at the generator's bus. The loader also checks: the generator exists, once, and is named by one entry only; the impedance is not zero.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generator", "rPu", "xPu"],
+      "properties": {
+        "generator": { "$ref": "#/$defs/name" },
+        "rPu": { "type": "number" },
+        "xPu": { "type": "number" }
+      }
+    },
+
+    "zeroSequenceMutual": {
+      "title": "Zero-sequence mutual coupling",
+      "description": "The zero-sequence mutual impedance rPu + j xPu (per unit on the case base) between two elements of the lines array, signed for each line's from-to direction (GridModel.ZeroSequenceMutuals). The loader also checks: both lines exist, once each, and differ.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lineA", "lineB", "rPu", "xPu"],
+      "properties": {
+        "lineA": { "$ref": "#/$defs/name" },
+        "lineB": { "$ref": "#/$defs/name" },
+        "rPu": { "type": "number" },
+        "xPu": { "type": "number" }
       }
     },
 

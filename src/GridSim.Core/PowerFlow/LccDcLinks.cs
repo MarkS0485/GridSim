@@ -68,6 +68,32 @@ public static class LccDcLinks
     /// <summary>The relative change in converter P and Q below which the AC/DC alternation has settled.</summary>
     public const double CouplingTolerance = 1e-9;
 
+    /// <summary>R2-01: the most tap positions a converter's tap search moves through in one direction.</summary>
+    internal const int MaxTapPositions = 10_000;
+
+    /// <summary>R2-01: step <paramref name="tap"/> by <paramref name="step"/> in direction <paramref name="dir"/> (-1 down, +1 up)
+    /// while <paramref name="wantsMove"/> holds and the next position stays within the limits (1e-12 slack), at most
+    /// <see cref="MaxTapPositions"/> times; a step that is not above 0, or that no longer changes the tap, stops it. For any
+    /// real step it gives the same sequence of taps as the loops it replaces (the same subtraction or addition each time).</summary>
+    internal static double MoveTap(double tap, double step, double min, double max, int dir, Func<double, bool> wantsMove)
+    {
+        if (!(step > 0)) return tap;
+        for (int k = 0; k < MaxTapPositions; k++)
+        {
+            if (!wantsMove(tap)) return tap;
+            double next = dir < 0 ? tap - step : tap + step;
+            if (dir < 0 ? !(next >= min - 1e-12) : !(next <= max + 1e-12)) return tap;
+            if (next == tap) return tap;
+            tap = next;
+        }
+        // R6-04: a validated model never gets here (GridModel.Validate refuses a range of more than MaxTapPositions steps);
+        // a model built in code and solved without Validate would otherwise stop at the cap silently, at a wrong tap.
+        if (wantsMove(tap))
+            throw new InvalidOperationException(FormattableString.Invariant(
+                $"LCC tap search: still moving after {MaxTapPositions} steps of {step:R} (range {min:R} to {max:R}); the tap range holds more positions than the search allows (GridModel.Validate refuses such a converter)."));
+        return tap;
+    }
+
     /// <summary>Solve the DC state of <paramref name="link"/> at the AC bus voltages <paramref name="vRectifierPu"/> and
     /// <paramref name="vInverterPu"/>. Throws <see cref="InvalidOperationException"/> naming the link when no state within
     /// the angle and tap limits meets its order.</summary>
@@ -117,8 +143,10 @@ public static class LccDcLinks
         double CosAlpha(double tap) => (vdrNeed + br * I) / (rc.Bridges * K * Eac(rc, vRectifierPu, tap));
         double tapR = rc.Tap;
         // Too little voltage (cos alpha above cos alpha_min): a lower tap raises Eac. Too much (below cos alpha_max): raise it.
-        while (CosAlpha(tapR) > cosAmin && tapR - rc.TapStep >= rc.TapMin - 1e-12) tapR -= rc.TapStep;
-        while (CosAlpha(tapR) < cosAmax && tapR + rc.TapStep <= rc.TapMax + 1e-12) tapR += rc.TapStep;
+        // NUM-20 / R2-01: the search moves one step at a time, at most MaxTapPositions steps (a step of 0, or one below the
+        // rounding of the tap, never changed it, and those loops never ended); GridModel.Validate refuses such a step.
+        tapR = MoveTap(tapR, rc.TapStep, rc.TapMin, rc.TapMax, -1, t => CosAlpha(t) > cosAmin);
+        tapR = MoveTap(tapR, rc.TapStep, rc.TapMin, rc.TapMax, +1, t => CosAlpha(t) < cosAmax);
         double cosA = CosAlpha(tapR);
         LccControl control = LccControl.RectifierCurrent;
         double alpha, vdr;
@@ -133,8 +161,8 @@ public static class LccDcLinks
             vdi = vdr - link.ResistanceOhms * I;
             double CosGamma(double tap) => (vdi + bi * I) / (ic.Bridges * K * Eac(ic, vInverterPu, tap));
             tapI = ic.Tap;
-            while (CosGamma(tapI) > cosGmin && tapI - ic.TapStep >= ic.TapMin - 1e-12) tapI -= ic.TapStep;
-            while (CosGamma(tapI) < cosGmax && tapI + ic.TapStep <= ic.TapMax + 1e-12) tapI += ic.TapStep;
+            tapI = MoveTap(tapI, ic.TapStep, ic.TapMin, ic.TapMax, -1, t => CosGamma(t) > cosGmin);
+            tapI = MoveTap(tapI, ic.TapStep, ic.TapMin, ic.TapMax, +1, t => CosGamma(t) < cosGmax);
             double cg = CosGamma(tapI);
             if (cg > cosGmin + 1e-12 || cg < cosGmax - 1e-12 || !(vdi > 0))
                 throw Fail(link, $"the rectifier is at its minimum firing angle and the inverter cannot hold the current (extinction angle would be {F(DetMath.Acos(Math.Clamp(cg, -1, 1)) * 180 / Math.PI)} degrees, limits {F(ic.AngleMinDeg)}..{F(ic.AngleMaxDeg)})");

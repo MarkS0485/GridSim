@@ -22,7 +22,8 @@ r.ok, r.exit_code                   # a NOT SECURE screen is still a result, wit
 
 `run(verb, *args)` runs `gridsim <verb> <args...> --json <temporary file>`, waits, and reads the file: a
 `gridsim-cli-result/1` document (manual chapter 19, "Result files"). The arguments go to the CLI as they are, in order;
-`--json`, `--csv` and `--out` are refused, because the wrapper names the result file.
+`--json`, `--csv` and `--out` are refused, because the wrapper names the result file; `--out` passes for the verbs
+whose own output it names (`OWN_OUT_VERBS`, such as `report` and `case-diff`).
 
 A `Result` has `verb`, `args`, `tool`, `exit_code`, `ok`, `summary` (a dict), `tables` (table name to a list of row
 dicts), `table(name)`, `stdout`, `stderr` and `document` (the JSON as read). Numbers are written by the CLI in round-trip
@@ -49,7 +50,9 @@ with gridsim.Session() as sess:
 ```
 
 Solves are bit-identical to `gs.pf(...)`. A host that ends raises `SessionError` (with its exit code); earlier responses
-are unaffected. `GridSim.run` is unchanged. See manual chapter 19, "rpc".
+are unaffected. `run_verb` makes the same flag check as `GridSim.run`. A `CaseHandle` belongs to the session that loaded
+it and to that session's host instance: another session, or the same session after `close()` and `start()`, refuses it
+before anything is sent, and releases nothing. See manual chapter 19, "rpc".
 
 ## Finding the CLI
 
@@ -64,6 +67,8 @@ The verbs whose result the CLI writes through its shared result writer, each wit
 (underscores for hyphens): `acopf`, `acopf-full` (`acopf_full`), `convert`, `cpf`, `cycle`, `dcopf`, `dcpf`, `dist3ph`, `domains`, `experimental`,
 `fault`, `freq`, `grade`, `hosting`, `iec60909`, `inertia-placement` (`inertia_placement`), `lodf`, `losses`, `n-1-1` (`n_1_1`), `nminus1`, `nminus2`, `pf`,
 `physics-check`, `pmu-estimate`, `pmu-ingest`, `protection-check`, `ptdf`, `qsts`, `restore`, `scopf`, `scuc`, `taps`, `validate`, `zonal`.
+The later writer verbs are wrapped the same way, among them `breaking-change` (`breaking_change`), whose first argument
+is its action: `gs.breaking_change("validate", "--journal", "journal.jsonl")`. The full list is `WRITER_VERBS`.
 The aliases `n-1`, `n-2` and `nminus1minus1` work in `run`. A GridSim test keeps this list equal to the CLI's own.
 
 Not wrapped, because they write no complete result document: the live run, `serve` (a resident stream), and the

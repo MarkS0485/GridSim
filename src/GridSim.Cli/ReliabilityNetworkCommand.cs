@@ -86,8 +86,8 @@ internal static class ReliabilityNetworkCommand
             if (outPath is not null && (File.Exists(outPath) || Directory.Exists(outPath)))
                 throw new IOException("Result path already exists; use a new path for this invocation.");
             byte[] bytes = File.ReadAllBytes(studyPath);
-            using (JsonDocument document = JsonDocument.Parse(bytes)) TransmissionSecurityCommand.CheckDuplicates(document.RootElement);
-            Request req = JsonSerializer.Deserialize<Request>(bytes, TransmissionSecurityCommand.Json) ?? throw new InvalidDataException("Study is null.");
+            using (JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes))) TransmissionSecurityCommand.CheckDuplicates(document.RootElement);
+            Request req = JsonSerializer.Deserialize<Request>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, TransmissionSecurityCommand.Json) ?? throw new InvalidDataException("Study is null.");
             if (req.SchemaVersion != 1) throw new InvalidDataException("schemaVersion must be 1.");
             if (req.Study != Verb) throw new InvalidDataException($"study must be \"{Verb}\".");
             NetworkMethod method = req.Method switch
@@ -103,13 +103,16 @@ internal static class ReliabilityNetworkCommand
 
             (GridModel model, object caseProvenance) = LoadCase(req.Case, studyPath, root, load);
             string dir = Path.GetDirectoryName(studyPath)!;
-            byte[] groupBytes = File.ReadAllBytes(Path.GetFullPath(req.Groups.Path, dir));
+            // R1-02: the files the study names are side files (no network or device path, a size limit).
+            byte[] groupBytes = GridSim.Core.Security.SideFile.ReadAllBytes(GridSim.Core.Security.SideFile.Resolve(req.Groups.Path, dir, "groups.path"),
+                GridSim.Core.Security.SideFile.CaseMaxBytes, "groups.path");
             BoundGroups groups = BoundGroups.Bind(ModelGroupsDocument.Parse(groupBytes), model);
             IReadOnlyList<PlacedDevice> devices = [];
             string? deviceSha = null;
             if (req.Devices is not null)
             {
-                byte[] deviceBytes = File.ReadAllBytes(Path.GetFullPath(req.Devices.Path, dir));
+                byte[] deviceBytes = GridSim.Core.Security.SideFile.ReadAllBytes(GridSim.Core.Security.SideFile.Resolve(req.Devices.Path, dir, "devices.path"),
+                    GridSim.Core.Security.SideFile.CaseMaxBytes, "devices.path");
                 deviceSha = TransmissionSecurityCommand.Hash(deviceBytes);
                 devices = DeviceSet.Parse(deviceBytes).Devices;
             }
@@ -200,7 +203,7 @@ internal static class ReliabilityNetworkCommand
         if (string.IsNullOrWhiteSpace(c.Sha256)) throw new InvalidDataException("case.sha256 is required.");
         if (c.Path is string relative)
         {
-            string path = Path.GetFullPath(relative, Path.GetDirectoryName(studyPath)!);
+            string path = GridSim.Core.Security.SideFile.Resolve(relative, Path.GetDirectoryName(studyPath)!, "case.path");
             var files = TransmissionSecurityCommand.Inputs(path, root);
             bool native = Directory.Exists(path) || path.EndsWith(".json", StringComparison.OrdinalIgnoreCase);
             string identity = native

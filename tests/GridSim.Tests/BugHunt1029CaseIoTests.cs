@@ -103,7 +103,7 @@ public sealed partial class BugHunt1029Tests
     {
         GridModel m = IeeeCases.Case9();
         GridModel blank = m.CopyWith(generators: m.Generators.Select((g, i) => i == 1 ? g with { Name = "   " } : g).ToList());
-        string dir = Path.Combine(Path.GetTempPath(), "bh41-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("bh41-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -127,7 +127,7 @@ public sealed partial class BugHunt1029Tests
 
         string fixture = File.ReadAllText(Path.Combine(CliProcess.Root(), "tests", "GridSim.Tests", "fixtures", "dynamics", "wscc9-genrou.dynamics.json"));
         string schemas = Path.Combine(CliProcess.Root(), "schemas", "v2");
-        string dir = Path.Combine(Path.GetTempPath(), "bh43-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("bh43-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

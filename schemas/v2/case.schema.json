@@ -108,7 +108,7 @@
 
     "override": {
       "title": "Override",
-      "description": "New values for some parameters of one template revision, for this case only. reason (non-blank) and \"shadow\": \"explicit\" are both required.",
+      "description": "New values for some parameters of one template revision, for this case only (or, with unit, for one unit only). reason (non-blank) and \"shadow\": \"explicit\" are both required.",
       "type": "object",
       "additionalProperties": false,
       "required": ["template", "params", "reason", "shadow"],
@@ -120,7 +120,8 @@
         },
         "reason": { "type": "string", "pattern": "\\S" },
         "shadow": { "const": "explicit" },
-        "provenance": { "$ref": "common.schema.json#/$defs/provenance" }
+        "provenance": { "$ref": "common.schema.json#/$defs/provenance" },
+        "unit": { "type": "string", "pattern": "\\S", "description": "RC5: the name of ONE generator this override applies to (a per-unit override). The template must be a unitProtection template and the one the unit resolves to (its protectionTemplate, else its binding rule). The unit's values then win over the template's for that unit alone; every other unit keeps the template's. Absent: the override applies to the template itself, as before. Readers built before this member (GridSim 2.1.073 and earlier) refuse it as an unknown member." }
       }
     }
   }

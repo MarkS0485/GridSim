@@ -14,7 +14,7 @@ public sealed class N067UkpnHeaderOnlyStubTests
     [Fact]
     public void Header_only_tables_are_named_in_the_refusal()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-n067-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-n067-" + Guid.NewGuid().ToString("N"));
         string raw = Path.Combine(root, "UkPowerNetworks", "RAWData");
         try
         {

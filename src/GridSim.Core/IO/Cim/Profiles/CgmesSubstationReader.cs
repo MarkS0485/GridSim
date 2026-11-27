@@ -14,7 +14,7 @@ namespace GridSim.Core.IO.Cim.Profiles;
 /// <param name="RequireSsh">Refuse (default) when a load, machine or shunt has no SSH set-point; false leaves such values at 0 with a note.</param>
 public sealed record CgmesReadOptions(double? BaseMva = null, string? Name = null, bool RequireSsh = true);
 
-/// <summary>What <see cref="CgmesSubstationReader.Read"/> found.</summary>
+/// <summary>What <see cref="CgmesSubstationReader.Read(CgmesArchive, CgmesReadOptions?)"/> found.</summary>
 /// <param name="Model">The node-breaker model (switch normal states from EQ).</param>
 /// <param name="SwitchStates">The switch states the SSH states (switch id to open); a switch the SSH does not state is absent.</param>
 /// <param name="TopologicalNodes">Connectivity node id to the id of its TopologicalNode, when a TP document was read.</param>
@@ -296,6 +296,24 @@ public static class CgmesSubstationReader
                     if (objects.Any(t => t.Class is "PhaseTapChangerTabular" or "PhaseTapChangerSymmetrical" or "PhaseTapChangerAsymmetrical"
                         && t.V("PhaseTapChanger.TransformerEnd") == e1.Mrid))
                         refused.Add($"transformer '{o.Id}' has a phase tap changer of a class other than PhaseTapChangerLinear.");
+                    // The rated-voltage ratio, as the bus-branch bridge applies it (CimGridModelBridge): Z above is per unit on
+                    // the rated voltage u1, which is the same per-unit value on u2. When a rating differs from its node's base
+                    // voltage (a 120 / 10.5 kV unit between 110 kV and 10 kV nodes), the nominal turns ratio is off-nominal by
+                    // n1 / n2 on the node bases (n = ratedU / node kV), and the impedance is referred to the LV node base
+                    // (x n2^2; the susceptance / n2^2). Applied only when both nodes have a base voltage and a rating differs,
+                    // so a unit whose ratings equal its node voltages is unchanged.
+                    double vb1 = KvOfNode(hv), vb2 = KvOfNode(lv);
+                    if (vb1 > 0 && vb2 > 0 && u1 > 0 && u2 > 0 && (u1 != vb1 || u2 != vb2))
+                    {
+                        double n1 = u1 / vb1, n2 = u2 / vb2;
+                        double refer = n2 * n2;
+                        r *= refer;
+                        x *= refer;
+                        b /= refer;
+                        ratio *= n1 / n2;
+                        notes.Add(string.Create(CultureInfo.InvariantCulture,
+                            $"transformer '{o.Id}': its rated voltages ({u1:R} / {u2:R} kV) differ from its nodes' base voltages ({vb1:R} / {vb2:R} kV), so its nominal ratio is off-nominal by {n1 / n2:R} on the node bases (applied as tap) and its impedance is referred to the LV node base."));
+                    }
                     transformers.Add(new NbTransformer(o.Id, NodeId(hv), NodeId(lv), r, x, b, ratio, shift, Rating(o)));
                     break;
                 }

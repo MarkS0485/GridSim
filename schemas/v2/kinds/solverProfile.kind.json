@@ -66,7 +66,7 @@
         {
           "consumer": "PowerFlowOptions.MaxQLimitPasses default",
           "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.MaxQLimitPasses",
-          "value": 12
+          "value": 100
         }
       ]
     },
@@ -79,6 +79,20 @@
           "consumer": "PowerFlowOptions.RetryFromDcStart default",
           "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.RetryFromDcStart",
           "value": true
+        }
+      ]
+    },
+    "divergeLimitPu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "required": false,
+      "description": "Divergence stop: a power-flow pass ends early, with status Diverged, when its largest mismatch rises above this limit and above the mismatch it started from. Positive infinity turns the stop off.",
+      "codeDefaults": [
+        {
+          "consumer": "PowerFlowOptions.DivergeLimitPu default",
+          "ref": "instance:GridSim.Core:GridSim.Core.PowerFlow.PowerFlowOptions.DivergeLimitPu",
+          "value": 10
         }
       ]
     },

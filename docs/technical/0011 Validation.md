@@ -92,7 +92,7 @@ and solves. The script makes the two problems the same:
 | What | GridSim | Old translation | Now |
 |---|---|---|---|
 | Several generators on a bus | one injection per bus: P, Q and Qmin / Qmax summed, the last unit's Vg (`NewtonShell.BuildBusSpec`, `VoltageSetpoint`) | from_ppc kept the first unit as a `gen` (its own Q range, its own Vg) and made every other one a static `sgen` with no reactive range | one ppc row per bus with those sums (`aggregate_generators`) |
-| Transformer charging B | MATPOWER's stamp: `j b/2 / |tau|^2` at the from bus, `j b/2` at the to bus | from_ppc turned it into a magnetising current `i0_percent = |B|` (sign lost, moved across the tap) | the same admittances as bus shunts |
+| Transformer charging B | MATPOWER's stamp: `j b/2 / \|tau\|^2` at the from bus, `j b/2` at the to bus | from_ppc turned it into a magnetising current `i0_percent = \|B\|` (sign lost, moved across the tap) | the same admittances as bus shunts |
 | Transformer written LV -> HV | ratio at the from bus | from_ppc put the ratio on the HV winding (the `tap_side` option does not change its matrix) | written HV -> LV: tap `1/t`, shift `-phi`, r and x times `t^2` (the same four admittances) |
 | pandapower options | - | defaults (`trafo_model="t"`, tolerance 1e-8 pu) | `trafo_model="pi"`, `enforce_q_lims=True`, `distributed_slack=False`, `voltage_depend_loads=True` (only the export's ZIP loads), a fresh solve at each of 1e-8 ... 1e-15 pu keeping the tightest that converges |
 

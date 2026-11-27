@@ -18,7 +18,7 @@ public sealed class R415cDist3phMeshRegulatorsBanksCliTests : IDisposable
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
     private static string R(double v) => v.ToString("R", Inv);
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r415c-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r415c-" + Guid.NewGuid().ToString("N"));
 
     public R415cDist3phMeshRegulatorsBanksCliTests() => Directory.CreateDirectory(_dir);
 

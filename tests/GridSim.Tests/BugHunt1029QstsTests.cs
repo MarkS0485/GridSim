@@ -9,7 +9,7 @@ public sealed partial class BugHunt1029Tests
 {
     private static double[] BHReadCsv(string csv, string columnJson)
     {
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-bh-" + Guid.NewGuid().ToString("N") + ".csv");
+        string path = TestTemp.Under("gridsim-bh-" + Guid.NewGuid().ToString("N") + ".csv");
         File.WriteAllText(path, csv);
         try
         {

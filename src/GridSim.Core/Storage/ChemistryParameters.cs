@@ -83,7 +83,7 @@ public sealed record ChemistryParameters
     public required double CapacityAh { get; init; }
     /// <summary>Open-circuit voltage vs SoC at 25 °C (V).</summary>
     public required LookupTable Ocv { get; init; }
-    /// <summary>Entropic coefficient dOCV/dT (V/K) vs SoC - the reversible heat <c>I T dU/dT</c>.</summary>
+    /// <summary>Entropic coefficient dOCV/dT (V/K) vs SoC. The reversible heat is <c>-I T dU/dT</c> with discharge-positive current.</summary>
     public LookupTable EntropicCoefficient { get; init; } = LookupTable.Constant(0.0);
     /// <summary>Series (ohmic) resistance vs SoC at 25 °C (Ω).</summary>
     public required LookupTable R0 { get; init; }

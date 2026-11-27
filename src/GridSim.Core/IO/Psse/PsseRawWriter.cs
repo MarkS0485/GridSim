@@ -41,8 +41,9 @@ public static class PsseRawWriter
 
     /// <summary>The revisions this writer writes. Revision 30 is read (<see cref="PsseRawParser.SupportedRevisions"/>) but
     /// not written: the writer exists to make round-trip fixtures and prove layouts, and 33 is the oldest layout a
-    /// current PSS/E reads.</summary>
-    public static readonly IReadOnlyList<int> WritableRevisions = new[] { 33, 34, 35 };
+    /// current PSS/E reads. Revision 36 (RC5 WP34) is the revision 35 records with the revision 36 header and an <c>@!</c>
+    /// heading line naming the fields of each record group (see <see cref="Revision36"/>).</summary>
+    public static readonly IReadOnlyList<int> WritableRevisions = new[] { 33, 34, 35, 36 };
 
     /// <summary>Write <paramref name="model"/> as RAW text in <paramref name="revision"/>'s layout.</summary>
     public static PsseWriteResult Write(GridModel model, int revision = 33)
@@ -53,7 +54,10 @@ public static class PsseRawWriter
                 $"PSS/E RAW writer: the model has zero-sequence mutual couplings ({model.ZeroSequenceMutuals.Count}) or machine zero-sequence impedances ({model.AllGenerators.Count(g => g.ZeroSequenceZPu is not null)}), " +
                 "which a RAW file cannot hold (sequence data belongs in a SEQ file); the written case's fault currents would differ from the model's.");
         if (!WritableRevisions.Contains(revision))
-            throw new ArgumentOutOfRangeException(nameof(revision), revision, $"PSS/E revision {revision} is not supported; supported: {string.Join(", ", WritableRevisions)}.");
+            // The first sentence keeps its wording from before revision 36 was added (a test pins it), and the second adds 36.
+            throw new ArgumentOutOfRangeException(nameof(revision), revision, $"PSS/E revision {revision} is not supported; supported: {string.Join(", ", WritableRevisions.Where(r => r != 36))}. "
+                + "Revision 36 is written too, as the revision 35 records under '@!' heading lines.");
+        if (revision == 36) return Revision36(Write(model, 35));
         bool v34 = revision >= 34, v35 = revision >= 35;
         var notes = new List<string>();
         var sb = new StringBuilder();
@@ -112,6 +116,10 @@ public static class PsseRawWriter
 
         sb.Append("0, ").Append(N(model.BaseMva, "the system base")).Append(", ").Append(revision).Append(", 0, 1, ")
           .Append(N(model.FrequencyHz, "the nominal frequency")).Append("     / PSS/E-").Append(revision).Append(" RAW written by GridSim\n");
+        // IO-20: a title that begins with "@!" is read back as a heading line and shifts the header by one line, so the
+        // first record is lost; such a name is refused rather than written.
+        if (PsseText.IsHeading(OneLine(model.Name)))
+            throw new InvalidDataException($"the case name '{OneLine(model.Name)}' begins with '@!', which PSS/E RAW reads as a heading line, not a title; rename the case.");
         sb.Append(OneLine(model.Name)).Append('\n');
         sb.Append("Written by GridSim (PsseRawWriter)\n");
         if (v35) sb.Append("0 / END OF SYSTEM-WIDE DATA, BEGIN BUS DATA\n");
@@ -417,6 +425,65 @@ public static class PsseRawWriter
     }
 
     /// <summary>
+    /// Revision 36 text from the revision 35 text the writer wrote (RC5 WP34). The PSS/E 36.0.0 release notes ("Power Flow
+    /// Data (RAW and RAWX formats) File Changes") list what revision 36 adds, not where in each record; GridSim's revision
+    /// 36 reader (<see cref="PsseRevision36"/>) therefore places every field by the <c>@!</c> heading line above its record
+    /// group. So the records are written in the revision 35 order, each record group under a heading line that names its
+    /// fields in that order (the revision 35 names of <see cref="PsseFieldRemap"/>), the case identification says 36, and
+    /// the fields revision 36 added (NAME on load, fixed shunt, generator, switched shunt and induction machine records,
+    /// DROOPNAME, BYPASS, the system-wide and new-section data) are not written, so their documented defaults (blank, 0,
+    /// none) apply. Read back by GridSim, the file gives the revision 35 file's model bit for bit, since the reader rebuilds
+    /// the same revision 35 records from it. Whether PSS/E 36 itself reads the fields by the heading or by position is not
+    /// known from a public source; this layout is not checked against a vendor-written revision 36 file.
+    /// </summary>
+    private static PsseWriteResult Revision36(PsseWriteResult r35)
+    {
+        var headings = new Dictionary<string, string[]>(StringComparer.Ordinal)
+        {
+            ["BUS"] = PsseFieldRemap.Bus, ["LOAD"] = PsseFieldRemap.Load, ["FIXED SHUNT"] = PsseFieldRemap.FixedShunt,
+            ["GENERATOR"] = PsseFieldRemap.Generator, ["BRANCH"] = PsseFieldRemap.Branch, ["SYSTEM SWITCHING DEVICE"] = PsseFieldRemap.SwitchingDevice,
+            ["AREA"] = PsseFieldRemap.Area, ["ZONE"] = PsseFieldRemap.Zone, ["OWNER"] = PsseFieldRemap.Owner,
+            ["FACTS CONTROL DEVICE"] = PsseFieldRemap.Facts, ["SWITCHED SHUNT"] = PsseFieldRemap.SwitchedShunt,
+            ["INDUCTION MACHINE"] = PsseFieldRemap.InductionMachine,
+        };
+        string[] lines = r35.Text.Split('\n');
+        var sb = new StringBuilder(r35.Text.Length + 4096);
+        for (int k = 0; k < lines.Length; k++)
+        {
+            string line = lines[k];
+            if (k == lines.Length - 1 && line.Length == 0) break;   // the text ends with a line break
+            if (k == 0)
+            {
+                // "IC, SBASE, 35, XFRRAT, NXFRAT, BASFRQ     / PSS/E-35 RAW written by GridSim": REV becomes 36.
+                int slash = line.IndexOf('/', StringComparison.Ordinal);
+                string[] f = line[..slash].Split(", ");
+                if (f.Length < 3 || f[2] != "35") throw new InvalidOperationException("PSS/E RAW writer: the revision 35 header was not in the form expected.");
+                f[2] = "36";
+                sb.Append(string.Join(", ", f)).Append(line[slash..].Replace("PSS/E-35", "PSS/E-36", StringComparison.Ordinal)).Append('\n');
+                continue;
+            }
+            sb.Append(line).Append('\n');
+            if (k >= 3 && line.StartsWith("0 / END OF ", StringComparison.Ordinal) && PsseFieldRemap.BeginLabel(line[4..]) is string begin
+                && headings.TryGetValue(begin, out string[]? spec))
+                sb.Append(Heading(spec)).Append('\n');
+        }
+        var notes = new List<string>(r35.Notes)
+        {
+            "revision 36: the records are written in the revision 35 order under the revision 36 header, each record group under an '@!' heading line naming its fields; " +
+            "the fields revision 36 added (NAME, DROOPNAME, BYPASS and the new sections) are not written, so their defaults apply.",
+        };
+        return new PsseWriteResult(sb.ToString(), notes, r35.BranchOrder);
+    }
+
+    /// <summary>An <c>@!</c> heading line: the first name of each field, text fields in single quotes.</summary>
+    private static string Heading(string[] spec) => "@!" + string.Join(",", spec.Select(f =>
+    {
+        bool text = f.EndsWith('*');
+        string name = (text ? f[..^1] : f).Split('|')[0];
+        return text ? "'" + name + "'" : name;
+    }));
+
+    /// <summary>
     /// <paramref name="model"/> in the order <paramref name="written"/>'s file holds it, the model the reader rebuilds from
     /// that file: branches in <see cref="PsseWriteResult.BranchOrder"/> (lines, transformers, FACTS series elements),
     /// tap changers and flow controls in the order of their transformers there, and static var compensators in bus order
@@ -526,7 +593,7 @@ public static class PsseRawWriter
     private static void VscLine(StringBuilder sb, VscConverter c, string who, bool v35)
     {
         sb.Append(c.Bus).Append(", ").Append(c.DcControl == VscDcControl.DcVoltage ? 1 : 2).Append(", ").Append(c.AcControl == VscAcControl.Voltage ? 1 : 2)
-          .Append(", ").Append(N(c.DcSetpoint, who + " DCSET")).Append(", ").Append(N(c.AcSetpoint, who + " ACSET")).Append(", ").Append(N(c.LossAKw, who + " ALOSS"))
+          .Append(", ").Append(N(c.DcControl == VscDcControl.Power ? 0.0 - c.DcSetpoint : c.DcSetpoint, who + " DCSET")).Append(", ").Append(N(c.AcSetpoint, who + " ACSET")).Append(", ").Append(N(c.LossAKw, who + " ALOSS"))
           .Append(", ").Append(N(c.LossBKwPerA, who + " BLOSS")).Append(", ").Append(N(c.MinLossKw, who + " MINLOSS")).Append(", ").Append(N(c.SmaxMva, who + " SMAX"))
           .Append(", ").Append(N(c.ImaxA, who + " IMAX")).Append(", ").Append(N(c.PowerWeight, who + " PWF")).Append(", ").Append(N(c.QmaxMvar, who + " MAXQ"))
           .Append(", ").Append(N(c.QminMvar, who + " MINQ")).Append(", 0, ");

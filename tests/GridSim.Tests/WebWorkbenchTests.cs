@@ -21,7 +21,7 @@ public sealed class WebWorkbenchTests
 
     private static WebApplicationFactory<Program> Factory(params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-r410-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-r410-keys-" + Guid.NewGuid().ToString("N"));
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Auth:KeysDirectory", keys);

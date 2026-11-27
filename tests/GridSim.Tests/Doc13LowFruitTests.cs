@@ -20,7 +20,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Doc13LowFruitTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc13-lf-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc13-lf-" + Guid.NewGuid().ToString("N"));
 
     public Doc13LowFruitTests() => Directory.CreateDirectory(_dir);
 

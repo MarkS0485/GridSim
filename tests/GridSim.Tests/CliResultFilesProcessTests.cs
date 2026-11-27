@@ -231,7 +231,7 @@ public sealed class CliResultFilesProcessTests
 
     internal static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-result-files-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-result-files-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

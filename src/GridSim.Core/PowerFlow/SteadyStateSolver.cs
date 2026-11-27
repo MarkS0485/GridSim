@@ -48,6 +48,10 @@ public sealed class SteadyStateSolver
     /// <summary>A tap move smaller than this (pu ratio) is no move: the OLTC loop has settled (R192).</summary>
     internal const double TapChangeEpsilon = 1e-12;
 
+    /// <summary>NUM-06: the ratio a tap loop steps from: a stored 0 (or below) is 1.0 (the MATPOWER line convention AdmittanceStamp
+    /// applies); every other value is itself.</summary>
+    internal static double EffectiveTap(double tapRatio) => tapRatio <= 0.0 ? 1.0 : tapRatio;
+
     /// <summary>The engine supplied by the caller, or null to pick one per model with
     /// <see cref="SolverSelector.CreateNewton"/> at each <see cref="Solve"/>.</summary>
     private readonly IPowerFlowSolver? _nr;
@@ -269,7 +273,12 @@ public sealed class SteadyStateSolver
                     // Read from the working copy if it exists (reflecting an earlier in-pass tap change to
                     // the same branch, as the old code did), else from the current model.
                     Branch tx = branches is not null ? branches[idx] : current.Branches[idx];
-                    double tap = tx.TapRatio;
+                    // NUM-05: an open transformer cannot move its controlled bus; stepping it cost a re-solve per pass,
+                    // ran the tap to a limit and reported it pinned. It holds its tap and is neither stepped nor pinned.
+                    if (!tx.InService) continue;
+                    // NUM-06: a stored ratio of 0 is the MATPOWER "line" convention, 1.0, as AdmittanceStamp reads it; the
+                    // loop stepped it from 0 (to 0.0125). Every non-zero ratio is the same number as before.
+                    double tap = EffectiveTap(tx.TapRatio);
 
                     // Which way does a tap step move the controlled bus? The Branch tap sits on the From end
                     // (MATPOWER convention: an ideal a:1 transformer between the From bus and the series
@@ -322,6 +331,8 @@ public sealed class SteadyStateSolver
                     TransformerFlowControl fc = model.TransformerFlowControls[k];
                     int idx = flowBranch[k];
                     if (idx < 0 || steppedThisPass.Contains(idx)) continue;
+                    // NUM-05: an open transformer's zero-flow placeholder is not a flow to control.
+                    if (!(branches is not null ? branches[idx] : current.Branches[idx]).InService) continue;
                     LineFlow lf = result.LineFlows[idx];
                     double flow = fc.Kind == TransformerFlowKind.ReactivePower ? lf.QFromMvar : lf.PFromMw;
                     Branch tx = branches is not null ? branches[idx] : current.Branches[idx];

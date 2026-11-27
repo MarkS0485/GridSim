@@ -265,10 +265,10 @@ on by the BFS owner map, sub-GSP impedances dropped by design. The network
 whose granularity matches the per-GSP measurement layer one-to-one - the
 default estimation target. See **Fold map**.
 
-**GDA [GS].** Grid Data Archive - the read-only lake of GB grid data (DNO
+**GDA [GS].** Grid Data Analysis - the author's own tool, with a read-only lake of GB grid data (DNO
 LTDS, Elexon settlement, NESO ETYS/TEC/inertia/frequency) GridSim's GB
-networks, measurements and estimated history are built from. Kept out of this
-repository. See [09-gda-integration](<0009 GDA integration.md>).
+networks, measurements and estimated history are built from. Not public and
+not part of this repository. See [09-gda-integration](<0009 GDA integration.md>).
 
 **Generator [PS].** The `Generator` record (`Core/Model/Model.cs`): `Pg`/`Qg`,
 setpoint `Vg`, limits `Qmin`/`Qmax`/`Pmax`, machine base `MBase`, inertia
@@ -461,7 +461,7 @@ set-point on the initial-RoCoF approximation, given intrinsic stored energy
 **Q-limit switching (PV->PQ) [PS].** The outer-loop model of a generator's
 excitation ceiling: a PV bus whose aggregate reactive output violates its
 limits is released to PQ with Q pinned at the binding limit, and the flow
-re-solves, up to `PowerFlowOptions.MaxQLimitPasses` (default 12; below 1 is
+re-solves, up to `PowerFlowOptions.MaxQLimitPasses` (default 100; below 1 is
 refused). If the cap is reached right after a switch, the engines solve once
 more and report the result not converged (`MaxIterations`).
 

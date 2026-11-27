@@ -1,0 +1,89 @@
+# GridSim command line tool container image: the `gridsim` CLI and the GridSim.Core library it carries.
+#
+# Build:  docker build -f Dockerfile.cli -t gridsim-cli --build-arg SOURCE_REVISION=$(git rev-parse HEAD) .
+# Run:    docker run --rm gridsim-cli                                   (prints the help)
+#         docker run --rm gridsim-cli case9 --once                      (a bundled case, nothing mounted)
+#         docker run --rm -v "$PWD:/work" -v "$PWD/licence:/licence:ro" gridsim-cli pf case14
+#
+# Two stages, like the web image (Dockerfile): the pinned .NET SDK image publishes the CLI with the release's own
+# linux-x64 publish profile (src/GridSim.Cli/Properties/PublishProfiles/linux-x64.pubxml), and the run-time stage holds
+# only that output. The profile publishes ONE self-contained single-file executable that carries the .NET runtime, with
+# the bundled case data, the schemas and the licence and notice files beside it, exactly as the release archive does.
+# Because the executable carries its own runtime, the run-time stage is the runtime-deps image (the native libraries
+# .NET needs, no .NET runtime) rather than the runtime image: a second runtime in the image would never be used.
+#
+# /work is the working folder: mount the folder that holds your cases there and the results land in it. /licence is
+# where the image looks for a licence (GRIDSIM_LICENCE_FILE below): mount a folder holding licence.gridsim read-only, or
+# mount nothing and the CLI runs at the free tier. No licence is ever built into the image. A key can instead be passed
+# for one run with -e GRIDSIM_LICENCE=<key>.
+#
+# The image makes no network connection at run time: the licence check is offline, and the only verbs that open a
+# connection are the ones a user starts on purpose with an address of their own (see the offline-operation chapter).
+#
+# SOURCE_REVISION, SBOM_SHA256 and SOURCE_TREE are the same provenance arguments as the web image; see Dockerfile.
+
+# ---------------------------------------------------------------------------------------------- build ---
+# The same SDK image as the web Dockerfile: the exact SDK in global.json (10.0.404), pinned by digest. Change the two
+# Dockerfiles and global.json together.
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS build
+WORKDIR /src
+# The SDK's own usage telemetry stays off while the image is built.
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1
+
+# Restore first, from the project files alone, so the package layer is cached until a project file changes. The
+# restore is LOCKED and uses the release publish profile, so it resolves the same graph the release publish does and
+# fails loud if a lock file would change.
+COPY Directory.Build.props GridSim.slnx .editorconfig ./
+COPY global.json ./
+COPY Directory.Build.targets ./
+COPY src/DotnetRuntimeNotices.targets src/
+COPY src/GridSim.Core/GridSim.Core.csproj src/GridSim.Core/packages.lock.json src/GridSim.Core/
+COPY src/GridSim.Gda/GridSim.Gda.csproj   src/GridSim.Gda/packages.lock.json  src/GridSim.Gda/
+COPY src/GridSim.Gpu/GridSim.Gpu.csproj   src/GridSim.Gpu/packages.lock.json  src/GridSim.Gpu/
+COPY src/GridSim.Cli/GridSim.Cli.csproj   src/GridSim.Cli/packages.lock.json  src/GridSim.Cli/
+COPY src/GridSim.Cli/Properties/PublishProfiles/ src/GridSim.Cli/Properties/PublishProfiles/
+RUN dotnet restore src/GridSim.Cli/GridSim.Cli.csproj --locked-mode -p:PublishProfile=linux-x64
+
+# What the CLI build reads: the bundled case data and schemas (shipped beside the binary and partly embedded in Core),
+# the licence and notices, the CLI reference chapter compiled into the binary for the per-verb help, the crossval
+# sidecar scripts shipped beside it, the one scripting source file the CLI compiles in, and the projects themselves.
+COPY LICENSE.md THIRD-PARTY-NOTICES.md ./
+COPY data/ data/
+COPY schemas/ schemas/
+COPY ["docs/manual/0019 CLI reference.md", "docs/manual/"]
+COPY tools/crossval/crossval.py tools/crossval/sidecar_common.py tools/crossval/
+COPY src/GridSim.Scripting/PathConfinement.cs src/GridSim.Scripting/
+COPY src/GridSim.Core/ src/GridSim.Core/
+COPY src/GridSim.Gda/  src/GridSim.Gda/
+COPY src/GridSim.Gpu/  src/GridSim.Gpu/
+COPY src/GridSim.Cli/  src/GridSim.Cli/
+
+ARG SOURCE_REVISION=
+ARG SBOM_SHA256=
+ARG SOURCE_TREE=
+RUN dotnet publish src/GridSim.Cli/GridSim.Cli.csproj -c Release -p:PublishProfile=linux-x64 \
+        -p:SourceRevisionId="${SOURCE_REVISION}" -p:GridSimSbomSha256="${SBOM_SHA256}" \
+        -p:GridSimSourceTree="${SOURCE_TREE}" --no-restore
+
+# -------------------------------------------------------------------------------------------- runtime ---
+# runtime-deps of the runtime the pinned SDK bundles (10.0.404 carries 10.0.15), pinned by digest (Ubuntu 24.04).
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.15@sha256:e6702e45635272155c2aa35568bcbdb975595c0afa73e2656a973d0a87703282 AS runtime
+
+# No packages are installed: the image is the pinned base plus the published folder.
+WORKDIR /app
+COPY --from=build /src/artifacts/publish/gridsim-linux-x64/ ./
+
+# The working folder, owned by the unprivileged "app" user the .NET images provide, so a run with nothing mounted can
+# still write its results there.
+RUN mkdir -p /work && chown "$APP_UID" /work
+USER $APP_UID
+
+ENV GRIDSIM_LICENCE_FILE=/licence/licence.gridsim
+# The executable is on the PATH as `gridsim`; a single-file bundle that holds native libraries unpacks them under /tmp.
+ENV PATH="/app:${PATH}" \
+    DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp/.net
+
+WORKDIR /work
+ENTRYPOINT ["gridsim"]
+CMD ["--help"]

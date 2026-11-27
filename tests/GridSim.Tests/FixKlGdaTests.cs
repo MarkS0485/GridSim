@@ -6,7 +6,7 @@ namespace GridSim.Tests;
 /// <summary>APP-27: the NPg reader now makes the column check the LTDS reader makes (GR-289) for the voltage columns it needs.</summary>
 public sealed class FixKlGdaTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-fixkl-npg-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-fixkl-npg-" + Guid.NewGuid().ToString("N"));
     private const string Dataset = "LTDS_Appendix_3_Circuit_Data";
 
     public void Dispose()

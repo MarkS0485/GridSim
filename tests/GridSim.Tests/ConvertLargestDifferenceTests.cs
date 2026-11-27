@@ -13,7 +13,7 @@ public class ConvertLargestDifferenceTests
     [Fact]
     public void A_failed_proof_names_the_largest_voltage_difference_and_how_many_buses_differ()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-convert-largest-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-convert-largest-" + Guid.NewGuid().ToString("N"));
         try
         {
             string output = Path.Combine(dir, "uk.m");

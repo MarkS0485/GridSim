@@ -181,7 +181,7 @@ public abstract class FluxMachineElement : NodalElement
                 double a = W0 * (-Rd[i] * Lam[i * n + j] + wp * Smat[i * n + j]);
                 _k[i * n + j] = (i == j ? 1.0 : 0.0) - c * dt * a;
             }
-        if (!_lu!.Factor(_k)) throw new InvalidOperationException($"{Name}: the machine step matrix is singular at t = {t:R} s.");
+        if (!_lu!.Factor(_k)) throw new InvalidOperationException(FormattableString.Invariant($"{Name}: the machine step matrix is singular at t = {t:R} s."));
         for (int j = 0; j < n; j++)
         {
             Array.Clear(_col);

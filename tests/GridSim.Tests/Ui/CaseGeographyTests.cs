@@ -233,7 +233,7 @@ public sealed class CaseGeographyTests
     [Fact]
     public void A_case_folder_without_the_file_has_no_geography_and_no_problem()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-casegeo-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-casegeo-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -252,7 +252,7 @@ public sealed class CaseGeographyTests
     [Fact]
     public void A_case_folder_with_a_valid_file_loads_it_and_a_malformed_one_gives_the_reason()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-casegeo-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-casegeo-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

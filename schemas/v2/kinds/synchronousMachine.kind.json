@@ -543,6 +543,26 @@
       "markGated": false,
       "description": "Open-circuit saturation factor S(1.2) at 1.2 pu air-gap flux (PSS/E GENROU S(1.2)); above S(1.0) when S(1.0) is above 0.",
       "codeDefaults": []
+    },
+    "model": {
+      "type": "enum",
+      "values": [
+        "GENROU",
+        "GENTPJ",
+        "GENCLS"
+      ],
+      "required": false,
+      "markGated": false,
+      "description": "Machine model of a gridsim-dynamics/2 file. Absent or GENROU: the six-state subtransient machine (GENROU and GENSAL data). GENTPJ: the same machine with the stator-current saturation term saturationKis (saturation evaluated on |psi''| + Kis |It|, GENROU's additive form). GENCLS: the classical machine, a constant voltage behind xdpPu, which takes only inertiaH, damping and xdpPu and no exciter or stabiliser.",
+      "codeDefaults": []
+    },
+    "saturationKis": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "GENTPJ stator-current saturation term Kis (pu flux per pu current, may be negative); needs saturationS10 and saturationS12. Read only for model GENTPJ. Default 0 (GENROU).",
+      "codeDefaults": []
     }
   }
 }

@@ -32,7 +32,7 @@ public sealed class CrossvalSidecarShippedTests
         // A copy of the built CLI (its top-level files and the shipped tools/ folder, no data/) in a temporary folder,
         // the shape of a release folder: no source tree five levels up, so only the shipped copy can be found.
         string exeDir = Path.GetDirectoryName(CliProcess.BuiltCliDll())!;
-        string tmp = Path.Combine(Path.GetTempPath(), "gridsim-crossval-ship-" + Guid.NewGuid().ToString("N"));
+        string tmp = TestTemp.Under("gridsim-crossval-ship-" + Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(tmp);

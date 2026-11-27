@@ -58,7 +58,7 @@ public class CrashLogTests
     [Fact]
     public void Write_creates_a_uniquely_named_log_in_the_given_folder()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-crashlog-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-crashlog-test-" + Guid.NewGuid().ToString("N"));
         try
         {
             string? path = CrashLog.Write("gridsim", Thrown(), new[] { "fault", "case9" }, dir);
@@ -81,7 +81,7 @@ public class CrashLogTests
     {
         // GR-839: the fallback is the shared /tmp on Linux and macOS, so the log (arguments and stack) is 0600 and a
         // folder the writer creates is 0700. Windows keeps its per-user ACLs and has no Unix mode to check (skipped there).
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-crashlog-mode-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-crashlog-mode-" + Guid.NewGuid().ToString("N"));
         try
         {
             string? path = CrashLog.Write("gridsim", Thrown(), null, dir);
@@ -100,7 +100,7 @@ public class CrashLogTests
     {
         // A folder path that is actually an existing FILE cannot be created as a directory: the log must still be
         // written (to the temp fallback), never lost and never a second exception.
-        string blocker = Path.Combine(Path.GetTempPath(), "gridsim-crashlog-blocker-" + Guid.NewGuid().ToString("N"));
+        string blocker = TestTemp.Under("gridsim-crashlog-blocker-" + Guid.NewGuid().ToString("N"));
         File.WriteAllText(blocker, "not a folder");
         string? path = null;
         try

@@ -31,6 +31,36 @@ public sealed record UcteNodeMeta(string Code, string GeographicalName, string C
 /// <param name="Order">The order code.</param>
 public sealed record UcteBranchKey(string Kind, string Node1, string Node2, string Order);
 
+/// <summary>
+/// What a transformer in operation carried in the file beyond the model branch: the text of the fields the model folds
+/// into its ratio and shunts or does not hold, as written (trimmed), and the ratio and shift the reader made of them.
+/// <see cref="UcteWriter"/> writes these texts back for a transformer the model still has as read, so a UCTE case
+/// read and written again gives its reader the same text and so the same numbers.
+/// </summary>
+/// <param name="RatedVoltage1">Rated voltage U1 (kV), columns 23-27.</param>
+/// <param name="RatedVoltage2">Rated voltage U2 (kV), columns 29-33.</param>
+/// <param name="NominalPower">Nominal power (MVA), columns 35-39 ("" when blank). Not read into the model.</param>
+/// <param name="Susceptance">B (microsiemens), columns 55-62 ("" when blank).</param>
+/// <param name="Conductance">G (microsiemens), columns 64-69 ("" when blank).</param>
+/// <param name="Regulation">The transformer's ##R record from column 21 on (phase and angle regulation, with their
+/// targets), or null when it has none.</param>
+/// <param name="TapRatio">The ratio the reader made: t = (U2 (1 + n' du / 100) / Ub2) / (U1 / Ub1), with any angle step.</param>
+/// <param name="PhaseShiftDeg">The phase shift (degrees) the reader made.</param>
+public sealed record UcteTransformerRecord(string RatedVoltage1, string RatedVoltage2, string NominalPower, string Susceptance,
+    string Conductance, string? Regulation, double TapRatio, double PhaseShiftDeg);
+
+/// <summary>
+/// A ##L or ##T record the reader skipped because it is out of operation (status 7, 8 or 9), kept so that
+/// <see cref="UcteWriter"/> can write it back as the file had it. The model has no branch for it.
+/// </summary>
+/// <param name="Block">"##L" or "##T".</param>
+/// <param name="Text">The record as written, trailing white space removed.</param>
+/// <param name="Before">The number of model branches read before it: in the file it came just before
+/// <see cref="GridModel.Branches"/>[Before] (or at the end of its block).</param>
+/// <param name="Regulation">For a transformer, its ##R record as written (trailing white space removed), or null when it
+/// has none.</param>
+public sealed record UcteSkippedRecord(string Block, string Text, int Before, string? Regulation);
+
 /// <summary>The outcome of reading a UCTE-DEF file: the model, the notes, and what the model has no place for.</summary>
 public sealed record UcteParseResult(GridModel Model, IReadOnlyList<string> Notes)
 {
@@ -39,6 +69,19 @@ public sealed record UcteParseResult(GridModel Model, IReadOnlyList<string> Note
 
     /// <summary>The record of each model branch, position k for <see cref="GridModel.Branches"/>[k].</summary>
     public IReadOnlyList<UcteBranchKey> BranchKeys { get; init; } = Array.Empty<UcteBranchKey>();
+
+    /// <summary>The file's own text for each transformer in operation, keyed by its position k in
+    /// <see cref="GridModel.Branches"/>.</summary>
+    public IReadOnlyDictionary<int, UcteTransformerRecord> Transformers { get; init; } = new Dictionary<int, UcteTransformerRecord>();
+
+    /// <summary>The status code (column 21) of each model branch's record, position k for <see cref="GridModel.Branches"/>[k]:
+    /// 0 (real element) or 1 (equivalent element) for a line or transformer, 2 for a busbar coupler. All in
+    /// operation; the model holds no other.</summary>
+    public IReadOnlyList<int> BranchStatus { get; init; } = Array.Empty<int>();
+
+    /// <summary>The out-of-operation ##L and ##T records (status 7, 8 or 9), in file order, which the model does not
+    /// hold.</summary>
+    public IReadOnlyList<UcteSkippedRecord> Skipped { get; init; } = Array.Empty<UcteSkippedRecord>();
 }
 
 /// <summary>
@@ -99,7 +142,7 @@ public static class UcteParser
 
     /// <summary>Read a UCTE-DEF file from disk. The case name defaults to the file stem.</summary>
     public static UcteParseResult ParseFile(string path, UcteReadOptions? options = null)
-        => ParseWithDiagnostics(File.ReadAllText(path), Path.GetFileNameWithoutExtension(path), options);
+        => ParseWithDiagnostics(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Path.GetFileNameWithoutExtension(path), options);
 
     private sealed record Line(int Number, string Block, string Text)
     {
@@ -216,6 +259,8 @@ public static class UcteParser
         // ---- Lines ------------------------------------------------------------------------------------------------
         var branches = new List<Branch>();
         var keys = new List<UcteBranchKey>();
+        var branchStatus = new List<int>();
+        var skipped = new List<UcteSkippedRecord>();
         var seen = new Dictionary<(string, string, string), int>();
         int off = 0, couplers = 0, zeroZ = 0;
         (int Bus, string Code) NodeOf(Line l, int from, string field)
@@ -238,7 +283,7 @@ public static class UcteParser
             Unique(l, ci, cj, ord);
             int status = l.Int(21, 21, "status");
             if (status is not (0 or 1 or 2 or 7 or 8 or 9)) throw l.Error(FormattableString.Invariant($"status is {status}; a line is 0, 1, 2, 7, 8 or 9"));
-            if (status is 7 or 8 or 9) { off++; continue; }
+            if (status is 7 or 8 or 9) { off++; skipped.Add(new UcteSkippedRecord("##L", l.Text.TrimEnd(), branches.Count, null)); continue; }
             double kvi = baseKv[i - 1], kvj = baseKv[j - 1];
             if (kvi != kvj) throw l.Error(FormattableString.Invariant($"a line joins nodes of different nominal voltages ({kvi} kV and {kvj} kV); a transformer belongs in ##T"));
             double zb = kvi * kvi / BaseMva;
@@ -251,6 +296,7 @@ public static class UcteParser
                 couplers++;
                 branches.Add(new Branch(i, j, 0, ZeroImpedanceXPu, Name: nm.Length > 0 ? nm : null));
                 keys.Add(new UcteBranchKey("coupler", ci, cj, ord));
+                branchStatus.Add(status);
                 continue;
             }
             double rpu = r / zb, xpu = x / zb;
@@ -258,6 +304,7 @@ public static class UcteParser
             branches.Add(new Branch(i, j, rpu, xpu, b * 1e-6 * zb,
                 RateAMva: limit is double a && a > 0 ? Math.Sqrt(3.0) * kvi * a / 1000.0 : 0, Name: nm.Length > 0 ? nm : null));
             keys.Add(new UcteBranchKey("line", ci, cj, ord));
+            branchStatus.Add(status);
         }
 
         // ---- Regulation records, by transformer ---------------------------------------------------------------------
@@ -277,6 +324,7 @@ public static class UcteParser
                 tableUsers.Add((l.Text[..8], l.Text.Substring(9, 8), l.Col(19, 19)));
         int xfOff = 0, regulated = 0, tablesUsed = 0, tablesFirst = 0;
         var used = new HashSet<(string, string, string)>();
+        var transformers = new Dictionary<int, UcteTransformerRecord>();
         foreach (Line l in blocks["##T"])
         {
             (int n1, string c1) = NodeOf(l, 1, "node 1");
@@ -287,7 +335,13 @@ public static class UcteParser
             int status = l.Int(21, 21, "status");
             if (status is not (0 or 1 or 8 or 9)) throw l.Error(FormattableString.Invariant($"status is {status}; a transformer is 0, 1, 8 or 9"));
             used.Add((c1, c2, ord));
-            if (status is 8 or 9) { xfOff++; continue; }
+            if (status is 8 or 9)
+            {
+                xfOff++;
+                skipped.Add(new UcteSkippedRecord("##T", l.Text.TrimEnd(), branches.Count,
+                    regulation.TryGetValue((c1, c2, ord), out Line? offReg) ? offReg.Text.TrimEnd() : null));
+                continue;
+            }
             double u1 = l.Real(23, 27, "rated voltage 1"), u2 = l.Real(29, 33, "rated voltage 2");
             if (!(u1 > 0) || !(u2 > 0)) throw l.Error(FormattableString.Invariant($"rated voltages must be above 0 kV (U1 {u1}, U2 {u2})"));
             double r = l.Real(41, 46, "R", 0), x = l.Real(48, 53, "X", 0), b = l.Real(55, 62, "B", 0), g = l.Real(64, 69, "G", 0);
@@ -307,10 +361,14 @@ public static class UcteParser
             }
             double t = (u2 * ratio / kv2) / (u1 / kv1);
             if (g != 0 || b != 0) { gs[n1 - 1] += g * 1e-6 * kv1 * kv1; bs[n1 - 1] += b * 1e-6 * kv1 * kv1; }
+            // RC5 WP34 review: the file's own text, for the writer to give back (nothing here changes what is read).
+            transformers[branches.Count] = new UcteTransformerRecord(l.Col(23, 27), l.Col(29, 33), l.Col(35, 39), l.Col(55, 62), l.Col(64, 69),
+                reg is null ? null : reg.Text.Length > 20 ? reg.Text[20..].TrimEnd() : "", t, angle);
             branches.Add(new Branch(n2, n1, r / zb1, x / zb1, 0, TapRatio: t, PhaseShiftDeg: angle,
                 RateAMva: limit is double a && a > 0 ? Math.Sqrt(3.0) * kv1 * a / 1000.0 : 0, IsTransformer: true,
                 Name: nm.Length > 0 ? nm : null));
             keys.Add(new UcteBranchKey("transformer", c1, c2, ord));
+            branchStatus.Add(status);
         }
         foreach ((string, string, string) k in regulation.Keys)
             if (!used.Contains(k)) throw regulation[k].Error(FormattableString.Invariant($"the regulation record names transformer {k.Item1} - {k.Item2} order '{k.Item3}', which ##T does not define"));
@@ -389,7 +447,7 @@ public static class UcteParser
         var errors = model.Validate().Where(d => d.Severity == ValidationSeverity.Error).Select(d => d.Message).ToList();
         if (errors.Count > 0)
             throw new InvalidDataException($"UCTE-DEF case '{caseName}' is invalid:" + Environment.NewLine + "  " + string.Join(Environment.NewLine + "  ", errors));
-        return new UcteParseResult(model, notes) { Nodes = meta, BranchKeys = keys };
+        return new UcteParseResult(model, notes) { Nodes = meta, BranchKeys = keys, Transformers = transformers, BranchStatus = branchStatus, Skipped = skipped };
     }
 
     /// <summary>A regulation record's ratio factor on the regulated winding and phase shift (degrees).</summary>

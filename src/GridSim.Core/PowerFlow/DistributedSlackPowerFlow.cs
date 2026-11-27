@@ -153,7 +153,7 @@ public sealed class DistributedSlackPowerFlow : IPowerFlowSolver
             {
                 if (Math.Abs(unplaced) > ToleranceMw)
                 {
-                    LastNote = $"every participating unit is at a limit; {unplaced:R} MW of the imbalance could not be shared";
+                    LastNote = FormattableString.Invariant($"every participating unit is at a limit; {unplaced:R} MW of the imbalance could not be shared");
                     return NotConverged(r);
                 }
                 return r;

@@ -127,8 +127,8 @@ internal static class CgmesStudyCommand
             if (output is not null && export is not null && string.Equals(output, export, StringComparison.OrdinalIgnoreCase))
                 throw new IOException("--out and --export name the same file.");
             byte[] bytes = File.ReadAllBytes(input);
-            using (JsonDocument document = JsonDocument.Parse(bytes)) CheckDuplicates(document.RootElement);
-            Request request = JsonSerializer.Deserialize<Request>(bytes, Json) ?? throw new InvalidDataException("Study is null.");
+            using (JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes))) CheckDuplicates(document.RootElement);
+            Request request = JsonSerializer.Deserialize<Request>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, Json) ?? throw new InvalidDataException("Study is null.");
             if (request.SchemaVersion != 1 || request.Bundle is null || request.Voltage is null || request.Bundle.Profiles is null
                 || string.IsNullOrWhiteSpace(request.Bundle.Sha256))
                 throw new InvalidDataException("Schema version 1 with bundle (sha256, profiles) and voltage is required.");
@@ -138,6 +138,7 @@ internal static class CgmesStudyCommand
             // Read each profile once; the study works on these bytes only.
             string directory = Path.GetDirectoryName(input)!;
             var profiles = new List<CgmesProfileInput>();
+            long profileTotal = 0;
             // R4-11b: with --archive the profile paths name entries of that ZIP (read in sorted order, path traversal and
             // duplicate profiles refused) instead of files; hashes and everything after are unchanged.
             Dictionary<string, byte[]>? archived = null;
@@ -156,8 +157,12 @@ internal static class CgmesStudyCommand
                 }
                 if (p.Path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"Profile {p.Profile} ({p.Path}): zipped bundles are not supported in v1; list each profile document.");
-                string full = Path.GetFullPath(p.Path, directory);
-                profiles.Add(new CgmesProfileInput(p.Profile, p.Version, p.Path.Replace('\\', '/'), p.Sha256, File.ReadAllBytes(full)));
+                // R1-02: each profile document the study names is a side file (no network or device path, a size limit).
+                string full = GridSim.Core.Security.SideFile.Resolve(p.Path, directory, $"profile {p.Profile}");
+                byte[] profileBytes = GridSim.Core.Security.SideFile.ReadAllBytes(full, GridSim.Core.IO.Cim.Zip.CgmesArchiveReader.MaxEntryBytes, $"profile {p.Profile}");
+                // R2-05: the documents a study lists are held to the archive's running total too.
+                profileTotal = GridSim.Core.IO.Cim.Zip.CgmesArchiveReader.AddToTotal(profileTotal, profileBytes.LongLength, p.Path, GridSim.Core.IO.Cim.Zip.CgmesArchiveReader.MaxTotalBytes);
+                profiles.Add(new CgmesProfileInput(p.Profile, p.Version, p.Path.Replace('\\', '/'), p.Sha256, profileBytes));
             }
             string identity = CgmesBundleInspector.BundleIdentity(profiles);
             if (!string.Equals(identity, request.Bundle.Sha256, StringComparison.OrdinalIgnoreCase))

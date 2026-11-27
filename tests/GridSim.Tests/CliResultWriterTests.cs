@@ -28,7 +28,7 @@ public sealed class CliResultWriterTests
 
     private static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-writer-test-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-writer-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }
@@ -298,6 +298,8 @@ public sealed class CliResultWriterTests
             "substation-state", // added RC4 R4-11 part A: the node-breaker substation-state verb writes through the shared writer (new coverage, not a moved expectation)
             "cgmes-export", "cgmes-conform", // added RC4 R4-11 part B: the CGMES per-profile export and conformity verbs write through the shared writer (new coverage, not a moved expectation)
             "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess", "study-case", "case-diff", "result-diff", "report", // added RC4 (last candidate): the ten study verbs write --json and --csv through the shared writer (new coverage, not a moved expectation)
+            "protection-eval", "protection-grade", "acopf-opt", "acscopf", "reconfig", "grid-code", "reduce", "cgmes-shacl", // added RC5 WP11 (coordinator ruling): the RC5 verbs write --json and --csv through the shared writer (new coverage, not a moved expectation; existing writer output pinned unchanged by Rc5Wp11WriterVerbsTests)
+            "breaking-change", // added RC5 run journal (coordinator ruling, structural pin): the new breaking-change verb writes its reports through the shared writer (new coverage, not a moved expectation; no existing writer output changes)
         };
         foreach (string v in f10) Assert.Contains(v, CliOutput.WriterVerbs);
         Assert.DoesNotContain("serve", CliOutput.WriterVerbs);

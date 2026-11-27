@@ -69,14 +69,21 @@ public static class SubtransientMachine
 
         public SaturationCurve(double satAt1Pu, double satAt12Pu)
         {
-            if (satAt1Pu < 0.0) throw new ArgumentOutOfRangeException(nameof(satAt1Pu), "Se(1.0) must be >= 0.");
-            if (satAt12Pu < 0.0) throw new ArgumentOutOfRangeException(nameof(satAt12Pu), "Se(1.2) must be >= 0.");
+            // DYN-11: NaN too (a NaN point left B NaN, and Se then returned 0: the machine ran unsaturated without a word).
+            if (!(satAt1Pu >= 0.0) || !double.IsFinite(satAt1Pu)) throw new ArgumentOutOfRangeException(nameof(satAt1Pu), "Se(1.0) must be >= 0.");
+            if (!(satAt12Pu >= 0.0) || !double.IsFinite(satAt12Pu)) throw new ArgumentOutOfRangeException(nameof(satAt12Pu), "Se(1.2) must be >= 0.");
             SatAt1Pu = satAt1Pu;
             SatAt12Pu = satAt12Pu;
             // DP-04: Se(1.0) = 0 with Se(1.2) > 0 is not an unsaturated machine; it used to read as one and drop the 1.2 point.
+            // DYN-02 (ruling 15): it is the curve that starts at 1.0 pu, as for the exciters: A = 1.0, and Se(1.2) = B (0.2)^2
+            // / 1.2 gives B = 1.2 Se(1.2) / 0.04. Said in the DYR reader's notes.
             if (satAt1Pu == 0.0 && satAt12Pu > 0.0)
-                throw new ArgumentOutOfRangeException(nameof(satAt12Pu),
-                    $"Se(1.0) is 0 but Se(1.2) is {satAt12Pu.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}; give both points above 0 for a saturated machine, or both 0 for an unsaturated one.");
+            {
+                _a = 1.0;
+                double d = UpperFitPointPu - 1.0;
+                _b = UpperFitPointPu * satAt12Pu / (d * d);
+                return;
+            }
             if (satAt1Pu <= 0.0) return;   // unsaturated: A = B = 0, Se == 0
             if (satAt12Pu <= satAt1Pu)
                 throw new ArgumentOutOfRangeException(nameof(satAt12Pu), "Se(1.2) must exceed Se(1.0) for a rising saturation curve.");
@@ -134,6 +141,20 @@ public static class SubtransientMachine
         public (double D, double Q) GenrouIncrements(double eqpp, double edpp, double qAxisRatio)
         {
             double psi = Math.Sqrt(eqpp * eqpp + edpp * edpp);
+            double s = Se(psi);
+            return (eqpp * s, edpp * s * qAxisRatio);
+        }
+
+        /// <summary>
+        /// WP3a (RC5): GENTPJ's saturation, the GENROU increments with the stator-current term added to the flux
+        /// magnitude: <c>s = Se(|psi''| + kisCurrent)</c>, where <paramref name="kisCurrent"/> is <c>Kis |It|</c> on one base.
+        /// With <paramref name="kisCurrent"/> = 0 the sum is <c>|psi''|</c> exactly, so this is
+        /// <see cref="GenrouIncrements"/> bit for bit. PSS/E's GENTPJ also scales its reactances by the saturation factor;
+        /// GridSim keeps GENROU's additive increments, so a saturated GENTPJ is GridSim's form, not PSS/E's.
+        /// </summary>
+        public (double D, double Q) GentpjIncrements(double eqpp, double edpp, double qAxisRatio, double kisCurrent)
+        {
+            double psi = Math.Sqrt(eqpp * eqpp + edpp * edpp) + kisCurrent;
             double s = Se(psi);
             return (eqpp * s, edpp * s * qAxisRatio);
         }
@@ -196,12 +217,12 @@ public static class SubtransientMachine
         /// </summary>
         public double Xd { get; } = double.IsFinite(Xd) && Xd > 0.0 && Xd >= Xdp
             ? Xd : throw new ArgumentOutOfRangeException(nameof(Xd), Xd,
-                $"Xd must be a finite number > 0 and at least X'd (got Xd = {Xd}, X'd = {Xdp}).");
+                FormattableString.Invariant($"Xd must be a finite number > 0 and at least X'd (got Xd = {Xd}, X'd = {Xdp})."));
         /// <summary>Synchronous q-axis reactance Xq (pu); must be finite, &gt; 0 and at least <see cref="Xqp"/>
         /// (D-DOC-056; see <see cref="Xd"/>).</summary>
         public double Xq { get; } = double.IsFinite(Xq) && Xq > 0.0 && Xq >= Xqp
             ? Xq : throw new ArgumentOutOfRangeException(nameof(Xq), Xq,
-                $"Xq must be a finite number > 0 and at least X'q (got Xq = {Xq}, X'q = {Xqp}).");
+                FormattableString.Invariant($"Xq must be a finite number > 0 and at least X'q (got Xq = {Xq}, X'q = {Xqp})."));
         /// <summary>Transient d-axis reactance X'd (pu); must be &gt; 0.</summary>
         public double Xdp { get; } = Xdp > 0.0
             ? Xdp : throw new ArgumentOutOfRangeException(nameof(Xdp), "X'd must be > 0.");
@@ -316,7 +337,7 @@ public static class SubtransientMachine
             }
             if (!settled)
                 throw new InvalidOperationException($"The saturated subtransient equilibrium's q-axis flux did not settle in "
-                    + $"{SaturatedEquilibriumMaxIterations} fixed-point iterations (delta0 = {delta0}, E'q0 = {eqp0}).");
+                    + FormattableString.Invariant($"{SaturatedEquilibriumMaxIterations} fixed-point iterations (delta0 = {delta0}, E'q0 = {eqp0})."));
             double iq = (vSin - eddp) / (p.Xqpp + p.ExternalReactance);
             edp = eddp - (p.Xqp - p.Xqpp) * iq;   // T''qo steady state: E''d = E'd + (X'q - X''q) Iq
         }
@@ -357,7 +378,12 @@ public static class SubtransientMachine
             throw new ArgumentException("An exciter needs a finite voltageReference.", nameof(voltageReferencePu));
 
         double ws = 2.0 * Math.PI * f0;
-        int steps = (int)Math.Round(durationSeconds / stepSeconds);
+        // DYN-10: checked against the run cap before the cast.
+        double stepRatio = Math.Round(durationSeconds / stepSeconds);
+        if (!(stepRatio <= MultiMachineSubtransient.MaxRunSteps))
+            throw new ArgumentOutOfRangeException(nameof(durationSeconds), durationSeconds,
+                FormattableString.Invariant($"the run is {stepRatio:R} steps of {stepSeconds:R} s, more than the {MultiMachineSubtransient.MaxRunSteps} a run may take."));
+        int steps = (int)stepRatio;
 
         var fluxEqp = new FirstOrderLag(1.0, p.Tdop);    // E'q
         var fluxEqpp = new FirstOrderLag(1.0, p.Tdopp);  // E''q

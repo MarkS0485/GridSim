@@ -20,14 +20,14 @@ has a section below.
 | Help | [`help`](#help) (and `gridsim <verb> --help`) |
 | Running a case | [no verb](#running-a-case-no-verb) |
 | Contingency and analysis | [`trip`](#trip), [`screen`](#screen), [`nminus1`](#nminus1), [`nminus2`](#nminus2), [`n-1-1`](#n-1-1), [`nminus1-sweep`](#nminus1-sweep), [`stress`](#stress), [`chain`](#chain), [`cycle`](#cycle), [`corrective-sequence`](#corrective-sequence) |
-| Network analysis | [`pf`](#pf), [`ptdf`](#ptdf), [`lodf`](#lodf), [`sensitivity`](#sensitivity), [`qv-curve`](#qv-curve), [`pv-contingency`](#pv-contingency), [`dc-contingency`](#dc-contingency), [`fault-level-n1`](#fault-level-n1), [`line-constants`](#line-constants), [`dist3ph-mesh`](#dist3ph-mesh), [`substation-state`](#substation-state), [`cgmes-export`](#cgmes-export), [`cgmes-conform`](#cgmes-conform), [`dgs-import`](#dgs-import), [`dcpf`](#dcpf), [`dcopf`](#dcopf), [`acopf`](#acopf), [`acopf-full`](#acopf-full), [`scuc`](#scuc), [`scopf`](#scopf), [`transmission-security`](#transmission-security), [`transfer-capability`](#transfer-capability), [`cgmes-study`](#cgmes-study), [`planning-study`](#planning-study), [`study-case`](#study-case), [`case-diff`](#case-diff), [`result-diff`](#result-diff), [`report`](#report), [`restoration-study`](#restoration-study), [`reliability-study`](#reliability-study), [`reliability-network`](#reliability-network), [`probabilistic`](#probabilistic), [`qsts`](#qsts), [`hosting`](#hosting), [`cpf`](#cpf), [`taps`](#taps), [`restore`](#restore), [`losses`](#losses), [`dist3ph`](#dist3ph) (experimental) |
-| Physics and protection | [`physics-check`](#physics-check), [`conformance`](#conformance), [`protection-check`](#protection-check), [`grade`](#grade), [`devices-check`](#devices-check), [`fault-line`](#fault-line), [`sc-trace`](#sc-trace), [`protection-audit`](#protection-audit), [`fault`](#fault), [`fault-series`](#fault-series), [`fault-simultaneous`](#fault-simultaneous), [`iec60909`](#iec60909), [`g74`](#g74), [`arc-flash`](#arc-flash), [`cable-rating`](#cable-rating), [`experimental`](#experimental) |
-| Frequency and dynamics | [`freq`](#freq), [`replay`](#replay), [`transient`](#transient), [`domains`](#domains), [`stability`](#stability), [`modal`](#modal), [`modal-full`](#modal-full), [`fit-frequency`](#fit-frequency), [`inertia-placement`](#inertia-placement), [`dynamics-study`](#dynamics-study), [`motor-start`](#motor-start), [`user-model`](#user-model) |
-| Harmonics, impedance and EMT | [`harmonics`](#harmonics), [`harmonic-assess`](#harmonic-assess), [`flicker`](#flicker), [`filter-design`](#filter-design), [`impedance-stability`](#impedance-stability), [`emt`](#emt), [`emt-line`](#emt-line), [`emt3`](#emt3) |
+| Network analysis | [`pf`](#pf), [`ptdf`](#ptdf), [`lodf`](#lodf), [`sensitivity`](#sensitivity), [`qv-curve`](#qv-curve), [`pv-contingency`](#pv-contingency), [`dc-contingency`](#dc-contingency), [`fault-level-n1`](#fault-level-n1), [`line-constants`](#line-constants), [`dist3ph-mesh`](#dist3ph-mesh), [`substation-state`](#substation-state), [`cgmes-export`](#cgmes-export), [`cgmes-conform`](#cgmes-conform), [`cgmes-shacl`](#cgmes-shacl), [`dgs-import`](#dgs-import), [`dcpf`](#dcpf), [`dcopf`](#dcopf), [`acopf`](#acopf), [`acopf-full`](#acopf-full), [`scuc`](#scuc), [`scopf`](#scopf), [`acopf-opt`](#acopf-opt), [`acscopf`](#acscopf), [`reconfig`](#reconfig), [`dist-opt`](#dist-opt), [`reduce`](#reduce), [`qv-modal`](#qv-modal), [`transmission-security`](#transmission-security), [`transfer-capability`](#transfer-capability), [`cgmes-study`](#cgmes-study), [`planning-study`](#planning-study), [`study-case`](#study-case), [`case-diff`](#case-diff), [`result-diff`](#result-diff), [`report`](#report), [`restoration-study`](#restoration-study), [`reliability-study`](#reliability-study), [`reliability-network`](#reliability-network), [`probabilistic`](#probabilistic), [`qsts`](#qsts), [`hosting`](#hosting), [`cpf`](#cpf), [`taps`](#taps), [`restore`](#restore), [`losses`](#losses), [`dist3ph`](#dist3ph) (experimental) |
+| Physics and protection | [`physics-check`](#physics-check), [`conformance`](#conformance), [`protection-check`](#protection-check), [`grade`](#grade), [`devices-check`](#devices-check), [`fault-line`](#fault-line), [`sc-trace`](#sc-trace), [`protection-audit`](#protection-audit), [`protection-eval`](#protection-eval), [`protection-grade`](#protection-grade), [`fault`](#fault), [`fault-series`](#fault-series), [`fault-simultaneous`](#fault-simultaneous), [`iec60909`](#iec60909), [`g74`](#g74), [`arc-flash`](#arc-flash), [`cable-rating`](#cable-rating), [`experimental`](#experimental) |
+| Frequency and dynamics | [`freq`](#freq), [`replay`](#replay), [`transient`](#transient), [`domains`](#domains), [`stability`](#stability), [`modal`](#modal), [`modal-full`](#modal-full), [`fit-frequency`](#fit-frequency), [`inertia-placement`](#inertia-placement), [`dynamics-study`](#dynamics-study), [`grid-code`](#grid-code), [`motor-start`](#motor-start), [`user-model`](#user-model) |
+| Harmonics, impedance and EMT | [`harmonics`](#harmonics), [`harmonic-assess`](#harmonic-assess), [`flicker`](#flicker), [`filter-design`](#filter-design), [`impedance-stability`](#impedance-stability), [`emt`](#emt), [`emt-line`](#emt-line), [`emt3`](#emt3), [`cosim`](#cosim), [`emt-partition`](#emt-partition), [`harmonic-pf`](#harmonic-pf) (experimental), [`harmonic-se`](#harmonic-se) (experimental) |
 | Evidence | [`replay-event`](#replay-event), [`scenario`](#scenario), [`h0-study`](#h0-study), [`fleet`](#fleet), [`evidence`](#evidence) |
 | Data | [`gda`](#gda), [`gda-replay`](#gda-replay), [`synth`](#synth), [`export`](#export), [`convert`](#convert), [`validate`](#validate), [`zonal`](#zonal), [`pmu-ingest`](#pmu-ingest) (experimental), [`pmu-estimate`](#pmu-estimate), [`estimate`](#estimate), [`estimate-noise-floor`](#estimate-noise-floor), [`crossval`](#crossval) |
 | Real-time and telemetry | [`serve`](#serve), [`rpc`](#rpc), [`interpose`](#interpose) |
-| Benchmarking and preflight | [`bench`](#bench), [`bench --estimate`](#bench---estimate), [`bench --perf`](#bench---perf), [`gpucheck`](#gpucheck), [`simdcheck`](#simdcheck), [`batchsolve`](#batchsolve), [`audit`](#audit), [`compliance`](#compliance) |
+| Benchmarking and preflight | [`bench`](#bench), [`bench --estimate`](#bench---estimate), [`bench --perf`](#bench---perf), [`gpucheck`](#gpucheck), [`simdcheck`](#simdcheck), [`batchsolve`](#batchsolve), [`audit`](#audit), [`compliance`](#compliance), [`breaking-change`](#breaking-change) |
 | Electrical references | [`ref`](#ref) |
 
 `gridsim --help` (or `-h`, or `gridsim help`) prints the verb list, then exits 0. `gridsim <verb> --help`,
@@ -85,10 +85,12 @@ error: trip does not take --top (it is not one of trip's flags, so it would be s
 | Exit code | Meaning |
 |---|---|
 | 0 | Success. |
-| 1 | Input error: a missing or unloadable file or case folder, invalid data in a case (for example a generator whose Pmin is above its Pmax, refused by `dcopf` and `acopf`), an invalid measurement set or window file (`serve` skips it and exits 1 at the end), a case that fails to load inside a batch run (`bench`, `nminus1-sweep`, `stress`, `transient --cases`), a requested [result file](#result-files) that cannot be written. Also a failed check: the physics-law gate (`physics-check`, `conformance`), a right-half-plane eigenvalue (`modal`), a missed High tier (`cycle`), a batched result off the CPU reference (`batchsolve`), a singular harmonic network (`harmonics`), a violated experimental law, a bus the `iec60909 --all-buses` sweep cannot study. |
+| 1 | Input error: a missing or unloadable file or case folder, invalid data in a case (for example a generator whose Pmin is above its Pmax, refused by `dcopf` and `acopf`), an invalid measurement set or window file (`serve` skips it and exits 1 at the end), a case that fails to load inside a batch run (`bench`, `nminus1-sweep`, `stress`, `transient --cases`), a requested [result file](#result-files) or any other output that cannot be written (read-only, locked by another program, access denied, a full disk), named in one line (`error: could not write the output ...`), never an internal error. Also a failed check: the physics-law gate (`physics-check`, `conformance`), a right-half-plane eigenvalue (`modal`), a missed High tier (`cycle`), a batched result off the CPU reference (`batchsolve`), a singular harmonic network (`harmonics`), a violated experimental law, a bus the `iec60909 --all-buses` sweep cannot study. |
 | 2 | Usage error: an unknown flag, a flag of another verb, a bad flag value, an unknown verb, an unknown case name ([one rule on every verb](#case-arguments)), a bus id that is not in the case (`stability --fault-bus`, `fault --bus`, `protection-check --fault-bus`, `iec60909 --bus`, a `--bess` site), a licence refusal (a network above the tier's bus limit, or a key `licence import` rejects), a forward-inference rejection (`REJECTED (forward inference)`, on every verb that reads dated data). |
 | 3 | A verdict or convergence failure: a baseline that is not `Reproduced`, an estimate that is not converged or not observable, a `crossval` mismatch, non-converged steps (`gda-replay`, `transient`, `chain`), an EMT numerical failure, an infeasible dispatch (`dcopf`, `acopf`), a contingency verdict that is not secure (`nminus1`, `nminus2`, `n-1-1`, `nminus1-sweep`: the base case or any screened outage violates a limit, islands or does not solve; `screen`: any loss breaches a frequency limit), and a power flow that did not converge on the verbs that report it: the default solve report, `--enableExport`, a `--ticks` run with any tick that did not converge, `pf`, `losses`, `taps`, `cpf` (the base load does not converge), `gda --solve` and `--all-gsps`, `serve` with failed windows, `fault` and `protection-check` (including a converter current iteration that does not converge), the stability and modal verbs, `impedance-stability`, the experimental models and `conformance` (a case that stops converging or cannot be run). Also a failed probe or solve in `gpucheck`, `bench` and `bench --estimate`. |
+| 4 | `breaking-change validate` only: review needed. The only results that moved did so under a breaking change with no bound (UNBOUNDED, see [breaking-change](#breaking-change)), and nothing else is wrong. |
 | 77 | `crossval` only: the environment cannot run the check (no Python, or no pandapower). |
+| 78 | The telemetry guard refused to start, before any verb, `--version` or help ran: a telemetry library or injected agent is loaded, an environment variable would switch on an exporter, configure an APM agent or load an agent (for example `SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `DD_AGENT_HOST`, `DOTNET_STARTUP_HOOKS`, `CORECLR_ENABLE_PROFILING=1`), or the binary lacks the build marker. One line on stderr names the reason: `gridsim: telemetry guard: <reason>. Exiting with code 78.` The full lists are in [technical ch. 35, section Telemetry](<../technical/0035 Deployment and security.md#telemetry>). |
 
 A verb's own section lists its exceptions. `physics-check` exits 1, not 3, on a converged state that fails the
 hard-law gate (a physically impossible state); a power flow that did not converge exits 3.
@@ -126,7 +128,9 @@ The verbs: `dcopf`, `acopf`, `acopf-full`, `scuc`, `scopf`, `qsts`, `hosting`, `
 `experimental`, `convert` (`--json` and `--csv` only: its second argument is already its output), `validate`, `zonal`,
 `probabilistic`, `reliability-network`, `flicker`, `filter-design`, `harmonic-assess`, `connection-assess`, `study-case`, `case-diff`,
 `result-diff` and `report` (`--json` and `--csv` only: their own `--out` still names their own output),
-`pf`, `sensitivity`, `qv-curve`, `pv-contingency`, `dc-contingency`, `fault-level-n1`, `pmu-ingest` and `pmu-estimate`. `serve` does not take them: it is a resident stream that reports each measurement window as it
+`pf`, `sensitivity`, `qv-curve`, `pv-contingency`, `dc-contingency`, `fault-level-n1`, `pmu-ingest`, `pmu-estimate`,
+`protection-eval`, `protection-grade`, `cgmes-shacl`, `breaking-change`, and `acopf-opt`, `acscopf`, `reconfig`, `grid-code` and `reduce`
+(`--json` and `--csv` only: their own `--out` still names their own output). `serve` does not take them: it is a resident stream that reports each measurement window as it
 arrives and may run without end, so one document written when it stops does not fit it. On every other verb `--json`
 and `--csv` exit 2 (`modal`'s own `--json` and `screen`'s own `--csv` excepted: `screen --csv <file>` writes its
 screening table, and `modal --json` prints JSON on the console and takes no file, `modal --export <file.json>` being
@@ -135,9 +139,16 @@ its file output).
 - **What is written.** The verb's summary values and its tables, from the same values it prints, but complete: where
   the console lists the top N rows (dispatch, distribution factors, outages, branch losses, traced loads), the file
   has every row, and no number is rounded to the console's display precision.
-- **JSON.** One document: `{"schema": "gridsim-cli-result/1", "tool": "gridsim <version>+<commit>", "verb", "args",
-  "exitCode", "summary": {key: value}, "tables": {name: [{column: value}, ...]}}`. Keys and column names are
-  snake_case.
+- **JSON.** One document: `{"schema": "gridsim-cli-result/1", "tool": "gridsim <version>+<commit>", "buildStatus",
+  "verb", "args", "exitCode", "summary": {key: value}, "tables": {name: [{column: value}, ...]}}`. Summary keys and
+  column names are snake_case. `buildStatus` says what kind of build wrote the file: `"RELEASE"` for a release build
+  that names its exact release checkout (built by the release workflow, with the SBOM hash injected, from a clean
+  checkout whose full commit is the one stamped in `tool`), `"UNSUPPORTED BUILD"` for any other build, such as a
+  local build or a build of changed source. Compliance is a separate statement, reported by `gridsim compliance
+  verify`; it does not change `buildStatus`. Like `tool`, it describes the build, not the result. With the global switch `--timings` the document ends with one more property, `"timings": {...}`:
+  wall-clock milliseconds per stage (`startup`, `parse`, `build`, `assemble`, `factor`, `solve`, `write`, `total`),
+  the counts the verb exposes, `stages_merged` (stages folded into the combined `solve`) and `stages_not_measured`;
+  see [Global switches](#global-switches). Without the switch the document has no such property.
 - **CSV.** The verb's main table goes to the named file, every other table beside it as `<stem>-<table>.csv`, and the
   summary as `<stem>-summary.csv` (`key,value`, starting with the rows `verb` and `exit_code`). A verb with no table
   writes only the summary, to the named file. Invariant culture (`.` decimal point); a field holding a comma, a quote
@@ -180,7 +191,100 @@ real CLI skip when none is found). See `python/README.md`.
 For many calls on one case, `gridsim.Session` starts `gridsim rpc` once and keeps it: `sess.load("case9")` returns a
 `CaseHandle`, `handle.solve()` re-solves it without reloading, `sess.run_verb("pf", "case14")` returns the same `Result`
 as `gs.run`, and `sess.line_constants(geometry)` evaluates a line geometry in process. The numbers are the same bits as
-the subprocess path; see [rpc](#rpc). `GridSim.run` is unchanged.
+the subprocess path; see [rpc](#rpc). `GridSim.run` is unchanged. `run_verb` makes the same flag check as `gs.run`:
+`--json` and `--csv` are refused, and `--out` passes for the verbs whose own output it names (`OWN_OUT_VERBS`).
+
+A `CaseHandle` (and a `Case` below) belongs to the session that loaded it and to that session's host instance. Every
+host numbers its level 1 handles `case-1`, `case-2`, ..., so the id alone cannot tell two hosts apart: a session refuses a
+handle of another session, or one loaded before its host was restarted (`close()` then `start()`), with `GridSimError`
+before anything is sent, and `release()` of it marks nothing released. A plain id string is still accepted.
+
+**The object model and psspy.** `gridsim.ModelSession` starts `gridsim rpc --protocol 2` (see [rpc](#rpc)) and refuses a host of another protocol.
+`ms.open(case)` gives a `Case` whose `buses`, `generators`, `loads`, `branches` and `shunts` are read-only mappings of
+`Element` objects, keyed and with the attributes the rpc section lists. Reading an attribute asks the host; assigning one
+writes it, and a refused write raises `GridSimError` and changes nothing. `case.solve()` gives a `LoadFlowResult`
+(`converged`, `bus(id).vm`, `bus(id).va`, `branch(key).p_from`, `generator(key)` for a unit's solved P and Q);
+`case.contingency(...)`, `case.short_circuit(...)` and
+`case.opf(...)` run `nminus1`, `iec60909` and `acopf-full` on the case as edited and give the verb's own `Result`;
+`case.save(path, "raw33"|"raw34"|"raw35"|"v2")` writes it; `case.rms(study.json)` runs `dynamics-study`.
+`case.add(kind, key, **values)` and `case.delete(kind, key, cascade=False)` add and delete elements: a bus by its id
+(`base_kv` required), a generator as `bus:id`, a load or shunt by its bus id (one per bus), a branch as `from-to:circuit`
+(`x` required). A bus with branches, units, a load or a shunt is deleted only with `cascade=True`, which deletes them first.
+Technical chapter 41 gives the rules.
+
+```python
+with gridsim.ModelSession() as ms:
+    case = ms.open("data/matpower/lib/case9.m")
+    case.loads["9"].pd = 0.0               # a set request; solve() then solves the edited case
+    r = case.solve()
+    r.bus(9).vm, r.branch("8-9").p_from
+    case.short_circuit("--bus", 5).summary["ikpp_ka"]
+```
+
+`from gridsim import psspy` (never imported by `import gridsim`) maps a subset of psspy calls onto the object model. Return
+values follow psspy, `ierr` or `(ierr, value)`. For most calls the non-zero ierr values are GridSim's own, not PSS/E's: 1
+element not found, 2 bad argument or string, 3 not solved or stale (the case was edited after the last solve), 9 not
+supported. The deletes (`purgbrn`, `purgmac`, `purgload`, `purgshunt`), the complex arrays (`abuscplx`, `amachcplx`,
+`abrncplx`) and `inimac` return PSS/E's own codes for every condition the API manual names (listed below); a request
+PSS/E would answer and GridSim cannot returns 9, or 11 in `abrncplx`, where PSS/E's 9 means an invalid string. `_i`,
+`_f` and `_s` are this module's "no change" defaults (`getdefaultint/real/char()`). Each argument layout is taken from a
+public source, named in the code beside the call: the PSS/E 34 Application Program Interface manual as publicly posted
+(its section), or a public example call on the psspy.org forum. A layout no public source confirms is refused with ierr 9,
+never guessed. The mappings are checked against GridSim's own verbs, not against PSS/E. Only the forms below are
+accepted. `psspy.last_error()` says why the last dynamic call returned ierr 9.
+
+| psspy call | GridSim |
+|---|---|
+| `psseinit(buses)` | Starts the ModelSession; the bus count is ignored. |
+| `read(numnam, ifile)`, `readrawx(ifile)` | `load` of a RAW (30, 33 to 36) or RAWX file. |
+| `readrawx(...)` | ierr 9: no public source confirms its arguments. Open a RAWX file with `ModelSession.open`. |
+| `writerawversion(vernum, out, ofile)` | `save` as RAW 33, 34 or 35 to `ofile` with `out` 0 (a file); `out` 1 (the report window) or any other version: ierr 9. |
+| `rawd_2(sid, all, out=0, ofile=...)` | `save` as RAW 33, keyword form only; a positional status or option array: ierr 9 (its layout is unconfirmed). |
+| `fnsl(options)` | `solve` (Newton, reactive limits on); ierr 0 when it ran, converged or not (`solved()` tells). Any option other than the defaults: ierr 9, never ignored. |
+| `solved()` | 0 converged, 1 not converged, 3 no solve since the last edit. |
+| `busdat(ibus, string)` | `PU`, `KV`, `ANGLE` (radians), `ANGLED`, `BASE`. |
+| `busint(ibus, string)` | `TYPE`. |
+| `gendat(ibus)` | The in-service generation at the bus in the solved state: the bus's net injection plus its demand. |
+| `macdat(ibus, id, string)` | `P`, `Q`, `MVA`: the machine's solved output (ierr 3 before a solve; ierr 9 for a unit sharing its bus with another in-service unit). `PMAX`, `PMIN`, `QMAX`, `QMIN`, `MBASE`: the unit's data. |
+| `loddt2(ibus, id, string1, string2)` | string1 `MVA`, `IL`, `YL` or `TOTAL`, string2 `NOM` or `ACT`. Answered for a bus holding exactly one load record with this id, constant power only: `MVA` and `TOTAL` are its P + jQ, `IL` and `YL` 0. `ACT` needs a solve and at least 0.7 pu at the bus (PSS/E's default PQBRAK). Several load records at the bus, an I or Y part, the `O_` units, `LDDGN`, `YNEG`, `YZERO`: ierr 9; an id the file does not hold there: ierr 1. |
+| `brnmsc(ibus, jbus, ckt, string)`, `brnflo(ibus, jbus, ckt)` | `P`, `Q`, `MVA`, or P + jQ, at the ibus end of the solved case. The percent loadings (`PCTRTA` and the rest): ierr 9. |
+| `abusint`, `abusreal` (sid negative; flag 1 or 2) | `NUMBER`, `TYPE`; `PU`, `KV`, `ANGLE`, `ANGLED`, `BASE`. |
+| `abrnint`, `abrnreal`, `abrnchar` (sid negative; flag 3 or 4, entry 1) | `FROMNUMBER`, `TONUMBER`, `STATUS`; `P`, `Q`, `MVA` (from end), `MXPCTMVARATA`, `RATEA`; `ID`. GridSim does not tell a line from a two-winding transformer, so flags 1, 2, 5 and 6, and a case with a three-winding transformer, are ierr 9; so are the current-based percentages. |
+| `aareaint`, `aareareal` (sid negative; flag 1, read as the areas with a bus in the case, in ascending number) | `NUMBER`; `PINT` (the solved net export in MW, tie lines only, each tie measured at its metered end as `pf --area-control` counts it). A RAW case only: the areas are read from the file. `PINT` needs a solve (ierr 3) and is ierr 9 for a case with three-winding transformers. The public example (psspy.org question 5541) gives the call shape and `PINT` with flag 1 only; flag 2 and the strings `SWING`, `PDES` and `PTOL` are confirmed by no public source, so they are ierr 9. |
+| `amachint`, `amachreal`, `amachchar` (sid negative; flag 1 to 4) | `NUMBER`, `STATUS`; `PGEN`, `QGEN` (solved, as `macdat`), `MBASE`, `PMAX`, `PMIN`, `QMAX`, `QMIN`; `ID`. |
+| `machine_chng_2(ibus, id, intgar, realar)` | intgar[0] status; realar[0..6] PG, QG, QT, QB, PT, PB, MBASE. |
+| `load_chng_5(ibus, id, intgar, realar, lodtyp)` | intgar[0] status; realar[0..1] PL, QL; as `loddt2`, only for a bus holding one constant-power load record with this id. `lodtyp` other than blank: ierr 9. |
+| `branch_chng_3(ibus, jbus, ckt, intgar, realari, ratings)` | intgar[0] status; realari[0..2] R, X, B; ratings[0] RATE1 (rate A). PSS/E refuses a two-winding transformer here; GridSim, which does not tell one from a line, edits either. |
+| `bus_chng_4(ibus, inode, intgar, realar, name)` | intgar[0] type; realar[1] VM, realar[2] VA (the public layout: BASKV, VM, VA, ...). |
+| `bus_data_4(ibus, inode, intgar, realar, name)` | Adds the bus or changes it. intgar [IDE, AREA, ZONE, OWNER]; realar [BASKV, VM, VA, NVHI, NVLO, EVHI, EVLO]. A new bus needs BASKV (ierr 2). Areas, zones and owners other than 1, the emergency limits, a node, a name, or a new BASKV for an existing bus: ierr 9. |
+| `load_data_6(ibus, id, intgar, realar, lodtyp)` | Adds the load or changes it. intgar [STATUS, AREA, ZONE, OWNER, SCALE, INTRPT, DGENM]; realar [PL, QL, IP, IQ, YP, YQ, DGENP, DGENQ]: constant power only. A second load id at a bus (one load per bus), any other part, or a load type: ierr 9. |
+| `machine_data_4(ibus, id, intgar, realar, name)` | Adds machine `ibus:id` or changes it. intgar[0] STAT; realar[0..6] PG, QG, QT, QB, PT, PB, MBASE; later slots or a droop name: ierr 9. A new unit takes the plant's VS; a PQ bus with an in-service unit becomes PV. |
+| `plant_data_4(ibus, inode, intgar, realar)` | realar[0] VS sets the voltage set-point of the units at the bus, and of units added there later. Remote regulation, or RMPCT other than 100: ierr 9. The bus type is not changed. |
+| `branch_data_3(ibus, jbus, ckt, intgar, realar, ratings, namear)` | Adds the line or changes it: R, X, B; RATE1 to RATE3 as rate A, B, C. Line shunts, LEN, other ratings, owners other than O1 = 1, or a name: ierr 9. |
+| `two_winding_data_6(ibus, jbus, ckt, intgar, realari, ratings, namear, vgrpar)` | Adds the transformer or changes it: R1-2, X1-2 (system base), tap WINDV1/WINDV2, shift ANG1. CW, CZ or CM other than 1, tap control (COD1), a correction table, magnetising admittance, a name or vector group: ierr 9. |
+| `shunt_data(ibus, id, intgar, realar)` | Adds a fixed shunt (GL, BL at 1 pu) or changes one added this way. One shunt per bus; a status other than 1: ierr 9. |
+| `purgbrn`, `purgmac`, `purgload`, `purgshunt` | Delete the element. PSS/E's codes: 1 bus not found; `purgbrn` 2 branch not found; `purgmac` 2 no machines at the bus, 3 machine not found; `purgload` 2 no load at the bus, 3 another load id; `purgshunt` 2 no fixed shunt at the bus, 3 another shunt id. A branch a tap changer names, the last unit at a slack bus, a bus whose file holds several loads, or a shunt of the file (its id is not held): ierr 9. |
+| `abuscplx`, `amachcplx`, `abrncplx` | `VOLTAGE` (solved, pu); `PQGEN` (solved, MW + j MVAr); `RX` (pu). Flags as the real arrays. PSS/E's codes: 2 SID above 11; 3 a flag PSS/E does not have (`abuscplx`, `amachcplx`), 5 (`abrncplx`); 6 an entry other than 1 or 2 (`abrncplx`); 6 (`abuscplx`, `amachcplx`) or 9 (`abrncplx`) a string PSS/E does not have. A subsystem, a valid flag or string GridSim does not map, or an unsolved case: ierr 9 (11 in `abrncplx`). The public `abrncplx` call sites use flag 1, which GridSim does not answer (it does not tell a line from a two-winding transformer); flags 3 and 4 follow the API manual. |
+| `two_winding_data_6` WN1BUS | intgar[8] (WN1BUS) is the bus that carries WINDV1 and ANG1, ibus by default for a new transformer. A new transformer is held from that bus, so its tap and shift sit where PSS/E puts them. A transformer already held keeps its stored winding one when WN1BUS is not given, in whichever order the call names the ends: the PSS/E API defines a defaulted argument as "no input" (`getdefaultint`, as excerpted in the PowerMCP repository), so a defaulted WN1BUS gives no new winding one. WN1BUS that is neither end, or a given WN1BUS on the other end of a held transformer (with a winding voltage or angle): ierr 9. intgar[1] (METBUS) must be one of the two ends, as in `branch_data_3`: ierr 9 otherwise. |
+| `inibus`/`nxtbus`, `inimac`/`nxtmac`, `inibrn`/`nxtbrn` | Iterate over the buses (number order), the machine ids at a bus (ascending) and the branches at a bus (by to bus and circuit). `nxtbus` gives GridSim's bus name, without PSS/E's base-voltage suffix. `inimac` gives PSS/E's 1 for no such bus and 2 for a bus whose type is not 2 or 3. |
+| `dyre_new(status, dyrfile)` | Records the DYR file for `dynamics-study`. |
+| `strt_2(options, outfile)`, `strt(option, outfile)` | Records t = 0 and checks the initialisation with a 0.05 s run with no event (ierr 3 when the machines cannot start). |
+| `run(0, tpause)` | Re-runs one `dynamics-study` row from t = 0 to `tpause` with every event so far; `psspy.channels()` holds it. A run in steps gives the same bits as one run to the same time. With no event yet the row holds only the undisturbed time series to `tpause`: dynamics-study needs an event, so a branch trip is placed one step later and the samples after `tpause` are cut off. An edited case is first written as RAW 33, read back and compared (attribute by attribute, bit for bit; then written again and compared byte for byte apart from the titles); a case that does not survive: ierr 9. |
+| `dist_bus_fault(ibus, units, basekv, values)` | A three-phase fault now: values [G, B] in MVA (units 1), Y = (G + jB)/SBASE pu with the case's own SBASE read from the RAW or RAWX file, Zf = 1/Y; G + jB of magnitude 1e9 MVA or more (PSS/E's default is -2e11) is a bolted fault. Units 2 and 3: ierr 9. |
+| `dist_clear_fault(ifault)` | `faultClear` of the ifault-th fault applied. |
+| `dist_branch_trip(ibus, jbus, ckt)`, `dist_machine_trip(ibus, id)` | `branchTrip`, `machineTrip`. |
+| `voltage_channel`, `machine_array_channel` | Bus voltage; machine ANGLE (1) and SPEED (7). PELEC and the rest: ierr 9 (machine power is not traced). |
+| `progress_output`, `report_output`, `alert_output` | Accepted and ignored. |
+| `solv` | Gauss-Seidel (`pf --engine gs`): options as `fnsl` (any non-default is ierr 9). Bus results are the Gauss-Seidel solution; branch flows and machine outputs are read from the host's Newton solve of the same case, the same solution to the tolerance. After a solve that does not converge they are not served (ierr 3). |
+
+Any slot of an array not listed holding a value other than the default is ierr 9. Refused with `NotImplementedError` and
+the reason: `case` and `save` (the .sav binary is proprietary); `fdns`, `fncl` and `nsol` (PSS/E's decoupled
+Newton methods are not confirmed to match GridSim's fast-decoupled load flow, so nothing is substituted; for that solution use
+`case.study("pf", "--engine", "fdxb")`), `mslv` (no modified Gauss-Seidel engine); `accc*` and `dfax*` (use `case.contingency()`); `ascc*`,
+`scmu*` and `iecs_4` (use `case.short_circuit()`); `opf*` (use `case.opf()`); `dist_scmu_fault`, `dist_spcb_fault`,
+`dist_branch_fault` (unverified layouts; use `case.rms()` with a `sequenceFault` or `lineFault` event); `bsys` and any
+subsystem other than sid -1 (the object model has no areas, zones or owners to select by); and any other psspy name. The PowerFactory Python API
+is not mirrored: its object model is proprietary.
 
 ## Output files
 
@@ -199,6 +303,14 @@ under `results/` or one you named with `--out`, `--export`, `--csv`, `--json`, `
 Three writers keep stricter rules of their own. `interpose` never replaces a captured window: a clash is kept under a
 `-dupN` name. `convert` and the JSON case writer never write over an existing case (exit 1). `synth` regenerates its case
 folder (by default `results/synth/gb-synthetic`); the bundled `data/gb-synthetic` is rewritten only when `--out` names it.
+
+The study verbs that write their own result file keep a never-overwrite rule as well: an existing `--out` (file or
+folder) is refused before the run, and nothing is replaced. Two exit codes apply. The JSON result verbs `harmonic-pf`,
+`harmonic-se`, `gic`, `cosim`, `emt-partition` and `qv-modal` exit 2 with `error: <verb>: '<path>' already exists; name
+a new file (it is never overwritten).` The study-file verbs (the specialist studies, the harmonic planning verbs,
+`long-term`, `dynamics-study`, the reliability, restoration, transfer-capability and transmission-security studies, and
+the other verbs that take a study JSON) exit 1 with `Result path already exists; use a new path for this invocation.`
+Each verb's own section states its rule.
 
 A run that writes a report FILE (`bench`, `nminus1-sweep`, `stress`, `chain`) writes its metadata beside the report as
 `<report>.run-metadata.json` (`results/bench.md` gets `results/bench.run-metadata.json`), so reports that share a folder
@@ -301,7 +413,10 @@ bit for bit.
 Parsed before the verb and usable with any command. `--cpu` and `--gpu` may also come before the verb
 (`gridsim --cpu dcopf case9 --prices`): they are taken off the argument list before any verb-specific flag check, so a
 verb's own flags are checked against the verb (before October 2026 that run was refused, because the `--prices` check
-read `--cpu` as the verb).
+read `--cpu` as the verb). The study verbs that read their options from a study file (`dynamics-study`,
+`transmission-security`, `cable-rating`, `planning-study`, `study-case`, `breaking-change` and the others dispatched with
+them) take `--cpu` before or after the verb (they run on the CPU), apply `--frequency-hz`, refuse `--gpu` naming it
+(exit 2), and accept `--name=value` like every other verb.
 
 | Flag | Default | Meaning |
 |---|---|---|
@@ -314,11 +429,14 @@ read `--cpu` as the verb).
 | `--forming-inertia <GVA.s>` | 0 | Virtual former inertia Ev. `vsm` only: with `--forming droop` it is refused (exit 2), a droop former carrying no virtual inertia (N311). |
 | `--forming-damping <MW/Hz>` | 0 | Virtual former damping Dv. |
 | `--frequency-hz <Hz>` | 50 (assumed) | The nominal frequency of every MATPOWER `.m` file the run loads (a path, a bundled `.m` name, or a built-in name backed by a file such as `gb-reduced-29`). A `.m` file carries no system frequency, so without the flag it is assumed to be 50 Hz and a parse note says so; the IEEE, WSCC and most MATPOWER library cases are 60 Hz systems (`gridsim modal data/matpower/lib/case9.m --frequency-hz 60`). It sets the f0 of every dynamic study of that model: the small-signal state matrix (`modal`), the swing equation of `stability` (single study and CCT), `trip`'s RoCoF, EMT branch inductances (`emt`), impedance scans and IEC 60909's frequency terms. It changes no power-flow, OPF or state-estimation number: the frequency enters none of those equations. Like `--cpu` it may stand anywhere on the line. The value must be a finite number above 0 Hz, given once (otherwise exit 2). For a PSS/E `.raw` file it is the base frequency when the file's BASFRQ is 0 or missing (otherwise 60 Hz, PSS/E's default, is assumed and noted); a file that states a different BASFRQ is refused (exit 1). It does not apply to a JSON case folder (its `system.json` carries `frequencyHz`) or to a built-in case name (each carries its own frequency); when the run loads no `.m` file at all, `warning: --frequency-hz <Hz> had no effect ...` is printed on stderr at the end and the exit code is unchanged. (N187, October 2026.) |
-| `--psse-revision <n>` | from the file | The revision a PSS/E `.raw` file is read as when its first line does not say (no REV field and no `PSS/E-NN` comment, as in the UKGDS cases: `gridsim ehv2.raw --psse-revision 30 --frequency-hz 50`). One of 30, 33, 34, 35, given once (otherwise exit 2). A file that states a different revision is refused (exit 1). When the run loads no `.raw` file, `warning: --psse-revision had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end. See [ch. 2](<0002 Loading networks.md#pss-e-raw-files>). |
+| `--psse-revision <n>` | from the file | The revision a PSS/E `.raw` file is read as when its first line does not say (no REV field and no `PSS/E-NN` comment, as in the UKGDS cases: `gridsim ehv2.raw --psse-revision 30 --frequency-hz 50`). One of 30, 33, 34, 35, given once (otherwise exit 2). A file that states a different revision is refused (exit 1). When the run loads no `.raw` file, `warning: --psse-revision had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end. See [ch. 2](<0002 Loading networks.md#psse-raw-files>). |
 | `--seq-data <file.seq>` | none | A PSS/E sequence data file (revision 30 layout) applied to every `.raw` case the run loads, so `fault` and `iec60909` use its machine reactances (X''d, X2), line and transformer zero-sequence impedances and transformer winding connections. The name must end in `.seq` and be given once (otherwise exit 2). Its notes are printed on stderr as `note: <file>.seq: ...`, ending with the counts applied. Machine zero-sequence impedances and mutual coupling between whole lines are applied. Sequence data GridSim's networks have no element for (sequence shunt loads, mutual coupling over part of a line, zero-sequence switched shunts) refuses the load (exit 1) unless `--allow-unmodelled` is given. When the run loads no `.raw` file, `warning: --seq-data had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end. See [ch. 2](<0002 Loading networks.md#sequence-data-seq>). |
 | `--tap-control` | off | Apply a PSS/E `.raw` file's automatic voltage control by tap (COD 1): each controlled winding becomes an on-load tap changer (band VMI..VMA, limits RMI..RMA, step (RMA - RMI) / (NTP - 1)) that the solve steps from the file's ratios, each winding regulating its own reactive power flow (COD 2, by tap) or active power flow (COD 3, by phase shift angle) is stepped the same way until the flow into it is in VMI..VMA, and a case that does not converge from the file's taps is solved from a ramp start (10 %, 20 %, ... of its demand and generation first; the report says so on a `Ramp start:` line). Without it the taps stay at the file's ratios. Given once (otherwise exit 2). When the run loads no `.raw` file, `warning: --tap-control had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end. See [ch. 2](<0002 Loading networks.md#tap-control>). |
 | `--shunt-control` | off | Switch a PSS/E `.raw` file's switched shunts that have discrete local voltage control (MODSW 1, one block size, BINIT a whole number of blocks) in whole blocks to hold their bus in VSWLO..VSWHI: in the case solve (inside the tap loop; the report adds a `Switched shunts:` line) and in `pf` (as a `--switched-shunts` file's banks; giving both exits 2). Those with continuous local voltage control (MODSW 2) become static var compensators solved with the power flow (the report prints a `Static var compensator` line for each). Every other switched shunt stays fixed at BINIT, noted. Given once (otherwise exit 2). When the run loads no `.raw` file, `warning: --shunt-control had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end. See [ch. 2](<0002 Loading networks.md#shunt-control>). |
-| `--allow-unmodelled` | off | Read a PSS/E `.raw` file that holds in-service devices GridSim does not model (capacitor-commutated two-terminal DC links, VSC converters regulating a remote bus, multi-terminal DC converters on two DC buses, FACTS devices in modes 4 to 8 or regulating a remote bus, or induction machines with a standard design code, a double cage or saturation). Without it such a file is refused (exit 1), the message naming each kind and the line of its first record. With it those devices are read past, each kind counted in a `note:` line on stderr, and the power flow differs from the file's. GNE devices are refused either way. With `--seq-data` it also lets sequence data GridSim's fault networks do not model be read past, each kind counted in a note; for a UCTE-DEF `.uct` file it reads transformers that have special tables (##TT), using their own impedances. Like `--cpu` it may stand anywhere on the line; given twice it exits 2. When the run loads no `.raw` file, `warning: --allow-unmodelled had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end and the exit code is unchanged. See [ch. 2](<0002 Loading networks.md#pss-e-raw-files>). |
+| `--area-control` | off | Keep a PSS/E `.raw` file's area interchange data for `pf`: each AREA record's swing bus (ISW), desired export (PDES, MW) and tolerance (PTOL, MW), the area of every bus, and each branch's metered end (the MET field of revision 33 and later, a negative J, or NMETR 1 on a two-winding transformer; otherwise the from end). `pf` then controls each area as a `--area-interchange` file would (giving both exits 2). An area that holds a slack bus, has ISW 0 or names an ISW outside the area is reported only, noted. The model is the same with or without it. Given once (otherwise exit 2). When the run loads no `.raw` file, or no `pf` run reads the data, a warning says it had no effect. |
+| `--remote-vreg` | off | Keep a PSS/E `.raw` file's remote voltage regulation for `pf`: each in-service unit at a PV bus whose IREG names another bus, a PQ bus, holds that bus at VS, as a `--remote-vreg-file` file would (giving both exits 2). One control per controlling bus (the first unit's IREG and VS); a second bus naming the same regulated bus is noted and holds its own bus, as PSS/E RMPCT sharing is not modelled. Without it the unit holds VS at its own bus, as before. The model is the same with or without it. Given once (otherwise exit 2). When the run loads no `.raw` file, or no `pf` run reads the data, a warning says it had no effect. |
+| `--dyr-extended` | off | A PSS/E `.dyr` file given with `--dyn-data` is also read for the extended model library: GENCLS, ESST1A, EXST1, SCRX, ESAC1A, ESDC1A, EXDC2, IEEEX1, ESAC8B, ESST3A, IEEEST, PSS2A, PSS2B, the GGOV1, WSIEG1 and IEEEG3 governors and the CIM5BL motor load, each in its PSS/E record order (GENTPJ, PSS2C, ESAC7B, HYGOV4 and GENQEC records are refused by name: their order is not confirmed by two public sources). Without it those records are models the reader does not map, exactly as before. Given twice it exits 2. When the run reads no `.dyr` file, `warning: --dyr-extended had no effect: this run read no PSS/E .dyr file.` is printed on stderr at the end and the exit code is unchanged. See [ch. 2](<0002 Loading networks.md#dynamic-data-dyr>). |
+| `--allow-unmodelled` | off | Read a PSS/E `.raw` file that holds in-service devices GridSim does not model (capacitor-commutated two-terminal DC links, VSC converters regulating a remote bus, multi-terminal DC converters on two DC buses, FACTS devices in modes 4 to 8 or regulating a remote bus, or induction machines with a standard design code, a double cage or saturation). Without it such a file is refused (exit 1), the message naming each kind and the line of its first record. With it those devices are read past, each kind counted in a `note:` line on stderr, and the power flow differs from the file's. GNE devices are refused either way. With `--seq-data` it also lets sequence data GridSim's fault networks do not model be read past, each kind counted in a note; for a UCTE-DEF `.uct` file it reads transformers that have special tables (##TT), using their own impedances. Like `--cpu` it may stand anywhere on the line; given twice it exits 2. When the run loads no `.raw` file, `warning: --allow-unmodelled had no effect: this run loaded no PSS/E .raw file.` is printed on stderr at the end and the exit code is unchanged. See [ch. 2](<0002 Loading networks.md#psse-raw-files>). |
 | `--bfs` | off | Bare/case/dir forms: route the solve through the radial backward/forward-sweep solver (auto-selected for radial models anyway). The sweep declines a meshed or disconnected network (nothing is solved), so `--bfs` on a meshed case does not converge: exit 3 with `--once`, `--enableExport` or `--ticks`. |
 | `--enableExport[=path]` | off | Bare/case/dir forms: dump the full math trace of one solve to JSON (`results/exports/<case>-solve.json` by default, where `<case>` is the built-in name, or for a path the file or folder name without `.m`: `data/matpower/lib/case14.m` writes `case14-solve.json`; D-DOC-154, it used to be `data_matpower_lib_case14.m-solve.json`; the export's `meta` still records the argument as given). The path is given only in the `=` form (`--enableExport=out.json`); on the bare run the space form (`--enableExport out.json`) exits 2 saying so, instead of writing the default file (GR-688). A solve that does not converge still writes the export, says so on stderr and exits 3; when the sweep declined, the solver is named `BackwardForwardSweep (declined: ...)`. `harmonics` and `impedance-stability` use it to write their own exports. |
 | `--export-jacobian` | off | Force the (large) Jacobian past the size gate into the export. |
@@ -329,6 +447,10 @@ read `--cpu` as the verb).
 | `--incident-log <file>` | off | Raise security events as incidents (one per significant event, one per burst of routine ones) and append them to `<file>` as JSON lines, each naming the audit entry that evidences it. Needs `--audit-log`. A failed write is reported at the end and the run exits 1. |
 | `--audit-sign-key <private.pem>` | off | ECDSA P-256 private key (PEM): sign the anchor after every entry, into `<log>.anchor.sig`. Needs `--audit-log`; a key that is not a P-256 private key exits 1. |
 | `--audit-verify-key <public.pem>` | off | ECDSA P-256 public key (PEM): before the run starts, the anchor's signature must exist and verify, or exit 1. Needs `--audit-log`. |
+| `--journal <file.jsonl>` | off | Record this run in a run journal: one JSON line (`gridsim-journal/1`) written when the run ends, with the command line, the SHA-256 of every input file, the path and SHA-256 of every output, the exit code and the build. `breaking-change validate` re-runs these entries on a later build. It is taken off the command line before anything else reads it, so the run is byte for byte what it is without it: same stdout, stderr, exit code and output files, and a result file's `args` do not show it. Nothing is printed when the entry is written; if it cannot be written, one `warning: journal: ...` line goes to stderr and the exit code is unchanged. Many runs may write one journal at once (a lock file `<journal>.lock` beside it, which holds no data). The active file is rotated into `<name>-<first>-<last>.jsonl` at 64 MiB. A network or device path, a missing value, or the flag given twice exits 2. Not recorded: `--version`, help, `licence`, `--importLicence`, `breaking-change` and the interactive live view. The journal holds absolute paths and file names; it is a local file only. See [technical ch. 42](<../technical/0042 Run journal and breaking-change validation.md>). |
+| `--timings` | off | Time the run stage by stage, in wall-clock milliseconds. With it, a verb's `--json` result gains a final `timings` block (see [Result files](#result-files)) and a short table is printed on stderr when the run ends (`timings (wall-clock ms):`, then one line per stage). The stages are `startup` (process start to the first statement of the CLI), `parse` (case load), `build`, `assemble`, `factor`, `solve`, `write` (end of the last measured stage to the end of the run: the console report and the result document being filled and rendered; for a `--json` run it stops when the document has been rendered, so the file write itself is not in it) and `total` (process start to that instant; it also holds untimed work between the stages, such as flag checks and the licence check, so the stages add to less than it). A verb whose code path calls one solver entry point that builds, assembles, factors and solves inside it reports one combined `solve` figure, and the block says so in `stages_merged`; a stage a verb does not measure is absent and named in `stages_not_measured`. Counts the verb exposes are added (`iterations`; `solves` for `cpf`). Measured verbs: `pf`, `dcpf`, `iec60909`, `estimate`, `nminus1`, `acopf`, `dcopf`, `cpf`, `stability`, `dynamics-study`, `crossval` and `harmonics`; on any other verb the block holds `startup`, `parse` where the verb loads a case through the shared loader, `write` and `total`, and `stages_not_measured` lists the rest. The `pf` Q-limit pass count is not exposed by the solver result, so it is not reported. Without the switch every output is byte for byte what it was; with it, stdout and the result file differ only by the `timings` block, and stderr only by the table after the run. It is taken off the command line first, so a result file's `args` and the run journal do not show it. Not a reproducibility figure: the numbers are wall-clock times of this run on this machine. |
+| `--journal-snapshot` | off | With a journal, also keep a copy of each input file (and each file of a case folder) in the journal's snapshot store, `objects/` beside the journal, by SHA-256: written once, read-only, files over 256 MiB skipped. A later `validate` re-runs from the copy when the original has gone or changed. Outputs are never kept. Nothing is deleted automatically: delete `objects/` (or old objects in it) to free the space; entries whose inputs were only there then cannot be re-run. |
+| `GRIDSIM_JOURNAL=<file>` / `GRIDSIM_JOURNAL=off` | unset | The environment form of `--journal` (used when `--journal` is not given). `off` switches the journal off for the run, whatever `--journal` or the config file say. A network or device path gives a warning and no journal. |
 
 The audited verbs (`estimate`, `crossval`, `interpose`, `serve`) also write one `action=security` entry per security
 event at the point of detection, besides the run's own entry: an input refused by the horizon guard, an infeasible
@@ -337,7 +459,7 @@ service-level objective. The `audit:` line at the end counts them (`security-eve
 | `--once` | off | Bare/case/dir forms: solve once, print, exit. |
 | `--ticks N` | interactive | Bare/case/dir forms: run N headless live ticks then exit. N is at least 1: leave the flag out for the interactive loop; `--ticks 0` or a negative count exits 2. Every tick is run and printed; when any tick did not converge (`DIV`) the run ends with `error: <n> of <N> tick(s) did not converge (DIV)` and exit 3. `interpose` uses it as a frame cap. |
 | `--importLicence <file.gridsim>` | - | Install a software licence from a `.gridsim` file, then exit (see the `licence` verb and [ch. 4](<0004 Licensing and activation.md>)). Fully offline. The value must be a file path: an empty value (`--importLicence=`), a following flag (`--importLicence --once`) or no value at all exits 2 with `error: --importLicence expected a licence file path (<file.gridsim>) but got '...'`. Distinct from the DNO `--licence` distribution-area selector of `gda`. |
-| `--version` | - | Print `gridsim <version>+<commit>` (the release number and the full git commit the binary was built from) and exit 0. Answered before anything else, so it needs no licence and works alongside any other token. |
+| `--version` | - | Print `gridsim <version>+<commit>` (the release number and the full git commit the binary was built from) and exit 0. Answered before anything else but the telemetry guard (exit 78, see the exit-code table), so it needs no licence and works alongside any other token. |
 
 An unexpected internal error (a defect, not bad input) prints `gridsim: internal error ...` and the path of a crash
 log on stderr, then the process ends with the runtime's crash exit code (not 0, 1, 2 or 3). The crash log goes to
@@ -534,7 +656,7 @@ limit) and named on stderr in a `warning: screen: ...` line, because its RoCoF a
 
 ### nminus1
 
-`gridsim nminus1 [<case>] [--dir <path>] [--global-vlimits] [--outage-types branch,gen,bus] [--outage-dispatch reference|droop|inertia] [--post-fault-rating A|B|C] [--batched-lanes N]` (alias `n-1`)
+`gridsim nminus1 [<case>] [--dir <path>] [--global-vlimits] [--outage-types branch,gen,bus] [--outage-dispatch reference|droop|inertia] [--post-fault-rating A|B|C] [--batched-lanes N] [--ras <file>]` (alias `n-1`)
 
 Sequential N-1 branch outage screening on one model: each branch out in turn, re-solved, classified secure /
 violations / islanded. Default model `data/uk`; a positional case or `--dir` selects another
@@ -613,6 +735,24 @@ units shared it, how many met a limit and any MW left to the reference, for exam
 droop over 2 unit(s)`. With `--outage-dispatch` on another verb, without `gen` or `bus` in `--outage-types`, or with
 another value, it exits 2.
 
+`--ras <file>` (`nminus1` and `nminus2`) runs remedial action schemes inside each contingency. The file is a
+`gridsim-ras/1` document; [ch. 11](<0011 Contingency analysis.md#remedial-action-schemes---ras>) describes it. For each
+contingency the schemes are armed from the base case and the outage, then level by level every armed scheme whose
+triggers hold operates and the state is solved again, up to the file's `maxLevels` (default 5). The output keeps the
+screen's table (headed `Before schemes:`) and adds a second table (`After schemes:`) with the last level, the status
+after the schemes (`SECURE AFTER RAS`, `VIOLATIONS AFTER RAS`, `NOT CONVERGED AFTER RAS` or `RAS LOOP`), the final
+loading and voltages, the schemes that operated and one line per action (`ACTION SKIPPED: <reason>` for one that
+could not act). Both tables carry the screen's lost load and generation, reference-move and worsened base-case
+violation lines for their state. The verdict is judged on the state after the schemes: exit 0 only when the base case and every
+contingency are secure after them. The result file adds the summary keys `ras_schemes`, `ras_max_levels`,
+`secure_after_ras`, `violations_after_ras`, `not_converged_after_ras` and `ras_loop`, the columns `ras_fired`,
+`ras_level`, `post_ras_status`, `post_ras_max_loading_pct`, `post_ras_vmin_pu`, `post_ras_vmax_pu` and
+`post_ras_violations` on `outages`, and a `ras_actions` table (`outage,level,scheme,action,kind,element,applied,detail`;
+with `--csv`, `<stem>-ras_actions.csv`). A file that cannot be read, or that names an element the case does not have, is
+an input error (exit 1). `--ras` on another verb, with `--batched-lanes`, or with an `--outage-dispatch` other than
+`reference` exits 2. The file is an input of the run, so the run journal hashes it and `breaking-change validate`
+re-runs the job with it. Without `--ras` both verbs are unchanged.
+
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)).
 
@@ -633,6 +773,7 @@ N-1`). Results are printed worst first. Default model `data/uk`. Exit codes as f
 | `--exhaustive` | off | Enumerate every pair; use only on small cases. |
 | `--top` | 20 | Rows to print (all pairs are still screened and counted). |
 | `--post-fault-rating` | A | Judge the outage states against rating A, B or C (see [nminus1](#nminus1)). |
+| `--ras` | off | Run the remedial action schemes of a `gridsim-ras/1` file inside each pair (see [nminus1](#nminus1)). |
 | `--global-vlimits` | off | Judge every bus against the operational band 0.94-1.06 pu, ignoring the case's per-bus limits (see [nminus1](#nminus1)). `--bus-vlimits` is accepted as a no-op alias of the default. |
 | `--bus-vlimits` | on | The default (each bus against its own limits), accepted as a no-op so existing scripts keep working; with `--global-vlimits` it exits 2. |
 
@@ -854,12 +995,13 @@ exits 1. The verbs are used in [ch. 5](<0005 Running power flows.md>) (`pf`) and
 
 ### pf
 
-`gridsim pf <case> [--distributed-slack pmax|pg|equal] [--switched-shunts <file.json>] [--top 12]`
+`gridsim pf <case> [--distributed-slack pmax|pg|equal] [--switched-shunts <file.json>] [--area-interchange <file.json>] [--remote-vreg-file <file.json>] [--top 12] [--engine newton|fdxb|fdbx|gs] [--gs-accel 1.0] [--max-q-passes 100] [--q-revert] [--max-iter 100] [--diverge-limit 10|off]`
 
 One AC power flow on the engine the shared rule picks (radial sweep, dense or sparse Newton), 100 iterations with
 reactive limits on, printed: convergence, iterations, mismatch, losses, the voltage range and the `--top` lowest bus
-voltages. Two opt-in controls wrap the unchanged engine as outer loops (like the tap-changer loop), so the dense and
-sparse engines give the same bits with them too:
+voltages. Four opt-in controls wrap the unchanged engine as outer loops (like the tap-changer loop), so the dense and
+sparse engines give the same bits with them too. They nest in this order: engine, distributed slack, switched shunts,
+remote voltage, area interchange.
 
 - `--distributed-slack pmax|pg|equal`: the real-power balance (losses and any scheduling error) is shared among the
   in-service units by participation factors proportional to Pmax, to scheduled Pg, or equal, instead of all landing on
@@ -877,20 +1019,92 @@ sparse engines give the same bits with them too:
   "initialSteps": 0, "vminPu": 0.97, "vmaxPu": 1.03, "name": "C5" } ] }` (bus, stepMvar, maxSteps, vminPu, vmaxPu
   required; every key checked). The output lists each bank's steps and bus voltage. Not settled (a bank frozen outside
   its band, or 50 passes) exits 3.
+- `--remote-vreg-file <file.json>`: a PV bus holds the voltage of another bus. The controlling bus stays PV in the
+  Newton solve and its set point is moved between solves: e = target - V at the regulated bus, then a secant step on
+  that control's own history (the first step adds e), the set point kept in [0.8, 1.2] pu, until every regulated bus is
+  within 1e-8 pu of its target (30 passes at most). A controlling bus the reactive-limit loop turned PQ, at the limit
+  the target pushes against, is AT Q LIMIT and its set point is frozen. Refused (exit 1): two controlling buses for one
+  regulated bus, a regulated bus that is PV or slack, or one in another island. The file:
+  `{ "format": "gridsim-remote-vreg/1", "controls": [ { "generatorBus": 2, "regulatedBus": 3, "targetVpu": 1.0 } ] }`
+  (every key required and checked). The output lists each control as `bus 2 -> bus 3: OK` (or AT Q LIMIT, AT SET-POINT
+  LIMIT, NOT SETTLED) with the regulated voltage and the set point.
+- `--area-interchange <file.json>`: each controlled area holds its net export at the desired value by moving the units
+  at its swing bus. The export is the sum, over the in-service branches with one end in the area, of the active power at
+  the branch's metered end: as it is when that end is in the area, negated when it is not, so a tie's losses fall on the
+  area at the far end from the meter. After each solve, an area more than its tolerance off has the difference added to
+  its swing units, shared by (Pmax - Pmin) within their limits (equally when a range is zero or unbounded), and the case
+  is solved again (20 passes at most). An area whose units all reach a limit is AT LIMIT and is not moved again; that is
+  still exit 0. The area holding the slack bus cannot be controlled (exit 1): the slack absorbs the remainder. List it
+  under `reportAreas` to have its export printed. The file:
+  `{ "format": "gridsim-area-interchange/1", "areas": [ { "area": 2, "swingBus": 2, "desiredExportMw": -30,
+  "toleranceMw": 0.1, "buses": [2, 3] } ], "reportAreas": [ { "area": 1, "buses": [1] } ], "meteredEnds": [ { "from": 1,
+  "to": 2, "meteredBus": 2 } ] }` (`reportAreas` and `meteredEnds` optional; a metered end may add `name` to pick one of
+  parallel branches; an unlisted branch is metered at its from end). Area interchange and `--distributed-slack` both move
+  unit real power, so together they exit 2. The output lists each area as `area 2: OK` (or AT LIMIT, NOT SETTLED,
+  REPORTED) with its export, desired value, tolerance and the MW added.
+
+A PSS/E `.raw` case gives the same data with the global switches `--area-control` and `--remote-vreg` (giving a file as
+well exits 2).
+
+`--engine` picks the solution method by name. `newton` (or no `--engine`) is the shared rule above, unchanged. `fdxb`
+and `fdbx` are the fast-decoupled load flow, XB and BX versions, with B' and B'' built as MATPOWER's `makeB.m` builds
+them; `gs` is Gauss-Seidel as MATPOWER's `gausspf.m` iterates it (PQ buses, then PV buses, in model order), with the
+acceleration factor `--gs-accel` (1.0 is plain Gauss-Seidel). All three use Newton's convergence test (the largest P and
+Q mismatch below the tolerance, in pu) and the same reactive-limit loop, so a converged answer is the same solution as
+Newton's to the tolerance. The fast-decoupled engines take up to 100 iterations, Gauss-Seidel up to 10000. They are
+offered for comparison and for PSS/E script migration; Newton stays the recommended engine. They do not run with the
+outer-loop controls (`--distributed-slack`, switched shunts, remote voltage control, area interchange: exit 2) or on a
+case with HVDC links, FACTS devices, static var compensators or induction machines (exit 1). The fast-decoupled engines
+also refuse a branch with X = 0 (purely resistive), naming it (exit 1): both B' variants drop R from one matrix, so such a
+branch has no admittance there; Newton and Gauss-Seidel solve it. The header line names the
+engine, and the result file gains `engine` (and `gs_acceleration`); without `--engine` both are as before.
+
+The reactive-limit loop switches a generator bus from PV to PQ when its reactive output passes a limit, and solves again,
+for at most 100 passes by default. A very large case can need more: if the last permitted pass still switched a bus, `pf` reports NOT CONVERGED
+although the mismatch of that last solve is tiny, because the limits had not settled. Two flags change that. With
+`--max-q-passes <N>` (a whole number, 1 or more) the loop may run N passes. With `--q-revert` a bus that was switched to
+PQ returns to PV (once per solve) when its solved voltage shows the limit is no longer binding, so the loop settles in fewer passes (about
+half on the large synthetic cases). Both apply to every `--engine`. `--q-revert` is off unless given. Without either flag the loop runs up to 100 passes with no
+revert. A case that settles in fewer passes gives the same bytes at any cap. The two can be combined.
+
+A solve that is running away is stopped early. When the largest power mismatch of an iteration rises above both 10 pu and
+the mismatch the pass started from, `pf` stops that pass and reports `DIVERGED` instead of `NOT CONVERGED`, with the
+iteration it stopped at and the state at that point, which is not a solution. Above 10 pu the simulation is
+fundamentally broken and no starting point will fix it, so continuing to the iteration cap only spends time. The limit is
+10 pu and not lower on purpose: a run that peaks at a few pu (the synthetic 90,000-bus case peaked at 4.1 pu) is still a
+plausible but wrong state, and that state is useful evidence of an error in the model. The starting mismatch is part of
+the test because a flat start on a large case can itself be above 10 pu. `--diverge-limit <X>` sets the limit in pu
+(above 0), so a user who knows their models can lower it to save time. `--diverge-limit off` runs every pass to the
+iteration cap, as before. `--max-iter <N>` (a whole number, 1 or more) sets that cap; without it the cap is 100, and 10000
+for `--engine gs`. The stop applies to every `--engine`, but not to the backward/forward sweep that solves a radial
+feeder, which tests the voltage change and not the power mismatch. It reads only the mismatch the iteration has already computed, and
+changes no arithmetic, so a solve that converges gives the same bytes with the stop on or off. The exit status of a
+diverged run is 3, as for any run that did not converge; the result file is written only for a converged run.
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--distributed-slack` | off | `pmax`, `pg` or `equal`; any other value exits 2. |
 | `--switched-shunts` | - | A `gridsim-switched-shunts/1` file; a missing or invalid file exits 1. |
+| `--area-interchange` | - | A `gridsim-area-interchange/1` file; a missing or invalid file exits 1. |
+| `--remote-vreg-file` | - | A `gridsim-remote-vreg/1` file; a missing or invalid file exits 1. |
 | `--top` | 12 | Lowest voltages and largest slack moves to list; 0 or more (a negative value exits 2). |
+| `--engine` | newton | `newton`, `fdxb`, `fdbx` or `gs`; any other value exits 2. |
+| `--gs-accel` | 1.0 | Gauss-Seidel acceleration factor, above 0 and below 2; only with `--engine gs` (otherwise exit 2). |
+| `--max-q-passes` | 100 | The most reactive-limit (PV to PQ) passes; a whole number, 1 or more (anything else exits 2). |
+| `--q-revert` | off | A switch with no value: a bus switched to PQ may return to PV. Off keeps the one-way switching. |
+| `--max-iter` | 100 (Gauss-Seidel 10000) | The most iterations per pass; a whole number, 1 or more (anything else exits 2). |
+| `--diverge-limit` | 10 | The largest mismatch (pu, above 0) a pass may reach, above its starting mismatch, before it stops with `DIVERGED`; `off` never stops it early. Anything else exits 2. |
 
-Exit 0 converged (and shunts settled); 3 not converged or not settled; 1 on a load error or a bad file; 2 on a usage
-error (an unknown `--distributed-slack` rule, a flag of another verb).
+Exit 0 converged (and shunts, remote controls and areas settled; AT LIMIT and AT Q LIMIT count as settled); 3 not
+converged or not settled; 1 on a load error, a bad file or a refused control; 2 on a usage error (an unknown
+`--distributed-slack` rule, a flag of another verb, area interchange with `--distributed-slack`, a file and the matching
+`.raw` switch together).
 
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)): the summary (case, convergence, losses, voltage range, the slack and shunt outcome), a
 `buses` table (every bus: |V|, angle, net injection), and with the options a `slack_units` table (every participating
-unit) and a `switched_shunts` table. A solve that does not converge writes no file; unsettled shunts write the file
+unit), a `switched_shunts` table, a `remote_vreg` table (each control) and an `areas` table (each area), with the pass
+counts and settled flags in the summary. Without those options the file is exactly as before. A solve that does not converge writes no file; unsettled shunts write the file
 with exit code 3 inside.
 
 ### ptdf
@@ -1073,7 +1287,11 @@ Node-breaker topology processing (RC4 R4-11 part A, Core `GridSim.Core.Model.Sub
 `gridsim-substations/1` file: `substations` (each with `voltageLevels`, `bays`, connectivity `nodes` and `switches`, a
 switch being a `breaker`, `disconnector`, `earthSwitch` or `loadBreak` with `from`, `to` and `normalOpen`, the words of
 the asset overlay's substation records) and the equipment on the nodes: `lines`, `transformers`, `loads`, `generators`
-and `shunts`. `<case.json>` may instead be a CGMES exchange, a `.zip` or a folder of EQ, TP, SSH and SV profile files, which
+and `shunts`, and optionally `transformers3w` (three-winding transformers: `id`, the `hv`, `mv` and `lv` nodes, the pair
+impedances `r12Pu`, `x12Pu`, `r13Pu`, `x13Pu`, `r23Pu`, `x23Pu` on the model base, the star-point magnetising `bPu`, and
+optional three-entry lists `ratio`, `phaseShiftDeg` and `ratedMva`; each is projected as a star bus and three branches with
+the PSS/E reader's star impedances), and optionally `notes` (an array of strings: provenance, such as the switches an
+[scl-import](#scl-import) with `--assume-closed` took as closed; no calculation reads them). `<case.json>` may instead be a CGMES exchange, a `.zip` or a folder of EQ, TP, SSH and SV profile files, which
 Core's `CgmesSubstationReader` reads into the same node-breaker model (the inverse of [cgmes-export](#cgmes-export)); the
 SSH switch states are then the starting states, `--open` and `--close` override them, and a switch the SSH does not state is
 handled by `--unspecified`. CGMES carries no system base, so the model is read on 100 MVA (noted) unless `--base-mva` gives
@@ -1163,9 +1381,59 @@ refused, or a file cannot be written; 2 usage.
 | `--close` | none | Comma list of switch ids to close. |
 | `--unspecified` | `normal` | `normal`: a switch named in neither list takes its `normalOpen` state; `refuse`: refuse it. |
 | `--sv` | `none` | `solve` writes an SV document from a Newton-Raphson solve of the projected case. |
+| `--profiles` | none | A comma list of `dl`, `gl`, `sc` and `dy`: the bus-branch export with these profiles (below). |
+| `--geo` | none | With `--profiles gl`: the `gridsim-geo/1` sidecar holding the bus sites and line routes. |
+| `--dyr` | none | With `--profiles dy`: the PSS/E DYR file whose records are written as the DY profile. |
+| `--model` | none | `bus-branch`, with `--cgmes-version 3.0`: a bus-branch case written as CGMES 3.0 EQ, TP, SSH and SV documents (below). |
 
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)): the summary and the tables `files` and `omissions`.
+
+**Diagram, geographical, short-circuit and dynamics profiles.**
+`gridsim cgmes-export <case> --dir <folder> --profiles dl,gl,sc,dy [--geo <gridsim-geo.json>] [--dyr <file.dyr>]`
+
+With `--profiles` the input is a bus-branch case (any case file the CLI reads). It is written as `<case>_EQ.xml`, the same
+bytes `convert` writes to a `.xml` file (one CGMES 2.4.15 document with the equipment, topology, set-points and starting
+voltages), and each named profile as its own document with an `md:FullModel` header:
+
+- `dl`, `<case>_DL.xml`: one Diagram (orientation negative, y growing downwards as the single-line diagram draws it) and,
+  per bus, a DiagramObject on its TopologicalNode with one point at the bus's layout position. Refused when every bus is
+  at (0, 0).
+- `gl`, `<case>_GL.xml`: WGS 84 (`urn:ogc:def:crs:EPSG::4326`, x = longitude, y = latitude) Locations from the `--geo`
+  sidecar. A bus-branch case has no Substation to carry a location, so each line whose two buses have sites gets a
+  Location running from its from site through its route to its to site; a site that no such line touches is refused.
+- `sc`, `<case>_SC.xml`: the short-circuit data: line and transformer zero-sequence impedances in ohms, transformer
+  winding connections (D, Y, Yn) with the neutral reactance, and machine X''d, X2 and zero-sequence impedance (per unit on
+  the machine base). Each ohm value is the double GridSim's reader converts back to the model's bits; any that has none
+  is counted in a note.
+- `dy`, `<case>_DY.xml`: the `--dyr` records of GENROU, GENSAL, GENCLS, SEXS, SCRX and TGOV1 as their IEC 61970-302
+  classes, linked to their machines. The case must be a PSS/E `.raw` file (the DYR names machines by bus and ID). Any
+  other model is refused by name.
+
+`--profiles` on its own writes CGMES 2.4.15 only, and refuses `--cgmes-version 3.0` and the node-breaker options. The gridsim-geo/1
+sidecar is strict JSON:
+`{"format":"gridsim-geo/1","crs":"EPSG:4326","sites":[{"bus":1,"latDeg":51.5072,"lonDeg":-0.1276}],"lines":[{"branch":2,"points":[[51.51,-0.12]]}]}`
+(`branch` is the 1-based branch number, `points` the route between the two end sites). Reading the profiles back is a
+library step (`CgmesDiagramLayout`, `CgmesGeographicalLocation`, `CgmesShortCircuitProfile`, `CgmesDynamicsProfile`;
+see [technical ch. 32](<../technical/0032 CIM and CGMES import and export.md>)). Exit 0 done; 1 the case, the sidecar or
+the DYR cannot be read or a profile is refused; 2 usage.
+
+**CGMES 3.0 bus-branch documents.**
+`gridsim cgmes-export <case> --dir <folder> --model bus-branch --cgmes-version 3.0 [--profiles dl,gl,sc,dy] [--geo <gridsim-geo.json>] [--dyr <file.dyr>]`
+
+With `--model bus-branch` a bus-branch case (any case file the CLI reads) is written as four CGMES 3.0 documents,
+`<case>_EQ.xml`, `_TP.xml`, `_SSH.xml` and `_SV.xml`, each with an `md:FullModel` header naming its CGMES 3.0 profile and
+the models it depends on. The values are the ones the 2.4.15 document holds (the same writer, the same exact-value search),
+split by profile as the CGMES 3.0 RDFS places each attribute: equipment, terminals, limits and tap changers in EQ;
+TopologicalNodes in TP; p and q, targets, steps, `Equipment.inService` and terminal flags in SSH; starting voltages in SV.
+Every IdentifiedObject carries its `IdentifiedObject.mRID`; objects are named `urn:uuid:` identifiers. Each bus gets a
+Substation and a VoltageLevel, which CGMES 3.0 needs as the TopologicalNode's container. GridSim's CIM reader rebuilds the
+same model from the four documents as from the 2.4.15 one. Not written: the machine inertia (in 3.0 a dynamics-profile
+attribute; use `--profiles dy`), `GeneratingUnit.normalPF` (the case holds none: distributed-slack factors are a solve option, not model data) and the SV flows;
+`SynchronousMachine.type` and `operatingMode` are written as `generator`. Each omission is listed. With `--profiles` the
+named profiles are written in CGMES 3.0 too and refer to the 3.0 objects; the short-circuit profile then holds the
+machine r0, x0, r2 and x2 in ohms (on the machine's rated voltage and MVA), as CGMES 3.0 does. `--model bus-branch`
+without `--cgmes-version 3.0` is a usage error (exit 2); the 2.4.15 routes above are unchanged.
 
 ### cgmes-conform
 
@@ -1186,9 +1454,50 @@ comparator-unverified. Exit 0 when no check fails; 1 when the bundle cannot be r
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)): the summary and the table `checks` (id, name, basis, status, findings).
 
+### cgmes-shacl
+
+`gridsim cgmes-shacl <bundle.zip|folder> --shapes <folder|file> [--shapes <folder|file>] [--rdfs <folder|file>] [--profile-filter eq,tp,ssh,sv,dl,gl,sc,dy] [--report <file.csv|file.json>]`
+
+`gridsim cgmes-shacl --census <folder|file> [<folder|file> ...]`
+
+Runs SHACL shapes on a CGMES bundle with GridSim's own SHACL Core checker (no third-party library). The shapes are the
+user's: for example the ENTSO-E CGMES 3.0 files of https://github.com/entsoe/CGMES-AP (`*-AP-Con-Simple-SHACL.ttl` and
+the others) or the CGMES 2.4 sets of https://github.com/entsoe/QoCDC-AP; none ship with GridSim. Shapes and RDFS files
+are Turtle (`.ttl`) or RDF/XML (`.rdf`, `.xml`); a folder is read for those files. The checker covers targets by class
+(with the rdfs:subClassOf closure of the `--rdfs` files; without them the exact rdf:type only, said in the output), by
+node, by subject and by object; paths that are a property, an inverse or a sequence; and the constraints sh:class,
+sh:datatype, sh:nodeKind, sh:minCount, sh:maxCount, the four range bounds, sh:minLength, sh:maxLength, sh:pattern,
+sh:in, sh:hasValue, sh:node, sh:property, sh:and, sh:or, sh:not, sh:xone, sh:equals and sh:disjoint, with severity,
+message and deactivation. Every sh:sparql constraint, SPARQL-based target and other constraint is listed as NOT RUN by
+name (many ENTSO-E constraints are SHACL-SPARQL). The verdict is one of three. "conforms" means every constraint that
+applies was run and none gave a result. "does not conform" means a constraint that was run gave a result. "not
+determined" means no result was found, but a constraint that applies was not run. A constraint that holds a part not run
+(for example sh:node or sh:not of a shape with sh:closed) is decided only when that part cannot change the answer;
+otherwise it is listed as not run too. Even "conforms" covers the SHACL Core subset only and is not a conformity
+certificate. CGMES documents carry no datatypes, so an untyped value satisfies sh:datatype when its text is a
+valid value of that type. Files are read in path order and the results are sorted, so the report does not depend on the
+order the files are named in. `--report` writes every result and every constraint not run as CSV or JSON, never over an
+existing file. The exit codes are those of `cgmes-conform`: 0 conforms; 1 the shapes, the RDFS or the bundle cannot be
+read, or the report cannot be written; 2 usage; 3 no pass (the bundle does not conform, or the verdict is not
+determined).
+
+Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
+([Result files](#result-files)): the summary (`conforms`, `verdict`, the counts) and the tables `results` (severity, component, focus, path, value,
+shape, message), `not_run` (what, shape, reason) and `notes`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--shapes` | required | A shapes file or folder; may be given more than once. |
+| `--rdfs` | none | The profile RDFS (file or folder) for the rdfs:subClassOf closure. |
+| `--profile-filter` | all | Only the bundle's documents of these profiles (eq, tp, ssh, sv, dl, gl, sc, dy, eqbd, tpbd). |
+| `--report` | none | Write the report to this new `.csv` or `.json` file. |
+| `--census` | none | Read only the shapes named after it and list every SHACL feature they use: the count of each, whether the checker runs it, is inert (labels, targets, the path) or does not run it, the number of `sh:sparql` constraints and SPARQL targets, and the path forms. Exit 0 read; 1 unreadable; 2 usage. The result files hold the summary and the table `features`. |
+
 ### line-constants
 
 `gridsim line-constants <geometry.json> [--length-km <km> --base-kv <kV> --base-mva <MVA>]`
+
+`gridsim line-constants --cable <cables.json> [--length-km <km> --base-kv <kV> --base-mva <MVA>]`
 
 Overhead line constants from conductor geometry (Core `GridSim.Core.Lines`): the series impedance and potential
 coefficient matrices of the cross-section, reduced to what a power-flow or fault study needs. `<geometry.json>` is a
@@ -1233,11 +1542,69 @@ still printed and written).
 | `--length-km` | - | Line length for the per-unit values (km). Needs `--base-kv` and `--base-mva`. |
 | `--base-kv` | - | Base voltage for the per-unit values (kV). |
 | `--base-mva` | - | Base power for the per-unit values (MVA). |
+| `--cable` | - | Read a `gridsim-cableconstants/1` file of buried single-core cables instead of an overhead geometry (see below). |
 
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)): the summary (method, frequency, sequence constants, tail bound and, when asked, the
 per-unit values) and one table per stage (`primitive_z`, `primitive_p`, `phase_z`, `phase_c`, `transposed_z`,
 `transposed_c`), each as `row`, `col`, value rows.
+
+#### Single-core cables (`--cable`)
+
+With `--cable <cables.json>` the verb solves buried single-core cables, each with a core, an optional metallic sheath and
+an optional armour, instead of an overhead line. The file is a strict `gridsim-cableconstants/1` document:
+
+```json
+{
+  "schema": "gridsim-cableconstants/1",
+  "earth": "wedepohl",
+  "bonding": "both",
+  "frequency_hz": 50,
+  "earth_resistivity_ohm_m": 100,
+  "transposed": true,
+  "cables": [
+    {"name": "A", "x_m": -0.1, "depth_m": 1.0, "outer_radius_m": 0.0365,
+     "conductors": [
+       {"inner_radius_m": 0, "outer_radius_m": 0.0145, "resistivity_ohm_m": 1.72e-8,
+        "insulation": {"relative_permittivity": 2.5, "loss_tangent": 0.0004}},
+       {"inner_radius_m": 0.0315, "outer_radius_m": 0.0325, "resistivity_ohm_m": 2.83e-8,
+        "insulation": {"relative_permittivity": 2.3}}]}
+  ]
+}
+```
+
+Each cable lists its conductors from the inside out: the core first (an `inner_radius_m` of 0 is a solid core, above 0 a
+hollow one), then the sheath, then the armour. `insulation` is the layer outside that conductor; it runs to the next
+conductor's inner radius, or to `outer_radius_m` for the outermost layer, so every cable needs an outer jacket.
+`relative_permeability` (conductor or insulation) defaults to 1 and `loss_tangent` to 0. A stranded core is entered with
+the resistivity that gives its DC resistance on the stated radius. Semiconducting screens count as part of the
+insulation: enter a permittivity already corrected for them if a correction is wanted. `depth_m` is the depth of the
+cable's centre below the surface.
+
+The calculation follows Ametani's general formulation (IEEE Trans. PAS-99, 1980) and the cable constants chapter of the
+EMTP Theory Book. Each conductor's surface impedances are Schelkunoff's, with the modified Bessel functions of complex
+argument computed natively; the loop impedances (core to sheath, sheath to armour, outermost layer to earth) are
+transformed to the conductor matrix; the insulation gives C = 2 pi eps0 eps_r / ln(r_o / r_i) and G = omega C tan(delta)
+per layer. `earth` picks the earth-return formula: `wedepohl` is Wedepohl and Wilcox's closed form, which is accurate
+while |m_e| times the larger of the spacing and the depth sum is small (a warning is printed above 0.05, where its error
+reaches about 0.1%); `pollaczek` is the exact Pollaczek integral by fixed-order quadrature, with its truncation bound
+reported. `bonding` is `both` (sheaths and armour earthed at both ends and eliminated by Kron reduction), `single` (bonded
+at one point: no current in the metallic layers) or `cross` (ideal cross-bonding: the impedance averaged over the three
+positions each metallic layer takes along a major section, then eliminated; three cables with the same metallic layers:
+a sheath, and an armour on all or none). In every
+case the metallic layers are at earth potential for the capacitance, so the phase C and G are those of the core
+insulation. `transposed` (default true) works as for overhead lines.
+
+Every stage is kept: the primitive Z and P over every conductor, named `<cable>.core`, `<cable>.sheath` and
+`<cable>.armour`; the conductor admittance (`conductor_y`, G and B in S/km); the bonded phase Z, C and G (`phase_g`); the
+transposition average and the sequence constants. The summary adds `earth`, `bonding`, `cables`,
+`wedepohl_argument_max` and `warnings`. Exit codes are as for overhead lines; a cable that overlaps another, lies above
+ground, has layers out of order, or a cross-bonded system that is not three cables with the same metallic layers, exits 1
+naming it.
+Scope: single-core cables in homogeneous earth. Pipe-type and three-core cables are not modelled, and there is no
+proximity effect between cables beyond the earth-return coupling. The values are verified against closed forms (the DC
+resistance, the skin-effect asymptote, the coaxial capacitance) and against an independent 30-digit mpmath calculation of
+the same formulas; no published worked example with complete data was available to compare against.
 
 ### dgs-import
 
@@ -1282,6 +1649,49 @@ an output exists or nothing could be imported; 2 usage; 3 with `--strict` when t
 | `--accept-unconfirmed` | off | Use attribute mappings whose name or meaning no public source confirms (each use is listed). |
 | `--strict` | off | Exit 3 when any object was refused or any class is unsupported (the files are still written). |
 
+### scl-import
+
+`gridsim scl-import <file.scd> --params <params.json> --out <case.substations.json> [--assume-closed]`
+
+Imports the substation section of an IEC 61850 SCL file (an SSD, SCD or any other SCL file; Core `GridSim.Core.IO.Scl`)
+into the node-breaker model of [substation-state](#substation-state) and writes it as a `gridsim-substations/1` file. SCL
+describes topology and equipment, not electrical values, so impedances and set points come from a `gridsim-scl-params/1`
+file keyed by SCL path. See [technical ch. 45](<../technical/0045 IEC 61850 SCL substation import.md>).
+
+What is imported: each `ConnectivityNode` becomes a node (its id is the `pathName`); a `CBR` becomes a breaker and a `DIS`
+a disconnector, or an earth switch when one terminal is grounded; `LIN` and `CAB` become lines (one piece with two
+terminals, or the two one-terminal halves a file holds for a line between substations); `GEN` becomes a generator and
+`IFL` an external grid (a slack generator); a `PowerTransformer` with two windings becomes a transformer and with three a
+three-winding transformer. `CTR` and `VTR` are kept as measurement points and play no part in the topology; a current
+transformer with two terminals sits in series, so its two nodes are merged into one. Loads are not in SCL: they come from
+the params file, at a node's `pathName`. Every other type code is refused by name, and so is the whole import: leaving out
+a capacitor or a motor would change the network. The SCL substation section holds no switch state, so every switch needs
+its state (`normalOpen`) in the params file: a switch without one is refused, each named. With `--assume-closed` such a
+switch is taken as closed instead, listed in the report and recorded in the written file's `notes`. A current transformer
+whose two terminals are in different voltage levels is refused (it has no ratio to join them).
+
+The Communication, IED and DataTypeTemplates sections are read past and counted. GOOSE control blocks are listed by name
+only. Elements of the substation section that are not read (`Function`, `LNode`, `GeneralEquipment`, `SubEquipment`,
+`TapChanger`, `Private`, ...) are listed as NOT IMPORTED with their count. Any such element that holds conducting
+equipment or a power transformer (a `Function` or `SubFunction` may) is refused, as is a top-level `Line` or `Process`
+section that holds equipment: that equipment would otherwise be lost. The params file's values are range-checked: `vPu`
+and `tapRatio` above 0, a branch impedance not exactly 0, ratings at least 0, `qMinMvar` not above `qMaxMvar` and
+`pMinMw` not above `pMaxMw`.
+
+The file is untrusted XML: a file with a DTD (so any entity, internal or external) is refused, elements may nest at most
+64 deep, and the file size is capped like every other input file.
+
+The report (mapped, measurement points, NOT IMPORTED, read past, GOOSE control blocks, notes) is printed, with the bus and
+branch count of the projection at the imported switch states. The output is never an existing file. Not on the shared
+`--json`/`--csv` writer. Exit 0 imported; 1 the SCL file or the params file is refused or unreadable, or the output cannot
+be written; 2 usage (a missing flag, or an output that already exists).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--params` | required | The `gridsim-scl-params/1` file: lines, transformers, three-winding transformers, generators, infeeds, loads and switch states. |
+| `--out` | required | The `gridsim-substations/1` file to write (never an existing one). |
+| `--assume-closed` | off | Take a switch with no state in the params file as closed instead of refusing it; each is listed and recorded in the output file's `notes`. |
+
 ### dist3ph-mesh
 
 `gridsim dist3ph-mesh <case.json> [--steps <steps.json>] [--warm-start] [--tol <A>] [--max-iter <N>] [--scale <F>] [--pin-floating] [--hold-taps]`
@@ -1294,7 +1704,9 @@ any topology (rings included) with every conductor a named wire (a, b, c, n, l1,
 of each branch (a four-wire line is 4x4, neutral included, nothing pre-reduced), explicit earthing and loads by connection. A
 radial case agrees with `dist3ph` within a stated tolerance (a different algorithm, so not bit identity); `dist3ph` is not replaced.
 Units are SI: volts to earth, ohms, siemens, volt-amperes, amperes. `<case.json>` is a strict `gridsim-dist3ph-mesh/1` document
-(an unknown or missing key, a duplicate key or a wrong type exits 1 naming it):
+(an unknown or missing key, a duplicate key or a wrong type exits 1 naming it). The licence's bus limit applies to it as to
+every network, one bus per node of `nodes` (two for a `swer` case): a case over the limit is refused with exit 2 before it
+is solved, as `--from-dist3ph` refuses a feeder. An example:
 
 ```json
 {
@@ -1699,7 +2111,7 @@ each secured (outage, branch) pair adds the post-outage flow through the line ou
 GridSim's own sparse two-phase simplex. By default the pairs enter the LP only once the dispatch breaks them (constraint
 generation; each round re-solves with the broken limits added, until none is broken by more than 1e-6 MW); `--full-lp`
 puts every pair in from the start and gives the same optimal cost. The DC model is that of `dcopf`, `ptdf` and `lodf`
-(series reactance only). See technical chapter 29 for the formulation and its validation.
+(series reactance with tap ratios, phase shifts and bus shunt conductance, as MATPOWER `makeBdc`). See technical chapter 29 for the formulation and its validation.
 
 Outages: `all` (the default) secures every in-service branch whose outage leaves the network connected; outages that
 would island it are listed and not secured. A comma list of branch indices (from 0) secures those; a listed outage that
@@ -1732,6 +2144,354 @@ Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file
 `lp_iterations`, `full_lp`) and the tables `dispatch` (`unit,bus,name,p_mw,marginal_cost_per_mwh`), `prices`
 (`bus_id,lmp_per_mwh`), `binding` (`branch,name,contingency,flow_mw,rate_mw`; contingency -1 is the intact network) and
 `islanding_outages` (`branch`). A run with no secure dispatch writes no result file.
+
+### acopf-opt
+
+`gridsim acopf-opt <case> [--objective cost|losses|rpo] [--controls <file.json>] [--rounding flip|neighbours] [--max-iter 150] [--out <file.csv|file.json>]`
+
+The AC optimal power flow of [`acopf-full`](#acopf-full) (the same MIPS interior point method, copied, not changed)
+with a choice of objective and with continuous transformer taps and bus shunts as controls (`AcOpfExtended`).
+`cost` minimises the units' polynomial cost curves, as `acopf-full`. `losses` minimises the sum of the units' output,
+which is the losses plus the fixed demand (a linear cost of 1 per MW on every unit). `rpo` (reactive power optimisation)
+is `losses` with every unit that is not at a slack bus held at its case output, so the controls are the units' reactive
+output (through the voltages), the taps and the shunts. `losses` and `rpo` accept units with no cost curve; `cost`
+still refuses them. With no controls file, `cost` gives the same bits as `acopf-full`.
+
+The controls file (`gridsim-opf-controls/1`, every member checked, all optional):
+
+```
+{ "format": "gridsim-opf-controls/1",
+  "taps": ["T1", "T2"],
+  "shunts": [ { "bus": 2, "bMinMvar": 0, "bMaxMvar": 100, "stepMvar": 10, "initialMvar": 0 } ] }
+```
+
+`taps` lists transformers by their unique branch name, or is the word `"oltcs"` for every OLTC of the case. A tap's
+range and step come from its OLTC record, else 0.9 .. 1.1 in steps of 0.0125; the variable is 1/tau on the from side
+(the MATPOWER branch model). A shunt adds a susceptance (MVAr at 1 pu, capacitive positive) to the bus's own case shunt.
+
+`pst` adds phase-shifter angle controls, one per branch, after the shunts:
+
+```
+"pst": [ { "branch": "PS1", "minDeg": -30, "maxDeg": 30, "stepDeg": 1 } ]
+```
+
+The angle is the MATPOWER shift (positive as SHIFT) in degrees. `minDeg` and `maxDeg` default to the range of the
+branch's active power flow control (PSS/E COD 3) and are needed when it has none; `stepDeg` defaults to that control's
+step, else 0, which means the angle is continuous and is not rounded. The branch keeps its case tap ratio, and a branch
+cannot have a tap control as well. An optional `"kind": "pst"` member is accepted.
+
+After the continuous optimum each control is rounded to its grid (tau = MinTap + n step, B = bMinMvar + n step), to the
+nearest point; a tie goes to the point nearer the case value (`initialMvar` for a shunt), then to the lower. The controls
+are then fixed and the same objective is solved again. If that does not converge or breaks a limit, each control in
+turn (taps first, in file order) is flipped to its other neighbour, and the first flip that converges within every limit
+is kept. If none does, the run prints `rounded point infeasible` and the continuous optimum. This is a stated heuristic,
+not a mixed-integer optimum.
+
+`--rounding neighbours` solves every floor/ceil combination of the discrete controls instead (2^n solves for n controls
+with two neighbours, in Gray-code order) and keeps the best feasible one; a tie goes to the lowest combination index.
+More than 12 discrete controls are refused. The result is optimal over the floor/ceil neighbours of the continuous
+optimum. It is not a global mixed-integer optimum. It ends `BestNeighbour`, or `NoNeighbourFeasible` (exit 3) when no
+combination is feasible, and the result table gains `rounding_mode`, `rounding_combinations` and
+`rounding_combination` in its summary.
+
+Prints the continuous optimum (objective, generation, load, losses, every unit's P and Q, every control's value, the
+binding limits), the rounding of each control, how the rounding ended and the discrete re-solve. Exit 0 done. Exit 1 for
+a case or controls file it refuses (the reasons of `acopf-full`, an unknown member or name, a branch that is not a
+transformer, crossed ranges). Exit 2 for an unknown `--rounding` mode. Exit 3 when the continuous optimum does not
+converge (the iteration log is printed on stderr, no dispatch is shown) or the rounded point is infeasible.
+
+When the continuous optimum fails, stderr names the status: `acopf-opt: not converged: ...` (the iteration cap),
+`acopf-opt: numerical failure: ...` (the iteration broke down), or `acopf-opt: no solution: likely infeasible: ...`.
+The last is status `Infeasible`: the run broke down after the feasibility measure stayed above its tolerance and above
+half its value of four iterations before while the complementarity grew. That is the signature an interior point
+method shows on a problem with no feasible point. It is evidence of infeasibility, not a proof. The message gives the
+iterations and values of that window, the reason the iteration stopped, and the inequality constraints with the largest
+final multipliers (at least a thousandth of the largest, eight at most), which are usually the ones in conflict. An
+independent phase-1 solve (for example raising the ratings until a solution exists) confirms it.
+
+Result files: `--json <file.json>` or `--csv <file.csv>` write the result to a file through the shared writer ([Result files](#result-files)): the `summary` rows as summary values and every row of the result table as the table `rows` (record, element, field, value). `--out` is unchanged: it still names its own result table, not a shared-writer file.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--objective` | cost | `cost`, `losses` or `rpo`. |
+| `--controls` | none | A `gridsim-opf-controls/1` file of taps, shunts and phase-shifter angles to optimise. |
+| `--rounding` | flip | `flip` (nearest point, then one flip at a time) or `neighbours` (the best floor/ceil combination, at most 12 controls). |
+| `--max-iter` | 150 | Iteration cap of each interior point solve; at least 1. |
+| `--out` | none | Write the result table (`record,element,field,value`) as CSV, or as JSON for a `.json` file. |
+
+### acscopf
+
+`gridsim acscopf <case> [--mode preventive|corrective] [--ramp-mw <MW> | --ramp-file <file.json>] [--contingencies all|<i,j,...>] [--outages <file.json> | --n2 pairs|<file.json> [--max-outages 5000]] [--post-rating A|B|C] [--objective cost|losses] [--max-rounds 20] [--max-iter 150] [--out <file.csv|file.json>]`
+
+AC security-constrained optimal power flow (`AcScopf`). The base case and each secured branch outage are network
+blocks of one stacked AC-OPF, solved by the MIPS interior point method of `acopf-full`. Preventive: every unit not at a
+slack bus keeps its base-case output after the outage. Corrective: each such unit may move by at most its ramp
+(`--ramp-mw` for every unit, or `--ramp-file`, `{"format": "gridsim-opf-ramps/1", "rampMw": [...]}` with one ramp per
+in-service unit). Slack-bus units take the change in losses; reactive output and voltages are free within their limits
+in every block (post-outage voltage control is allowed). The objective is the base case's. Post-outage branch limits use
+the rating rule of [`scopf`](#scopf).
+
+Outages enter by constraint generation: after each solve every listed outage not yet in the problem is screened with an
+AC Newton power flow (the base-case dispatch, the base-case voltages as set-points, reactive limits on, the slack taking
+the losses); every outage that does not converge, breaks a post-outage rating by more than 1e-6 MVA or a voltage limit
+by more than 1e-6 pu is added, in index order, and the problem is solved again from scratch, until none is added. An
+outage that islands the network is listed and not secured. Then every secured outage is screened again at the final
+dispatch (in corrective mode with its block's unit outputs). Its block let the unit voltages move after the outage and
+the screen holds them, so one can still fail; the run then ends `SecuredOutageFailsScreen`, naming those outages.
+
+Generator and N-2 outages: `--outages <file.json>` reads a list of outages, each removing branches, units or both:
+
+```
+{ "format": "gridsim-scopf-outages/1",
+  "outages": [ { "branches": [3, 4], "name": "double circuit" }, { "generators": [1] }, { "branches": [2], "generators": [0] } ] }
+```
+
+Branches are indices into the case's branch list and units into its in-service unit list, both from 0. In a block the
+removed units' P and Q are held at 0 and have no coupling row. Their output is shared by governor droop: each remaining
+synchronous unit with a dispatch range takes a fixed share in proportion to its effective MVA base (its MBASE, or the
+system base when it has none), held there (preventive) or within its ramp
+of it (corrective), and the units at the reference bus take their own share and the change in losses. Each unit's limits
+hold after the outage, so it keeps room for its share. An outage of every unit at a slack bus moves the reference to the
+bus of the largest remaining unit; taking out every unit is refused. Power-flow-only units and converter-interfaced
+units (wind, solar, battery) take no share, as in the contingency screen's governor-droop mode. The screen of an outage that removes a unit shares
+the output the same way, and fails when a unit's share takes it outside its range or the reference bus's P or Q leaves
+its units' range.
+`--n2 pairs` makes every pair of the `--contingencies` branches (or of every in-service branch) in index order; more than
+5000 pairs are refused unless `--max-outages` raises the cap. `--n2 <file.json>` reads an outage file whose every entry
+is a pair of branches. With either flag the outage numbers in the output are positions in the list, and the result
+table gains an `outage` / `label` row for each.
+
+Prints each round (outages in the problem, iterations, objective, outages added), the secured, screened-ok and islanding
+outages, the base-case optimum, each secured block's dispatch and binding limits, and the binding ramp limits. Exit 0
+optimal. Exit 1 for input it refuses (a bad outage list, outage file or ramp file, an outage of every unit, a pair
+count above the cap, the reasons of `acopf-full`). Exit 2 for `--outages` with `--n2` or `--contingencies`, or
+`--max-outages` without `--n2`. Exit 3 when a solve
+does not converge, the round cap is reached or a secured outage fails its screen at the final dispatch; no dispatch is
+printed.
+
+Result files: `--json <file.json>` or `--csv <file.csv>` write the result to a file through the shared writer ([Result files](#result-files)): the `summary` rows as summary values and every row of the result table as the table `rows`; a run that is not optimal writes nothing. `--out` is unchanged: it still names its own result table, not a shared-writer file.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--mode` | preventive | `preventive` or `corrective`. |
+| `--ramp-mw` | none | Corrective: the ramp (MW) of every unit. |
+| `--ramp-file` | none | Corrective: a `gridsim-opf-ramps/1` file with one ramp per in-service unit. |
+| `--contingencies` | all | `all`, or a comma list of branch indices (from 0). With `--n2 pairs`, the branches to pair. |
+| `--outages` | none | A `gridsim-scopf-outages/1` file of outages (branches, units or both) in place of `--contingencies`. |
+| `--n2` | none | `pairs` (every pair of the listed branches) or a `gridsim-scopf-outages/1` file of branch pairs. |
+| `--max-outages` | 5000 | With `--n2`: the most pairs allowed. |
+| `--post-rating` | A | The rating after an outage: A, B or C (A where B or C is not given). |
+| `--objective` | cost | `cost` or `losses` of the base case. |
+| `--max-rounds` | 20 | The most solves constraint generation may take; at least 1. |
+| `--max-iter` | 150 | Iteration cap of each interior point solve; at least 1. |
+| `--out` | none | Write the result table as CSV, or as JSON for a `.json` file. |
+
+### reconfig
+
+`gridsim reconfig <case> [--switchable <i,j,...>] [--respect-ratings] [--min-gain-mw 1e-6] [--max-swaps 100] [--out <file.csv|file.json>]`
+
+Distribution feeder reconfiguration for loss reduction by branch exchange, best improvement (`FeederReconfiguration`;
+Civanlar et al. 1988, Baran and Wu 1989). The start is the case's in-service branches, which must be radial and connected
+(a meshed or disconnected start is refused, naming the loop or the bus). The switchable branches are every branch that
+is not a transformer, or `--switchable` (a transformer there is refused). Each pass tries, for every open switchable
+branch in index order, closing it and opening each in-service switchable branch on the loop it makes, in index order;
+each trial is solved by the backward/forward sweep of `pf` and rejected if it does not converge, a bus falls below its
+lower voltage limit (else 0.94 pu) or, with `--respect-ratings`, a branch is above RATE_A. The trial of lowest loss is
+taken (a later one wins only when lower by more than 1e-9 MW, so ties go to the lower closed, then opened, index), and it
+stops when the best saving is below `--min-gain-mw` or at `--max-swaps`. Branch exchange is a local search: the result
+is not guaranteed to be the global optimum. Balanced feeders only (not `dist3ph`). A MATPOWER `.m` case is read with
+its out-of-service (status 0) branches kept as open switches (every other verb drops them), so the tie switches of the
+published feeders, such as case33bw's branches 33 to 37, are there to close.
+
+Prints the base losses, each swap (closed, opened, losses after), the final open branches, losses and minimum voltage.
+Exit 0 done. Exit 1 for a start or switchable list it refuses.
+
+Result files: `--json <file.json>` or `--csv <file.csv>` write the result to a file through the shared writer ([Result files](#result-files)): the `summary` rows as summary values and every row of the result table as the table `rows`. `--out` is unchanged: it still names its own result table, not a shared-writer file.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--switchable` | every non-transformer branch | A comma list of branch indices (from 0) that may be switched. |
+| `--respect-ratings` | off | Reject a configuration with a branch above RATE_A (no value). |
+| `--min-gain-mw` | 1e-6 | Stop when the best swap saves less than this (MW). |
+| `--max-swaps` | 100 | The most swaps to make; reaching it is reported. |
+| `--out` | none | Write the result table (`record,element,field,value`) as CSV, or as JSON for a `.json` file. |
+
+### dist-opt
+
+`gridsim dist-opt <case> --mode capplace|vvo|phase-balance [--params <file.json>] [--out <file.csv|file.json>]`
+
+Distribution optimisation in three modes. Each is deterministic: every search runs in a fixed order, uses no random
+numbers, and gives ties to the lowest index. The settings come from a `gridsim-distopt/1` JSON file (`--params`), which
+is read strictly: an unknown member, or a section for another mode, is refused by name.
+
+- `capplace`: shunt capacitor placement and sizing on a balanced case. The objective (after Grainger and Lee, IEEE
+  Trans. PAS-100(3), 1981) is the annual loss cost (losses x `energyCostPerMwh` x `hoursPerYear`) plus the capital cost
+  (`fixedCostPerBank` per installed bank plus `costPerMvar` per Mvar). Each candidate bus has a list of bank sizes in
+  Mvar, starting at 0 (`candidates`, or `defaultStepsMvar` for every PQ bus). A bank is a constant admittance added to
+  the bus shunt. The search is a heuristic: greedy by marginal benefit (each round tries every candidate at its next
+  size with a full Newton power flow and keeps the best), then a confirmation over every combination of one size down,
+  no change or one size up on the buses holding a bank (3^m power flows). Above 8 banks the confirmation covers the 8
+  the greedy search changed last, and the result lists the others as `unconfirmed`. A case with an OLTC or a
+  transformer flow control is refused (the trial power flows do not regulate them).
+- `vvo`: volt/VAr optimisation over the case's OLTC taps (`taps`, by transformer name; default every OLTC) and
+  switched capacitor banks (`capacitors`: name, bus, Mvar, starting state). The objective is `losses` or `demand`
+  (conservation voltage reduction: the real power the ZIP loads draw at their solved voltages), with every bus voltage
+  in its band. A tap moves on the grid MinTap + k x StepPu; an OLTC with an impedance correction table takes its R and
+  X from the table at each trial ratio. Every OLTC of the case must be among `taps`, and a transformer flow control is
+  refused, since the trial power flows do not regulate them. Discrete coordinate descent in a fixed order (taps, then
+  capacitors), then the same neighbour confirmation over every control (refused above 8 controls unless `confirm` is
+  false). The result is a local discrete optimum.
+- `phase-balance`: moves single-phase loads between phases on a `dist3ph-mesh` case file. The proxy objective is the
+  largest deviation of a phase's real power from the mean. When there are at most 3^12 = 531 441 assignments (the
+  product of each movable load's allowed phase count), all are searched (the lexicographically smallest best assignment
+  wins); above that, greedy, largest load first, a load to the lightest phase and a generating load to the heaviest. One `dist3ph-mesh` solve before
+  and one after report the head-branch neutral current and the voltage unbalance factor at the head node.
+
+In `capplace` and `vvo`, trials are compared on the total voltage violation first, then the objective, so an
+infeasible start first moves into the band. The bus limits are the case's own where it has them, else `vminPu` and
+`vmaxPu` (default 0.95 and 1.05). The `common` section sets `vminPu`, `vmaxPu`, `tolerancePu` (Newton, default 1e-10),
+`maxIterations` (30), `confirm` (true) and `maxRounds` (100). It is not read by `phase-balance`, whose section is
+`phaseBalance`: `movable` (load names, each with optional `phases`), `phases` (default a, b, c), `headBranch` and
+`neutralWire` (default n).
+
+Prints each step, the result and how the search ended. Exit 0 done. Exit 1 for a file or setting it refuses. Exit 3 when
+the result is outside the voltage band, the search stopped at its round cap, or a `phase-balance` solve did not converge.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--mode` | none (required) | `capplace`, `vvo` or `phase-balance`. |
+| `--params` | none | The `gridsim-distopt/1` settings file. |
+| `--out` | none | Write the result table (`record,element,field,value`) as CSV, or as JSON for a `.json` file. |
+
+### long-term
+
+`gridsim long-term <case> <long-term.json> [--out <long-term.csv>]`
+
+Long-term (quasi-steady-state) simulation. The fast dynamics are replaced by their equilibrium, a power flow with one
+system frequency, and the slow elements are stepped with a fixed step: AGC, tap changer timers and recovering loads. See
+[technical ch. 43](<../technical/0043 Long-term dynamics.md>) for the equations.
+
+The input is strict JSON with `schema` `gridsim-long-term/1`:
+
+- `stepSeconds` and `durationSeconds` (a whole number of steps).
+- `units`: the governed units, each `generator` (index in the case's in-service generators, or a unique name), `droopPu`
+  and optional `mbaseMva`.
+- Optional `loadDampingMwPerHz` (D, default 0).
+- Optional `agc`: `kiPerSecond`, `units` (each `generator` and `participation`), optional `biasMwPerHz` (default the
+  natural response beta) and `rateLimitMwPerSecond`.
+- Optional `oltcTimers`: each `transformer` (the name of a tap changer of the case), `firstDelaySeconds` and
+  `nextDelaySeconds`.
+- Optional `loads`: each `bus`, `tpSeconds`, `tqSeconds`, `alphaS`, `alphaT`, `betaS`, `betaT` (the transient exponents
+  0, 1 or 2).
+- Optional `events`: `branchTrip` (`branch`), `generatorTrip` (`generator`), `loadStep` (`bus`, `pMw`, `qMvar`) and
+  `setPoint` (`generator`, `pMw`), each with `atSeconds` after 0. An event lands on the first step at or after its time.
+- Optional `equilibriumToleranceMw` (1e-6), `powerFlowTolerancePu` (1e-10) and `maxEquilibriumPasses` (30).
+
+Prints the step, the natural response, the end state, the lowest voltage, the tap moves and each event as applied, and
+writes one CSV row per step: `t_s`, `df_hz`, `min_v_pu`, `min_v_bus`, the AGC set point change of each AGC unit, the tap
+of each timed tap changer, P and Q of each recovering load, the equilibrium passes, the residual and the events applied at
+that step. `--out` names the CSV (default `long-term.csv` beside the input); an existing file is never overwritten. The
+CSV is the result file: the verb is not on the shared `--json`/`--csv` writer.
+
+Exit 0 when the run reaches its end. Exit 1 for a case or input it cannot read or refuses. Exit 2 for usage. Exit 3 when
+an equilibrium power flow fails and the run stops ("loss of short-term equilibrium" with the time), or when GridSim's
+own frequency loop does not settle within `maxEquilibriumPasses` ("numerical failure" with the time: raise the cap or
+the tolerance).
+
+### qv-modal
+
+`gridsim qv-modal <case> [--modes 5] [--out <file.json>]`
+
+QV modal analysis (Gao, Morison and Kundur, IEEE Trans. PWRS 7(4), 1992; Kundur section 14.3) at the case's Newton power
+flow (the shared engine rule, 100 iterations, reactive limits on, as `pf`). The power-flow Jacobian is reduced to the
+reactive-power and voltage relation at the PQ buses, J_R = J_QV - J_Qtheta J_Ptheta^-1 J_PV (a PV bus held at a reactive
+limit counts as PQ), and its eigenvalues are found with the general real eigen solver that `modal-full` uses. Each mode
+prints its eigenvalue and the ten buses with the largest participation factor (P_k = left_k x right_k, scaled so a mode's
+factors sum to 1). An eigenvalue above 0 is voltage stable, below 0 unstable, and near 0 close to the voltage stability
+limit; the bus with the largest participation is where that mode is weakest. See
+[technical ch. 29](<../technical/0029 OPF, CPF, taps, distribution factors and loss allocation.md>).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--modes` | 5 | How many modes to report, smallest absolute eigenvalue first; a whole number of 1 or more. |
+| `--out` | none | Write the result as JSON (`gridsim-qv-modal/1`: the PQ buses and, per mode, the eigenvalue and every bus's participation); an existing file is never overwritten. |
+
+The JSON from `--out` is the result file: the verb is not on the shared `--json`/`--csv` writer. Scope: the standard
+power-flow Jacobian only (reactive limits as solved, no dynamic models, no branch or generator participation). A case
+with HVDC links, FACTS devices, static var compensators or induction machines is refused: the reduced Jacobian is built
+from the network alone, so it would describe a different system.
+
+J_R is not symmetric, so a stable state can have complex pairs of eigenvalues; each mode is judged on its real part, and
+a complex mode prints as `a + jb`. Exit 0 when every reported eigenvalue has a positive real part. Exit 3 when the power
+flow does not converge or a reported eigenvalue has a real part of 0 or below. Exit 1 for a case that cannot be loaded
+or analysed (a singular J_Ptheta, a defective J_R, or a case with the coupled devices above). Exit 2 for usage.
+
+### reduce
+
+`gridsim reduce <case> --keep <ids|file> --method ward|xward|rei [--rei-groups gen|gen,load] [--out <case.m|case.json>]`
+
+`gridsim reduce <case> --keep <ids|file> --method sc [--out <case.json>]`
+
+`gridsim reduce <case> --method dynamic --groups <file> | --coherency <r> --xdp <pu> [--out <case.m|case.json>]`
+
+A static network equivalent (`NetworkReduction`, `GridSim.Core.PowerFlow.Equivalents`): the buses named by `--keep` stay
+as they are and every other bus (the external network) is replaced by elements on the boundary, the kept buses with a
+branch to an external bus. `ward` is the Ward equivalent: equivalent branches, shunts and constant-power injections.
+`xward` is the extended Ward: Ward plus one voltage-controlled source per boundary bus standing in for the external PV
+buses. `rei` is the REI equivalent: the external generators (and, with `--rei-groups gen,load`, the external loads as a
+second group) are moved to one fictitious bus per group through a zero-power-balance network, then Ward. The base case is
+solved with reactive limits off and a 1e-10 pu tolerance; the reduced case is solved from a flat start with the same
+options. See [technical ch. 40](<../technical/0040 Network equivalents.md>) for the equations and the error bounds.
+
+Prints the boundary, each element (pu on the system base), the notes (what was removed and not carried) and the base-case
+check, the largest |V_reduced - V_full| at the boundary. `--out` writes the reduced case as MATPOWER (`.m`) or a v2 JSON
+case (`.json`) through the existing writers, never over an existing file; each writer keeps its own rules (a v2 JSON
+case needs every bus base kV above 0, so a case such as case14 with base kV 0 is written as `.m`). Refused, naming the element: a slack bus outside
+the kept set, an external network not connected to the boundary, a phase shifter in the external network (the equivalent
+is not reciprocal), a ZIP load, HVDC, FACTS, SVC, induction machine, OLTC, flow control or boundary touching the external
+network, and a kept set that is empty or holds every bus. Exit 0 done. Exit 1 for a case it cannot load or a reduction it
+refuses. Exit 3 when the base case or the reduced case does not converge.
+
+Result files: `--json <file.json>` or `--csv <file.csv>` write the result to a file through the shared writer ([Result files](#result-files)): the summary (case, method, bus counts, the base-case check), the tables `elements` (kind, name, buses, real and imaginary part in pu), `boundary` and `notes`. `--out` is unchanged: it still names the reduced case, not a shared-writer file.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--keep` | required | The bus ids to keep: a comma list (`1,2,3,4,5`) or a file of ids separated by commas, spaces or new lines. Not used by `dynamic`. |
+| `--method` | required | `ward`, `xward` (extended Ward), `rei`, `sc` (short-circuit equivalent) or `dynamic` (coherency-based dynamic equivalent). |
+| `--rei-groups` | `gen` | REI only: `gen` (one group, the external generators) or `gen,load` (a second group for the external loads). |
+| `--out` | none | Write the reduced case to this new `.m` or `.json` file. With `dynamic`, also `<name>.dynamics.json` beside it. |
+| `--groups` | none | `dynamic` only: a file of coherent groups, one per line, each a list of bus ids whose in-service units form the group (`#` starts a comment line). |
+| `--coherency` | none | `dynamic` only: find this many groups by slow coherency instead of reading `--groups`. |
+| `--xdp` | required with `dynamic` | The classical transient reactance X'd given to every machine, pu on its own base. |
+
+**`--method sc`**, the short-circuit equivalent (`ShortCircuitEquivalent`). No power flow is run. The positive-, negative-
+and zero-sequence networks of the IEC 60909 studies are Kron-reduced onto the boundary and written as equivalent branches
+(with zero-sequence data, or delta/delta windings where the zero sequence is not coupled) and one fictitious source bus
+per boundary bus (a branch and a synchronous machine carrying the positive-sequence row sum, with a grounded-wye/delta
+winding carrying the zero-sequence one). The fault studies on the reduced case then give the full case's Ik'' at every
+kept bus, for three-phase, line-to-line and earth faults. It prints the elements, the external network's Thevenin
+impedances Z1, Z2 and Z0 at each boundary bus, the notes and a check, the IEC 60909 three-phase Ik'' at each boundary bus
+with a base kV on the full and the reduced case (`NOT RUN` when no boundary bus has a base kV). Refused, naming the
+element: a converter-interfaced unit or a machine with X2 different from X''d in the external network, a zero-sequence
+mutual coupling across the boundary, and the external elements the Ward equivalent refuses except ZIP loads. Loads are
+not represented and the reduced case's power flow is not the base case. Apply the IEC 60909 correction factors to the
+full case before reducing it, never to the reduced case. A boundary bus that the external network gives no path in a
+sequence has an infinite Thevenin impedance there; the other buses keep theirs. `--out` writes a JSON v2 case that
+carries every sequence field (the equivalent branches' windings, machine zero-sequence impedances and kept mutual
+couplings), reads it back and prints `reload check`, the largest relative difference of the three-phase, line-to-line,
+single- and double-line-to-earth Ik'' at the kept buses between the equivalent and the written case (0 expected: the
+numbers are written exactly). A `.m` output is refused (exit 2): MATPOWER holds no X''d and no sequence data, so the
+written case's fault currents would differ. Result files add the table `thevenin` and the summary value
+`max_reload_ikpp_rel`.
+
+**`--method dynamic`**, the coherency-based dynamic equivalent (`CoherencyGrouping`, `InertialAggregation`). Every bus is
+kept. Each group of coherent machines, from `--groups` or found by slow coherency with `--coherency`, becomes one
+classical (GENCLS) machine: S_eq the summed rating, H_eq and D_eq rating-weighted, X'd_eq the parallel combination. A
+group on several buses moves to a new bus at the rating-weighted voltage, its terminal buses absorbed through ideal
+transformers, so the base case solves the reduced case. Every machine takes the X'd of `--xdp` and no damping (tagged
+Synthetic in the dynamics file). It prints the groups, the notes and the base-case check, the largest
+|V_reduced - V_full| over the kept buses (V_eq at an equivalent bus). Exciters, governors and stabilisers are not
+aggregated. Result files: the summary and the tables `groups` and `notes`. Exit codes as above.
 
 ### transmission-security
 
@@ -2107,7 +2867,9 @@ records the SHA-256 of the template and of the result and the generator (`gridsi
 same inputs give the same bytes. Markdown lists the tables and gives each plot's SHA-256; HTML is self-contained (inline CSS
 and SVG, no script); CSV carries every table. The output format follows the `--out` extension (`.md`, `.html`, `.csv`)
 unless `--format` is given. `--template-for` writes the default template for a result: a summary, then a section per table
-and per plot.
+and per plot. It takes a workbench result or a verb's `--json` result (`gridsim-cli-result/1`). For a verb's result the
+summary lists the verb, the exit code and every summary value, and each table section binds the table's rows, with the
+columns of its first row.
 
 Exit 0 when written, 1 for an unusable template or result, a result that does not match the template's hash, or an existing
 `--out` path, 2 for an invalid invocation.
@@ -2259,8 +3021,9 @@ of a probability); `qmc-shifted` the spread of the replicate estimates over the 
 point set, no error bar"; `convolution` no sampling error, with the lattice step per branch (`latticeStepMw`). The
 convolution of continuous inputs inflates the variance by about step squared over 12 per term (a stated discretisation
 tolerance); discrete inputs on the lattice are exact. A sample whose AC power flow does not converge is kept as a row in
-`failedSamples` with its status and stays in the denominator of every probability; mean, deviation and quantiles use the
-converged samples, whose count is given. Convolution applies only where the quantity is a sum of independent terms (DC
+`failedSamples` with its status, and every statistic (mean, deviation, quantiles and the probabilities) is taken over
+the converged samples, whose count is given, so it is conditional on convergence. A run with any failed sample is
+`INCOMPLETE`, and its reason gives the failed count; with every sample converged it is `COMPLETE`. Convolution applies only where the quantity is a sum of independent terms (DC
 flows, capacity): an AC evaluator or correlated inputs return `OUT OF SCOPE` with the reason, and nothing is approximated.
 Quasi-Monte Carlo accepts at most 64 dimensions (inputs or units); above that use Monte Carlo or convolution.
 
@@ -2348,7 +3111,11 @@ storage profiles of a study file, warm-started from the previous step, with the 
 state (tap positions, bank steps, delay timers, inverter set points, storage energy) carried from step to step. The
 engine is the one the case solve picks: the backward/forward sweep for a radial feeder (or with `--bfs`), otherwise the
 shared Newton engine on the selected backend, with the default power-flow options. Step 0 is solved from the case as
-given, so a one-step study with nothing varying gives exactly the case's own power flow.
+given, so a one-step study with nothing varying gives exactly the case's own power flow. PV units, storage and load
+additions are constant-power injections: on a bus with a voltage-dependent (ZIP) load only the bus's own load follows
+the ZIP characteristic (the ZIP is re-based on the bus demand so that the devices keep their set power), and a bus where
+the devices cancel the load exactly while its ZIP part still varies is refused by name. A tap changer whose own
+transformer is out of service is not stepped (and counts no operation), here and in the case solve's tap loop.
 
 Two control modes (`"mode"` in the file):
 
@@ -2418,7 +3185,7 @@ The study file (`gridsim-qsts/1`; every key checked, unknown keys refused):
 ```
 
 Required: `format`, `stepSeconds` (whole seconds, at least 1), `steps`. A profile gives one sample per its own
-`stepSeconds` from t = 0, inline (`values`) or from a CSV column (`csv`, a path relative to the study file, and `column`,
+`stepSeconds` from t = 0, inline (`values`) or from a CSV column (`csv`, a path relative to the study file (a local absolute path is accepted; a network (UNC) or device path is refused before anything is opened, and the file may be at most 64 MiB), and `column`,
 a header name or an index from 0; `"header": true` or `false` says whether the first row names the columns, and when it is left out a column chosen by name needs a header row and one chosen by index has a header when the first row's cell in that column is not a number (bug #162: it used to look at the first cell only, so a headerless file starting with a timestamp column lost its first sample); an unreadable cell is reported by its file line); `"interpolation"`
 `hold` (default) or `linear`; `"scale"` multiplies every value; a study longer than a profile is refused unless the
 profile has `"wrap": true`. Load profiles multiply the bus demand (`scaleP` / `scaleQ`, default both; `"buses": "all"`
@@ -2876,7 +3643,7 @@ Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file
 
 Validate a placed-device file and bind it to a case (RC4 R4-07, Core `GridSim.Core.Protection.Devices`). `<set.json>` is a
 strict `gridsim-devices/1` document: `manifestVersion`, then `devices`, each with `id`, `type` (`relay`, `fuse`, `recloser`
-or `breaker`), optional `function` (ANSI number: `50`, `51`, `50N`, `51N`, `67`, `21`; default `51` for a relay or
+or `breaker`), optional `function` (ANSI number: `50`, `51`, `50N`, `51N`, `67`, `21`, `87`; default `51` for a relay or
 recloser), `branch` (`index`, `from`, `to`, `end` = `from` or `to`: the stable branch identity, so a parallel circuit stays
 distinct), `ct` (`primaryA`, `secondaryA`), optional `vt`, `shots` (each `curve`, `pickupA` in CT secondary amps,
 `timeDial`, `definiteTimeS`), `instantaneous` (`pickupA`, `delayS`), `recloseIntervalsS` (one fewer than the shots),
@@ -2886,8 +3653,45 @@ distinct), `ct` (`primaryA`, `secondaryA`), optional `vt`, `shots` (each `curve`
 files. Curve data lives in `data/protection-curves/*.json` (`gridsim-protection-curve/1`); every file must carry a `source`
 (kind `standard`, `manufacturer` or `synthetic`, title, publisher, url, locator, retrieved, optional sha256 of the source
 document) and a file without one is refused. Only publicly documented vendor data is accepted, as data, never as code;
-proprietary settings-transfer formats are not supported. Distance, directional and earth-fault functions are accepted and
-reported as not evaluated by the three-phase study. Exit 0 valid; 1 the case, device file or curve data cannot be loaded or
+proprietary settings-transfer formats are not supported. Distance, directional, earth-fault and differential functions are
+accepted and reported as not evaluated by the three-phase study (`sc-trace`, `fault-line`, `protection-audit`);
+`protection-eval` and `protection-grade` evaluate them. Three optional members carry their settings, each accepted only with
+its own function: `distance` with `21` (`characteristic` `mho` or `quad`; `loops` `phase`, `earth` or `both`, default
+`both`; optional `k0` as `magnitude` and `angleDeg`, default from the line's own Z0 and Z1; `zones`, one to three, each
+`reachOhms`, `angleDeg`, `timeS` and for a quad `resistiveReachOhms` and optional `leftReachOhms`; `directionalLowDeg` and
+`directionalHighDeg`, default -30 and 120, for a quad), `directional` with `67` (`polarisation` `quadrature`,
+`zero-sequence` or `negative-sequence`; `characteristicAngleDeg`; `direction` `forward` or `reverse`, default `forward`;
+`minPolarisingV` in pu, default 0.01) and `differential` with `87` (`is1A`, `k1`, `is2A`, `k2`; optional `remoteCt` as
+`primaryA` and `secondaryA`, default the device's own CT). Reaches are CT/VT secondary ohms, currents CT secondary amps. A
+`21` or `67` with these settings needs a `vt`; zone reaches and times must not fall from one zone to the next; `k2` must
+not be below `k1`; an `87` with a `differential` setting on a transformer is refused (use `transformerDifferential`), and
+so is a `21` with settings unless its `distance` sets `onTransformer: true`. An `87` may instead carry one of two
+optional members (RC5 WP18):
+- `transformerDifferential` (87T, on the device's own two-winding transformer): `vectorGroup` (`YNd1`, `Yd11`, `Dyn1`,
+  `Dyn11`, `YNyn0`, `Yy0` or `Dd0`), `ratedMva`, and `is1`, `k1`, `is2`, `k2` in pu of the rating. Optional `hvCt` and
+  `lvCt`, each `{ "branch": { index, from, to, end } }`, put that side's CT on a branch from the transformer's bus, at its
+  other end; that bus must carry no load, shunt, unit, HVDC converter, static var compensator or FACTS device. The HV side is the bus with the higher base kV. The case's
+  phase shift must be the group's, and its windings, where given, must match; a case without both windings is accepted
+  for `YNyn0` only. Three-winding legs are refused;
+- `busDifferential` (87B): `zone` (bus IDs), `cts` (each `branch` with its `end` at the zone, and `ct` as `primaryA` and
+  `secondaryA`), `is1A` and `k1` in secondary amps of the CT with the largest primary, optional `is2A` and `k2` (together,
+  for a dual slope), `bias` `sum` (default) or `max`, and optional `checkZone` (bus IDs, a superset of the zone). A `21` placed on a two-winding transformer that
+way needs a phase shift that is a whole multiple of 30 degrees; its earth loops need no phase shift and an explicit `k0`.
+The `distance` object takes these optional members (RC5 WP17):
+- a zone may carry `reverse: true` (it looks behind the relay; reverse zones follow the forward zones, at most one). A
+  reverse zone sends the DCB block and also trips on its own `timeS`, as a time-delayed back-up;
+- `scheme`: `type` (`DUTT`, `PUTT`, `POTT` or `DCB`), `remote` (the 21 at the other end of the same branch), `channelS`
+  and `coordinationS` (default 0). PUTT, POTT and DCB need a zone 2, POTT a remote zone 2, and DCB a remote reverse zone;
+- `powerSwing`: `outerR`, `innerR`, `outerX`, `innerX` (ohm sec, outer larger than inner), `deltaTS`, `blockZones` (zone
+  numbers) and `unblockS` (default 2);
+- `loadEncroachment`: `fwdAngleDeg` and `revAngleDeg` (0 to 90) and `minLoadOhms`, for phase loops;
+- `sotf`: `windowS` and `mode` (`Z2` or `nondirectional`). `windowS` (above 0) is how long the logic stays armed after
+  the line closes. The static fault study is at the moment of closing, so every energised fault lies inside the window
+  and the value is checked but does not change the result;
+- `mutual`: `branch` (a parallel line between the same two buses) and optional `k0m` (`magnitude` and `angleDeg`, taken
+  from the case's zero-sequence mutual data when absent), for earth loops.
+
+Exit 0 valid; 1 the case, device file or curve data cannot be loaded or
 is invalid (a branch whose ends differ from the case, an unknown curve, a duplicate ID, a recloser with the wrong number of
 intervals); 2 usage.
 
@@ -2928,7 +3732,7 @@ Result files: `--json`, `--csv` or `--out` write the table `fault_line` ([Result
 
 Short-circuit trace for one fault (RC4 R4-07): the current each placed device measures through its CT, its operating time,
 its confidence (`Grounded` for a tabulated manufacturer curve, `Generic` for an equation on a user setting, `NotCheckable`
-for a function not evaluated), the sequence of operation (earliest first, ties by device order), the primary and backup
+for a function not evaluated here: a 21, 67, 50N, 51N or 87 is evaluated by [`protection-eval`](#protection-eval)), the sequence of operation (earliest first, ties by device order), the primary and backup
 device, and the grading margin of each device against the nearest upstream device on its supply path. A device's direction
 is decided by the bridge rule on the fault network; a device in a mesh is marked `meshed` and takes no part in pairing. A
 fuse is timed at its total clear time as a primary and its minimum melt as a backup. A device on an out-of-service branch is
@@ -2961,7 +3765,8 @@ instantaneous reach (the current at a fault at the far end of the device's own b
 above 1 it overreaches); each breaker's `CheckBreaker` margins against the maximum three-phase duty at its bus; and every
 check that could not be made, with its reason (missing evidence is never a pass). The verdict is `Coordinated`,
 `NotCoordinated` or `Incomplete` (no pair could be graded). Exit 0 coordinated and every device operating at its minimum
-fault with no instantaneous overreach; 3 otherwise; 1 invalid input; 2 usage.
+fault with no instantaneous overreach and every evaluated breaker adequate; 3 otherwise (an `Incomplete` audit and a breaker
+printed NOT ADEQUATE included); 1 invalid input; 2 usage.
 
 | Flag | Default | Meaning |
 |---|---|---|
@@ -2969,6 +3774,119 @@ fault with no instantaneous overreach; 3 otherwise; 1 invalid input; 2 usage.
 
 Result files: `--json`, `--csv` or `--out` write the summary (`format` = `gridsim-protection-audit/1`, verdict, counts) and the
 tables `pairs`, `device_sensitivity`, `breakers` and `not_evaluated` ([Result files](#result-files)).
+
+### protection-eval
+
+`gridsim protection-eval <case> --devices <set.json> (--bus <id> | --branch <i> --fraction <d>) [--type 3ph|slg|ll|llg] [--xf 0] [--energised true|false] [--curves <dir>]`
+
+`gridsim protection-eval <case> --devices <set.json> --swing <trace.csv|result.json> [--curves <dir>]`
+
+Every placed device measured on the phasors of one fault (RC5 WP4, Core `GridSim.Core.Protection.Placed`). The prefault
+power flow is solved on the fault network (the split copy for a fault along a line) and must converge; the fault is the
+three-phase study for `3ph` and the sequence-network study for `slg`, `ll` and `llg`, through Zf = j`--xf`. Each relay
+uses its own bus voltage and the branch current into the branch at its end. 50/51 operate on the largest phase current
+and 50N/51N on |3I0|, both on their curves (IEC 60255-151, IEEE C37.112). A `67` with quadrature polarisation is a phase
+element (Ia with Vbc, Ib with Vca, Ic with Vab), with zero-sequence polarisation a 67N (3I0 against -3V0), with
+negative-sequence polarisation a 67Q (I2 against -V2); it is forward when cos(arg Iop - arg Vpol - RCA) > 0 and operates
+only when the direction matches its setting and its overcurrent element operates; below `minPolarisingV` it reports no
+polarising voltage. A `21` measures the phase loops (Vx - Vy) / (Ix - Iy) and the earth loops Vp / (Ip + k0 3I0), the
+earth loops released only when |3I0| is above 10 % of the largest phase current, against mho circles (operate when
+Re(Z conj(Zr - Z)) >= 0) or quadrilaterals (reactance line, two resistive blinders parallel to the zone angle, and the
+directional limits); the fastest zone hit over all loops wins. A loop whose voltage is at or below 1e-6 of its nominal
+(1 pu for an earth loop, sqrt(3) pu for a phase loop) has collapsed, a bolted fault at the relay point where V / I is
+rounding noise: its direction is taken from the prefault (memory) voltage, forward when Vmem / I lies within 90 degrees
+of the zone-1 angle, and the loop is then in every zone of that direction (reported as Z = 0, with "close-in fault, loop
+voltage collapsed" in the reason). The generic `21` of `protection-check` and `fault`, which has no memory voltage,
+reports such an end as not measured. An `87` is a dual-slope biased line differential on the two
+ends of its own branch (Id = |I_near + I_far|, Ib = (|I_near| + |I_far|) / 2; operate above k1 Ib + Is1 up to Is2 and
+above k2 Ib - (k2 - k1) Is2 + Is1 beyond), instantaneous, with no charging-current compensation. The result names, per
+device, the element, the measured quantity (A or ohm secondary), the loop or phase, the zone, the direction and the time.
+Converter-interfaced units keep their prefault current in an unbalanced study and are named in a note.
+
+The optional `distance` members (see [`devices-check`](#devices-check)) work as follows:
+- A reverse zone tests -Z against its characteristic. It trips on its own `timeS` (a time-delayed back-up for faults
+  behind the relay), so it counts in the time and in `protection-grade` like any other zone.
+- With `mutual`, the earth loop current adds k0m 3I0m, where I0m is the parallel line's zero-sequence current at the
+  relay's bus.
+- With `loadEncroachment`, a phase loop with |Z| >= `minLoadOhms` within `fwdAngleDeg` of 0 degrees or `revAngleDeg` of
+  180 degrees is blocked.
+- With `sotf` and `--energised true`, the relays on the faulted branch (the line just closed) trip at 0 s: mode `Z2` when
+  zone 1 or 2 picks up, and mode `nondirectional` when a phase current exceeds the CT primary. Relays on other lines keep
+  their zone timers. `--energised true` needs `--branch`; with `--bus` it is a usage error, since no line was closed.
+- With a `scheme`, each end's aided trip time follows: DUTT t_Z1,r + channel; PUTT max(p_Z2, t_Z1,r + channel); POTT
+  max(p_Z2, p_Z2,r + channel); DCB p_Z2 + coordination unless a block is received. The remote end sends the block when
+  its reverse zone picks up and its zone 1 or zone 2 does not (the forward pickup stops the carrier). The carrier stop
+  and the POTT permissive come from the remote end's faulted-phase loops only. The pickup p is 0 s when
+  the element picks up. The end trips at the smaller of its zone time and this time, and a line `scheme ...` is printed
+  for it.
+
+`--swing <trace>` takes no fault. It reads a bus-voltage trace in one of two forms:
+- a `dynamics-study` result file (JSON), read as it is: the one simulated case's `timeSeconds`, and each pair of
+  `busVoltage N` channels (unit `pu` for the magnitude, `deg` for the angle) as bus N. A result with more than one
+  simulated case is refused, so keep one fixed-time case in the study;
+- a CSV: lines starting `#` are skipped; the header is `t_s` then `vm_<bus>` (pu) and `va_<bus>` (degrees).
+
+The times must increase. For each 21 with `powerSwing` it forms Z(t) = V / I at the relay, with the current from the
+branch's pi stamp on its two bus voltages. The stamp uses the case's fixed tap, so a tap changer that moves during the
+RMS run is not followed. It then runs the
+two-blinder detector: a pass that stays between the outer and inner rectangles (|R| <= R, |X| <= X) for `deltaTS` is a
+swing. The `blockZones` are then blocked until Z leaves the outer rectangle or `unblockS` has passed. One line is printed
+per pass. A relay whose two buses are not both in the trace is listed as not evaluated.
+
+Not modelled: fault resistance in the unbalanced study (Zf is a reactance), channel failure, the current-reversal guard,
+echo and weak-infeed logic, out-of-step tripping, swing detection during an unbalanced fault, CVT transients, 87T and
+87B. Exit 0 evaluated; 3 the fault could not be applied; 1 invalid input (including an unreadable trace); 2 usage
+(including `--swing` with a fault flag, and `--energised true` with `--bus`).
+
+Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
+([Result files](#result-files)): the summary (case, fault, type, xf, fault bus) and the table `devices` (every row printed, with the
+measured values in round-trip form). When a device carries a scheme, the table adds the columns `scheme`, `aided` and
+`aided_trip_s`. With `--swing`, the summary is the case, `mode` = `swing` and the sample count, and the table is `swing`
+(`device`, `pass`, `outer_entry_s`, `inner_entry_s`, `swing`, `block_from_s`, `block_to_s`, `release`, `block_zones`,
+`reason`).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--devices` | required | The `gridsim-devices/1` file. |
+| `--bus` | - | Fault bus ID. Exactly one of `--bus` or `--branch`. |
+| `--branch` | - | Branch index for a fault along a line; with `--fraction`. |
+| `--fraction` | 0.5 | Position along the branch in [0, 1]. |
+| `--type` | `3ph` | `3ph`, `slg` (phase a to earth), `ll` (b to c) or `llg` (b and c to earth). |
+| `--xf` | 0 | Fault reactance, pu (Zf = j xf). |
+| `--energised` | `false` | `true` marks the faulted branch as just closed onto the fault, for the `sotf` setting of the 21s on it. Needs `--branch`. |
+| `--swing` | - | A bus-voltage trace for power-swing blocking (CSV or a `dynamics-study` result file); takes no fault flags. |
+| `--curves` | installed data | Curve data directory. |
+
+### protection-grade
+
+`gridsim protection-grade <case> --devices <set.json> [--types 3ph,slg] [--fractions 0.05,...,0.95] [--cti 0.4] [--curves <dir>]`
+
+Coordination checks over placed devices (RC5 WP4). Faults are every bus of the case in model order, for each listed type.
+G1, grading margin: at each fault, for every device with the fault beyond it, the nearest upstream device on its supply
+path is its backup (the `sc-trace` rule); when both operate, the backup must be at least `--cti` slower (distance zone
+times, curve times for 50/51, 50N/51N and 67, a fuse's total clear as primary and minimum melt as backup, 0 for 87); a
+pair where either does not operate is listed as not graded. G2, zone-1 underreach: a bolted three-phase fault at the far
+bus of a 21's branch must not be in zone 1. G3, zone-2 cover: the same fault must be in zone 2 or faster. G4, zone-1
+coverage: the largest swept fraction of the protected line, from the relay's end, at which zone 1 operates (none is a
+failure). G5, earth-fault sensitivity: for a 50N/51N, the smallest |3I0| over the `slg` faults beyond it over its pickup,
+passing when the device operates there. G6, zone reaches load, only for a 21 with `loadEncroachment`: the phase-loop
+impedance at the prefault load point must lie in no forward zone, or else in the blinder's load region. G7, zone
+completeness, only for an 87B: every branch leaving the zone (or the check zone) has a CT at its zone end; a missing CT
+fails, naming the branch, and the element is not evaluated. G8, stability, for an 87T or 87B: it does not operate for any
+fault of the study outside its zone. A check that could not be made is listed as not evaluated with its reason, never
+as a pass. The verdict is `Coordinated`, `NotCoordinated` or `Incomplete` (nothing could be graded). Exit 0 coordinated; 3
+not coordinated or incomplete; 1 invalid input; 2 usage.
+
+Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
+([Result files](#result-files)): the summary (verdict, required margin, counts) and the tables `pairs`, `checks` and `not_evaluated`.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--devices` | required | The `gridsim-devices/1` file. |
+| `--types` | `3ph,slg` | Comma list of fault types: `3ph`, `slg`, `ll`, `llg`. |
+| `--fractions` | 0.05 to 0.95 in steps of 0.05 | The G4 sweep, numbers inside (0, 1). |
+| `--cti` | 0.40 | Required coordination time interval (s). |
+| `--curves` | installed data | Curve data directory. |
 
 ### fault
 
@@ -2981,7 +3899,10 @@ relays that operate on the faulted state. Generator subtransient reactance is sy
 carries none. The prefault solve must converge: a non-converged prefault state is refused with `fault: the pre-fault
 power flow did not converge (...)` and exit 3. Exit 2 without a case or `--bus`, for an unknown `--type`, or for a `--bus`
 that is not in the case (`error: fault: fault bus <id> is not in case '<name>'.`, checked before any solve, the same
-rule as `protection-check --fault-bus` and `iec60909 --bus`); exit 1 on a load error or a fault-analysis error. When
+rule as `protection-check --fault-bus` and `iec60909 --bus`); exit 1 on a load error or a fault-analysis error. A
+fault bus whose island has no fault source (no synchronous unit with a source reactance and, for the three-phase fault,
+no converter-interfaced unit) is refused with exit 1, as `iec60909` refuses it: the loads alone would otherwise appear
+to feed the fault. When
 the converter current iteration of the three-phase study does not converge, the study is printed for diagnosis, the
 relays are not assessed (`relays: not assessed (the faulted state did not converge, ...)`: a non-converged state is not
 a network state), stderr says the faulted state is not reliable, and the run exits 3. A negative
@@ -3153,7 +4074,7 @@ October 2026 (D-DOC-096 / 097 / 098):
 | Flag | Default | Meaning |
 |---|---|---|
 | `--bus` | required (or `--all-buses`) | Fault bus id. |
-| `--type` | `3ph` | `3ph` (three-phase), `ll` (line-to-line), `slg` (single-line-to-earth, on the zero-sequence network) or `dlg` (double-line-to-earth, the earth current `|3 I0|`). |
+| `--type` | `3ph` | `3ph` (three-phase), `ll` (line-to-line), `slg` (single-line-to-earth, on the zero-sequence network) or `dlg` (double-line-to-earth, the earth current `\|3 I0\|`). |
 | `--objective` | `max` | `max` (voltage factor c = 1.10 HV / 1.05 LV, equipment rating) or `min` (c = 1.00 / 0.95, protection sensitivity). |
 | `--tb` | 0.10 | Breaker minimum time delay (s) for Ib and the DC component; above 0. |
 | `--tk` | 1.0 | Fault duration (s) for Ith; above 0. |
@@ -3161,7 +4082,7 @@ October 2026 (D-DOC-096 / 097 / 098):
 | `--branches` | off | List every in-service branch's from- and to-end current for the three-phase fault (`Iec60909.BranchFaultCurrents`, the current a relay on the branch sees; c_max source), every branch of the fault bus's island, largest first. Three-phase at one `--bus` only (else exit 2). The result file gets a `branch_currents` table. (D-DOC-168: the console list used to stop at 12 rows while its header counted every branch.) |
 | `--top N` | all | With `--branches`: print only the N largest rows, and a closing line saying how many were left out (the result file still holds every branch). N at least 1; exit 2 without `--branches`. |
 | `--all-buses` | off | The duty at every bus with a base kV instead of one `--bus` (not both, else exit 2). Prints one row per bus and the largest Ik''; the result file gets a `buses` table. A bus that cannot be studied (no base kV, no source) is listed with the reason and the run exits 1 after the table; with `--breaker`, an inadequate breaker at any bus (checked at the bus's own voltage) exits 3. |
-| `--corrections` | off | Apply the IEC 60909-0 impedance-correction factors before the study (maximum objective only, else exit 2): `K_G` to a directly connected generator's X''d and X2, `K_S` (or `K_SO` with `--no-unit-oltc`) to a power-station unit (a unit with a unit transformer reactance) as a whole, `K_T` to each network transformer's impedance with x_T taken on its own rating from RateA (a transformer with no RateA, and any element on a bus with no base kV, is listed as not corrected). The model is per unit on nominal voltages, so the voltage ratios in the formulas are taken as 1. Needs `--rated-pf`. The factors applied are printed (range per factor) and written to a `corrections` table. [VERIFY]: the K_S / K_SO forms and the zero-sequence correction against the standard's text (IEC 60909-0 is not in docs/reference). |
+| `--corrections` | off | Apply the IEC 60909-0 impedance-correction factors before the study (maximum objective only, else exit 2): `K_G` to a directly connected generator's X''d and X2, `K_S` (or `K_SO` with `--no-unit-oltc`) to a power-station unit (a unit with a unit transformer reactance) as a whole, `K_T` to each network transformer's impedance with x_T taken on its own rating from RateA and c_max that of the network on the transformer's low-voltage side (IEC 60909-0:2016, 6.3.3; 1.05 for an LV side at or below 1 kV), (a transformer with no RateA, and any element on a bus with no base kV, is listed as not corrected). The model is per unit on nominal voltages, so the voltage ratios in the formulas are taken as 1. Needs `--rated-pf`. The factors applied are printed (range per factor) and written to a `corrections` table. [VERIFY]: the K_S / K_SO forms and the zero-sequence correction against the standard's text (IEC 60909-0 is not in docs/reference). |
 | `--rated-pf` | - | With `--corrections` (required): the generators' rated power factor cos(phi_rG), in (0, 1]; GridSim carries none, so it is never assumed. |
 | `--no-unit-oltc` | off | With `--corrections`: unit transformers without an on-load tap changer (`K_SO` at the main tap, p_G = 0, instead of `K_S`). |
 
@@ -3195,7 +4116,9 @@ data, or whose X''d is the synthesised default, makes the bus INCOMPLETE and no 
 "xdSyncPu": 1.2, "tdSubS": 0.05, "tdTransS": 1.0}], "motors": [{"name": "M1", "bus": 3, "ratedMva": 10,
 "lockedRotorCurrentRatio": 6, "decay": "exponential", "timeConstantS": 0.04}]}`. Reactances are per unit on the generator's MBase
 (X''d is the case's own); a motor's `decay` is `exponential` (needs `timeConstantS`) or `iec60909-q` (needs `ratedMw` and
-`polePairs`). With `--no-decay` and no motors, Ik'' and ip equal `iec60909` bit for bit. Exit 0 done; 1 unreadable case or
+`polePairs`). `iec60909-q` is the IEC 60909-0 motor breaking current mu q Ik'', with mu from the motor's own Ik''/IrM; at
+time 0 the motor gives Ik''. IEC gives mu and q from 0.02 s, so with an `iec60909-q` motor and decay on, a time or `--tb`
+between 0 and 0.02 s is refused (exit 1). With `--no-decay` and no motors, Ik'' and ip equal `iec60909` bit for bit. Exit 0 done; 1 unreadable case or
 data file or a study error; 2 usage (no bus, unknown bus, bad flag); 3 INCOMPLETE data or an inadequate breaker.
 
 | Flag | Default | Meaning |
@@ -3497,11 +4420,61 @@ framework in this repository. The BDEW guideline and the limit values were not o
 | `--list-rules` | off | Print the built-in rule set ids and exit; no study is read. |
 | `--out` | none | Also write the result JSON to this new file. |
 
+### grid-code
+
+`gridsim grid-code <study.json> [--out <result.json>]` and `gridsim grid-code --list`
+
+The grid-code compliance suite (`GridSim.Core.Compliance.GridCode`): fault ride-through, reactive capability, frequency
+response, RoCoF and frequency withstand of one unit against the GB Grid Code European Connection Conditions (Issue 6
+Revision 33, 11 June 2025) or Regulation (EU) 2016/631 (RfG). GB values are fixed by the code; RfG values are the TSO's
+choices, each refused unless it lies inside the Regulation's range (the message names the parameter, the range and the
+article). The requirement data ships as `gridsim-gridcode-requirements/1` files, one per edition, every value with its
+clause; `--list` prints their ids and titles and the check ids. See [ch. 15](<0015 RMS, modal and impedance stability.md#grid-code-compliance>)
+for the checks and their methods.
+
+The study file is strict JSON, `gridsim-gridcode-study/1` (schema `schemas/gridcode/gridsim-gridcode-study-1.schema.json`):
+`schema`, `label`, `case` (a case path relative to the study file, read as any case argument), `unit` (`bus`, and `name`
+when the bus has several generators), `pccBus`, `code` (`gb-ecc` or `eu-rfg`), `moduleType` (`B`, `C` or `D`),
+`technology` (`synchronous`, `ppm`, `hvdc`, `dc-ppm` or `ppm-gfm`), `connectionKv` and `checks`; optionally `dynData` (a
+`gridsim-dynamics/2` file, or a `.dyr` file for a `.raw` case, binding every generator; needed by the RMS and governor
+checks), `plantBuses` (for `q-capability`), `frtProfile` (RfG: the TSO's `uret` ... `trec3`), `extendedClearingTime`
+(RfG: allows tclear up to 0.25 s), `area` (RfG: `CE`, `Nordic`, `GB`, `IE-NI` or `Baltic`), `fsmMode` (GB LFSM-O from
+50.5 Hz) and `stepSeconds` (RMS step, default 0.01). The checks are `frt-envelope`, `frt-retained-voltage`,
+`frt-recovery`, `frt-uv-settings`, `q-capability`, `lfsm-o`, `lfsm-u`, `fsm-step`, `rocof-settings`, `rocof-event` and
+`frequency-relays`, each `{ "id": ..., inputs }` as the schema lists.
+
+Four more GB checks run only when named, with `code` `gb-ecc`. Their values come from the extension file
+`gb-ecc-issue6-rev33-ext`, and a result that runs one records its hash as `provenance.requirementsExtSha256`:
+
+- `ffci-envelope`: optional `fault` and `durationSeconds`, as `frt-envelope`.
+- `frt-long`: optional `durationsSeconds` (default: the profile's labelled corners over 0.14 s), `stageSeconds` (0.05),
+  `afterSeconds` (1.0), `maxPasses` (8), `bus` (default the PCC) and `atSeconds` (0.1). Times must be whole steps.
+- `avr-step`: optional `stepSeconds` (default the study step) and `durationSeconds` (10, longer than 3 s). It needs the
+  unit's exciter in `dynData`.
+- `vctrl-step`: `events` (as `rocof-event`) and `durationSeconds`; optional `leadToLag` (the 2 s limit) and `qmaxMvar`
+  and `qminMvar` (default the unit's case values).
+
+Under `eu-rfg` these four are refused.
+
+The result is `gridsim-gridcode/1`: per check the id, case, clause, outcome, status, value, limit, signed margin (positive
+inside the requirement), unit, the time of the margin and the reason, then the counts and the verdict: `NON-COMPLIANT` on
+any failure, else `INCOMPLETE` while any check is not evaluated or not demonstrated, else `COMPLIANT`. A check that cannot
+be evaluated is never a pass. Numbers are written in invariant culture with shortest round-trip formatting, so two runs give
+the same bytes. Exit 0 `COMPLIANT`, 3 anything else, 1 for input it cannot accept, 2 for an invalid invocation.
+
+Result files: `--json <file.json>` or `--csv <file.csv>` write the result to a file through the shared writer ([Result files](#result-files)): the `gridsim-gridcode/1` document itself, its scalar members as the summary and each array as a table. `--out` is unchanged: it still names its result file, not a shared-writer file.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--list` | off | Print the built-in requirement sets and the check ids, and exit; no study is read. |
+| `--list-ext` | off | Print the GB extension requirement set and the extension check ids (`ffci-envelope`, `frt-long`, `avr-step`, `vctrl-step`), and exit; no study is read. |
+| `--out` | none | Also write the result JSON to this new file. |
+
 ### experimental
 
 `gridsim experimental [<subcommand> <case> [flags]]`
 
-Opt-in experimental models, tagged unvalidated-at-scale and kept off the validated solve and estimate paths. With no
+Opt-in experimental models, tagged unvalidated-at-scale and kept off the verified solve and estimate paths. With no
 subcommand it lists them. `<case>` must come straight after the subcommand and accepts `<case|case.m|case-dir>`.
 
 | Subcommand | Does |
@@ -3520,6 +4493,31 @@ Exit 2 on a missing case or an unknown subcommand; exit 1 on a load error or a f
 
 Result files: `--json <file.json>`, `--csv <file.csv>` or `--out <file.json|file.csv>` write the result to a file
 ([Result files](#result-files)).
+
+### gic
+
+`gridsim gic <case> --gic <file.json> [--field N,E] [--direction-sweep <degrees>] [--out <file.json>]`
+
+Geomagnetically induced currents for a uniform geoelectric field (Core `GicSolver`), by the method of the NERC
+application guide (December 2013): each line gets the DC source V = E_N L_N + E_E L_E from its northward and eastward
+length, and the DC network of lines, transformer windings and substation grounds is solved by nodal analysis. The data a
+load-flow case does not hold comes from a `gridsim-gic/1` file: substation coordinates and ground resistance, the buses in
+each substation, the transformers' winding type and DC resistance, an optional reactive-loss factor k and an optional
+blocking device, and line ohms where the case's R is not the DC resistance. See
+[technical ch. 44](<../technical/0044 Geomagnetically induced currents.md>).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--gic` | required | The `gridsim-gic/1` file. Every in-service transformer of the case must be described in it (type `open` for no DC path), and every line's buses must be in a substation. |
+| `--field` | none | The northward and eastward field, V/km, as `N,E`. |
+| `--direction-sweep` | none | A sweep at 1 V/km over directions 0, step, 2 step, ... below 360 degrees (from north towards east); reports each transformer's largest effective GIC and its direction. Step above 0, at most 180. |
+| `--out` | none | Write the result as JSON (`gridsim-gic-result/1`: the gic file's SHA-256, per substation the neutral current and voltage, per transformer I_H, I_X, the neutral current, the effective GIC and Q, per line the distances, source voltage, ohms and current, and the sweep); an existing file is never overwritten. |
+
+At least one of `--field` and `--direction-sweep` is required. Transformer currents are per phase; line and neutral
+currents are all three phases. The JSON from `--out` is the result file: the verb is not on the shared `--json`/`--csv`
+writer.
+
+Exit 0 when solved. Exit 1 for a case or gic file that cannot be read or does not fit the case. Exit 2 for usage.
 
 ## Frequency and dynamics verbs
 
@@ -3630,8 +4628,8 @@ exit 2 unless they name the same folder, and a second positional case exits 2.
 | `--fault-bus` | 7 (case9) / first non-generator bus | Fault location. |
 | `--clear` | - | Fixed clearing time in ms, giving a STABLE / UNSTABLE verdict; omit for the critical clearing time. Classical and `--rms`. Must be a finite number, 0 or more (0 is an instantaneous clear); a negative value, `NaN` or `Infinity` exits 2 (a negative value used to run a study with no fault in it and report STABLE). At most 1000 ms (N266, October 2026): above it exits 2. Why 1000 ms: the slowest clearance GB plant coordinates with is back-up protection within 800 ms in England and Wales (300 ms in Scotland), Grid Code CC.6.2.2.2.2; 1000 ms is the window both CCT searches use, so a fixed clearing time stays inside the range the CCT answers; and the RMS study runs a fixed 3 s, so a much later clear would end the run with the fault still on. Without the bound a large value also grew the run's time and memory without limit. Both engines (N246, October 2026; the `--rms` engine since CF2): under the verdict a `law 9 (synchronism, scored from this run): HOLDS` (or `VIOLATED`) line scores the physics law from the run's own rotor-angle trajectory with the out-of-step criterion of PSS/E and PowerFactory, any machine more than 180 degrees from the centre of inertia at any sample: `largest rotor angle from the centre of inertia X deg (limit 180 deg, the out-of-step criterion); peak speed deviation Y Hz, reported, not scored (no frequency band in a fault study)`. The verdict itself is unchanged (the integrator's pole-slip test, 360 degrees from the centre of inertia); when a machine passes 180 but not 360 degrees a `note:` line says the two criteria differ. On `--rms` the centre of inertia and the maximum cover the machines the RMS verdict judges (island reference machines are left out of both, as the verdict leaves them out). The steady-state law 9 row of `physics-check` names this verb as the one that scores it. |
 | `--clear-by-trip` | - | N351, `--rms` only: the fault at `--fault-bus` is cleared by also tripping these branches (comma list of 0-based indices into the case's branch list), as a line fault is cleared by its breakers. Without `--clear` it is the critical clearing time search with those trips at every trial's clearing instant (the same step grid, window and first-loss rule as below); with `--clear` a STABLE / UNSTABLE verdict for that clearing time. Not with `--screen` or `--events` (exit 2). |
-| `--events` | - | N351, `--rms` only: one scheduled RMS event study. A comma list of `kind:arguments@seconds` items: `fault:BUS@t` (bolted fault), `clear:BUS@t` (its clearance), `trip:K@t` (branch K trips, 0-based), `reclose:K@t` (it closes again: auto-reclose), `load:BUS:P:Q@t` (a load step of P MW and Q Mvar, negative to shed) and `gentrip:G@t` (generator G trips, 0-based). For example `--events "fault:7@0.1,clear:7@0.183,trip:5@0.183,reclose:5@0.683"`. Prints the events and a STABLE / UNSTABLE verdict over the connected machines. The run lasts 3 s, or 3 s past the last event. It owns the whole disturbance: with `--screen`, `--fault-bus`, `--clear` or `--clear-by-trip` it exits 2; a malformed list exits 2 naming the item; an event the study refuses (a bus not in the case, a reclose of a branch that is not tripped, a time after the end) exits 2 with the reason. |
-| `--events-out` | - | N363, with `--rms --events` only (otherwise exit 2): writes the event study's export to the folder (created if missing): `rms-events-machines.csv` (every machine trace at every integration step: `t_s,trace,bus,delta_rad,speed_pu,eqp_pu,edp_pu,eqpp_pu,eddp_pu`, each number in its shortest round-trip form), `rms-events-converters.csv` when the fleet has converter plant (`t_s,converter,name,bus,v_pu,p_pu,q_pu,ip_pu,iq_pu,in_dip_mode`), `rms-events.json` (schema `gridsim-rms-events-export/1`: case, nominal frequency, step, duration, the events in time order, the verdict, converter-iteration failures, the machine list with island references marked, provenance `Synthetic` and whether the result is INDICATIVE) and `run-metadata.json`. Both CSVs start with the run header and a `# provenance:` line (`Synthetic`, a model trajectory, not a record; INDICATIVE when the GENROU data is synthesised). A file that cannot be written exits 1. The run and its verdict are unchanged. |
+| `--events` | - | N351, `--rms` only: one scheduled RMS event study. A comma list of `kind:arguments@seconds` items: `fault:BUS@t` (bolted fault), `clear:BUS@t` (its clearance), `trip:K@t` (branch K trips, 0-based), `reclose:K@t` (it closes again: auto-reclose), `load:BUS:P:Q@t` (a load step of P MW and Q Mvar, negative to shed), `gentrip:G@t` (generator G trips, 0-based), `sfault:TYPE:BUS@t` or `sfault:TYPE:BUS:R:X@t` (a `3ph`, `slg`, `ll` or `llg` fault at the bus, bolted or through R + jX pu; cleared by `clear:BUS@t`), `lfault:TYPE:K:D@t` or `lfault:TYPE:K:D:R:X@t` (the same fault a fraction D along line K) and `lclear:K@t` (its clearance). For example `--events "fault:7@0.1,clear:7@0.183,trip:5@0.183,reclose:5@0.683"`. With a sequence fault the run also prints the fault point (sequence and phase currents, phase voltages, Z2, Z0) and `--events-out` adds `rms-fault-points.csv`. Prints the events and a STABLE / UNSTABLE verdict over the connected machines. The run lasts 3 s, or 3 s past the last event. It owns the whole disturbance: with `--screen`, `--fault-bus`, `--clear` or `--clear-by-trip` it exits 2; a malformed list exits 2 naming the item; an event the study refuses (a bus not in the case, a reclose of a branch that is not tripped, a time after the end) exits 2 with the reason. |
+| `--events-out` | - | N363, with `--rms --events` only (otherwise exit 2): writes the event study's export to the folder (created if missing): `rms-events-machines.csv` (every machine trace at every integration step: `t_s,trace,bus,delta_rad,speed_pu,eqp_pu,edp_pu,eqpp_pu,eddp_pu`, each number in its shortest round-trip form), `rms-events-converters.csv` when the fleet has converter plant (`t_s,converter,name,bus,v_pu,p_pu,q_pu,ip_pu,iq_pu,in_dip_mode`), `rms-devices.csv` when the run has SVC, STATCOM or HVDC models (`t_s,device,name,model,state,value`), `rms-events.json` (schema `gridsim-rms-events-export/1`: case, nominal frequency, step, duration, the events in time order, the verdict, converter-iteration failures, the machine list with island references marked, provenance `Synthetic` and whether the result is INDICATIVE) and `run-metadata.json`. Both CSVs start with the run header and a `# provenance:` line (`Synthetic`, a model trajectory, not a record; INDICATIVE when the GENROU data is synthesised). A file that cannot be written exits 1. The run and its verdict are unchanged. |
 | `--events-every` | 1 | With `--events-out` only (otherwise exit 2): write every N-th integration step to the export CSVs (steps 0, N, 2N, ...; a whole number from 1 to 1000000, anything else exits 2). The default 1 writes every step, so an export without the flag is the full-resolution one. `rms-events.json` records `everySteps` and `samplesWritten`; the run itself is unchanged. |
 | `--export` | - | Write a `gridsim-classical-export/1` trajectory for the scipy cross-check (`tools/crossval/crossval_classical.py`). Classical single-bus run only: with `--rms` or `--screen` it exits 2 before any work (`error: stability: --export writes the classical single-bus trajectory and is not available with --rms (no file would be written).`); it used to be accepted with no file written. A missing folder is created ([Output files](#output-files)). |
 
@@ -3694,7 +4692,7 @@ file that is missing or invalid. A STABLE or UNSTABLE verdict does not change th
 
 ### dynamics-study
 
-`gridsim dynamics-study <study.json> [--out <result.json>]`
+`gridsim dynamics-study <study.json> [--out <result.json>] [--unit-protection <unit-protection.json>] [--model-assignments <assignments.json>] [--model-plugins <plugins.json>]`
 
 Native RMS dynamics study over a PSS/E RAW case and its DYR file (RC3 P6). It runs the same engine and model bindings as
 `stability --rms --dyn-data` (the RAW parse, the PSS/E DYR reader and the gridsim-dynamics/2 loader, unchanged) from one
@@ -3714,9 +4712,49 @@ branch, a `seq` attachment (not supported in v1) and the global RAW switches (`-
 `--tap-control`, `--shunt-control`, `--psse-revision`, `--frequency-hz`) are refused before any solve.
 
 A case is `events` (an event list: `busFault` and `faultClear` with `bus`, `branchTrip` and `branchReclose` with
-`branch`, `machineTrip` with `machine`, `loadStep` with `bus`, `pMw`, `qMvar`; each with `at` in seconds) or `cct`
+`branch`, `machineTrip` with `machine`, `loadStep` with `bus`, `pMw`, `qMvar`, `sequenceFault` with `bus` and `type`,
+`lineFault` with `branch`, `fraction` and `type`, `lineFaultClear` with `branch`; each with `at` in seconds) or `cct`
 (`faultBus`, `clearingTrips`, `onsetSeconds`, `maxClearingSeconds`, optional `refinedStepSeconds`, `iterations`,
-`scanSteps`). Any other event kind (an unbalanced fault, a fault part-way along a line) is refused.
+`scanSteps`). A `sequenceFault` or `lineFault` `type` is `threePhase`, `slg`, `ll` or `llg`, with optional `rPu` and
+`xPu` (the fault impedance, pu on the system base); a `sequenceFault` is cleared by a `faultClear` on its bus. Any other
+event kind is refused.
+
+**Step schedule and error-controlled step (RC5).** `integration` takes two optional members for the full model; give one
+or neither. Without them the study, its output and every number are exactly as before.
+
+- `stepSchedule`: a list of windows `{ "fromS": 0, "dtS": 0.001 }, { "fromS": 0.5, "dtS": 0.005 }`. The events rows take
+  fixed steps of `dtS` from each `fromS` to the next. The first window starts at 0, starts rise, and each window must be a
+  whole number of its own steps. An event strictly inside a window whose step is larger than the schedule's smallest is
+  refused (start a window at the event). A one-window schedule at `stepSeconds` gives the plain rows bit for bit.
+- `errorControl` (EXPERIMENTAL: opt-in, and not part of the verified contract): GridSim chooses the windows.
+  Members, all optional: `relativeTolerance` (1e-3), `absoluteTolerance` (1e-4, pu, rad for angles), `maxStepSeconds`
+  (0.02), `minStepSeconds` (1e-4), `segmentSeconds` (0.1), `maxPasses` (12) and `safetyFactor` (0.5, in (0, 1]). The run
+  is cut into segments, with one starting at every event time. Each pass runs the schedule and the same schedule with
+  every step halved, compares every recorded state at every shared sample (the machine states, each converter's
+  voltage, powers and currents, each network device's states), and halves the step of every segment whose scaled
+  difference is above the safety factor. The error figure is a first-order step-doubling estimate, not a bound, and a
+  run can cost up to 2 x `maxPasses` full simulations (24 with the defaults). Each events row's `stepControl` and
+  `effectiveOptions.integration.errorControlStatus` carry the EXPERIMENTAL label. The reported run is the finer of the last
+  pass. A row whose tolerance was not met is INCOMPLETE, unless both runs of the last pass lost synchronism (then it stays
+  UNSTABLE, with the note).
+
+The no-event interval and the `cct` rows keep `stepSeconds`. Each events row gets `stepControl` (the mode, the windows
+with each one's scaled difference under error control, the number of steps, and for error control whether the tolerance
+was met, the largest scaled difference, the passes, the runs and a note). `effectiveOptions.integration` echoes the
+member given. Refused as input errors: both members at once, a malformed or off-grid schedule, an event in a coarse
+window, error-control values out of range, and either member with `--model-assignments` (GridSim cannot check that a user
+or plug-in model takes the step on each call).
+
+**IEC 61400-27-1 wind turbines (RC5, opt-in).** An optional top-level `iec61400` list makes units of the case IEC 61400-27-1
+style Type 4A or 4B wind turbines (2020 edition structure), one entry per unit: `machine` (`bus`, `id`), `type` (`4A` or
+`4B`), `edition` (2020), and the members `genSystem`, `pControl`, `qControl`, `currentLimit`, `pll`, `measurement`,
+`mechanical` (Type 4B only) and optional `protection`, with the parameters listed in chapter 15. The models are implemented
+from public open-source implementations (Dynawo) and the CGMES DY definitions, not checked against the IEC 61400-27-1 text.
+The unit's coverage row reads BOUND with the model's description, and `effectiveOptions.iec61400` lists each unit with that
+source note. Without the member the study, its output and every number are exactly as before. Refused as input errors: an
+unknown or missing field, a parameter the type does not read (`tpaero` or `mechanical` on Type 4A, `tpwtref` on Type 4B), the
+2015 edition, ride-through mode 3, a value out of range, a unit given twice or with DYR records, a user or plug-in model on
+the same unit, and the member together with `adaptive`, `stepSchedule` or `errorControl`.
 
 **Variable step and relays in the loop (RC4 R4-14).** An optional `adaptive` member of the version 1 study file adds a second,
 opt-in integration path beside the fixed-step one; without it the study, its output and every number are exactly as before.
@@ -3728,7 +4766,9 @@ curve library directory). Every row is then also run by the variable-step kernel
 (and `effectiveOptions.adaptive`) that declares `integration: adaptive`, the scheme, the tolerances, the accepted and rejected
 step counts, the smallest and largest step, the model it integrates, and per row the events as applied. The kernel is the
 Dormand-Prince 5(4) embedded pair with a step rule that is a pure function of the step just tried and its error, so a run is
-bit-identical across repeats and thread counts. Scheduled events are applied at exactly their requested times (the step is cut
+bit-identical across repeats and thread counts. The error test scales each state by `atol + rtol * max(|y|, |y_new|)`, and
+each rotor angle by the fixed `atol + rtol * 1 rad`, so the angle tolerance does not loosen as the angles drift off frequency. A step with a NaN in any state fails the error test, so a run whose state goes non-finite stops with
+the minimum-step error "(non-finite state)" rather than ending as a loss of synchronism. Scheduled events are applied at exactly their requested times (the step is cut
 to land on them), where the fixed-step engine moves them to its step grid; each event is listed beside the time the
 fixed-step engine applies it and the difference. Relays from the device set (overcurrent relays and reclosers, functions 50
 and 51, and fuses) are driven by the curve equation or table of their placed device at the simulated primary current: each
@@ -3741,6 +4781,59 @@ electromechanical swing of the prepared machines with their subtransient EMFs fr
 value: exciters, governors, flux decay and converter plant are not represented (a case with converter plant is refused for the
 adaptive rows), so the adaptive rows are additional evidence from that reduced model; the fixed-step rows are unchanged and
 still decide `status`. Equivalence with the PowerFactory variable-step integration is not claimed (COMPARATOR-UNVERIFIED).
+
+**Unit protection in the loop (RC5, opt-in).** `--unit-protection <file>`, or `adaptive.unitProtection` in the study file
+(`path`, relative to the study file, and the `sha256` of its exact bytes), puts the generating units' own relays in the
+adaptive rows: 81U / 81O, 81R, 27 / 59, 32 and 78 stages act during the run, an operating stage disconnects its unit's
+machine and the run continues (40 is listed as not evaluated: the swing model has no field model; critical clearing time
+rows do not run unit relays). It is given once. Without the `adaptive` member, `--unit-protection` runs the relays in the
+full-model run alone (below). The
+file is a `gridsim-unit-protection/1` document (`schemas/unitprotection/unit-protection.schema.json`): `templates`, each a
+template of kind `unitProtection` in the v2 library shape, and `units`, each with `unit`, `template`, and optionally the
+unit's own `params` (with a `reason`, and a `provenance` for values that do not carry their own). Its templates and values
+are checked and resolved exactly as a v2 case's unit protection (unit value, else template value, else no relay; a value
+with no stated source is a `[VERIFY]` placeholder quoting the reason). A unit is named by its PSS/E machine key
+`<bus>:<id>`: the RAW generator record's bus number and machine ID as written (quotes and surrounding blanks removed, case
+kept), for example `101:1`. A unit the RAW case does not have is refused before any solve, each one listed. The result
+gains `unitProtection` (the source, file name, SHA-256 and schema, the units, the templates, and every unit trip with its
+row, case, unit, stage, trip time, the quantity read and the settings with their grades and sources),
+`effectiveOptions.adaptive.unitProtection`, and in the adaptive section `unitRelayRule`, `unitRelaysNotEvaluated` and per
+row `unitRelays` (every stage: picked up, tripped, when, the quantity) and `stopReason`; every other member is as without
+it, and a study without unit protection is byte-identical to before.
+
+With unit protection each events row is also re-run on the full-model engine (the fixed-step six-state machines with
+flux decay, their exciters and governors, the same events and step) with the units' relays acting, including loss of
+excitation (40: the apparent impedance V_t / I at the machine terminals each step, in pu of the unit rating, against the
+`loe1` / `loe2` offset mho zones and their delays). A stage operates at the first step at least its delay after it picked
+up (never early; one-step resolution) and its unit leaves at the next step; a trip of the last machine ends that run with
+the reason. The result's `unitProtection` gains `fullModel`: `engine`, `rule`, `statusRule`, `notEvaluated` (each stage
+the engine cannot evaluate, with the reason: for example 40 on a unit with no rating or with no field dynamics, 78 with
+a delay, a frequency stage for another nominal; on a unit with a unit transformer folded in, 40 reads the machine
+terminal, behind the transformer), `trips` (row, case, unit, stage, operate
+and disconnection times, the quantity, for 40 the apparent R and X, the settings) and `rows` (per row the disposition
+`EVALUATED`, `FAILED` or `NOT RUN` for a CCT row, the relay run's synchronism verdict, any early end and every stage's
+record). `unitProtection.trips` stays the adaptive rows' list, and the `cases` rows and `status` are unchanged.
+
+Without the `adaptive` member, `--unit-protection` runs the units' relays in this full-model run only: the result gains
+`effectiveOptions.unitProtection` (`source`, `units`) and `unitProtection` with the file's identity, its units and
+templates and `fullModel` as above (no `trips` list, since no adaptive row was run). `fullModel` is the same, byte for
+byte, as with the `adaptive` member, and every other member is the study's own without unit protection.
+
+```json
+{
+  "schema": "gridsim-unit-protection/1",
+  "templates": [
+    { "id": "gridsim.local.sync", "rev": 1, "kind": "unitProtection", "status": "active", "title": "Synchronous unit",
+      "params": { "uf1Hz": 47.0, "uf1DelayS": 2.0, "relayNominalHz": 50 },
+      "provenance": { "_default": { "tag": "CuratedPlaceholder", "note": "[VERIFY] class default, not a unit schedule" } } }
+  ],
+  "units": [
+    { "unit": "101:1", "template": "gridsim.local.sync@1" },
+    { "unit": "102:G2", "template": "gridsim.local.sync@1", "params": { "uf1Hz": 47.5 },
+      "reason": "the unit's protection schedule", "provenance": { "tag": "Recorded", "note": "unit 102 G2 protection schedule" } }
+  ]
+}
+```
 
 The coverage report lists every DYR record (line, bus, model, ID, role, generator index) with its status: `SUPPORTED`
 (every value carried, exactly or by the exact derivations it lists), `APPROXIMATED` (a value left out), `SKIPPED` (an
@@ -3779,14 +4872,66 @@ unreadable RAW or DYR file, an existing output path). Exit 2 for an invalid invo
 | Flag | Default | Meaning |
 |---|---|---|
 | `--out` | none | Also write the result JSON to this new file. |
+| `--unit-protection` | none | A `gridsim-unit-protection/1` file whose units' own relays act in the full-model re-run of each events row and, with the study's `adaptive` member, in the adaptive rows (units named `<bus>:<id>`). |
+| `--model-assignments` | none | A `gridsim-model-assignments/1` file binding user models (shipped or file declarative models, and plug-in models) to machines as governor or exciter. See [`user-model`](#user-model). |
+| `--model-plugins` | none | A `gridsim-plugins/1` configuration: the only way a plug-in model is loaded. Needs `--model-assignments`. Refused through `rpc` over `--listen`. |
+
+**User models in a study (RC5).** `--model-assignments <file>` binds user models to machines, in place of the governor or
+exciter their DYR records give:
+
+```json
+{
+  "schema": "gridsim-model-assignments/1",
+  "userModels": [
+    { "machine": { "bus": 1, "id": "1" }, "model": "TGOV1", "parameters": { "R": 0.05, "T1": 0.49 } },
+    { "machine": { "bus": 2, "id": "1" }, "file": "my-exciter.model.json", "sha256": "<hex>", "replacesStabiliser": true }
+  ],
+  "pluginModels": [
+    { "machine": { "bus": 3, "id": "1" }, "model": "MY_GOV", "parameters": { "R": 0.05 } }
+  ]
+}
+```
+
+A declarative entry names a shipped model (`model`) or a document (`file`, relative to the assignments file, pinned by its
+`sha256`; a network or device path is refused, the document may be at most 16 MiB, and a pin that does not match is
+refused naming the pin, not the hash of the file read). A plug-in entry names a model of the `--model-plugins` configuration; without that flag it is refused with
+"plug-in models need --model-plugins". The coverage report lists a record bound to a declarative model as
+`SUPPORTED (USER MODEL, sha256:<document hash>)` and one bound to a plug-in as
+`SUPPORTED (PLUGIN, sha256:<assembly hash>, OUTSIDE THE VERIFIED CONTRACT)`; the reader notes carry the plug-in id,
+assembly, hash, contract version, parameter values and the same label. The result's `provenance` gains `modelAssignments`
+(the file name, its SHA-256 and the declarative bindings) and, with plug-ins, `plugins` (the configuration's SHA-256, the
+contract version, the label and each model's machine, role, assembly, SHA-256 and parameters). Without the two flags the
+result is byte-identical to a run without them.
+
+The file may also hold `deviceModels`: injection, machine and load models with no DYR record of their own. Each entry is
+`{ "role": "injection" | "machine" | "load", "bind": ..., "plugin": "<id>" }`, or `"file"` and `"sha256"` in place of
+`"plugin"` for a declarative document, with optional `"parameters"`. An injection or machine model binds to a unit,
+`"bind": { "machine": { "bus": 3, "id": "1" } }`, which then runs as a current source on its own bus without its DYR machine,
+exciter or governor; a load model binds to part of a bus load, `"bind": { "bus": 4, "pMw": 10, "qMvar": 0 }`. The role must
+be the model's own; a machine is a contract 2 plug-in only. The reader notes name each model and where it is bound, with
+OUTSIDE THE VERIFIED CONTRACT for a plug-in, and the
+result's `provenance` gains `deviceModels` (role, binding, model, SHA-256, source, assembly, contract version, configuration
+SHA-256, parameters and label). Not with `adaptive`, `stepSchedule` or `errorControl`; the unit may not also take a governor
+or exciter model, an IEC 61400 model, or be the angle reference.
+
+An entry of role `relay` is a user relay: a contract 2 relay plug-in, or a declarative document of role `relay` (inputs `vm`,
+`f`, `p`, `q`, `dfdt`, `speed`, `i`; output `trip`, 0 or the reason code; the `ontimer` and `latch` blocks give whole-step
+timers and seal-in). It binds to a unit, `"bind": { "machine": { "bus": 2, "id": "1" } }`, or to a branch, `"bind": { "branch":
+{ "from": 2, "to": 4, "circuit": "1" } }`, read at its `from` end as written; a branch relay's trip opens the branch. With
+relays, each events row is run again on the full-model fixed-step engine with them acting: the result gains `userRelays.fullModel`
+(or, with unit protection, the relays join `unitProtection.fullModel`), with each row's `unitRelays` and `branchRelays` records
+and the `trips` and `branchTrips` lists, and `provenance.relayModels` (the same fields as `deviceModels`). The study's own rows,
+status and exit code are unchanged. A declarative relay's file is journalled and re-checked by `breaking-change validate`.
+Not with `adaptive`, `stepSchedule` or `errorControl`.
 
 ### motor-start
 
 `gridsim motor-start <study.json> [--out <result.json>]`
 
 Motor acceleration study from a native JSON operating point (RC3 P8). It starts one placed induction motor of a
-gridsim-case/2 case (a `motors` row of its network file: see the v2 schema guide) direct-on-line and integrates its
-acceleration with the network solved at every step. It never calls the steady-state induction machine solve: the slip
+gridsim-case/2 case (a `motors` row of its network file: see the v2 schema guide), direct-on-line or through a
+reduced-voltage starter, and integrates its acceleration with the network solved at every step. A group study starts
+several motors, each at its own time and by its own method, on one network. It never calls the steady-state induction machine solve: the slip
 is derived from rotor speed (1 at standstill) and the single-cage equivalent circuit is evaluated at that slip. The
 existing power flow, the steady-state induction machine model and every other verb are unchanged.
 
@@ -3795,12 +4940,48 @@ relative to the study file, and `sha256`, the digest of the consumed-file manife
 computes it for a native case: one `path<TAB>sha256` line per consumed file, the manifest, its network, asset and library
 files and the v2 schema set; a mismatch is refused and prints the resolved identity); `motor` (the motor row's name);
 `initial` (`speedPu`, at least 0 and below the running speed, and `connected`, which must be false: the start event
-connects the motor, and a motor already connected before it is refused); `start` (`atSeconds`, and `method`:
-`directOnLine`, the only method in v1); `integration.stepSeconds`; `termination` (`runningSpeedPu`, `horizonSeconds`,
+connects the motor, and a motor already connected before it is refused); `start` (`atSeconds`, `method`: `directOnLine`,
+`starDelta`, `autotransformer`, `reactor`, `softStarter` or `vfd`, and for every method but `directOnLine` a `starter`
+object, below); `integration.stepSeconds`; `termination` (`runningSpeedPu`, `horizonSeconds`,
 `stallDwellSeconds`, `stallAcceleratingTorquePu`); `preStart` (`pgToleranceMw`, `vmTolerancePu`, `maxSlackMovementMw`);
 optional `report` (`sampleEverySteps`, default 1, and `maxVoltageDipPercent`, a reported flag). The start time and the
 horizon must be whole numbers of steps. Unknown or duplicated fields, non-finite numbers, a v1 case folder (it has no
 motor rows) and an unknown motor are refused before any solve.
+
+The `starter` object takes only the fields of its method; a field of another method is refused by name. Every time in
+it must be a whole number of steps. For `starDelta`, `autotransformer` and `reactor`, an `initial.speedPu` at or above
+the switch speed is refused: the starter would switch at once and the start would be direct-on-line.
+
+| Method | Fields | What the motor sees |
+|---|---|---|
+| `starDelta` | `switchSpeedPu` (default 0.8), `switchTimeSeconds` (optional), `deadTimeSeconds` (default 0) | V/sqrt(3) on each winding until the switch to delta, at the switch speed or time, whichever comes first. The line current and the torque are a third of direct-on-line. The transition is open: during the dead time the motor is disconnected and coasts under its load. A connection in delta below the breakdown (pull-out torque) speed is noted as "transition current peak"; with a dead time the note is on the reconnection in delta, where the peak is. |
+| `autotransformer` | `tapRatio` k (0 to 1), `switchSpeedPu`, `switchTimeSeconds` | k V. Motor current k times direct-on-line, line current and torque k squared. Ideal transformer, magnetising current ignored; the switch to full voltage is a step (the Korndorfer closed transition approximated as instantaneous). |
+| `reactor` | `reactorRPu` and `reactorXPu` (pu on the motor base), or `reactorROhm` and `reactorXOhm` (ohms are taken only for a reactor; on another method they are refused by name); `switchSpeedPu`, `switchTimeSeconds` | A series impedance: I = V / \|Z_motor + Z_r\|, bypassed at the switch. |
+| `softStarter` | `initialVoltageFraction` V0, `rampSeconds`, `currentLimitPu` (optional, pu of rated current) | A voltage ramping linearly from V0 to 1 over the ramp, then bypassed. With a current limit the fraction is lowered so the line current stays at or below the limit (settled to 1e-9 relative). It is a series controller: the line current is the motor current, the active power is the motor's, and the rest of the apparent power is reactive. Fundamental frequency only. |
+| `vfd` | `initialFrequencyHz` f0, `ratedFrequencyHz` fn, `rampSeconds`, `driveEfficiency` (default 0.97), `currentLimitPu` (optional) | Plain constant V/f: V = f/fn of rated voltage, with no stator-resistance (IR) compensation, so the torque at low frequency is lower than a drive with boost would give; the frequency ramps from f0 to fn; the circuit's reactances scale with f/fn and the slip is taken against the supply frequency. The line side draws the motor's input power over the efficiency at unity power factor, a constant-power load at the bus (refused on a bus whose demand varies with voltage). The ramp pauses while the motor current is above the limit. A start with `initial.speedPu` above f0/fn is refused: the slip would be negative and the drive would regenerate (a flying restart), which is not modelled. |
+
+Starter inputs are held over each step, and the predictor solve of Heun's method uses the same stage. With a starter the
+sample's current, P and Q are what the bus supplies, and its terminal voltage is the motor's own; `starterSamples` (one
+per sample: stage, voltage factor, drive frequency, motor voltage, motor current, line current and motor input power) and
+`starterTransitions` (each stage change with the line current just before and just after, at the same speed) are added
+to the result. A run without a starter writes neither. `RUNNING` needs the starter in its final stage (switched,
+bypassed, or the drive at rated frequency); a motor already above the running speed then is `RUNNING` at that step. The
+stall dwell is counted in whole steps and does not run while the motor is disconnected.
+
+A group study replaces `motor`, `initial` and `start` with `group`: an array of objects, each with its own `motor`,
+`initial` and `start` (method and starter included). The network is solved each step with every connected motor. The
+result has one entry per motor in `motors` (status, acceleration and decision times, starting, peak and final states,
+samples, starter samples and transitions) and the deepest dip at any bus over the whole run in `voltageDip`. The group
+status is `RUNNING` only when every motor runs; otherwise `NO SOLUTION` if a step failed, `STALLED` if any motor
+stalled, else `HORIZON ENDED`. The exit code follows the group status. A motor whose outcome is decided stays on the
+network while the others run, and a stage change its starter still makes then (a timed switch after a stall, say) is
+recorded in its transitions with a note. Results are deterministic for a given member order; with three or more motors
+on one bus the order of the list fixes the order in which their loads are summed, so reordering the list can change
+results at rounding level.
+
+The starter models are fundamental-frequency and quasi-steady, as the direct-on-line study: no switching transients, no
+closed-transition detail, no drive harmonics, single-cage motors only. They are verified against the closed forms above
+on a stiff bus; they have not been compared with ETAP or PowerFactory motor-start runs.
 
 The case is loaded with loader balancing suppressed at the loader seam, whatever its `system.dispatch` says, and the
 authored generator schedule is read from the network files: every in-service generator must give `outputMw`, `pMinMw`
@@ -3842,6 +5023,8 @@ Exit 3 `STALLED`, `NO SOLUTION`, `HORIZON ENDED` or `INCOMPLETE`.
 
 `gridsim user-model check <model.json | LIBRARY-ID>`
 
+`gridsim user-model check-plugin <plugins.json>`
+
 Declarative dynamic models (RC4 R4-08, Core `GridSim.Core.Dynamics.UserModels`). A user-defined controller is a
 `gridsim-model/1` JSON document describing a block diagram, not code: ports (inputs and outputs), parameters with units and
 bounds, blocks from a closed catalogue, wires, and an initialisation block. It is interpreted by the same step operators
@@ -3849,7 +5032,8 @@ the coded controllers use (`ControlBlocks.FirstOrderLag`, `LeadLag`, `Washout`, 
 same integration machinery, so a declarative model is inside GridSim's bit-identity guarantee: a model that re-expresses a
 coded one (TGOV1, SEXS, PSS1A, GAST, IEEET1, IEEEG1 without valve rate limits, SEXS with PSS1A) gives the coded model's
 output bit for bit (every sample of 10^5 steps at three step sizes, and whole studies on IEEE 9 and the 14-bus dynamics
-fixture). Vendor binaries (FMU, DLL) are not part of this format and are deferred.
+fixture). Vendor binaries (FMU, DLL) are not part of this format; GridSim's own .NET plug-in interface is a separate route,
+described under "Model plug-ins" below.
 
 `list` prints the shipped library, one model per line: id, role, document SHA-256 and title. `check` reads a document (a
 file, or a shipped id) and validates it against the closed vocabulary, compiles it, and prints what the model coverage
@@ -3860,8 +5044,13 @@ not exist or the document is refused (every refusal is printed with its code and
 `[algebraic-loop]`, `[unknown-block]`, `[unit-mismatch]`, `[undeclared-port]`, `[out-of-bounds]`); exit 2 usage (a missing
 argument, an unknown subcommand, any flag: the verb takes none).
 
+`check-plugin` loads a `gridsim-plugins/1` configuration under every loading rule below, binds each listed model at its
+declared defaults (which runs the replay check) and prints, per model, the id, role, assembly, assembly SHA-256, the status
+`SUPPORTED (PLUGIN, sha256:<hash>, OUTSIDE THE VERIFIED CONTRACT)` and the parameters. Exit 0 every model passed; exit 1 a
+refusal, printed with the entry it names.
+
 The format. A document has `format` (`gridsim-model/1`), `id`, `role` (`exciter`, `governor`, `stabiliser` or `generic`),
-`source` (the public source of the structure, required), `parameters` (name, `unit` of `pu`, `s` or `1/s`, `value`, optional
+`source` (the public source of the structure, required; the roles `injection`, `load` and `relay` are described below), `parameters` (name, `unit` of `pu`, `s` or `1/s`, `value`, optional
 `min`, `max`, `minExclusive`, `maxExclusive`, `allowInfinite`), optional `derived` constants (`add`, `sub`, `mul`, `div` of
 parameters, evaluated in listed order so a coded constructor's arithmetic can be reproduced) and `constraints` (a parameter
 sum), `ports` (`inputs`; `outputs` each bound with `from`), `blocks` and `initialisation`. A model role fixes its ports: an
@@ -3871,8 +5060,8 @@ steady regulator error); a governor takes `speed` and gives `pm` (from `pm0`); a
 
 The block catalogue is closed: `gain`, `div`, `sum` (with a `signs` text), `product`, `lag`, `leadlag`, `washout`,
 `integrator` (windup-limited when given limits), `pi`, `limit`, `ratelimit`, `deadband`, `table1d`, `expsat`, `min`, `max`,
-`switch`, `const`, `hold`, `delay` (whole steps) and `satpole` (the IEEE type 1 saturated exciter pole). A block outside it
-is refused naming the block; it is never approximated. A wire is a port name or a block id; `block.prev` reads a stateful
+`switch`, `const`, `hold`, `delay` (whole steps), `satpole` (the IEEE type 1 saturated exciter pole), `expr` (below), and
+`ontimer` and `latch` (below, with the relay role). A block outside it is refused naming the block; it is never approximated. A wire is a port name or a block id; `block.prev` reads a stateful
 block's output as it stood at the start of the step, and is the only way to close a loop: an algebraic loop without it is
 refused naming the blocks. A `washout` with a second input updates its state from that value after the step's outputs are
 evaluated (the coded `OutputFor` then `Step` split used by the rate-feedback loops). Units are checked: time constants are
@@ -3891,8 +5080,164 @@ UserModelFieldController(model), ...)` (the RMS studies' exciter list), or `Dyna
 `UserModelAssignment`: one governor or exciter model per machine, by bus and id, in place of the DYR record's controller).
 The study's model coverage report then lists the record as `SUPPORTED (USER MODEL, sha256:<hash>)` and its notes carry the
 model id, hash, order digest and bound parameter values. The dynamics-study JSON request (`schemaVersion` 1) is unchanged:
-binding user models from a request file is not offered by this verb. Equivalence with PowerFactory DSL models is not
-claimed (COMPARATOR-UNVERIFIED): the claim is bit identity with GridSim's own coded models.
+binding user models from a request file is not offered by this verb; the sidecar `--model-assignments` file is (see
+[`dynamics-study`](#dynamics-study)). Equivalence with PowerFactory DSL models is not claimed (COMPARATOR-UNVERIFIED): the
+claim is bit identity with GridSim's own coded models.
+
+**The `expr` block (RC5).** `{ "id": "cmd", "type": "expr", "inputs": ["pref", "speed"], "expr": "in0 - in1 / @R", "unit": "pu" }`.
+The text is numbers (no exponent), the block's inputs `in0` to `in7`, declared parameters `@Name`, `+ - * /` (left to right,
+`*` and `/` before `+` and `-`), unary minus, brackets, and the functions `min` and `max` (two or more arguments, taken left to
+right), `abs`, `sqrt`, `exp` (the deterministic `DetMath.Exp`) and `clamp(x, lo, hi)`. It is compiled once into a fixed
+evaluation order that is the text read left to right, so `in0 - in1 / @R` does exactly the coded TGOV1's `Pref - dw / R`.
+Nesting and the evaluation stack are capped at 64. The output unit is declared with `unit` and not inferred. A non-finite
+result (a division by zero, the square root of a negative number) refuses the step with the code `non-finite`, naming the
+block. An `expr` TGOV1 gives the coded TGOV1's output bit for bit (tested).
+
+**Injection and load roles (RC5).** An `injection` model takes `vm` (the terminal |V|) and gives `ip` and `iq`, the active
+and reactive current exporting positive on the unit's MBASE; the current is `(ip - j iq) v / |v|` times MBASE / Sb. A `load`
+model takes `vm` and gives `p` and `q`, the drawn active and reactive power as multiples of the load's P and Q; the current
+drawn is `conj(S / v)`. Both are initialised from `p0`, `q0` (on the MBASE for an injection, system per unit for a load) and
+`v0`. Inside the network iteration the model is evaluated with every state held (`ModelInstance.EvaluateHeld`), so its
+current is a pure function of the voltage; the states advance once per step. A load model's Norton admittance is the one the
+constant-admittance bus load would have had, so `p = q = (vm / v0)^2` leaves the network exactly as the static load did
+(tested to 1e-12 pu through a fault). They reach the RMS study through the API: `SubtransientInit.MachineData.UserInjection`
+(a `UserDeviceModel`) on a generator, and `UserDynamicLoadData` in `RmsLoadedMachineData.Loads` for a bus load (which may be
+purely reactive). At its start each must reproduce the power-flow P + jQ to 1e-10 (1 + |S|) pu, or it is refused.
+
+**Model plug-ins (RC5).** A plug-in is a .NET class library that references `GridSim.Core`, carries
+`[assembly: GridSimModelPlugin(1)]`, and holds one public class per model implementing `IUserModelFactory`: an `Id` (1 to 16
+of A-Z, 0-9 and underscore), a `Role` (exciter, governor, stabiliser, injection or load), the `Parameters` it takes (name,
+unit, default, optional bounds) and `Create(parameters)`, which returns a fresh instance of the role interface:
+`IUserExciter` (`Initialize(efd0)`, `EquilibriumErrorPu(efd0)` without touching the states, `Step(verr, speedDev, dt)`),
+`IUserGovernor` (`Initialize(pm0)`, `Step(speedDev, dt)`), `IUserStabiliser`, `IUserInjection` or `IUserLoad` (a constant
+Norton admittance, `Initialize` at the power-flow start, `Current(v)` with the states held, `Commit(v)`, `Step(t, v, dt)`).
+Quantities are per unit: the machine base for the control roles, the system base for currents; phasors are (re, im) pairs.
+
+Contract 2 (`[assembly: GridSimModelPlugin(2)]`) keeps every contract 1 interface and adds two roles. `machine`:
+`IUserMachine`, a Norton source with a constant admittance on the system base (`NortonAdmittancePu`), `Initialise` at the
+power-flow P0 + jQ0, V0 and MBASE, `NortonCurrentPu` from the present states, `Step(dt, inputs)` from the step's terminal
+voltage, and the speed, rotor angle, field current and electrical power it reports. It runs on the injection route, keeps its
+own rotor, field and mechanical power, and is not judged in the synchronism verdict. `relay`: `IUserRelay`, `Initialise()`
+and `Evaluate(inputs)` once per step (step number and size, time, unit bus |V|, the machine's electrical frequency and its
+rate of change, P, Q, speed and |I|), returning no action or a trip with a reason code; it trips its unit by the unit relays'
+path. Bound to a branch instead, it reads |V| at one end and the |I|, P and Q flowing into the branch there (frequency, its
+rate and speed are NaN: a branch has no machine), and its trip opens the branch from the next step.
+A configuration entry may add `"contract": 1` or `2`, which must match the assembly. A contract 1 assembly cannot give the
+machine or relay role: a role number outside the five contract 1 roles is refused when the model is bound, with the words
+contract 1 always used, and an assembly that declares a contract other than 1 or 2 is refused with "this build implements
+contract 1", as before. The sample `tests/GridSim.ModelPlugin.Contract2Sample` writes a classical machine and two
+under-voltage relays.
+
+**Relay role (RC5).** A `relay` document takes, in this order, `vm` (pu), `f` (Hz, declared `1`), `p`, `q` (system pu), `dfdt`
+(Hz/s, declared `1/s`), `speed` (pu) and `i` (system pu), the fields a relay plug-in reads, and gives `trip`: 0 for no
+action, otherwise the reason code (a whole number). It has no initialisation inputs; its stateful blocks are initialised with
+literals. `ontimer` (parameter `time`, seconds) gives 1 once its input has been non-zero for `time`, counted in whole steps by
+the built-in relay stages' rule (operation at the first step k with `(k - k_pickup) h + h 1e-6 >= time`, a zero step resets
+it, one fixed step size, initialised with 0); `latch` gives 1 from the first step its input is non-zero to the end of the run
+(initialised with 0 or 1). A relay document runs through `UserRelayBinding.ForUnit` or `ForBranch` with
+`RmsTransientStability.StudyEventsWithUserRelays`, or as a `deviceModels` entry of role `relay` in a dynamics study (see
+[`dynamics-study`](#dynamics-study)); bound to a branch it may not read `f`, `dfdt` or `speed`. Its records carry its id and
+document hash, without the OUTSIDE THE VERIFIED CONTRACT label.
+
+How to write one:
+
+1. Make a class library for the same .NET version as GridSim, reference `GridSim.Core` (do not copy it beside the plug-in:
+   the host's copy is the one the plug-in binds to), and add `[assembly: GridSimModelPlugin(1)]`.
+2. Write the model as a class that keeps all its state in its fields, on the calling thread, using the public
+   `ControlBlocks` operators (`FirstOrderLag`, `LeadLag`, `Washout`, `Integrator`, `PiController`) where they fit and
+   `DetMath` for any transcendental function. The sample `tests/GridSim.ModelPlugin.Sample` writes TGOV1 and SEXS this way.
+3. Write a factory class with a public parameterless constructor that returns a new instance from `Create`.
+4. Build it, put the DLL under a folder you control, and write the configuration:
+   `{ "schema": "gridsim-plugins/1", "root": "plugins", "assemblies": [ { "path": "MyModels.dll", "sha256": "<hex>", "models": ["MY_GOV"] } ] }`.
+5. Run `gridsim user-model check-plugin plugins.json`, then use the model through `dynamics-study --model-plugins
+   plugins.json --model-assignments assignments.json`.
+
+The contract a plug-in must keep: no threads, tasks, async, timers or locks; no clock; no randomness and no `HashCode`; no
+enumeration of `Dictionary`, `HashSet`, concurrent collections or `Hashtable` (use arrays, `List<T>` or `SortedDictionary`);
+no file, network, console, process or environment access, no P/Invoke, no unsafe code, no reflection emit; no mutable
+static state (an instance holds all its state, and instances share nothing); `DetMath` for transcendental functions and, of
+`System.Math`, only Abs, Min, Max, Sqrt, Floor, Ceiling, Round (to even), Sign, Clamp and CopySign; no
+`Math.FusedMultiplyAdd`, vectors, intrinsics, `float` or `decimal`; and `Current(v)` pure. What GridSim enforces: a lint of
+the assembly's metadata before it is loaded (every member, type and signature it references, and single-precision opcodes),
+which refuses a breach naming the member and the type that references it, and a replay check when a model is bound, which
+refuses it as "not deterministic (replay differs at step k)". Every number a plug-in returns is checked finite; a
+non-finite one refuses the step, naming the model and the time.
+
+The lint refuses, by name, wherever the plug-in's IL, signatures or metadata reference them:
+
+- GridSim.Core outside the namespaces `GridSim.Core.Dynamics.Models`, `GridSim.Core.Dynamics.Plugins` and
+  `GridSim.Core.Numerics` (so no `Save(path)` or other file API of Core, and no Core table), and in those the loader's own
+  types (`PluginConfig`, `PluginLoader`, `PluginSet`, `PluginVerifier`, `PluginReplay`, `PluginDenylist`) and the SIMD
+  capability readings (`SimdCapabilities`, `SimdTier`).
+- Writing a static field of another assembly, taking its address, or reading one that holds anything but a number, bool,
+  char or string (an array or object there could be written through). A plug-in's own statics are its own business; the
+  replay checks their effect.
+- Members of `System.Double` other than the exact ones (`IsNaN`, `IsFinite` and the other classifications, comparisons,
+  `Abs`, `Min`, `Max`, `Clamp`, `CopySign`, `Sign`, `Sqrt`, `Floor`, `Ceiling`, `Round`, `Truncate`, `BitIncrement`,
+  `BitDecrement`, `GetHashCode`): so `double.Sin`, `double.Exp`, `double.FusedMultiplyAdd` and the rest of its maths, and
+  parsing and formatting. `System.Half`. `Parse` and `TryParse` on the integer types, and `System.Convert`.
+- `GetHashCode` on any type but the numbers, bool, char and enums (string, comparer, tuple and object hash codes are
+  randomised per process or follow object identity).
+- `IEnumerable`, `IEnumerable<T>`, `ICollection`, `ICollection<T>`, the dictionary and set interfaces, LINQ
+  (`System.Linq`), `Dictionary` and `HashSet` enumeration (`GetEnumerator`, `Keys`, `Values`, their enumerator and key and
+  value collection types, `HashSet.CopyTo`), `ImmutableHashSet`, `ImmutableDictionary`, the frozen, concurrent and
+  specialised collections, and the JSON, XML and serialisation namespaces. Iterate arrays, `List<T>` and
+  `SortedDictionary` directly (an `IReadOnlyList<T>` by index).
+- Environment readings: `OperatingSystem`, the current culture (`CultureInfo.CurrentCulture` and its relatives,
+  `NumberFormatInfo.CurrentInfo`, `RegionInfo.CurrentRegion`), `TimeZoneInfo`, `JitInfo`, `GCSettings`, `RuntimeFeature`,
+  weak references.
+- Reflection: `System.Type`, the `System.Reflection` namespace (its attribute types excepted: the SDK writes them on every
+  assembly), expression trees (`System.Linq.Expressions`), `Delegate.DynamicInvoke`, `UnsafeAccessor`, an
+  `IgnoresAccessChecksTo` attribute (defined or referenced), and any method without a body of its own (extern).
+- Every framework namespace but the few a numerical model needs. A framework type (`System.*`, `Microsoft.*`) is allowed
+  only in `System`, `System.Collections.Generic`, `System.Collections.Immutable`, `System.Collections.ObjectModel`,
+  `System.Diagnostics.CodeAnalysis`, `System.Globalization`, `System.Runtime.CompilerServices`, `System.Runtime.Versioning`
+  and `System.Text`, and the attribute types of `System.ComponentModel`, `System.Diagnostics` and `System.Reflection` (with
+  the enums `EditorBrowsableState` and `DebuggerBrowsableState` they take);
+  the lists above still apply inside them. So a file or network route in any other namespace is refused without being
+  named: `System.Formats.Tar`, `System.Data` (`DataSet.WriteXml` and `ReadXml`), `System.Resources`,
+  `TextWriterTraceListener`, `Trace` and `FileVersionInfo` in `System.Diagnostics`, and `System.Buffers` (`ArrayPool`, state
+  shared with the host). A plug-in references only `GridSim.Core` and the framework assemblies that hold those namespaces
+  (`System.Runtime`, `System.Collections`, `System.Collections.Immutable`, `System.Memory`, `System.ObjectModel`,
+  `System.Runtime.Extensions`, `System.Private.CoreLib`, `System`, `mscorlib`, `netstandard`).
+
+A plug-in is trusted code. The lint and the replay check catch accidents against the determinism contract; .NET has no
+in-process sandbox, so load only plug-ins you would run as a program of your own. `breaking-change validate` never re-runs
+a plug-in job, and `rpc --listen` never loads one.
+
+What the lint does not see: it checks names, not data flow. Text formatted with the current culture without naming it
+(string interpolation, `ToString()` without a provider, culture-sensitive string comparison) is not refused, nor a
+framework method that takes `IReadOnlyCollection<T>` or `object` and enumerates a dictionary or set handed to it. A
+record type is refused (its generated members use `System.Type` and `EqualityComparer` hash codes).
+
+The replay check runs each model 200 steps from two operating points of its role (a 0.01 pu input step at step 100): one
+instance alone from the first point, one alone from the second, then two fresh instances side by side, one from each
+point, initialised one after the other and stepped in turn. Each paired instance must repeat its solo run bit for bit, and
+an injection's current asked twice at the same voltage must give the same bits. A relay is replayed twice, with a unit's
+inputs and with a branch's (no frequency, rate of change or speed), since it may be bound to either. Because the paired instances start at
+different points, state shared through a static (a value one instance writes and the other reads, or a shared counter)
+shows as a difference. It cannot prove determinism: sharing that changes no output in those 200 steps from those two
+points passes.
+
+Loading rules. A plug-in is loaded only from a `gridsim-plugins/1` configuration named on the command line: no default
+folder, no environment variable, no discovery. Each path must resolve inside the configuration's `root` (default: the
+configuration's folder): no `..` escape, no absolute path outside, no network or device path, no symbolic link or junction
+on any component (the scripting `--confine` rule). The SHA-256 of the file must equal `sha256`; the bytes are read once and
+the same bytes are checked and loaded. The assembly must carry the attribute and reference only the framework and
+GridSim.Core, and may not take the name of an assembly GridSim grants its internals to (an `InternalsVisibleTo` target of a
+GridSim assembly, such as GridSim.Tests; the names are read from the attributes, ignoring case). The listed ids must be unique and differ from every shipped model. Every rule is checked for every entry before
+anything is loaded; the assemblies then load into one collectible context per configuration. `rpc` refuses the plug-in routes
+over `--listen`, and the web app does not offer them.
+
+What this is not. The lint and the replay are a determinism check, not a security boundary: .NET has no in-process sandbox,
+so a plug-in runs with your rights. Load only assemblies you trust; the hash pin protects against a swapped file, not against
+its author. Results with plug-ins are outside the verified contract: GridSim verifies the route (a plug-in that re-expresses
+TGOV1 or SEXS gives the coded output bit for bit), not the plug-in's maths. Out of scope: the PSS/E USRMDL/CONEC/CONET
+compiled-model interface, PowerFactory DSL import, the IEEE/Cigre real-code DLL interface for EMT, user machine (rotor and
+flux) models and relay models. A plug-in stabiliser is attached through the API (`RmsExciter.WithLibraryStabiliser(new
+PluginStabiliser(model))`); a study binds governor and exciter plug-ins. Injection and load plug-ins are reached through the
+API (as for the declarative roles above), not yet from the `dynamics-study` file. `modal-full` takes declarative models
+only, and a model with an `expr` block is reported NOT LINEARISED there (no linearisation is defined for it).
 
 ### modal
 
@@ -4340,7 +5685,7 @@ A `current` output of a converter is the filter current of the phase (converter 
 current; an unfiltered switched converter has no single current and the output is refused. The result gains the `converters` table
 (`converter`, `model_class` `AverageValue` or `Switched`, `description`) and the summary keys `switching_timing` and
 `comparator_status`. A load that needs a floating star point cannot be written in a study (a branch load returns to a bus, and a
-grounded bus gives the star point a ground path); the validated cases use a grounded star point. The Core grid-following and
+grounded bus gives the star point a ground path); the verified cases use a grounded star point. The Core grid-following and
 grid-forming inverter models live in the older phase-domain engine and are not on the nodal solver, so they are not available here.
 
 `hvdc` (optional; the Core R4-19 HVDC models, a link described as entries of three kinds; every converter is listed in the `converters`
@@ -4369,14 +5714,16 @@ A refusal of the Core (a pulse count other than 6 or 12, a DC voltage set point 
 with the Core's own text. The grid-forming and grid-following inverters, a DC line with sheath or frequency dependence and multi-terminal
 DC grids are not available. A `partition` key (parallel runs cut at Bergeron lines) is not offered: the Core partitioned engine cuts only
 single-conductor Bergeron lines of a network built per partition, while a study builds one network of three-phase buses whose lines are modal
-(`bergeron`, `fd`) and cannot be cut, so a faithful `partition` key would need a new three-phase cuttable line element.
+(`bergeron`, `fd`) and cannot be cut, so a faithful `partition` key would need a new three-phase cuttable line element. The
+partitioned engine has its own verb, [`emt-partition`](#emt-partition), on a single-conductor network; [`cosim`](#cosim) runs an
+emt3 study against an RMS phasor side.
 
 An `fd` line is fitted for the study's step: the delay removed from the propagation function is the group delay at the top of the band
 rounded down to whole steps, and the step must not exceed the shortest line travel time. The fit is refused (exit 1) when the fitted
 characteristic admittance or propagation function is not passive and a perturbation of at most 5 per cent cannot correct it. The
 result gives, per line and mode, the fit error (maximum and rms, separately for the characteristic admittance and the propagation
 function), the delay and any passivity correction. Nothing is compared with PSCAD or EMTP (COMPARATOR-UNVERIFIED); chapter 16 of the
-manual lists what is and is not validated.
+manual lists what is and is not verified.
 
 Exit 0 when the run completed; 1 when the file is missing or invalid, or the network or a line fit is refused; 2 for a usage error;
 3 when the run ended with a named status other than completed (the Newton iteration did not converge, or the nodal matrix was
@@ -4385,6 +5732,74 @@ singular): the traces up to the last good step are still written and the status 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--out` / `--json` / `--csv` | - | Write the result through the shared [result writer](#result-files): the summary (status, step, method, factorisation and Newton counts and tolerances, the largest absolute value of each output) and the tables `line_fits` (one row per line and mode) and `traces` (`time_s` and one column per output). |
+
+### cosim
+
+`gridsim cosim <study.json> [--out <file.json>] [--boundary-csv <file.csv>]`
+
+RMS-EMT co-simulation through the Core interface (`RmsEmtInterface`). `<study.json>` is a strict `gridsim-cosim/1` document:
+
+- `emt3`: an inline `gridsim-emt3/1` study (the detailed part, exactly as [`emt3`](#emt3) reads it);
+- `boundary_bus`: the bus of that study where the RMS side connects;
+- `form`: `thevenin` (the RMS side hands over an EMF behind a series R-L and takes back the boundary current) or `norton`
+  (a current source with a shunt R and L, taking back the boundary voltage);
+- `exchange_every_steps`: EMT steps between exchanges (1 or more);
+- `rms`: the RMS side, a source phasor `source_re_v`, `source_im_v` (peak volts, cosine convention: phase a is
+  `Re{E e^(j w t)}`) behind either `line` (`surge_ohm`, `travel_s`: a lossless line, shorter than a quarter wave) or
+  `series` (`r_ohm`, `x_ohm`), with optional `source_changes` (`at_s`, `re_v`, `im_v`), each applied at the first exchange
+  at or after its time.
+
+The RMS side is the Core phasor side, not the RMS transient kernel: that kernel runs a whole case and has no entry to
+exchange a boundary quantity part-way through. The interface is added after every element of the EMT study. One fundamental
+cycle must be a whole number (at least 8) of EMT steps, and the equivalent impedance must be inductive. The result is
+bit-repeatable with itself and is not bit-comparable with an all-EMT run (the equivalent is fitted at the fundamental only).
+See [ch. 16](<0016 Electromagnetic transients (EMT).md>).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Write the EMT traces and the exchange log as JSON (`gridsim-cosim/1`); an existing file is never overwritten. |
+| `--boundary-csv` | none | Write the exchange log as CSV: `time_s`, `valid`, the voltage and current phasors the EMT side measured, the voltage the RMS side computed, and the EMF and impedance it handed over (peak values, exact round-trip numbers). |
+
+The verb is not on the shared `--json`/`--csv` writer.
+
+Exit 0 when the run completed. Exit 3 when the EMT run ended with a named status other than completed. Exit 1 for a missing
+or invalid file, or a network or interface the Core refuses. Exit 2 for usage.
+
+### emt-partition
+
+`gridsim emt-partition <study.json> [--partition auto|<cut.json>] [--threads 1] [--monolithic] [--out <file.json>]`
+
+The partitioned parallel EMT run of the Core (`PartitionedEngine`, `LinePartitioner`). The Core cuts a network only at
+single-conductor Bergeron lines, while an `emt3` study builds three-phase buses whose lines are modal, so this verb has its
+own input. `<study.json>` is a strict `gridsim-emt-partition/1` document: `time_step_s`, `duration_s`, `sample_every`
+(default 1), and the lists
+
+- `sources`: `name`, `node`, `r_ohm` (default 0), `amplitude_v`, `frequency_hz`, `phase_deg` (default 0): the EMF
+  `amplitude_v sin(2 pi f t + phase)`;
+- `branches`: `name`, `kind` (`resistor`, `inductor`, `capacitor` or `series-rl`), `from`, `to`, and `r_ohm`, `l_h` or
+  `c_f` as the kind needs;
+- `switches`: `name`, `from`, `to`, `ron_ohm` (default 1e-6), `roff_ohm` (default 1e9), `closed` (default false),
+  `events` (`at_s`, `close`);
+- `lines`: `name`, `from`, `to`, `surge_ohm`, `travel_s`, `attenuation` (default 1): a Bergeron line with ground return;
+- `outputs` (required): `name`, `kind` (`voltage` of a node, `current` of a branch or switch), `target`.
+
+A node named `gnd` or `ground` is the reference. The network is split into partitions: the connected parts left when the cut
+lines are removed, named p1, p2, ... in the order their first node appears in the document. A cut line must have a travel
+time of at least one step; partitions then run between exchanges for the shortest cut travel time in whole steps, and the
+result does not depend on the thread count. Nonlinear elements and the backward-Euler event rule are not offered (the Core
+refuses them in a partitioned run). See [ch. 16](<0016 Electromagnetic transients (EMT).md>).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--partition` | none (nothing cut) | `auto` cuts every line whose travel time is at least the step; otherwise a `gridsim-emt-cut/1` file, `{"schema": "gridsim-emt-cut/1", "cut": ["line names"]}`. |
+| `--threads` | 1 | Worker threads for the partitions. The traces are the same bits for any count; the result file records the count used (`threads`), as provenance, so two files made with different counts differ in that field only. |
+| `--monolithic` | off | Build the same partitions as one network and run the single-network nodal solver (the engine's reference: the same bits). |
+| `--out` | none | Write the result as JSON (`gridsim-emt-partition/1`: the plan, the times and one trace per output); an existing file is never overwritten. |
+
+The verb is not on the shared `--json`/`--csv` writer.
+
+Exit 0 when the run completed. Exit 3 when the run ended with a named status other than completed. Exit 1 for a missing or
+invalid file, or a network or cut the Core refuses (a cut line shorter than the step). Exit 2 for usage.
 
 ### harmonic-assess
 
@@ -4439,6 +5854,69 @@ existing output path). Exit 2 for an invalid invocation.
 |---|---|---|
 | `--out` | none | Also write the result JSON to this new file (with `--report-template`, the template). |
 | `--report-template` | off | Write the report template for this verb's result to `--out` and exit; no study is read. |
+
+### harmonic-pf
+
+`gridsim harmonic-pf <case> --spectra <file.json> [--orders 5,7,11] [--norton-g 0] [--norton-b 0] [--out <file.json>]`
+
+Experimental: the console headline carries `[EXPERIMENTAL]` and the result file `"experimental": true`, because the
+coupling model is an assumed placeholder and the solver has not been checked against an independent coupled harmonic
+solver.
+
+Coupled harmonic power flow (Core `CoupledHarmonicPowerFlow`). The network is the study model the `harmonics` verb uses:
+machine source reactance, loads as damping shunts, balanced sequences. The sources come from a `gridsim-harmonics/1` file, the
+same file `harmonics --spectra` reads. Each source bus carries a Norton coupling admittance `g + j b h` (pu on the case base)
+in parallel with its current source. With both values 0 (the default) the result is the plain penetration solve
+`V_h = Z_h I_h`. The fixed-point loop over the source injections runs to 1e-10 pu, at most 50 passes per order. The
+voltage THD of each bus is taken over the solved fundamental (Newton, 100 iterations, reactive limits on). See
+[ch. 17](<0017 Harmonic studies.md>).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--spectra` | required | The `gridsim-harmonics/1` source file. A component at an order the study does not analyse is refused (exit 1), as `harmonics` refuses it. |
+| `--orders` | 3 to 49, odd | The orders to solve, comma separated, each 2 or more. |
+| `--norton-g` | 0 | Coupling conductance at each source bus, pu (not negative). |
+| `--norton-b` | 0 | Coupling susceptance per harmonic order at each source bus, pu (the admittance at order h is g + j b h). |
+| `--out` | none | Write the result as JSON (`gridsim-harmonic-pf/1`: per bus the fundamental voltage, the THD and, per order, the real and imaginary parts, magnitude and angle of V_h; the iteration count and the convergence flag); an existing file is never overwritten. |
+
+The JSON from `--out` is the result file: the verb is not on the shared `--json`/`--csv` writer. The coupling model is an
+assumed placeholder (provenance CuratedPlaceholder), not a measured converter characteristic.
+
+Exit 0 when the fixed-point loop converged at every order. Exit 3 when it did not, or when the fundamental power flow did
+not converge. Exit 1 for a case or source file that cannot be read, or a singular Y(h). Exit 2 for usage.
+
+### harmonic-se
+
+`gridsim harmonic-se <case> <measurements.json> [--out <file.json>]`
+
+Experimental: the console headline carries `[EXPERIMENTAL]` and the result file `"experimental": true`, because the
+estimator has not been checked against an independent reference.
+
+Harmonic state estimation (Core `HarmonicStateEstimator`, weighted least squares). At each order in the measurement file it
+estimates the harmonic current injected at each candidate bus from measured bus voltage phasors, on the same study model as
+`harmonic-pf`. The measurement file is a strict `gridsim-harmonic-meas/1` document: `takenUtc` (required, not in the
+future), `baseMva` (must match the case), and `orders`, each with `order`, `candidates` (bus numbers) and `voltages`
+(`bus`, `re`, `im` in pu, `sigma` in pu). `sigma` is the standard deviation of each of the real and imaginary parts. Only bus
+voltages are read: the estimator has no branch current measurement, so a `currents` key is refused.
+
+Per order the verb reports the estimated injections, the estimated voltage at every bus, each measurement's residual and
+normalised residual (`|r| / sqrt(Omega_ii)`, with Omega_ii the variance of each of the residual's real and imaginary
+parts), whether the candidates are observable, and the chi-square test: `J = sum |r|^2 / sigma^2` against the exact 99 %
+quantile with `2 (m - s)` degrees of freedom (m measurements, s candidates; 13.2767 at 4 degrees of freedom). Because the
+residual is complex, the square of a normalised residual follows chi-square with 2 degrees of freedom under Gaussian
+errors, not the square of a standard normal: a value above 3 has a 1.1 % chance from noise alone (exp(-9/2)), not 0.27 %.
+The verb uses it only to name the largest. A measurement the estimate must pass through (a critical measurement) has no normalised
+residual. See [ch. 17](<0017 Harmonic studies.md>).
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--out` | none | Write the result as JSON (`gridsim-harmonic-se/1`); an existing file is never overwritten. |
+
+The verb is not on the shared `--json`/`--csv` writer.
+
+Exit 0 when every order is observable and passes the chi-square test. Exit 3 when an order is not observable or fails the
+test (bad data suspected; the largest normalised residual names the likely measurement). Exit 1 for a case or measurement
+file that cannot be read, fewer measurements than candidates, or a singular Y(h). Exit 2 for usage.
 
 ### flicker
 
@@ -4706,7 +6184,7 @@ exits 3 and writes nothing; `--solve` exits 3 when the solve does not converge.
 
 `gridsim gda-replay (--series <ts.json> | --synth) [flags]`
 
-The historical state estimator: replay a demand time series through the validated solver, reconstructing grid state at
+The historical state estimator: replay a demand time series through the verified solver, reconstructing grid state at
 each past timestamp (horizon-guarded, never nowcasting). Writes `state-estimate.csv`, `exports/state-*.json` and
 `run-metadata.json`. Exit 3 if any step fails to converge; exit 2 with neither `--series` nor `--synth` or on a
 forward-inference rejection; exit 1 if the case or series does not load.
@@ -4766,12 +6244,12 @@ the output path and must end in `.json` (exit 2 otherwise, so a mistyped case na
 
 ### convert
 
-`gridsim convert <input.m|input.raw|input.uct|case-dir|case> <output.m|output.raw|output.xml|output.json|output-dir> [--public [--provenance <manifest.json>]]`
+`gridsim convert <input.m|input.raw|input.uct|case-dir|case> <output.m|output.raw|output.rawx|output.uct|output.xml|output.json|output-dir> [--raw-revision 33|34|35|36] [--ucte-country <CC>] [--public [--provenance <manifest.json>]]`
 
 Convert a case between MATPOWER, PSS/E RAW, CGMES, a JSON case folder (v1) and a JSON v2 case. An output ending in `.m` is written as
-MATPOWER (version 2); an output ending in `.raw` is written as PSS/E RAW revision 33 (see below); an output ending in `.xml` is written as CGMES RDF/XML (see below); an output ending in `.json` is written as a JSON v2 case (N299, October 2026): the manifest at that
+MATPOWER (version 2); an output ending in `.raw` is written as PSS/E RAW revision 33, or the revision `--raw-revision` names (33 to 36; see below); an output ending in `.rawx` is written as PSS/E RAWX (JSON), revision 35; an output ending in `.uct` is written as UCTE-DEF (see below); an output ending in `.xml` is written as CGMES RDF/XML (see below); an output ending in `.json` is written as a JSON v2 case (N299, October 2026): the manifest at that
 path and its network file beside it (`uk.case.json` writes `uk.network.json`); any other output is a JSON case folder. The input is loaded as every verb loads it (a `.m` file through the unit
-normaliser, a PSS/E `.raw` file through the RAW reader ([ch. 2](<0002 Loading networks.md#pss-e-raw-files>)), a UCTE-DEF `.uct` file through the UCTE reader ([ch. 2](<0002 Loading networks.md#ucte-def-files>)), a CIM / CGMES input (below), a JSON folder dispatched as usual, or a built-in name). The conversion is then proved: the written case is
+normaliser, a PSS/E `.raw` file through the RAW reader ([ch. 2](<0002 Loading networks.md#psse-raw-files>)), a UCTE-DEF `.uct` file through the UCTE reader ([ch. 2](<0002 Loading networks.md#ucte-def-files>)), a CIM / CGMES input (below), a JSON folder dispatched as usual, or a built-in name). The conversion is then proved: the written case is
 read back and both are solved with the contingency option set and the tap-changer loop, and every bus voltage, angle
 and injection, both loss totals and every line flow must be the same bits. The last line says so (`round trip: the
 written case solves bit-identically (...)`).
@@ -4807,6 +6285,33 @@ transformers, then FACTS series elements); the proof compares it with the input 
 change the last bits of the admittance sums). Not written, with a note: generator dynamics and fault data, boundaries,
 the asset bundles, MATPOWER DC lines; a name holding a single quote is written in double quotes. Refused (exit 1):
 ZIP loads, zero-sequence data, an infinite generator limit, a transformer with line charging and a ratio or phase shift.
+
+A revision 36 RAW output holds the revision 35 records under the revision 36 header, each record group under an `@!` heading
+line that names its fields; the fields revision 36 added (load, generator and shunt names, DROOPNAME, BYPASS) are left to
+their defaults. GridSim's revision 36 reader places fields by those headings, so it reads the file to the revision 35
+model bit for bit. A RAWX output holds the same records as a revision 35 RAW output, field by field, with the section and
+field names of the public RAWX layout and every number in the same round-trip form, and is read back the same way.
+
+A UCTE-DEF output holds nodes (under `##Z` country blocks), lines, transformers and their regulation in the fixed
+columns of the UCTE-DEF version 02 format. A bus whose base voltage is not one of the ten UCTE levels (750, 500, 380,
+330, 220, 150, 120, 110, 70 or 27 kV, so 0 kV too) is refused, as are HVDC links, FACTS devices, static var
+compensators, induction machines, ZIP loads, a second unit at one bus and a bus shunt with no transformer to carry it
+(UCTE-DEF has no node shunt; a shunt rides on a transformer whose node 1 is the bus). A `.uct` input is written back
+with its own node codes, country blocks and names, and each transformer with the file's own rated voltages, nominal
+power and regulation record, so it reads back to the same model. Each line and transformer keeps its status code (0
+real, 1 equivalent, 2 busbar coupler, or the matching out-of-operation code 8, 9 or 7 for one switched out), and the
+file's own out-of-operation records are written back as they were. A branch with a negative R or X from another
+format is written as an equivalent element (status 1), the only kind UCTE-DEF lets carry a negative impedance, and the
+notes name it. For any other input the node codes are synthesised:
+the country's code character, the bus id in five digits, the level code and busbar 1, under the country's `##Z` block.
+`--ucte-country` names the country as its two-letter UCTE block name (for example `FR`, giving codes such as
+`F0001251`); it is required when codes are synthesised (exit 1 without it, naming the flag), and a name that is not a
+UCTE country, or `XX`, exits 2. A synthesised code never starts with `X`: UCTE keeps `X` for X-nodes, the boundary nodes
+that other UCTE tools treat as boundary points. Transformers are written with nominal power from rating A (100 MVA,
+the system base, when rating A is 0). Numbers are fixed-width text, written with as many decimals as their columns
+hold, so a case from another format comes back to that precision, not bit for bit, and the proof then reports the
+difference (exit 3) with the largest voltage difference; the notes name what UCTE-DEF cannot hold (start voltages of PQ
+buses, voltage limits, ratings B and C, unit data beyond the power-flow record).
 
 A CGMES output is one RDF/XML file holding the equipment, topology, steady-state hypothesis and state-variable content:
 buses as TopologicalNodes with their base voltage and their stored voltage as an `SvVoltage` (where a solve starts),
@@ -5112,7 +6617,14 @@ independent re-solve and diff. Requires Python with pandapower. The interpreter 
 prints the one it used (`[crossval] Python: <path> (from <source>)`): `GRIDSIM_PYTHON` when set (a full path, or a name
 looked up on PATH; if it names nothing the verb exits 1 and runs no other interpreter); else the active virtual
 environment's own interpreter (`VIRTUAL_ENV`); else the first `python` (then `python3`) found on PATH, folder by folder in
-PATH order; else the `py` launcher (Windows); else the bare names. Voltage-dependent (ZIP) loads in the export are
+PATH order; else, on Windows, the `py` launcher by its full path (in the Windows folder, or under
+`Programs\Python\Launcher` in the local application data; `py.exe` on PATH is found too). No bare name is ever
+started, on any system, and a relative PATH folder (`.`, `bin`) is not searched: Windows, and .NET on Linux and macOS,
+look in the current folder before PATH, so a `python` in the folder of a downloaded case would run. For the same reason
+a relative `GRIDSIM_PYTHON` path is refused (exit 1) and a relative `VIRTUAL_ENV` is skipped, and the `py` launcher is
+started with `-3` before the script and `PYLAUNCHER_NO_SEARCH_PATH=1` in its environment, so it does not follow the
+script's `#!/usr/bin/env python3` line to a search that also looks in the current folder. With no interpreter
+found the verb exits 77. Voltage-dependent (ZIP) loads in the export are
 given to pandapower as its own ZIP load model. See [ch. 27, Validation tools](<0027 Validation tools.md>).
 
 The comparison is held to machine epsilon (N243, October 2026). After GridSim's ordinary solve (1e-8 pu) converges,
@@ -5180,7 +6692,7 @@ and exit 2.
 
 ### rpc
 
-`gridsim rpc [--listen <host:port>] [--allow-non-loopback]`
+`gridsim rpc [--listen <host:port>] [--allow-non-loopback] [--idle-seconds <S>] [--protocol 1|2]`
 
 The in-process access endpoint the Python package drives (`gridsim.Session`, see [Python](#python)): a resident request
 and response service, `gridsim-rpc/1`, that holds loaded cases between requests. It is not `serve` (the state-estimation
@@ -5191,9 +6703,44 @@ existing output stays the CLI's own. The licence gate is the one the CLI resolve
 Without `--listen` the requests are lines on standard input and the responses lines on standard output (anything an engine
 would print goes to standard error), so there is no network at all. With `--listen` the same lines travel over one TCP
 connection at a time, and the endpoint refuses (exit 2) any address that is not loopback (`127.0.0.1`, `::1`, `localhost`)
-unless `--allow-non-loopback` is also given: there is no authentication, so listening beyond loopback is an explicit
-choice, with a warning on standard error. The first standard output line in `--listen` mode is
-`{"protocol":"gridsim-rpc/1","listening":"<address:port>"}` (use port 0 to let the system choose).
+unless `--allow-non-loopback` is also given: the token and the data travel unencrypted, so listening beyond loopback is
+an explicit choice, with a warning on standard error. The first standard output line in `--listen` mode is
+`{"protocol":"gridsim-rpc/1","listening":"<address:port>","token_file":"<path>"}` (use port 0 to let the system choose).
+
+**The session token (`--listen` only).** When it starts listening the host draws a random token (64 hexadecimal
+characters) and writes it to a new file that only the user running the host can read, `GridSim/rpc/rpc-<machine>-<process id>-<random>.token`
+(the machine part is the machine name's letters, digits and hyphens followed by 8 hex digits of its SHA-256, so two
+machines never share it) in the per-user local application-data folder (`%LOCALAPPDATA%` on Windows; the platform's equivalent elsewhere, created
+with mode 0600 in a 0700 folder). The first output line names the file; the token itself is never printed. Every request
+over the socket must carry it as a `"token"` member, checked before anything else in the request: a request without
+it, or with another, gets an error of kind `unauthorised` (exit code 2) and ends the connection. So another user of the same machine, who can reach a loopback port
+but cannot read the file, cannot use the endpoint. The file is removed when the host stops. Over standard input and
+output there is no token, and a `"token"` member is refused as a key the operation does not take. The file is removed
+when the host stops (by `shutdown`, Ctrl+C, a termination signal or the console closing), and a token file left by a host
+on the same machine that is no longer running is removed when the next one starts (only that machine's files: the folder
+may be one home folder shared by the nodes of a cluster). A file of the older `rpc-<process id>.token` shape, which has
+no machine part, is removed the same way when no process of that id runs on this machine, and so is a file of the
+`rpc-<machine>-<process id>-<random>.token` shape whose machine part is this machine's name without the hash. Both
+older shapes are swept best effort: they cannot say which node wrote them, so on a shared home folder a host of such an
+older version still running on another node can lose its token file, and its clients then cannot find it.
+
+**Time limits (`--listen` only).** A new connection must complete its first request, carrying the token, within 10
+seconds of being accepted (or `--idle-seconds`, when that is shorter), however it sends the bytes, so a peer that connects
+and sends nothing, or trickles a byte at a time, cannot hold the endpoint (connections are served one at a time). After
+that the connection is closed when no request has arrived for `--idle-seconds` since the last response (default 120; 0
+never closes it); a partial line does not count as a request, and a verb that runs for a long time does not count as
+silence.
+
+Over `--listen` the endpoint speaks only its own protocol. A request line is read up to the line limit and no further; a line
+over the limit, a line that is not JSON and a line that is not a JSON object get their error response and then end the
+connection (the server goes on accepting connections), so a client speaking another protocol at the port, such as a web
+browser, cannot reach an operation. Over `--listen` every file a request names must lie inside the host's working
+folder, the rule `save` applies: the case of `load`, the verb of `run-verb` and every value of its arguments (an argument
+itself, the value of a `--flag=value` argument, and each item of a comma list such as `bench --cases a.m,b.m`) must resolve
+inside that folder without passing through a link, and a network (UNC) or device path is refused in any of them. A value
+that is not a path (a number, a bus id, an event) resolves inside the folder and passes. On Windows a value such as
+`v:5` (a probe) has the shape of a drive-relative path; it is taken as a path, and refused, only when that drive exists.
+The standard input transport is unchanged.
 
 A request is one JSON object per line, `{"id": <string|number|null>, "op": "<operation>", ...}`; a key the operation does not
 take is an error. The response is one line carrying `protocol`, the request `id`, `op`, `status` (`ok` or `error`),
@@ -5202,12 +6749,15 @@ null) and `result` or `error` (`kind` and `message`). A malformed line or a fail
 session continues; a finished study whose verdict is a failure (`exitCode` 3) is `status` `ok` with its result. The
 operations:
 
-- `hello`: the protocol, the tool version and the operation names.
+- `hello`: the protocol, the tool version, the build status (`build_status`: `RELEASE` or `UNSUPPORTED BUILD`, as in
+  the result files) and the operation names.
 - `load` (`case`): load a case once (a built-in name, a `.m` file or a case folder, as every verb takes it) and return its
-  `handle` (`case-1`, `case-2`, ... per session), size and `case_identity`. The SHA-256 is of the consumed files for a
+  `handle` (`case-1`, `case-2`, ... per session; at level 2 `case-<host token>-1`, ...), size and `case_identity`. The SHA-256 is of the consumed files for a
   folder or `.json` case, of the file for another file, and of the name and build for a built-in name (`case_identity`
   `files`, `file` or `built-in-name`). A licence refusal is an `error` of kind `licence-refused` with the message the CLI
-  prints after `error:`, exit 2.
+  prints after `error:`, exit 2. The licence's bus limit holds at solve time too: a level 2 case that has been edited
+  (`set`, `add`, `delete`) is a user network, whatever it was loaded from, and is checked again before `solve`, the
+  solved attributes of `get`, `study` and `save`; one over the limit gets the same `licence-refused` error.
 - `solve` (`handle`): the `pf` solve of the held case, again and again without reloading: `converged`, `iterations`,
   `max_mismatch_pu`, `loss_mw`, `loss_mvar` and the bus columns `bus`, `vm_pu`, `va_deg`, `p_inj_mw`, `q_inj_mvar`, with the
   digits `pf --json` writes. `exitCode` 3 when it does not converge.
@@ -5220,15 +6770,59 @@ operations:
 - `line-constants` (`geometry`, optional `per_unit` with `length_km`, `base_kv`, `base_mva`): the `line-constants` verb's
   result document for a geometry given inline.
 
+**Protocol level 2 (`--protocol 2`, `gridsim-rpc/2`): the object model.** Level 1 is the default and is unchanged byte for
+byte (`--protocol 1` is the same). Level 2 answers every operation above as level 1 does apart from the label
+`gridsim-rpc/2` and the handle, lists eight more in `hello` after the eight above (the last two, `add` and `delete`, since 2.1.110), and holds an editable copy of each loaded
+case. A level 2 host draws a random token when it starts (one per process, or per connection over `--listen`); `hello`
+gives it as `host`, and every handle carries it: `case-<token>-1`, `case-<token>-2`, ... A handle issued by another host,
+or by the same program before a restart, is refused as "not issued by this host", so it never reaches another case
+([technical ch. 41](<../technical/0041 Scripting object model and API.md>)). Elements are keyed as follows, in model order:
+a bus by its id; a generator by `<bus>:<machine id>` for a PSS/E case, else its name, else `G<bus>` (`#2`, `#3` on a
+repeat); a load by the id of a bus with demand when the case was loaded; a branch by `<from>-<to>:<circuit>` for a PSS/E
+case, else its name, else `<from>-<to>`; a shunt by the id of a bus with a fixed shunt. The attributes: bus `type` (1 PQ,
+2 PV, 3 slack), `vm`, `va_deg`, `base_kv` (read only), `name` (read only), `vmin`, `vmax`; generator `pg`, `qg`, `vg`,
+`qmin`, `qmax`, `pmin`, `pmax`, `mbase`, `status`; load `pd`, `qd`, `status` (0 keeps the set-point for re-energising);
+branch `r`, `x`, `b`, `tap`, `shift_deg`, `rate_a`, `rate_b`, `rate_c`, `status`; shunt `gs`, `bs`; in MW, MVAr, MVA, pu on
+the system base and degrees.
+
+- `elements` (`handle`, `kind`): every element of the kind with every attribute.
+- `get` (`handle`, `kind`, `key`, optional `attributes`): the attributes asked for. On a branch, `p_from_mw`, `q_from_mvar`,
+  `p_to_mw`, `q_to_mvar` and `loading_pct` read the `solve` of the case as it stands (read only, by name only). On a
+  generator, `p_solved_mw` and `q_solved_mvar` read the unit's output from the same solve: the bus net injection plus
+  the bus load at the solved voltage (a lone unit takes the whole bus; several share it); an out-of-service unit is refused.
+- `set` (`handle`, `kind`, `key`, `values`: attribute names and numbers): write them in one revision and return
+  `revision`; `solve` then solves the edited case. A refused write (an unknown kind or attribute, a read-only attribute,
+  status other than 0 or 1, an edit that makes the case invalid) changes nothing.
+- `edits` (`handle`): the edit log.
+- `study` (`handle`, `verb`, `args`, optional `timeout_s`): `pf`, `nminus1`, `nminus2`, `iec60909`, `fault`, `acopf-full`,
+  `dcopf`, `scopf` or `stability` on the case as it stands, answered as `run-verb`. With no edit the host passes the case
+  it loaded, so the document is the CLI's own. With edits it writes the case as a JSON v2 case to a temporary folder,
+  reads it back and writes it again. It runs the verb only when every object model attribute of the copy read back equals
+  the held case's, bit for bit, and the two writes are byte-identical (the write-read-write is idempotent); otherwise the
+  study is refused naming the first difference. These checks cover every value an edit can change, not fields outside the
+  object model. The host's case path is taken out of the document's `args` and shown as `<case>`
+  in the printed text. A case the JSON v2 writer refuses (a bus with no positive base kV, as in case14) cannot be studied
+  after an edit: `save` it as RAW and use `run-verb`. `dynamics-study` names its files by SHA-256, so it too goes through
+  `save` and `run-verb`.
+- `save` (`handle`, `path`, `format`: `raw33`, `raw34`, `raw35` or `v2`): write the case as it stands, never over a file
+  with other content (the same bytes are accepted) and never where a link stands; files are only ever created new. Over
+  `--listen` every file written (for `v2`, the manifest and its sibling `.network.json`) must lie inside the host's
+  working folder and must not be a link, and network and device paths are refused. Every target is checked before any is
+  written.
+
 A response is a function of the request and the session's earlier requests only: no timestamps, process ids or temporary
-paths, handles numbered per session, numbers in round-trip form. A verb that itself prints times is not repeatable through
+paths, handles numbered per session, numbers in round-trip form. The one exception is level 2's host token, which makes
+the handles and the `hello` differ from run to run. A verb that itself prints times is not repeatable through
 `run-verb` either. Sessions are sequential; parallel work is parallel sessions (separate processes). Exit 0 when the input
-ends or after `shutdown`; 2 on a bad flag or a refused listen address; 1 if the socket cannot be bound.
+ends or after `shutdown`; 2 on a bad flag or a refused listen address; 1 if the socket cannot be bound or the token file
+cannot be written.
 
 | Flag | Default | Meaning |
 |---|---|---|
 | `--listen` | none (standard input and output) | `host:port`, `[IPv6]:port` or a bare port (host `127.0.0.1`), port 0 to 65535: serve over TCP on that address. Non-loopback hosts are refused unless `--allow-non-loopback`. |
-| `--allow-non-loopback` | off | Accept a `--listen` address beyond loopback, with no authentication. Only with `--listen`. |
+| `--allow-non-loopback` | off | Accept a `--listen` address beyond loopback (the token and the data travel unencrypted). Only with `--listen`. |
+| `--idle-seconds` | 120 | Close a `--listen` connection after this many seconds without a request (0: never). Only with `--listen`. |
+| `--protocol` | 1 | `1` (`gridsim-rpc/1`) or `2` (`gridsim-rpc/2`, the object model operations). |
 
 ### interpose
 
@@ -5469,6 +7063,153 @@ never fails the whole batch.
 
 Exit 1 if the batched result differs from the CPU reference by more than 1e-6 or disagrees on which systems are
 singular; exit 2 if `count x n x n` exceeds the single-dispatch limit.
+
+### breaking-change
+
+`gridsim breaking-change validate [--journal <file.jsonl>] [--since <version>] [--verb <verb>] [--case <glob>] [--parallel N] [--scratch <dir>] [--keep-scratch] [--accept <Bn>] [--json <file>|--csv <file>|--out <file>]`
+`gridsim breaking-change import <dir|file.json>... [--journal <file.jsonl>]`
+`gridsim breaking-change list [--since <version>]`
+
+Re-run the jobs in your run journal on this build and see, bit for bit, what changed and which breaking change explains
+it. The journal records each run you make while it is switched on (`--journal`, `GRIDSIM_JOURNAL` or the config file,
+see Global switches and [ch. 3](<0003 Configuration.md>)). It is off by default, so switch it on before you upgrade:
+the first useful `validate` compares the release you recorded with against the one you upgrade to.
+
+`validate` reads every entry (or those the filters keep) in journal order. Each entry is re-run as a fresh
+`gridsim` process of this build, in a scratch folder of its own, with its inputs read from where they were (or from the
+snapshot store) and every output path rewritten into the scratch folder, so your original results are only read, never
+written. Each output is then compared with the recorded one, field by field, bit for bit. Fields that carry only build
+or run identity (the `tool` and `args` of a result file, a study's `provenance.engine`, timings) are left out; the list
+is in technical chapter 42. Each entry gets one status:
+
+| Status | Meaning |
+|---|---|
+| `IDENTICAL` | Same exit code, same output files, every compared field the same bits. |
+| `CHANGED` | Something moved. The report names each field that moved, with the largest absolute and relative difference, the largest distance in ulps and the fewest agreeing bits (53 when identical, 52 for one ulp, 0 for a sign change), and checks it against the breaking changes (`B1`, `B2`, ...) that can explain it (the claim check, below). |
+| `CANNOT-REPLAY` | It could not be re-run, with the reason: an input missing or changed since the run (including a file named inside a study, model assignments or plug-in configuration file), a job that would load plug-in code (`--model-plugins`, `user-model check-plugin`: a re-run never loads code), a console-only run (no result file), a verb that is never re-run (live, network, timing and hardware verbs, verbs that write outside their output flags, and the dynamics verbs listed below), a GPU run, a result file that changed since the run, or a re-run that newly exits 1 or 2 when no breaking change claims that refusal (one that does makes the entry `CHANGED` on `(exit code)` alone, explained by it). |
+| `SKIPPED-SAME-BUILD` | Recorded by this very build (same version and commit). By determinism it cannot change, so it is not re-run. |
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--journal <file.jsonl>` | the configured journal | The journal to read (`validate`) or append to (`import`). A network or device path exits 2; no journal at all exits 1. |
+| `--since <version>` | all | Only entries recorded by this release or later (`2.1.090`; a `v` prefix and an `-RC-n` suffix are allowed). |
+| `--verb <verb>` | all | Only entries of this verb (aliases resolve: `n-1` is `nminus1`). |
+| `--case <glob>` | all | Only entries with an input whose path or file name matches the glob (`*` and `?`; ignoring case on Windows). |
+| `--parallel N` | 0 (automatic) | Re-run up to N entries at once. Automatic is the smallest of the processor count, 80 % of installed memory in 256 MiB slots, and the number of entries. A job starts only when its memory estimate (1.25 x its recorded peak, at least 256 MiB) fits in 80 % of installed memory; a larger one runs alone. The report is the same for every N. |
+| `--scratch <dir>` | a new folder in the temporary folder | Where the re-runs write. It must be new or empty, and not inside the journal's folder (exit 2 otherwise). |
+| `--keep-scratch` | off | Keep the scratch folder (it is deleted at the end otherwise). |
+| `--accept <Bn>` | none | Acknowledge the jobs of this run that are UNBOUNDED under Bn (only a breaking change with no bound, B3, can be accepted; any other ID exits 2). They are reported REVIEWED, and the acknowledgement is written to `<journal name>.accept.json` beside the journal. |
+
+**The claim check.** Matching a breaking change is not enough to explain a change, or a second regression in the same
+field could hide behind its ID. Each breaking change states what it does to the fields it moves: a bound (the largest
+absolute or relative change of each value, from the magnitude measured in the CHANGELOG), an exact transform (new = f x
+old, such as a sign flip or a ratio squared), or, where no bound means anything, the exact transition of a status or
+the exit code (`Optimal` to `SecuredOutageFailsScreen`). Each changed field gets one verdict:
+
+| Verdict | Meaning |
+|---|---|
+| `EXPLAINED (Bn)` | The field moved within what the breaking changes in its window claim. When several claim bounds on one field, their bounds add. |
+| `EXCEEDS-CLAIM (Bn)` | The field moved, but beyond the claim: past the bound, off the transform, or through another transition. The report gives what was observed and what was claimed. |
+| `AMBIGUOUS` | Several changes claim the field and their claims cannot be added (a transform or a transition beside another claim). |
+| `UNEXPLAINED` | No breaking change in the window claims the field. |
+| `UNBOUNDED (Bn)` | The field moved under a breaking change that has no bound (B3, below). Expected, but no number can check it: it needs your review. |
+| `REVIEWED (Bn)` | An UNBOUNDED field you acknowledged with `--accept Bn`, that has moved no further since. |
+
+An entry takes the worst verdict of its fields. Only an entry whose every changed field is EXPLAINED counts as
+explained; EXCEEDS-CLAIM, AMBIGUOUS and UNEXPLAINED are flagged on the console and in the summary, and are likely a bug:
+please report them. All of them are CHANGED, so the exit code is 3.
+
+**Dynamics jobs.** `validate` re-runs `stability`, `dynamics-study`, `long-term`, `trip` and `modal`. Their result
+files are the ones they write: `stability --events-out` (the RMS event export and its `run-metadata.json`) and
+`--export` (the classical trajectory), the `dynamics-study --out` result, the `long-term --out` CSV (without `--out` the
+CSV goes beside the input, so such a run is not re-run), and the `trip` and `modal` `--export` files. A run that printed
+its result only is not re-run. The DYR or dynamics file of `--dyn-data` is an input like any other. The journal also
+hashes the files an input names inside itself: a study file's RAW case, DYR, unit protection, device and curve files;
+the user model files of `--model-assignments`; the assemblies of `--model-plugins`. With `--journal-snapshot` they are
+kept in the snapshot store, apart from plug-in assemblies, which are code and are never copied there. On a re-run each
+is read where it was if its bytes are unchanged; otherwise the input and every file it names are placed together in the
+scratch folder, in the same layout, from the snapshot store. A file that is gone or changed with no copy makes the entry
+`CANNOT-REPLAY: input missing: <file>` (or `input changed`). A plug-in job (`--model-plugins`, or `user-model
+check-plugin`) is never re-run: a journal line or an imported result file carries its own command line, so a plug-in
+configuration and its assembly could arrive with it, and a re-run never loads code. Such an entry is `CANNOT-REPLAY: not
+replayable: --model-plugins loads plug-in code, and a re-run never loads code` whatever the state of its assemblies, and
+nothing is loaded; run the job again by hand to compare it. These dynamics verbs are
+never re-run, and the entry says why: `transient`, `emt`, `replay-event`, `scenario`, `h0-study` and `evidence` (their
+result files carry wall time or the run header, and markdown is compared byte for byte), `impedance-stability` (its
+export carries the time and host), `replay` and `fit-frequency` (no result file) and `fleet` (not yet shown to give the
+same result twice). The run header lines at the top of a result CSV and the host, build and time fields of
+`run-metadata.json` are left out of the comparison; the run description and the provenance line are compared. A
+`stability` job given its case folder with a relative `--dir` names the folder in its run description as typed, and the
+re-run is given its full path, so that job shows CHANGED on the run description (the `run` field and the `# run:` line)
+with nothing else moved. Give the folder as a full path, or the case positionally, and the job replays IDENTICAL. A
+plug-in assembly is never taken from the snapshot store, whatever the journal says.
+
+**B3 and `--accept`.** B3 (with `--dyr-extended --allow-unmodelled`, a PSS/E DYR CSVGN1 record is now modelled as an
+SVC) has no bound: how far the CSVGN1 control moves a trajectory depends on the unit's data and the disturbance. It
+appears only for a job recorded before 2.1.083 whose command line holds both `--dyr-extended` and
+`--allow-unmodelled` and whose DYR holds a CSVGN1 record: in practice a `stability`, `trip` or `modal` job with a
+`.dyr` file as its `--dyn-data`. The DYR is always inspected: one that cannot be read makes the job CANNOT-REPLAY
+before it is re-run, so B3 is never assumed. A `dynamics-study` job is never raised: that verb refuses
+`--allow-unmodelled` and reads its DYR without the extended library. A job with no DYR input at all (a `pf` run, or one whose `--dyn-data` is a JSON file) read no DYR,
+so B3 cannot have acted and is not raised. Any other job is judged without B3. For such a job, every field the other changes do not explain is UNBOUNDED, and the entry reads
+`UNBOUNDED (B3)` once, with each moved field and its size. Nothing else wrong, the exit code is 4 (review needed).
+Look at the fields; when you are content, run `validate --accept B3`. Those jobs then read REVIEWED, exit 0, and the
+acknowledgement is kept in `<journal name>.accept.json` beside the journal. Later runs read REVIEWED only for the same
+job with every field moved no further than accepted; a new job, a new field or a larger movement reads UNBOUNDED
+again. B27 (from 2.1.117, EXDC2, IEEEX1, ESAC8B, ESST3A and IEEEG3 records modelled under the same two options)
+follows the same rules, with those five records in place of CSVGN1. B28 (an RMS run refused when a model that starts
+from the first step's measurements meets a disturbance at t = 0) is reached through the library API only: every
+`stability` disturbance starts after the first step (a `--events` time of 0 is refused) and `dynamics-study` refuses
+an event at 0, so it explains no journal job.
+B33 (from 2.1.144, the DC model of MATPOWER's `makeBdc`) has no bound either: how far a tap ratio, a phase shift or
+a bus Gs moves a DC result depends on the whole network. It appears only for a job that runs the DC model on a case
+that has one of those terms: an in-service tap other than 0 or 1, a non-zero phase shift, or a bus Gs. A case with none
+is computed exactly as before, so a change there is not B33's and reads UNEXPLAINED. The case is the job's case
+argument (a case file, a case folder or a built-in name), or the case its study file names for `transmission-security`,
+`transfer-capability`, `corrective-sequence` and `probabilistic`, loaded where the re-run loads it; a case that cannot
+be read makes the job CANNOT-REPLAY before it is re-run. The AC modes of B33's verbs never raise it: `nminus1` (an AC
+study in every mode) and `sensitivity --kind tap`, `dvdq` or `effectiveness`. A `planning-study` job is raised whatever
+its master case holds, because its projects can add or change branches.
+
+The entries are re-run in parallel, longest recorded run first; each re-run is single-threaded and is killed after ten
+times its recorded run time (at least 60 s). A re-run that crashes or is killed is run once more on its own after the
+others, and only that result counts. Progress (`[n/N] seq S done`) goes to stderr as runs finish; the report lists the
+entries in journal order and never contains the parallelism, timings or scratch paths.
+
+Exit codes: 0 when every entry is IDENTICAL, REVIEWED or skipped as the same build; 3 when anything else CHANGED; 4
+(review needed) when the only changes are UNBOUNDED; 1 when anything cannot be re-run (this wins over 3 and 4, as in
+every batch verb, and 3 wins over 4); 2 on a usage error, or when the filters name nothing.
+
+The report (`--json`, `--csv`, `--out`) has the summary `changed_unexplained`, `changed_exceeds_claim`,
+`changed_ambiguous`, `journal_entries`, `selected`, `identical`, `changed`, `changed_explained`, `cannot_replay`,
+`skipped_same_build`, `build_version`, `oldest_recorded_version`, `map_sha256`, `changed_unbounded`,
+`changed_reviewed` and `accepted_now`, and the tables `reviews` (one row per UNBOUNDED or REVIEWED job: accepted now,
+accepted earlier, or needs review with the reason), `entries` (one row
+per entry, with its status, claim check, reason, explaining IDs and worst field), `field_differences` (one row per
+field that moved, with its verdict, the claim and the observation) and `breaking_changes` (how many entries each
+breaking change explains, and how many it was matched to but did not cover).
+
+```
+gridsim --journal work/journal.jsonl nminus1 case14 --json out/n1.json
+# ... upgrade GridSim ...
+gridsim breaking-change validate --journal work/journal.jsonl --json validate.json
+breaking-change validate on 2.1.104: unexplained=0 exceeds-claim=0 ambiguous=0 identical=1 changed=0 cannot-replay=0 skipped-same-build=0
+  seq 1 nminus1 (2.1.104): IDENTICAL
+```
+
+`import` builds journal entries from result files you already have (`gridsim-cli-result/1` documents written with
+`--json`), so results kept from an earlier release can be checked at once. Each document records its verb, command line
+and exit code. The inputs are found at the recorded paths and hashed when you import, not when the run happened, and
+the entry says so; an input that is gone makes that entry CANNOT-REPLAY. A file that is not such a document is skipped.
+Exit 0 when at least one file was imported, 1 otherwise.
+
+`list` prints the breaking-change map built into this release: each ID, the release it landed in, its kind, title and
+scope (the verbs, options and input formats it can affect). Its claims are in the `--json` form of the map file,
+`src/GridSim.Core/Journal/breaking-changes.json`. `--since` keeps those after a release.
+
+The journal is a convenience log, not evidence: it is a plain file anyone with access can edit. For a tamper-evident
+record use `--audit-log`. A re-run proves bit identity on this build and this machine; it does not validate results
+against the real grid.
 
 ## Electrical references
 

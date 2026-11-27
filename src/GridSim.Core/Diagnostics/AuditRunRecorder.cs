@@ -7,7 +7,7 @@ namespace GridSim.Core.Diagnostics;
 /// <summary>
 /// Records ONE product run (a CLI verb such as <c>estimate</c>) in the persistent audit log (R075 wiring).
 ///
-/// <para><b>Lifecycle.</b> <see cref="Start"/> opens the log BEFORE the run does any work, so a tampered, locked
+/// <para><b>Lifecycle.</b> <see cref="Start(string, string, string, ProvenanceTag, string?)"/> opens the log BEFORE the run does any work, so a tampered, locked
 /// or misplaced log stops the run before it produces anything (fail loud). The run then adds its inputs
 /// (<see cref="AddInput"/>), its one-line result (<see cref="SetOutcome"/>) and, when it has one, the grid instant
 /// it describes (<see cref="StateTimeUtc"/>). <see cref="Finish"/> writes the single entry and closes the log.
@@ -45,7 +45,7 @@ public sealed class AuditRunRecorder
         AnchorWasMissing = anchorWasMissing;
     }
 
-    /// <summary>D-DOC-062: the anchor file this run checked the log against at <see cref="Start"/> and rewrites after
+    /// <summary>D-DOC-062: the anchor file this run checked the log against at <see cref="Start(string, string, string, ProvenanceTag, string?)"/> and rewrites after
     /// every entry it appends.</summary>
     public string AnchorPath { get; }
 
@@ -287,9 +287,11 @@ public sealed class AuditRunRecorder
     public void SetOutcome(string outcome)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outcome);
+        // SEC-19: the same rule as the entry formatter (AuditEvent.BreaksLine): a Unicode line or paragraph separator was
+        // accepted here and then refused when the entry was written at Finish, so the run's last entry was lost.
         foreach (char c in outcome)
-            if (char.IsControl(c))
-                throw new ArgumentException("The outcome must be one line with no control characters.", nameof(outcome));
+            if (AuditEvent.BreaksLine(c))
+                throw new ArgumentException("The outcome must be one line with no control characters or line separators.", nameof(outcome));
         lock (_gate) _outcome = outcome;
     }
 
@@ -403,7 +405,7 @@ public sealed class AuditRunRecorder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
         var sb = new StringBuilder(reason.Length);
-        foreach (char c in reason) sb.Append(char.IsControl(c) ? ' ' : c);
+        foreach (char c in reason) sb.Append(AuditEvent.BreaksLine(c) ? ' ' : c);   // SEC-19: the formatter's own rule
         return sb.ToString().Trim();
     }
 

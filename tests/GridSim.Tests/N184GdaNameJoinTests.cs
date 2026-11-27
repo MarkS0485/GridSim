@@ -99,7 +99,7 @@ public sealed class N184GdaNameJoinTests
     /// <summary>Minimal NPg RAWData CSVs: one 66 kV circuit, one 66/11.5 kV transformer at WHITBY, and loads.</summary>
     private static string NpgFixture()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-r1-npg-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-r1-npg-" + Guid.NewGuid().ToString("N"));
         string raw = Path.Combine(root, "NorthernPowerGrid", "RAWData");
         void Write(string dataset, string csv)
         {

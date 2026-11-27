@@ -128,6 +128,9 @@ public static class Typer
             }
             case SystemExpr s:
                 return VType.Of(Measures.SystemUnit(s.Quantity));
+            case StudyExpr st:
+                if (st.Ref is { } sr) RefType(sr, st.Noun!.Value, scope);
+                return StudyExtension.TypeOf(st.Reading);
             case FuncExpr f:
             {
                 VType a = Numeric(f.Args[0], scope, f.Function);
@@ -226,6 +229,7 @@ public static class Typer
         switch (e)
         {
             case MeasureExpr m: checkName(m.Noun, m.Ref); break;
+            case StudyExpr { Ref: { } sr } st: checkName(st.Noun!.Value, sr); break;
             case NegExpr n: CollectNames(n.Operand, checkName); break;
             case BinExpr b: CollectNames(b.Left, checkName); CollectNames(b.Right, checkName); break;
             case FuncExpr f: foreach (Expr a in f.Args) CollectNames(a, checkName); break;
@@ -266,6 +270,8 @@ public static class Evaluator
             }
             case SystemExpr sy:
                 return s.SystemReading(sy.Quantity, sy.Pos);
+            case StudyExpr st:
+                return s.StudyReadingValue(st, scope);
             case FuncExpr f:
             {
                 Value a = Eval(f.Args[0], scope, s);
@@ -380,6 +386,8 @@ public static class Binder
                 return f with { Bus = Lit(f.Bus, Noun.Bus, scope) };
             case ClearFaultStatement cf:
                 return cf with { Bus = Lit(cf.Bus, Noun.Bus, scope) };
+            case StudyStatement { Bus: { } sb } study:
+                return study with { Bus = Lit(sb, Noun.Bus, scope) };
             case StepSimStatement ss:
                 return ss with { Duration = Num(ss.Duration, scope, s) };
             case AtStatement a:

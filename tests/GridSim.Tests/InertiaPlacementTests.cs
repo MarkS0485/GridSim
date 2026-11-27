@@ -153,7 +153,7 @@ public sealed class InertiaPlacementTests
     [Fact]
     public void The_verb_runs_on_uk_and_writes_one_row_per_run()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-inertia-placement-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-inertia-placement-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

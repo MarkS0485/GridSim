@@ -111,6 +111,7 @@ exclude_docs: |
 # order follows the parts listed in each Contents page.
 nav:
   - Home: README.md
+  - Understanding GridSim determinism: "Understanding GridSim determinism.md"
   - User manual:
       - Contents: "manual/0000 Contents.md"
       - Getting going:
@@ -151,11 +152,13 @@ nav:
           - Validation tools: "manual/0027 Validation tools.md"
           - Benchmarking and GPU: "manual/0028 Benchmarking and GPU.md"
           - Scripting: "manual/0035 Scripting.md"
+          - Using GridSim from AI tools (MCP): "manual/0037 Using GridSim from AI tools (MCP).md"
       - Reference:
           - CLI reference: "manual/0019 CLI reference.md"
           - Extending GridSim: "manual/0029 Extending GridSim.md"
           - Troubleshooting: "manual/0030 Troubleshooting.md"
           - Exports and formats: "manual/0031 Exports and formats.md"
+          - Determinism and reproducibility: "manual/0036 Determinism and reproducibility.md"
   - Technical reference:
       - Contents: "technical/0000 Contents.md"
       - Foundations:
@@ -167,16 +170,20 @@ nav:
           - Glossary: "technical/0012 Glossary.md"
           - The v2 JSON schema: "technical/0028 The v2 JSON schema.md"
           - Deterministic mathematics: "technical/0038 Deterministic mathematics.md"
+          - "Determinism: specification and evidence": "technical/0046 Determinism - specification and evidence.md"
       - Steady state:
           - Power flow: "technical/0003 Power flow.md"
           - Contingency and security analysis (N-k): "technical/0023 Contingency and security analysis (N-k).md"
           - "OPF, CPF, taps, distribution factors and loss allocation": "technical/0029 OPF, CPF, taps, distribution factors and loss allocation.md"
           - Quasi-static time series and hosting capacity: "technical/0037 Quasi-static time series and hosting capacity.md"
+          - Network equivalents: "technical/0040 Network equivalents.md"
+          - Geomagnetically induced currents: "technical/0044 Geomagnetically induced currents.md"
       - Dynamics:
           - Frequency dynamics: "technical/0005 Frequency dynamics.md"
           - Asset-dynamics data grounding: "technical/0013 Asset-dynamics data grounding.md"
           - Cascade validation and blind prediction: "technical/0014 Cascade validation and blind prediction.md"
           - Standard dynamic-model library: "technical/0024 Standard dynamic-model library.md"
+          - Grid-code compliance: "technical/0039 Grid-code compliance.md"
           - Small-signal and impedance stability: "technical/0030 Small-signal and impedance stability.md"
           - Electromagnetic transient (EMT) simulation: "technical/0021 Electromagnetic transient (EMT) simulation.md"
           - Harmonics: "technical/0019 Harmonics.md"
@@ -202,6 +209,11 @@ nav:
           - "Web host, REST and WebSocket, SSO and sessions": "technical/0034 Web host, REST and WebSocket, SSO and sessions.md"
           - Deployment and security: "technical/0035 Deployment and security.md"
           - Known limitations and design decisions: "technical/0036 Known limitations and design decisions.md"
+          - Scripting object model and API: "technical/0041 Scripting object model and API.md"
+          - Run journal and breaking-change validation: "technical/0042 Run journal and breaking-change validation.md"
+          - Long-term dynamics: "technical/0043 Long-term dynamics.md"
+          - IEC 61850 SCL substation import: "technical/0045 IEC 61850 SCL substation import.md"
+          - MCP server design: "technical/0047 MCP server design.md"
       - Design records:
           - C37.118 synchrophasor: technical/design/c37118-synchrophasor.md
           - CIM and CGMES mapping: technical/design/cim-cgmes-mapping.md

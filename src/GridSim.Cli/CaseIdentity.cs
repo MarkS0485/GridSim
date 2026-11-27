@@ -40,7 +40,7 @@ internal static class CaseIdentity
         }
         Add(Path.GetFileName(path), path);
         if (requireJsonExtension && !path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) return files;
-        using JsonDocument manifest = JsonDocument.Parse(File.ReadAllBytes(path));
+        using JsonDocument manifest = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(path)));
         string directory = Path.GetDirectoryName(path)!;
         foreach (string kind in new[] { "network", "assets" })
             if (manifest.RootElement.TryGetProperty(kind, out JsonElement list))

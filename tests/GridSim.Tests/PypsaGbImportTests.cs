@@ -249,7 +249,7 @@ public class PypsaGbImportTests
 
     private static string CopyReduced()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-pypsa-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-pypsa-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         foreach (string f in new[] { "buses.csv", "lines.csv", "links.csv" }) File.Copy(Path.Combine(ReducedDir, f), Path.Combine(dir, f));
         return dir;
@@ -285,7 +285,7 @@ public class PypsaGbImportTests
     [Fact]
     public void The_zonal_importer_refuses_bad_files()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-zonal-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-zonal-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -343,7 +343,7 @@ public class PypsaGbImportTests
     [Fact]
     public void The_zonal_verb_shows_the_model_and_writes_its_result_file()
     {
-        string json = Path.Combine(Path.GetTempPath(), "gridsim-zonal-" + Guid.NewGuid().ToString("N") + ".json");
+        string json = TestTemp.Under("gridsim-zonal-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
             CliProcess.Result r = CliProcess.RunBuilt("zonal", "pypsa-gb-zonal", "--json", json);
@@ -358,7 +358,7 @@ public class PypsaGbImportTests
 
             CliProcess.Result usage = CliProcess.RunBuilt("zonal");
             Assert.True(usage.ExitCode == 2, usage.ToString());
-            CliProcess.Result missing = CliProcess.RunBuilt("zonal", Path.Combine(Path.GetTempPath(), "no-such-zonal-" + Guid.NewGuid().ToString("N")));
+            CliProcess.Result missing = CliProcess.RunBuilt("zonal", TestTemp.Under("no-such-zonal-" + Guid.NewGuid().ToString("N")));
             Assert.True(missing.ExitCode == 1, missing.ToString());
         }
         finally { if (File.Exists(json)) File.Delete(json); }

@@ -24,7 +24,7 @@ internal static class PsseTopologyFixture
     public static PsseSubstationCase Read(string text)
     {
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(text);
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-p2-" + Guid.NewGuid().ToString("N") + ".raw");
+        string path = TestTemp.Under("gridsim-p2-" + Guid.NewGuid().ToString("N") + ".raw");
         try
         {
             File.WriteAllBytes(path, bytes);

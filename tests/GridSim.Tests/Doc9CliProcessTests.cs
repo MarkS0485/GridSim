@@ -18,7 +18,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Doc9CliProcessTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc9-cli-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc9-cli-" + Guid.NewGuid().ToString("N"));
 
     public Doc9CliProcessTests() => Directory.CreateDirectory(_dir);
 

@@ -21,7 +21,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class N195UkpnTapRangeConventionTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-n195-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-n195-{Guid.NewGuid():N}");
 
     public N195UkpnTapRangeConventionTests() => Directory.CreateDirectory(_root);
 

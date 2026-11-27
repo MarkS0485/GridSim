@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr859StreamingAuditVerifyTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-gr859-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-gr859-{Guid.NewGuid():N}");
 
     public Gr859StreamingAuditVerifyTests() => Directory.CreateDirectory(_dir);
 

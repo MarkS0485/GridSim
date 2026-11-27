@@ -1,0 +1,13 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Unit protection three-unit (plain)",
+  "description": "The three-unit case with no unit protection: its results must equal the three-unit case's bit for bit.",
+  "system": {
+    "baseMva": 100,
+    "frequencyHz": 50,
+    "dispatch": false
+  },
+  "network": [
+    "plain.network.json"
+  ]
+}

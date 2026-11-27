@@ -13,7 +13,7 @@ public class ExportDataLossTests
     // A fresh scratch folder per test, removed afterwards.
     private static string NewTempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-export-dataloss-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-export-dataloss-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

@@ -1,0 +1,144 @@
+{
+  "schema": "gridsim-volatile-fields/1",
+  "rule": "A field is listed only when its result schema defines it as build identity, run identity or timing, never a computed value. Paths: $.a.b[*].c is one field (array indices collapsed); **.a.b is that tail at any depth. Key names compare ignoring case. A $.tables.<t>[*].<c> path also masks CSV column <c>; a $.summary.<k> path also masks key <k> of a key,value CSV.",
+  "documents": [
+    {
+      "schema": "gridsim-cli-result/1",
+      "verb": "*",
+      "fields": [
+        { "path": "$.tool", "why": "build identity: gridsim <version>+<commit> (CliOutput.Finish)" },
+        { "path": "$.buildStatus", "why": "build identity: RELEASE or UNSUPPORTED BUILD, from the build's compliance attestation (CliResultWriter)" },
+        { "path": "$.args", "why": "the command line as given; a re-run's paths differ by construction (CliOutput.Finish)" },
+        { "path": "$.summary.provenance_engine", "why": "build identity: a study document's provenance.engine, flattened into the summary by CliResultFromJson" },
+        { "path": "$.summary.comparator_freeze_grid_sim_release", "why": "build identity: transfer-capability's comparator freeze, flattened by CliResultFromJson" },
+        { "path": "$.summary.total_elapsed_ms", "why": "timing: study-case and planning-study run manifests, flattened by CliResultFromJson" },
+        { "path": "$.tables.jobs[*].elapsed_ms", "why": "timing: per-job wall time of the study-case manifest, flattened by CliResultFromJson" }
+      ]
+    },
+    {
+      "schema": "gridsim-solve-export/1",
+      "verb": "*",
+      "fields": [
+        { "path": "$.meta.gitCommit", "why": "build identity (SolveExportMeta.GitCommit)" },
+        { "path": "$.meta.timestampUtc", "why": "run identity: when the export was written (SolveExportMeta.TimestampUtc)" },
+        { "path": "$.meta.elapsedMs", "why": "timing (SolveExportMeta.ElapsedMs)" },
+        { "path": "$.meta.machine", "why": "run identity: the host (SolveExportMeta.Machine)" }
+      ]
+    },
+    {
+      "schema": "*",
+      "verb": "*",
+      "fields": [
+        { "path": "**.provenance.engine", "why": "build identity: the study documents' engine (BuildInfo.InformationalVersion)" },
+        { "path": "**.comparator.freeze.gridSimRelease", "why": "build identity: transfer-capability comparator freeze (BuildInfo.InformationalVersion)" },
+        { "path": "**.totalElapsedMs", "why": "timing: study-case and planning-study run manifests" },
+        { "path": "**.elapsedMs", "why": "timing: per-job wall time of study-case and planning-study manifests" }
+      ]
+    },
+    {
+      "schema": "*",
+      "verb": "*",
+      "file": "run-metadata.json",
+      "fields": [
+        { "path": "$.timestampUtc", "why": "run identity: when the sidecar was written (RunInfo.WriteJson)" },
+        { "path": "$.backend", "why": "run identity: the solver backend's description (RunInfo.Backend); a GPU run is never re-run" },
+        { "path": "$.gitCommit", "why": "build identity (RunInfo.GitCommit)" },
+        { "path": "$.buildConfig", "why": "build identity (RunInfo.BuildConfig)" },
+        { "path": "$.coreVersion", "why": "build identity (RunInfo.CoreVersion)" },
+        { "path": "$.runtime", "why": "host identity: the .NET runtime (RuntimeInformation.FrameworkDescription)" },
+        { "path": "$.arch", "why": "host identity: the process architecture" },
+        { "path": "$.serverGc", "why": "host identity: the garbage collector mode" },
+        { "path": "$.simdTier", "why": "host identity: the SIMD tier (results are the same bits on every tier)" },
+        { "path": "$.simdLanes", "why": "host identity: the SIMD width" },
+        { "path": "$.simdFma", "why": "host identity: whether FMA is available" },
+        { "path": "$.machineName", "why": "host identity: the machine name" },
+        { "path": "$.os", "why": "host identity: the operating system" },
+        { "path": "$.cpu", "why": "host identity: the processor model" },
+        { "path": "$.logicalCores", "why": "host identity: the logical core count (a re-run is single-threaded)" },
+        { "path": "$.ramGb", "why": "host identity: the installed memory" },
+        { "path": "$.gpuSolves", "why": "run identity: GPU solve counters, written on a GPU backend only (a GPU run is never re-run)" }
+      ]
+    },
+    {
+      "schema": "*",
+      "verb": "*",
+      "file": "*.run-metadata.json",
+      "fields": [
+        { "path": "$.timestampUtc", "why": "run identity: the report sidecar's time (RunInfo.WriteJson, RunInfo.MetadataPathFor)" },
+        { "path": "$.backend", "why": "run identity (RunInfo.Backend)" },
+        { "path": "$.gitCommit", "why": "build identity (RunInfo.GitCommit)" },
+        { "path": "$.buildConfig", "why": "build identity (RunInfo.BuildConfig)" },
+        { "path": "$.coreVersion", "why": "build identity (RunInfo.CoreVersion)" },
+        { "path": "$.runtime", "why": "host identity" },
+        { "path": "$.arch", "why": "host identity" },
+        { "path": "$.serverGc", "why": "host identity" },
+        { "path": "$.simdTier", "why": "host identity" },
+        { "path": "$.simdLanes", "why": "host identity" },
+        { "path": "$.simdFma", "why": "host identity" },
+        { "path": "$.machineName", "why": "host identity" },
+        { "path": "$.os", "why": "host identity" },
+        { "path": "$.cpu", "why": "host identity" },
+        { "path": "$.logicalCores", "why": "host identity" },
+        { "path": "$.ramGb", "why": "host identity" },
+        { "path": "$.gpuSolves", "why": "run identity (GPU backend only)" }
+      ]
+    },
+    {
+      "schema": "*",
+      "verb": "*",
+      "file": "*.csv",
+      "fields": [
+        { "path": "#GridSim  -  ", "why": "run identity: the run header's first line, the time the run started (RunInfo.HeaderLines)" },
+        { "path": "#code:", "why": "build identity: commit, Core version and build configuration (RunInfo.HeaderLines)" },
+        { "path": "#runtime:", "why": "host identity: the .NET runtime and GC mode (RunInfo.HeaderLines)" },
+        { "path": "#machine:", "why": "host identity: the machine name and operating system (RunInfo.HeaderLines)" },
+        { "path": "#cpu:", "why": "host identity: processor, logical cores and memory (RunInfo.HeaderLines)" },
+        { "path": "#simd:", "why": "host identity: the SIMD tier (RunInfo.HeaderLines)" },
+        { "path": "#backend:", "why": "run identity: the solver backend (RunInfo.HeaderLines)" }
+      ]
+    },
+    {
+      "schema": "gridsim-rms-events-export/1",
+      "verb": "stability",
+      "note": "stability --events-out summary (RmsEventsExport.SummaryJsonText): case label, frequency, step, duration, events, verdict, machine list and provenance tag. Every field is an input or a computed value; none is identity or timing.",
+      "fields": []
+    },
+    {
+      "schema": "gridsim-classical-export/1",
+      "verb": "stability",
+      "note": "stability --export (the classical trajectory): label, frequency, step, machines, reduced admittance and samples. No identity or timing field.",
+      "fields": []
+    },
+    {
+      "schema": "*",
+      "verb": "dynamics-study",
+      "note": "The dynamics-study result has no schema tag (schemaVersion 1). Its one identity field, provenance.engine, is masked by **.provenance.engine above; its provenance hashes (studySha256, inputs, modelAssignments, plugins) are compared, and a differing one makes the entry CANNOT-REPLAY (indirect input changed).",
+      "fields": []
+    },
+    {
+      "schema": "*",
+      "verb": "long-term",
+      "note": "long-term --out CSV (LongTermResult.ToCsv): one row per step, no comment lines, no identity or timing column.",
+      "fields": []
+    },
+    {
+      "schema": "*",
+      "verb": "trip",
+      "note": "trip --export CSV (dtm,f): times from the fixed epoch 2000-01-01, not the clock. No identity or timing column.",
+      "fields": []
+    },
+    {
+      "schema": "*",
+      "verb": "modal",
+      "note": "modal --export (SmallSignalExport): label, model and modes. No identity or timing field.",
+      "fields": []
+    },
+    {
+      "schema": "gridsim-planning-complete/1",
+      "verb": "*",
+      "fields": [
+        { "path": "$.build", "why": "build identity: planning-study completion record (version and module ids)" }
+      ]
+    }
+  ]
+}

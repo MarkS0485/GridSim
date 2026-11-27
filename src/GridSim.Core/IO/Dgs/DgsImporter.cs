@@ -283,7 +283,11 @@ public static class DgsImporter
             double xk = Math.Sqrt(zk * zk - rk * rk);
             double scale = options.BaseMva / strn;
             double ratio = (uh / kvH) / (ul / kvL);
-            trafos.Add(new NbTransformer(r.Id, nh, nl, rk * scale, xk * scale, 0.0, ratio, 0.0, strn));
+            // The short-circuit impedance is z ul^2 / strn ohms on the LV side. On the LV terminal's base that is
+            // z (Sb / strn) (ul / kvL)^2, with the ratio above at the HV side. When ul equals the LV terminal kV the
+            // factor is exactly 1.0.
+            double refer = (ul / kvL) * (ul / kvL);
+            trafos.Add(new NbTransformer(r.Id, nh, nl, rk * scale * refer, xk * scale * refer, 0.0, ratio, 0.0, strn));
             string note = ty!.Real("i0tr") is not null ? "magnetising current i0tr is not modelled (B = 0)." : "";
             Add("ElmTr2", r, note.Length > 0 ? DgsObjectOutcome.Approximated : DgsObjectOutcome.Mapped, note.Length > 0 ? note : $"type {typ}.", r.Id);
             Replace("TypTr2", ty, DgsObjectOutcome.Mapped, "used by a transformer.", ty.Id);
@@ -336,7 +340,7 @@ public static class DgsImporter
             Cubicle? c = null;
             if (why is null) TryEnd(r.Id, 0, "shunt", out c, out why);
             if (why is not null) { Add("ElmShnt", r, DgsObjectOutcome.Refused, why); continue; }
-            shunts.Add(new NbShunt(r.Id, Materialise(c!), 0.0, -r.Real("qcapn")!.Value));
+            shunts.Add(new NbShunt(r.Id, Materialise(c!), 0.0, r.Real("qcapn")!.Value));   // Bs = +qcapn: a capacitor injects qcapn MVAr at 1 pu
             Add("ElmShnt", r, DgsObjectOutcome.Mapped, "capacitor at 1 pu voltage (MVAr taken at nominal).", r.Id);
         }
         // ---- couplers ----

@@ -28,7 +28,7 @@ public class N101UnlimitedLimitsTests
     {
         GridModel m = S10TestSupport.LoadMatpower("pegase/case1354pegase.m").Model;
         Assert.Contains(m.AllGenerators, g => double.IsInfinity(g.Qmax) || double.IsInfinity(g.Qmin) || double.IsInfinity(g.Pmax));
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n101-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n101-" + Guid.NewGuid().ToString("N"));
         try
         {
             JsonCaseWriter.WriteDirectory(m, dir);

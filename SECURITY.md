@@ -13,6 +13,17 @@ This policy covers GridSim: the source in this repository and the builds publish
 
 The builds are self-contained and carry the .NET runtime, so a .NET runtime security fix also reaches you only in a
 new GridSim release.
+Runtime updates are tracked by a weekly check against Microsoft's .NET 10.0 release metadata: when a newer SDK
+is out, an issue is opened (marked if it is a security release), and the fix ships by rebuilding and releasing.
+
+## Fixes released under this policy
+
+2.1.074 fixes two denial-of-service weaknesses in the script parser and the script console limits, both assessed
+High (GHSA-38hc-fggf-q864 and GHSA-2h96-qcc2-c9gh). The release's CHANGELOG `Security` section lists every fix.
+2.1.134 neutralises CSV formula injection (CWE-1236): a CSV string cell starting with `=`, `+`, `-`, `@`, a tab or a
+carriage return gets a leading apostrophe; numbers are unchanged (breaking change B31). 2.1.135 applies the same guard
+to every other CSV the CLI writes (reports, estimates, EMT probes, benchmark labels and the rest) and to the Core
+CSV text APIs, such as the placed-protection evaluator's `ToCsv`.
 
 ## Reporting a vulnerability
 

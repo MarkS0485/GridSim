@@ -18,7 +18,9 @@ namespace GridSim.Core.Analysis;
 /// dispatch is globally cost-optimal across ALL simultaneously-binding constraints, not a one-line-at-a-
 /// time redispatch. With limits off it reduces to a plain merit-order (cheapest-first) economic dispatch.
 /// Costs are a linear per-generator marginal cost, defaulted from fuel type when a case carries no
-/// explicit cost. DC assumptions (reactance-only, 1 pu voltages) are inherited from the PTDF.
+/// explicit cost. DC assumptions (1 pu voltages, no losses; series reactance with tap ratios, phase shifts and
+/// bus shunt conductance, MATPOWER makeBdc, B33) are inherited from <see cref="DistributionFactors"/>: f0 carries the
+/// shifts and Gs, and demand is sum Pd + sum Gs.
 ///
 /// Scale (R005, October 2026): the LP is solved by <see cref="DcOpfSecuritySimplex"/>, the BoundedSimplex
 /// algorithm performed operation for operation without its dense matrices (PTDF held once per distinct
@@ -96,7 +98,8 @@ public static class DcOptimalPowerFlow
     /// <summary>One DC island's share of a multi-island dispatch (N034).</summary>
     /// <param name="ReferenceBus">The island's reference bus (its slack, else its largest generator, else its first bus).</param>
     /// <param name="BusCount">How many buses the island holds.</param>
-    /// <param name="LoadMw">The island's demand (MW).</param>
+    /// <param name="LoadMw">The island's demand (MW): bus Pd plus bus shunt conductance Gs (B33), what its generation
+    /// must meet.</param>
     /// <param name="GenMw">The island's dispatched generation (MW); 0 for an island with no generator.</param>
     /// <param name="HasGeneration">False for a dead island: no generator sits on it, so its load cannot be supplied.</param>
     /// <param name="Feasible">The island's own verdict: its dispatch meets its demand (and its line limits, when they
@@ -234,7 +237,7 @@ public static class DcOptimalPowerFlow
         CheckGeneratorLimits(model);
         var pmin = model.Generators.Select(gen => gen.Pmin).ToArray();
         var pmax = model.Generators.Select(gen => double.IsInfinity(gen.Pmax) ? UnboundedPmaxMw : gen.Pmax).ToArray();
-        double demand = model.Buses.Sum(b => b.Pd);
+        double demand = DcDemand.TotalMw(model);   // B33: Pd + Gs
 
         // 1. Merit order: start at Pmin, then load cheapest generators up to Pmax to meet demand.
         var pg = (double[])pmin.Clone();
@@ -416,9 +419,9 @@ public static class DcOptimalPowerFlow
             if (!island.HasGeneration)
             {
                 // Dead island: nothing can supply it. Reported, never dropped; infeasible when it has load to serve.
-                bool deadOk = !(Math.Abs(island.LoadMw) > BalanceToleranceMw);
+                bool deadOk = !(Math.Abs(DcDemand.IslandMw(island)) > BalanceToleranceMw);   // B33: Gs is load too
                 if (!deadOk) feasible = false;
-                summaries.Add(new IslandDispatch(island.ReferenceBusId, island.BusIds.Count, island.LoadMw, 0.0,
+                summaries.Add(new IslandDispatch(island.ReferenceBusId, island.BusIds.Count, DcDemand.IslandMw(island), 0.0,
                     HasGeneration: false, Feasible: deadOk, SecurityLpStatus: null));
                 continue;
             }
@@ -466,7 +469,7 @@ public static class DcOptimalPowerFlow
                 if (st != LpStatus.Optimal && (lpStatus is null || lpStatus == LpStatus.Optimal)) lpStatus = st;
                 else lpStatus ??= st;
             }
-            summaries.Add(new IslandDispatch(island.ReferenceBusId, island.BusIds.Count, island.LoadMw, r.TotalGenMw,
+            summaries.Add(new IslandDispatch(island.ReferenceBusId, island.BusIds.Count, DcDemand.IslandMw(island), r.TotalGenMw,
                 HasGeneration: true, Feasible: r.Feasible, SecurityLpStatus: r.SecurityLpStatus));
         }
         if (!anyLp) lpStatus = null;
@@ -488,7 +491,7 @@ public static class DcOptimalPowerFlow
             for (int i = 0; i < g; i++) dispatch.Add(new GenDispatch(model.Generators[i].Bus, pg[i], marginal[i]));
             total = curveTotal;
         }
-        double demand = model.Buses.Sum(b => b.Pd);
+        double demand = DcDemand.TotalMw(model);   // B33: Pd + Gs
 
         // F19: prices only when every energised island reached a priced optimum. A dead island's buses get no price
         // (nothing can supply them, so there is no marginal cost to report); they are left out of the bus list.
@@ -639,7 +642,7 @@ public static class DcOptimalPowerFlow
         var lo = new double[n];
         var hi = new double[n];
         for (int i = 0; i < g; i++) { c[i] = cost[i]; lo[i] = pmin[i]; hi[i] = pmax[i]; }
-        b[0] = model.Buses.Sum(bus => bus.Pd);
+        b[0] = DcDemand.TotalMw(model);   // B33: Pd + Gs
         for (int r = 0; r < lines; r++)
         {
             int l = rated[r];
@@ -708,7 +711,7 @@ public static class DcOptimalPowerFlow
 
         // Balance row and generator bounds/costs.
         for (int i = 0; i < g; i++) { A[0, i] = 1.0; c[i] = cost[i]; lo[i] = pmin[i]; hi[i] = pmax[i]; }
-        b[0] = model.Buses.Sum(bus => bus.Pd);
+        b[0] = DcDemand.TotalMw(model);   // B33: Pd + Gs
 
         // Thermal rows:  sum_i a[l,i] Pg_i + s_l = RateA_l - f0_l,   s_l in [0, 2 RateA_l]
         // so the line flow RateA_l - s_l ranges over [-RateA_l, +RateA_l].

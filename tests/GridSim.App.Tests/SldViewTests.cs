@@ -39,7 +39,7 @@ public sealed class SldViewTests
 
     private sealed class Temp : IDisposable
     {
-        public string Dir { get; } = Path.Combine(Path.GetTempPath(), "gridsim-r418-app-" + Guid.NewGuid().ToString("N"));
+        public string Dir { get; } = TestTemp.Under("gridsim-r418-app-" + Guid.NewGuid().ToString("N"));
         public Temp(string source)
         {
             Directory.CreateDirectory(Dir);
@@ -174,7 +174,7 @@ public sealed class SldViewTests
             Generators = [new NbGenerator("G1", "R1", 50, Slack: true)],
             Loads = [new NbLoad("L2", "R2", 10), new NbLoad("L3", "R3", 20)],
         });
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-r418-app-" + Guid.NewGuid().ToString("N") + ".json");
+        string path = TestTemp.Under("gridsim-r418-app-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
             File.WriteAllText(path, json, new System.Text.UTF8Encoding(false));

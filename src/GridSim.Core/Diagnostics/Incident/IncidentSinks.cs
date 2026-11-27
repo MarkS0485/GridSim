@@ -86,7 +86,7 @@ public sealed class JsonLinesIncidentSink : IIncidentSink, IDeliveryChannel
             try
             {
                 byte[] line = Encoding.UTF8.GetBytes(Format(report) + "\n");
-                using var fs = new FileStream(FilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+                using var fs = new FileStream(FilePath, UserOnlyFile.Options(FileMode.Append, FileAccess.Write, FileShare.Read));   // SEC-09
                 fs.Write(line);
                 fs.Flush(flushToDisk: true);
                 _published++;
@@ -141,7 +141,7 @@ public sealed class SecurityIncidentSink : IAuditSink
 
 /// <summary>
 /// Builds the standard incident wiring a product path attaches to its audit log: an <see cref="IncidentRouter"/> to
-/// <paramref name="sink"/>, a <see cref="SecurityIncidentSink"/> for single significant events, and a
+/// <c>sink</c>, a <see cref="SecurityIncidentSink"/> for single significant events, and a
 /// <see cref="SecurityEventMonitor"/> for bursts. The CLI's <c>--incident-log</c> and the web host's
 /// <c>Audit:IncidentLogPath</c> both use it, so the two raise identical incidents for identical trails.
 /// <para>GR-363 (November 2026): the burst monitor is wired with a sliding window of

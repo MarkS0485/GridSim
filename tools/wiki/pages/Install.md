@@ -5,9 +5,9 @@ Two routes: a ready-built release (no .NET install needed), or a build from sour
 
 ## Release binaries (Windows, Linux and macOS)
 
-The latest release is [2.1.073 RC-4](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.073-RC-4). All builds are
+The latest release is [2.1.105 RC-5](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.105-RC-5). All builds are
 self-contained: the .NET runtime is carried inside, so nothing else needs installing. Pick the file for your machine
-(`<version>` is the release number, for example `2.1.073`):
+(`<version>` is the release number, for example `2.1.105`):
 
 | What | Platform | File |
 |---|---|---|
@@ -20,7 +20,7 @@ self-contained: the .NET runtime is carried inside, so nothing else needs instal
 | CycloneDX SBOMs | Any | `*.sbom.json` |
 | SHA-256 checksums of every file | Any | `SHA256SUMS.txt` |
 
-All of them are on the [release page](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.073-RC-4). Check every download against
+All of them are on the [release page](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.105-RC-5). Check every download against
 `SHA256SUMS.txt`. The `GridSim.Core` NuGet package and the web container image are published separately; the
 [manual chapter](https://marks0485.github.io/GridSim/manual/0001%20Getting%20started/) says where.
 

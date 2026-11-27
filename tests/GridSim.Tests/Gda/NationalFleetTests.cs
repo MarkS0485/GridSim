@@ -13,7 +13,7 @@ public class NationalFleetTests : IDisposable
 
     public NationalFleetTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "gridsim-fleet-" + Guid.NewGuid().ToString("N"));
+        _root = TestTemp.Under("gridsim-fleet-" + Guid.NewGuid().ToString("N"));
         string neso = Path.Combine(_root, "NESO", "RAWData");
 
         string tec = Path.Combine(neso, "Transmission Entry Capacity (TEC) register");

@@ -123,18 +123,24 @@ public static class AuditEvent
     /// (<see cref="ArgumentException"/>) on any field that would make the layout ambiguous, and on two inputs
     /// with the same name.
     /// </summary>
+    /// <summary>SEC-19: a character that breaks an entry's single line: a control character, or a Unicode line or paragraph
+    /// separator (GR-853). The one rule every caller checks an outcome or folds a reason by.</summary>
+    internal static bool BreaksLine(char c)
+        => char.IsControl(c)
+           || char.GetUnicodeCategory(c) is System.Globalization.UnicodeCategory.LineSeparator
+                                         or System.Globalization.UnicodeCategory.ParagraphSeparator;
+
     public static string FormatSummary(string actor, string action, IReadOnlyList<AuditInput> inputs, string outcome)
     {
         RequireToken(actor, nameof(actor), "actor");
         RequireToken(action, nameof(action), "action");
+        // (BreaksLine below is the one rule SetOutcome and the run recorder's reason folding share, SEC-19.)
         ArgumentNullException.ThrowIfNull(inputs);
         ArgumentException.ThrowIfNullOrWhiteSpace(outcome);
         // GR-853: the Unicode line and paragraph separators (U+2028, U+2029) break a line as surely as a newline, but
         // are not control characters, so they used to pass; they are refused too.
         foreach (char c in outcome)
-            if (char.IsControl(c)
-                || char.GetUnicodeCategory(c) is System.Globalization.UnicodeCategory.LineSeparator
-                                              or System.Globalization.UnicodeCategory.ParagraphSeparator)
+            if (BreaksLine(c))
                 throw new ArgumentException(
                     "The outcome must be a single line of text with no control characters or line separators (no newlines or tabs).",
                     nameof(outcome));

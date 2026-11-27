@@ -24,7 +24,7 @@ namespace GridSim.Tests;
 public sealed class Cf6TrustRulesTests : IDisposable
 {
     private static readonly DateTime Now = new(2026, 7, 1, 12, 0, 0, DateTimeKind.Utc);
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-cf6-trust-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-cf6-trust-" + Guid.NewGuid().ToString("N"));
 
     public Cf6TrustRulesTests() => Directory.CreateDirectory(_dir);
 

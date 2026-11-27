@@ -201,11 +201,16 @@ internal static class CliResultWriter
         : double.IsNegativeInfinity(d) ? "-Infinity"
         : d.ToString("R", Inv);
 
-    /// <summary>A CSV field: quoted (with doubled quotes) when it holds a comma, a quote or a line break.</summary>
-    public static string CsvField(string s) =>
-        s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r')
+    /// <summary>A CSV STRING field: a leading apostrophe when it starts with = + - @ TAB or CR (formula injection,
+    /// CWE-1236; <see cref="GridSim.Core.IO.CsvFormulaGuard"/>), then quoted (with doubled quotes) when it holds a comma, a
+    /// quote or a line break. Numbers never come here: <see cref="CsvCell"/> writes them by their type.</summary>
+    public static string CsvField(string s)
+    {
+        s = GridSim.Core.IO.CsvFormulaGuard.Neutralise(s);
+        return s.Contains(',') || s.Contains('"') || s.Contains('\n') || s.Contains('\r')
             ? "\"" + s.Replace("\"", "\"\"", StringComparison.Ordinal) + "\""
             : s;
+    }
 
     /// <summary>One normalised cell as CSV text (null is an empty field; booleans are true / false).</summary>
     public static string CsvCell(object? v) => v switch
@@ -220,9 +225,16 @@ internal static class CliResultWriter
 
     /// <summary>
     /// The JSON document, as UTF-8 text:
-    /// { "schema", "tool", "verb", "args", "exitCode", "summary": { key: value }, "tables": { name: [ { column: value } ] } }.
+    /// { "schema", "tool", "buildStatus", "verb", "args", "exitCode", "summary": { key: value }, "tables": { name: [ { column: value } ] } }.
     /// </summary>
     public static string JsonText(CliResult r, string tool, IReadOnlyList<string> args, int exitCode)
+        => JsonText(r, tool, args, exitCode, null);
+
+    /// <summary>
+    /// The same document with the optional "timings" block (the --timings switch, <see cref="StageTimer"/>) as its last
+    /// property. With no block the text is exactly what it always was.
+    /// </summary>
+    internal static string JsonText(CliResult r, string tool, IReadOnlyList<string> args, int exitCode, StageTimer.Snapshot? timings)
     {
         using var ms = new MemoryStream();
         var opts = new JsonWriterOptions
@@ -236,6 +248,9 @@ internal static class CliResultWriter
             w.WriteStartObject();
             w.WriteString("schema", Schema);
             w.WriteString("tool", tool);
+            // Additive: the build status of the running build (RELEASE or UNSUPPORTED BUILD, from its compliance
+            // attestation), next to the build stamp it qualifies.
+            w.WriteString("buildStatus", GridSim.Core.Diagnostics.SupplyChain.BuildStatus.Current);
             w.WriteString("verb", r.Verb);
             w.WriteStartArray("args");
             foreach (string a in args) w.WriteStringValue(a);
@@ -265,6 +280,7 @@ internal static class CliResultWriter
                 w.WriteEndArray();
             }
             w.WriteEndObject();
+            if (timings is not null) StageTimer.WriteJson(w, timings);
             w.WriteEndObject();
         }
         return Encoding.UTF8.GetString(ms.ToArray());
@@ -291,8 +307,11 @@ internal static class CliResultWriter
 
     /// <summary>Write the JSON document to <paramref name="path"/> (atomically: a temporary file, then a move).</summary>
     public static void WriteJson(CliResult r, string path, string tool, IReadOnlyList<string> args, int exitCode)
+        => WriteJson(r, path, tool, args, exitCode, null);
+
+    internal static void WriteJson(CliResult r, string path, string tool, IReadOnlyList<string> args, int exitCode, StageTimer.Snapshot? timings)
     {
-        string text = JsonText(r, tool, args, exitCode);
+        string text = JsonText(r, tool, args, exitCode, timings);
         WriteAtomic(path, w => w.Write(text));
     }
 
@@ -411,6 +430,12 @@ internal static class CliOutput
         // the shared writer (CliResultFromJson); their own --out keeps naming their own result file (see VerbsWithoutOut).
         "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",
         "study-case", "case-diff", "result-diff", "report",
+        // RC5 WP11: the RC5 verbs. protection-eval and protection-grade fill the report from the values they print; acopf-opt,
+        // acscopf and reconfig from the rows of their own result file; grid-code from its own result document (CliResultFromJson);
+        // reduce and cgmes-shacl from the values they print. The five with an --out of their own keep it (see VerbsWithoutOut).
+        "protection-eval", "protection-grade", "acopf-opt", "acscopf", "reconfig", "grid-code", "reduce", "cgmes-shacl",
+        // RC5 (run journal): the breaking-change verb writes its validate, import and list reports through the shared writer.
+        "breaking-change",
     };
 
     /// <summary>
@@ -424,6 +449,7 @@ internal static class CliOutput
         "convert",
         "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",
         "study-case", "case-diff", "result-diff", "report",
+        "acopf-opt", "acscopf", "reconfig", "grid-code", "reduce",   // RC5 WP11: their --out names their own result file or reduced case
     };
 
     /// <summary>The report the running verb fills; null when no result file was asked for (the usual case).</summary>
@@ -487,9 +513,25 @@ internal static class CliOutput
         }
 
         // Two flags naming the same file would overwrite one result with the other.
-        var full = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // CLI-21: compared with the platform's path rule (case-insensitive on Windows and macOS, exact elsewhere), and a
+        // CSV request's derived files (<stem>-<table>.csv, <stem>-summary.csv) count as its own.
+        StringComparison cmp = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var full = new HashSet<string>(cmp == StringComparison.Ordinal ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
         foreach ((string _, string p) in requests)
             if (!full.Add(Path.GetFullPath(p))) return $"error: two result flags name the same file '{p}'.";
+        foreach ((string fmt, string p) in requests)
+        {
+            if (fmt != "csv") continue;
+            string csvFull = Path.GetFullPath(p);
+            string prefix = Path.Combine(Path.GetDirectoryName(csvFull)!, Path.GetFileNameWithoutExtension(csvFull)) + "-";
+            foreach ((string _, string q) in requests)
+            {
+                string other = Path.GetFullPath(q);
+                if (string.Equals(other, csvFull, cmp)) continue;
+                if (other.StartsWith(prefix, cmp) && other.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                    return $"error: '{q}' may be one of the files the CSV result '{p}' writes beside itself (<name>-<table>.csv, <name>-summary.csv); name another file.";
+            }
+        }
         return null;
     }
 
@@ -525,13 +567,21 @@ internal static class CliOutput
             return;
         }
         string tool = "gridsim " + GridSim.Core.BuildInfo.InformationalVersion;
+        // 2.1.154: --timings. The write stage ends when the document has been rendered, so render it once here (the dry
+        // render is the cost of rendering) and fix the figures; the same block then goes into every JSON file asked for.
+        StageTimer.Snapshot? timings = null;
+        if (StageTimer.Enabled && Requests.Any(q => q.Format == "json"))
+        {
+            _ = CliResultWriter.JsonText(r, tool, args, exitCode);
+            timings = StageTimer.Seal();
+        }
         foreach ((string format, string path) in Requests)
         {
             try
             {
                 if (format == "json")
                 {
-                    CliResultWriter.WriteJson(r, path, tool, args, exitCode);
+                    CliResultWriter.WriteJson(r, path, tool, args, exitCode, timings);
                     Console.Error.WriteLine($"[{r.Verb}] wrote {Path.GetFullPath(path)}");
                 }
                 else

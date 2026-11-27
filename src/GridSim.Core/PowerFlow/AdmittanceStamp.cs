@@ -16,11 +16,11 @@ public readonly record struct BranchStamp(Complex Yff, Complex Ytt, Complex Yft,
 /// removes the drift risk and, crucially, makes the stamp <b>frequency-parameterisable</b> so the harmonic
 /// engine builds Y(h) from the same arithmetic.
 ///
-/// <para>At <paramref name="h"/> = 1 and <paramref name="rFactor"/> = 1 this reproduces the fundamental stamp
+/// <para>At <c>h</c> = 1 and <c>rFactor</c> = 1 this reproduces the fundamental stamp
 /// bit-for-bit (multiplying by 1.0 is exact for doubles), so the existing power-flow / fault / audit results
 /// are unchanged. For a harmonic order h, series reactance and line charging scale with h
 /// (<c>X -&gt; hX</c>, <c>B -&gt; hB</c>); series resistance scales by a skin-effect factor
-/// <paramref name="rFactor"/> the caller supplies.</para>
+/// <c>rFactor</c> the caller supplies.</para>
 /// </summary>
 public static class AdmittanceStamp
 {
@@ -39,6 +39,19 @@ public static class AdmittanceStamp
         Complex bc = new Complex(0, (b * h) / 2.0);                 // half line charging each end (scales with h)
         return FromAdmittance(ys, bc, tapRatio, phaseShiftDeg);
     }
+
+    /// <summary>ANA-07: a branch's series reactance at harmonic order <paramref name="h"/>. An inductive reactance (X &gt;= 0)
+    /// is omega L and scales by h; a capacitive one (X &lt; 0, a series capacitor) is -1 / (omega C) and scales by 1 / h.
+    /// A transformer's negative reactance is not a capacitor but the star-equivalent leg of a three-winding unit (a
+    /// combination of leakage inductances), so a transformer branch scales by h whatever its sign. At h = 1 both forms
+    /// return <paramref name="x"/> exactly. R5-09: a series-compensated line held as one branch with a net X below 0
+    /// (X_L - X_C &lt; 0) is scaled as a pure capacitor; the right value, X_L h - X_C / h, needs both parts.</summary>
+    public static double SeriesReactanceAtOrder(double x, double h, bool isTransformer) => x >= 0.0 || isTransformer ? x * h : x / h;
+
+    /// <summary>ANA-07: a shunt susceptance at harmonic order <paramref name="h"/>: capacitive (B &gt;= 0, omega C) scales by h,
+    /// inductive (B &lt; 0, a reactor or a magnetising branch folded into B, -1 / (omega L)) by 1 / h; the bus-shunt rule of
+    /// the frequency-dependent builder. Exact at h = 1.</summary>
+    public static double ShuntSusceptanceAtOrder(double b, double h) => b >= 0.0 ? b * h : b / h;
 
     /// <summary>
     /// The 2x2 stamp from an already-computed series admittance <paramref name="ys"/> and per-end shunt

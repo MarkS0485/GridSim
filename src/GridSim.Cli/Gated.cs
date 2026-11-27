@@ -111,6 +111,24 @@ internal static class Gated
         if (!r.Allowed) throw new GateRefusedException(r.Message);
     }
 
+    /// <summary>CLI-01: the licence check for a model edited in memory after its load (<c>rpc --protocol 2</c>'s <c>add</c>,
+    /// <c>delete</c> and <c>set</c>). An edited model is a user network whatever it was loaded from, so the tier's bus limit
+    /// applies to its bus count as it stands.</summary>
+    internal static void AdmitEdited(GridModel model)
+    {
+        GateResult r = _gate.Check(model.BusCount, bundled: false);
+        if (!r.Allowed) throw new GateRefusedException(r.Message);
+    }
+
+    /// <summary>CLI-08: the licence check for a network read by a verb's own reader (not a loader here), by its bus count:
+    /// <paramref name="bundled"/> is the content rule's verdict for the file it came from
+    /// (<see cref="BundledNetworks.BundledAcrossLoad{T}"/>).</summary>
+    internal static void AdmitCount(int busCount, bool bundled)
+    {
+        GateResult r = _gate.Check(busCount, bundled);
+        if (!r.Allowed) throw new GateRefusedException(r.Message);
+    }
+
     /// <summary>RC4 wiring: true when <paramref name="path"/> is a CIM / CGMES input for <c>convert</c>: a .xml document, a .zip
     /// exchange, or a folder of .xml profile files that is not a GridSim case folder (no system.json, buses.json or .m file).</summary>
     internal static bool IsCimInput(string path)
@@ -141,7 +159,13 @@ internal static class Gated
                 .Select(e => e.Text).ToArray();
             if (docs.Length == 0) throw new InvalidDataException("No CGMES profile documents (EQ, TP, SSH, SV) were found.");
         }
-        else docs = [File.ReadAllText(path)];
+        else
+        {
+            // R2-05: one document is held to the per-document limit (256 MiB, the input-file limit) through a bounded
+            // stream; it was read whole. The reader honours a byte order mark, as File.ReadAllText did.
+            using var reader = new StreamReader(GridSim.Core.Security.SideFile.OpenRead(full, CgmesArchiveReader.MaxEntryBytes, $"the CIM / CGMES input '{Path.GetFileName(full)}'"), System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+            docs = [reader.ReadToEnd()];
+        }
         var notes = new List<string>();
         double? frequencyHz = _declaredFrequencyHz;
         CimNetwork net = CimImporter.Parse(docs, CimImportOptions.Default);
@@ -240,6 +264,15 @@ internal static class Gated
     /// <see cref="PsseReadOptions.AllowUnmodelled"/>.</summary>
     public static bool AllowUnmodelled { get; set; }
 
+    /// <summary>WP3a (RC5): set by <c>--dyr-extended</c>; every PSS/E DYR file this run reads is read with
+    /// <see cref="PsseDyrOptions.ExtendedLibrary"/> (GENCLS, ESST1A, EXST1, SCRX, ESAC1A, ESDC1A, IEEEST, PSS2A,
+    /// PSS2B; GENTPJ refused by name).</summary>
+    public static bool DyrExtended { get; set; }
+
+    /// <summary>WP3a (RC5): true once a PSS/E DYR file has been read (so the CLI can say when --dyr-extended reached
+    /// nothing).</summary>
+    public static bool DyrLoaded { get; private set; }
+
     /// <summary>Tranche A: set by <c>--tap-control</c>; every PSS/E RAW file this run loads is read with
     /// <see cref="PsseReadOptions.ApplyTapControl"/>, and the steady-state solvers get a ramp start of
     /// <see cref="TapControlRampStages"/> stages.</summary>
@@ -262,6 +295,37 @@ internal static class Gated
     /// <summary>Tranche A: remember the shunt loop <paramref name="solver"/> drives.</summary>
     public static void RememberShuntLoop(GridSim.Core.PowerFlow.SteadyStateSolver solver, GridSim.Core.PowerFlow.SwitchedShuntPowerFlow loop) => _shuntLoops.AddOrUpdate(solver, loop);
 
+    /// <summary>WP13 (RC5): set by <c>--area-control</c>; every PSS/E RAW file this run loads is read with
+    /// <see cref="PsseReadOptions.KeepAreaInterchange"/>, and its areas are kept for pf (<see cref="AreasOf"/>).</summary>
+    public static bool ApplyAreaControl { get; set; }
+
+    /// <summary>WP13 (RC5): set by <c>--remote-vreg</c>; every PSS/E RAW file this run loads is read with
+    /// <see cref="PsseReadOptions.RemoteRegulation"/>, and its remote voltage controls are kept for pf
+    /// (<see cref="RemoteControlsOf"/>).</summary>
+    public static bool ApplyRemoteRegulation { get; set; }
+
+    /// <summary>WP13 (RC5): true once pf has read a .raw file's area interchange data (for the no-effect warning).</summary>
+    public static bool AreaControlRead { get; set; }
+
+    /// <summary>WP13 (RC5): true once pf has read a .raw file's remote voltage controls (for the no-effect warning).</summary>
+    public static bool RemoteRegulationRead { get; set; }
+
+    /// <summary>WP13 (RC5): the area interchange data a .raw file gave with --area-control.</summary>
+    public sealed record AreaControlData(IReadOnlyList<GridSim.Core.PowerFlow.AreaInterchangeSpec> Areas,
+        IReadOnlyList<GridSim.Core.PowerFlow.AreaMembership> Reported,
+        IReadOnlyDictionary<int, GridSim.Core.Estimation.BranchEnd> MeteredEnds);
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<GridModel, AreaControlData> _areaControl = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<GridModel, IReadOnlyList<GridSim.Core.PowerFlow.RemoteVoltageControl>> _remoteControls = new();
+
+    /// <summary>WP13 (RC5): the area interchange data the .raw file of <paramref name="m"/> gave (with
+    /// <c>--area-control</c>); null for any other model.</summary>
+    public static AreaControlData? AreasOf(GridModel m) => _areaControl.TryGetValue(m, out var a) ? a : null;
+
+    /// <summary>WP13 (RC5): the remote voltage controls the .raw file of <paramref name="m"/> gave (with
+    /// <c>--remote-vreg</c>); null for any other model.</summary>
+    public static IReadOnlyList<GridSim.Core.PowerFlow.RemoteVoltageControl>? RemoteControlsOf(GridModel m) => _remoteControls.TryGetValue(m, out var c) ? c : null;
+
     /// <summary>Tranche A: the shunt loop <paramref name="solver"/> drives, or null.</summary>
     public static GridSim.Core.PowerFlow.SwitchedShuntPowerFlow? ShuntLoopOf(GridSim.Core.PowerFlow.SteadyStateSolver solver) => _shuntLoops.TryGetValue(solver, out var l) ? l : null;
 
@@ -271,6 +335,9 @@ internal static class Gated
 
     // Tranche A: the last PSS/E RAW file this run loaded, whose machine keys a .dyr file is mapped through.
     private static PsseParseResult? _lastPsse;
+
+    /// <summary>RC5 WP10: the last PSS/E RAW parse of this run (cgmes-export --dyr maps DYR machines through its keys).</summary>
+    internal static PsseParseResult? LastPsse => _lastPsse;
 
     /// <summary>
     /// Tranche A (October 2026): a <c>--dyn-data</c> PSS/E DYR file. Its records are mapped onto the machines of the PSS/E RAW
@@ -288,18 +355,21 @@ internal static class Gated
             throw new InvalidDataException($"'{path}' is a PSS/E DYR file, which names machines by the bus and ID of a PSS/E .raw case; this run's case is not the .raw file's network.");
         string file = Path.GetFileName(path);
         PsseDyrResult dyr = PsseDyrReader.Read(File.ReadAllText(path), raw, Path.GetFileNameWithoutExtension(path),
-            new PsseDyrOptions { AllowUnmodelled = AllowUnmodelled, SourceName = file });
+            new PsseDyrOptions { AllowUnmodelled = AllowUnmodelled, SourceName = file, ExtendedLibrary = DyrExtended });
+        DyrLoaded = true;
         foreach (string note in dyr.Notes) Console.Error.WriteLine($"note: {file}: {note}");
         // WECC (expansion): a DYR that gives only renewable units has no machine document to load; its renewable chains go to
         // the RMS study with the set (MachineDynamicsSet.Renewables) either way.
-        if (dyr.Machines == 0) return MachineDynamicsSet.Empty("PSS/E DYR " + Path.GetFileNameWithoutExtension(path), path).WithRenewables(dyr.Renewables);
+        // WP6 (RC5): the DYR's SVC models (CSVGN1) and DC line models (CDC4T) ride with the set too.
+        if (dyr.Machines == 0) return MachineDynamicsSet.Empty("PSS/E DYR " + Path.GetFileNameWithoutExtension(path), path).WithRenewables(dyr.Renewables).WithDynamicLoads(dyr.DynamicLoads).WithDevices(dyr.Facts, dyr.NetworkDevices);
         string dir = Path.Combine(Path.GetTempPath(), "gridsim-dyr-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
             string json = Path.Combine(dir, file + ".dynamics.json");
             File.WriteAllText(json, dyr.Json);
-            return MachineDynamicsLoader.Load(json, schemasDir, model).WithRenewables(dyr.Renewables);
+            // WP3b (RC5): the DYR's dynamic loads (CIM5BL) ride with the set to the RMS study.
+            return MachineDynamicsLoader.Load(json, schemasDir, model).WithRenewables(dyr.Renewables).WithDynamicLoads(dyr.DynamicLoads).WithDevices(dyr.Facts, dyr.NetworkDevices);
         }
         finally
         {
@@ -323,6 +393,10 @@ internal static class Gated
     /// <summary>Tranche A: true once a UCTE-DEF file has been loaded (--allow-unmodelled also reaches its ##TT tables).</summary>
     public static bool UcteLoaded { get; private set; }
 
+    /// <summary>The last UCTE-DEF read <see cref="Ucte"/> made (model, node codes and the file's transformer text), so
+    /// <c>convert</c> can write a .uct input back as a .uct with its own codes and fields (RC5 WP34 review).</summary>
+    public static UcteParseResult? LastUcteRead { get; private set; }
+
     /// <summary>
     /// Tranche A (October 2026): read a UCTE-DEF file (<see cref="UcteParser"/>), then enforce the licence on the model, as
     /// <see cref="Psse"/> does for a .raw file. This is the ONE place the CLI loads a .uct file. The declared
@@ -341,6 +415,7 @@ internal static class Gated
         string file = Path.GetFileName(path);
         foreach (string note in parsed!.Notes) Console.Error.WriteLine($"note: {file}: {note}");
         UcteLoaded = true;
+        LastUcteRead = parsed;
         if (frequencyHz is not null) DeclaredFrequencyApplied = true;
         return model;
     }
@@ -377,7 +452,7 @@ internal static class Gated
         PsseSeqResult? seq = null;
         GridModel model = Unloadable(path, "PSS/E RAW case file", () =>
         {
-            parsed = PsseRawParser.ParseFile(path, new PsseReadOptions { FrequencyHz = frequencyHz, AllowUnmodelled = AllowUnmodelled, Revision = PsseRevision, ApplyTapControl = ApplyTapControl, ApplyShuntControl = ApplyShuntControl });
+            parsed = PsseRawParser.ParseFile(path, new PsseReadOptions { FrequencyHz = frequencyHz, AllowUnmodelled = AllowUnmodelled, Revision = PsseRevision, ApplyTapControl = ApplyTapControl, ApplyShuntControl = ApplyShuntControl, KeepAreaInterchange = ApplyAreaControl, RemoteRegulation = ApplyRemoteRegulation });
             if (seqPath is null) return parsed.Model;
             seq = PsseSeqReader.ReadFile(seqPath, parsed, new PsseSeqOptions { AllowUnmodelled = AllowUnmodelled });
             return seq.Model;
@@ -396,6 +471,8 @@ internal static class Gated
         else _lastPsse = parsed;
         PsseLoaded = true;
         if (parsed!.SwitchedShunts.Count > 0) _shunts.AddOrUpdate(model, parsed.SwitchedShunts);
+        if (ApplyAreaControl) _areaControl.AddOrUpdate(model, new AreaControlData(parsed.AreaInterchange, parsed.AreaReported, parsed.BranchMeteredEnds));
+        if (ApplyRemoteRegulation) _remoteControls.AddOrUpdate(model, parsed.RemoteVoltageControls);
         if (frequencyHz is not null) DeclaredFrequencyApplied = true;
         return model;
     }
@@ -441,6 +518,12 @@ internal static class Gated
     /// ratings, on the source model's system base (CGMES carries none). An internal check: no licence count.</summary>
     public static GridModel ReadBackCgmes(string path, double baseMva)
         => GridSim.Core.IO.Cim.CgmesWriter.ReadBack(File.ReadAllText(path), baseMva, Path.GetFileNameWithoutExtension(path));
+
+    /// <summary>RC5 WP34: read back a UCTE-DEF file <c>convert</c> has just written, at the source model's frequency
+    /// (UCTE-DEF carries none). An internal check: no licence count. Kept here so <see cref="Ucte"/> and this method are
+    /// the only places the CLI calls the UCTE reader.</summary>
+    public static GridModel ReadBackUcte(string path, double frequencyHz)
+        => UcteParser.ParseFile(path, new UcteReadOptions { FrequencyHz = frequencyHz }).Model;
 
     public static GridModel ReadBackMatpower(string path, double frequencyHz)
         => MatpowerUnitNormalizer.Normalize(MatpowerParser.Parse(File.ReadAllText(path), Path.GetFileNameWithoutExtension(path), frequencyHz));

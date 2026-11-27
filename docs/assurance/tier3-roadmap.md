@@ -1,6 +1,6 @@
 # Assurance roadmap (further frameworks)
 
-**Status as at GridSim 2.1.005 (reviewed 2026-11-01).** This note records the assurance frameworks that are candidates for later work,
+This note records the assurance frameworks that are candidates for later work,
 each with where it would attach to the existing evidence and why it is parked rather than pursued now. It keeps the
 forward view honest: the assurance set deliberately covers the Cyber Assessment Framework (`caf-mapping.md`), the NIS
 Regulations (`nis-oes-gap-assessment.md`), the secure-development lifecycle (`ssdf-mapping.md`), build provenance
