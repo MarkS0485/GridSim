@@ -16,7 +16,7 @@ public sealed partial class BugHunt1101WebTests
 {
     private static WebApplicationFactory<Program> WebFactory(string? environment, params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-bh1101-keys-" + Guid.NewGuid().ToString("N"));
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             if (environment is not null) b.UseEnvironment(environment);
@@ -159,7 +159,7 @@ public sealed partial class BugHunt1101WebTests
         foreach (string path in new[] { "/", "/api/cases", "/compliance", "/no-such-page" })
         {
             using HttpResponseMessage r = await c.GetAsync(new Uri(path, UriKind.Relative));
-            Assert.Equal("frame-ancestors 'none'", string.Join(",", r.Headers.GetValues("Content-Security-Policy")));
+            Assert.Equal("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'", string.Join(",", r.Headers.GetValues("Content-Security-Policy")));
             Assert.Equal("DENY", string.Join(",", r.Headers.GetValues("X-Frame-Options")));
             Assert.Equal("nosniff", string.Join(",", r.Headers.GetValues("X-Content-Type-Options")));
             Assert.Equal("strict-origin-when-cross-origin", string.Join(",", r.Headers.GetValues("Referrer-Policy")));
@@ -177,7 +177,7 @@ public sealed partial class BugHunt1101WebTests
         await using var f = WebFactory(null, ("GridSim:FrameAncestors", "'self' https://portal.example.com"));
         using HttpClient c = ClientFor(f, "http://localhost/");
         using HttpResponseMessage r = await c.GetAsync(new Uri("/", UriKind.Relative));
-        Assert.Equal("frame-ancestors 'self' https://portal.example.com", string.Join(",", r.Headers.GetValues("Content-Security-Policy")));
+        Assert.Equal("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://portal.example.com", string.Join(",", r.Headers.GetValues("Content-Security-Policy")));
         Assert.False(r.Headers.Contains("X-Frame-Options"));   // X-Frame-Options cannot name a portal
     }
 

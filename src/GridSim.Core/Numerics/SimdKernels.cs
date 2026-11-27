@@ -22,12 +22,12 @@ namespace GridSim.Core.Numerics;
 /// and operating system):
 /// <list type="bullet">
 /// <item><b>Bit-exact at every width</b>: <see cref="SubtractScaledRow(double[],int,int,int,double)"/>,
-/// <see cref="AddScaledRow"/> with <c>fastFma=false</c> and the complex column updates do a separate multiply
-/// then add/subtract per lane, matching the scalar <c>x -= f*y</c> to the bit. <see cref="Dot"/> sums in one
+/// <see cref="AddScaledRow(double[], int, double[], int, int, double, bool)"/> with <c>fastFma=false</c> and the complex column updates do a separate multiply
+/// then add/subtract per lane, matching the scalar <c>x -= f*y</c> to the bit. <see cref="Dot(double[], int, double[], int, int)"/> sums in one
 /// DEFINED order (four partial sums, then the tail) that every width reproduces exactly, so it gives the same bits
 /// on every CPU (it is not the left-to-right order of <see cref="DotExact"/>, which stays available).
 /// <see cref="SinCos(double[],double[],double[],int)"/> is the deterministic fdlibm sin/cos per element.</item>
-/// <item><b>Not for numerical paths</b>: <see cref="AddScaledRow"/> with <c>fastFma=true</c> fuses multiply and
+/// <item><b>Not for numerical paths</b>: <see cref="AddScaledRow(double[], int, double[], int, int, double, bool)"/> with <c>fastFma=true</c> fuses multiply and
 /// add where the CPU has FMA, so its last bit depends on the CPU. No GridSim numerical path passes it
 /// (<c>DeterministicMathGuardTests</c> fails if one does); it remains only as the tested R102 kernel arm.</item>
 /// </list>

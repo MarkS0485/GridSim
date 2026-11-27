@@ -1,0 +1,9 @@
+A public sample SCL file (IEC 61850-6 System Configuration Description), used unchanged as test data for the SCL
+substation import (scl-import).
+
+Source: OpenSCD, https://github.com/openscd/open-scd, commit ce61ffe85d37f07db17062efc348028d4a24f3d8
+  packages/openscd/test/testfiles/valid2007B4.scd
+  (sha256 a0a5b2917b915f3bbbb54fef1ab6aa7618574d852dbefbb4e84cc3f3194ac4e6, 30142 bytes)
+
+Licence: Apache License 2.0, the licence of the OpenSCD repository. Its text is in LICENSE-Apache-2.0.txt (the
+repository's LICENSE.md, copied unchanged). The repository has no NOTICE file. No change was made to the file.

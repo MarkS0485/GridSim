@@ -100,7 +100,7 @@ public sealed partial class Cf1OpenCodeFindingsTests
     [Fact]
     public void N339_load_any_reads_a_v2_file_and_sends_bad_json_and_other_tags_to_the_v1_reader_unchanged()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n339-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n339-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -274,7 +274,7 @@ public sealed partial class Cf1OpenCodeFindingsTests
     [Fact]
     public void N339_the_validate_engine_knows_the_tag_and_runs_the_reader()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n339v-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n339v-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

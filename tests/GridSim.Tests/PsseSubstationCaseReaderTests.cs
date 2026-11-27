@@ -13,7 +13,7 @@ public sealed class PsseSubstationCaseReaderTests
     {
         byte[] bytes = System.Text.Encoding.UTF8.GetBytes(File.ReadAllText(Fixture)
             .Replace("'CB 1', 2, 1, 1, 0.0,", "'CB 1', 2, 1, 1, 0.0001,", StringComparison.Ordinal));
-        string path = Path.GetTempFileName();
+        string path = TestTemp.NewFile();
         try
         {
             File.WriteAllBytes(path, bytes);
@@ -32,7 +32,7 @@ public sealed class PsseSubstationCaseReaderTests
     [Fact]
     public void Rejects_a_source_hash_mismatch_before_parsing()
     {
-        string path = Path.GetTempFileName();
+        string path = TestTemp.NewFile();
         try
         {
             File.WriteAllText(path, "not a RAW case", System.Text.Encoding.UTF8);
@@ -50,7 +50,7 @@ public sealed class PsseSubstationCaseReaderTests
             .Replace("'CB 1', 2, 1, 1, 0.0,", "'CB 1', 2, 1, 1, 0.0001,", StringComparison.Ordinal);
         var encoding = new System.Text.UnicodeEncoding(bigEndian: false, byteOrderMark: true, throwOnInvalidBytes: true);
         byte[] bytes = encoding.GetPreamble().Concat(encoding.GetBytes(source)).ToArray();
-        string path = Path.GetTempFileName();
+        string path = TestTemp.NewFile();
         try
         {
             File.WriteAllBytes(path, bytes);

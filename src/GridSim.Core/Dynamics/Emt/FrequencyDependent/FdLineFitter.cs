@@ -97,7 +97,7 @@ public static class FdLineFitter
         // Group delay at the top of the band from the exact phase constant, then round down to whole steps.
         double tauGroup = lengthM * (gamma[m - 1].Imaginary - gamma[m - 2].Imaginary) / (w[m - 1] - w[m - 2]);
         int steps = (int)Math.Floor(tauGroup / dt + 1e-9);
-        if (steps < 1) throw R($"Mode '{name}': the travel time {tauGroup:R} s is shorter than the step {dt:R} s; the step must not exceed it.");
+        if (steps < 1) throw R(FormattableString.Invariant($"Mode '{name}': the travel time {tauGroup:R} s is shorter than the step {dt:R} s; the step must not exceed it."));
         double tau = steps * dt;
         var amin = new Complex[m];
         for (int i = 0; i < m; i++) amin[i] = a[i] * ComplexDet.Exp(new Complex(0.0, w[i] * tau));
@@ -125,14 +125,14 @@ public static class FdLineFitter
         {
             ycShift = -minRe * (1.0 + 1e-6);
             if (!options.EnforcePassivity || ycShift > options.MaxPassivityPerturbation * maxYc)
-                throw R($"Mode '{name}': the fitted characteristic admittance is not passive (least real part {minRe:E3} S) and cannot be corrected by a perturbation of at most {options.MaxPassivityPerturbation:P1}; the fit is refused. Raise the order or narrow the band.");
+                throw R(FormattableString.Invariant($"Mode '{name}': the fitted characteristic admittance is not passive (least real part {minRe:E3} S) and cannot be corrected by a perturbation of at most {options.MaxPassivityPerturbation:P1}; the fit is refused. Raise the order or narrow the band."));
             ycF = new RationalFunction(ycF.D + ycShift, ycF.Poles, ycF.Residues);
         }
         if (maxA > 1.0)
         {
             aScale = 1.0 / (maxA * (1.0 + 1e-9));
             if (!options.EnforcePassivity || (1.0 - aScale) > options.MaxPassivityPerturbation)
-                throw R($"Mode '{name}': the fitted propagation function exceeds 1 in magnitude ({maxA:R}) and cannot be corrected by a scaling of at most {options.MaxPassivityPerturbation:P1}; the fit is refused.");
+                throw R(FormattableString.Invariant($"Mode '{name}': the fitted propagation function exceeds 1 in magnitude ({maxA:R}) and cannot be corrected by a scaling of at most {options.MaxPassivityPerturbation:P1}; the fit is refused."));
             aF = new RationalFunction(aF.D * aScale, aF.Poles, aF.Residues.Select(r => r * aScale).ToArray());
         }
 
@@ -147,7 +147,7 @@ public static class FdLineFitter
         FdLine.Coeffs(ycF.Poles, dt, out _, out double[] lam, out _);
         double gm = ycF.D;
         for (int k = 0; k < ycF.Poles.Length; k++) gm += ycF.Residues[k] * lam[k];
-        if (!(gm > 0)) throw R($"Mode '{name}': the companion conductance of the fitted admittance at step {dt:R} s is not positive ({gm:E3} S); the fit is refused.");
+        if (!(gm > 0)) throw R(FormattableString.Invariant($"Mode '{name}': the companion conductance of the fitted admittance at step {dt:R} s is not positive ({gm:E3} S); the fit is refused."));
 
         var rep = new FdModeFitReport(name, options.Order, tau, maxEy, Math.Sqrt(sumEy / m), maxEa, Math.Sqrt(sumEa / m),
             ycShift, aScale, Math.Min(minRe, ycF.D), Math.Min(maxA, 1.0), gm);

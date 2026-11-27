@@ -106,7 +106,7 @@ public static class MultiPhaseFeederAdapter
                     int tap = (int)Math.Round(t);
                     if (Math.Abs(tap * opt.RegulatorStepPu - (ratios[p] - 1.0)) > 1e-9 || Math.Abs(tap) > opt.MaxTap)
                     {
-                        unsupported.Add($"branch {label}: step-voltage regulator ratio {ratios[p]:R} on phase {Wire[p]} is not a tap on the {opt.RegulatorStepPu:R} per unit grid within +/-{opt.MaxTap}");
+                        unsupported.Add(FormattableString.Invariant($"branch {label}: step-voltage regulator ratio {ratios[p]:R} on phase {Wire[p]} is not a tap on the {opt.RegulatorStepPu:R} per unit grid within +/-{opt.MaxTap}"));
                         ok = false;
                         break;
                     }

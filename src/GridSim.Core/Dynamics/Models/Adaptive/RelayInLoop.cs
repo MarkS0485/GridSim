@@ -7,7 +7,7 @@ using GridSim.Core.Protection.Devices;
 namespace GridSim.Core.Dynamics.Models.Adaptive;
 
 /// <summary>Where the relays read their primary currents from: given the network in force and the machine EMF phasors of
-/// the current state, fill <paramref name="amps"/> (one primary current magnitude in amperes per relay, in the order of
+/// the current state, fill <c>amps</c> (one primary current magnitude in amperes per relay, in the order of
 /// <see cref="RelayInLoop"/>). A pure function of its arguments.</summary>
 public interface IRelayCurrentSource
 {

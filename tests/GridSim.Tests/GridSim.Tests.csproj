@@ -43,6 +43,8 @@
          CliOutput's own), so VerbHelpTests and CliResultWriterTests drive the real code directly. -->
     <Compile Include="..\..\src\GridSim.Cli\VerbHelp.cs" Link="Linked\VerbHelp.cs" />
     <Compile Include="..\..\src\GridSim.Cli\CliResultWriter.cs" Link="Linked\CliResultWriter.cs" />
+    <!-- 2.1.154: the result writer's optional timings block comes from the stage timer (pure: a stopwatch and counters). -->
+    <Compile Include="..\..\src\GridSim.Cli\StageTimer.cs" Link="Linked\StageTimer.cs" />
     <Compile Include="..\..\src\GridSim.Cli\CliResultFromJson.cs" Link="Linked\CliResultFromJson.cs" />
     <!-- N103: the per-verb flag check reads the same chapter; VerbFlagsTests drive it directly. -->
     <Compile Include="..\..\src\GridSim.Cli\VerbFlags.cs" Link="Linked\VerbFlags.cs" />
@@ -55,6 +57,10 @@
          pure; Doc7ValidationSidecarTests drive them directly. -->
     <Compile Include="..\..\src\GridSim.Cli\ConformanceAllowances.cs" Link="Linked\ConformanceAllowances.cs" />
     <Compile Include="..\..\src\GridSim.Cli\PythonLocator.cs" Link="Linked\PythonLocator.cs" />
+    <Compile Include="..\..\src\GridSim.Cli\RpcTokenFiles.cs" Link="Linked\RpcTokenFiles.cs" />
+    <Compile Include="..\..\src\GridSim.Cli\CliFailures.cs" Link="Linked\CliFailures.cs" />
+    <!-- Bug hunt batch 5 (CLI-17): the WP27 result writer is pure apart from the file system. -->
+    <Compile Include="..\..\src\GridSim.Cli\Wp27CliSupport.cs" Link="Linked\Wp27CliSupport.cs" />
     <!-- DOC-8 (D-DOC-072): the one output policy is pure (paths and the file system only); CliFilesTests drive it
          directly, and the shared result writer above writes through it. -->
     <Compile Include="..\..\src\GridSim.Cli\CliFiles.cs" Link="Linked\CliFiles.cs" />
@@ -79,6 +85,12 @@
              Exclude="..\..\data\reference-inbox\**" Link="data\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- Real GDA serializer output (a gridsim-solve-export/1 zone case), used to lock the bridge wire contract. -->
     <Content Include="fixtures\**\*.json" Link="fixtures\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Temporary folders and files: every test makes them through TestTemp, which deletes them at the end of the run.
+       One source file shared by every test project. -->
+  <ItemGroup>
+    <Compile Include="..\Shared\TestTemp.cs" Link="Shared\TestTemp.cs" />
   </ItemGroup>
 
 </Project>

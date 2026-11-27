@@ -13,7 +13,7 @@ internal static class R401Cases
 
     internal static string NewRoot()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-r401-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-r401-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         return root;
     }

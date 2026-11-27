@@ -40,7 +40,7 @@ public sealed class MotorStartCliProcessTests
 
     private static string Setup(string fixtureCase, string fixtureNetwork)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-motor-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-motor-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         File.Copy(Fixture(fixtureCase), Path.Combine(dir, fixtureCase));
         File.Copy(Fixture(fixtureNetwork), Path.Combine(dir, fixtureNetwork));

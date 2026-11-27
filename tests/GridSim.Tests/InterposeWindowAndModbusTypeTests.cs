@@ -208,7 +208,7 @@ public class InterposeWindowAndModbusTypeTests
     [Fact]
     public void A_register_type_on_a_non_modbus_address_fails_at_load()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"pm-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"pm-{Guid.NewGuid():N}.json");
         try
         {
             File.WriteAllText(path, """

@@ -31,7 +31,18 @@ public sealed record TransmissionSecurityResult(
 /// </summary>
 public static class TransmissionSecurityRunner
 {
+    /// <summary>B33: the result names the DC model it used. A network with no tap ratio other than 0 or 1, no phase shift
+    /// and no bus shunt conductance is computed by the reactance-only instructions, so it keeps the earlier wording and
+    /// its result bytes are unchanged; any other network gets the MATPOWER makeBdc wording.</summary>
     public static TransmissionSecurityResult Run(GridModel model, TransmissionSecurityRequest request)
+    {
+        TransmissionSecurityResult result = RunCore(model, request);
+        return DcPowerFlow.UsesMakeBdcTerms(model)
+            ? result with { DcApproximation = "Unity voltage, no losses; series reactance with tap ratios, phase shifts and shunt conductance, as MATPOWER makeBdc. Resistance, charging and shunt susceptance omitted." }
+            : result;
+    }
+
+    private static TransmissionSecurityResult RunCore(GridModel model, TransmissionSecurityRequest request)
     {
         Validate(model, request);
         string? unsupported = Unsupported(model);

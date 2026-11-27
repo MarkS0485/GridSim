@@ -73,7 +73,7 @@ public static class RtuMeasurementSetMapper
             {
                 if (crosswalk.TryResolve(p.Address, out RtuPointBinding wrong))
                     throw new InvalidDataException(
-                        $"RTU crosswalk binds {p.Address} as a {wrong.Kind} measurement, but that address carries a " +
+                        FormattableString.Invariant($"RTU crosswalk binds {p.Address} as a {wrong.Kind} measurement, but that address carries a ") +
                         (p.Type switch
                         {
                             RtuPointType.StepPosition => "step position (a tap position, IEC 60870-5 type 5 / 32)",
@@ -129,7 +129,7 @@ public static class RtuMeasurementSetMapper
             }
         }
 
-        if (nonFinite > 0) note += $"; left out {nonFinite} non-finite value(s)";
+        if (nonFinite > 0) note += FormattableString.Invariant($"; left out {nonFinite} non-finite value(s)");
         return new MeasurementSet
         {
             Case = caseName,
@@ -196,7 +196,7 @@ public static class RtuMeasurementSetMapper
         // ValidateDataType above already proved the binding address is a Modbus register; the point's address
         // is the binding's, so this cannot fail - but check anyway rather than assume.
         if (!RtuPointMap.TryParseModbusRegister(p.Address, out string prefix, out int register))
-            throw new InvalidDataException($"Point '{p.Address}' is not a Modbus register address.");
+            throw new InvalidDataException(FormattableString.Invariant($"Point '{p.Address}' is not a Modbus register address."));
         string nextAddress = prefix + (register + 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
         RtuPoint? next = null;
         foreach (RtuPoint q in window)
@@ -204,12 +204,12 @@ public static class RtuMeasurementSetMapper
                 next = q;   // the same frame holds each register once; the last match is that one
         if (next is null)
             throw new InvalidDataException(
-                $"Binding '{b.Address}' is {b.DataType} (two registers) but register '{nextAddress}' is not in the " +
+                FormattableString.Invariant($"Binding '{b.Address}' is {b.DataType} (two registers) but register '{nextAddress}' is not in the ") +
                 "same response. Poll a block that includes both registers.");
         if (next.Type != p.Type)
             throw new InvalidDataException(
-                $"Binding '{b.Address}' is {b.DataType} (two registers) but register '{nextAddress}' is a {next.Type} point " +
-                $"and '{p.Address}' a {p.Type} point; two registers of different kinds are not one value (GR-815).");
+                FormattableString.Invariant($"Binding '{b.Address}' is {b.DataType} (two registers) but register '{nextAddress}' is a {next.Type} point ") +
+                FormattableString.Invariant($"and '{p.Address}' a {p.Type} point; two registers of different kinds are not one value (GR-815)."));
         ushort second = AsRegister(next);
 
         (ushort hi, ushort lo) = b.WordOrder == RtuWordOrder.HighWordFirst ? (first, second) : (second, first);
@@ -219,7 +219,7 @@ public static class RtuMeasurementSetMapper
             RtuRegisterType.U32 => bits,
             RtuRegisterType.S32 => unchecked((int)bits),
             RtuRegisterType.F32 => BitConverter.Int32BitsToSingle(unchecked((int)bits)),
-            _ => throw new InvalidDataException($"Binding '{b.Address}': unknown dataType {b.DataType}."),
+            _ => throw new InvalidDataException(FormattableString.Invariant($"Binding '{b.Address}': unknown dataType {b.DataType}.")),
         };
         return (raw, next.Quality);
     }
@@ -229,7 +229,7 @@ public static class RtuMeasurementSetMapper
     {
         if (p.Value < 0 || p.Value > ushort.MaxValue || p.Value != Math.Floor(p.Value))
             throw new InvalidDataException(
-                $"Point '{p.Address}' value {p.Value} is not a raw 16-bit register, so a register data type cannot apply.");
+                FormattableString.Invariant($"Point '{p.Address}' value {p.Value} is not a raw 16-bit register, so a register data type cannot apply."));
         return (ushort)p.Value;
     }
 }

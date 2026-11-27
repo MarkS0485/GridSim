@@ -16,12 +16,15 @@
 # version shows without a commit.
 
 # ---------------------------------------------------------------------------------------------- build ---
-# Bug #161: the SDK image is pinned to the exact SDK in global.json (10.0.401), not the floating 10.0 tag, so the
+# Bug #161: the SDK image is pinned to the exact SDK in global.json (10.0.404), not the floating 10.0 tag, so the
 # image restores the same implicit package versions the committed packages.lock.json files record. Change both together.
 # GR-423: also pinned by digest (the multi-arch index digest of that tag on mcr.microsoft.com, resolved 2026-11-01), so a
 # re-pushed tag cannot change the build image. Update tag and digest together.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401@sha256:e70cdb7f80b0348f5cb85f19a8f670fca061f033d57eed12fa003d58b0e06317 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:8c6edfb26c85153f236d26efebd9ad349aec403583f343f201ee67838b23658d AS build
 WORKDIR /src
+# The SDK's own usage telemetry stays off while the image is built.
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1
 
 # Restore first, from the project files alone, so the package download layer is cached until a project file
 # changes (source edits then rebuild without re-downloading packages).
@@ -62,9 +65,9 @@ RUN dotnet publish src/GridSim.Web/GridSim.Web.csproj -c Release -p:PublishProfi
         -p:GridSimSourceTree="${SOURCE_TREE}" --no-restore
 
 # -------------------------------------------------------------------------------------------- runtime ---
-# The runtime the pinned SDK bundles (10.0.401 carries runtime 10.0.12), pinned for the same reason, and by digest
+# The runtime the pinned SDK bundles (10.0.404 carries runtime 10.0.15), pinned for the same reason, and by digest
 # (GR-423; the image is Ubuntu 24.04).
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.12@sha256:222759b391a1aaf241166672c8f99b2d4ada452e7b5319f3c6e8f265a37b5ad4 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:aac50ceef10391e78a899e3d2ccd00bbafa2dcb56ccf4586cbccf00edb84fc21 AS runtime
 
 # GR-423: no packages are installed. The health check used to install curl from the distribution at build time, an
 # unpinned package; it now uses bash's built-in /dev/tcp, so the runtime image is the pinned base plus the app.
@@ -83,6 +86,12 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
     Auth__KeysDirectory=/keys
 EXPOSE 8080
+
+# The licence is looked for in /licence, a folder mounted read-only at run time (compose.yml mounts ./licence there).
+# Nothing mounted, or an empty folder, means the free tier: a missing licence file never stops the app starting. No
+# licence is ever built into the image; a key can instead be passed as the environment variable Licence__Key or
+# GRIDSIM_LICENCE. The command line image (Dockerfile.cli) sets the same line.
+ENV GRIDSIM_LICENCE_FILE=/licence/licence.gridsim
 
 # The probe does what `curl -fsS http://localhost:8080/` did: GET / with Host: localhost, healthy on a 2xx or 3xx status
 # line, unhealthy on a refused connection, a 4xx/5xx status or no answer within 5 s.

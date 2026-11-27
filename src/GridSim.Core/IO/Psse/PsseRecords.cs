@@ -95,6 +95,16 @@ public sealed class PsseRecord
         return v;
     }
 
+    /// <summary>R2-09: the absolute value of an integer bus field whose sign marks something (a negative J marks the metered
+    /// end). -2147483648 has no positive int, so Math.Abs threw an OverflowException (an internal error); it is refused
+    /// naming the field.</summary>
+    public int AbsInt(int index, string name, int? dflt = null)
+    {
+        int v = Int(index, name, dflt);
+        if (v == int.MinValue) throw Error($"{name} is {v}, which is not a bus number");
+        return Math.Abs(v);
+    }
+
     /// <summary>An error naming this record's line and section.</summary>
     public InvalidDataException Error(string what) =>
         new($"PSS/E {_file} line {Line} ({Section} data): {what}.");

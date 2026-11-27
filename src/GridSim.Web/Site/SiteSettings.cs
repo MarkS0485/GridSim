@@ -1,27 +1,27 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 
 namespace GridSim.Web.Site;
 
 /// <summary>
-/// N086 / N087: everything that identifies ONE deployment of the web app (its analytics, its share-card metadata,
+/// N086 / N087: everything that identifies ONE deployment of the web app (its share-card metadata,
 /// its security contact, its footer links and its data-protection application name) comes from configuration, never
 /// from committed code. Before N086 the page head loaded a Google tag and a first-party analytics script from one
 /// specific estate host, carried that estate's og:image and Organization metadata, served a security.txt naming one
 /// person, linked one person's social profiles in the footer, and used that estate's data-protection application name
 /// when none was configured - in every deployment, including a fresh clone run on a laptop.
 ///
-/// <para>Defaults are neutral: with no <c>Site</c> section at all the page loads no third-party script, carries no
-/// host-specific metadata, shows no personal links, answers 404 for <c>/.well-known/security.txt</c>, and protects its
-/// cookies under the application name <see cref="DefaultApplicationName"/>. A site sets its own values through
-/// configuration, typically environment variables such as <c>Site__GoogleTagId</c> (see docs/developer/deploy/README.md).</para>
+/// <para>Defaults are neutral: with no <c>Site</c> section at all the page carries no host-specific metadata, shows no
+/// personal links, answers 404 for <c>/.well-known/security.txt</c>, and protects its cookies under the application
+/// name <see cref="DefaultApplicationName"/>. A site sets its own values through configuration, typically environment
+/// variables such as <c>Site__ShareImageUrl</c> (see docs/developer/deploy/README.md). The page never loads a script from
+/// another origin: the analytics settings (<see cref="RemovedSettings"/>) were removed in 2.1.140 and are refused.</para>
 ///
-/// <para>Fail loud: every value is checked once at start-up. A malformed value (a relative URL, a tag id that is not
-/// a tag id, a security contact without an expiry, an expiry already in the past, a control character anywhere) stops
-/// the app with a message naming the setting, rather than rendering a broken or misleading page.</para>
+/// <para>Fail loud: every value is checked once at start-up. A malformed value (a relative URL, a security contact
+/// without an expiry, an expiry already in the past, a control character anywhere) or a removed setting stops the app
+/// with a message naming the setting, rather than rendering a broken or misleading page.</para>
 /// </summary>
 public sealed class SiteSettings
 {
@@ -35,23 +35,15 @@ public sealed class SiteSettings
     /// </summary>
     public const string DefaultApplicationName = "GridSim";
 
-    /// <summary>The site name passed to the first-party analytics script when <c>Site:AnalyticsSiteName</c> is unset.</summary>
-    public const string DefaultAnalyticsSiteName = "GridSim";
+    /// <summary>
+    /// The analytics settings removed in 2.1.140 (the Google tag and the analytics script loaded scripts from another
+    /// origin). Each is refused at start-up when set; the telemetry guard also refuses them, before this is read.
+    /// </summary>
+    public static IReadOnlyList<string> RemovedSettings { get; } =
+        ["GoogleTagId", "AnalyticsScriptUrl", "AnalyticsCollectorUrl", "AnalyticsSiteName"];
 
     /// <summary>The <c>Preferred-Languages</c> line of security.txt when <c>Site:SecurityTxt:PreferredLanguages</c> is unset.</summary>
     public const string DefaultSecurityPreferredLanguages = "en";
-
-    /// <summary>Google tag id (for example <c>G-XXXXXXXXXX</c>); empty = no Google tag is loaded.</summary>
-    public string GoogleTagId { get; private init; } = "";
-
-    /// <summary>Absolute URL of a first-party analytics script; empty = none is loaded.</summary>
-    public string AnalyticsScriptUrl { get; private init; } = "";
-
-    /// <summary>Absolute URL the analytics script reports to (its <c>data-collector</c> attribute); empty = attribute omitted.</summary>
-    public string AnalyticsCollectorUrl { get; private init; } = "";
-
-    /// <summary>The <c>data-site</c> attribute given to the analytics script.</summary>
-    public string AnalyticsSiteName { get; private init; } = DefaultAnalyticsSiteName;
 
     /// <summary>Absolute URL of the share-card image (og:image, twitter:image); empty = those two tags are omitted.</summary>
     public string ShareImageUrl { get; private init; } = "";
@@ -91,9 +83,6 @@ public sealed class SiteSettings
     public string? SecurityTxtAt(DateTimeOffset nowUtc) =>
         SecurityTxt is not null && SecurityTxtExpiresUtc is { } expires && nowUtc < expires ? SecurityTxt : null;
 
-    /// <summary>True when a Google tag or a first-party analytics script is configured.</summary>
-    public bool HasAnalytics => GoogleTagId.Length > 0 || AnalyticsScriptUrl.Length > 0;
-
     /// <summary>
     /// The schema.org Organization block as JSON, or null when no organisation is configured. Serialised with the
     /// default System.Text.Json encoder, which escapes &lt;, &gt; and &amp;, so the text cannot close the surrounding
@@ -116,24 +105,11 @@ public sealed class SiteSettings
         }
     }
 
-    /// <summary>The Google tag bootstrap script body, or null when no tag id is configured. The id is pattern-checked
-    /// at start-up (letters, digits and dashes only), so it is safe to place inside a JavaScript string literal.</summary>
-    public string? GoogleTagBootstrap => GoogleTagId.Length == 0
-        ? null
-        : "window.dataLayer = window.dataLayer || [];\n"
-          + "function gtag(){dataLayer.push(arguments);}\n"
-          + "gtag('js', new Date());\n"
-          + "gtag('config', '" + GoogleTagId + "');";
-
     /// <summary>One footer link.</summary>
     public sealed record FooterLink(string Text, string Url);
 
     /// <summary>The neutral settings: nothing configured.</summary>
     public static SiteSettings Neutral { get; } = new();
-
-    // A Google tag id: a short prefix (G, GT, AW, UA, DC), a dash, then letters, digits and dashes. Strict on purpose:
-    // the id is written into a script, so anything outside this alphabet is refused rather than escaped.
-    private static readonly Regex TagIdPattern = new("^(G|GT|AW|UA|DC)-[A-Za-z0-9-]{4,40}$", RegexOptions.CultureInvariant);
 
     /// <summary>
     /// Read and check the <c>Site</c> section. <paramref name="nowUtc"/> is the moment the security.txt expiry is
@@ -145,16 +121,9 @@ public sealed class SiteSettings
         ArgumentNullException.ThrowIfNull(configuration);
         IConfigurationSection s = configuration.GetSection(Section);
 
-        string tag = Text(s, "GoogleTagId");
-        if (tag.Length > 0 && !TagIdPattern.IsMatch(tag))
-            throw Bad("GoogleTagId", $"'{tag}' is not a Google tag id (expected something like G-ABC123DEF4: a prefix, a dash, then letters, digits and dashes)");
-
-        string script = AbsoluteUrl(s, "AnalyticsScriptUrl");
-        string collector = AbsoluteUrl(s, "AnalyticsCollectorUrl");
-        if (collector.Length > 0 && script.Length == 0)
-            throw Bad("AnalyticsCollectorUrl", "is set but Site:AnalyticsScriptUrl is not; a collector without a script does nothing");
-        string siteName = Text(s, "AnalyticsSiteName");
-        if (siteName.Length == 0) siteName = DefaultAnalyticsSiteName;
+        foreach (string removed in RemovedSettings)
+            if (!string.IsNullOrWhiteSpace(s[removed]))
+                throw Bad(removed, "was removed in 2.1.140: the web app loads no script from another origin. Remove the setting");
 
         string orgName = Text(s, "OrganisationName");
         string orgUrl = AbsoluteUrl(s, "OrganisationUrl");
@@ -166,10 +135,6 @@ public sealed class SiteSettings
 
         return new SiteSettings
         {
-            GoogleTagId = tag,
-            AnalyticsScriptUrl = script,
-            AnalyticsCollectorUrl = collector,
-            AnalyticsSiteName = siteName,
             ShareImageUrl = AbsoluteUrl(s, "ShareImageUrl"),
             OrganisationName = orgName,
             OrganisationUrl = orgUrl,

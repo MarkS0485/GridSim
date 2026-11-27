@@ -27,7 +27,17 @@ public sealed record CgmesArchive(IReadOnlyList<CgmesArchiveEntry> Entries, IRea
 public static class CgmesArchiveReader
 {
     public const int MaxEntries = 10000;
-    public const long MaxEntryBytes = 512L * 1024 * 1024;
+
+    /// <summary>IO-06: the most bytes one document may expand to: the input-file limit every other reader uses (256 MiB),
+    /// far above a national EQ profile.</summary>
+    public const long MaxEntryBytes = InputFileLimits.DefaultMaxBytes;
+
+    /// <summary>The most bytes the whole archive (or folder) may expand to, every entry and every nested zip counted
+    /// (zip-bomb limit). IO-06: 1 GiB (it was 2 GiB). Each accepted document is held as bytes, as UTF-16 text (twice the
+    /// bytes) and as a parsed tree (several times the text), so a bundle at the limit can ask for roughly 8 to 12 GiB: the
+    /// limit stops a bomb, it does not make every accepted bundle fit a small machine. The largest bundle in the repository
+    /// expands to about 15 MB.</summary>
+    public const long MaxTotalBytes = 512L * 1024 * 1024;   // R2-12 (ruling 17): 512 MiB (was 1 GiB)
 
     public static CgmesArchive ReadFile(string zipPath)
     {
@@ -35,30 +45,53 @@ public static class CgmesArchiveReader
         return Read(fs);
     }
 
-    /// <summary>Read a directory the same way (its .xml files, sorted by relative path), for the unzipped form of a bundle.</summary>
-    public static CgmesArchive ReadDirectory(string dir)
+    /// <summary>Read a directory the same way (its .xml files, sorted by relative path), for the unzipped form of a bundle.
+    /// IO-06: the archive's limits apply here too: at most <see cref="MaxEntries"/> files, each .xml file at most
+    /// <see cref="MaxEntryBytes"/>, and <see cref="MaxTotalBytes"/> in all (they used to apply to the zip form only).</summary>
+    public static CgmesArchive ReadDirectory(string dir) => ReadDirectory(dir, MaxTotalBytes);
+
+    /// <summary>The same read with a different running-total limit (tests).</summary>
+    internal static CgmesArchive ReadDirectory(string dir, long maxTotalBytes)
     {
         var docs = new List<(string Path, byte[] Bytes)>();
         var skipped = new List<string>();
-        foreach (string f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories).OrderBy(x => Path.GetRelativePath(dir, x).Replace('\\', '/'), StringComparer.Ordinal))
+        string[] files = Directory.GetFiles(dir, "*", SearchOption.AllDirectories);
+        if (files.Length > MaxEntries)
+            throw new InvalidDataException($"CGMES folder '{Path.GetFileName(Path.TrimEndingDirectorySeparator(dir))}' holds {files.Length} files (limit {MaxEntries}).");
+        long total = 0;
+        foreach (string f in files.OrderBy(x => Path.GetRelativePath(dir, x).Replace('\\', '/'), StringComparer.Ordinal))
         {
             string rel = Path.GetRelativePath(dir, f).Replace('\\', '/');
-            if (rel.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)) docs.Add((rel, File.ReadAllBytes(f)));
+            if (rel.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+            {
+                long length = new FileInfo(f).Length;
+                if (length > MaxEntryBytes) throw new InvalidDataException($"CGMES folder: file '{rel}' is {length} bytes (limit {MaxEntryBytes}).");
+                using Stream s = new LimitedStream(File.OpenRead(f), MaxEntryBytes, rel);
+                using var buffer = new MemoryStream();
+                s.CopyTo(buffer);
+                // R2-13: the total counts the bytes actually read (a file can grow between its length and its read).
+                total = AddToTotal(total, Math.Max(length, buffer.Length), rel, maxTotalBytes);
+                docs.Add((rel, buffer.ToArray()));
+            }
             else skipped.Add(rel);
         }
         return Build(docs, skipped);
     }
 
-    public static CgmesArchive Read(Stream zip)
+    public static CgmesArchive Read(Stream zip) => Read(zip, MaxTotalBytes);
+
+    /// <summary>The same read with a different running-total limit (the tests use a small one; the public overload uses <see cref="MaxTotalBytes"/>).</summary>
+    internal static CgmesArchive Read(Stream zip, long maxTotalBytes)
     {
         var docs = new List<(string Path, byte[] Bytes)>();
         var skipped = new List<string>();
         using var archive = new ZipArchive(zip, ZipArchiveMode.Read, leaveOpen: true);
-        Collect(archive, "", 0, docs, skipped);
+        long total = 0;
+        Collect(archive, "", 0, docs, skipped, ref total, maxTotalBytes);
         return Build(docs, skipped);
     }
 
-    private static void Collect(ZipArchive archive, string prefix, int depth, List<(string, byte[])> docs, List<string> skipped)
+    private static void Collect(ZipArchive archive, string prefix, int depth, List<(string, byte[])> docs, List<string> skipped, ref long total, long maxTotalBytes)
     {
         if (archive.Entries.Count > MaxEntries)
             throw new InvalidDataException($"CGMES archive '{prefix}' has {archive.Entries.Count} entries (limit {MaxEntries}).");
@@ -78,19 +111,31 @@ public static class CgmesArchiveReader
                 using Stream inner = Bounded(e, full);
                 using var ms = new MemoryStream();
                 inner.CopyTo(ms);
+                total = AddToTotal(total, ms.Length, full, maxTotalBytes);
                 ms.Position = 0;
                 using var nested = new ZipArchive(ms, ZipArchiveMode.Read);
-                Collect(nested, full + "/", depth + 1, docs, skipped);
+                Collect(nested, full + "/", depth + 1, docs, skipped, ref total, maxTotalBytes);
             }
             else if (name.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
             {
                 using Stream s = Bounded(e, full);
                 using var buffer = new MemoryStream();
                 s.CopyTo(buffer);
+                total = AddToTotal(total, buffer.Length, full, maxTotalBytes);
                 docs.Add((full, buffer.ToArray()));
             }
             else skipped.Add(full);
         }
+    }
+
+    /// <summary>The running total of a bundle's expanded bytes, refused past <paramref name="maxTotalBytes"/> naming the entry
+    /// that crossed it; shared by the archive, folder and study-list routes so the message is the same.</summary>
+    public static long AddToTotal(long total, long bytes, string full, long maxTotalBytes)
+    {
+        long sum = total + bytes;
+        if (sum > maxTotalBytes)
+            throw new InvalidDataException($"CGMES archive: the entries up to '{full}' expand to more than {maxTotalBytes} bytes in all (limit, refused).");
+        return sum;
     }
 
     private static Stream Bounded(ZipArchiveEntry e, string full)

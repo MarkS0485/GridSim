@@ -71,7 +71,7 @@ public class ContingencyCorrectnessTests
         Assert.Equal(100, o.MaxIterations);
         Assert.True(o.EnforceQLimits);
         Assert.Equal(1e-8, o.Tolerance);
-        Assert.Equal(12, o.MaxQLimitPasses);
+        Assert.Equal(100, o.MaxQLimitPasses);
         Assert.False(o.RevertQLimits);
         Assert.False(o.FlatStart);
         Assert.Null(o.Trace);

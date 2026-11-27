@@ -12,6 +12,9 @@ public sealed partial class ReplayEngine
 {
     // ---- RMS SUBTRANSIENT and GOVERNED ----------------------------------------------------------------------------------
 
+    /// <summary>The v2 schema folder as SELECT ENGINE RMS finds it (above the base folder, then above the program).</summary>
+    internal static string? FindSchemasFor(string baseDir) => FindSchemas(baseDir);
+
     private static string? FindSchemas(string baseDir)
     {
         foreach (string start in new[] { baseDir, AppContext.BaseDirectory })
@@ -23,13 +26,22 @@ public sealed partial class ReplayEngine
         return null;
     }
 
+    private static string ResolveSchemas(string written, string baseDir, string kind)
+    {
+        try { return GridSim.Core.Security.SideFile.Resolve(written, baseDir, $"{kind}: SCHEMAS"); }
+        catch (InvalidDataException ex) { throw new ScriptException(ErrorPhase.Execution, default, ex.Message); }
+    }
+
     private static Dyn LoadDynamics(ReplaySettings st, GridModel m, CaseInfo ci, string baseDir)
     {
         string kind = "RMS " + st.Model;
-        string full = Path.GetFullPath(st.DynamicsPath!, baseDir);
+        // R1-02: the dynamic data file and the schemas folder a script names are refused on a network or device path.
+        string full;
+        try { full = GridSim.Core.Security.SideFile.Resolve(st.DynamicsPath!, baseDir, $"{kind}: the dynamic data file"); }
+        catch (InvalidDataException ex) { throw new ScriptException(ErrorPhase.Execution, default, ex.Message); }
         if (!File.Exists(full))
             throw new ScriptException(ErrorPhase.Execution, default, $"{kind}: the dynamic data file \"{st.DynamicsPath}\" does not exist (relative paths are taken from {baseDir})");
-        string schemas = st.SchemasDir is { } sd ? Path.GetFullPath(sd, baseDir)
+        string schemas = st.SchemasDir is { } sd ? ResolveSchemas(sd, baseDir, kind)
             : FindSchemas(baseDir) ?? throw new ScriptException(ErrorPhase.Execution, default, $"{kind}: the v2 schemas (schemas/v2) were not found above the base folder; name them with SCHEMAS \"folder\"");
         MachineDynamicsSet set;
         try { set = MachineDynamicsLoader.Load(full, schemas, m); }
@@ -89,7 +101,10 @@ public sealed partial class ReplayEngine
         foreach (ReplayEvent e in faults)
         {
             var f = (FaultEffect)e.Effect;
-            events.Add(f.On ? new RmsBusFault(Seconds(e.TimeUs), f.BusId) : new RmsFaultClear(Seconds(e.TimeUs), f.BusId));
+            // WP2: a typed fault is a sequence fault; an untyped one is the bolted fault, exactly as before.
+            events.Add(!f.On ? new RmsFaultClear(Seconds(e.TimeUs), f.BusId)
+                : f.Type is GridSim.Core.Protection.FaultType t ? new RmsSequenceFault(Seconds(e.TimeUs), f.BusId, t, f.FaultRPu, f.FaultXPu)
+                : new RmsBusFault(Seconds(e.TimeUs), f.BusId));
         }
         MultiMachineSubtransient.Result res;
         double[] h;

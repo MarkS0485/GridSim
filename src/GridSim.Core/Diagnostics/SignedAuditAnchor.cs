@@ -245,8 +245,10 @@ public static class SignedAuditAnchor
     private static void WriteLine(string signaturePath, string line)
     {
         string full = Path.GetFullPath(signaturePath);
-        string temp = full + ".tmp";
-        using (var fs = new FileStream(temp, FileMode.Create, FileAccess.Write, FileShare.None))
+        // SEC-09 / SEC-10: a random temporary name created new (a planted "<file>.tmp" link is never followed), 0600 off
+        // Windows.
+        string temp = UserOnlyFile.TempSibling(full);
+        using (var fs = new FileStream(temp, UserOnlyFile.Options(FileMode.CreateNew, FileAccess.Write, FileShare.None)))
         {
             fs.Write(Encoding.ASCII.GetBytes(line));
             fs.Flush(flushToDisk: true);

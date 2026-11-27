@@ -109,13 +109,15 @@ public sealed class AssetOverlayKindTests
         KindSpecRegistry templates = KindSpecRegistry.LoadDirectory(KindsDir, RealSchemas());
         OverlayKindSet overlay = Load();
         Assert.Empty(templates.Kinds.Select(k => k.Kind).Intersect(overlay.Kinds.Select(k => k.Kind), StringComparer.Ordinal));
-        // The template kinds are untouched: none carries an overlay block, and their registry loads the sixteen files as before.
+        // The template kinds are untouched: none carries an overlay block, and their registry loads the template kind files (seventeen since RC5).
         foreach (string f in Directory.GetFiles(KindsDir, "*" + KindSpecRegistry.KindFileSuffix))
         {
             using JsonDocument d = JsonSchemaSubset.ParseFile(f);
             Assert.False(d.RootElement.TryGetProperty("overlay", out _), $"{Path.GetFileName(f)} must not be an overlay kind");
         }
-        Assert.Equal(16, templates.Kinds.Count);
+        // Moved 2026-11-20 (RC5 per-unit protection, the pre-approved registry-count bump): 16 -> 17, the new template kind
+        // unitProtection (sixteen parameter kinds plus site).
+        Assert.Equal(17, templates.Kinds.Count);
     }
 
     [Fact]
@@ -138,7 +140,7 @@ public sealed class AssetOverlayKindTests
         foreach (string f in onDisk)
             Assert.True(File.ReadAllBytes(Path.Combine(OverlayDir, f)).AsSpan().SequenceEqual(BundledSchemas.Bytes(BundledSchemas.V2OverlayKindsPrefix + f)), f);
 
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-p5a-schemas-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-p5a-schemas-" + Guid.NewGuid().ToString("N"));
         try
         {
             BundledSchemas.WriteV2SchemaFolder(dir);
@@ -205,7 +207,7 @@ public sealed class AssetOverlayKindTests
     [Fact]
     public void A_missing_overlay_folder_is_refused_naming_it()
     {
-        string missing = Path.Combine(Path.GetTempPath(), "gridsim-p5a-none-" + Guid.NewGuid().ToString("N"));
+        string missing = TestTemp.Under("gridsim-p5a-none-" + Guid.NewGuid().ToString("N"));
         var ex = Assert.Throws<DirectoryNotFoundException>(() => OverlayKindSet.LoadDirectory(missing, RealSchemas()));
         Assert.Contains(missing, ex.Message, StringComparison.Ordinal);
     }

@@ -331,7 +331,7 @@ public class PsseTapControlTests
     [Fact]
     public void Tap_control_on_the_command_line_solves_a_case_beyond_its_nose_point_and_says_how()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-taps-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-taps-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

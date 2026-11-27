@@ -145,7 +145,7 @@ public static class AnsiDuty
         catch (InvalidOperationException ex) { return Fail(busId, AnsiStatus.Failed, ex.Message); }
 
         double xm = zMom[k].Imaginary, rth = zR[k].Real;
-        if (!(xm > 0.0)) return Fail(busId, AnsiStatus.Failed, $"first-cycle network reactance at bus {busId} is {xm:R} pu; it must be above 0");
+        if (!(xm > 0.0)) return Fail(busId, AnsiStatus.Failed, FormattableString.Invariant($"first-cycle network reactance at bus {busId} is {xm:R} pu; it must be above 0"));
         double xrM = rth > 0.0 ? xm / rth : double.PositiveInfinity;
         double symM = e / xm * baseKa;
         double mfM = MultiplyingFactors.MomentaryMf(xrM);
@@ -154,7 +154,7 @@ public static class AnsiDuty
         // Per-source currents (E/X current divider): I_g = E |Z_gk| / (|Z_kk| X_src).
         var contribs = new List<AnsiSourceCurrent>(srcs.Count);
         double xi = double.NaN, xrI = double.NaN, symI = double.NaN, nacd = double.NaN, mfRef = double.NaN, mfI = double.NaN, intKa = double.NaN, refKa = double.NaN;
-        if (intKnown) { xi = zInt[k].Imaginary; if (!(xi > 0.0)) return Fail(busId, AnsiStatus.Failed, $"interrupting network reactance at bus {busId} is {xi:R} pu; it must be above 0"); }
+        if (intKnown) { xi = zInt[k].Imaginary; if (!(xi > 0.0)) return Fail(busId, AnsiStatus.Failed, FormattableString.Invariant($"interrupting network reactance at bus {busId} is {xi:R} pu; it must be above 0")); }
         double sumLocal = 0.0, sumAll = 0.0;
         foreach (Src s in srcs)
         {
@@ -177,7 +177,7 @@ public static class AnsiDuty
             {
                 mfRef = MultiplyingFactors.RemoteInterruptingMf(xrI, cyc);
                 refKa = mfRef * symI;
-                if (nacd > 1e-12) intNote = $"OUT OF SCOPE: NACD = {nacd:R} > 0 (local generation); local multiplying factors are AWAITING STANDARD TEXT. Reference value uses the remote factor and is not a duty";
+                if (nacd > 1e-12) intNote = FormattableString.Invariant($"OUT OF SCOPE: NACD = {nacd:R} > 0 (local generation); local multiplying factors are AWAITING STANDARD TEXT. Reference value uses the remote factor and is not a duty");
                 else { mfI = mfRef; intKa = refKa; }
             }
         }

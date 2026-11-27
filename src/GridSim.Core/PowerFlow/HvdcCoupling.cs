@@ -41,10 +41,21 @@ public static class HvdcCoupling
         foreach (LccDcLink l in model.LccLinks)
             foreach (int bus in new[] { l.Rectifier.Bus, l.Inverter.Bus })
                 if (!busIndex.ContainsKey(bus)) throw new InvalidOperationException($"LCC link {l.Name}: converter bus {bus} is not in the model.");
+        // NUM-21: two converters in AC voltage control on one bus solved as one PV bus, and each was then credited with the
+        // bus's whole reactive output (its rating check against about twice its real loading). Refused by name like the
+        // other shared voltage controls.
+        var vscVoltageAt = new Dictionary<int, string>();
         foreach (VscDcLink l in model.VscLinks)
             foreach (VscConverter c in new[] { l.First, l.Second })
             {
                 if (!busIndex.TryGetValue(c.Bus, out int convBusIndex)) throw new InvalidOperationException($"VSC link {l.Name}: converter bus {c.Bus} is not in the model.");
+                if (c.AcControl == VscAcControl.Voltage)
+                {
+                    string me = ReferenceEquals(c, l.First) ? $"VSC link {l.Name}'s first converter" : $"VSC link {l.Name}'s second converter";
+                    if (vscVoltageAt.TryGetValue(c.Bus, out string? first))
+                        throw new InvalidOperationException($"{me} controls the voltage of bus {c.Bus}, which {first} also controls; GridSim cannot share the bus's voltage control between two converters (set one to reactive-power control).");
+                    vscVoltageAt[c.Bus] = me;
+                }
                 if (c.AcControl == VscAcControl.Voltage && model.Generators.Any(g => g.Bus == c.Bus))
                     throw new InvalidOperationException($"VSC link {l.Name}: converter bus {c.Bus} controls its voltage and also has generators; GridSim cannot share the bus's voltage control between them.");
                 // The slack bus holds its own voltage, so a converter in AC voltage control there is refused like a FACTS

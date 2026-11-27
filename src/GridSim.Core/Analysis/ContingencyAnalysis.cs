@@ -185,7 +185,7 @@ public sealed record NkScreenReport(IReadOnlyList<ContingencyResult> Results, IR
         $"only {candidates} single outage(s) solve ({excluded} do not), fewer than the depth k = {k}, so no {k}-outage combination could be formed; nothing was screened.");
 }
 
-/// <summary>What <see cref="ContingencyAnalysis.PlanCorrectiveRedispatch"/> did.</summary>
+/// <summary>What <see cref="ContingencyAnalysis.PlanCorrectiveRedispatch(GridModel)"/> did.</summary>
 public enum RedispatchOutcome
 {
     /// <summary>Nothing to relieve: every rated line and every limited boundary is inside its limit in the DC model
@@ -402,7 +402,14 @@ public static partial class ContingencyAnalysis
             candidates = RankCandidates(single, candidateCount, k, out excluded).Select(i => live[i]).ToArray();
         }
 
-        // Enumerate the k-subsets of the candidate set.
+        // Enumerate the k-subsets of the candidate set. ANA-18: counted first and refused above a stated limit, naming
+        // the count; every subset and a result per subset were built in memory before any solve, so exhaustive k = 3 on
+        // 2,000 branches (about 1.3e9) ran out of memory with no word about why.
+        double comboCount = 1.0;
+        for (int c = 0; c < k; c++) comboCount = comboCount * (candidates.Length - c) / (c + 1);
+        if (comboCount > MaxCombinations)
+            throw new ArgumentException(FormattableString.Invariant(
+                $"N-{k}: {candidates.Length} candidate branches give about {comboCount:G4} outage combinations, more than the {MaxCombinations} one screen takes; screen fewer candidates (a candidate count) or a smaller k."), nameof(k));
         var combos = new List<int[]>();
         Combinations(candidates, k, combos);
 
@@ -543,9 +550,9 @@ public static partial class ContingencyAnalysis
     }
 
     /// <summary>
-    /// The default N-1-1 corrective action (D01, N069): <see cref="PlanCorrectiveRedispatch"/>'s model. The
+    /// The default N-1-1 corrective action (D01, N069): <see cref="PlanCorrectiveRedispatch(GridModel)"/>'s model. The
     /// dispatch is unchanged unless the first outage leaves a rated line or a limited boundary over its limit, and
-    /// then it moves as few MW as possible to relieve it. See <see cref="PlanCorrectiveRedispatch"/>.
+    /// then it moves as few MW as possible to relieve it. See <see cref="PlanCorrectiveRedispatch(GridModel)"/>.
     /// </summary>
     public static GridModel RedispatchToRelieve(GridModel model) => PlanCorrectiveRedispatch(model).Model;
 
@@ -560,7 +567,8 @@ public static partial class ContingencyAnalysis
     /// left an islanded network's dispatch untouched (N069).
     /// </para>
     /// <para>
-    /// <b>What it does now</b> (DC model, reactance only, as the old action):
+    /// <b>What it does now</b> (the DC model of <see cref="DistributionFactors"/>: series reactance with taps, phase shifts
+    /// and bus shunt conductance, MATPOWER makeBdc, B33):
     /// <list type="number">
     /// <item>Form the DC model of <paramref name="model"/> (one reference per DC island, <see cref="DistributionFactors"/>)
     /// and the DC flows of the PRESENT dispatch (each island's reference absorbs its imbalance, as the AC slack does).</item>
@@ -745,7 +753,7 @@ public static partial class ContingencyAnalysis
             moved, overloadedNames, lastStatus) { UnrelievedAfter = unrelieved };
     }
 
-    /// <summary>A monitored element is over its limit, for <see cref="PlanCorrectiveRedispatch"/>, when its |DC flow|
+    /// <summary>A monitored element is over its limit, for <see cref="PlanCorrectiveRedispatch(GridModel)"/>, when its |DC flow|
     /// exceeds the limit by more than this (MW). The DC-OPF's binding tolerance
     /// (<see cref="DcOptimalPowerFlow.BindingToleranceMw"/>, 1e-3 MW): an LP answer sitting exactly on a limit, give or
     /// take rounding, is not re-reported as an overload.</summary>
@@ -798,7 +806,8 @@ public static partial class ContingencyAnalysis
     /// The operating point of each generator for the corrective redispatch's bounds (N083): a copy of the stated
     /// <paramref name="pg"/> in which each DC island's reference unit carries its island's imbalance.
     /// <para>
-    /// For island k: imbalance_k = (island demand, <see cref="DcIsland.LoadMw"/>) - (sum of the stated Pg of the
+    /// For island k: imbalance_k = (island demand, <see cref="DcIsland.LoadMw"/> plus the island's shunt conductance
+    /// load <see cref="DcIsland.ShuntLoadMw"/>, B33) - (sum of the stated Pg of the
     /// generators in island k, in model order). The reference unit is the first generator, in model order, whose bus is
     /// the island's <see cref="DcIsland.ReferenceBusId"/>; its operating point is its stated Pg + imbalance_k (MATPOWER
     /// <c>pfsoln</c> gives the slack bus's whole real-power balance to the first unit at that bus the same way). The DC
@@ -827,7 +836,7 @@ public static partial class ContingencyAnalysis
                 if (referenceUnit < 0 && model.Generators[i].Bus == island.ReferenceBusId) referenceUnit = i;
             }
             if (referenceUnit < 0) continue;   // no unit at the reference bus: nothing to correct
-            op[referenceUnit] = pg[referenceUnit] + (island.LoadMw - islandGeneration);
+            op[referenceUnit] = pg[referenceUnit] + (DcDemand.IslandMw(island) - islandGeneration);   // B33: Pd + Gs
         }
         return op;
     }
@@ -847,7 +856,7 @@ public static partial class ContingencyAnalysis
     }
 
     /// <summary>
-    /// One round of the minimum-change LP of <see cref="PlanCorrectiveRedispatch"/>. Variables: up_0..up_{g-1},
+    /// One round of the minimum-change LP of <see cref="PlanCorrectiveRedispatch(GridModel)"/>. Variables: up_0..up_{g-1},
     /// dn_0..dn_{g-1}, then one slack per controllable active element. Rows: one balance row per DC island that holds a
     /// generator (sum of up - dn over the island = 0), then per controllable active element
     /// sum_i a_e,i (up_i - dn_i) + s_e = L_e - F_e with s_e in [0, 2 L_e], so the new flow F_e + sum a (up - dn) =
@@ -1230,6 +1239,31 @@ public static partial class ContingencyAnalysis
 
     private static string? JoinNotes(string? a, string? b) => a is null ? b : b is null ? a : a + "; " + b;
 
+    /// <summary>ANA-11: take out of <paramref name="reduced"/> every DC link, FACTS device, static var compensator, induction
+    /// machine and OLTC record that sits on (or controls) the removed bus <paramref name="busId"/>, and name them; null when
+    /// there is none (the model is then not copied).</summary>
+    private static string? DropDevicesOnBus(ref GridModel reduced, int busId)
+    {
+        var names = new List<string>();
+        List<T> Keep<T>(IReadOnlyList<T> all, Func<T, bool> on, Func<T, string> name)
+        {
+            var kept = new List<T>(all.Count);
+            foreach (T d in all) { if (on(d)) names.Add(name(d)); else kept.Add(d); }
+            return kept;
+        }
+        List<LccDcLink> lcc = Keep(reduced.LccLinks, l => l.Rectifier.Bus == busId || l.Inverter.Bus == busId, l => $"LCC link '{l.Name}'");
+        List<VscDcLink> vsc = Keep(reduced.VscLinks, l => l.First.Bus == busId || l.Second.Bus == busId, l => $"VSC link '{l.Name}'");
+        List<MtdcLink> mtdc = Keep(reduced.MtdcLinks, l => l.Converters.Any(c => c.Bus == busId), l => $"multi-terminal DC link '{l.Name}'");
+        List<FactsDevice> facts = Keep(reduced.FactsDevices, f => f.SendingBus == busId || f.TerminalBus == busId, f => $"FACTS device '{f.Name}'");
+        List<StaticVarCompensator> svc = Keep(reduced.StaticVarCompensators, s => s.Bus == busId, s => $"static var compensator '{s.Name}'");
+        List<InductionMachine> im = Keep(reduced.InductionMachines, m => m.Bus == busId, m => $"induction machine '{m.Name}'");
+        List<Oltc> oltc = Keep(reduced.Oltcs, o => o.ControlsBus == busId, o => $"the OLTC of transformer '{o.Transformer}'");
+        if (names.Count == 0) return null;
+        reduced = reduced.CopyWith(oltcs: oltc, lccLinks: lcc, vscLinks: vsc, mtdcLinks: mtdc, factsDevices: facts,
+            staticVarCompensators: svc, inductionMachines: im);
+        return "removed with the bus: " + string.Join(", ", names);
+    }
+
     /// <summary>
     /// F20: a branch's loading (percent) against its short-term (RateB) or emergency (RateC) rating: the larger end MVA,
     /// computed from the solved end flows exactly as the solver computes it for RateA (|S_from| and |S_to| as complex
@@ -1366,6 +1400,11 @@ public static partial class ContingencyAnalysis
                 var result = new List<Bus>(model.Buses.Count - 1);
                 foreach (Bus b in buses ?? model.Buses) if (b.Id != bus.Id) result.Add(b);
                 GridModel reduced = model.CopyWith(buses: result, generators: gens, branches: keptBranches);
+                // ANA-11: the devices on (or controlling) the removed bus go with it; CopyWith carried them over, so they
+                // referenced a bus no longer in the model (a solver error, or the device silently dropped by the engine).
+                // Named in the row's note. A bus with no such device is screened exactly as before.
+                string? deviceNote = DropDevicesOnBus(ref reduced, bus.Id);
+                if (deviceNote is not null) note = note is null ? deviceNote : note + "; " + deviceNote;
                 if (noUnitLeft)
                     return NonConverged(label, Splits(model, reduced)) with { Kind = OutageKind.Bus, LostLoadMw = bus.Pd, LostGenerationMw = lostGen, Note = note };
                 if (dispatch != OutageDispatch.ReferenceBus)   // N124: share the net lost power (generation less load)
@@ -1398,7 +1437,7 @@ public static partial class ContingencyAnalysis
     /// <paramref name="branches"/> (in service). Returns the new bus list (null when nothing changes), the note, and
     /// whether no unit was left to take the reference.
     /// </summary>
-    private static (IReadOnlyList<Bus>? Buses, string? Note, bool NoUnitLeft) ReelectReference(
+    internal static (IReadOnlyList<Bus>? Buses, string? Note, bool NoUnitLeft) ReelectReference(
         GridModel model, IReadOnlyList<Branch> branches, IReadOnlyList<Generator> gens, int? removedBusId, int affectedBusId)
     {
         Bus? affected = null;
@@ -1478,40 +1517,7 @@ public static partial class ContingencyAnalysis
         string how = dispatch == OutageDispatch.GovernorDroop ? "governor droop" : "inertia";
         if (lostMw == 0.0) return (reduced, $"no net power lost, nothing to share by {how}");
 
-        // Buses reachable from a reference bus over in-service branches.
-        var adjacency = new Dictionary<int, List<int>>();
-        foreach (Branch br in reduced.Branches)
-        {
-            if (!br.InService) continue;
-            if (!adjacency.TryGetValue(br.From, out List<int>? a)) adjacency[br.From] = a = new List<int>();
-            a.Add(br.To);
-            if (!adjacency.TryGetValue(br.To, out List<int>? c)) adjacency[br.To] = c = new List<int>();
-            c.Add(br.From);
-        }
-        var reach = new HashSet<int>();
-        var queue = new Queue<int>();
-        foreach (Bus b in reduced.Buses) if (b.Type == BusType.Slack && reach.Add(b.Id)) queue.Enqueue(b.Id);
-        while (queue.Count > 0)
-        {
-            int u = queue.Dequeue();
-            if (!adjacency.TryGetValue(u, out List<int>? next)) continue;
-            foreach (int v in next) if (reach.Add(v)) queue.Enqueue(v);
-        }
-        // AN-01: only the part of the network that lost the power shares it. islandBuses names a bus (or the former
-        // neighbours of a removed bus) of that part; units of other islands cannot deliver to it. Null = the whole network.
-        if (islandBuses is not null)
-        {
-            var part = new HashSet<int>();
-            foreach (int s in islandBuses) if (part.Add(s)) queue.Enqueue(s);
-            while (queue.Count > 0)
-            {
-                int u = queue.Dequeue();
-                if (!adjacency.TryGetValue(u, out List<int>? next)) continue;
-                foreach (int v in next) if (part.Add(v)) queue.Enqueue(v);
-            }
-            reach.IntersectWith(part);
-        }
-
+        double[] weights = ParticipationWeights(reduced, dispatch, islandBuses);
         IReadOnlyList<Generator> gens = reduced.Generators;
         int n = gens.Count;
         var weight = new double[n];
@@ -1522,15 +1528,8 @@ public static partial class ContingencyAnalysis
         for (int i = 0; i < n; i++)
         {
             Generator g = gens[i];
-            if (g.PowerFlowOnly || g.IsConverterInterfaced || !reach.Contains(g.Bus)) continue;
-            double mva = Dynamics.Models.MachineBase.EffectiveMva(g, reduced.BaseMva);
-            double w = dispatch == OutageDispatch.GovernorDroop ? mva : g.H * mva;
-            if (!(w > 0.0) || !double.IsFinite(w)) continue;
-            // RC4 (2.1.073): a MATPOWER case may now load with PMIN above PMAX (an OPF limit a power flow does not use);
-            // sharing within [Pmin, Pmax] needs a real range, so a participating unit with a crossed one is refused here.
-            if (g.Pmin > g.Pmax)
-                throw new ArgumentException(FormattableString.Invariant(
-                    $"Outage sharing by {how}: generator {i} ('{g.Name ?? g.Type}' at bus {g.Bus}) has Pmin {g.Pmin} MW above Pmax {g.Pmax} MW, so it has no dispatch range to share within."));
+            double w = weights[i];
+            if (!(w > 0.0)) continue;
             double r = raise ? g.Pmax - g.Pg : g.Pg - g.Pmin;
             if (!(r > 0.0)) continue;   // already at (or beyond) its limit in this direction: no headroom
             weight[i] = w;
@@ -1577,6 +1576,73 @@ public static partial class ContingencyAnalysis
             + (fixedAtLimit > 0 ? string.Create(inv, $", {fixedAtLimit} at a limit") : "")
             + (remaining > 0.0 ? string.Create(inv, $"; {remaining:F1} MW beyond their headroom left to the reference") : "");
         return (reduced.CopyWith(generators: moved), note);
+    }
+
+    /// <summary>
+    /// The participation weight of each unit of <paramref name="reduced"/> (aligned to its in-service list) in the sharing
+    /// of <see cref="ShareLostPower"/>, before any headroom test: 0 for a unit that takes no part (power-flow only, converter
+    /// plant, a weight that is not a positive finite number, or a bus not connected to a reference bus, within the part of
+    /// the network that <paramref name="islandBuses"/> names when given). A participating unit with Pmin above Pmax is
+    /// refused. Shared by the contingency screen and the AC-SCOPF generator outages, so both use the same weights.
+    /// </summary>
+    internal static double[] ParticipationWeights(GridModel reduced, OutageDispatch dispatch, IReadOnlyCollection<int>? islandBuses = null)
+    {
+        ArgumentNullException.ThrowIfNull(reduced);
+        if (dispatch == OutageDispatch.ReferenceBus)
+            throw new ArgumentOutOfRangeException(nameof(dispatch), dispatch, "The reference-bus mode does not share, so it has no weights.");
+        string how = dispatch == OutageDispatch.GovernorDroop ? "governor droop" : "inertia";
+
+        // Buses reachable from a reference bus over in-service branches.
+        var adjacency = new Dictionary<int, List<int>>();
+        foreach (Branch br in reduced.Branches)
+        {
+            if (!br.InService) continue;
+            if (!adjacency.TryGetValue(br.From, out List<int>? a)) adjacency[br.From] = a = new List<int>();
+            a.Add(br.To);
+            if (!adjacency.TryGetValue(br.To, out List<int>? c)) adjacency[br.To] = c = new List<int>();
+            c.Add(br.From);
+        }
+        var reach = new HashSet<int>();
+        var queue = new Queue<int>();
+        foreach (Bus b in reduced.Buses) if (b.Type == BusType.Slack && reach.Add(b.Id)) queue.Enqueue(b.Id);
+        while (queue.Count > 0)
+        {
+            int u = queue.Dequeue();
+            if (!adjacency.TryGetValue(u, out List<int>? next)) continue;
+            foreach (int v in next) if (reach.Add(v)) queue.Enqueue(v);
+        }
+        // AN-01: only the part of the network that lost the power shares it. islandBuses names a bus (or the former
+        // neighbours of a removed bus) of that part; units of other islands cannot deliver to it. Null = the whole network.
+        if (islandBuses is not null)
+        {
+            var part = new HashSet<int>();
+            foreach (int s in islandBuses) if (part.Add(s)) queue.Enqueue(s);
+            while (queue.Count > 0)
+            {
+                int u = queue.Dequeue();
+                if (!adjacency.TryGetValue(u, out List<int>? next)) continue;
+                foreach (int v in next) if (part.Add(v)) queue.Enqueue(v);
+            }
+            reach.IntersectWith(part);
+        }
+
+        IReadOnlyList<Generator> gens = reduced.Generators;
+        var weight = new double[gens.Count];
+        for (int i = 0; i < gens.Count; i++)
+        {
+            Generator g = gens[i];
+            if (g.PowerFlowOnly || g.IsConverterInterfaced || !reach.Contains(g.Bus)) continue;
+            double mva = Dynamics.Models.MachineBase.EffectiveMva(g, reduced.BaseMva);
+            double w = dispatch == OutageDispatch.GovernorDroop ? mva : g.H * mva;
+            if (!(w > 0.0) || !double.IsFinite(w)) continue;
+            // RC4 (2.1.073): a MATPOWER case may now load with PMIN above PMAX (an OPF limit a power flow does not use);
+            // sharing within [Pmin, Pmax] needs a real range, so a participating unit with a crossed one is refused here.
+            if (g.Pmin > g.Pmax)
+                throw new ArgumentException(FormattableString.Invariant(
+                    $"Outage sharing by {how}: generator {i} ('{g.Name ?? g.Type}' at bus {g.Bus}) has Pmin {g.Pmin} MW above Pmax {g.Pmax} MW, so it has no dispatch range to share within."));
+            weight[i] = w;
+        }
+        return weight;
     }
 
     /// <summary>The original indices of the branches that remain after removing <paramref name="removed"/>, in order.</summary>
@@ -1777,6 +1843,9 @@ public static partial class ContingencyAnalysis
         for (int j = 0; j < m.Branches.Count; j++) if (!skip.Contains(j)) branches.Add(m.Branches[j]);
         return m.CopyWith(branches: branches);   // keeps asset dynamics and protections too (R270)
     }
+
+    /// <summary>ANA-18: the most outage combinations one N-k screen enumerates (each is held with its result in memory).</summary>
+    public const int MaxCombinations = 20_000_000;
 
     /// <summary>All unordered k-subsets of <paramref name="items"/>, appended to <paramref name="into"/>.</summary>
     private static void Combinations(int[] items, int k, List<int[]> into)

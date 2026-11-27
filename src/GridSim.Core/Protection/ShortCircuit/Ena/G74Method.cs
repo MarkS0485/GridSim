@@ -56,6 +56,9 @@ public static class G74Method
         "AWAITING STANDARD TEXT: G74 worked examples (no example reproduced)",
     };
 
+    /// <summary>The shortest minimum time delay (s) for which IEC 60909-0 gives the motor factors mu and q.</summary>
+    public const double Iec60909MotorMinTimeSeconds = 0.02;
+
     private const string ConverterText = G74ConverterContribution.PositiveSequenceModel + "; " + G74ConverterContribution.NegativeSequenceModel;
 
     public static string MotorGeneratorName(G74MotorData m) => $"motor:{m.Name}@bus {m.Bus}";
@@ -69,6 +72,15 @@ public static class G74Method
         foreach (double t in times) if (!(t >= 0.0) || !double.IsFinite(t)) reasons.Add($"break time {t} is not a finite number of seconds >= 0");
         if (!(options.BreakTimeSeconds >= 0.0) || !double.IsFinite(options.BreakTimeSeconds)) reasons.Add("breaker time must be a finite number of seconds >= 0");
         if (!model.Buses.Any(b => b.Id == busId)) return Fail(busId, G74Status.Failed, $"bus {busId} is not in the case", times);
+        // IEC 60909-0 gives the motor factors mu and q for a minimum time delay of 0.02 s and above; t = 0 is the initial
+        // current. A time strictly between the two has no IEC value, so it is refused rather than clamped to 0.02 s.
+        if (options.Decay && data.Motors.Any(m => m.Decay == MotorDecayModel.Iec60909Q))
+        {
+            foreach (double t in times)
+                if (t > 0.0 && t < Iec60909MotorMinTimeSeconds) reasons.Add($"break time {t.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s is between 0 and 0.02 s, where IEC 60909-0 defines no motor breaking factor (iec60909-q decay)");
+            if (options.BreakTimeSeconds > 0.0 && options.BreakTimeSeconds < Iec60909MotorMinTimeSeconds)
+                reasons.Add($"breaker time {options.BreakTimeSeconds.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s is between 0 and 0.02 s, where IEC 60909-0 defines no motor breaking factor (iec60909-q decay)");
+        }
         if (reasons.Count > 0) return Fail(busId, G74Status.Failed, reasons, times);
 
         // Motors: each becomes an equivalent X''d source on its own base, appended to the fleet in file order.
@@ -124,9 +136,13 @@ public static class G74Method
             else if (motorByName.TryGetValue(mp.Name, out G74MotorData? mot))
             {
                 kind = "induction-motor"; name = mot.Name; steady = options.Decay ? 0.0 : mp.IkppKa;
-                v = options.Decay
-                    ? grid.Select(t => mp.IkppKa * G74InductionMotor.Ratio(mot.Decay, mot.TimeConstantS, mot.MwPerPolePair, t)).ToArray()
-                    : Constant(mp.IkppKa, grid.Length);
+                // IEC 60909-0: a motor's breaking current is mu q Ik''M, with mu from the motor's own Ik''M / IrM at the time.
+                // At t = 0 the contribution is Ik''M itself.
+                v = !options.Decay ? Constant(mp.IkppKa, grid.Length)
+                    : mot.Decay == MotorDecayModel.Iec60909Q
+                    ? grid.Select(t => t == 0.0 ? mp.IkppKa
+                        : mp.IkppKa * (Iec60909.BreakingFactorMu(mp.IkppKa / mp.RatedCurrentKa, t) * Iec60909.MotorBreakingFactorQ(mot.MwPerPolePair, t))).ToArray()
+                    : grid.Select(t => mp.IkppKa * G74InductionMotor.Ratio(mot.Decay, mot.TimeConstantS, mot.MwPerPolePair, t)).ToArray();
             }
             else if (!options.Decay)
             {

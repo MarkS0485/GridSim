@@ -127,7 +127,7 @@ public class CaseSessionTests
     [Fact]
     public void A_folder_without_buses_json_is_not_a_case()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-editor-empty-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-editor-empty-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

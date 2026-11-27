@@ -17,7 +17,7 @@ public class GeoLocatorTests : IDisposable
 
     public GeoLocatorTests()
     {
-        _dir = Path.Combine(Path.GetTempPath(), "gridsim-geo-" + Guid.NewGuid().ToString("N"));
+        _dir = TestTemp.Under("gridsim-geo-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_dir);
         _csv = Path.Combine(_dir, "substations.csv");
 

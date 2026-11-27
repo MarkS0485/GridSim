@@ -85,7 +85,7 @@ internal static class CaseDiffCommand
         if (!File.Exists(path)) throw new FileNotFoundException("Case not found: " + path);
         byte[] manifest = File.ReadAllBytes(path);
         files["manifest"] = manifest;
-        using JsonDocument document = JsonDocument.Parse(manifest);
+        using JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(manifest));
         string directory = Path.GetDirectoryName(path)!;
         foreach (string kind in new[] { "network", "assets" })
             if (document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty(kind, out JsonElement list)

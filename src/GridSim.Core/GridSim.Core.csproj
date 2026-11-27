@@ -16,6 +16,12 @@
          JsonSerializerContext (one per call site, beside it). It also makes the SDK add its ILLink analyser package
          (Microsoft.NET.ILLink.Tasks, build-time only, versioned with the SDK) to this project's packages.lock.json. -->
     <IsAotCompatible>true</IsAotCompatible>
+    <!-- IntelliSense for package users: the XML documentation file is generated and packed beside the assembly (the SDK
+         puts it in lib/ with the dll). A member without a comment, or a parameter without a param tag where others have
+         one, is not an error (CS1591 and CS1573 off, Core only); a malformed comment (CS1570, CS1572, CS1574, CS0419,
+         CS1734, CS1571 and the rest) still fails the build. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
   </PropertyGroup>
 
   <!-- The test project reaches internal numeric helpers (e.g. NewtonShell) to unit-test them
@@ -61,6 +67,14 @@
     <EmbeddedResource Include="..\..\data\bundled.sha256" LogicalName="GridSim.Core.bundled.sha256" />
     <!-- R4-20e: the connection-rule sets (gridsim-connection-rules/1), shipped with every limit empty and flagged. -->
     <EmbeddedResource Include="Harmonics\Planning\Rules\*.json" LogicalName="GridSim.Core.connection-rules.%(Filename)%(Extension)" />
+    <!-- RC5 WP8: the grid-code requirement files (gridsim-gridcode-requirements/1), one per code edition. -->
+    <EmbeddedResource Include="Compliance\GridCode\Requirements\*.json" Exclude="Compliance\GridCode\Requirements\*-ext.json" LogicalName="GridSim.Core.gridcode.%(Filename)%(Extension)" />
+    <!-- RC5 WP22: the extension files (gridsim-gridcode-requirements-ext/1) under their own prefix, so the requirement-set list
+         and every existing resource name are unchanged. -->
+    <EmbeddedResource Include="Compliance\GridCode\Requirements\*-ext.json" LogicalName="GridSim.Core.gridcode-ext.%(Filename)%(Extension)" />
+    <!-- RC5 (run journal): the breaking-change map and the volatile-field list of breaking-change validate. -->
+    <EmbeddedResource Include="Journal\breaking-changes.json" LogicalName="GridSim.Core.breaking-changes.json" />
+    <EmbeddedResource Include="Journal\volatile-fields.json" LogicalName="GridSim.Core.volatile-fields.json" />
   </ItemGroup>
 
   <!-- R4-08: the shipped declarative dynamic models (gridsim-model/1 documents), embedded so a model loads from bytes compiled

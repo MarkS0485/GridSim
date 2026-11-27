@@ -45,10 +45,12 @@ internal static class MotorStartCommand
             if (output is not null && (File.Exists(output) || Directory.Exists(output)))
                 throw new IOException("Result path already exists; use a new path for this invocation.");
             byte[] studyBytes = File.ReadAllBytes(input);
-            using JsonDocument document = JsonDocument.Parse(studyBytes);
+            using JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(studyBytes));
             JsonElement r = document.RootElement;
             TransmissionSecurityCommand.CheckDuplicates(r);
-            Obj(r, "study", new[] { "schemaVersion", "case", "motor", "initial", "start", "integration", "termination", "preStart" }, new[] { "report" });
+            bool group = r.ValueKind == JsonValueKind.Object && r.TryGetProperty("group", out _);
+            if (group) Obj(r, "study", new[] { "schemaVersion", "case", "group", "integration", "termination", "preStart" }, new[] { "report" });
+            else Obj(r, "study", new[] { "schemaVersion", "case", "motor", "initial", "start", "integration", "termination", "preStart" }, new[] { "report" });
             if (Int(r.GetProperty("schemaVersion"), "schemaVersion") != 1) throw new InvalidDataException("schemaVersion must be 1.");
 
             JsonElement c = r.GetProperty("case");
@@ -62,17 +64,20 @@ internal static class MotorStartCommand
             if (!casePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("case.path must name a gridsim-case/2 manifest (.json).");
 
-            string motor = Str(r.GetProperty("motor"), "motor");
-            JsonElement init = r.GetProperty("initial");
-            Obj(init, "initial", new[] { "speedPu", "connected" }, Array.Empty<string>());
-            var initial = new MotorStartInitialState(Num(init.GetProperty("speedPu"), "initial.speedPu"), Bool(init.GetProperty("connected"), "initial.connected"));
-            JsonElement start = r.GetProperty("start");
-            Obj(start, "start", new[] { "atSeconds", "method" }, Array.Empty<string>());
-            MotorStartMethod method = Str(start.GetProperty("method"), "start.method") switch
+            var members = new List<ParsedMember>();
+            if (group)
             {
-                "directOnLine" => MotorStartMethod.DirectOnLine,
-                string s => throw new InvalidDataException($"start.method must be \"directOnLine\" (got \"{s}\"); other starting methods are not supported in v1."),
-            };
+                JsonElement g = r.GetProperty("group");
+                if (g.ValueKind != JsonValueKind.Array || g.GetArrayLength() == 0) throw new InvalidDataException("group must be a non-empty array of motors.");
+                int gi = 0;
+                foreach (JsonElement item in g.EnumerateArray())
+                {
+                    string at = $"group[{gi++}]";
+                    Obj(item, at, new[] { "motor", "initial", "start" }, Array.Empty<string>());
+                    members.Add(Member(item, at + "."));
+                }
+            }
+            else members.Add(Member(r, ""));
             JsonElement integ = r.GetProperty("integration");
             Obj(integ, "integration", new[] { "stepSeconds" }, Array.Empty<string>());
             JsonElement term = r.GetProperty("termination");
@@ -92,8 +97,7 @@ internal static class MotorStartCommand
                 if (rep.TryGetProperty("sampleEverySteps", out JsonElement se)) sampleEvery = Int(se, "report.sampleEverySteps");
                 if (rep.TryGetProperty("maxVoltageDipPercent", out JsonElement dl)) dipLimit = Num(dl, "report.maxVoltageDipPercent");
             }
-            var request = new MotorStartRequest(motor, initial, Num(start.GetProperty("atSeconds"), "start.atSeconds"), method,
-                Num(integ.GetProperty("stepSeconds"), "integration.stepSeconds"), termination, tolerance, sampleEvery, dipLimit);
+            double step = Num(integ.GetProperty("stepSeconds"), "integration.stepSeconds");
 
             // Case identity before any load, then the load, then the identity again (an input changed mid-load is refused).
             List<TransmissionSecurityCommand.InputFile> files = TransmissionSecurityCommand.Inputs(casePath, root);
@@ -103,7 +107,23 @@ internal static class MotorStartCommand
             if (!files.SequenceEqual(TransmissionSecurityCommand.Inputs(casePath, root)))
                 throw new IOException("Case inputs changed during loading.");
 
-            MotorStartResult result = MotorStartRunner.Run(loaded, request);
+            object result;
+            bool running;
+            if (group)
+            {
+                var request = new MotorGroupStartRequest(members.Select(m => m.ToMember(loaded)).ToList(), step, termination, tolerance, sampleEvery, dipLimit);
+                MotorGroupStartResult groupResult = MotorStartRunner.RunGroup(loaded, request);
+                result = groupResult;
+                running = groupResult.Outcome == MotorStartOutcome.Running;
+            }
+            else
+            {
+                MotorGroupMember m = members[0].ToMember(loaded);
+                var request = new MotorStartRequest(m.Motor, m.Initial, m.StartSeconds, m.Method, step, termination, tolerance, sampleEvery, dipLimit, m.Starter);
+                MotorStartResult single = MotorStartRunner.Run(loaded, request);
+                result = single;
+                running = single.Outcome == MotorStartOutcome.Running;
+            }
             string json = JsonSerializer.Serialize(new
             {
                 schemaVersion = 1,
@@ -125,7 +145,7 @@ internal static class MotorStartCommand
                 temporary = null;
             }
             Console.WriteLine(json);
-            return result.Outcome == MotorStartOutcome.Running ? CliExit.Ok : CliExit.Verdict;
+            return running ? CliExit.Ok : CliExit.Verdict;
         }
         catch (GateRefusedException) { throw; }
         catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or JsonException or ArgumentException or InvalidOperationException or KeyNotFoundException or FormatException)
@@ -137,6 +157,77 @@ internal static class MotorStartCommand
         {
             if (temporary is not null && File.Exists(temporary)) File.Delete(temporary);
         }
+    }
+
+    /// <summary>One motor as the study names it: its row, initial state, start time and method, and the starter (a reactor
+    /// in ohms is turned into pu on the motor's own base once the case is loaded).</summary>
+    private sealed record ParsedMember(string Motor, MotorStartInitialState Initial, double StartSeconds, MotorStartMethod Method, MotorStarter? Starter,
+        (double R, double X)? ReactorOhms)
+    {
+        public MotorGroupMember ToMember(MotorStartCaseInput loaded)
+        {
+            MotorStarter? starter = Starter;
+            if (ReactorOhms is { } ohms && starter is not null)
+            {
+                List<GridSim.Core.Model.PlacedMotor> hit = loaded.Motors.Where(x => string.Equals(x.Name, Motor, StringComparison.Ordinal)).ToList();
+                if (hit.Count == 1)
+                {
+                    (double rPu, double xPu) = MotorStarter.ReactorFromOhms(hit[0], ohms.R, ohms.X);
+                    starter = starter with { ReactorRPu = rPu, ReactorXPu = xPu };
+                }
+            }
+            return new MotorGroupMember(Motor, Initial, StartSeconds, Method, starter);
+        }
+    }
+
+    private static readonly string[] StarterFields =
+    {
+        "switchSpeedPu", "switchTimeSeconds", "deadTimeSeconds", "tapRatio", "reactorRPu", "reactorXPu", "reactorROhm", "reactorXOhm",
+        "initialVoltageFraction", "rampSeconds", "currentLimitPu", "initialFrequencyHz", "ratedFrequencyHz", "driveEfficiency",
+    };
+
+    private static ParsedMember Member(JsonElement r, string prefix)
+    {
+        string motor = Str(r.GetProperty("motor"), prefix + "motor");
+        JsonElement init = r.GetProperty("initial");
+        Obj(init, prefix + "initial", new[] { "speedPu", "connected" }, Array.Empty<string>());
+        var initial = new MotorStartInitialState(Num(init.GetProperty("speedPu"), prefix + "initial.speedPu"), Bool(init.GetProperty("connected"), prefix + "initial.connected"));
+        JsonElement start = r.GetProperty("start");
+        Obj(start, prefix + "start", new[] { "atSeconds", "method" }, new[] { "starter" });
+        MotorStartMethod method = Str(start.GetProperty("method"), prefix + "start.method") switch
+        {
+            "directOnLine" => MotorStartMethod.DirectOnLine,
+            "starDelta" => MotorStartMethod.StarDelta,
+            "autotransformer" => MotorStartMethod.Autotransformer,
+            "reactor" => MotorStartMethod.Reactor,
+            "softStarter" => MotorStartMethod.SoftStarter,
+            "vfd" => MotorStartMethod.Vfd,
+            string s => throw new InvalidDataException($"{prefix}start.method must be one of directOnLine, starDelta, autotransformer, reactor, softStarter, vfd (got \"{s}\")."),
+        };
+        MotorStarter? starter = null;
+        (double, double)? ohms = null;
+        if (start.TryGetProperty("starter", out JsonElement st))
+        {
+            string at = prefix + "start.starter";
+            Obj(st, at, Array.Empty<string>(), StarterFields);
+            double? N(string name) => st.TryGetProperty(name, out JsonElement v) ? Num(v, at + "." + name) : null;
+            double? rOhm = N("reactorROhm"), xOhm = N("reactorXOhm");
+            if ((rOhm is not null || xOhm is not null) && (N("reactorRPu") is not null || N("reactorXPu") is not null))
+                throw new InvalidDataException($"{at}: give the reactor in pu (reactorRPu, reactorXPu) or in ohms (reactorROhm, reactorXOhm), not both.");
+            if (rOhm is not null || xOhm is not null)
+            {
+                // Ohms are converted only for a reactor; on any other method the field is refused under its own name (before
+                // any conversion, so the refusal never names a pu field the study file does not hold).
+                if (method != MotorStartMethod.Reactor)
+                    throw new InvalidDataException($"{at}.{(rOhm is not null ? "reactorROhm" : "reactorXOhm")}: not a field of a {Str(start.GetProperty("method"), prefix + "start.method")} starter.");
+                if (rOhm is null || xOhm is null) throw new InvalidDataException($"{at}: a reactor in ohms needs both reactorROhm and reactorXOhm.");
+                ohms = (rOhm.Value, xOhm.Value);
+            }
+            starter = new MotorStarter(method, N("switchSpeedPu"), N("switchTimeSeconds"), N("deadTimeSeconds"), N("tapRatio"),
+                N("reactorRPu"), N("reactorXPu"), N("initialVoltageFraction"), N("rampSeconds"),
+                N("currentLimitPu"), N("initialFrequencyHz"), N("ratedFrequencyHz"), N("driveEfficiency"));
+        }
+        return new ParsedMember(motor, initial, Num(start.GetProperty("atSeconds"), prefix + "start.atSeconds"), method, starter, ohms);
     }
 
     private static void Obj(JsonElement e, string what, string[] required, string[] optional)

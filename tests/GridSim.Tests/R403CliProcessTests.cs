@@ -8,7 +8,7 @@ public sealed class R403CliProcessTests
 {
     private static string TempFile(string name)
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-r403-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-r403-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return Path.Combine(d, name);
     }

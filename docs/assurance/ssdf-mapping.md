@@ -1,6 +1,6 @@
 # NIST Secure Software Development Framework (SSDF) mapping
 
-**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This document maps GridSim's development and release
+This document maps GridSim's development and release
 practice to the NIST Secure Software Development Framework (SP 800-218, version 1.1), practice group by practice
 group. It is a companion to `caf-mapping.md`: where that document maps the running system to the Cyber Assessment
 Framework, this one maps the process that produces the system. It exists because CAF v4.0 principle A4.b, Secure
@@ -35,7 +35,7 @@ skipped on a runner without AVX-512), and macOS on Apple silicon and Linux and W
 hardware-intrinsics-off modes; no leg is advisory.
 
 At RC-1 (2.1.000, 2026-10-31) the compensating control was only half in place. The workflow refused the RC tag form
-then (it accepts it since 2.1.008, but no release has been made through it since), so RC-1 was built, signed and
+then (it accepts it since 2.1.008, and RC-3 and RC-4 were then published through it), so RC-1 was built, signed and
 published by hand from the owner's build machine after the local suite passed
 (GridSim.Tests 10,291 passed and 31 skipped by the RAM gate on an 8 GB machine, GridSim.App.Tests 310 passed;
 `RC1.md`); the CI runs started by hand after publication all failed, the last on one desktop-app layout test on one
@@ -76,8 +76,8 @@ any machine without exactly that SDK refuses to build; every workflow installs i
 (`global-json-file: global.json`), and the container image builds on `sdk:10.0.401`; CI restores NuGet packages in
 locked mode (`BugHunt1101WebTests`, `B161_*`). Since 2026-11-01 every GitHub Action in every workflow is pinned to a
 full commit SHA, with its release tag in a comment, and the CycloneDX SBOM tool is installed at a named version.
-Still not fixed: the release workflow, which the CI-cadence deviation in section 1 relies on, did not build
-RC-1 and has built no release since.
+The release workflow, which the CI-cadence deviation in section 1 relies on, did not build RC-1; it built RC-3 and
+RC-4.
 
 ### 2.4 PO.4 Define and use criteria for software security checks
 
@@ -98,10 +98,10 @@ workflow is written to build on GitHub-hosted runners, gated on the full CI matr
 attestation on every Release file. RC-1 was built instead on the owner's development machine (Windows 11, SDK
 10.0.401), so for the published release the development and build environments are one machine and no attestation
 records the build. Since 2026-11-01 the release workflow rebuilds the linux-x64 CLI independently and compares it
-byte for byte with the shipped archive (job `reproducible`); it has not run yet, covers that archive only, and the
+byte for byte with the shipped archive (job `reproducible`); it passed in the RC-3 and RC-4 release runs, covers that archive only, and the
 Release job waits for it, so a non-reproducible Linux CLI stops the release. Since the same date the workflow also
 builds the WPF and Avalonia desktop apps (job `desktop`; GA-5, an owner decision), each with its own SBOM hash, signed
-on Windows with the same pinned certificate, with no macOS desktop build; this too has not run. (The determinism tests cited in `nasa-std-7009-credibility.md` compare numerical results, not binaries).
+on Windows with the same pinned certificate, with no macOS desktop build; this ran in the RC-3 and RC-4 release runs. (The determinism tests cited in `nasa-std-7009-credibility.md` compare numerical results, not binaries).
 
 ---
 
@@ -198,7 +198,7 @@ stops; each desktop bundle must contain its hash; for RC-1 the owner did this by
 known commit and a clean source tree, recorded in the build as `GridSimSourceTree` (`BuildProvenance.ReleaseRefusal`;
 `BugHunt1101WebTests`, `B176_*`); it still does not prove the hash is a real SBOM's or that the workflow built the
 binary, so a local build of a clean tree can set it. The reproducible-build check in the workflow (linux-x64 CLI
-only, a gate on the Release job, not yet run) is the route that would show a binary is the released one.
+only, a gate on the Release job, green in the RC-3 and RC-4 runs) is the route that shows a binary is the released one.
 
 ### 4.5 PW.7 Review and analyse human-readable code
 
@@ -233,8 +233,8 @@ machines needs a named sender or client, or an explicit opt-out flag (`BugHunt11
 
 ### 5.1 RV.1 Identify and confirm vulnerabilities on an ongoing basis
 
-**Status: Partially achieved.** Dependabot watches NuGet, Docker and GitHub Actions (monthly, with Dependabot
-security updates enabled on the public repository); NuGet audit and the vulnerable-package gate fail the build on a
+**Status: Partially achieved.** Dependabot alerts cover NuGet, Docker and GitHub Actions (version-update pull requests are paused,
+`open-pull-requests-limit: 0`; Dependabot security updates are enabled on the public repository); NuGet audit and the vulnerable-package gate fail the build on a
 known-vulnerable dependency; CodeQL scans the C# when run by hand. A security contact is published
 (`mark@gridsimdigitaltwin.co.uk`, RFC 9116 `security.txt`). Since 2026-11-01 [`SECURITY.md`](../../SECURITY.md) states the
 disclosure and remediation policy: private reporting through GitHub private vulnerability reporting, an objective
@@ -262,33 +262,34 @@ A general post-incident review template is folded into `incident-response.md`.
 | SSDF practice | GridSim control | Evidence | Status |
 |---|---|---|---|
 | PO.1 | `UnderstandingRestrictions.md` invariants; `CONTRIBUTING.md` criteria | `RestrictionInvariantTests` | Achieved |
-| PO.3 | Declared toolchain, SDK pinned by `global.json` (10.0.401, no roll-forward) since 2.1.008, analysers, CodeQL `security-extended` (by hand), Dependabot, telemetry off, CI / release / publish workflows | `WorkflowContractTests`, `WorkflowReleaseGateTests`, `AvaloniaTelemetryOptOutTests`, `BugHunt1101WebTests` (`B161_*`) | Partially achieved (the release workflow did not build RC-1 and has built no release since; Actions SHA-pinned since 2026-11-01) |
+| PO.3 | Declared toolchain, SDK pinned by `global.json` (10.0.401, no roll-forward) since 2.1.008, analysers, CodeQL `security-extended` (by hand), Dependabot, telemetry off, CI / release / publish workflows | `WorkflowContractTests`, `WorkflowReleaseGateTests`, `AvaloniaTelemetryOptOutTests`, `BugHunt1101WebTests` (`B161_*`) | Partially achieved (the release workflow did not build RC-1; it built RC-3 and RC-4; Actions SHA-pinned since 2026-11-01) |
 | PO.4 | Warnings-as-errors; NuGet audit as an error; release gated on the full CI matrix (as written); release-build and SBOM-hash check on each CLI binary, SBOM-hash check on each desktop bundle | CI build; `WorkflowReleaseGateTests`; `ComplianceAttestationTests`; `RC1.md` | Partially achieved (the CI gate did not apply to RC-1) |
-| PO.5 | Hosted release build gated on CI and provenance attestation, as written; RC-1 built on the owner's machine; reproducible-build check for the linux-x64 CLI written and a gate on the Release job, not yet run; desktop apps in the ship scope as written | `WorkflowReleaseGateTests`; `RC1.md` | Partially achieved |
-| PS.2 | Authenticode on the three Windows executables and NuGet signing (self-signed, pinned thumbprint; the workflow signs the same three and the package); SHA256SUMS; provenance attestation written into the workflow but absent for RC-1 | `RC1.md`; `WorkflowReleaseGateTests`; `WorkflowContractTests` | Partially achieved (Linux files rest on checksums alone) |
-| PS.3 | RC-1 and RC 1.0 Releases with SHA256SUMS and the CLI SBOM; append-only CHANGELOG | `VersionContractTests` | Partially achieved (no published SBOM for the desktop apps or package, five written into the workflow and not yet run; no attestation; unsigned tags) |
+| PO.5 | Hosted release build gated on CI and provenance attestation, as written; RC-1 built on the owner's machine; reproducible-build check for the linux-x64 CLI a gate on the Release job (green in the RC-3 and RC-4 runs); RC-3 and RC-4 built by the workflow; desktop apps in the ship scope | `WorkflowReleaseGateTests`; `RC1.md` | Partially achieved |
+| PS.2 | Authenticode on the three Windows executables and NuGet signing (self-signed, pinned thumbprint; the workflow signs the same three and the package); SHA256SUMS; provenance attestation in the workflow (RC-3 and RC-4), absent for RC-1 | `RC1.md`; `WorkflowReleaseGateTests`; `WorkflowContractTests` | Partially achieved (Linux files rest on checksums alone) |
+| PS.3 | RC-1 and RC 1.0 Releases with SHA256SUMS and the CLI SBOM; append-only CHANGELOG | `VersionContractTests` | Partially achieved (no published SBOM for the desktop apps or package at RC-1, five built by the workflow since; no attestation for RC-1; unsigned tags up to RC-4) |
 | PW.4 | Minimal declared dependency set; `THIRD-PARTY-NOTICES.md` | `ThirdPartyNoticesTests` | Achieved |
 | PW.5 | Nullable, analysers, warnings-as-errors, fail-loud validation | CI build; `MeasurementSet` tests | Achieved |
-| PW.6 | Lock files, restored in locked mode on CI and in the image build; SDK pinned; SBOM hash injected and checked; build SDK and source-tree state stamped; release build needs a 64-hex SBOM hash, a known commit and a clean tree (since 2.1.008) | `SupplyChainManifestTests`; `WorkflowReleaseGateTests`; `BugHunt1101WebTests` (`B161_*`, `B176_*`) | Partially achieved (a local restore is not locked; a local build of a clean tree can still set the release-build flag; the reproducible-build check is written and gates the release but has not run) |
+| PW.6 | Lock files, restored in locked mode on CI and in the image build; SDK pinned; SBOM hash injected and checked; build SDK and source-tree state stamped; release build needs a 64-hex SBOM hash, a known commit and a clean tree (since 2.1.008) | `SupplyChainManifestTests`; `WorkflowReleaseGateTests`; `BugHunt1101WebTests` (`B161_*`, `B176_*`) | Partially achieved (a local restore is not locked; a local build of a clean tree can still set the release-build flag; the reproducible-build check gates the release and was green in the RC-3 and RC-4 runs) |
 | PW.8 | Security-control tests; vulnerable-package gate | the named security tests | Achieved |
-| RV.1 | Dependabot; NuGet audit and the vulnerable-package gate; CodeQL (by hand); security contact | CI build; `codeql.yml` | Partially achieved (disclosure policy and support period stated in `SECURITY.md`; CodeQL by hand; policy not yet exercised by a release) |
+| RV.1 | Dependabot alerts; NuGet audit and the vulnerable-package gate; CodeQL (by hand); security contact | CI build; `codeql.yml` | Partially achieved (disclosure policy and support period stated in `SECURITY.md`; CodeQL by hand; policy not yet exercised by a release; 2.1.074 carries the first fixes under it) |
 
 ---
 
 ## 7. The one recorded deviation
 
-Continuous integration runs when the release workflow calls it on a release tag, or by manual dispatch; CodeQL runs by
-manual dispatch only. Neither runs on every push. This is a deliberate, risk-accepted deviation from the common SSDF
+Continuous integration runs when the release workflow calls it on a release tag, by manual dispatch, and (since 2026-11-01,
+GR-382) on every push to `main` and weekly on the public repository, where it is free; pushes to the private development
+repository start nothing. CodeQL runs by manual dispatch only. This is a deliberate, risk-accepted deviation from the common SSDF
 implementation pattern, taken because the CAF and the SSDF are both outcome-based. The outcome is every shipped change
 built and checked deterministically, and the compensating control is twofold: the owner's every build for use is a
-production build carrying the compliance attestation, checked by the local suite, and CI is run by hand as the witness
-of a release (and, in the release workflow, as its gate). A build that is not a release build (since 2.1.008: no
+production build carrying the compliance attestation, checked by the local suite, and CI is the witness of a release
+(in the release workflow, its gate). A build that is not a release build (since 2.1.008: no
 64-hex SBOM hash, an unknown commit, or a dirty or unrecorded source tree) reports `NOT ATTESTED`, so it cannot be
 mistaken for a release.
 
 For RC-1 the witness half failed: the release workflow refused the RC tag form then and did not run, and the CI runs
-started by hand after publication did not pass. Neither has changed in effect since: the workflow accepts the tag form
-from 2.1.008 but has built no release, and no CI run has been made since the 2026-10-31 failures. A reader who expects CI-on-every-push should read this section as a documented
-compensating control with a recorded failure at RC-1, not as an omission and not as a met control. The release's
+started by hand after publication did not pass. That has changed: the workflow accepts the tag form from 2.1.008 and built
+RC-3 and RC-4 behind a green CI matrix. A reader who expects CI-on-every-push should read this section as a documented
+compensating control with a recorded failure at RC-1, since improved, not as an omission and not as a met control. The release's
 authenticity and integrity evidence (the signatures, `SHA256SUMS.txt`, and the provenance attestation the workflow
 would add) is the subject of `slsa-provenance.md` and is cited under CAF v4.0 A4.b.

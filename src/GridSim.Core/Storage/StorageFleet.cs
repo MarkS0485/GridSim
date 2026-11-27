@@ -65,7 +65,9 @@ public sealed class StorageFleet
             if (!ids.Contains(s.Bus)) throw new ArgumentException($"storage site '{s.Name}' is at unknown bus {s.Bus}.");
     }
 
-    /// <summary>Run every site through one step of <paramref name="stepHours"/>.</summary>
+    /// <summary>Run every site through one step of <paramref name="stepHours"/>. NUM-24: <paramref name="hour"/> is the
+    /// hour of day as the caller's clock gives it; the GDA replay passes the UTC hour (its time series is UTC), so a
+    /// time-of-day schedule used there is read in UTC, not in local (for example British Summer) time.</summary>
     public IReadOnlyList<SiteStepRecord> Advance(int step, double hour, double stepHours, double demandMw, double priceGbpPerMwh)
     {
         var records = new List<SiteStepRecord>(Sites.Count);

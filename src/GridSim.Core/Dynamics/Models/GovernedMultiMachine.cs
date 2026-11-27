@@ -15,7 +15,7 @@ namespace GridSim.Core.Dynamics.Models;
 /// <item>the machine-epsilon numerics of the classical kernel are inherited unchanged - this layer adds
 ///   only the governor state advance.</item>
 /// </list>
-/// Each present governor is initialised to its machine's initial mechanical power <paramref name="pm0"/>
+/// Each present governor is initialised to its machine's initial mechanical power <c>pm0</c>
 /// so an undisturbed run is stationary; on a disturbance it acts on the machine's own speed deviation. For
 /// an islanded machine set the steady speed deviation settles to the analytic droop
 /// <c>omegabar_ss = deltaP / sum(1/R)</c>, the second, independent oracle this layer is validated against.

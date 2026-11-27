@@ -115,7 +115,7 @@ public sealed partial class BugHunt1101WebTests
     [Fact]
     public void B178_a_same_length_swap_with_the_write_time_put_back_is_not_bundled()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-data-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-bh1101-data-" + Guid.NewGuid().ToString("N"));
         string folder = Path.Combine(root, "uk");
         Directory.CreateDirectory(folder);
         try

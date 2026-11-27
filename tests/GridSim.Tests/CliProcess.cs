@@ -89,7 +89,7 @@ internal static class CliProcess
     internal static Result Run(string exe, string[] args, int timeoutMs = 120_000, IReadOnlyDictionary<string, string?>? environment = null,
         bool machineLicence = false)
     {
-        string work = Path.Combine(Path.GetTempPath(), "gridsim-cli-test-" + Guid.NewGuid().ToString("N"));
+        string work = TestTemp.Under("gridsim-cli-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(work);
         try
         {

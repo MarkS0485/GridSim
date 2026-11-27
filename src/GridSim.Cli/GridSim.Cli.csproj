@@ -39,6 +39,12 @@
     <ProjectReference Include="..\GridSim.Gpu\GridSim.Gpu.csproj" />
   </ItemGroup>
 
+  <!-- RC5 WP11: the rpc object model's save path over a TCP listener follows the scripting path rule (one source, compiled
+       in here; the CLI does not reference the scripting library). -->
+  <ItemGroup>
+    <Compile Include="..\GridSim.Scripting\PathConfinement.cs" Link="Linked\PathConfinement.cs" />
+  </ItemGroup>
+
   <!-- Stamp the git commit + build config into the assembly so RunInfo can report the exact
        code version at runtime (the server has no git checkout). Only release tags (v2.*) name a build: an older
        checkpoint tag such as RC2-checkpoint must not label a later candidate, so with no reachable v2 tag the stamp is the

@@ -40,7 +40,7 @@ public sealed record SynchronousMachineCircuit(
         if (!(d.RatingMva > 0) || !(d.RatedKvLl > 0) || !(d.FrequencyHz > 0)) throw R("The machine rating, rated voltage and frequency must be positive.");
         if (!(d.RaPu >= 0) || !double.IsFinite(d.RaPu)) throw R("The armature resistance must be finite and not negative.");
         double xl = p.LeakageReactance > 0.0 ? p.LeakageReactance : 0.5 * Math.Min(p.Xdpp, p.Xqpp);
-        if (!(xl > 0 && xl < p.Xdpp && xl < p.Xqpp)) throw R($"The leakage reactance Xl = {xl:R} must be positive and below X''d and X''q.");
+        if (!(xl > 0 && xl < p.Xdpp && xl < p.Xqpp)) throw R(FormattableString.Invariant($"The leakage reactance Xl = {xl:R} must be positive and below X''d and X''q."));
         const double eq = 1e-9;
         double lad = p.Xd - xl;
         double xdpl = p.Xdp - xl;

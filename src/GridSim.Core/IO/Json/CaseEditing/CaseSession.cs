@@ -219,7 +219,7 @@ internal sealed class CaseSession
         foreach (CaseFileSpec spec in CaseFileSpec.V1Files)
         {
             string path = Path.Combine(full, spec.FileName);
-            byte[]? bytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
+            byte[]? bytes = File.Exists(path) ? GridSim.Core.IO.InputFileLimits.ReadAllBytes(path) : null;
             docs.Add(new CaseDocument(docs.Count, path, spec, spec.SchemaFile, "", StringComparer.OrdinalIgnoreCase, bytes));
         }
         if (!docs[1].Exists)
@@ -278,7 +278,7 @@ internal sealed class CaseSession
         string full = Path.GetFullPath(file);
         if (!File.Exists(full)) throw new FileNotFoundException($"v2 document not found: {file}", file);
         string folder = Path.GetDirectoryName(full)!;
-        byte[] bytes = File.ReadAllBytes(full);
+        byte[] bytes = GridSim.Core.IO.InputFileLimits.ReadAllBytes(full);
         JsonSourceText first = JsonSourceText.Parse(bytes, Path.GetFileName(full), StringComparer.Ordinal);
         string? schema = first.Root.Kind == JsonSourceKind.Object ? RecordRead.Str(first.Root, "schema", StringComparer.Ordinal) : null;
 
@@ -312,7 +312,7 @@ internal sealed class CaseSession
                     string netName = Path.GetFileName(path);
                     if (docs.Any(d => string.Equals(d.FileName, netName, StringComparison.Ordinal)))
                         throw new InvalidDataException($"{Path.GetFileName(full)}: network file '{rel}' has the same file name as another file of the case ({netName}); the editor names files by their name, so each must be distinct.");
-                    byte[]? nb = File.Exists(path) ? File.ReadAllBytes(path) : null;
+                    byte[]? nb = File.Exists(path) ? GridSim.Core.IO.InputFileLimits.ReadAllBytes(path) : null;
                     docs.Add(new CaseDocument(docs.Count, path, null, V2NetworkSchema, "", StringComparer.Ordinal, nb));
                 }
 
@@ -335,7 +335,7 @@ internal sealed class CaseSession
                     string name = Path.GetFileName(path);
                     if (docs.Any(d => string.Equals(d.FileName, name, StringComparison.Ordinal)))
                         throw new InvalidDataException($"{Path.GetFileName(full)}: asset overlay file '{rel}' has the same file name as another file of the case ({name}); the editor names files by their name, so each must be distinct.");
-                    byte[]? ab = File.Exists(path) ? File.ReadAllBytes(path) : null;
+                    byte[]? ab = File.Exists(path) ? GridSim.Core.IO.InputFileLimits.ReadAllBytes(path) : null;
                     docs.Add(new CaseDocument(docs.Count, path, null, V2AssetsSchema, "", StringComparer.Ordinal, ab));
                 }
         }
@@ -349,11 +349,7 @@ internal sealed class CaseSession
     }
 
     /// <summary>True when <paramref name="path"/> lies inside <paramref name="folder"/> (both full paths).</summary>
-    internal static bool IsInside(string folder, string path)
-    {
-        string root = Path.TrimEndingDirectorySeparator(folder) + Path.DirectorySeparatorChar;
-        return path.StartsWith(root, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
-    }
+    internal static bool IsInside(string folder, string path) => V2CaseLoader.IsInside(folder, path);   // IO-17: links below the folder too
 
     /// <summary>Pre-flight for a v2 case: every existing document against its schema, then the v2 semantic checks.</summary>
     private static CasePreflight RunPreflightV2(CaseSession s)

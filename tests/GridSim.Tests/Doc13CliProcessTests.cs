@@ -10,7 +10,7 @@ public sealed class Doc13CliProcessTests
 {
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc13-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc13-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

@@ -93,7 +93,14 @@ public sealed class V2KindSpecCodeDefaultTests
         // Added 2026-11-19 (RC4, the Newton retry option): 594 -> 595. solverProfile.retryFromDcStart registers the code
         // default PowerFlowOptions.RetryFromDcStart = true, one new entry checked against the code by the per-entry test
         // above. No existing entry or value changed.
-        Assert.Equal(595, counts.Values.Sum());
+        // Added 2026-11-20 (RC5 per-unit protection; the registry-count bump Mark pre-approved as non-core structural):
+        // 595 -> 596. The new unitProtection kind registers its one code default, unitProtection.relayNominalHz =
+        // UnitProtectionSet.DefaultSettingsNominalHz (50 Hz), checked against the code by the per-entry test above. No
+        // existing entry or value changed.
+        // Added (B37, the power-flow divergence stop): 596 -> 597. solverProfile.divergeLimitPu registers the code default
+        // PowerFlowOptions.DivergeLimitPu = 10 pu, one new entry checked against the code by the per-entry test above.
+        // No existing entry or value changed.
+        Assert.Equal(597, counts.Values.Sum());
     }
 
     // ------------------------------------------------------------------------------ the Q24 keys

@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 /// <summary>Post-RC3 batch K web fixes: APP-03 (private-model rule on POST /api/solve).</summary>
 public sealed class FixKlWebTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-fixkl-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-fixkl-" + Guid.NewGuid().ToString("N"));
 
     public FixKlWebTests() => Directory.CreateDirectory(_dir);
 

@@ -9,6 +9,14 @@
        intent is visible where builds are configured. AvaloniaTelemetryOptOutTests pins both. -->
   <Target Name="AvaloniaStats" />
 
+  <!-- The telemetry build marker, stamped on every project: [assembly: AssemblyMetadata("TelemetryOff", "true")]. The
+       desktop app and the web app check it first thing at start-up (GridSim.Core.Diagnostics.TelemetryGuard) and exit
+       with code 78 when an app assembly lacks it or carries any other value, so a binary not built with the switches
+       above cannot start. TelemetryGuardTests pins this item. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="TelemetryOff" Value="true" />
+  </ItemGroup>
+
   <!-- Bug #176: a release build (one with an SBOM hash injected, -p:GridSimSbomSha256=<hex>) also records whether the
        source tree was CLEAN when it was built. Source Link stamps the HEAD commit even when files are modified, so
        without this a modified tree could attest "release build, commit <sha>" for code that is not that commit.

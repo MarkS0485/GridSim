@@ -59,7 +59,7 @@ internal sealed class UiOverlayFixture : IDisposable
         ] }
         """;
 
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-assets-5view-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-assets-5view-" + Guid.NewGuid().ToString("N"));
 
     /// <summary>A fresh v2 projection of data/uk, with the overlay when <paramref name="withOverlay"/>, and
     /// <paramref name="overlayA"/> in place of file A when given (a bad overlay for the refusal tests).</summary>

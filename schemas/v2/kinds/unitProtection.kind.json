@@ -1,0 +1,271 @@
+{
+  "schema": "gridsim-kind/2",
+  "kind": "unitProtection",
+  "title": "Unit protection",
+  "description": "RC5: the relays a generating unit carries itself (27 / 59 under / over voltage, 32 reverse power, 40 loss of excitation, 81U / 81O under / over frequency, 81R RoCoF, 78 vector shift), separate from the network's protection. A template of this kind is a unit protection class default; a generator names it with protectionTemplate (or a binding rule matches it), and a case override with a unit member sets one unit's own values on top. Resolution per setting: unit override, else the template, else absent (an absent relay is absent; nothing is invented). A stage exists when its pickup resolves and then needs its delay. Read by GridSim.Core.Protection.UnitProtectionSet (no code default: every value comes from a template, an override or a preset).",
+  "params": {
+    "uv1Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "27 undervoltage stage 1 pickup, pu of the unit's terminal bus nominal voltage; above 0 and below 1.",
+      "codeDefaults": []
+    },
+    "uv1DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 27 stage 1 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "uv2Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "27 undervoltage stage 2 pickup (pu); above 0 and below 1.",
+      "codeDefaults": []
+    },
+    "uv2DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 27 stage 2 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "ov1Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 1,
+      "required": false,
+      "description": "59 overvoltage stage 1 pickup (pu); above 1.",
+      "codeDefaults": []
+    },
+    "ov1DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 59 stage 1 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "ov2Pu": {
+      "type": "number",
+      "unit": "pu@system",
+      "min": 1,
+      "required": false,
+      "description": "59 overvoltage stage 2 pickup (pu); above 1.",
+      "codeDefaults": []
+    },
+    "ov2DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 59 stage 2 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "reversePowerPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "description": "32 reverse power pickup: the real power the unit absorbs, pu of its own rating (capacityMva); above 0 and at most 1.",
+      "codeDefaults": []
+    },
+    "reversePowerDelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 32 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "loe1OffsetPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "40 loss of excitation zone 1: offset of the mho circle below the origin of the R-X plane, pu of the unit's own impedance base (typically X'd / 2).",
+      "codeDefaults": []
+    },
+    "loe1DiameterPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "40 zone 1 mho circle diameter, pu of the unit's impedance base (typically 1.0 pu); above 0. Required with loe1OffsetPu.",
+      "codeDefaults": []
+    },
+    "loe1DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 40 zone 1 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "loe2OffsetPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "40 zone 2 mho offset (pu of the unit's impedance base).",
+      "codeDefaults": []
+    },
+    "loe2DiameterPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "description": "40 zone 2 mho diameter (typically Xd); above 0. Required with loe2OffsetPu.",
+      "codeDefaults": []
+    },
+    "loe2DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 40 zone 2 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "uf1Hz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "description": "81U underfrequency stage 1 pickup (Hz); below relayNominalHz.",
+      "codeDefaults": []
+    },
+    "uf1DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 81U stage 1 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "uf2Hz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "description": "81U underfrequency stage 2 pickup (Hz); below relayNominalHz.",
+      "codeDefaults": []
+    },
+    "uf2DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 81U stage 2 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "of1Hz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "description": "81O overfrequency stage 1 pickup (Hz); above relayNominalHz.",
+      "codeDefaults": []
+    },
+    "of1DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 81O stage 1 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "of2Hz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "description": "81O overfrequency stage 2 pickup (Hz); above relayNominalHz.",
+      "codeDefaults": []
+    },
+    "of2DelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 81O stage 2 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "rocofHzPerS": {
+      "type": "number",
+      "unit": "Hz/s",
+      "min": 0,
+      "required": false,
+      "description": "81R RoCoF (loss-of-mains) pickup (Hz/s); above 0.",
+      "codeDefaults": []
+    },
+    "rocofDelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 81R (it resets when RoCoF falls below the pickup) (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "vectorShiftDeg": {
+      "type": "number",
+      "unit": "deg",
+      "min": 0,
+      "max": 180,
+      "required": false,
+      "description": "78 vector shift pickup (deg); above 0 and below 180.",
+      "codeDefaults": []
+    },
+    "vectorShiftDelayS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "description": "Definite time delay of 78 (s): the quantity must stay beyond the pickup this long. Required whenever the pickup resolves (unit value or template); refused without it.",
+      "codeDefaults": []
+    },
+    "relayNominalHz": {
+      "type": "number",
+      "unit": "Hz",
+      "min": 0,
+      "required": false,
+      "description": "The nominal frequency the absolute 81U / 81O pickups are written for. Absent: 50 Hz (the GB value the ENA settings assume). On a system of another nominal the frequency stages are reported not checkable.",
+      "codeDefaults": [
+        {
+          "consumer": "UnitProtectionSet: absent => the GB 50 Hz (DefaultSettingsNominalHz)",
+          "ref": "member:GridSim.Core:GridSim.Core.Protection.UnitProtectionSet.DefaultSettingsNominalHz",
+          "value": 50.0
+        }
+      ]
+    },
+    "rocofPreset": {
+      "type": "enum",
+      "values": [
+        "legacy",
+        "legacy-high-impedance",
+        "modern"
+      ],
+      "required": false,
+      "description": "ENA loss-of-mains RoCoF preset, expanding to rocofHzPerS and rocofDelayS with cited provenance: legacy = K2 x 0.125 Hz/s with K2 = 1.0 (EREC G59 Issue 3 Amendment 8 p.62 and note (2) p.63), legacy-high-impedance = K2 = 1.6 (0.2 Hz/s), both with a 0.5 s delay (S135 Table 10.5.7.1 p.62, plant commissioned before 01/02/18; S132 Table 10.5.7.1 p.63, legacy band), reset when RoCoF falls below the threshold (S135 note p.63); modern = 1 Hz/s, 0.5 s (EREC G99 Issue 2 Table 10.1 p.125). An explicit rocofHzPerS / rocofDelayS in the same template or override wins.",
+      "codeDefaults": []
+    },
+    "interfacePreset": {
+      "type": "enum",
+      "values": [
+        "g99-hv",
+        "g99-lv"
+      ],
+      "required": false,
+      "description": "EREC G99 Issue 2 Table 10.1 interface protection (Types A to C, p.125), HV or LV column: 27, 59 stages 1 and 2, 81U stages 1 and 2, 81O and 81R, all Recorded with the table cited. rocofPreset and explicit values in the same template or override win.",
+      "codeDefaults": []
+    }
+  }
+}

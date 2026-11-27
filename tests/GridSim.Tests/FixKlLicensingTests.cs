@@ -6,7 +6,7 @@ namespace GridSim.Tests;
 /// <summary>APP-25: a v2 case is bundled only when its manifest AND every file it lists are shipped content.</summary>
 public sealed class FixKlLicensingTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-fixkl-lic-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-fixkl-lic-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {

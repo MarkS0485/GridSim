@@ -14,7 +14,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr190GateRefusalTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-gr190-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-gr190-" + Guid.NewGuid().ToString("N"));
 
     public Gr190GateRefusalTests() => Directory.CreateDirectory(_dir);
 

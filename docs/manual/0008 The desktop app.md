@@ -570,6 +570,80 @@ platform. It differs from the desktop app in these ways:
 - Its HARMONICS tab runs the study in the page, where the desktop tab is a reference panel.
 - A raw public-data replay session shows a reduced tab strip.
 
+## Telemetry
+
+This section is about usage telemetry (data about you or your use of the app sent to a third party), not the grid
+telemetry GridSim reads as input.
+
+Neither desktop app (the WPF dashboard `GridSim.Wpf` nor the Avalonia app `GridSim.App.Desktop`) sends usage
+telemetry. WPF has none. Avalonia, the UI framework of the second app, has telemetry only at build time: its
+`Avalonia.BuildServices` package adds a build step that sends anonymous build statistics. This repository switches
+that step off (`Directory.Build.targets` replaces it with an empty one, and every CI workflow sets
+`AVALONIA_TELEMETRY_OPTOUT=1`). Avalonia sends nothing at run time, and GridSim adds no telemetry library.
+
+A guard enforces this in both apps (and in the CLI and the web app). It is the first thing the app runs, before any
+window or setting is loaded, and the app exits with code **78** if any of these is true:
+
+- **The build marker is missing.** Every GridSim assembly is built with the marker `TelemetryOff=true`. The app's
+  assemblies must all carry it with exactly that value: for the WPF dashboard `GridSim.Wpf`, `GridSim.Ui` and
+  `GridSim.Core`; for the Avalonia app `GridSim.App.Desktop`, `GridSim.App`, `GridSim.Ui`, `GridSim.Core` and
+  `GridSim.Scripting`. A binary not built by this repository's build cannot start.
+- **A telemetry library or agent is loaded**, at start-up or at any time later. The refused names are
+  `Avalonia.BuildServices`, `Microsoft.ApplicationInsights`, `Microsoft.Extensions.Logging.ApplicationInsights`,
+`OpenTelemetry.Exporter`, `Azure.Monitor`, `Sentry`, `Microsoft.VisualStudio.Telemetry`, `Segment`, `Mixpanel`,
+`Bugsnag`, `Raygun`, `Datadog`, `Elastic.Apm`, `NewRelic` and `Honeycomb`, and the injected agents
+`Microsoft.AspNetCore.ApplicationInsights.HostingStartup`, `OpenTelemetry.AutoInstrumentation`, `Dynatrace`,
+`OneAgent`, `AppDynamics`, `Instana`, `Serilog.Sinks.ApplicationInsights` and `Serilog.Sinks.Datadog`. An assembly
+matches when its name is the prefix or starts with the prefix and a dot (so `Sentry.AspNetCore` matches and
+`SentryLike` does not).
+- **An environment variable would load an agent into the app:** `DOTNET_STARTUP_HOOKS`,
+  `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`, `DOTNET_HOSTINGSTARTUPASSEMBLIES` or `DOTNET_ADDITIONAL_DEPS` set;
+  `DOTNET_DiagnosticPorts` or its legacy form `COMPlus_DiagnosticPorts` set to a non-empty value; any
+  profiler switch (`CORECLR_ENABLE_PROFILING`, `CORECLR_ENABLE_NOTIFICATION_PROFILERS` or their `DOTNET_` forms) set to anything but empty or a value read as 0;
+  and, while such a switch is on, any variable whose name starts with `CORECLR_PROFILER`, `CORECLR_NOTIFICATION_PROFILERS`,
+  `DOTNET_PROFILER` or `DOTNET_NOTIFICATION_PROFILERS` (with profiling off the runtime loads no profiler, so a path left set
+  machine-wide by an agent installer does not stop the app). A diagnostic profiler is refused too, and so is an
+  app started by `dotnet watch` or an IDE's Hot Reload (both set `DOTNET_STARTUP_HOOKS`).
+- **An environment variable would switch on an exporter:**
+
+- any variable whose name starts with `OTEL_EXPORTER_` or `OTEL_DOTNET_AUTO_`;
+- `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER` or `OTEL_LOGS_EXPORTER` set to anything but `none`;
+- `APPLICATIONINSIGHTS_CONNECTION_STRING`, `APPLICATIONINSIGHTS_AUTHENTICATION_STRING`,
+  `APPINSIGHTS_INSTRUMENTATIONKEY`, `ApplicationInsightsAgent_EXTENSION_VERSION`,
+  `XDT_MicrosoftApplicationInsights_Mode`, `APPINSIGHTS_PROFILERFEATURE_VERSION` or
+  `APPINSIGHTS_SNAPSHOTFEATURE_VERSION` (Application Insights and Azure Monitor);
+- `SENTRY_DSN`, `DD_API_KEY`, `NEW_RELIC_LICENSE_KEY`, `ELASTIC_APM_SERVER_URL`, `ELASTIC_APM_SERVER_URLS` or
+  `HONEYCOMB_API_KEY`;
+- `DD_TRACE_ENABLED` set to `true` or `1`;
+- `AVALONIA_TELEMETRY_OPTOUT` set to anything but `1` or `true` (unset is fine).
+
+- **An environment variable configures an APM agent:** `DD_AGENT_HOST`, `DD_TRACE_AGENT_URL` (Datadog),
+  `NEW_RELIC_APP_NAME` (New Relic), `DT_TENANT`, `DT_CONNECTION_POINT` (Dynatrace) or any variable whose name starts
+  with `APPDYNAMICS_` set to anything; `DD_PROFILING_ENABLED` set to anything but empty, `0` or `false`; `DD_ENV` or
+  `DD_SERVICE` (Datadog's service tags) set to anything, each on its own and whatever `DD_TRACE_ENABLED` says. Only
+  these exact names: a name that merely contains one (`DDENV`, `MY_DD_ENV`) is fine.
+
+Names are matched ignoring case. 
+- **The guard itself fails.** Any error inside the guard also exits.
+
+On exit the app writes one line to the error stream and the trace log, naming the reason, for example
+`GridSim.App.Desktop: telemetry guard: environment variable SENTRY_DSN is set (it switches on a telemetry exporter). Exiting with code 78.`
+(the WPF dashboard, which has no console, writes it to the trace log only, starting `GridSim.Wpf:`).
+It shows no dialog. Remove the variable or the library and start the app again.
+
+The guard checks what is loaded and configured. It does not watch network traffic.
+
+## Offline operation
+
+GridSim starts, runs and stops with no internet connection; it needs one only to be downloaded. The licence is checked
+offline against a key built into the app, and there is no update check, no crash reporting and nothing fetched at run
+time. The fonts and images are inside the app.
+
+The app uses the network only when you start a bridge session to a bridge endpoint you have set by hand
+(`BridgeEndpoint` in `settings.json`, empty by default). The CLI verbs `interpose`, `rpc` and `pmu-ingest --live` also
+use the network, only while you run them ([ch. 19](<0019 CLI reference.md>)). The full list is in technical
+chapter 35, section Offline operation.
+
 ## Limits
 
 - CONDITION and STRESS colouring have data only on a bridge feed.

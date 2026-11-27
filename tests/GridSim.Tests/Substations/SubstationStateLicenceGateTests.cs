@@ -10,7 +10,7 @@ namespace GridSim.Tests.Substations;
 /// </summary>
 public sealed class SubstationStateLicenceGateTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r411-gate-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r411-gate-" + Guid.NewGuid().ToString("N"));
 
     public SubstationStateLicenceGateTests() => Directory.CreateDirectory(_dir);
 

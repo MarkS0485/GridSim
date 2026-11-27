@@ -185,7 +185,7 @@ public class N061PmuIngestTests
 
     private static string Capture(params byte[][] frames)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-pmu-{Guid.NewGuid():N}.bin");
+        string path = TestTemp.Under($"gridsim-pmu-{Guid.NewGuid():N}.bin");
         File.WriteAllBytes(path, frames.SelectMany(f => f).ToArray());
         return path;
     }

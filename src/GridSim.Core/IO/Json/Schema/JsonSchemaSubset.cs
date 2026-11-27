@@ -112,7 +112,7 @@ public sealed class JsonSchemaSubset
         var sources = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (string path in Directory.EnumerateFiles(dir, "*" + SchemaFileSuffix, SearchOption.TopDirectoryOnly)
                                           .OrderBy(p => p, StringComparer.Ordinal))
-            sources[Path.GetFileName(path)] = File.ReadAllText(path);
+            sources[Path.GetFileName(path)] = GridSim.Core.IO.InputFileLimits.ReadAllText(path);
         if (sources.Count == 0) throw new InvalidDataException($"Schema directory {dir} holds no *{SchemaFileSuffix} files.");
         return FromSources(sources);
     }
@@ -179,7 +179,7 @@ public sealed class JsonSchemaSubset
     {
         try
         {
-            return JsonDocument.Parse(File.ReadAllText(path), ReaderOptions);
+            return JsonDocument.Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path), ReaderOptions);
         }
         catch (JsonException ex)
         {

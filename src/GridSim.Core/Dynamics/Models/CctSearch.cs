@@ -6,7 +6,7 @@ namespace GridSim.Core.Dynamics.Models;
 /// <summary>
 /// The step-grid search for a critical clearing time (CCT), shared by the RMS engine
 /// (<see cref="RmsTransientStability.CriticalClearingBracket"/>) and the classical model
-/// (<see cref="Distributed.ClassicalInit.CriticalClearingBracket"/>), so the two can never search differently.
+/// (<see cref="Distributed.ClassicalInit.CriticalClearingBracket(Model.GridModel, PowerFlow.PowerFlowResult, double[], int, double?, double, double, int, bool, int, double)"/>), so the two can never search differently.
 ///
 /// <para><b>What it reports (N048, October 2026).</b> The CCT is defined as the FIRST loss of synchronism from below:
 /// the largest whole number of steps m such that clearing after every step count from 0 to m holds synchronism, so

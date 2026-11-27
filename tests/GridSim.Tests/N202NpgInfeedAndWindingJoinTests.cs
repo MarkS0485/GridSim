@@ -30,7 +30,7 @@ public sealed class N202NpgInfeedAndWindingJoinTests
     /// same voltage (a tie, so it must stay on its own key).</summary>
     private static string Fixture()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-n202-npg-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-n202-npg-" + Guid.NewGuid().ToString("N"));
         string raw = Path.Combine(root, "NorthernPowerGrid", "RAWData");
         void Write(string dataset, string csv)
         {

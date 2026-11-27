@@ -91,7 +91,7 @@ public class Gr306Iec104CommonAddressTests
 
     private static string WriteMap(string? key)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gr306-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gr306-{Guid.NewGuid():N}.json");
         string keyMember = key is null ? "" : $"\"iec104Key\": \"{key}\", ";
         File.WriteAllText(path, "{ \"schema\": \"gridsim-rtu-pointmap/1\", " + keyMember +
             "\"bindings\": [ { \"address\": \"CA:1/IOA:10\", \"kind\": \"VmPu\", \"bus\": 1, \"sigma\": 0.01 } ] }");
@@ -133,9 +133,9 @@ public class Gr306Iec104CommonAddressTests
     public void A_crosswalk_with_the_key_round_trips_and_one_without_it_writes_no_member()
     {
         string path = WriteMap("casdu-ioa");
-        string again = Path.Combine(Path.GetTempPath(), $"gr306-{Guid.NewGuid():N}.json");
+        string again = TestTemp.Under($"gr306-{Guid.NewGuid():N}.json");
         string plain = WriteMap(null);
-        string plainAgain = Path.Combine(Path.GetTempPath(), $"gr306-{Guid.NewGuid():N}.json");
+        string plainAgain = TestTemp.Under($"gr306-{Guid.NewGuid():N}.json");
         try
         {
             RtuPointMap.Load(path).Save(again);

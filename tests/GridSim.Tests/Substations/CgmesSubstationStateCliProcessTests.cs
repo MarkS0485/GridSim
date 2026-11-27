@@ -16,7 +16,7 @@ public sealed class CgmesSubstationStateCliProcessTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-wire1-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-wire1-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

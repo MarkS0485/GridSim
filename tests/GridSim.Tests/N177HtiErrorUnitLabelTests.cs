@@ -85,7 +85,7 @@ public sealed class N177HtiErrorUnitLabelTests
     [Fact]
     public void Planted_case14_hti_labels_each_row()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n177-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n177-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

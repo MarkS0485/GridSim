@@ -1,10 +1,6 @@
 @inherits LayoutComponentBase
-@implements IDisposable
 @using GridSim.Core.Licensing
-@using Microsoft.AspNetCore.Components.Routing
 @inject LicenceGate Licence
-@inject NavigationManager Nav
-@inject IJSRuntime JS
 @inject GridSim.Web.Site.SiteSettings Site
 
 <div class="app-shell">
@@ -68,38 +64,4 @@
             : Licence.Entitlement.IsExpired
                 ? $"{GridSim.Core.Licensing.LicenceGate.Sep}EXPIRED {Licence.Entitlement.Expires:yyyy-MM-dd}"
                 : $"{GridSim.Core.Licensing.LicenceGate.Sep}expires {Licence.Entitlement.Expires:yyyy-MM-dd}";
-
-    protected override void OnInitialized()
-    {
-        Nav.LocationChanged += OnLocationChanged;
-    }
-
-    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        await SendPageViewAsync();
-    }
-
-    private async Task SendPageViewAsync()
-    {
-        // N086: only when the deployment configured analytics (Site:AnalyticsScriptUrl); a neutral deployment makes
-        // no analytics call at all.
-        if (Site.AnalyticsScriptUrl.Length == 0) return;
-        // Defensive: the first-party analytics beacon may not be loaded yet
-        // (deferred script) or the collector may be unreachable. Never throw.
-        try
-        {
-            // GR-714: a named function, not eval (which would force a Content-Security-Policy to allow unsafe-eval). When
-            // the beacon is not loaded the call throws and is ignored below, as the old guard did.
-            await JS.InvokeVoidAsync("tsgbAnalytics.pageView");
-        }
-        catch
-        {
-            // ignore - analytics must never break navigation
-        }
-    }
-
-    public void Dispose()
-    {
-        Nav.LocationChanged -= OnLocationChanged;
-    }
 }

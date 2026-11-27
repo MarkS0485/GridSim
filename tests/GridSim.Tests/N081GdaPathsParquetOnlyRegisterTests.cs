@@ -14,7 +14,7 @@ public sealed class N081GdaPathsParquetOnlyRegisterTests
 {
     private static string NewRoot()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-n081-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-n081-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

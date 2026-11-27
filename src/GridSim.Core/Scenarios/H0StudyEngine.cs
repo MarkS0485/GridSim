@@ -76,7 +76,7 @@ public sealed record H0StudyResult(
 /// sweep floors a scalar E, this routes every cell through the authored per-asset fleet
 /// (<see cref="AssetFrequencyDynamics"/>) over a RECONSTRUCTED grid model, applying two model-level
 /// transforms per cell: scale the real synchronous inertia (<see cref="GridInertiaTransforms.ScaleSynchronousInertia"/>)
-/// and set the grid-forming fraction of the converter fleet (<see cref="GridInertiaTransforms.SetGfmFraction"/>).
+/// and set the grid-forming fraction of the converter fleet (<see cref="GridInertiaTransforms.SetGfmFraction(GridModel, double, string, string)"/>).
 ///
 /// <para>Wiring Workstream A's grid-forming FORMATION path is what makes "GFM holds at H=0" a real
 /// physical result rather than a flag: the GFM fleet is re-interpreted as a virtual former (Ev/Dv, via

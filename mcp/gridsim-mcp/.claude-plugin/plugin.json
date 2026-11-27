@@ -1,0 +1,75 @@
+{
+  "name": "gridsim",
+  "version": "0.1.0",
+  "description": "GridSim's deterministic power-system solver for AI tools: build, solve, study and check networks on your own machine, offline, with a hash-chained study record. GridSim is installed separately.",
+  "author": {
+    "name": "Mark Shirley"
+  },
+  "license": "LicenseRef-GridSim-1.0",
+  "icon": "./assets/icon.svg",
+  "keywords": [
+    "power-systems",
+    "load-flow",
+    "contingency",
+    "short-circuit",
+    "engineering",
+    "education"
+  ],
+  "userConfig": {
+    "gridsim_cli": {
+      "type": "string",
+      "title": "GridSim program",
+      "description": "Full path to the gridsim program of your GridSim installation. Leave empty to use gridsim on the PATH.",
+      "required": false
+    },
+    "licence_file": {
+      "type": "string",
+      "title": "GridSim licence file",
+      "description": "Path to your GridSim licence file (needed only for cases over 1,500 buses). Passed to GridSim as GRIDSIM_LICENCE_FILE; never read, printed or recorded by the plugin.",
+      "sensitive": true,
+      "required": false
+    },
+    "workspace": {
+      "type": "string",
+      "title": "Workspace folder",
+      "description": "Folder for cases, results and study records. Leave empty for a gridsim-workspace folder in the current project.",
+      "required": false
+    },
+    "enable_compare": {
+      "type": "boolean",
+      "title": "Validation tools (maintainer)",
+      "description": "Turn on the validation tools (compare, crossval_single, divergence_triage, build_regression). They need the Lab Mode harness and its rival runtimes; leave off otherwise.",
+      "required": false,
+      "default": false
+    },
+    "harness_path": {
+      "type": "string",
+      "title": "Lab Mode harness folder",
+      "description": "Folder of the GridSim Lab Mode harness (the one holding run.py). Used only when the validation tools are on.",
+      "required": false
+    },
+    "enable_caselab": {
+      "type": "boolean",
+      "title": "Case lab (maintainer)",
+      "description": "Turn on the case lab (caselab_run, caselab_status, caselab_findings, caselab_reproduce, caselab_propose): generated cases compared with the rival tools, triaged and shrunk to minimal reproducers. Needs the validation tools on and the Lab Mode harness; leave off otherwise.",
+      "required": false,
+      "default": false
+    },
+    "enable_rebuild": {
+      "type": "boolean",
+      "title": "Rebuild on demand (maintainer)",
+      "description": "Turn on rebuild_on_demand: a user-owned GridSim build, in a folder outside the source checkout, with allowlisted solver constants changed. Every such build is UNSUPPORTED. Leave off otherwise.",
+      "required": false,
+      "default": false
+    },
+    "rebuild_dir": {
+      "type": "string",
+      "title": "Rebuild folder",
+      "description": "Folder for rebuild_on_demand's build copies, outside any GridSim checkout. Leave empty for .gridsim-mcp/rebuild in the workspace.",
+      "required": false
+    }
+  },
+  "network": {
+    "hosts": []
+  }
+}

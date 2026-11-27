@@ -47,7 +47,7 @@ public sealed record AssetClass(
         var errs = new List<string>();
         foreach ((string key, AssetClassProvenance prov) in Provenance)
             if (prov.Tag == ProvenanceTag.CuratedPlaceholder && !(prov.Note?.Contains("[VERIFY]") ?? false))
-                errs.Add($"asset class '{Name}' parameter '{key}' is CuratedPlaceholder but its note lacks the literal [VERIFY] token.");
+                errs.Add(FormattableString.Invariant($"asset class '{Name}' parameter '{key}' is CuratedPlaceholder but its note lacks the literal [VERIFY] token."));
         return errs;
     }
 }
@@ -68,7 +68,7 @@ public sealed class AssetClassLibrary
         foreach (AssetClass c in classes)
         {
             if (!map.TryAdd(c.Name, c))
-                throw new InvalidDataException($"Duplicate asset class name '{c.Name}' in asset-classes.json.");
+                throw new InvalidDataException(FormattableString.Invariant($"Duplicate asset class name '{c.Name}' in asset-classes.json."));
             unsupported.AddRange(AssetClassSupport.Problems(c));
         }
         // Every class entering a library (from asset-classes.json, built in code, or re-built by an asset sweep) is
@@ -86,7 +86,7 @@ public sealed class AssetClassLibrary
 
     public AssetClass Get(string name)
         => _classes.TryGetValue(name, out AssetClass? c) ? c
-         : throw new InvalidDataException($"Unknown asset class '{name}' referenced by a binding but not defined in asset-classes.json.");
+         : throw new InvalidDataException(FormattableString.Invariant($"Unknown asset class '{name}' referenced by a binding but not defined in asset-classes.json."));
 
     /// <summary>Validate every class's provenance discipline; throws on any violation.</summary>
     public void ValidateOrThrow()
@@ -215,7 +215,7 @@ public static class AssetClassSupport
         var problems = new List<string>();
         if (!IsSupportedKind(cls.Kind))
         {
-            problems.Add($"asset class '{cls.Name}' has kind {cls.Kind}, which GridSim cannot simulate as an authored class: " +
+            problems.Add(FormattableString.Invariant($"asset class '{cls.Name}' has kind {cls.Kind}, which GridSim cannot simulate as an authored class: ") +
                 "there is no controller for it, so every asset bound to it would silently stay passive. Remove the class " +
                 "(a synchronous machine's inertia comes from its generator's H and MBase).");
             return problems;   // its keys cannot be judged against a kind that has no consumer
@@ -224,10 +224,10 @@ public static class AssetClassSupport
         foreach (string key in cls.Params.Keys.OrderBy(k => k, StringComparer.Ordinal))
         {
             if (RefusedKeys.TryGetValue(key, out string? why))
-                problems.Add($"asset class '{cls.Name}' sets '{key}': {why}");
+                problems.Add(FormattableString.Invariant($"asset class '{cls.Name}' sets '{key}': {why}"));
             else if (!accepted.Contains(key))
-                problems.Add($"asset class '{cls.Name}' (kind {cls.Kind}) sets '{key}', which nothing that simulates a " +
-                    $"{cls.Kind} reads, so it would be silently ignored. Check the spelling; accepted keys: " +
+                problems.Add(FormattableString.Invariant($"asset class '{cls.Name}' (kind {cls.Kind}) sets '{key}', which nothing that simulates a ") +
+                    FormattableString.Invariant($"{cls.Kind} reads, so it would be silently ignored. Check the spelling; accepted keys: ") +
                     string.Join(", ", accepted.OrderBy(k => k, StringComparer.Ordinal)) + ".");
         }
         // N304 / N318: a protection frequency setting on the wrong side of, or implausibly far from, the nominal it is
@@ -302,15 +302,15 @@ public static class AssetClassSupport
         bool declared = cls.Params.ContainsKey(AssetParams.SettingsNominalHz);
         if (!double.IsFinite(nominal) || !(nominal > 0.0))
         {
-            problems.Add($"protection class '{cls.Name}' sets '{AssetParams.SettingsNominalHz}' = {nominal:R}, which is not a " +
+            problems.Add(FormattableString.Invariant($"protection class '{cls.Name}' sets '{AssetParams.SettingsNominalHz}' = {nominal:R}, which is not a ") +
                 "finite number of Hz above 0.");
             return problems;   // the settings cannot be judged against a nominal that is not a frequency
         }
         // How the nominal was arrived at, for the messages: declared by the class, or the GB default.
         string nominalText = declared
-            ? $"'{AssetParams.SettingsNominalHz}' = {nominal:R}"
-            : $"'{AssetParams.SettingsNominalHz}' absent, so the GB {nominal:R} Hz";
-        string advice = $"Settings written for another system must declare its nominal in '{AssetParams.SettingsNominalHz}' " +
+            ? FormattableString.Invariant($"'{AssetParams.SettingsNominalHz}' = {nominal:R}")
+            : FormattableString.Invariant($"'{AssetParams.SettingsNominalHz}' absent, so the GB {nominal:R} Hz");
+        string advice = FormattableString.Invariant($"Settings written for another system must declare its nominal in '{AssetParams.SettingsNominalHz}' ") +
             "(for example 60 for a 60 Hz system).";
         // Fixed key order (UF, OF, LFDD), so the message lists problems in the same order on every run. The flag says which
         // way the stage operates: true = when frequency falls BELOW its setting (UF, LFDD), false = rises ABOVE it (OF).
@@ -320,7 +320,7 @@ public static class AssetClassSupport
             if (!cls.Params.TryGetValue(key, out double hz)) continue;
             if (!double.IsFinite(hz))
             {
-                problems.Add($"protection class '{cls.Name}' sets '{key}' = {hz:R}, which is not a finite frequency.");
+                problems.Add(FormattableString.Invariant($"protection class '{cls.Name}' sets '{key}' = {hz:R}, which is not a finite frequency."));
                 continue;
             }
             // Distance from the nominal measured towards the stage's own side: positive = the right side. For a UF / LFDD
@@ -330,14 +330,14 @@ public static class AssetClassSupport
             string side = below ? "below" : "above";
             string stage = below ? "an under-frequency or LFDD stage" : "an over-frequency stage";
             if (!(towardsOwnSide > 0.0))
-                problems.Add($"protection class '{cls.Name}' sets '{key}' = {hz:R} Hz, which is not {side} the {nominal:R} Hz " +
-                    $"nominal its settings are written for ({nominalText}). It is {stage}, which operates when frequency goes " +
-                    $"{side} its setting, so the setting must lie {side} the nominal; a setting on the wrong side is the mark of " +
-                    $"settings written for another nominal. {advice}");
+                problems.Add(FormattableString.Invariant($"protection class '{cls.Name}' sets '{key}' = {hz:R} Hz, which is not {side} the {nominal:R} Hz ") +
+                    FormattableString.Invariant($"nominal its settings are written for ({nominalText}). It is {stage}, which operates when frequency goes ") +
+                    FormattableString.Invariant($"{side} its setting, so the setting must lie {side} the nominal; a setting on the wrong side is the mark of ") +
+                    FormattableString.Invariant($"settings written for another nominal. {advice}"));
             else if (towardsOwnSide > MaxFrequencySettingDistanceHz)
-                problems.Add($"protection class '{cls.Name}' sets '{key}' = {hz:R} Hz, more than {MaxFrequencySettingDistanceHz:R} Hz " +
-                    $"{side} the {nominal:R} Hz nominal its settings are written for ({nominalText}). A real frequency setting " +
-                    $"lies within a few hertz of its nominal. {advice}");
+                problems.Add(FormattableString.Invariant($"protection class '{cls.Name}' sets '{key}' = {hz:R} Hz, more than {MaxFrequencySettingDistanceHz:R} Hz ") +
+                    FormattableString.Invariant($"{side} the {nominal:R} Hz nominal its settings are written for ({nominalText}). A real frequency setting ") +
+                    FormattableString.Invariant($"lies within a few hertz of its nominal. {advice}"));
         }
         return problems;
     }

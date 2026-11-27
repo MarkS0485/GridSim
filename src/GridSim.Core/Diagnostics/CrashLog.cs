@@ -44,7 +44,7 @@ public static class CrashLog
     }
 
     /// <summary>
-    /// Build the text of a crash log. Separate from <see cref="Write"/> so it can be tested without touching disk.
+    /// Build the text of a crash log. Separate from <see cref="Write(string, object?, IReadOnlyList{string}?)"/> so it can be tested without touching disk.
     /// </summary>
     /// <param name="app">Which app crashed, for example <c>gridsim</c> (the CLI) or <c>GridSim.Wpf</c>.</param>
     /// <param name="error">The unhandled exception object (normally an <see cref="Exception"/>; anything else is

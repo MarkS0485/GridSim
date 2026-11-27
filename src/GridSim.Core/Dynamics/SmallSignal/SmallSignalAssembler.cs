@@ -165,8 +165,10 @@ public static class SmallSignalAssembler
 
         // COI measurement rows over the machine states (length n, only machine entries populated).
         // d(f) [Hz]      = f0 * sum_i M_i d(omega)_i / M_T
-        // d(f)/dt [Hz/s] = f0/M_T * sum_i M_i (d(omega)_i/dt), machine-driven part only (breaks the algebraic loop):
-        //                = f0/M_T * ( -sum_j (col-sum K_L)_j d(delta)_j  -  sum_i D_i d(omega)_i )
+        // d(f)/dt [Hz/s] = f0/M_T * sum_i M_i (d(omega)_i/dt)
+        //                = f0/M_T * ( -sum_j (col-sum K_L)_j d(delta)_j  -  sum_i D_i d(omega)_i  +  sum_inv dP_inv_pu )
+        // The machine terms are filled here and the inverter power terms below, before any block reads the row. The
+        // inverter power is a lag state with no feedthrough (PowerOutputRow on the state), so there is no algebraic loop.
         var dfRow = new double[n];
         var rocofRow = new double[n];
         for (int i = 0; i < g; i++) dfRow[g + i] = f0 * mArr[i] / mT;
@@ -189,6 +191,18 @@ public static class SmallSignalAssembler
         {
             int bus = p.GeneratorBuses[i];
             states.Add(new StateLabel(g + i, StateKind.SwingSpeed, bus, $"d.omega_gen{bus}"));
+        }
+
+        // The inverters' own power in the RoCoF row: f0/M_T * sum_i M_i (dP_inv_pu / M_T) = f0/M_T * dP_inv_pu.
+        int pOff = 2 * g;
+        foreach (InverterLinearBlock b in blocks)
+        {
+            for (int r = 0; r < b.Order; r++)
+            {
+                double coeffPu = b.PowerOutputRow[r] / baseMva;
+                if (coeffPu != 0.0) rocofRow[pOff + r] += f0 / mT * coeffPu;
+            }
+            pOff += b.Order;
         }
 
         int off = 2 * g;

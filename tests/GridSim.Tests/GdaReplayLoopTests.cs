@@ -69,7 +69,7 @@ public class GdaReplayLoopTests
     public void Series_round_trips_through_json_and_load_enforces_the_horizon()
     {
         GdaTimeSeries original = GdaTimeSeries.Synthetic("day", new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), 5, 30);
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-ts-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-ts-{Guid.NewGuid():N}.json");
         try
         {
             original.Save(path);
@@ -97,8 +97,8 @@ public class GdaReplayLoopTests
             new(Now.AddHours(-ForwardInferenceGuard.HorizonHours), 1.0),       // exactly on the horizon
         });
 
-        string insidePath = Path.Combine(Path.GetTempPath(), $"gridsim-ts-{Guid.NewGuid():N}.json");
-        string boundaryPath = Path.Combine(Path.GetTempPath(), $"gridsim-ts-{Guid.NewGuid():N}.json");
+        string insidePath = TestTemp.Under($"gridsim-ts-{Guid.NewGuid():N}.json");
+        string boundaryPath = TestTemp.Under($"gridsim-ts-{Guid.NewGuid():N}.json");
         try
         {
             inside.Save(insidePath);

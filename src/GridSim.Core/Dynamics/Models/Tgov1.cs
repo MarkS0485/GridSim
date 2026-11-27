@@ -37,7 +37,7 @@ public sealed class Tgov1 : IRmsGovernor
     public Tgov1(double droopPu, double valveTimeSeconds, double reheatLeadSeconds, double reheatLagSeconds,
         double turbineDampingPu = 0.0, double valveMinPu = 0.0, double valveMaxPu = double.PositiveInfinity)
     {
-        if (droopPu <= 0.0) throw new ArgumentOutOfRangeException(nameof(droopPu), "Droop R must be > 0.");
+        if (!(droopPu > 0.0) || !double.IsFinite(droopPu)) throw new ArgumentOutOfRangeException(nameof(droopPu), "Droop R must be > 0.");   // DYN-11: NaN too
         _rDroop = droopPu;
         _dt = turbineDampingPu;
         if (!(valveTimeSeconds >= 0.0) || !double.IsFinite(valveTimeSeconds))

@@ -112,7 +112,7 @@ public class PsseRawDeviceWriterTests
     [Fact]
     public void Convert_writes_raw_and_proves_the_round_trip()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-convert-raw-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-convert-raw-" + Guid.NewGuid().ToString("N"));
         try
         {
             string output = Path.Combine(dir, "case14.raw");

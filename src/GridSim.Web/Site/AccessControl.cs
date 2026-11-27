@@ -47,6 +47,10 @@ namespace GridSim.Web.Site;
 /// configuration) maps neither <c>/api</c> nor <c>/ws/sim</c>, so this changes nothing there; the anonymous pages,
 /// <c>/compliance</c>, <c>/health</c> and the read-only <c>/api</c> calls are not gated.</para>
 ///
+/// <para><b>Per request.</b> The Operator default is granted per request, and only to one that reached the host directly from
+/// a loopback peer with no <c>X-Forwarded-*</c> or <c>Forwarded</c> header (<see cref="IsDirectLoopback"/>). A request relayed
+/// by a reverse proxy that passes a loopback <c>Host</c> is an anonymous Viewer.</para>
+///
 /// <para><b>On a denial.</b> The action does not run: REST answers 403 with the reason, <c>/ws/sim</c> answers an error frame
 /// and leaves the connection's session exactly as it was. When the host has an audit log (<c>Audit:LogPath</c>), one
 /// <see cref="SecurityEventKind.AccessDenied"/> entry is written through <see cref="AccessDenialAudit"/>, the same path the
@@ -113,6 +117,32 @@ public sealed class AccessControl
     /// <summary>The band every <c>/ws/sim</c> control frame needs: selecting a stream source and driving a session.</summary>
     public const OperationRole SimControlRole = OperationRole.Operator;
 
+    /// <summary>The prefix of a dashboard action's operation name (<c>dashboard.play</c>, <c>dashboard.trip</c>, <c>dashboard.harmonics</c>, ...).
+    /// Driving a LIVE session from the page (play, step, speed, step size, trip) needs <see cref="SimControlRole"/>, as the same controls on
+    /// <c>/ws/sim</c> do; the on-demand harmonics study needs <see cref="SolveRole"/>, as <c>POST /api/solve</c> does. Watching a session and
+    /// driving a replay need no more than the anonymous role.</summary>
+    public const string DashboardOperationPrefix = "dashboard.";
+
+    /// <summary>Operation name of a workbench study run (<c>/workbench/&lt;id&gt;</c>, RUN): an on-demand analysis, so <see cref="SolveRole"/>.</summary>
+    public const string WorkbenchStudyOperation = "workbench.study";
+
+    /// <summary>
+    /// The page-side form of <see cref="Require"/>: null when <paramref name="identity"/> holds <paramref name="required"/>, else the refusal text
+    /// to show (the denial is audited exactly as <see cref="Require"/> audits it).
+    /// </summary>
+    public string? RefusalFor(IdentityContext identity, OperationRole required, string operation)
+    {
+        try
+        {
+            Require(identity, required, operation);
+            return null;
+        }
+        catch (AccessDeniedException ex)
+        {
+            return ex.Message;
+        }
+    }
+
     private readonly AccessDenialAudit _audit;
 
     /// <summary>Build the access control with a fixed anonymous role and the denial recorder.</summary>
@@ -129,6 +159,52 @@ public sealed class AccessControl
         _audit = audit;
     }
 
+    /// <summary>
+    /// The band a caller needs before the dashboard starts its session, or null when none is needed. A live solver session
+    /// (<paramref name="isBridgeFeed"/> false) can be driven by its holder, so the interactive pass needs
+    /// <see cref="SimControlRole"/>; the prerender pass is unchanged (its component is discarded when the circuit's own pass
+    /// starts). A bridge feed or raw replay (<c>bridge:&lt;case&gt;@&lt;source&gt;</c>) only shows what the feed sends and needs no
+    /// role. A private model needs the higher of <see cref="SimControlRole"/> and
+    /// <see cref="GridSim.Web.Model.CaseCatalog.PrivateListingRole"/>.
+    /// </summary>
+    public static OperationRole? DashboardSessionRole(bool isPrivate, bool isInteractive, bool isBridgeFeed)
+    {
+        if (isPrivate)
+            return GridSim.Web.Model.CaseCatalog.PrivateListingRole > SimControlRole
+                ? GridSim.Web.Model.CaseCatalog.PrivateListingRole : SimControlRole;
+        return isInteractive && !isBridgeFeed ? SimControlRole : null;
+    }
+
+    /// <summary>True for a bridge feed or raw replay id (<c>bridge:&lt;case&gt;@&lt;source&gt;</c>), which the dashboard only watches.</summary>
+    public static bool IsBridgeFeedId(string? caseId) => caseId is not null && caseId.StartsWith("bridge:", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Label of the marker identity the host adds to a request that is not a direct loopback request.</summary>
+    public const string NotDirectLoopbackLabel = "gridsim:not-direct-loopback";
+
+    /// <summary>
+    /// True when the request came straight from a loopback peer (or has no network peer at all) and carries no <c>X-Forwarded-*</c> or <c>Forwarded</c>
+    /// header. Only such a request may hold the loopback anonymous default. Call it before the forwarded-headers
+    /// middleware, which rewrites the peer address and removes those headers.
+    /// </summary>
+    public static bool IsDirectLoopback(System.Net.IPAddress? remote, IHeaderDictionary headers)
+    {
+        ArgumentNullException.ThrowIfNull(headers);
+        if (remote is not null && !System.Net.IPAddress.IsLoopback(remote)) return false;   // null: no network peer (in-process or a local socket)
+        foreach (string name in headers.Keys)
+            if (name.StartsWith("X-Forwarded-", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "Forwarded", StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
+    }
+
+    /// <summary>Mark <paramref name="user"/> as not a direct loopback request, so <see cref="IdentityFor"/> withholds the loopback default.</summary>
+    public static ClaimsPrincipal MarkNotDirectLoopback(ClaimsPrincipal? user)
+    {
+        ClaimsPrincipal p = user ?? new ClaimsPrincipal();
+        p.AddIdentity(new ClaimsIdentity(authenticationType: null) { Label = NotDirectLoopbackLabel });
+        return p;
+    }
+
     /// <summary>The role of a caller who is not signed in.</summary>
     public OperationRole AnonymousRole { get; }
 
@@ -137,6 +213,9 @@ public sealed class AccessControl
 
     /// <summary>True when denials are written to an audit log.</summary>
     public bool AuditsDenials => _audit.IsConfigured;
+
+    /// <summary>The host's audit recorder for security events (denials, bridge reconnects); records nothing when the host keeps no log.</summary>
+    public AccessDenialAudit Audit => _audit;
 
     /// <summary>A one-line description for the start-up log.</summary>
     public string Description =>
@@ -205,6 +284,11 @@ public sealed class AccessControl
     {
         string subject = "anonymous";
         OperationRole role = AnonymousRole;
+        // The loopback default (an unset GridSim:AnonymousRole on a loopback-only instance) holds for a request that reached
+        // the host directly from a loopback peer with no proxy header. A request the host marked otherwise (a reverse proxy
+        // in front that passes a loopback Host) is a Viewer.
+        if (AnonymousRoleIsDefault && role > OperationRole.Viewer && user is not null && user.Identities.Any(i => i.Label == NotDirectLoopbackLabel))
+            role = OperationRole.Viewer;
         bool named = false;
         if (user is not null)
         {
@@ -286,6 +370,10 @@ public sealed class AccessDenialAudit
     private readonly Lock _gate = new();
     private readonly AuditRunRecorder? _recorder;
     private readonly AuditRecorderOptions _options;
+    // Set when the host has an audit log but runs no resident estimator: there is no run recorder, so each denial is
+    // written by opening this log for that one entry (AuditRunRecorder.AppendSecurityEvent) and closing it.
+    private readonly string? _ownLogPath;
+    private readonly string? _ownAnchorPath;
 
     /// <summary>The recorder for a host with no audit log: denials are refused and not recorded.</summary>
     public static AccessDenialAudit None { get; } = new(null, null);
@@ -300,8 +388,23 @@ public sealed class AccessDenialAudit
         _options = options ?? AuditRecorderOptions.None;
     }
 
+    /// <summary>
+    /// Record denials in the host's own audit log at <paramref name="logPath"/>, for a host that runs no resident
+    /// estimator (so has no run recorder). Nothing is held open: each denial opens the log, appends one
+    /// <see cref="SecurityEventKind.AccessDenied"/> entry and closes it, with the anchor and sinks of
+    /// <paramref name="options"/>.
+    /// </summary>
+    public AccessDenialAudit(string logPath, string? anchorPath, AuditRecorderOptions options)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logPath);
+        ArgumentNullException.ThrowIfNull(options);
+        _ownLogPath = Path.GetFullPath(logPath);
+        _ownAnchorPath = string.IsNullOrWhiteSpace(anchorPath) ? null : anchorPath;
+        _options = options;
+    }
+
     /// <summary>True when denials are recorded (the host has an audit log).</summary>
-    public bool IsConfigured => _recorder is not null;
+    public bool IsConfigured => _recorder is not null || _ownLogPath is not null;
 
     /// <summary>The one-line, secret-free reason recorded for a denial: the operation, the required and actual bands,
     /// the subject and the request's correlation id (both reduced to letters, digits and <c>. _ - @ /</c>).</summary>
@@ -318,20 +421,34 @@ public sealed class AccessDenialAudit
     /// must not be replaced by an audit error. The failure is reported on standard error instead.
     /// </summary>
     public void Record(IdentityContext identity, AccessDeniedException denial)
+        => RecordEvent(SecurityEventKind.AccessDenied, ReasonFor(identity, denial));
+
+    /// <summary>
+    /// Record one security event of any kind in the host's audit log, by the same routes and with the same never-throws
+    /// rule as <see cref="Record"/> (a bridge reconnect attempt or give-up is recorded this way). Nothing is written
+    /// when the host has no audit log.
+    /// </summary>
+    public void RecordEvent(SecurityEventKind kind, string reason)
     {
-        string reason = ReasonFor(identity, denial);
         AuditRunRecorder? recorder = _recorder;
-        if (recorder is null)
+        if (recorder is null && _ownLogPath is null)
             return;   // no audit log configured: the refusal is the whole answer
         lock (_gate)
         {
+            string logName = recorder?.FilePath ?? _ownLogPath!;
             try
             {
+                if (recorder is null)
+                {
+                    AuditRunRecorder.AppendSecurityEvent(_ownLogPath!, AuditEvent.DefaultActor(), ProvenanceTag.Synthetic,
+                        _ownAnchorPath, _options, kind, reason);
+                    return;
+                }
                 if (!recorder.IsFinished)
                 {
                     try
                     {
-                        recorder.RecordSecurityEvent(SecurityEventKind.AccessDenied, reason);
+                        recorder.RecordSecurityEvent(kind, reason);
                         return;
                     }
                     catch (InvalidOperationException) when (recorder.IsFinished)
@@ -340,14 +457,14 @@ public sealed class AccessDenialAudit
                     }
                 }
                 AuditRunRecorder.AppendSecurityEvent(recorder.FilePath, recorder.Actor, recorder.Provenance,
-                    recorder.AnchorPath, _options, SecurityEventKind.AccessDenied, reason);
+                    recorder.AnchorPath, _options, kind, reason);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException
                 or ArgumentException or System.Security.Cryptography.CryptographicException)
             {
                 // AuditLogTamperException is an IOException, so a log that no longer verifies lands here too.
                 Console.Error.WriteLine(
-                    $"GridSim.Web: error: an access denial ({reason}) could not be recorded in the audit log '{recorder.FilePath}': {ex.Message}");
+                    $"GridSim.Web: error: a security event ({kind}: {reason}) could not be recorded in the audit log '{logName}': {ex.Message}");
             }
         }
     }

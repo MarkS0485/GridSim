@@ -44,7 +44,7 @@ internal sealed class UiTemplateFixture : IDisposable
         }
         """;
 
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-templates-4-4-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-templates-4-4-" + Guid.NewGuid().ToString("N"));
 
     public UiTemplateFixture(Func<string, string>? edit = null, bool library = false)
     {

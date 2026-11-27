@@ -65,7 +65,7 @@ public static class PowerElectronicsRunner
         ArgumentNullException.ThrowIfNull(converters);
         NodalResult run = NodalSolver.Run(net, dt, duration, probes, events, options);
         string timing = "Switching instants (gate edges, diode and thyristor turn-on, current-zero turn-off, scheduled events) are quantised UP to the "
-            + $"{dt:R} s step grid and are never interpolated: the timing error is at most one step ({dt:R} s) and a current-zero turn-off may overshoot by at most "
+            + FormattableString.Invariant($"{dt:R} s step grid and are never interpolated: the timing error is at most one step ({dt:R} s) and a current-zero turn-off may overshoot by at most ")
             + "one step of current. Every switching decision uses the last accepted state, so the run is bit-identical on every machine and thread count."
             + (options is { EventRule: NodalEventRule.BackwardEulerStep } ? " Each switching step is one backward-Euler step." : "");
         return new PowerElectronicsResult(run, converters.Select(c => (c.Name, c.ModelClass, c.Description)).ToArray(), timing);

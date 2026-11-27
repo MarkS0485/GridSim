@@ -23,6 +23,8 @@ app, case editor) first; the test harness and the build tools follow. The contai
 | `GDA_ROOT` | unset | the same two | Second fallback for `--root`, read only when `GDA_DATA_ROOT` is unset or empty; the same missing-folder rule applies. With no `--root` and neither variable set, `gda` prints its usage and exits 2. |
 | `GRIDSIM_LICENCE` | unset | licence resolution in the command line tool, the desktop app, the web app and the case editor | A `GSK1 ...` licence key for one run. Order: an explicit key (web `Licence:Key`), then this variable, then the installed licence file, then the free Personal tier. A key that is present but rejected leaves the run at the free tier; `gridsim licence status` shows why. |
 | `GRIDSIM_LICENCE_FILE` | unset (the per-user `GridSim/licence.gridsim`) | the same programs | The licence file to read at start-up and to install a licence to, in place of the per-user one. Blank counts as unset. The test suite sets it for every command line run so a test never sees the machine's licence. |
+| `GRIDSIM_JOURNAL` | unset | the command line tool | A path switches the run journal on for each run, writing to that file (`gridsim-journal/1`, [technical ch. 42](<../technical/0042 Run journal and breaking-change validation.md>)); `off` switches it off whatever `--journal` or the config file say. `--journal <file>` on the command line wins over a path here. A network or device path gives a warning and no journal. `breaking-change validate` and `import` use it as their default journal. |
+| `GRIDSIM_JOURNAL_CONFIG` | unset (the per-user `GridSim/journal.json`) | the command line tool | The journal config file to read in place of the per-user one. The file is `{"schema":"gridsim-journal-config/1","enabled":true,"path":null,"snapshot":false,"maxSegmentBytes":67108864}`: `enabled` switches the journal on, `path` null means `GridSim/journal/journal.jsonl` in the per-user application data folder, `snapshot` keeps each input in the snapshot store, and `maxSegmentBytes` is the size at which the journal is rotated. A file that cannot be read gives one warning and the run goes on without a journal. The test suite points it at a file that does not exist, so a test never writes the user's journal. |
 | `GRIDSIM_CRASH_DIR` | unset | the command line tool and the desktop app (`CrashLog`) | The folder an unhandled-exception crash log is written to. Unset, the log goes to `GridSim/crash` under the per-user data folder (`%LOCALAPPDATA%\GridSim\crash` on Windows, `~/.local/share/GridSim/crash` on Linux, `~/Library/Application Support/GridSim/crash` on macOS), and to the system temporary folder if that cannot be created (on Linux and macOS the log is created owner-only there). |
 | `ROCM_PATH` | `/opt/rocm` | the ROCm GPU interop (`GridSim.Gpu`) | The root of the ROCm install: the native libraries are also searched under `<ROCM_PATH>/lib`. |
 | `GRIDSIM_PYTHON` | unset | `gridsim crossval` (`PythonLocator`) | The Python interpreter the sidecar runs with: a path, or a name looked up on PATH. When set, that one and no other; if it names nothing that exists, the run fails. |
@@ -266,7 +268,7 @@ API are described in [ch. 9](<0009 The web app and REST and WebSocket API.md>).
 | `Auth:SlidingHours`, `Auth:AbsoluteDays` | `8`, `14` | How long a sign-in lasts: the cookie renews while used and must be signed in again after `Auth:SlidingHours` idle, and in all after `Auth:AbsoluteDays` from sign-in. Whole numbers (hours 1 to 8760, days 1 to 365); the days must not be shorter than the hours; anything else stops start-up. A role removed at the authority takes effect at the next sign-in. |
 | `Auth:ApplicationName`, `Auth:KeysDirectory`, `Auth:CookieName`, `Auth:CookieDomain` | `GridSim`, `App_Data/keys` under the content root, `.AspNetCore.Identity.Application`, no domain | Recognise an estate single-sign-on cookie (decrypt only; no page requires sign-in). |
 | `Sso:Enabled`, `Sso:Authority`, `Sso:IsAuthority`, `Sso:AllowedClients`, `Sso:TicketSeconds` | `false`, empty, `false`, empty list, `120` | Cross-domain single sign-on settings. With the shipped settings every visitor is anonymous. |
-| `Site:GoogleTagId`, `Site:AnalyticsScriptUrl`, `Site:AnalyticsCollectorUrl`, `Site:ShareImageUrl`, `Site:Organisation*`, `Site:FooterLinks:N:*`, `Site:SecurityTxt:*` | all empty; `Site:AnalyticsSiteName` is `GridSim` | The deployment's own analytics, share card, organisation block, footer links and `/.well-known/security.txt`. With none set the page loads no third-party script and security.txt answers 404; a malformed value stops start-up naming the setting. The full list is in `docs/developer/deploy/README.md`. |
+| `Site:ShareImageUrl`, `Site:Organisation*`, `Site:FooterLinks:N:*`, `Site:SecurityTxt:*` | all empty | The deployment's own share card, organisation block, footer links and `/.well-known/security.txt`. With none set security.txt answers 404; a malformed value stops start-up naming the setting. The page never loads a script from another origin: the analytics settings (`Site:GoogleTagId`, `Site:AnalyticsScriptUrl`, `Site:AnalyticsCollectorUrl`, `Site:AnalyticsSiteName`) were removed in 2.1.140, and a host given one exits with code 78 naming it. The full list is in `docs/developer/deploy/README.md`. |
 | `Analytics:LogPath` | `gridsim-usage/usage.jsonl` in the folder above the app's own folder (`AppContext.BaseDirectory`) | The visit log file. Best effort: the file is opened for append at start-up (created empty when missing), and a path whose folder cannot be created or whose file cannot be written disables the log without stopping the app, with a `warning: the usage log is off` line on stderr naming the path and the error. A later append that fails is reported on stderr once. |
 | `Analytics:MaxLogBytes` | `16777216` (16 MiB) | The usage log's rotation size (bug #188). When the live file passes it, the file is renamed `usage-<UTC stamp>.jsonl` beside it (never overwriting) and a fresh one starts; the number of visits in every rotated file is kept in `<log>.visits`, so start-up reads that number and the live file only. A whole number of bytes, at least 4096; anything else stops start-up naming the setting. |
 
@@ -297,6 +299,32 @@ source reads them. You set them when you run the estimated-state workflow
 | `GRIDSIM_CLI` | `NetworkModel/build_estimated_state.py` and `calibrate_sigmas.py` | Path to the command line tool (`gridsim.exe`). Default: the repository's Release build if present, else Debug. Build Release first: backfill days are CLI-bound and Release is 2 to 3 times faster per period. A GDA checkout that predates the rename of the executable to `gridsim` needs this set to the new name. |
 | `SPINE_ETYS` | `NetworkModel/spine/build_spine.py` | `1` opts in to the ETYS 2025 circuit overlay. The overlay describes today's network, and under it the 2019 event day regressed from 46/46 chi-square clean to 32/46, so leave it off for backfill. |
 | `GRIDRADAR_API_TOKEN` | `Ingest/gridradar/gridradar_acquire.py` | The PMU-feed access token (a gitignored `config.json` beside the script works too). Without it the Gridradar products are not built. |
+
+## Containers
+
+GridSim has two container images, both built locally from the repository: `Dockerfile` for the web app and
+`Dockerfile.cli` for the `gridsim` command line tool (with the GridSim.Core library it carries). Published images are on
+the roadmap, pending broader validation, so building them yourself is the way to get one today.
+
+```bash
+docker build -f Dockerfile.cli -t gridsim-cli .
+docker run --rm gridsim-cli                       # the help
+docker run --rm gridsim-cli case9 --once          # a bundled case, nothing mounted
+docker run --rm -v "$PWD:/work" -v "$PWD/licence:/licence:ro" gridsim-cli pf case14
+```
+
+The command line image works in `/work`: mount your case folder there and results are written back into it. The
+bundled cases are inside the image. The web image runs under Docker Compose (`docker compose up -d --build`); its
+settings are in `compose.yml` and `docs/developer/deploy/README.md`.
+
+Both images set `GRIDSIM_LICENCE_FILE=/licence/licence.gridsim`. Mount a folder holding `licence.gridsim` at `/licence`,
+read-only (`compose.yml` mounts `./licence` there for the web app). With nothing mounted, or an empty folder, the
+program runs at the free tier and starts as usual. A licence is never built into an image; to pass the key itself,
+set `GRIDSIM_LICENCE` (either image) or `Licence__Key` (the web app). `gridsim licence import` cannot write to the
+read-only mount and says so: copy the file into the host folder instead.
+
+Neither image needs the internet once built. The licence check is offline, and the only connections opened are the
+ones a user starts with an address of their own. Building an image downloads the base images and NuGet packages.
 
 ## Build settings that affect configuration
 

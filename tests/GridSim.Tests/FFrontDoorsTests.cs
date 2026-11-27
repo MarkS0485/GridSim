@@ -14,7 +14,7 @@ public sealed partial class FFrontDoorsTests
     /// <summary>A fresh temporary folder for one test's input files.</summary>
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-f-front-doors-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-f-front-doors-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

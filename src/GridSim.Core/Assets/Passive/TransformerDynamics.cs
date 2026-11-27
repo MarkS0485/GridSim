@@ -143,7 +143,9 @@ public sealed class TransformerDynamics : IPassiveAssetDynamics
         // load-loss term, the same I^2 R drive as LineThermalDynamics). The state used to chase K itself, so at K = 0.5
         // it settled at 0.50 instead of 0.25 and the derate was twice too large (0.80 vs 0.64 at K = 0.8).
         double k = ctx.LoadingFraction;
-        _thermal = ThermalLag.Step(_thermal, Math.Max(k * k, _ambient), dt, _thermalTauS);
+        // SEC-29: a non-finite loading is the context's "no network value": the thermal state holds, as the voltage path
+        // does (Math.Max(NaN, ambient) is NaN, and the lag then held NaN for the rest of the run).
+        if (double.IsFinite(k)) _thermal = ThermalLag.Step(_thermal, Math.Max(k * k, _ambient), dt, _thermalTauS);
         double derate = _derateFull * Math.Clamp(_thermal, 0.0, 1.0);
 
         return new PlantStateUpdate(TapRatio: _tap, RatingDerateFraction: derate, ThermalStatePu: _thermal);

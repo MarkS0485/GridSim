@@ -6,7 +6,7 @@ namespace GridSim.Tests;
 /// <summary>R4-08: <c>gridsim user-model</c> as the built CLI: list the library, check a shipped id or a document file, refuse a bad one naming the object.</summary>
 public sealed class R408UserModelCliTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r408-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r408-" + Guid.NewGuid().ToString("N"));
 
     public R408UserModelCliTests() => Directory.CreateDirectory(_dir);
 

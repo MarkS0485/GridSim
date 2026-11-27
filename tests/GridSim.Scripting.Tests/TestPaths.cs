@@ -15,7 +15,7 @@ internal static class TestPaths
 
     private static readonly Lazy<string> FrequencyOnlyGb = new(() =>
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-script-gb-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-script-gb-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         foreach (string f in Directory.GetFiles(GbFolder, "*.json"))
         {
@@ -32,7 +32,7 @@ internal static class TestPaths
 
     public static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-script-tests-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-script-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

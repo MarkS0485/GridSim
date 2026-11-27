@@ -16,7 +16,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Cf6RmsEventsExportTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-cf6-rmsx-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-cf6-rmsx-" + Guid.NewGuid().ToString("N"));
 
     public Cf6RmsEventsExportTests() => Directory.CreateDirectory(_dir);
 

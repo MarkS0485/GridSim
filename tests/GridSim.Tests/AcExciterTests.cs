@@ -198,15 +198,19 @@ public class AcExciterTests
         const string machine = "     6 'GENROU' 1   7.0  0.03  0.50  0.05  3.0  0.0  1.60  1.55  0.25  0.40  0.18  0.12  0.0  0.0 /";
         string dyr = machine + "\n     6 'EXAC1' 1   0.0  0.1  0.5  400.0  0.02  9.0  -5.4  0.8  0.03  1.0  0.2  0.38  1.0  4.18  0.1  3.14  0.03 /";
         PsseDyrResult r = PsseDyrReader.Read(dyr, raw, "case14", new PsseDyrOptions { SourceName = "exac1.dyr" });
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-exac1-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-exac1-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
             string path = Path.Combine(dir, "exac1.dynamics.json");
             File.WriteAllText(path, r.Json);
-            // E1 4.18 above E2 3.14: the saturation fit refuses it, naming EXAC1 (the values arrived where the DYR put them).
-            var ex = Assert.Throws<InvalidDataException>(() => MachineDynamicsLoader.Load(path, SchemasDir, raw.Model));
-            Assert.Contains("EXAC1: the saturation points need E2 above E1 (got E1 4.18, E2 3.14)", ex.Message, StringComparison.Ordinal);
+            // DYN-01 (re-pinned): E1 4.18 above E2 3.14 is IEEE 421.5's own order (E1 at the ceiling). A quadratic through
+            // two points does not depend on their order, so the record loads (it used to be refused) and fits the same
+            // curve as the ascending order, bit for bit.
+            MachineDynamicsEntry desc = Assert.Single(MachineDynamicsLoader.Load(path, SchemasDir, raw.Model).Entries);
+            IReadOnlyDictionary<string, double> dp = desc.Exciter!.Params;
+            Assert.Equal((4.18, 0.1, 3.14, 0.03), (dp["acSatE1"], dp["acSatSe1"], dp["acSatE2"], dp["acSatSe2"]));
+            Assert.Equal(AcExciter.SaturationFit("EXAC1", 3.14, 0.03, 4.18, 0.1), AcExciter.SaturationFit("EXAC1", 4.18, 0.1, 3.14, 0.03));
         }
         finally { Directory.Delete(dir, true); }
 

@@ -57,7 +57,7 @@ per-unit results are unaffected.
 |---|---|---|
 | `gridsim case14`, `gridsim uk` | A built-in or shipped case by name | [Built-in names](#built-in-names) |
 | `gridsim case33bw.m`, `gridsim --mpc <file>` | A MATPOWER `.m` file by path or by library name | [MATPOWER files](#matpower-files) |
-| `gridsim grid.raw` | A PSS/E RAW file (revision 30, 33, 34 or 35) by path | [PSS/E RAW files](#pss-e-raw-files) |
+| `gridsim grid.raw` | A PSS/E RAW file (revision 30, 33, 34 or 35) by path | [PSS/E RAW files](#psse-raw-files) |
 | `gridsim grid.uct` | A UCTE-DEF file by path | [UCTE-DEF files](#ucte-def-files) |
 | `gridsim --dir <folder>`, `gridsim pf <folder>` | A JSON case folder | [JSON case directories](#json-case-directories) |
 | `gridsim pf <manifest>.json` | A JSON v2 case manifest | [JSON v2 files](#json-v2-files) |
@@ -263,7 +263,8 @@ note: case33bw.m: raw engineering units detected (branch impedance in ohms, dema
 
 ## PSS/E RAW files
 
-`gridsim <file>.raw` loads a PSS/E power-flow RAW file of revision 30, 33, 34 or 35, and any verb that takes a case
+`gridsim <file>.raw` loads a PSS/E power-flow RAW file of revision 30, 33, 34, 35 or 36 (and `gridsim <file>.rawx` a RAWX
+file, see below), and any verb that takes a case
 takes a `.raw` path in the same place as a `.m` file (`gridsim nminus1 grid.raw`, `gridsim convert grid.raw grid.m`).
 The revision comes from the REV field of the first line, or from `PSS/E-NN` in its comment; a file that gives neither
 needs `--psse-revision <n>` (the UKGDS distribution cases are such files, in the revision 30 layout:
@@ -322,8 +323,8 @@ and 35 only.
   not 0) are not modelled. A model with links goes to a Newton engine (the backward/forward sweep refuses them), and the
   MATPOWER, JSON and PSS/E writers refuse it rather than write a case without them.
 - **VSC DC links.** Each in-service link is solved with the AC power flow by PSS/E's VSC model: one converter holds the
-  DC voltage (TYPE 1), the other an active power order (TYPE 2, DCSET MW drawn from its bus; negative sends power to
-  it); converter losses max(MINLOSS, ALOSS + BLOSS x Idc) come from the AC side and the DC line loss is R Idc^2. A MODE
+  DC voltage (TYPE 1), the other an active power order (TYPE 2, DCSET MW fed into its AC bus, as PSS/E defines it;
+  negative draws power from the bus); converter losses max(MINLOSS, ALOSS + BLOSS x Idc) come from the AC side and the DC line loss is R Idc^2. A MODE
   1 converter holds its bus voltage at ACSET within MINQ..MAXQ (a limit reached releases the bus); a MODE 2 converter
   runs at power factor ACSET. When a converter's apparent power exceeds min(SMAX, sqrt(3) V base kV IMAX) its order and
   reactive power are reduced by its weighting PWF (at a fixed power factor both scale together; the DC voltage
@@ -456,11 +457,75 @@ fixed at BINIT, as above.
 - **Refused.** For MODSW 1, VSWHI not above VSWLO; for MODSW 2, VSWHI below VSWLO; VSWLO not above 0; a negative block
   count. Each refusal names the line.
 
+### Area control and remote regulation
+
+Two more global switches, used by `pf` only. Without them the model and the notes are exactly as before.
+
+- `--area-control` keeps the AREA records: swing bus ISW, desired export PDES and tolerance PTOL, both in MW as the file
+  gives them. It also keeps each bus's area and each branch's metered end: the MET field (revision 33 and later), a
+  negative J, or NMETR 1 on a two-winding transformer; otherwise bus I. `pf` then holds each area's net export at PDES
+  by moving the units at ISW. The area holding the swing bus, an area with ISW 0, an area whose ISW is not one of
+  its buses, an area whose ISW has no in-service unit, and an area with PTOL 0 MW or less are reported only, each
+  counted in a note. None of them stops the run.
+- `--remote-vreg` makes each in-service unit at a PV bus whose IREG names another bus, a PQ bus, hold that bus at VS.
+  `pf` moves the unit's own set point between solves to do it. The usual note, that the unit holds VS at its own bus,
+  is replaced by one counting the controls. A bus that is not PV, a regulated bus that is PV or the swing bus, and a
+  second bus naming a regulated bus that is already taken (PSS/E RMPCT sharing) keep the old behaviour, each counted in
+  a note.
+
+See `pf` in [ch. 19](<0019 CLI reference.md#pf>).
+
+### Revision 36 and RAWX
+
+**Revision 36.** PSS/E 36 adds a NAME of up to 40 characters to load, fixed shunt, generator, switched shunt and induction
+machine records, a DROOPNAME to the generator and a BYPASS flag to the branch, has switching devices name a rating table,
+and adds the sections voltage droop control, switching device rating table, load type, interface and interface element
+(and SWDRATNAM lines in the system-wide data). GridSim reads a revision 36 file by the `@!` heading line that PSS/E writes
+above each record group: the heading names the fields, so each load, fixed shunt, generator, branch, system switching
+device, switched shunt and induction machine record is placed by name and read exactly as its revision 35 equivalent is (the
+same model, bit for bit). NAME, DROOPNAME and the rating-table names are dropped; the sections GridSim has no model for are
+read past and counted in a note. A record group with no heading line is refused, naming the line, rather than guessed at;
+so is a section terminator with no `END OF x DATA, BEGIN y DATA` label (the label tells the sections apart), a section
+neither revision defines, and a branch with BYPASS 1 (PSS/E treats it as a zero-impedance line; clear the flag or write the
+branch as a switching device). Bus, transformer, area, DC, FACTS, zone, owner and substation records are read as in
+revision 35. Revision 36's field positions are not in the public release notes, which list the changes only, so the tests
+use files written from those notes and the revision 35 layout; no PSS/E-written revision 36 file has been read.
+
+**RAWX.** A RAWX file (PSS/E's JSON form, from version 35) is one object with a `network` member. Each section is an object
+with `fields` and `data`: `caseid` holds one flat array of values, every other section an array of rows. Fields are found by
+name, case-insensitively, in any order; a field left out takes its default and an extra field is ignored. GridSim reads
+caseid, bus, load, fixshunt, generator, acline, sysswd, transformer, area, zone, owner, swshunt and indmach, and also
+twotermdc (the rectifier's and inverter's fields with the suffixes r and i: `ipr`, `ipi`, ...), vscdc (the two
+converters' with 1 and 2: `ibus1`, `ibus2`, ...), ntermdc with its ntermdcconv, ntermdcbus and ntermdclink rows (each
+naming its link in `name`; the counts nconv, ndcbs and ndcln must match), facts, impcor (one row per point: itable, tap,
+refact, imfact), msline and iatransfer, and gives the same model as the RAW file with the same data. These names are the
+public RAWX layout as PowSyBl's PSS/E model and the surge-io reader use it. A DC row without its converter buses is
+refused naming its section. GNE and substation data in RAWX are refused naming the section, not dropped; write that
+case as RAW. The revision (`rev`) must be 35 or 36. The file is recognised by its
+content as well as by `.rawx`.
+
 ### Sequence data (SEQ)
 
-A PSS/E sequence data file (`.seq`, revision 30 layout) gives the fault studies (`fault`, `iec60909`) their sequence
-data: `--seq-data grid.seq` applies it to the `.raw` case the run loads. The file states its revision 30 or none; with
-none, the `.raw` case must be revision 30 (later revisions add transformer fields this layout would misread).
+A PSS/E sequence data file (`.seq`) gives the fault studies (`fault`, `iec60909`) their sequence
+data: `--seq-data grid.seq` applies it to the `.raw` case the run loads. The file states its revision (30, 33, 34, 35 or 36) or
+none; with none, the `.raw` case must be revision 30 (later revisions add transformer fields this layout would misread). A
+file of revision 33 or later needs a `.raw` case of revision 33 or later. The text below describes the revision 30 layout; the
+later layout follows it.
+
+**Revisions 33 to 36.** One GENERATOR section holds `I, ID, ZRPOS, ZXPPDV, ZXPDV, ZXSDV, ZRNEG, ZXNEGDV, ZR0, ZX0DV, CZG, ZRG,
+ZXG, REFDEG`: ZXPPDV is the subtransient reactance X''d, ZXNEGDV the negative-sequence reactance X2 and ZR0 + jZX0DV the
+zero-sequence impedance, as ZXPOS, ZXNEG and RZERO + jXZERO are in revision 30. A generator grounding impedance (ZRG, ZXG
+not 0) has no element in GridSim's zero-sequence network and is unmodelled. The sections then follow in this order: LOAD,
+zero-sequence non-transformer branch (the revision 30 fields), mutual (the revision 30 fields), transformer, switched shunt,
+fixed shunt and induction machine; revision 35 and later put a system-wide section first (keyword lines, read past) and the
+two non-conventional source sections last. The transformer record is `I, J, K, ICKT, CZ0, CZG, CC, RG1, XG1, R01, X01, RG2,
+XG2, R02, X02, RNUTRL, XNUTRL`: R01 + jX01 is the zero-sequence path impedance on the system base, and the connection code CC
+is 1 to 4 (revisions 33, 34) or 11 to 14 (revisions 35, 36) for the same four earth paths as in revision 30; a connection
+CC 2 or 12 folds RG1 + jXG1 in as 3 (RG + jXG) and CC 3 or 13 does the same with RG2, XG2. CZ0 or CZG other than 1, any other
+CC, a three-winding record and a neutral impedance RNUTRL, XNUTRL are refused or counted as unmodelled; none is guessed at.
+Induction machine, zero-sequence fixed shunt (when not zero) and non-conventional source records are unmodelled. This layout
+is written from public descriptions of PSS/E-written files and from the revision 33 and 35 fixtures in the tests; no
+PSS/E-written SEQ file of those revisions has been read.
 
 - **Machines.** ZXPOS is the machine's subtransient reactance X''d and ZXNEG its negative-sequence reactance X2, both on
   its MBASE and above 0. The resistances are not used (GridSim's machine fault source is a reactance), with a note. A
@@ -481,7 +546,7 @@ none, the `.raw` case must be revision 30 (later revisions add transformer field
 - **Matching.** Records match the `.raw` case's machines by bus and ID and its branches and transformers by buses (in
   either order) and circuit. A record for an element that is out of service or on a dropped isolated bus is skipped and
   counted; one the `.raw` file does not hold, or a second record for one element in a section, is refused.
-- **Refused.** A change case (IC not 0), a revision other than 30, a three-winding transformer's zero-sequence record,
+- **Refused.** A change case (IC not 0), a revision other than 30 and 33 to 36, a three-winding transformer's zero-sequence record,
   CC 5 to 9, CC 1 with a grounding impedance, a zero-sequence path of zero impedance, and a record after the last
   section. The three-winding and CC 5 to 9 connection codes stay refused because no definition of their zero-sequence
   networks was available to check them against: a guessed mapping could connect the wrong windings to earth without
@@ -499,7 +564,39 @@ and machine ID, and the result is checked and bound exactly as a `gridsim-dynami
 the subtransient machine, SEXS, IEEET1, EXAC1 and ESST4B to the exciters, PSS1A to the stabiliser, TGOV1, IEEEG1, HYGOV and GAST to the
 governors; each value is tagged with the file and line it came from. Where GridSim needs a value PSS/E gives in another
 form, it is derived exactly and tagged as derived: the SEXS lead time TA = (TA/TB) x TB, the IEEEG1 droop R = 1 / K,
-and for GENSAL, which has no q-axis transient circuit, X'q = Xq and T'qo = T''qo (that circuit then carries nothing). An EXAC1 record maps value by value (TR must be 0); ESAC1A is read only from a `gridsim-dynamics/2` file, because its PSS/E CON order is not in public text, so an ESAC1A record is a model this reader does not map.
+and for GENSAL, which has no q-axis transient circuit, X'q = Xq and T'qo = T''qo (that circuit then carries nothing). An EXAC1 record maps value by value (TR must be 0). Without `--dyr-extended`, ESAC1A is read only from a
+`gridsim-dynamics/2` file and an ESAC1A record is a model this reader does not map.
+
+With `--dyr-extended` the reader also maps the extended library, value by value in the PSS/E record order of the model
+documentation: GENCLS (H and D, with X'd taken from the `.raw` generator record's ZSORCE reactance ZX), the exciters ESST1A, EXST1, SCRX, ESAC1A and ESDC1A, and the stabilisers IEEEST, PSS2A and PSS2B, which may sit
+on any mapped exciter. It refuses, naming the record, what these models cannot represent: GENCLS with H = 0 (PSS/E's
+infinite bus) or a ZX that is not above 0, an exciter or stabiliser on a GENCLS unit, ESAC1A with TR, ESDC1A with KE = 0, VRMAX = 0 or
+SWITCH not 0, IEEEST with the second-order terms A2, A4 or A6, and a stabiliser input other than rotor speed (code 1) or
+electrical power (code 3), or on a remote bus. A GENTPJ record is refused by name: GridSim models GENTPJ, but its PSS/E
+record order is not in a public source, so it is not read with a guessed order; write the machine as a
+`gridsim-dynamics/2` template with `model` GENTPJ. The record orders were checked against the public copy of the PSS/E
+model library data sheets, NREL PowerSystems.jl's DYR mapping and the PowerWorld model pages. Technical chapter 24 gives
+each block diagram.
+
+`--dyr-extended` also maps the exciters EXDC2, IEEEX1, ESAC8B and ESST3A and the IEEEG3 hydro governor, value by value;
+each record order was found in the same order in two public sources (the PSS/E 33 model library data sheets, and ANDES,
+PowerSystems.jl or PowerWorld). EXDC2, IEEEX1 and ESAC8B refuse KE = 0 and VRMAX = 0, and EXDC2 and IEEEX1 a SWITCH other
+than 0. For ESAC8B, KE = 0 is refused because PSS/E's handling of it is not confirmed. Four records are refused by name, with the reason: PSS2C (modelled, but only PowerWorld gives its record order;
+write it as a `gridsim-dynamics/2` stabiliser template), and ESAC7B, HYGOV4 and GENQEC (not modelled; their order or
+structure is not given by two public sources). Without `--dyr-extended` these nine are models the reader does not map,
+with the same message as before.
+
+The extended library also reads the GGOV1 and WSIEG1 governors and the CIM5BL induction motor load. GGOV1 is refused
+with a transport delay Teng, a speed deadband db or a negative Dm; WSIEG1 with a second shaft (JBUS or M not 0) or a
+deadband (db1, err or db2 not 0). A CIM5BL record names a load (its bus and load ID in the `.raw` file); the motor takes
+that load's PL + IP and QL + IQ, and the reactive power its circuit does not draw becomes a shunt at the bus. It is
+refused for a double cage (R2 or X2 not 0), saturation, the under-voltage relay (VI not 0), a load the `.raw` file does
+not hold in service, or a load with distributed generation; TNOM is for motor starting and is not read. The subsystem
+forms (CIM5OW, CIM5ZN, CIM5AR, CIM5AL) are refused: give one CIM5BL record per load. CIMWBL is refused because only one
+public source gives the order of its last four values. CMLDBLU2 is refused because only one public source gives its value
+order and GridSim does not do the WECC initialisation the record relies on (the substation shunt, the feeder
+compensation and the starting tap are data in GridSim); CMLDBLU1, the first CMLD version, is refused by name. Both
+models, and the CMLD with all its parts, are available through the API (technical ch. 24, Dynamic loads).
 
 Renewable units: REGCA1 (REGC_A) with REECA1, REECB1 or REECCU1 (REEC_A, REEC_B, REEC_C), and optionally the plant
 controller REPCA1 (REPC_A) and the wind turbine models WTDTA1, WTARA1, WTPTA1 and WTTQA1 (WTGT_A, WTGAR_A, WTGPT_A,
@@ -522,7 +619,12 @@ unit with no GENROU or GENSAL record, or a value a GridSim model has no block fo
 KE = 0 or exciter saturation; a PSS1A input other than speed, a remote bus, the A1 / A2 filter, T5 not equal to T6, or
 the VCU / VCL cut-offs; an IEEEG1 second shaft; a HYGOV filter, gate rate limit, turbine gain other than 1, turbine
 damping or no-load flow; GENSAL saturation. `--allow-unmodelled` leaves those out, each listed in a `note:` line, and
-uses the rest. A record for a machine the `.raw` file does not hold, a second record of the same kind for one unit, a
+uses the rest. A mapped HYGOV record is also listed in a `note:` line as approximated: GridSim's penstock is the linear
+ideal water column `(1 - TW s) / (1 + 0.5 TW s)` at every loading, which matches PSS/E's nonlinear penstock at full gate
+only (below it the water time is overstated by 1 / g0, twice at half gate), and the dashpot feedback is taken from the
+actual gate. The two saturation points of an exciter record may come in either order (IEEE 421.5 lists E1 at the
+ceiling, above E2); one point with SE 0 and the other above 0 is refused, because the two readings of such data differ
+widely and the convention is not settled. A record for a machine the `.raw` file does not hold, a second record of the same kind for one unit, a
 record with the wrong number of values, or one not ended by a slash, is always refused, naming its line.
 
 The model's branches are the lines, then the switching devices, then the two-winding and the three-winding

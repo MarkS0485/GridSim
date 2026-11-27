@@ -13,7 +13,7 @@ namespace GridSim.Core.Estimation;
 internal static class ChiSquare
 {
     /// <summary>The p-quantile of the chi-square distribution with <paramref name="dof"/> degrees of
-    /// freedom; NaN when dof <= 0 (no redundancy - the test is meaningless). Exact at 1 and 2 degrees of freedom; from 3
+    /// freedom; NaN when dof &lt;= 0 (no redundancy - the test is meaningless). Exact at 1 and 2 degrees of freedom; from 3
     /// on it is the Wilson-Hilferty cube approximation. Its relative error against the exact quantile (bug hunt
     /// 2026-10-29, finding 74, measured): -0.51 %, -0.33 %, -0.24 % at p = 0.95 and +0.21 %, +0.22 %, +0.20 % at p = 0.99,
     /// for 3, 4 and 5 degrees of freedom (7.7750 against 7.8147 at 3 and 0.95), falling as the degrees of freedom grow.
@@ -34,6 +34,50 @@ internal static class ChiSquare
         double t = 2.0 / (9.0 * dof);
         double cube = 1.0 - t + NormalQuantile(p) * Math.Sqrt(t);
         return dof * cube * cube * cube;
+    }
+
+    /// <summary>
+    /// RC5 (2.1.134): the exact p-quantile of chi-square with an EVEN number of degrees of freedom <paramref name="dof"/> =
+    /// 2k, for a test whose degrees of freedom are always even (two real parts per complex measurement). The survival
+    /// function is then the Poisson sum <c>Q(x) = e^(-y) sum_(j&lt;k) y^j / j!</c> with y = x / 2, decreasing in y; the
+    /// quantile is the y with Q(y) = 1 - p, found by bisection on the doubles until the bracket cannot shrink, with Q in log
+    /// form (the terms <c>-y + j ln y - ln j!</c> summed about their largest) so it neither underflows nor overflows. All
+    /// through <see cref="DetMath"/>, so the same bits everywhere. NaN when dof is not a positive even number or p is not
+    /// in (0, 1). <see cref="Quantile"/> is unchanged.
+    /// </summary>
+    public static double QuantileEven(int dof, double p)
+    {
+        if (dof <= 0 || dof % 2 != 0 || !(p > 0) || !(p < 1)) return double.NaN;
+        int k = dof / 2;
+        double target = DetMath.Log(1.0 - p);
+        double lo = 0.0, hi = Math.Max(1.0, k);
+        while (LogSurvival(hi, k) > target) hi *= 2.0;
+        while (true)
+        {
+            double mid = lo + ((hi - lo) / 2.0);
+            if (mid <= lo || mid >= hi) break;
+            if (LogSurvival(mid, k) > target) lo = mid;
+            else hi = mid;
+        }
+        return lo + hi;   // 2 x the midpoint of the last bracket (lo and hi are adjacent doubles)
+    }
+
+    // ln Q(y) for chi-square with 2k degrees of freedom at x = 2y: the log of e^(-y) sum_(j<k) y^j / j!.
+    private static double LogSurvival(double y, int k)
+    {
+        if (!(y > 0)) return 0.0;   // Q(0) = 1
+        double lnY = DetMath.Log(y);
+        double max = double.NegativeInfinity, t = -y;
+        var terms = new double[k];
+        for (int j = 0; j < k; j++)
+        {
+            if (j > 0) t += lnY - DetMath.Log(j);
+            terms[j] = t;
+            if (t > max) max = t;
+        }
+        double sum = 0.0;
+        for (int j = 0; j < k; j++) sum += DetMath.Exp(terms[j] - max);
+        return max + DetMath.Log(sum);
     }
 
     /// <summary>Standard-normal quantile (inverse CDF), Acklam's rational approximation

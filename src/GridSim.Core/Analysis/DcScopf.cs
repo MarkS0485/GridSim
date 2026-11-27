@@ -78,11 +78,12 @@ public sealed record ScopfResult(
 /// rated branch inside its rating before any outage AND after each listed single-branch outage, with no action after the
 /// outage (preventive). Solved as a sparse linear program by <see cref="SparseBoundedSimplex"/>.
 ///
-/// <para><b>Formulation.</b> DC model of <see cref="DistributionFactors"/> (reactance only, 1 pu voltages; taps and phase
-/// shifts ignored). Columns: the dispatch P_g in [Pmin, Pmax] at cost c_g; an angle psi_i per bus in MW-scaled form
+/// <para><b>Formulation.</b> DC model of <see cref="DistributionFactors"/> (1 pu voltages, no losses; series reactance with
+/// tap ratios, phase shifts and bus shunt conductance, MATPOWER makeBdc, B33). Columns: the dispatch P_g in [Pmin, Pmax] at cost c_g; an angle psi_i per bus in MW-scaled form
 /// (psi = base MVA x theta; the reference bus fixed at 0); a flow f_l per branch, within +/- RateA when rated (free when
-/// not). Rows: each bus's balance, sum of its units' P - sum of flows leaving + sum of flows arriving = its demand; each
-/// branch's flow, f_l - b_l (psi_from - psi_to) = 0 with b_l = 1 / X_l. After the outage of branch k, branch l carries
+/// not). Rows: each bus's balance, sum of its units' P - sum of flows leaving + sum of flows arriving = its demand Pd plus
+/// its shunt conductance Gs; each branch's flow, f_l - b_l (psi_from - psi_to) = -b_l phi_l base with b_l = (1 / X_l) / tap_l
+/// and phi_l the branch's phase shift in radians (the right-hand side is 0 on an unshifted branch). After the outage of branch k, branch l carries
 /// f_l + LODF(l, k) f_k (<see cref="DistributionFactors.LodfColumn"/>); each secured pair gets a column q in +/- the
 /// post-outage rating and the row q - f_l - LODF(l, k) f_k = 0. Every row has a handful of non-zeros, so the LP grows with
 /// the network and the secured pairs, not with buses x branches.</para>
@@ -190,7 +191,7 @@ public static class DcScopf
         }
 
         double demand = 0;
-        foreach (Bus b in model.Buses) demand += b.Pd;
+        foreach (Bus b in model.Buses) demand += DcDemand.BusMw(b);   // B33: Pd + Gs
 
         // The pairs (outage position c, branch l) in the LP: all of them, or none to start with.
         var active = new SortedSet<(int C, int L)>();
@@ -203,7 +204,7 @@ public static class DcScopf
         while (true)
         {
             rounds++;
-            Lp lp = Build(model, busIndex, genBus, cost, refIndex, inDc, outages, lodf, postRate, active);
+            Lp lp = Build(model, df, busIndex, genBus, cost, refIndex, inDc, outages, lodf, postRate, active);
             SparseSimplexResult r = SparseBoundedSimplex.Solve(lp.Problem, maxIterations: options.LpMaxIterations);
             lpIterations += r.Iterations;
             if (!r.Optimal)
@@ -289,7 +290,7 @@ public static class DcScopf
 
     private sealed record Lp(SparseLpProblem Problem, int[] FlowCol, int BalanceRow0);
 
-    private static Lp Build(GridModel model, Dictionary<int, int> busIndex, int[] genBus, double[] cost, int refIndex,
+    private static Lp Build(GridModel model, DistributionFactors df, Dictionary<int, int> busIndex, int[] genBus, double[] cost, int refIndex,
         bool[] inDc, List<int> outages, double[][] lodf, double[] postRate, SortedSet<(int C, int L)> active)
     {
         int nBus = model.Buses.Count, nBr = model.Branches.Count, G = genBus.Length;
@@ -319,7 +320,7 @@ public static class DcScopf
 
         // Bus balance rows: units in, flows out, flows in = demand.
         int balance0 = b.Count;
-        for (int i = 0; i < nBus; i++) b.Add(model.Buses[i].Pd);
+        for (int i = 0; i < nBus; i++) b.Add(DcDemand.BusMw(model.Buses[i]));   // B33: Pd + Gs
         for (int g = 0; g < G; g++) a.Add((balance0 + genBus[g], g, 1.0));
         for (int l = 0; l < nBr; l++)
         {
@@ -329,14 +330,16 @@ public static class DcScopf
             a.Add((balance0 + f, flowCol[l], -1.0));
             a.Add((balance0 + t, flowCol[l], 1.0));
         }
-        // Flow rows: f - b (psi_from - psi_to) = 0.
+        // Flow rows: f - b (psi_from - psi_to) = Pfinj base, where Pfinj = -b phi is the branch's phase-shift offset (B33;
+        // 0 without a shift). b and Pfinj are the very values DistributionFactors uses, so the LP's flows are its DcFlows.
         for (int l = 0; l < nBr; l++)
         {
             if (!inDc[l]) continue;
             Branch br = model.Branches[l];
-            double sus = 1.0 / br.X;
+            double sus = df.BranchSusceptance(l);
+            double offset = df.BranchFlowOffsetPu(l);
             int row = b.Count;
-            b.Add(0.0);
+            b.Add(offset == 0.0 ? 0.0 : offset * model.BaseMva);
             a.Add((row, flowCol[l], 1.0));
             a.Add((row, psi0 + busIndex[br.From], -sus));
             a.Add((row, psi0 + busIndex[br.To], sus));

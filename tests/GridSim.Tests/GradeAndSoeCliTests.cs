@@ -147,7 +147,7 @@ public sealed class GradeAndSoeCliTests
     [Fact]
     public void A_missing_file_fails_loud()
     {
-        Assert.Throws<FileNotFoundException>(() => AlarmLogCsv.Load(Path.Combine(Path.GetTempPath(), $"no-such-{Guid.NewGuid():N}.csv")));
+        Assert.Throws<FileNotFoundException>(() => AlarmLogCsv.Load(TestTemp.Under($"no-such-{Guid.NewGuid():N}.csv")));
     }
 
     [Fact]

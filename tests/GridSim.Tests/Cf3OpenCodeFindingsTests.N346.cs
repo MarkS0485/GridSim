@@ -73,7 +73,7 @@ public sealed partial class Cf3OpenCodeFindingsTests
 
     private static WebApplicationFactory<Program> N346Factory(params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-cf3-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-cf3-keys-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(keys);
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
@@ -183,7 +183,7 @@ public sealed partial class Cf3OpenCodeFindingsTests
         using RSA rsa = RSA.Create(2048);
         var req = new CertificateRequest("CN=" + subject, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         using X509Certificate2 cert = req.CreateSelfSigned(DateTimeOffset.UtcNow.AddDays(-1), DateTimeOffset.UtcNow.AddDays(30));
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-cf3-cert-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-cf3-cert-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         string path = Path.Combine(dir, "keyring.pfx");
         if (withPrivateKey) File.WriteAllBytes(path, cert.Export(X509ContentType.Pfx));
@@ -217,7 +217,7 @@ public sealed partial class Cf3OpenCodeFindingsTests
             Assert.Contains(fragment, ex.Message, StringComparison.Ordinal);
         }
         Refused("Auth:KeyPreviousCertificatePath names a file that does not exist",
-            ("Auth:KeyProtection", "none"), ("Auth:KeyPreviousCertificatePath", Path.Combine(Path.GetTempPath(), "no-such-" + Guid.NewGuid().ToString("N") + ".pfx")));
+            ("Auth:KeyProtection", "none"), ("Auth:KeyPreviousCertificatePath", TestTemp.Under("no-such-" + Guid.NewGuid().ToString("N") + ".pfx")));
         Refused("the certificate in Auth:KeyPreviousCertificatePath has no private key",
             ("Auth:KeyProtection", "none"), ("Auth:KeyPreviousCertificatePath", N346Pfx("GridSim rotation public", withPrivateKey: false)));
         Refused("names the same certificate as Auth:KeyCertificatePath",
@@ -231,7 +231,7 @@ public sealed partial class Cf3OpenCodeFindingsTests
         // NEW certificate encrypts, the old one is the previous (decrypt-only) certificate. It reads the old payload
         // back. Host 3 has rotated but was not given the previous certificate: the old key cannot be decrypted, so the
         // same payload is refused (the setting is what makes the rotation lossless).
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-cf3-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-cf3-keys-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(keys);
         string oldPfx = N346Pfx("GridSim rotation old"), newPfx = N346Pfx("GridSim rotation new");
         static WebApplicationFactory<Program> Host(string keysDir, params (string Key, string Value)[] s) =>

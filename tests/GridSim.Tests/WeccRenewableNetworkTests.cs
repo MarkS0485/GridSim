@@ -166,7 +166,7 @@ public class WeccRenewableNetworkTests
         PsseParseResult raw = PsseRawParser.ParseFile(Fixture("case14.raw"));
         PsseDyrResult r = PsseDyrReader.Read(Dyr(RegcRecord, ReecRecord), raw, "case14");
         GridModel m = raw.Model;
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-wecc-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-wecc-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         MachineDynamicsSet set;
         try

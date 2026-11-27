@@ -51,9 +51,21 @@ public sealed record DeviceConfig(
         PropertyNameCaseInsensitive = true,
     });
 
-    public static DeviceConfig Load(string path) =>
-        JsonSerializer.Deserialize(File.ReadAllText(path), Json.DeviceConfig)
-        ?? throw new InvalidDataException($"Not a device config: {path}");
+    public static DeviceConfig Load(string path)
+    {
+        DeviceConfig d = JsonSerializer.Deserialize(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Json.DeviceConfig)
+            ?? throw new InvalidDataException($"Not a device config: {path}");
+        // SEC-35: the numbers go straight into the counterfactual, so they are range-checked where they are read: a name,
+        // inertia and fast response of 0 or more, a time constant above 0 and a dead band of 0 or more, all finite.
+        var problems = new List<string>();
+        if (string.IsNullOrWhiteSpace(d.Name)) problems.Add("name is missing");
+        if (!(double.IsFinite(d.RotationalInertiaMwS) && d.RotationalInertiaMwS >= 0)) problems.Add(FormattableString.Invariant($"rotationalInertiaMwS {d.RotationalInertiaMwS} must be a finite number, 0 or more"));
+        if (!(double.IsFinite(d.FastResponseMw) && d.FastResponseMw >= 0)) problems.Add(FormattableString.Invariant($"fastResponseMw {d.FastResponseMw} must be a finite number, 0 or more"));
+        if (!(double.IsFinite(d.FastResponseTimeConstantS) && d.FastResponseTimeConstantS > 0)) problems.Add(FormattableString.Invariant($"fastResponseTimeConstantS {d.FastResponseTimeConstantS} must be a finite number above 0"));
+        if (!(double.IsFinite(d.FastResponseDeadbandHz) && d.FastResponseDeadbandHz >= 0)) problems.Add(FormattableString.Invariant($"fastResponseDeadbandHz {d.FastResponseDeadbandHz} must be a finite number, 0 or more"));
+        if (problems.Count > 0) throw new InvalidDataException($"Device config '{path}': " + string.Join("; ", problems) + ".");
+        return d;
+    }
 
     public void Save(string path)
     {

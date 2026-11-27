@@ -7,7 +7,11 @@ turbine-governors (TGOV1, IEEEG1 and a hydro governor), the converter-plant mode
 the machines, the initialisation of a fleet from a solved power flow (`SubtransientInit`), and the RMS
 transient-stability integrator (`MultiMachineSubtransient`, `RmsTransientStability`) with its critical-clearing-time
 search. It gives the equations as coded, every parameter with its default, unit and source symbol, the invariants
-and the tests that pin them, and one machine initialised by hand against a captured run.
+and the tests that pin them, and one machine initialised by hand against a captured run. The library also holds the
+classical machine GENCLS, GENTPJ, the ESST1A, EXST1, SCRX and ESDC1A exciters and the IEEEST, PSS2A and PSS2B stabilisers
+([Extended library](#extended-library-gencls-gentpj-st1-scrx-dc1a-ieeest-pss2a-pss2b)), the GGOV1 and WSIEG1 governors
+([Turbine-governors](#turbine-governors)) and three dynamic load models: a third-order induction motor, a ZIP load with
+exponential recovery and a subset of the WECC composite load CMLD ([Dynamic loads](#dynamic-loads)).
 
 The library follows one design rule. Every dynamic element is a wiring of five blocks (`FirstOrderLag`, `LeadLag`,
 `Washout`, `Integrator`, `PiController`) that advance by the exact zero-order-hold solution of their own pole. A
@@ -308,10 +312,250 @@ A stage with `T1 = T2 = 0` (or `T3 = T4 = 0`) is bypassed and is exactly unity. 
 lead is an improper pure derivative and throws, naming the parameter. `Vsmax < Vsmin` throws. A PSS adds nothing in
 steady state, because the washout blocks any sustained input: `Initialize` sets `Vs = 0`.
 
+### Extended library: GENCLS, GENTPJ, ST1, SCRX, DC1A, IEEEST, PSS2A, PSS2B
+
+The library also holds the classical machine GENCLS, GENTPJ, four more exciters and three more stabilisers. They are
+wired from the same five blocks and follow the PSS/E model documentation block diagrams (IEEE Std 421.5-2005 for the
+ST1A, DC1A, PSS2A and PSS2B structures). Each starts at rest at the solved operating point; a quantity that needs the
+terminal voltage or the electrical power is set on the first step, from that step's measurements on the undisturbed
+network.
+
+**GENCLS** (`Gencls`). PSS/E data `H D`; `X'd` is the RAW generator record's source reactance `ZX` (ZSORCE, on MBASE),
+which the RAW reader records as `PsseParseResult.MachineSourceReactances`. The machine is the six-state machine with every
+reactance at `X'd` (`Xd = X'd = X''d = Xq = X'q = X''q`), so the network sees `E''` behind `X'd`, the rotor angle is the
+angle of `Vt + jX'd It`, `Id` and `Iq` drop out of every flux equation and `E''d` starts at 0. Every open-circuit time
+constant is `Gencls.HeldFluxTimeSeconds = 1e30` s, so each flux lag's `a = exp(-dt/T)` rounds to exactly 1 and the flux
+states are held bit for bit: the constant-`E'` classical model on the RMS engine. It takes no exciter or stabiliser (it has
+no field to drive); a governor still drives its mechanical power. PSS/E's `H = 0` infinite bus is not a GridSim machine and
+is refused.
+
+**GENTPJ** (a `gridsim-dynamics/2` machine template with `model` GENTPJ and `saturationKis`; the PSS/E GENTPJ record
+order is not in a public source, so the DYR reader refuses the record by name). The machine is GENROU with the stator-current term in the saturation input
+(`SaturationCurve.GentpjIncrements`, `MachineData.SaturationKis`):
+
+```
+s = Se(|psi''| + Kis |It|)          (GENROU: s = Se(|psi''|))
+d-axis increment  E''q s,   q-axis increment  E''d s (Xq - Xl)/(Xd - Xl)
+```
+
+`Kis` converts to the system base like a reactance; `|It|` is the start-of-step machine current, held across the step
+like every other flux input, and `SubtransientInit` seeds the field and the rotor angle with the same term, so a GENTPJ
+fleet starts at rest. With `Kis = 0` the sum is `|psi''|` exactly and the machine is GENROU bit for bit. PSS/E's GENTPJ
+also scales its reactances by the saturation factor (the GENTPF form); GridSim keeps GENROU's additive increments, so an
+unsaturated GENTPJ is exact and a saturated one is GridSim's form, not PSS/E's. `Kis` may be negative (WECC data run from
+-0.3 to 0.4).
+
+**EXST1 and ESST1A** (`St1Exciter`), the potential-source controlled-rectifier exciters (PSS/E EXST1: `TR VIMAX VIMIN TC
+TB KA TA VRMAX VRMIN KC KF TF`; ESST1A: ICONs `UEL VOS`, then `TR VIMAX VIMIN TC TB TC1 TB1 KA TA VAMAX VAMIN VRMAX VRMIN
+KC KF TF KLR ILR`):
+
+```
+Vc   = lag_{TR}(Vt)                                       (TR = 0: Vc = Vt)
+VF   = sKF/(1 + sTF) * Efd                                (start-of-step Efd)
+u    = clamp(Vref - Vc + Vs[VOS 1] - VF, VIMIN, VIMAX)    (input limiter)
+x    = leadlag_{TC/TB}(u), then leadlag_{TC1/TB1}         (EXST1: one stage)
+VA   = lag_{KA, TA, [VAMIN, VAMAX]}(x)                    (non-windup; EXST1: no limit)
+v    = VA + Vs[VOS 2] - max(0, KLR (IFD - ILR))           (field current limiter; EXST1 has none)
+Efd  = clamp(v, Vt VRMIN, Vt VRMAX - KC IFD)              (the lower bound wins if the two cross)
+```
+
+At rest `VA0 = Efd0 + max(0, KLR (Efd0 - ILR))` and the regulator error is `VA0/KA`; `Initialize` refuses a `VA0`
+outside `VAMIN..VAMAX` or an error outside `VIMIN..VIMAX`, and the first step refuses an `Efd0` outside the output limits
+at the measured `Vt`. The ceiling moves with the terminal voltage, so these exciters read the terminal phasors and, like
+ESST4B, are refused on a unit with a unit transformer folded into its reactances. The UEL input of ESST1A is not modelled
+(GridSim has no UEL model to drive it).
+
+**SCRX** (`Scrx`), data `TA/TB TB K TE EMIN EMAX CSWITCH rc/rfd`:
+
+```
+v1  = leadlag_{TA/TB}(Vref - Vt + Vs)
+x   = lag_{K, TE, [EMIN, EMAX]}(v1)                       (non-windup, as SEXS)
+Efd = x Vt (CSWITCH 0, bus fed)  or  x (CSWITCH 1, solid fed)
+Efd = -rc/rfd IFD while IFD < 0, when rc/rfd > 0           (the crowbar; rc/rfd = 0: negative current capability)
+```
+
+Solid fed, the regulator error at rest is `Efd0/K`. Bus fed, `x0 = Efd0/Vt0` needs the terminal voltage, so the first step
+sets the states and completes the voltage reference: the kernel's error is offset by `x0/K` less its first error, which
+is the reference `Vref = Vt0 + x0/K`.
+
+**ESDC1A** (`Esdc1a`), the IEEE DC1A dc commutator exciter, data `TR KA TA TB TC VRMAX VRMIN KE TE KF TF1 SWITCH E1
+SE(E1) E2 SE(E2)`:
+
+```
+x    = leadlag_{TC/TB}(Vref - Vc + Vs - VF),   VF = sKF/(1 + sTF1) * Efd
+VR   = lag_{KA, TA, [VRMIN, VRMAX]}(x)                    (non-windup)
+TE dEfd/dt = VR - (KE + SE(Efd)) Efd,    SE(Efd) Efd = B (Efd - A)^2 above A
+```
+
+The quadratic saturation is fitted through the two points as for the AC exciters; the exciter advances by the exact hold
+of its start-of-step linearised pole, as IEEET1 does. At rest `VR0 = (KE + SE(Efd0)) Efd0` and the error is `VR0/KA`.
+
+**ESAC1A from DYR.** The existing `AcExciter` ESAC1A reads the PSS/E record `TR TB TC KA TA VAMAX VAMIN TE KF TF KC KD KE
+E1 SE(E1) E2 SE(E2) VRMAX VRMIN`: `VAMAX`/`VAMIN` are the regulator lag's limits and `VRMAX`/`VRMIN` the output limits. A
+non-zero `TR` is refused, as for EXAC1.
+
+**IEEEST** (`Ieeest`), ICONs `ICS IB`, data `A1 A2 A3 A4 A5 A6 T1 T2 T3 T4 T5 T6 KS LSMAX LSMIN VCU VCL`, on rotor speed
+deviation (`ICS 1`) or electrical power on the machine base (`ICS 3`):
+
+```
+f   = (1 + A5 s)/((1 + A1 s)(1 + A3 s)) u                 (A2 = A4 = A6 = 0)
+v   = leadlag_{T1/T2}(leadlag_{T3/T4}(f))
+Vs  = clamp(KS (T5/T6) Washout_{T6}(v), LSMIN, LSMAX)     (KS sT5/(1 + sT6))
+Vs  = 0 while Vt > VCU (VCU > 0) or Vt < VCL (VCL > 0)
+```
+
+The filter is a lead-lag (`A5` over `A1`, or over `A3` when `A1 = 0`) and a lag, exact with the library blocks. The
+second-order terms `A2`, `A4`, `A6` have no block here and must be 0.
+
+**PSS2A and PSS2B** (`Pss2`), ICONs `ICS1 IB1 ICS2 IB2 M N`, data `TW1 TW2 T6 TW3 TW4 T7 KS2 KS3 T8 T9 KS1 T1 T2 T3 T4`,
+then PSS2B's `T10 T11 VS1MAX VS1MIN VS2MAX VS2MIN`, then `VSTMAX VSTMIN`:
+
+```
+n1 = lag_{T6}(Washout_{TW2}(Washout_{TW1}(clamp(u1, VS1MIN, VS1MAX))))
+n2 = lag_{KS2, T7}(Washout_{TW4}(Washout_{TW3}(clamp(u2, VS2MIN, VS2MAX))))
+r  = [(1 + sT8)/(1 + sT9)^M]^N (n1 + KS3 n2)               (M = 0 or N = 0 bypasses it; M N <= 8)
+Vs = clamp(leadlag_{T1/T2} leadlag_{T3/T4} [leadlag_{T10/T11}] (KS1 (r - n2)), VSTMIN, VSTMAX)
+```
+
+PSS2A has no input limits and no third stage. `TW2 = 0` or `TW4 = 0` bypasses that washout; the ramp-tracking filter is
+`N` cascades of a lead-lag `T8/T9` and `M - 1` lags `T9`. Both inputs are speed (`1`) or electrical power (`3`).
+
+**Wiring.** A library exciter is `RmsExciter.FromModel(IRmsExciterModel, PSS1A or library stabiliser)`; a library
+stabiliser joins any exciter, the existing ones included, through `RmsExciter.WithLibraryStabiliser`, and its output is
+added where the AVR's diagram adds it. Every such exciter reads the field current; one whose model or stabiliser reads the
+terminal voltage or the electrical power (`Pe = Re(Vt conj(It))` on the machine base) takes the terminal phasors, so the
+study binds its machine base. Without a library model or stabiliser every exciter takes exactly its previous path.
+
+**DYR.** `PsseDyrOptions.ExtendedLibrary` (gridsim: `--dyr-extended`) maps these records, value by value in their PSS/E
+order, into `gridsim-dynamics/2` templates (`model` on the machine template, the `st1`, `st1a`, `scrx`, `dc1a`, `ieeest`,
+`pss2` and `pss2b` parameters on the exciter and stabiliser templates; `schemas/schemaNotes.md`). Without it the reader
+maps exactly the models it mapped before and lists these as models it does not map. The record orders were checked
+against the public copy of the PSS/E model library data sheets and against NREL PowerSystems.jl's
+`psse_dynamic_mapping.yaml` or the PowerWorld transient-model pages (each model against two of them). Refused, naming the record: a
+GENTPJ record (no public record order), GENCLS with `H = 0` or a ZX that is not above 0, an exciter or stabiliser on a GENCLS unit, ESST1A UEL
+not 1 to 3 or VOS not 1 or 2, SCRX CSWITCH not 0 or 1, ESAC1A `TR` not 0, ESDC1A `KE = 0`, `VRMAX = 0` or `SWITCH` not 0, IEEEST with
+`A2`, `A4` or `A6`, and any stabiliser input other than speed or electrical power, or on a remote bus.
+
+### More controllers: EXDC2, IEEEX1, ESAC8B, ESST3A, PSS2C, IEEEG3
+
+Five more exciter and governor models and one stabiliser. Each is a library model on the same blocks and the same
+interfaces as the extended library above, and each starts at rest at the solved point.
+
+**EXDC2 and IEEEX1** (`Exdc2`), the IEEE dc commutator exciters type DC2 (1981) and type 1 (1979). Both take ESDC1A's
+data, `TR KA TA TB TC VRMAX VRMIN KE TE KF TF1 SWITCH E1 SE(E1) E2 SE(E2)`, and its diagram. The one difference is the
+regulator limit: the DC2 regulator is fed from the machine terminals, so its limits are `Vt VRMAX` and `Vt VRMIN`.
+
+```
+VR   = lag_{KA, TA}(x), held in [Vt VRMIN, Vt VRMAX]       (EXDC2; non-windup)
+VR   = lag_{KA, TA}(x), held in [VRMIN, VRMAX]             (IEEEX1)
+```
+
+IEEEX1 is ESDC1A step for step (a test runs the two side by side, bit for bit). EXDC2 reads the terminal voltage, so its
+check that `VR0` lies inside `Vt VRMIN .. Vt VRMAX` runs on the first step. ANDES swaps the two: constant limits on its
+EXDC2 and Vt-scaled limits on its IEEEX1. GridSim scales EXDC2 and keeps IEEEX1 constant, which matches the IEEE DC2
+diagram (a bus-fed regulator), the HYPERSIM EXDC2 model built on the PSS/E 34.2 library, and OpenIPSL's PSS/E IEEEX1.
+
+**ESAC8B** (`Esac8b`), the IEEE 421.5-2005 AC8B exciter with a PID regulator, data `TR KP KI KD TD KA TA VRMAX VRMIN TE KE
+E1 SE(E1) E2 SE(E2)`:
+
+```
+u    = KP e + KI/s e + s KD/(1 + s TD) e                   (e = Vref - Vc + Vs)
+VR   = lag_{KA, TA, [VRMIN, VRMAX]}(u)                     (non-windup)
+TE dVE/dt = VR - (KE + SE(VE)) VE - KDexc IFD
+Efd  = VE FEX(KC IFD / VE)
+```
+
+The PSS/E record has no `KC` and no exciter demagnetising factor, so a DYR record gives `KC = KDexc = 0` and `Efd = VE`. A
+`gridsim-dynamics/2` file may give both (`ac8bKc`, `ac8bKdExc`); `FEX`, the saturation fit and the inverse used at the start
+are `AcExciter`'s. The integral is the exact hold of `KI/s` (a ramp for a held error), the derivative `KD/TD` times the
+exact-hold washout of `TD`. At rest the integral holds `VR0/KA` with zero error when `KI` is above 0; with `KI = 0` the
+error is `VR0/(KA KP)`.
+
+**ESST3A** (`Esst3a`), the IEEE 421.5-2005 ST3A compound-source static exciter, data `TR VIMAX VIMIN KM TC TB KA TA VRMAX
+VRMIN KG KP KI VBMAX KC XL VGMAX THETAP TM VMMAX VMMIN`:
+
+```
+x    = leadlag_{TC/TB}(clamp(Vref - Vc + Vs, VIMIN, VIMAX))
+VR   = lag_{KA, TA, [VRMIN, VRMAX]}(x)
+VM   = lag_{KM, TM, [VMMIN, VMMAX]}(VR - min(KG Efd, VGMAX))
+VE   = | KP e^(j THETAP) VT + j (KI + KP e^(j THETAP) XL) IT |
+VB   = min(VE FEX(KC IFD / VE), VBMAX),    Efd = VB VM
+```
+
+The inner loop closes through `Efd = VB VM`. With `VB` held over the step it is a linear lag with pole
+`(1 + KM KG VB)/TM`, stepped by its exact hold, so it is stable at any step; when `KG Efd` is at `VGMAX` at the start of a
+step the plain lag is used. ESST3A reads the terminal voltage and current phasors, so the RMS exciter passes them (the
+current on the machine base). `VR0` depends on `VB0`, which needs the terminal quantities, so the model fixes its steady
+input on the first step and holds it as a constant offset on the error; this stands where PSS/E's `VREF` carries
+`VR0/KA`, and a reference step still moves the error one for one. Because ESST3A (and EXDC2, for its limit check)
+reads the first step's measurements as the steady state, a run with a disturbance in force at `t = 0` is refused for
+them, with automatic or given voltage references; schedule the disturbance after `t = 0`.
+
+The same refusal covers every model that sets a state, or checks its start, from the first step's measurements:
+ESST4B (every state from VT, IT and IFD), bus-fed SCRX (`x0 = Efd0/Vt0`), every library exciter with a voltage
+transducer (`TR` above 0: EXDC2, IEEEX1, ESDC1A, ESAC8B, ESST1A, EXST1; the lag starts at the first measured `Vt`), a
+library stabiliser that sets a state from the first step's network measurement (IEEEST, PSS2A, PSS2B or PSS2C on
+electrical power, whose washouts start at the first step's input, and PSS2C with its output logic, switched on or off
+from the first step's power; each stabiliser says so through `ReadsNetworkInputsAtStart`), and GGOV1 reading the electrical power (`Rselect` 1 or a supervisory load controller; `Pref`,
+`Pmwset` and the power transducer start at the first step's power). With automatic voltage references every field
+controller was already refused; the governor check applies with either. A stabiliser on rotor speed alone reads a state
+that no network change moves at `t = 0`, so it runs, also with the IEEEST voltage cut-off (`VCU` or `VCL` above 0):
+the cut-off reads `Vt` on every step but holds no state. No CLI verb can start a run with a disturbance in force at
+`t = 0` (the `stability` fault and events come at 0.1 s or after the first step, and `dynamics-study` refuses an onset
+or event time of 0), so the refusal is reached through the API only. The check is exact (the network in force at the first step is the
+base network or it is not), and a run with no disturbance at `t = 0` is unchanged bit for bit.
+
+**PSS2C** (`Pss2c`), the IEEE 421.5-2016 stabiliser: PSS2B with a fourth lead-lag `T12/T13` and an output logic on the
+electrical power. It is built from `Pss2` without changing it:
+
+```
+Vs = clamp(leadlag_{T12/T13}(PSS2B chain without its output clamp), VSTMIN, VSTMAX)   while on, else 0
+on when Pe rises above PPSSon, off when Pe falls below PPSSoff (PPSSoff <= PPSSon)
+```
+
+With `T12 = T13 = 0` and no output logic, PSS2C gives PSS2B's output bit for bit.
+
+**IEEEG3** (`Ieeeg3`), the IEEE 1973 hydro governor, data `TG TP Uo Uc PMAX PMIN sigma delta TR TW a11 a13 a21 a23`:
+
+```
+err  = P0 - dw - sigma g - delta sTR/(1 + sTR) g
+v    = err / (TG (1 + sTP)),  held in [Uc, Uo]             (gate velocity)
+g    = integral of v,  held in [PMIN, PMAX]
+Pm   = (a23 + (a11 a23 - a13 a21) TW s) / (1 + a11 TW s) g
+```
+
+The turbine is a feedthrough plus a lag, so its exact hold is exact at every sample; with the ideal-turbine values
+`a11 = 0.5, a13 = 1, a21 = 1.5, a23 = 1` it is `(1 - TW s)/(1 + 0.5 TW s)` and a unit gate step gives
+`Pm(t) = 1 - 3 e^(-2t/TW)`. The droop loop is explicit and refused when a step would flip a gate perturbation's sign
+(`(sigma + delta) dt / TG` above 1). At rest `g0 = Pm0 / a23` and `P0 = sigma g0`.
+
+**DYR.** With `--dyr-extended` the reader maps the EXDC2, IEEEX1, ESAC8B, ESST3A and IEEEG3 records value by value. Each
+record order is given in the same order by two public sources: the public copy of the PSS/E 33 model library data
+sheets (6.30 EXDC2, 6.44 IEEEX1, 6.15 ESAC8B, 6.20 ESST3A, 7.15 IEEEG3), with the ANDES `psse-dyr.yaml` input lists
+(EXDC2, IEEEX1, ESST3A), NREL PowerSystems.jl's `psse_dynamic_mapping.yaml` (ESAC8B) or PowerWorld's IEEEG3_PTI page
+(IEEEG3). EXDC2 and IEEEX1 refuse `KE = 0` and `VRMAX = 0` (PSS/E computes those for the DC exciters at initialisation,
+as OpenIPSL's IEEEX1 does), and a `SWITCH` other than 0. ESAC8B refuses `VRMAX = 0`, and `KE = 0` because PSS/E's
+handling of it for ESAC8B is not confirmed by a public source. Refused by name, with the reason in the message:
+
+| Record | Why it is not read |
+|---|---|
+| PSS2C | Modelled (file route), but one public source only gives its record order (PowerWorld). |
+| ESAC7B | One public source only for its order (PowerWorld), and no public text found gives its block diagram; not modelled. |
+| HYGOV4 | One public source only (PowerWorld's parameter list; its block diagram is not in text); not modelled. |
+| GENQEC | Record order and saturation function not public; not modelled. |
+
+GENTPJ stays refused as before. Without `--dyr-extended` all of these are models the reader does not map, with exactly
+the previous message.
+
+**File route.** A `gridsim-dynamics/2` exciter template takes `model` EXDC2 or IEEEX1 with the `dc1a...` parameters, ESAC8B
+with the `ac8b...` parameters and ESST3A with the `st3a...` parameters; a stabiliser template takes PSS2C with the PSS2B
+parameters plus `pss2cT12S`, `pss2cT13S` and optionally `pss2cPssOnPu` and `pss2cPssOffPu`; a governor template takes
+IEEEG3 with the `ieeeg3...` parameters, `droopPu` (sigma) and `valveMaxPu`/`valveMinPu` (PMAX, PMIN).
+
 ### Turbine-governors
 
-All four map speed deviation `dw` (pu) to mechanical power `Pmech` (pu on the machine base). `Initialize(Pm0)` sets
-the reference and every state so that `dw = 0` holds `Pm0` exactly.
+Each maps speed deviation `dw` (pu) to mechanical power `Pmech` (pu on the machine base); GGOV1 also reads the machine's
+electrical power. `Initialize(Pm0)` sets the reference and every state so that `dw = 0` holds `Pm0` exactly.
 
 **TGOV1** (`Tgov1`):
 
@@ -363,6 +607,52 @@ Pmech  = x2 - DTURB*dw
 On the temperature limit the steady state solves `x = AT + KT*(AT - x)`, so the turbine settles at `AT` whatever `KT`.
 `Initialize(Pm0)` needs `Pm0` inside `[VMIN, VMAX]` and at most `AT` (above it the limit binds and the start is not an
 equilibrium); `R <= 0` or `KT < 0` throws.
+**GGOV1** (`Ggov1`), the GE general governor-turbine model (PSS/E GGOV1, data sheet 7.8; the block structure as
+OpenIPSL's PSS/E-verified GGOV1). Per unit on the turbine rating `Trate` when it is given (converted to and from the
+machine base in the study), else on the machine base:
+
+```
+Pef   = lag_{Tpelec}(Pelec)
+fb    = Pef (Rselect 1) | valve stroke (-1) | fsr of the last step (-2) | 0 (isochronous, 0)
+xMW   = integral Kimw (Pmwset - Pef), in [-1.1 R, 1.1 R]           (supervisory load control)
+err   = clamp(Pref + xMW - R fb - dw, minerr, maxerr)
+fsrn  = Kpgov err + xI + Kdgov s/(1 + s Tdgov) err,   xI = integral Kigov err, in [Vmin, Vmax]
+fsrt  = min(1, Kpload e + xL),   e = Ldref/Kturb + Wfnl - TEXM,   dxL/dt = clamp(Kiload e, Rdown, Rup), xL <= 1
+fsra  = fsr(last step) + Ka dt (Aset - s/(1 + s Ta) dw)
+fsr   = clamp(min(fsrn, fsrt, fsra), Vmin, Vmax)
+valve = lag_{Tact}(fsr), rate in [Rclose, Ropen], position in [Vmin, Vmax]
+wf    = valve (1 + dw) (Flag 1) | valve (Flag 0)
+Pmech = LeadLag_{Tc/Tb}(Kturb (wf - Wfnl)) - Dm (1 + dw)
+TEXM  = lag_{Tfload}(LeadLag_{Tsa/Tsb}(wf))
+```
+
+At rest the turbine holds `Pm0 + Dm`, so the valve and `fsr` sit at `fsr0 = (Pm0 + Dm)/Kturb + Wfnl`, which must lie in
+`[Vmin, Vmax]`. `Pref = R fb0` and `Pmwset` are set on the first step from the measured power, so a machine at
+equilibrium starts with `err = 0`. The load limiter starts at `xL = fsr0` and must not bind there
+(`Ldref/Kturb + Wfnl >= fsr0`). In the RMS study the kernel passes each machine's start-of-step air-gap power
+`Re(E'' conj(I))` to a governor that reads it (`IRmsElectricalPowerGovernor`); no other governor sees a change. At a
+settled state the PID integral stops, so `err = 0`: with `Rselect 1` the power settles at `Pm0 - dw/R`, with
+`Rselect -1` the valve stroke at `fsr0 - dw/R`; on the load limit the fuel flow is `Ldref/Kturb + Wfnl` and the power
+`Ldref`. Refused by name: `Teng > 0` (no transport delay), `db != 0` (the public sources place the deadband differently)
+and `Dm < 0` (PSS/E's speed-dependent fuel limit). The load limiter is left out when `Kpload = Kiload = 0`, the
+acceleration limiter when `Ka` or `Ta` is 0. `Rup` and `Rdown` limit the rate of the load-limit integral. The
+acceleration limiter follows PSS/E's discrete form, so its effect depends on the step.
+
+**WSIEG1** (`Wsieg1`), the WECC modified IEEE type 1 steam governor (PSS/E WSIEG1, data sheet 7.35): IEEEG1's structure
+with the gate `GV` mapped through a piecewise-linear gain table to the steam flow `PGV`:
+
+```
+GV   = FirstOrderLag_{T3, rate [Uc, Uo], [PMIN, PMAX]}(Pref + LeadLag_{T2/T1}(-K dw))
+PGV  = NGV(GV)       (through (0, 0), (GV1, PGV1) .. (GV5, PGV5); the last segment extended)
+y4..y7 = lags T4, T5, T6, T7 from PGV
+Pmech = K1 y4 + K3 y5 + K5 y6 + K7 y7  (+ K2 y4 + K4 y5 + K6 y6 + K8 y7 on the same shaft)
+```
+
+A table of zeros is the identity. Points after the first all-zero pair are unused (PSS/E data leaves them 0); the
+points must rise in `GV` and not fall in `PGV`, so `Initialize` inverts the table: `GV0 = NGV^-1(Pm0)` and
+`Pref = GV0`. `IBLOCK` 1 to 3 set a `PMIN`, a `PMAX` or both that are 0 to the initial gate. The unit is
+tandem-compound, as IEEEG1. The intentional deadband `db1` with its hysteresis `err` and the backlash `db2` must be 0.
+
 `GovernedMultiMachine` hosts `Tgov1` on the classical swing through the `mechanicalPower` hook, one optional governor
 per machine. It initialises each governor at the machine's initial `Pm` and then applies a supplied `mechanicalReference`
 with `SetReference` (R246), so a set-point step travels through the valve and reheat lags; it passes no hook at all
@@ -372,6 +662,155 @@ swing damping (the test uses `Dt = 0`). TGOV1 data is on the machine's own base:
 base, one per machine, GR-560) and each governor is initialised at `Pm / k`, referenced at `reference / k` and its output
 scaled back by `k`, so a machine-base droop `R` acts as `k / R` on the system base; without it the governor reads the
 system-base powers directly (exact only for a machine rated at the system base).
+
+### Dynamic loads
+
+A dynamic load (`DynamicLoadData`) takes `PMw + j QMvar` of a bus's load: the part of `Bus.Pd`, `Bus.Qd` the RMS network
+would otherwise hold as a constant admittance at the solved voltage. The rest of the bus load stays that admittance, and
+with no dynamic load attached the network is stamped exactly as before. A study takes the loads through
+`RmsLoadedMachineData` (the machine data list with the loads), in place of the data list, on every RMS entry point.
+`SubtransientInit` initialises each load at its bus's solved voltage, stamps its Norton admittance `Y` and makes the bus
+a converter node; the kernel then drives it through the converter interface: it injects `Y V - I(V)`, where `I(V)` is
+the current the load draws, inside the converter / network fixed point, and advances its states over each step with the
+start-of-step voltage held. Its converter trace carries P and Q as injections (the consumption with the sign reversed).
+
+**Third-order induction motor** (`InductionMotorLoadData`, `InductionMotorParameters`; PSS/E CIM5 and CIMW with a single
+cage, the CMLD motor with `X'' = X'`). From the equivalent circuit `Ra + jXa` in series with `jXm` in parallel with
+`R1/s + jX1` (motor base): `X = Xa + Xm`, `X' = Xa + Xm X1/(Xm + X1)`, `T'o = (X1 + Xm)/(ws R1)`. With the motor current
+`I = (V - E')/(Ra + jX')`:
+
+```
+dE'/dt   = -(E' - j (X - X') I)/T'o - j s ws E',    s = 1 - w
+2H dw/dt = Te - TL(w),   Te = Re(E' conj(I))
+TL       = T0 (w/w0)^D  (CIM5, CMLD)  |  T0 (A w^2 + B w + C0 + D w^E), C0 = 1 - A w0^2 - B w0 - D w0^E  (CIMW)
+```
+
+In steady state this is the circuit exactly: `Z(s) = Ra + jX' + j(X - X')/(1 + j s ws T'o)`. The initial slip is the
+stable-branch slip at which the motor draws its power at the solved voltage (bisection below the breakdown slip, found by
+a golden-section search of `Te(s)`; both a fixed number of steps). A motor that cannot draw its power even at the
+breakdown slip is refused. The motor base is `MotorMva` (PSS/E: MBASE, or PMULT x the MW load). The reactive power the
+circuit draws differs from `QMvar`; the difference is a constant shunt at the bus, as PSS/E's "admittance of initial
+condition Mvar difference". The motor advances by classical RK4 over the step with `V` held; once its speed reaches 0 it
+is held there (the load does not drive it backwards). It stalls when the voltage falls below
+`Vb = sqrt(T0 / Tmax(1 pu))` for a constant torque, with `Tmax` the circuit's largest torque.
+
+**ZIP with exponential recovery** (`ZipRecoveryLoadData`; Karlsson and Hill, IEEE Trans. Power Systems 9(1), 1994). With
+`u = |V|/|V0|`, of `P0` the share `1 - fr` follows the static characteristic and the share `fr` recovers:
+
+```
+P = P0 ((1 - fr) (C1 u^E1 + C2 u^E2 + 1 - C1 - C2) + xp + fr u^at),   Tp dxp/dt = -xp + fr (u^as - u^at)
+```
+
+and likewise for Q (`fq`, `bs`, `bt`, `Tq`). A voltage step moves the recovering share at once by the transient exponent
+and then, through `Tp`, to the steady exponent. Below `VLOW` (default 0.7 pu) every term is evaluated at `VLOW` and scaled
+by `(|V|/VLOW)^2`, a constant impedance, so the current falls to 0 with the voltage. The Norton admittance is the initial
+admittance `conj(S0)/|V0|^2`.
+
+**CMLD subset** (`CompositeLoadData`; PSS/E CMLDBLU1, data sheet 9.6). Modelled: the substation transformer (a fixed
+ratio, then `Xxf`), the substation shunt `Bss`, the feeder `Rfdr + jXfdr` with its compensation split `Fb` at the
+substation end and `1 - Fb` at the far end, and at the far end motor A (the third-order motor above, taking `FmA` of the
+far-end power on a rating of that power over its loading factor) beside the static load (two exponential terms and a
+constant, the reactive power from its power factor). Impedances are on the load MVA base. The internal network is solved
+at every trial bus voltage (the static load as an admittance at its last voltage, iterated to 1e-13 pu); motor A then
+advances with the far-end voltage held. Initialisation finds the far-end voltage and power so that the bus voltage and
+active power equal the solved ones to 1e-14 (a fixed iteration of 200 passes at most, refused if it does not settle);
+the reactive difference is a shunt at the system bus. The Norton admittance is the linear driving-point admittance with
+the static load at its initial admittance.
+
+**Not modelled** in the CMLD subset on its own (the extensions below add some of these): motors B, C and D (the single-phase air conditioner motor with its stall, restart and
+thermal logic), the electronic load, distributed generation, the load tap changer (the tap is fixed), the under-voltage
+relays and contactors, the frequency dependence of the static load and motor A's subtransient level. Where WECC's model
+computes the feeder compensation and the tap at initialisation, the subset takes them as data. The motors do not see the
+bus frequency: slip is measured against the nominal synchronous speed.
+
+PSS/E DYR, with `--dyr-extended`: a `CIM5BL` record (I 'CIM5BL' LID IT RA XA XM R1 X1 R2 X2 E1 SE(E1) E2 SE(E2) MBASE
+PMULT H VI TI TB D TNOM; the data sheet 9.2 and the PowerWorld CIM5 page give this order) becomes a third-order motor
+on its load record's `PL + IP`, `QL + IQ`; the `YP`, `YQ` part stays the bus shunt. Refused by name: a double cage, saturation,
+the under-voltage relay (`VI` not 0), a load with distributed generation, and the subsystem forms (CIM5OW, CIM5ZN,
+CIM5AR, CIM5AL). `CIMWBL` is refused because only the PSS/E data sheet orders its last four values (NREL
+PowerSystems.jl's DYR mapping holds no CIMWBL either). `CMLDBLU2` is refused for two reasons. Its value order is
+confirmed by one public source only, the PSS/E data sheet. And GridSim does not do the WECC initialisation the record
+relies on: the substation shunt, the feeder compensation and the starting tap, which WECC computes from the power flow,
+are data in GridSim. `CMLDBLU1`, the first CMLD version, is refused by name; give the load through the API. Both models
+come through the API, with all the parts below.
+
+**CMLD extensions** (`CompositeLoadData.Extensions`, a `CompositeLoadExtensions`). They add motors B and C, motor D, the
+electronic load, under-voltage relays on the three-phase motors, the substation tap changer and distributed generation. With `Extensions` null the
+composite load is the subset above, bit for bit. The equations follow WECC MVWG, "WECC Composite Load Model Specification"
+(January 2015, re-issued April 2021, public on wecc.org).
+
+- Fractions. The far-end power splits as `FmA + FmB + FmC + FmD + Fel + Fstatic = 1`. `FmA` is `MotorFraction`, and 0 is
+  allowed with extensions. The static load takes the rest. Fractions adding up to more than `1 + 1e-12` are refused; the
+  WECC specification would scale them down instead.
+- Motors B and C (`CompositeLoadMotor`). Each is the third-order motor of motor A, with its own fraction, loading factor
+  and parameters, and its own Norton current at the far-end node. The code adds each part in the order A, B, C, D,
+  electronic, static and skips absent ones. So a lone motor B or C gives motor A's bits, and empty extensions give the
+  subset's bits.
+- Motor D (`AcMotorParameters`), the single-phase air-conditioner performance model. It is algebraic, on its MVA base
+  (its share of the power over `LFm`):
+
+```
+run, V >= Vbrk:            P = Po + Kp1 (V - Vbrk)^Np1     Q = Q'o + Kq1 (V - Vbrk)^Nq1
+run, V'stall < V < Vbrk:   P = Po + Kp2 (Vbrk - V)^Np2     Q = Q'o + Kq2 (Vbrk - V)^Nq2
+run at or below V'stall, or stalled:   P = Gstall V^2      Q = Bstall V^2,   Gstall + j Bstall = 1/(Rstall - j Xstall)
+Q'o = Po tan(acos CompPF) - Kq1 (1 - Vbrk)^Nq1
+```
+
+  The WECC values are `Vbrk` 0.86, `Kp1` 0, `Kq1` 6, `Nq1` 2, `Kp2` 12, `Np2` 3.2, `Kq2` 11 and `Nq2` 2.5
+  (`AcMotorParameters.Wecc`). PSS/E's CMLD record carries them as data, so they are parameters here. `Po` is `LFm` less the
+  run-curve term at the starting voltage, so the motor draws its share at the start (with the WECC `Kp1 = 0` above
+  `Vbrk`, `Po = LFm` exactly). `V'stall`, where the run curve below `Vbrk` meets the stall curve, is found by bisection to
+  the last bit. The specification's 0.01 pu scan is only indicative, and PowerWorld uses 1e-4 pu.
+- Motor D's two parts. Part A (`1 - Frst`) cannot restart. Part B (`Frst`) restarts once V stays above `Vrst` for `Trst`.
+  Both stall once V stays below `Vstall` for `Tstall`. A thermal relay acts on each part: `d theta/dt = (I^2 Rstall -
+  theta)/Tth`. The part's fraction falls linearly from 1 at `Th1t` to 0 at `Th2t` and never rises again.
+- Motor D's relays. The under-voltage relay trips `Fuvr` for good once V stays below `Vtr1` for `Ttr1`, or below `Vtr2`
+  for `Ttr2`. The contactors drop linearly from 1 at `Vc1off` to 0 at `Vc2off`. On the way up, the dropped part comes back
+  linearly from `Vc2on` (none) to `Vc1on` (all).
+- How motor D enters the network. It is an admittance, set from its power at the far-end voltage at the end of each step
+  and held over the next step. Its run curve below `Vbrk` draws more as the voltage falls, which a network solution cannot
+  hold as a power. The GridPACK reference implementation (Huang et al., arXiv 1708.00939, section III.D) holds the
+  admittance from the last step only below `Vbrk`. GridSim holds it in every run state, so above `Vbrk` it adds a lag of
+  one step, first order in the step like the rest of the integration.
+- Electronic load (`ElectronicLoadParameters`). A constant power at `PFel`, scaled by `Fv1`, the specification's pseudocode:
+  1 above `Vd1`, 0 below `Vd2`, linear in between while falling. `Vmin` tracks the lowest voltage but not below `Vd2`. On
+  recovery only `frcel` of the shed part returns. The specification's last line has a misplaced parenthesis. It is read as
+  the continuation of the line before it at `V = Vd1`. The electronic and static loads are solved at the trial voltage.
+- Three-phase motor relays (`MotorUnderVoltageRelay`). Two stages, `(Vtr1, Ttr1, Ftr1)` and `(Vtr2, Ttr2, Ftr2)`, each trip
+  their fraction once the far-end voltage stays below `Vtr` for `Ttr`. The fractions add. A tripped part scales the motor's
+  MVA; the rest of the motor runs on.
+- Tap changer (`CompositeLoadLtcParameters`). If the low-side voltage stays outside `[Vmin, Vmax]` for `Tdel`, the ratio
+  moves one `Step`, then one more every `Ttap` while it stays outside. A low voltage lowers the ratio, within
+  `[Tmin, Tmax]`. The ratio after n net moves is the starting tap plus `n Step`, from the integer n. The internal network
+  is solved with the present ratio at every trial voltage, so a move needs no new factorisation: the stamped Norton
+  admittance is only the starting estimate, and the load injects the difference.
+- Timers. Each timer counts the whole steps whose voltage meets its condition. It acts at the end of the step on which
+  the count n reaches its delay T, that is at n = ceil(T/dt), and resets when the condition fails. The quotient is taken
+  with a 4-ulp guard, so a delay that is a whole number of steps acts on that step whatever the step's binary form: 30 s
+  at 0.005 s acts after 6000 steps, 0.1 s at 0.01 s after 10. (Summing the step lengths would act one step late in both
+  cases, because the rounded sum falls just short.)
+- Quiet start. A composite load whose start would set off a part with no disturbance is refused: the low-side voltage
+  outside the tap changer's band, the far-end voltage below a three-phase motor's relay setting (`Vtr1` or `Vtr2` of a
+  stage with a fraction), below motor D's under-voltage setting (with `Fuvr` above 0), below motor D's `Vc1off`, at or
+  below its stall voltage, or below the electronic load's `Vd1`. Motor D's contactors, when in use (`Vc1off` above 0),
+  need `Vc2on >= Vc1off` (reconnection starts no lower than dropping starts; `Vc1on >= Vc2on` already holds, so
+  `Vc1on >= Vc1off` and `Vc2on >= Vc2off` follow) and both reconnection voltages above 0. With `Vc2on` below `Vc1off`, a
+  steady voltage between the two drops part of motor D on one step and reconnects some of it on the next, without end.
+  The WECC defaults (`Vc1off` 0.5, `Vc2off` 0.4, `Vc1on` 0.6, `Vc2on` 0.5) meet the rule.
+- Distributed generation (`CompositeLoadExtensions.Generation`, a `CompositeLoadGeneration`). A WECC DER_A unit (the
+  existing DER_A model, unchanged) at the far-end node. At the start it generates `Fdg` (in [0, 1)) of the far-end load
+  power, the power the load parts draw, so the far end's net draw is `1 - Fdg` of it and the bus still draws its
+  power-flow P and Q. Its reactive power follows its power factor (1 gives none), and its MVA rating is its starting
+  power over its loading factor. In the internal network it is a current source: its current at the trial far-end voltage
+  enters every solve, and its states advance from the far-end voltage at the start of each step, as the RMS kernel drives
+  a DER_A unit on a bus. DER_A's own start checks apply (the voltage inside `(vl1, vh1)` and the rest). The WECC
+  specification gives the CMLD generation in MW; GridSim gives it as this share.
+
+Not in the extensions: the frequency terms (`Pfrq`, `Qfrq` and motor D's
+frequency factors), motor D's voltage lag `Tv` and inverse-time stall (`Tstall < 0`), the relays' reconnection (`Vrc`,
+`Trc`), the tap changer's line-drop compensation and mid-band start, the WECC rule that trips the extra vars with the
+components (the system-bus shunt is fixed), point-on-wave stall, and generation models other than DER_A. The CMLD DYR
+records stay refused.
 
 ### Converter plant in the RMS engine
 
@@ -437,7 +876,9 @@ REEC_A   Vt_filt = lag(Vt, Trv);  Voltage_dip = Vt < Vdip or Vt > Vup (raw Vt)
          Q priority: Iqmax = min(VDL1, Imax), Ipmax = min(VDL2, sqrt(Imax^2 - Iqcmd^2))
          P priority: Ipmax = min(VDL2, Imax), Iqmax = min(VDL1, sqrt(Imax^2 - Ipcmd^2));  Ipmin = 0
          Thld2: Ipmax held at its dip value for Thld2 after the dip
-         the PI integrals, the Tiq lag and Pord freeze while Voltage_dip = 1
+         the PI integrals, the Tiq lag and Pord freeze while Voltage_dip = 1; with Tpord = 0, Pord = clamp(Psel,
+                 Pmin, Pmax) in a dip too (no lag, no freeze)
+         s2 and s3 are linked: s3 at a limit and pushing into it stops, and s2 stops too if it pushes the same way
 REEC_B   REEC_A without the VDL tables, the Iqfrz/Thld/Thld2 state machine, PFlag and Vref1 (VFlag=0: Vsel = Qlim)
 REEC_C   REEC_B with the VDL tables and the store: SOC = SOCini - (1/T) integral(Pe dt), Ipmin = -Ipmax,
          SOC <= SOCmin -> Ipmax = 0, SOC >= SOCmax -> Ipmin = 0
@@ -616,6 +1057,111 @@ of the RAW case and its flow branch a two-terminal branch of it, found by its bu
 returns the chains in
 `PsseDyrResult.Renewables`; the CLI carries them to `stability --rms` (see manual ch. 2 and ch. 15).
 
+### IEC 61400-27-1 style Type 4 wind turbines
+
+A converter unit can instead be an IEC 61400-27-1 style full-converter wind turbine, Type 4A or Type 4B, with Dynawo's
+2020 structure (`Dynamics/Models/Iec61400/`). **Source basis.** It is implemented from public open-source
+implementations and the CGMES DY definitions; it is not checked against the IEC 61400-27-1 text, which was not used. The
+module structure was read from Dynawo (RTE, MPL-2.0, commit 43812dfb): `Dynawo.Electrical.Wind.IEC.WT` (WT4ACurrentSource2020,
+WT4BCurrentSource2020), `Dynawo.Electrical.Controls.IEC.IEC61400` (Control4A2020, Control4B2020, PControl4A2020,
+PControl4B2020, QControl2020, CurrentLimiter2020, Mechanical, PLL, GridProtection2020) and `Dynawo.Electrical.Sources.IEC`
+(GenSystem4, RefFrameRotation). No Dynawo code was copied; each block is written again as a fixed-step discrete model. The
+parameter names are the CGMES 2.4.15 Dynamics profile names (WindGenType4IEC, WindContPType4aIEC / 4bIEC, WindContQIEC,
+WindContCurrLimIEC, WindMechIEC, WindProtectionIEC). CGMES 2.4.15 follows the 2015 edition, so the 2020 parameters it does
+not name take Dynawo's names in lower case (`dprefmax`, `dprefmin`, `tpwtref`, `mpuscale`, `updip`, `kpufrt`, `uqrise`,
+`tuss`, `kpqu`, `upqumax`, `tpll`, `upll1`, `upll2` and the measurement filters).
+
+The data path is `SubtransientInit.MachineData.Iec61400` (an `Iec61400Data`). A unit that carries it is converter plant of
+its own, a current source with no Norton admittance, driven by `Iec61400State`. Without it nothing changes: the
+pre-existing RMS digests and a dynamics-study result were pinned from the 2.1.127 build before the change and still hold.
+Values are per unit on the unit's MVA base; the network sees the current times MBASE / system base.
+
+```
+injection  I = (ip + j iq) exp(j theta_pll)      IEC frame: iq > 0 absorbs, Q = -U iq (Dynawo RefFrameRotation)
+measure    Uf, Pf, Qf = lag(U, tufilt), lag(P, tpfilt), lag(Q, tqfilt)     (own terminal P and Q, generating positive)
+PLL        theta_pll = lag(angle(V), tpll) while the last step's U < upll1 (frozen below upll2), else angle(V) at once
+P control  4A: pref = lag(P0, tpwtref) with rate [dprefmin, dprefmax];  4B: pref = ramp(P0, dprefmin, dprefmax)
+           x = pref (times U when mpuscale and U < updip);  4B: Paero = lag(x, tpaero), order input x w_gen
+           Pord = lag(input, tpord), rise <= dpmax, Pord <= ipmax U;   ipcmd = Pord / max(Uf, 0.01)
+Q control  mode 0 voltage: uref = clamp(xref + uref0, umin, umax);  modes 1, 3: uref = PI(kpq, kiq) on clamp(xref) - Qf
+           eU = uref - Udrop,  Udrop = |U + (rdroop + j xdroop)(Pf - j Qf) / U|  (Dynawo VDrop)
+           iqbase = -(PI(kpu, kiu) on eU), proportional limited to qmin/Uf .. qmax/Uf (kpufrt, unlimited, in a fault)
+           modes 2, 4 (open loop): iqbase = -clamp(lag(xref, tqord) / Uf, iqmin, iqmax), held in a fault
+           xref = Q0 (modes 1, 2), drop0 - uref0 with drop0 the dropped U0 (mode 0), tan(phi0) |Pf| (modes 3, 4)
+           iqv = kqv deadzone(Uf - Uss, udb1, udb2),  Uss = lag(Uf, tuss)
+           state: fault while Uf < uqdip or Uf > uqrise; post-fault after a dip for tpost (whole steps); else normal
+           fault: iqcmd = clamp(iqv (ride-through mode 0) or iqbase + iqv (modes 1, 2), iqmin, iqh1)
+           post-fault: as in the fault, or iqbase + iqpost in mode 2;  normal: iqcmd = iqbase
+limiter    imax (imaxdip in a fault); tables ipvdl(Uf), iqvdl(Uf); reactive priority (mqpri) only in and after a fault:
+             active priority:   iqmax = min(sqrt(imax^2 - min(ipcmd/w, ipvdl)^2), iqvdl),  ipmax = w ipvdl
+             reactive priority: iqmax = iqvdl,  ipmax = w min(ipvdl, sqrt(imax^2 - min(iqvdl, |iqcmd|)^2))
+             iqmin = min(iqmax, max(-iqmax, kpqu (Uf - upqumax))),  w = w_gen with mdfslim, else 1
+generator  ip = lag(ipcmd, tg), rise <= dipmax, ip <= ipmax;  iq = lag(iqcmd, tg), rate [diqmin, diqmax], iqmin..iqmax
+drive (4B) T = cdrt (w_wtr - w_gen) + kdrt theta,  d theta/dt = w_wtr - w_gen
+           2 hwtr dw_wtr/dt = Paero / w_wtr - T,   2 hgen dw_gen/dt = T - P / w_gen
+protection over and under voltage and frequency: trip when the time beyond the threshold exceeds the table's time for the
+           present level (whole steps); frequency from the terminal angle's derivative (the change per step, then
+           lag(tffilt / 20): Dynawo's Derivative block), rate-limited (dfmax), lag(tffilt)
+```
+
+**Discretisation.** Each step holds its inputs (the start-of-step terminal voltage and the unit's own power at the last
+commit). Lags are advanced by the exact zero-order hold, `y' = u + (y - u) exp(-dt/T)`, so an equilibrium stays exactly
+where it is. A rate limit clamps the step's change. An absolute limit clamps the state (non-windup): Dynawo's finite
+anti-windup gains Kpaw, Kipaw and Kiqaw are replaced by the limit of a large gain, and are not parameters. The PI integrals
+take forward Euler steps and are held during a fault. The drive train takes the semi-implicit Euler step: the speeds from
+the start-of-step torque, then the twist from the new speeds. Its undamped map has its eigenvalues on the unit circle at
+`phi = 2 asin(h wn / 2)`, with `wn^2 = kdrt (1/(2 hwtr) + 1/(2 hgen))`, so a free oscillation keeps its amplitude. The unit
+refuses a step with `h wn >= 2` or `h cdrt (1/(2 hwtr) + 1/(2 hgen)) >= 2`. Dynawo integrates the twist with gain 1 (no
+angle base factor), so `wn` has none either. The fault and protection timers count whole steps, so a run takes one step
+size: a change is refused, and `dynamics-study` refuses a step schedule or the error-controlled step with an IEC unit.
+
+**Initialisation.** From the unit's solved point only: `ip0 = P0 / U0`, `iq0 = -Q0 / U0`, every filter at its input, both
+speeds 1 pu, the twist at `P0 / kdrt`, the power references at P0 and the voltage reference at the dropped voltage. Dynawo
+starts the reactive-power PI at U0; GridSim starts it at the dropped voltage, the exact equilibrium (the two agree when
+rdroop = xdroop = 0). A start with a current or order outside its limit, inside the fault band (U0 below uqdip or above
+uqrise), or beyond a protection threshold is refused. Nothing is read from the first step, so a disturbance at t = 0 does
+not change the start.
+
+**Differences from Dynawo, on purpose.** Lookup tables hold their end values outside their range (Dynawo's table default
+extrapolates through the last two points; give points that cover the operating range and the two agree). Placeholder limits
+of +-999 are read as no limit. The converter's series and shunt impedance (Dynawo ElecSystem) is not built: the unit injects
+at its terminal. Ride-through mode 3 (a user hook) is not built and is refused. The protection tables `tuover`, `tuunder`,
+`tfover` and `tfunder` follow Dynawo's 2020 tables (allowed time against the level) under the CGMES WindProtectionIEC
+names; CGMES 2.4.15 gives those names scalar times, after the 2015 edition.
+
+**Verification.** Analytical, in `Rc5Wp23Iec61400Tests`: a flat start on a stiff bus for both types and five control modes;
+the generator lag against its exact step response at every sample; the rate limits step by step; the fault state machine,
+the kqv injection and the post-fault time at 10 ms and 5 ms steps; the current-limit circle with reactive and with active
+priority; the undamped drive train against the discrete closed form at every step and its zero crossings against the
+two-mass frequency; the protection timer at two step sizes; the protection's frequency derivative and its lag against
+their closed form on an angle ramp; a disturbance at t = 0 leaves the start unchanged.
+
+**Dynawo's reference curves are not compared.** Dynawo ships reference curves for its Neplan WT4A and WT4B 2020 examples
+(`Examples/references/Dynawo.Examples.Wind.IEC.Neplan.WT4ACurrentSource2020_res.csv` and the WT4B file: P, Q and U every
+1 ms over 25 s). A decimated copy (every 50 ms) is kept with the tests, with its MPL-2.0 attribution. The comparison the
+curves invite (drive the unit's terminal with the recorded voltage, compare P and Q) cannot be made with the model as
+built, and a test checks each reason on the data itself (`Rc5Batch2VerifyIec61400Tests`):
+- Every disturbance before and around the faults is a change of a reference: the active power reference steps from 1 to
+  0.5 pu at 2 s, the reactive reference from -0.21 to 0.2 pu at 4 s, and the grid frequency reference dips 1 % at 20 s.
+  GridSim's turbine holds its references at their initial values and has no reference input, so the state it would reach
+  the faults (6 s and 12 s) in is not Dynawo's.
+- The reactive control enters both faults held at a limit: Q settles at 0.085 pu, not at its 0.2 pu reference, with the
+  terminal voltage at 1.096 pu, so Dynawo's controller is in a limited state there. GridSim starts every unit at
+  an unconstrained equilibrium from its solved point, so even started at 5.95 s its controller state would differ.
+- The files hold the voltage magnitude only, not its phase. The PLL and the injected current's angle follow the terminal
+  angle, which jumps when a fault starts and clears, so the voltage alone is not a complete boundary condition.
+- P, Q and U are Dynawo's control measurements at the grid side of its ElecSystem (the LV transformer, RLvTr 0.001,
+  XLvTr 0.01, GLvTr 0.0005, BLvTr 0.001 pu), which is not built here.
+
+A reference input for P and x, a start from a limited controller state, the ElecSystem and the terminal phase would each be
+needed; with them the tolerance would follow from the 1 ms recording interval and the linear interpolation between samples.
+
+**Scope.** Type 4A and 4B only; Types 1, 2 and 3 are not built. The 2020 edition structure only (the 2015 structure is
+refused by name). Constant reactive power limits (the Q limiter's voltage and power tables are not built). No plant
+controller (WindPlantIEC). Balanced RMS, positive sequence. No PSS/E DYR record (PSS/E has no standard IEC records), and
+the CGMES DY export does not write these classes. The unit is given through the API or the `dynamics-study` file's
+`iec61400` member (manual ch. 15 and ch. 19).
+
 Machines and converters share one network. With the retained admittance partitioned machines-then-converters,
 `[Ymm Ymc; Ycm Ycc]` (`ConverterNetwork`):
 
@@ -699,6 +1245,8 @@ Step `k`, at `t = k*dt`:
    `Vref` supplied, each controlled machine's reference is set once, on the first step, to
    `|Vt| + controller.EquilibriumErrorPu(Efd)`, so the fleet starts at equilibrium; this needs the base network in
    force at `t = 0` and throws `InvalidOperationException` if any network stage other than the base network is in force at `t = 0`.
+   With `Vref` supplied, the same is refused for ESST3A and EXDC2, which finish their initialisation on the first
+   step's measurements.
 5. **Fluxes.** With the start-of-step `Id`, `Iq` and EMFs:
 
 ```
@@ -721,7 +1269,10 @@ starts at equilibrium.
 8. **Swing.** Coupled RK4 on `(delta, omega)` of all machines, with `E''q`, `E''d` and the converter currents frozen
    and `Pe_i = Re(E_i conj(Im_i))` re-solved from the network at each of the four stages.
 
-The step is fixed (no error control). The frozen-input splitting of steps 5 and 8 is designed to be first order in the
+The step is fixed by default. A step schedule (fixed steps of a different size in each window) or the error-controlled
+step (the windows chosen by step doubling over whole runs; EXPERIMENTAL, outside the verified contract) is opt-in; see [chapter 43](<0043 Long-term dynamics.md#step-schedule-for-the-full-rms-model>).
+On a schedule, step k starts at the schedule's sample time and every component is given that step's size. The
+frozen-input splitting of steps 5 and 8 is designed to be first order in the
 step (no test measures the order), and this is the reason the step is a stated parameter of every result (`StudyDefaultStepSeconds = 0.005` s for a
 study, `CctDefaultStepSeconds = 0.002` s for the clearing-time search).
 
@@ -824,6 +1375,9 @@ exciters)` drives the same machines, control library and sparse network with a l
 | `RmsBranchReclose` | `reclose:BRANCH@t` | returns a tripped branch to service |
 | `RmsLoadStep` | `load:BUS:PMW:QMVAR@t` | adds a constant-admittance load step; steps on one bus add |
 | `RmsGeneratorTrip` | `gentrip:GEN@t` | disconnects the machine (0-based generator index), zeroes its mechanical power and leaves it out of the synchronism verdict |
+| `RmsSequenceFault` | `sfault:TYPE:BUS@t`, `sfault:TYPE:BUS:R:X@t` | a three-phase (`3ph`), single line to ground (`slg`), line to line (`ll`) or double line to ground (`llg`) fault at the bus, bolted or through Zf = R + jX pu (system base), until a `clear:BUS@t` |
+| `RmsBranchSequenceFault` | `lfault:TYPE:BRANCH:FRACTION@t`, `lfault:TYPE:BRANCH:FRACTION:R:X@t` | the same fault a fraction (strictly between 0 and 1, from the From bus) along a line |
+| `RmsBranchFaultClear` | `lclear:BRANCH@t` | removes the fault along that line |
 
 Every event takes effect at the first integration step whose time has reached its `AtSeconds` and stays in effect
 unless a later event undoes it. The events are taken in time order, input order for equal times. At each distinct event
@@ -838,6 +1392,67 @@ clearance with no fault in place; a load step that is not finite or zero in both
 a unit that is not an integrated synchronous machine, a machine tripped twice, or a trip of every machine. A fault
 and its clearance reproduce the single-fault `Study` bit for bit.
 
+### Unbalanced and impedance faults
+
+`RmsSequenceFault` and `RmsBranchSequenceFault` (`src/GridSim.Core/Dynamics/Models/RmsSequenceFaults.cs`) use the
+standard positive-sequence method of balanced-frame RMS simulation, the one PSS/E and PowerFactory RMS use. At every
+network stage the positive-sequence network carries, at the fault point, an equivalent shunt built from the negative-
+and zero-sequence Thevenin impedances Z2 and Z0 seen there:
+
+| Type | Equivalent fault impedance |
+|---|---|
+| three-phase | Zf (Zf = 0 is the `BoltedFaultShuntPu` shunt of `RmsBusFault`, the same stamp) |
+| single line to ground (phase a) | Z2 + Z0 + 3 Zf |
+| line to line (b-c) | Z2 + Zf |
+| double line to ground (b-c-g) | Z2 in parallel with (Z0 + 3 Zf) |
+
+Z2 and Z0 come from the short-circuit sequence networks of `FaultAnalysis.Unbalanced`. The negative sequence is the
+in-service branch network with phase shifts reversed, the loads and load steps as the same constant admittances the RMS
+network holds, and each connected machine as 1 / j(X2 + Xt) on the system base, X2 being `Generator.NegativeSeqXPu`
+when given and the RMS X'' otherwise. The zero sequence is the IEC 60909 network (`Iec60909.BuildZeroSequenceNetwork`:
+winding connections, neutral reactances, line R0 / X0 or 3 Z1, machine zero-sequence impedances). Both are recomputed
+for every stage, so a branch trip or a machine trip during the fault changes them. Converter plant and units held as
+constant injections are open in both, as in the static study. An earth fault at a point with no zero-sequence earth path
+draws no current (single line to ground) or is the line to line fault (double line to ground). An earth fault on a model
+whose zero-sequence network cannot be represented (`Iec60909.RequireRepresentableZeroSequence`) is refused.
+
+A fault along a line splits the line at the fault point exactly as `FaultAlongLine.Build` does (R, X, B, R0 and X0 in
+the ratio d : 1 - d) for the sequence networks, and eliminates the fault point from the positive-sequence network by Kron
+reduction, so the two end buses carry the reduced stamps of the split line with the fault shunt. Only a line can be
+faulted along its length (no tap, phase shift, winding data or zero-sequence mutual coupling). While the line is tripped
+the fault carries no current; a reclose with the fault still in place recloses onto it. The run starts from the
+operating point of the whole line, and the split applies only while the fault is in place. For a line with charging,
+two lumped pi sections are not quite the network of one, so the fault-instant values differ from the static
+fault-along-line study (which solves its own power flow on the split line) by that difference, about 3e-5 relative on
+the WSCC 9-bus case; for a line without charging they agree to the power-flow tolerance.
+
+`RmsTransientStability.StudyEventsWithFaults(...)` runs the event study (the same machine traces, to the bit, as
+`StudyEvents`) and returns an `RmsFaultTrace` per sequence fault: at every step while it is in place, the
+positive-sequence voltage at the fault point from a second, read-only solve of the step's network, the sequence currents
+into the fault, V2 = -Z2 I2 and V0 = -Z0 I0, the phase voltage and current magnitudes, and the stage's Z2 and Z0.
+`CriticalClearingBracketSequenceFault(...)` is the critical clearing search of `CriticalClearingBracketEvents` with a
+sequence fault in place of the bolted one.
+
+Scope. This is a positive-sequence representation. The machines see the positive-sequence network only: the braking
+torque of negative-sequence current in the rotor, the double-frequency torque and every per-phase waveform detail are
+not modelled (the EMT engine, `emt3`, carries phases). The negative-sequence network carries each dynamic load by its
+Norton admittance, as the positive-sequence network does (for an induction motor, its locked-rotor admittance), with
+that share taken out of the bus's constant load admittance. A balanced fault in place at the same time as an unbalanced
+one (a bolted bus fault, or a three-phase sequence fault) is in the unbalanced fault's negative- and zero-sequence
+networks too: it is the same shunt from each phase to earth, so it appears unchanged in every sequence, and the result
+is exact. Two unbalanced faults in place at once (a cross-country fault) couple the sequence networks at two points,
+which one equivalent shunt per fault cannot represent, so the event list refuses the second.
+
+Verification (`Rc5Wp2RmsSequenceFaultTests`). At t = 0+ the fault currents, Z2, Z0 and phase voltages equal the static
+operating-point study (`FaultAnalysis.Unbalanced` and `FaultAnalysis.ThreePhase`) on an earthed WSCC 9-bus case to
+1e-10 relative, and Z0 bit for bit; a fault along a line without charging equals the static study on the split line
+to 1e-8. A
+three-phase fault with Zf = 0 reproduces the bolted `RmsBusFault` run bit for bit, and a shrinking Zf converges on it. On
+a single machine against a stiff source the electrical power during each fault type matches the hand-derived transfer
+reactance to 1e-10, and the critical clearing times order three-phase, then double line to ground, line to line and
+single line to ground. Dense and sparse power flows, repeated and parallel runs and the three SIMD modes give the same
+bits.
+
 `RmsTransientStability.CriticalClearingBracketEvents(model, result, data, faultBusId, clearingActions, background, ...)`
 runs the shared `CctSearch` on event studies: each trial places the fault at the onset, its clearance `m` steps later,
 re-times every clearing action (a branch trip, typically) to that instant, keeps the background events as given, and
@@ -848,7 +1463,9 @@ The CLI exposes both (`stability <case> --rms`):
 
 - `--events <list>` runs one `StudyEvents` with the comma-separated spec list. It takes no `--fault-bus`, `--clear` or
   `--clear-by-trip`, and no `--screen`. The run lasts `CliDefaults.RmsDurationS` (3.0 s) or 3.0 s past the last event,
-  whichever is later, at the 0.005 s step; it prints the events in time order and the verdict.
+  whichever is later, at the 0.005 s step; it prints the events in time order and the verdict. A list with a
+  sequence fault also prints each fault point at t = 0+ and at its last step, and `--events-out` then writes
+  `rms-fault-points.csv` (`RmsFaultPointsExport`) beside the other files.
 - `--clear-by-trip <i,j,...>` clears the fault at `--fault-bus` by tripping the listed branches: with `--clear <ms>` it
   is one event study at that clearing time; without it, the `CriticalClearingBracketEvents` search.
 - `--events-out <dir>` (with `--rms --events` only; exit 2 otherwise) writes the event study's export
@@ -893,6 +1510,306 @@ $ gridsim stability case9 --rms --pss
 error: --pss needs an AVR (--avr sexs or --avr ieeet1).
 [exit 2]
 ```
+
+### SVC, STATCOM and HVDC links
+
+Without device data the RMS network leaves every HVDC link, FACTS device and static var compensator out, as it always
+has: the loads are stamped from `Bus.Pd`, `Bus.Qd`, and a generator at a device bus takes the bus's solved injection with
+the device's power folded in. A study that gives device models (`src/GridSim.Core/Dynamics/Models/Facts/`, `Hvdc/`) gets a
+converter node for each device terminal, initialised on the device's power-flow state, and the generators at a link's bus
+then carry only their own power. Two ways to attach a model:
+
+- `SubtransientInit.MachineData.Facts`: an SVC or STATCOM held as a generator (scheduled at 0 MW), as PSS/E holds one.
+- `new RmsLoadedMachineData(machines, loads, devices)`: `SvcDeviceData` (a `StaticVarCompensator` of the case; its BINIT
+  is already in the bus shunt, so the model injects only the susceptance above it), `StatcomDeviceData` (a FACTS device in
+  STATCOM mode; a UPFC or series-impedance device is refused and stays at its power-flow injection), `LccLinkDynamicsData`,
+  `VscLinkDynamicsData` and `MtdcGridDynamicsData` (a multi-terminal DC link), each bound by name. Unknown, ambiguous or repeated names are refused.
+
+Every block uses the exact zero-order hold of `ControlBlocks` from the start-of-step voltage; within a step each device is
+a current source at its held states (the two ends of a link share one state, advanced by the first end).
+
+| Model | Equations | Initialisation |
+|---|---|---|
+| CSVGN1 | e = V - Vref; u1 = K (1 + sT1)/(1 + sT3) e; u2 = (1 + sT2)/(1 + sT4) u1 in [VMIN, VMAX]; x = 1/(1 + sT5) u2 in [RMIN/MBASE, 1]; Y = CBASE/Sb - x MBASE/Sb; I = -j (Y - Yheld) V | x0 = (CBASE/Sb - Y0)/(MBASE/Sb), Vref = V0 - x0/K; refused outside the range |
+| STATCOM1 | e = Vref - V - Xs Iq; Iq_cmd = Kp e + Ki/s e (non-windup); Iq = 1/(1 + sTc) Iq_cmd in [-ImaxInd, ImaxCap]; I = -j Iq (MBASE/Sb) V/\|V\| | Iq0 = Q0/(V0 MBASE/Sb), Vref = V0 + Xs Iq0 (+ Iq0/Kp when Ki = 0) |
+| LCC1 | Io = Pord_f / max(Vdc_m, floor) (or the current order), held in [C0, VDCOL(Vdc_m)]; Id = 1/(1 + sTIDC) Io; Vdi = N (k Eac cos(gamma) - (3/pi Xc + 2 Rc) Id), Vdr = Vdi + Rdc Id, alpha from Vdr; below ALFDY the rectifier sits at ALFDY and the inverter takes Id (1 - margin); Q = P tan(phi) | Id0, Vdc_m0, Pord0 and the taps from the power flow; the inverter at the power flow's extinction angle |
+| VSC1 | P_f = 1/(1 + sTp) Pref, Id = P_f / V; Iq from a filtered Q order or Iq0 + Kv (V0 - V) through 1/(1 + sTq); current limit with priority; the DC side carries the power the power converter exchanges (P_f, or V Id when Id is clipped, 0 below its voltage floor), and the DC voltage converter delivers it less R I^2 and both converter losses (its own current limit is not fed back) | P_f0, Q0 from the power flow; refused when a converter is over Imax |
+| MTDC1 | per DC bus H dW/dt = P - V (sum y (V - Vj) + g V), W = V^2; per converter P mode lag(Pord, Tp), droop lag(P0 - Kd (Vdc - Vdc0), Tp), or DC voltage (holds Vdc, takes what balances its bus); AC side as VSC1 | Vdc, P and Q from the power flow's MTDC solution; refused when a DC bus is out of balance by more than 1e-9 of the powers it balances |
+
+VSC1 has an opt-in flag, `Vsc1Data.DcFollowsLimitedPower` (`dcFollowsLimitedPower` in `dynamics-study`). With it, the DC
+voltage converter's own current limit is fed back too: when it cannot deliver the DC power at its AC bus, it delivers V Id
+at its limit and the power converter's power is cut to that plus the line and converter losses, so the DC side balances.
+The default is off, which keeps VSC1's results bit for bit.
+
+**Multi-terminal DC (MTDC1).** `MtdcGridDynamicsData` binds a multi-terminal DC link of the case by name and gives each
+converter a control (`MtdcTerminalControl`, by AC bus): `Power` (an order through the lag Tp), `Droop` (P = P0 - Kd (Vdc -
+Vdc0) through Tp) or `DcVoltage` (an ideal controller holding its DC bus at the power-flow voltage). Each DC bus stores
+energy in its capacitance C (the converters' capacitors, an MMC's equivalent capacitance and any extra bus capacitance, for
+example half of each cable's): H = C Vbase^2 / (2 Sbase), and the state is W = Vdc^2, so a constant power imbalance is a
+straight-line rise in W. The DC lines and grounds are the link's resistances. Each step is backward Euler, solved by
+Newton's method, because a resistive DC network is stiff (a bus's time constant is about 2 H R, far below an RMS step);
+the line flows are formed from voltage differences so a low-resistance line does not lose them to rounding. Forward
+Euler would be unstable there, and trapezoidal, A-stable but not L-stable, would ring on those fast modes (its step factor
+is -0.85 at dt / tau = 25, backward Euler's 0.038); backward Euler is first order, as the held-power coupling is. The
+converters' powers are held over a step, as every device's are, and a DC voltage converter's power is whatever balances
+its bus at the end of the step. The droop order uses the DC voltage at the start of the step, so the droop loop is
+explicit: on a DC bus on its own it is stable exactly for dt < 2 H V0 / Kd (the Jury test on its step map, whatever Tp),
+and a run whose step is that long or longer at any free droop bus is refused, naming the bus and the limit. Every converter's AC side is VSC1's: a current source with a current limit, its reactive
+power held at the power-flow value or under AC voltage control. A Power or Droop converter sends into the DC grid the
+power it actually exchanges after its current limit; a DC voltage converter's own limit is not fed back.
+
+The power flow solves a multi-terminal link with PSS/E's line-commutated converter equations, and MTDC1 starts on that
+solution: the DC voltages and each converter's P and Q. In the run every converter is a voltage-source converter. Its
+firing angle and tap are not part of the RMS model, and its reactive power is a control quantity rather than the
+line-commutated converter's. The power flow's converters are lossless, so MTDC1's are too.
+
+**Averaged MMC (MMC1).** `Mmc1Data` on a converter follows the averaged model of Saad et al. (IEEE Trans. Power Delivery
+28(3), 2013). The six arms of N submodules of capacitance C_SM hold the energy of one capacitor C_eq = 6 C_SM / N. With the
+energy controller off (the default), C_eq is lumped onto the converter's DC bus. With it on (Kp_W or Ki_W above 0), the
+converter keeps its stored energy E apart: dE/dt = P_ac - P_dc and P_dc = lag(P_ac + Kp_W (E - E0) + Ki_W integral(E -
+E0), Tw), so E returns to its starting value. The arm inductance adds w L_arm / 2 to the coupling reactance. The converter
+is a current source, so that reactance changes its internal voltage (traced as `e_conv_pu_<bus>`) and not its current.
+
+The LCC link blocks (no current) when the rectifier's AC voltage falls below VBLOCK, unblocks once it is above VUNBL and
+the link has been blocked for TBLOCK, and its current order then recovers at CRAMP (pu of the initial current per s) and
+the VDCOL voltage at VRAMP. The power flow settles its AC/DC alternation to 1e-9 (1 + |P|) MW from the voltages of its
+previous AC solve; that residual is held as a correction scaled by Id / Id0, so a link starts exactly on the injections
+the power flow reports.
+
+Verification: the flat start of every model; the SVC droop point (5 V^2 - 3.96 V - 1 = 0 on a 0.2 pu Thevenin source),
+the SVC at its capacitive limit (V = 1/1.4) and the STATCOM at its current limit (V = 0.75, Q = 0.75 pu against the SVC's
+0.51 pu); the STATCOM slope point; the SVC's linearised time constant within 2 %; the LCC and VSC order steps against the
+closed-form lag response to rounding; LCC blocking and the recovery ramp slope; the VSC DC power balance at every step;
+for MTDC1, the energy ramp of a constant imbalance (bit for bit with power-of-two values), a two-terminal DC line against
+its closed form V2 = (1 + sqrt(1.02)) / 2 and against the power flow's MTDC solution to 1e-10, droop sharing in the ratio
+of the gains, the flat start, the MMC's C_eq = 6 C_SM / N and its H, and the energy controller returning to E0; and the
+VSC1 voltage converter limit balanced against the DC equations.
+These are analytical checks; the models are not validated against PSS/E or PowerFactory runs.
+
+Not modelled: SVC switched elements (TSC and MSS of SVSMO1 to 3) and the slow susceptance regulator; LCC commutation
+failure, DC line dynamics, tap changes during the run, bypass and restart details beyond the ramps, and the forced current
+mode (TCMODE); for MTDC1, DC line inductance and capacitance dynamics beyond the bus capacitors, DC faults and DC
+breakers, a DC voltage converter's current limit, and the MMC's circulating-current control and submodule balancing; VSC1
+DC voltage (capacitor) and PLL dynamics, grid-forming control and MMC
+internals (the EMT engine covers these); UPFC and TCSC dynamics. Under the RMS sequence faults the devices see the
+positive sequence only. The adaptive-step study refuses a case with device models, as it refuses all converter plant.
+
+PSS/E DYR, with `--dyr-extended`: CSVGN1 (`IBUS 'CSVGN1' ID K T1 T2 T3 T4 T5 RMIN VMAX VMIN CBASE /`, MBASE the unit's)
+and CDC4T (`'DCNAME' 'CDC4T' ALFDY GAMDY TVDC TIDC VBLOCK VUNBL TBLOCK VBYPAS VUNBY TBYPAS RSVOLT RSCUR VRAMP CRAMP C0 V1
+C1 V2 C2 V3 C3 TCMODE /`; a non-zero VBYPAS, VUNBY, TBYPAS, RSVOLT, RSCUR or TCMODE is refused unless unmodelled dynamics
+are allowed). A record led by a quoted name is read as a DC line record only with the option, so the reader without it is
+unchanged error for error. SVSMO1 to 3, CSVGN3 to 6, CSTCON, CSTATT, VSCDCT and the other DC line models are refused by
+name: STATCOM1, VSC1 and MTDC1 are API and `dynamics-study` JSON only. These records were checked again for a second
+public source that gives the same order: PowerWorld's pages give orders for CSVGN3 (CSVGN1's ten values and VOV, an
+override voltage) and SVSMO3 (45 values, with deadbands, I2t limits and switched elements), but NREL PowerSystems.jl maps
+none of them, OpenIPSL has CSVGN1 only, and the PSS/E model library is not public text. So they stay refused.
+
+### User models: plug-ins, injection and load roles, the expr block
+
+Two routes put a model of the user's own into the RMS engine: a declarative `gridsim-model/1` document (interpreted by
+`ModelInstance` with the coded models' `ControlBlocks` operators) and a .NET plug-in (`GridSim.Core.Dynamics.Plugins`,
+contract version 1). Both reach the kernel through the same adapters.
+
+**Plug-in contract.** A plug-in assembly carries `[GridSimModelPlugin(1)]` and one `IUserModelFactory` per model (`Id`,
+`Role`, `Parameters`, `Create`). The role interfaces are narrow and separate from the kernel's: `IUserGovernor`
+(`Initialize(pm0)`, `Step(dw, dt)`), `IUserExciter` (`Initialize(efd0)`, `EquilibriumErrorPu(efd0)`, `Step(verr, dw, dt)`),
+`IUserStabiliser` (`Step(dw, vt, pe, dt)`), and `IUserInjection` / `IUserLoad` (a constant Norton admittance Y,
+`Initialize(P0, Q0, V0, rating)`, `Current(v)` with the states held, `Commit(v)`, `Step(t, v, dt)`), all in per unit on the
+machine base (control roles) or the system base (currents), phasors as (re, im) doubles in the network frame. The adapters
+(`PluginGovernor : IRmsGovernor`, `PluginFieldController : IRmsFieldController`, `PluginStabiliser : IRmsStabiliser`, and
+`UserDeviceState : IRmsConverterModel`) forward each call with the kernel's own arguments, so the route adds no arithmetic,
+and refuse a non-finite output naming the model and the time. The field controller reads the equilibrium error from a
+private scratch instance, as the declarative adapter does.
+
+**Network side of injection and load.** The kernel injects `I(v) + Y v` for an injection and `Y v - I(v)` for a load on top of
+the stamp Y, so the network sees exactly the model's current and Y only conditions the converter / network fixed point (the
+WP3b dynamic-load convention). A unit whose `MachineData.UserInjection` is set is converter plant in its own group, as a
+WECC or FACTS unit is; a `UserDynamicLoadData` joins the dynamic loads. With neither, `IsConverterUnit`, the grouping and the
+stamps are the historical ones (`d.UserInjection is not null` is one more false disjunct). When the plan is made, the model's
+current at the solved voltage must give the power-flow P + jQ to `1e-10 (1 + |S0|)` pu, or the start is refused.
+
+**Declarative injection and load.** Role `injection`: input `vm`, outputs `ip`, `iq` on the MBASE, initialised from
+`p0 = P0 / rating`, `q0 = Q0 / rating`, `v0 = |V0|`; `I = (ip - j iq)(v / |v|) rating` (the unit phasor `v / |v|` stands for
+`e^{j theta}` with no transcendental call). Role `load`: input `vm`, outputs `p`, `q`; `S = p P0 + j q Q0`, `I = conj(S / v)`
+drawn; the Norton admittance is `conj(P0 + j Q0) / max(|V0|^2, 1e-9)`, the expression the network builder stamps for a
+constant-admittance bus load, so a model with `p = q = (vm / v0)^2` draws `Y v` up to rounding and leaves the network as the
+static load did. The current is the held evaluation `ModelInstance.EvaluateHeld`: the compiled order runs once with each
+stateful block giving its output at its present state (a lag, integrator, rate limiter, hold, delay or saturated pole its
+state; a lead-lag, washout or PI its feedthrough of the present input on its present state) and nothing advances. `Step` is
+unchanged.
+
+**The expr block.** The text is parsed once (recursive descent) into a reverse Polish instruction array: inputs `in0`..`in7`,
+parameters `@Name` (in first-appearance order), literals without an exponent, `+ - * /` left-associative with `*` and `/`
+binding tighter, unary minus, and `min`, `max` (two or more arguments folded left to right with `Math.Min` / `Math.Max`),
+`abs`, `sqrt` (`Math.Sqrt`, correctly rounded on every platform), `exp` (`DetMath.Exp`) and `clamp(x, lo, hi)` (lo > hi gives
+NaN). Evaluation is the array in order on a preallocated stack, so the arithmetic is the text's left-to-right reading:
+`in0 - in1 / @R` is `Pref - dw / R` operation for operation and an expr TGOV1 is bit-identical to `Tgov1`. Nesting and stack
+depth are capped at 64. The output unit is declared (`unit`) and not inferred; the parameters in the text are checked
+declared. A non-finite result throws `UserModelException` with code `non-finite` naming the block.
+
+**Determinism lint.** `PluginVerifier` reads the assembly bytes with `System.Reflection.Metadata` before any load: the plug-in
+attribute (a member reference to the GridSim.Core attribute, so a look-alike defined in the plug-in does not count), the
+assembly references (the framework and GridSim.Core only), every method body's instruction stream (each member, field, type
+and signature token, `ldc.r4` and `conv.r4`), the signatures of every method, field and local, P/Invoke imports, module
+references and body-less (extern) methods, the type definitions (an `IgnoresAccessChecksTo` attribute the plug-in defines
+itself), and every remaining type and member reference. Each reference is looked up in `PluginDenylist`, and each refusal
+names the member and the referencing type and method. The lists are private `ImmutableArray<string>` fields,
+ordinal-sorted: namespaces, types (a listed type takes every type nested in it), members, the allowed `System.Math` and
+`System.Double` members, and the types whose `GetHashCode` is a pure function of the value (the numbers, bool, char,
+enums). GridSim.Core is open only in `Dynamics.Models`, `Dynamics.Plugins` and `Numerics`, checked by name and, in the type
+reference table, by the assembly the reference resolves to; the loader's types and `SimdCapabilities` are refused there.
+The `in`-parameter modifier `InAttribute` and the attribute types directly in `System.Reflection` (written by the SDK) are
+allowed. Past the deny lists, a framework type (`System.*`, `Microsoft.*`, `Internal.*`, `Windows.*`) must lie in one of
+the allowed namespaces (`System`, `System.Collections.Generic`, `System.Collections.Immutable`,
+`System.Collections.ObjectModel`, `System.Diagnostics.CodeAnalysis`, `System.Globalization`,
+`System.Runtime.CompilerServices`, `System.Runtime.Versioning`, `System.Text`) or be an attribute type of
+`System.ComponentModel` or `System.Diagnostics`, and an assembly reference must be on a short allow list (GridSim.Core and
+the framework assemblies that hold those namespaces). So a file or network route the deny lists do not name
+(`System.Formats.Tar`, `System.Data`, `System.Resources`, `TextWriterTraceListener`) is refused by default. It remains a
+lint, not a sandbox: a plug-in is trusted code.
+
+Static fields of another assembly (a member reference whose parent is not the plug-in's own type or a generic
+instantiation of one): `stsfld` and `ldsflda` are refused, and `ldsfld` is refused unless the field holds a number, bool,
+char or string, so no host array or object is reachable to write through. A plug-in's own statics are allowed; the
+replay check catches their effect between instances.
+
+What the lint covers is exactly the list in manual chapter 19 under `user-model`. It checks names, not data flow: implicit
+current-culture text operations (interpolation, `ToString()` without a provider, culture-sensitive comparison) and a
+framework method that takes `IReadOnlyCollection<T>` or `object` and enumerates a dictionary or set handed to it are not
+refused.
+
+**Replay check.** `PluginReplay`, run when a model is bound, at the study step for 200 steps with the input raised by
+0.01 pu at step 100, from two operating points of the role. Point A: Pm0 = 0.5; Efd0 = 1 with its own equilibrium error; a
+stabiliser at Vt = 1, Pe = 0.5; an injection at 0.5 pu, a load at 0.5 + j0.1 pu. Point B: Pm0 = 0.6; Efd0 = 1.2; Vt = 1.02,
+Pe = 0.6; an injection at 0.4 + j0.05 pu, a load at 0.4 + j0.08 pu; all at V = 1. One instance runs alone from A, then one
+alone from B; then two fresh instances run side by side, one from each point, initialised one after the other and stepped in
+turn. Each paired output must equal its solo run's output bit for bit, every output must be finite, and an injection's or
+load's current asked twice at the same voltage must give the same bits. Because the paired instances start at different
+points, static state shared between instances that changes an output within the 200 steps is refused: a shared counter
+(BAD_STATIC) and a set-point written in `Initialize` and read in `Step` (LEAK_INIT, which two instances at the same point
+cannot show) both differ at step 1. It does not prove determinism: sharing that changes no output in those 200 steps from
+those two points passes.
+
+**Loading.** `PluginLoader` reads a `gridsim-plugins/1` configuration and, for every entry before anything is loaded, checks
+the ids (unique, not a shipped model's), the path (`GridSim.Core.Security.PathConfinement`, the scripting `--confine` rule
+moved into Core with its code unchanged; `GridSim.Scripting.PathConfinement` forwards to it), the SHA-256 of the bytes read
+once, the attribute and contract version, and the lint. It then loads those same bytes with
+`AssemblyLoadContext.LoadFromStream` into one collectible context per configuration whose `Load` resolves nothing (the
+framework and GridSim.Core come from the host, so the interfaces are the host's), and instantiates the public factory
+classes in ordinal order of their full names.
+
+**Binding.** `UserModelOverlay.ApplyAll` binds declarative and plug-in assignments through one internal interface
+(`IAssignableModel`); the declarative texts (status, unit tag, note) are the R4-08 ones, and `Apply` is `ApplyAll` with no
+plug-ins. A plug-in record's status is `SUPPORTED (PLUGIN, sha256:<assembly hash>, OUTSIDE THE VERIFIED CONTRACT)` and its
+note carries the id, role, assembly, hash, contract version and parameter values.
+
+Evidence: a plug-in TGOV1 and SEXS written with the public `ControlBlocks` operators, and an expr TGOV1, are bit-identical to
+the coded models over 50 000 pinned inputs at three step sizes, on IEEE 9 with all three machines governed and excited, and
+in the dynamics study on the 14-bus fixture (API and CLI). A constant-power plug-in injection on a two-bus system holds the
+closed-form operating point (d = asin(0.1) / 2, V2 = cos d) to 1e-12 pu for 1 s. A declarative constant-impedance load gives
+the static load's bus voltage, and the closed-form faulted voltage 0.33081894288367963 pu through j0.05, to 1e-12.
+
+### User machines and relays: plug-in contract 2
+
+Contract 2 adds two roles to the five of contract 1, appended to `UserModelRole` so the old numbers stand: `Machine` and
+`Relay`. Every contract 1 interface is unchanged, a `[GridSimModelPlugin(1)]` assembly loads exactly as before, and a
+machine or relay model needs `[GridSimModelPlugin(2)]`. A configuration entry may say `"contract": 1` or `2`; when it does,
+the assembly must declare the same version. An assembly that declares any other version is refused ("this build implements contracts 1 and
+2"), and a contract 1 model whose factory gives a role number outside the five contract 1 roles is read and refused when
+bound, as it was before contract 2 existed. Everything else about loading is as above: the confined path, the SHA-256 pin
+of the bytes read once, the determinism lint (a relay that reads the clock is refused, `System.DateTime` and `Stopwatch`
+being on the list) and the replay check, with a machine probed from 0.5 pu and 0.4 + j0.05 pu and a relay through a dip to
+0.7 pu, once with a unit's inputs and once with a branch's (no frequency, rate of change or speed). The machine probe
+compares the Norton current read twice; the admittance, speed, angle, field current and power are checked finite there, and
+the admittance is held to the same bits at every step of a run. A plug-in may not take the name of an assembly GridSim
+grants its internals to (an `InternalsVisibleTo` target, read from the attributes). Results that record a contract version for the plug-in route as a whole still say 1; each model's own provenance
+names its assembly's version.
+
+**Machine.** `IUserMachine` is a Norton source with a constant admittance on the system base: `Initialise(P0, Q0, V0,
+MBASE)` presets the states so the machine exports the power-flow P0 + jQ0 at V0, `NortonAdmittancePu` is stamped once,
+`NortonCurrentPu` is the source current from the present states, and `Step(dt, t, v)` advances them from the step's
+converged terminal voltage. It also reports its speed, rotor angle, field current and electrical power, which must stay
+finite. The kernel runs it by the injection route (`MachineData.UserInjection` holding a model of role machine): a unit on its
+own bus, iterated with the network at each step, the net current `I_N - Y v`, stepped once per step. The start is checked as
+an injection's is, to `1e-10 (1 + |S0|)` pu, and an admittance that changes during the run stops it, naming the model.
+
+This is not the route the built-in machines take. Their rotor swing is integrated by the kernel itself, by RK4 with the
+network re-solved at each sub-step, and no plug-in can join that integration. So a plug-in machine owns its rotor, its
+field and its mechanical power, takes no bound exciter or governor, and is not judged in the synchronism verdict or offered
+as a rotor-angle channel; a classical plug-in machine is close to the built-in GENCLS but not bit-identical to it. A change
+of the machine's admittance (saturation, for example) must be carried in the Norton current, the same approximation the
+built-in subtransient machines make. There is no declarative machine role: the block catalogue has no way to express the
+network interface.
+
+**Relay.** `IUserRelay.Evaluate` reads, at every step start, from that step's converged solve: the step number and size,
+the time, the unit bus voltage magnitude, the machine's electrical frequency F0 (1 + w) and F0 dw/dt from the swing
+equation (the quantities the built-in 81 and 81R stages read), the unit's active and reactive power and its speed. It
+returns no action or a trip with a reason code. A relay is bound to a unit by name (`UserRelayBinding`) and run by
+`RmsTransientStability.StudyEventsWithUserRelays`, with or without the units' own protection; it is evaluated after the
+built-in stages and trips through their path: the unit is out from the next step, its mechanical power is 0 and its field
+held, it is no longer judged, and a trip of the last connected machine ends the run with the reason. A unit trips once.
+Timers count whole steps (the step number is given for that). Its record names the device `PLUGIN:<id>`, carries the reason
+code in place of the operate quantity and the plug-in provenance, with OUTSIDE THE VERIFIED CONTRACT, as its settings. The
+inputs also carry the magnitude of the machine's current.
+
+**Branch relays.** The same relay may be bound to a branch instead (`UserRelayBinding.ForBranch`, the branch's index and the
+bus at the end it reads). It then reads, from the same solve and after the unit relays, the bus voltage magnitude at that end
+and the current, active and reactive power flowing into the branch there (the branch's own pi-model stamp applied to the
+solved bus voltages); a branch has no machine, so the frequency, its rate of change and the speed are NaN, and a declarative
+relay that reads any of them is refused when it is bound to a branch. A trip opens the branch at both ends from the next
+step: the stage in force is rebuilt from its own state with the branch out, exactly as a scheduled branch trip builds it,
+and the branch stays out (a later scheduled reclose does not bring it back). A branch out by a scheduled event is not
+evaluated. When the network without the branch cannot be solved (a part of it left with no path to ground) the run ends at
+that step with the reason. A fault along the relay's own branch (`RmsBranchSequenceFault`) is refused, because it splits the
+branch and the current at its end is no longer the branch's. Branch relay records (`FullModelBranchRelayRecord`) name the
+branch, the measuring bus, the device, the trip and disconnection times and the reason code.
+
+**Declarative relays.** A `gridsim-model/1` document of role `relay` is a relay too (`UserRelayBinding.ForUnit` or
+`ForBranch` with a `UserModel`; device `USER:<id>`). Its input ports, in this order, are `vm` (pu), `f` (Hz, declared `1`),
+`p` and `q` (system pu), `dfdt` (Hz/s, declared `1/s`), `speed` (pu) and `i` (system pu): the relay inputs above, with no
+conversion. Its one output, `trip`, is 0 for no action; any other value trips, and that value, a whole number, is the reason
+code. It has no initialisation inputs. Two blocks join the catalogue for it, usable in any role:
+
+- `ontimer(u; time)`: an on-delay timer counted in whole steps. It picks up at the first step its input is non-zero and gives 1
+  from the first step k with `(k - k_pickup) h + h 1e-6 >= time`, exactly the built-in unit relay stages' rule; a step with
+  the input 0 resets it. The step must keep one size. It is initialised with 0.
+- `latch(u)`: a seal-in, 1 from the first step its input is non-zero to the end of the run, initialised with 0 or 1.
+
+A comparison is a `switch` block (`vm` against a threshold gives the strict `V < pickup` of the built-in 27 stage). The
+document is pinned and hashed like any declarative model, and its record carries its id, document hash and compiled order
+digest with no label: it runs inside the verified block catalogue. The refusals of an unknown role or block type list the
+roles and blocks they always listed.
+
+**Injection, machine and load models in a dynamics study.** `DynamicsStudyRequest.DeviceModels` (on the CLI, the
+`deviceModels` member of the `--model-assignments` file) binds an injection model (a plug-in or a declarative document) or
+a machine plug-in to a unit, by its native identity, and a load model (a plug-in or a declarative document) to part of a bus
+load. The unit becomes converter plant on its own bus, its DYR machine, exciter and governor data are not used, and the
+coverage notes name the model and where it is bound; a plug-in's note carries its provenance and OUTSIDE THE VERIFIED
+CONTRACT, a declarative model's carries its id and document hash and no label, because the declarative blocks are the
+verified catalogue. A unit with an injection or machine model cannot also take a governor or exciter model, an IEC 61400
+model, or be the angle reference, and device models do not run with the adaptive companion run, a step schedule or the
+error-controlled step. The unit itself must still be bound by the DYR coverage (a machine record, or the `leaveOut` policy).
+
+**Relays in a dynamics study.** `DynamicsStudyRequest.RelayModels` (on the CLI, a `deviceModels` entry of role `relay`)
+binds a relay plug-in or a declarative relay to a unit, `"bind": { "machine": { "bus": 2, "id": "1" } }`, or to a branch,
+`"bind": { "branch": { "from": 2, "to": 4, "circuit": "1" } }`, read at its `from` end as written. Each events row is then also
+run on the full-model fixed-step engine with the relays acting (and the units' own relays, when unit protection is given), as
+additional evidence: the study's own rows are unchanged and decide its status. On the CLI the companion run is the
+`unitProtection.fullModel` member with unit protection and the `userRelays.fullModel` member without it, and
+`provenance.relayModels` names each relay (a plug-in with OUTSIDE THE VERIFIED CONTRACT). A declarative relay's file is
+listed in the run journal, so `breaking-change validate` re-checks its hash. Relays do not run with the adaptive companion
+run, a step schedule or the error-controlled step.
+
+Evidence: a plug-in under-voltage relay written as the built-in 27 stage is evaluated trips at the same step as that stage
+on the 9-bus case, and the whole run is the same bits; a relay that never operates changes no bit of the run; a latched
+relay trips once after its delay on a fault shorter than the delay, where the same relay unlatched does not trip. The same
+three hold for the declarative relay (switch, ontimer, latch), and the declarative latch gives the plug-in latch's bits. A
+declarative overcurrent relay on a 9-bus branch opens it inside a bus fault, and the run is the same bits as the same events
+with a scheduled trip of that branch at the relay's disconnection step. Relays through the CLI give the API's records to the
+bit and leave the study's own rows as they were. A
+classical plug-in machine with an inertia too large to move meets the closed-form two-source fault voltage at every sample
+to 1e-12 pu, and the same machine with a real inertia repeats its run bit for bit. An injection model through the CLI gives
+the API run's bits on every channel sample of the 14-bus study.
 
 ## Parameters and defaults
 
@@ -1161,6 +2078,57 @@ that is `|expected - actual| < 0.5 * 10^-N`; "bit for bit" is `==` on every samp
 - A grid-forming unit is stationary at flat start, holds its current limit in a fault, holds its terminal voltage better
   than a grid-following unit at onset, and its virtual speed swings and is damped (`RmsGridFormingTests`).
 
+**Extended library** (`Rc5Wp3aDynamicLibraryTests`)
+- Flat start: each exciter alone holds its field to 1e-14 relative over 4000 steps, and each stabiliser stays within
+  1e-13 of 0; on case 9 every library fleet (ESST1A + PSS2A, EXST1 + IEEEST on power, SCRX bus fed + IEEEST on speed,
+  SCRX solid fed, ESDC1A + PSS2B, SEXS + PSS2A, ESAC1A + IEEEST) keeps every speed and E'q within the rounding bound
+  `2 eps n 12` (2.7e-12 for the 1000 steps; two roundings per step on at most 12 pu of field-path state) of the held-field
+  run for 5 s, and a fault moves the field; the case 14 DYR fleet (every DYR-mapped new model) stays within the same bound of
+  its held-field run and rides through a fault (`A_library_fleet_holds_case9_at_rest_to_rounding_and_a_fault_moves_it`,
+  `The_case14_dyr_fleet_starts_at_rest_and_rides_through_a_fault`).
+- GENCLS: at rest to 1e-12 in speed, and through a fault every flux state is its initial value bit for bit
+  (`A_gencls_fleet_starts_at_rest_and_holds_its_flux_states_bit_for_bit_through_a_fault`). GENTPJ with Kis above 0 starts at
+  rest and needs more field than Kis = 0 (`A_gentpj_with_kis_starts_at_rest`).
+- Step responses against `tests/tooling/dynamic-library-reference.py` (SciPy 1.18.1: the exact LTI step response by the
+  matrix exponential, and solve_ivp Radau at rtol 1e-12 for the rate-feedback loops) for EXST1, ESDC1A, ESST1A, IEEEST on
+  speed and PSS2A on each input: the worst error at seven sample times is below 1 % of the peak at a 0.1 ms step and falls
+  with the step (first-order convergence of the chained zero-order holds). EXST1 with `TA = 0` is the lead-lag's closed
+  form within its rounding bound (`KA 2 eps k |xL|` after k steps).
+- Limits at their exact levels: ESST1A `VAMAX` (non-windup, released on the first reversed step), `Vt VRMAX - KC IFD`,
+  `Vt VRMIN`, the field current limiter and VOS 2; the EXST1 input limiter; ESDC1A `VRMAX` (non-windup) with `Efd` settling
+  at `VRMAX/KE` and, saturated, at the root of `VRMAX = KE x + B (x - A)^2` solved independently; SCRX `EMAX Vt`, the
+  crowbar and negative current capability; IEEEST `LSMAX`/`LSMIN` and the `VCU`/`VCL` cut-offs; PSS2A `VSTMAX` and a washed-out
+  speed step; PSS2B with `VS1MAX` is PSS2A on the clipped input bit for bit.
+- GENTPJ with Kis = 0 is GENROU bit for bit: the increments for the same saturation inputs, the loader's machine data and a
+  saturated case 9 run (`Gentpj_increments_with_kis_zero_are_genrou_bit_for_bit_for_the_same_saturation_inputs`,
+  `A_gentpj_with_kis_zero_loads_and_runs_as_genrou_bit_for_bit`).
+- DYR: every record maps value by value in its PSS/E order and the records re-read from their text give the same document
+  bytes; the default reader still refuses the new models; each refusal names its record
+  (`Every_extended_dyr_record_maps_value_by_value_in_its_psse_order`, `The_dyr_records_round_trip_through_text_to_the_same_document`).
+- Determinism: dense and sparse power flows, repeated and parallel runs, and the built CLI in its three SIMD modes give the
+  same bits (`The_cli_dyr_extended_run_is_the_same_bits_in_every_simd_mode`).
+
+**More controllers** (`Rc5Wp19ControllerLibraryTests`, `Rc5Wp19BitIdentityTests`)
+- Flat start: each new exciter alone (EXDC2, IEEEX1, ESAC8B with and without `KC`/`KDexc`, ESST3A) holds its field within
+  `2 eps n 12` on every step for 400 steps; PSS2C alone outputs exactly 0 and IEEEG3 alone holds its gate exactly and its
+  power within the same bound; on case 9 each fleet (EXDC2 + PSS2C, IEEEX1, ESAC8B + PSS2C with its fourth stage, ESAC8B
+  with `KC`/`KDexc`, ESST3A + PSS2C with output logic, and an IEEEG3 governor fleet) stays within the bound of the held run for
+  2 s and a fault moves it; the case 14 DYR fleet of the mapped records starts at rest and rides through a fault.
+- Closed forms, on every step: EXDC2 settles at `0.5 VRMAX` exactly with `Vt = 0.5` and IEEEX1 at `VRMAX`; ESAC8B's two-lag
+  response stays within the derived bound `(dt/TA) KA du` (1 % of the change at 1 ms) of
+  `0.1 [1 - (TA e^(-t/TA) - TE e^(-t/TE))/(TA - TE)]` (0.05418351852854685 at 0.5 s) and within 1e-12 of the same
+  zero-order-hold chain run by `scipy.signal.dlsim`; the ESAC8B integral is the ramp `0.02 t` within `n eps (1e-4 + 0.01)`;
+  the ESST3A source voltage is 1.3078226179417451 to 1e-14; the IEEEG3 turbine gives `1 - 3 e^(-2t/TW)` at every sample
+  (0.5939941502901619 at 1 s).
+- Step responses against `tests/tooling/dynamic-library-reference.py` cases 15 to 19 (ESAC8B with the full PID, ESST3A,
+  PSS2C with its fourth stage, IEEEG3 closed loop): below 1 % of the peak change at 0.1 ms, falling with the step.
+- Reductions: PSS2C with `T12 = T13 = 0` and no logic is PSS2B bit for bit (directly and through the file route); IEEEX1 is
+  ESDC1A bit for bit. The PSS2C output logic switches on and off at its thresholds on every step.
+- DYR: each record maps value by value; a wrong count, `KE = 0`, `VRMAX = 0` and `SWITCH` are refused; PSS2C, ESAC7B,
+  HYGOV4 and GENQEC are refused by name with their reasons. Bit identity: the default reader's message for all nine model
+  names, the default and extended CLI runs of the earlier models, and the extended document of the WP3a file are hashed
+  from the 2.1.116 build and unchanged.
+
 ## Worked example
 
 One case9 machine is initialised by hand, then compared with a run of the library.
@@ -1257,11 +2225,38 @@ Timings in captured output differ by machine and run; the single-study capture
 | `src/GridSim.Core/Dynamics/Models/Ieeeg1.cs` | `Ieeeg1` | IEEEG1 governor |
 | `src/GridSim.Core/Dynamics/Models/HydroGovernor.cs` | `HydroGovernor` | Transient-droop hydro governor |
 | `src/GridSim.Core/Dynamics/Models/Gast.cs` | `Gast` | GAST gas-turbine governor |
+| `src/GridSim.Core/Dynamics/Models/Ggov1.cs` | `Ggov1`, `Ggov1Data`, `IRmsElectricalPowerGovernor` | GGOV1 governor, the rate-limited lag |
+| `src/GridSim.Core/Dynamics/Models/Wsieg1.cs` | `Wsieg1`, `Wsieg1Data` | WSIEG1 governor |
+| `src/GridSim.Core/Dynamics/Models/Iec61400/Iec61400Data.cs` | `Iec61400Data` and its module records, `Iec61400Table` | IEC 61400-27-1 style Type 4A/4B data, checks, source basis |
+| `src/GridSim.Core/Dynamics/Models/Iec61400/Iec61400Blocks.cs` | generator system, P and Q control, current limiter, drive train, PLL, protection | The discrete modules |
+| `src/GridSim.Core/Dynamics/Models/Iec61400/Iec61400State.cs` | `Iec61400State` | The unit as the RMS kernel drives it |
+| `src/GridSim.Core/Analysis/DynamicsStudy/Iec61400StudyFile.cs` | `Iec61400StudyFile` | The `dynamics-study` `iec61400` member |
+| `src/GridSim.Core/Dynamics/Models/DynamicLoads.cs` | `DynamicLoadData`, `RmsLoadedMachineData` | Dynamic loads in the RMS study |
+| `src/GridSim.Core/Dynamics/Models/InductionMotorLoad.cs` | `InductionMotorParameters`, `InductionMotorLoadData`, `InductionMotorTorque` | Third-order motor load |
+| `src/GridSim.Core/Dynamics/Models/ZipRecoveryLoad.cs` | `ZipRecoveryLoadData`, `StaticLoadCharacteristic` | ZIP with exponential recovery |
+| `src/GridSim.Core/Dynamics/Models/CompositeLoad.cs` | `CompositeLoadData` | CMLD subset |
+| `src/GridSim.Core/Dynamics/Models/CompositeLoadExtensions.cs` | `CompositeLoadExtensions`, `CompositeLoadMotor`, `MotorUnderVoltageRelay` | CMLD motors B and C, relays, the extended network |
+| `src/GridSim.Core/Dynamics/Models/AcMotorPerformance.cs` | `AcMotorParameters` | CMLD motor D (WECC air-conditioner performance model) |
+| `src/GridSim.Core/Dynamics/Models/ElectronicLoad.cs` | `ElectronicLoadParameters` | CMLD electronic load |
+| `src/GridSim.Core/Dynamics/Models/CompositeLoadLtc.cs` | `CompositeLoadLtcParameters` | CMLD substation tap changer |
 | `src/GridSim.Core/Dynamics/Models/AcExciter.cs` | `AcExciter` | EXAC1 and ESAC1A alternator-rectifier exciters |
 | `src/GridSim.Core/Dynamics/Models/Esst4b.cs` | `Esst4b` | ESST4B static exciter |
 | `src/GridSim.Core/Dynamics/Models/Sexs.cs` | `Sexs` | SEXS exciter |
 | `src/GridSim.Core/Dynamics/Models/Ieeet1.cs` | `Ieeet1` | IEEET1 exciter |
 | `src/GridSim.Core/Dynamics/Models/Pss1a.cs` | `Pss1a` | PSS1A stabiliser |
+| `src/GridSim.Core/Dynamics/Models/LibraryControllers.cs` | `IRmsExciterModel`, `IRmsStabiliser`, `FieldControlInputs` | The library exciter and stabiliser interfaces, the voltage transducer |
+| `src/GridSim.Core/Dynamics/Models/St1Exciter.cs` | `St1Exciter` | EXST1 and ESST1A exciters |
+| `src/GridSim.Core/Dynamics/Models/Scrx.cs` | `Scrx` | SCRX exciter |
+| `src/GridSim.Core/Dynamics/Models/Esdc1a.cs` | `Esdc1a` | ESDC1A exciter |
+| `src/GridSim.Core/Dynamics/Models/Exdc2.cs` | `Exdc2` | EXDC2 and IEEEX1 exciters |
+| `src/GridSim.Core/Dynamics/Models/Esac8b.cs` | `Esac8b` | ESAC8B exciter |
+| `src/GridSim.Core/Dynamics/Models/Esst3a.cs` | `Esst3a` | ESST3A exciter |
+| `src/GridSim.Core/Dynamics/Models/Pss2c.cs` | `Pss2c` | PSS2C stabiliser |
+| `src/GridSim.Core/Dynamics/Models/Ieeeg3.cs` | `Ieeeg3`, `Ieeeg3Data` | IEEEG3 hydro governor |
+| `src/GridSim.Core/Dynamics/Models/Ieeest.cs` | `Ieeest` | IEEEST stabiliser |
+| `src/GridSim.Core/Dynamics/Models/Pss2.cs` | `Pss2` | PSS2A and PSS2B stabilisers |
+| `src/GridSim.Core/Dynamics/Models/Gencls.cs` | `Gencls` | GENCLS machine data |
+| `tests/tooling/dynamic-library-reference.py` | script | SciPy reference step responses |
 | `src/GridSim.Core/Dynamics/Models/OneAxisMachine.cs` | `OneAxisMachine` | One-axis SMIB machine |
 | `src/GridSim.Core/Dynamics/Models/TwoAxisMachine.cs` | `TwoAxisMachine` | Two-axis SMIB machine |
 | `src/GridSim.Core/Dynamics/Models/SubtransientMachine.cs` | `SubtransientMachine`, `SaturationCurve` | Six-state SMIB machine, saturation |
@@ -1292,6 +2287,13 @@ Timings in captured output differ by machine and run; the single-study capture
 
 ## Limits
 
+- Plug-in results are outside the verified contract: the route is verified (bit identity of re-expressed coded models),
+  not a plug-in's maths. The lint and replay are a determinism check, not a sandbox; a plug-in runs with the user's rights.
+  The PSS/E USRMDL/CONEC/CONET interface, PowerFactory DSL import and the IEEE/Cigre real-code DLL interface are not
+  provided. A user machine is a contract 2 plug-in only (there is no declarative machine role), and it takes the injection
+  route, not the built-in machines' integration. `dynamics-study` binds governor and exciter models, injection, machine and
+  load models, and relays. `modal-full` takes declarative models only, and an `expr` block is not linearised there.
+
 - The subtransient machine follows the GENROU saturation form, but no PSS/E trace of a saturated machine is compared
   against, so agreement with a PSS/E GENROU run on the same data is not demonstrated.
 - The leakage reactance `Xl` enters only the q-axis saturation scale. The machines have no stator resistance and no
@@ -1307,14 +2309,39 @@ Timings in captured output differ by machine and run; the single-study capture
 - PSS1A omits the input transducer `T6` and the second-order low-pass filter `A1` and `A2`, and takes speed deviation as its only
   input; IEEET1 omits the transducer `TR` and takes its saturation as `Aex*exp(Bex*Efd)`, which the caller fits
   to `E1, SE(E1), E2, SE(E2)`.
-- The exciters are SEXS, IEEET1, EXAC1, ESAC1A and ESST4B; there is no other ESAC, EXAC or ESST model, no GGOV1, no PSS2B, and no over- or
-  under-excitation limiter.
+- The exciters are SEXS, IEEET1, EXAC1, ESAC1A, ESST4B, EXST1, ESST1A, SCRX, ESDC1A, EXDC2, IEEEX1, ESAC8B and ESST3A, and
+  the stabilisers PSS1A, IEEEST, PSS2A, PSS2B and PSS2C; there is no over- or under-excitation limiter (the ESST1A UEL
+  input is not driven, and the UEL/OEL inputs of ESAC8B, ESST3A and PSS2C are not modelled). Not modelled: EXAC2 to
+  EXAC4, EXST2, EXST3, ESAC2A to ESAC7B, ESST2A, ESST5B to ESST7B, ESDC2A, IEEET2 to IEEET5, and other PSS/E exciters.
+- ESAC8B omits the 2016 PID output limits, VFEMAX and VEMIN. PSS2C reads rotor speed and electrical power only.
+- The governors are TGOV1, IEEEG1, the hydro governor, GAST, GGOV1, WSIEG1 and IEEEG3. IEEEG3 has no deadband. HYGOV4,
+  URGS3T, WEHGOV, WPIDHY and the other PSS/E hydro governors are not modelled. GGOV1 has no transport delay `Teng`, no
+  speed deadband and no negative `Dm`; WSIEG1 has no deadbands and no cross-compound second machine. Both are verified
+  against SciPy integrations of their block diagrams and GGOV1's droop against its analytical steady state, not against a
+  PSS/E run of the same data.
+- The dynamic loads are verified against their equations (the motor's circuit, stall voltage and SciPy integration, the
+  recovery load's closed form, the CMLD subset's SciPy integration), not against a PSS/E or PowerFactory run. The CMLD
+  subset is not the WECC composite load: see [Dynamic loads](#dynamic-loads) for what it leaves out. The CMLD extensions
+  are verified against the WECC specification's equations (closed forms of motor D's curves, the electronic load's
+  pseudocode and every timer), bit-identity of motors B and C with motor A, and a SciPy integration of the extended model,
+  not against a PSS/E or PSLF CMLD run. They have no distributed generation and no DYR import. Dynamic loads reach
+  the RMS engine only; the small-signal and adaptive-step studies refuse them or do not see them.
+- The extended library is verified against its block diagrams: SciPy reference integrations, closed forms and exact limit
+  levels. It is not compared with a PSS/E or PowerFactory run of the same data, and the DYR record orders follow the PSS/E
+  model documentation, not a vendor-written file.
+- GENTPJ applies saturation in GENROU's additive form with `Kis |It|` added to the flux; PSS/E's GENTPJ scales the
+  reactances instead, so only an unsaturated GENTPJ is the PSS/E model. The PSS/E GENTPJ record order is not public, so
+  GENTPJ comes from a `gridsim-dynamics/2` file only. GENCLS has no `H = 0` infinite bus.
+- IEEEST has no second-order filter terms (`A2`, `A4`, `A6`); IEEEST, PSS2A and PSS2B read rotor speed and electrical
+  power only (no bus frequency, accelerating power or voltage input, no remote bus).
 - Events are bolted three-phase faults, branch trips and recloses, load steps and generator trips; there is no
   unbalanced fault, fault impedance or breaker timing model.
 - Without `--dyn-data` the CLI synthesises every machine parameter from `X'd`, and it fixes the exciter and PSS
   settings, so its results are indicative; the case files carry no machine dynamics. A converter's energy store is an API option that
   `SubtransientInit` does not attach, so `stability --rms` runs every converter without one.
-- The integrator is fixed-step with first-order operator splitting.
+- The integrator is fixed-step with first-order operator splitting. A step schedule changes the step between windows; the
+  error-controlled step (EXPERIMENTAL) chooses the windows by re-running the whole simulation (no step is taken back), so
+  its error figure is a first-order step-doubling estimate, not a bound, and a run can take up to 24 full simulations.
 - WECC models against ANDES 2.0.0 (REGCA1 + REECA1, an infinite bus behind two lines, a 100 ms fault, 1 ms steps): at rest
   the two agree to 1.3e-10 pu in V and 5.4e-11 in P; during the fault to 1.9e-3 in V, 8.9e-4 in P, 3.7e-3 in Q (ANDES
   solves states and network together by the implicit trapezoid, GridSim advances the states from the start-of-step

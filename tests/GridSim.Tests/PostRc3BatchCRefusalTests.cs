@@ -136,7 +136,7 @@ public sealed class PostRc3BatchCRefusalTests
     [Fact]
     public void A_harmonic_source_set_with_null_sources_is_refused_naming_the_member()
     {
-        string path = Path.Combine(Path.GetTempPath(), "gs-c-" + Guid.NewGuid().ToString("N") + ".json");
+        string path = TestTemp.Under("gs-c-" + Guid.NewGuid().ToString("N") + ".json");
         try
         {
             File.WriteAllText(path, "{\"schema\":\"" + HarmonicSourceSet.SchemaId + "\",\"baseMva\":100,\"sources\":null}");
@@ -291,11 +291,16 @@ public sealed class PostRc3BatchCRefusalTests
         Assert.Contains(c, p => p.Contains("iq1", StringComparison.Ordinal));
     }
 
+    // Re-pinned (ruling 15, DYN-02): DP-04 refused Se(1.0) = 0 with Se(1.2) > 0 so the 1.2 point was not dropped silently.
+    // Mark's ruling reads it as the curve that starts at 1.0 pu: A = 1, B = 1.2 Se(1.2) / 0.04, so Se(1.2) is the given 0.30
+    // (Se(x) = B (x - A)^2 / x) and Se is 0 at and below 1.0. The 1.2 point is kept, which was DP-04's concern.
     [Fact]
-    public void A_saturation_curve_with_zero_s10_and_positive_s12_is_refused_naming_both_values()
+    public void A_saturation_curve_with_zero_s10_and_positive_s12_starts_at_1_pu()
     {
-        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => new SubtransientMachine.SaturationCurve(0.0, 0.30));
-        Assert.Contains("Se(1.0) is 0 but Se(1.2) is 0.3", ex.Message, StringComparison.Ordinal);
+        var sat = new SubtransientMachine.SaturationCurve(0.0, 0.30);
+        Assert.Equal(0.30, sat.Se(1.2), 12);
+        Assert.Equal(0.0, sat.Se(1.0));
+        Assert.Equal(0.0, sat.Se(0.9));
         Assert.Equal(0.0, new SubtransientMachine.SaturationCurve(0.0, 0.0).Se(1.1));   // both zero stays unsaturated
     }
 }

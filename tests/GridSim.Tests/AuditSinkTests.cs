@@ -17,7 +17,7 @@ public sealed class AuditSinkTests : IDisposable
     private static readonly DateTime T0 = new(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
 
     // Every test gets its own scratch directory, removed afterwards.
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-audit-sink-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-audit-sink-{Guid.NewGuid():N}");
 
     public AuditSinkTests() => Directory.CreateDirectory(_dir);
 

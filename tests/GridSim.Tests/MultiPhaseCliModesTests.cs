@@ -93,7 +93,7 @@ public class MultiPhaseCliModesTests
                           $"\"realPu\": {i.Real.ToString("R", inv)}, \"imagPu\": {i.Imaginary.ToString("R", inv)}, \"sigmaPu\": 0.001 }}");
             }
         sb.Append("] }");
-        string mFile = Path.Combine(Path.GetTempPath(), $"gridsim-bc-{Guid.NewGuid():N}.json");
+        string mFile = TestTemp.Under($"gridsim-bc-{Guid.NewGuid():N}.json");
         File.WriteAllText(mFile, sb.ToString());
         try
         {

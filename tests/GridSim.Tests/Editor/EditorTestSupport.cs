@@ -68,7 +68,7 @@ internal static class EditorTestSupport
     {
         public TempCopy(string sourceDir)
         {
-            Dir = Path.Combine(Path.GetTempPath(), "gridsim-editor-test-" + Guid.NewGuid().ToString("N"));
+            Dir = TestTemp.Under("gridsim-editor-test-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Dir);
             foreach (string f in Directory.EnumerateFiles(sourceDir))
                 File.Copy(f, Path.Combine(Dir, Path.GetFileName(f)));

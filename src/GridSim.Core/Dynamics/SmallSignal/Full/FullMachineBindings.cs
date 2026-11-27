@@ -42,7 +42,7 @@ public sealed record FullMachineBindings(IReadOnlyList<FullMachineSpec> Specs, s
         ArgumentNullException.ThrowIfNull(resolveModel);
         string hash = Convert.ToHexString(SHA256.HashData(utf8)).ToLowerInvariant();
         JsonDocument doc;
-        try { doc = JsonDocument.Parse(utf8.ToArray(), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Disallow, AllowTrailingCommas = false, MaxDepth = 16 }); }
+        try { doc = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(utf8.ToArray()), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Disallow, AllowTrailingCommas = false, MaxDepth = 16 }); }
         catch (JsonException ex) { throw new FullBindingException("$", "not valid JSON: " + ex.Message); }
         using (doc)
         {

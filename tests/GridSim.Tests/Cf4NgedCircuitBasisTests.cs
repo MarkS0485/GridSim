@@ -20,7 +20,7 @@ public sealed class Cf4NgedCircuitBasisTests : IDisposable
     public Cf4NgedCircuitBasisTests()
     {
         // The N252 fixture shape: a 132 kV GSP, a 132/33 kV transformer (2 + j50 %) and a 33 kV cable (5 + j10 %, B 2 %).
-        _root = Path.Combine(Path.GetTempPath(), "gridsim-cf4-n347-" + Guid.NewGuid().ToString("N"));
+        _root = TestTemp.Under("gridsim-cf4-n347-" + Guid.NewGuid().ToString("N"));
         string ltds = Path.Combine(_root, "NationalGrid", "RAWData", "LTDS Tabular Model");
         Directory.CreateDirectory(ltds);
         File.WriteAllText(Path.Combine(ltds, "ltds-attachment-8-node.csv"),

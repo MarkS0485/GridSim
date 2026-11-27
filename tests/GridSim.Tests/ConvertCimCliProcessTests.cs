@@ -20,7 +20,7 @@ public sealed class ConvertCimCliProcessTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-wire2-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-wire2-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

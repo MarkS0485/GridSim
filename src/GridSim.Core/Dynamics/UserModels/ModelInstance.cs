@@ -39,7 +39,7 @@ public sealed class ModelInstance
         => _plan.Document.Parameters.Select(p => p.Name).Concat(_plan.Document.Derived.Select(d => d.Name))
             .Select(n => new KeyValuePair<string, double>(n, _s[_plan.ParamIndex[n]])).ToList();
 
-    /// <summary>The steady regulator error computed at the last <see cref="Initialize"/> (exciter models), else NaN.</summary>
+    /// <summary>The steady regulator error computed at the last <see cref="Initialize(ReadOnlySpan{double})"/> (exciter models), else NaN.</summary>
     public double EquilibriumError { get; private set; } = double.NaN;
 
     /// <summary>Output port <paramref name="index"/> after the last step.</summary>
@@ -141,6 +141,23 @@ public sealed class ModelInstance
         for (int i = 0; i < _deferred.Length; i++) _deferred[i].Update(_s, dtSeconds);
     }
 
+    /// <summary>
+    /// RC5 WP12: evaluate the model at <paramref name="inputs"/> with every state HELD: the compiled order runs once, each
+    /// stateful block giving its output at its present state (a lag, integrator, rate limiter, hold, delay or saturated pole
+    /// its state; a lead-lag, washout or PI its feedthrough of the present input on its present state), and nothing advances
+    /// or is snapshotted. The outputs are then read with <see cref="Output"/>. Calling it any number of times with the same
+    /// inputs gives the same bits and changes no state, which is what an injection or load model's current needs inside
+    /// the network fixed point. <see cref="Step(ReadOnlySpan{double}, double)"/> is not affected: it recomputes every block output from the states.
+    /// </summary>
+    public void EvaluateHeld(ReadOnlySpan<double> inputs)
+    {
+        if (inputs.Length != _plan.InputSlots.Length)
+            throw new ArgumentException($"{Document.Id}: expected {_plan.InputSlots.Length} input(s), got {inputs.Length}.", nameof(inputs));
+        for (int i = 0; i < inputs.Length; i++) _s[_plan.InputSlots[i]] = inputs[i];
+        foreach ((int slot, int op) in _plan.PrevSnapshots) _s[slot] = _ops[op].Current;
+        for (int i = 0; i < _ops.Length; i++) _ops[i].EvalHeld(_s);
+    }
+
     /// <summary>One-input step returning output port 0.</summary>
     public double Step(double a, double dtSeconds)
     {
@@ -166,6 +183,8 @@ public sealed class ModelInstance
         public ModelBlock Block = null!;
         public int Out;
         public abstract void Eval(double[] s, double dt);
+        // RC5 WP12: the output at the present state (EvaluateHeld). A combinational block is its own evaluation.
+        public virtual void EvalHeld(double[] s) => Eval(s, 0.0);
         public virtual bool HasUpdate => false;
         public virtual void Update(double[] s, double dt) { }
         public virtual double Current => double.NaN;
@@ -202,6 +221,9 @@ public sealed class ModelInstance
                 "hold" => new HoldOp(),
                 "delay" => new DelayOp(a, new StepDelay((int)P("steps"))),
                 "satpole" => new SatPoleOp(a, new SaturatedExciterPole(P("te"), P("ke"), P("a"), P("b"))),
+                "expr" => new ExprOp(sp.In, sp.ParamSlots.Select(k => s[k]).ToArray(), ExprProgram.Parse(block.Expr).Program!),
+                "ontimer" => new OnTimerOp(a, P("time")),
+                "latch" => new LatchOp(a),
                 _ => throw new InvalidOperationException("catalogue/instance mismatch: " + sp.Spec.Type),
             };
             op.Block = block;
@@ -250,6 +272,7 @@ public sealed class ModelInstance
     private sealed class LagOp(int a, FirstOrderLag lag) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = lag.Step(s[a], dt);
+        public override void EvalHeld(double[] s) => s[Out] = lag.Output;
         public override double Current => lag.Output;
         public override void Initialize(double[] s, int[] vals) => lag.Initialize(s[vals[0]]);
     }
@@ -257,12 +280,14 @@ public sealed class ModelInstance
     private sealed class LeadLagOp(int a, LeadLag ll) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = ll.Step(s[a], dt);
+        public override void EvalHeld(double[] s) => s[Out] = ll.OutputFor(s[a]);
         public override void Initialize(double[] s, int[] vals) => ll.Initialize(s[vals[0]]);
     }
 
     private sealed class WashoutOp(int a, int advance, Washout w) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = advance < 0 ? w.Step(s[a], dt) : w.OutputFor(s[a]);
+        public override void EvalHeld(double[] s) => s[Out] = w.OutputFor(s[a]);
         public override bool HasUpdate => advance >= 0;
         public override void Update(double[] s, double dt) => w.Step(s[advance], dt);
         public override void Initialize(double[] s, int[] vals) => w.Initialize(s[vals[0]]);
@@ -271,6 +296,7 @@ public sealed class ModelInstance
     private sealed class IntegratorOp(int a, Integrator i) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = i.Step(s[a], dt);
+        public override void EvalHeld(double[] s) => s[Out] = i.Output;
         public override double Current => i.Output;
         public override void Initialize(double[] s, int[] vals) => i.Initialize(s[vals[0]]);
     }
@@ -278,6 +304,7 @@ public sealed class ModelInstance
     private sealed class PiOp(int a, PiController p) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = p.Step(s[a], dt);
+        public override void EvalHeld(double[] s) => s[Out] = p.HeldOutput(s[a]);
         public override void Initialize(double[] s, int[] vals) => p.Initialize(s[vals[0]], s[vals[1]]);
     }
 
@@ -295,6 +322,7 @@ public sealed class ModelInstance
     private sealed class RateLimitOp(int a, RateLimiter r) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = r.Step(s[a], dt);
+        public override void EvalHeld(double[] s) => s[Out] = r.Output;
         public override double Current => r.Output;
         public override void Initialize(double[] s, int[] vals) => r.Initialize(s[vals[0]]);
     }
@@ -351,13 +379,110 @@ public sealed class ModelInstance
     private sealed class DelayOp(int a, StepDelay d) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = d.Step(s[a]);
+        public override void EvalHeld(double[] s) => s[Out] = d.Output;
         public override double Current => d.Output;
         public override void Initialize(double[] s, int[] vals) => d.Initialize(s[vals[0]]);
+    }
+
+    private sealed class ExprOp(int[] ins, double[] paramValues, ExprProgram program) : Op
+    {
+        private readonly double[] _stack = new double[Math.Max(1, program.StackDepth)];
+
+        public override void Eval(double[] s, double dt)
+        {
+            double v = program.Evaluate(s, ins, paramValues, _stack);
+            if (!double.IsFinite(v))
+                throw new UserModelException("non-finite", "block " + Block.Id, $"the expression gave {v.ToString("R", System.Globalization.CultureInfo.InvariantCulture)}; the step is refused.");
+            s[Out] = v;
+        }
+    }
+
+    /// <summary>RC5 wp32b: the on-delay timer, counted in whole steps exactly as the built-in unit relay stages count
+    /// (FullModelUnitRelays): picked up at the first step its input is non-zero, it gives 1 from the first step k with
+    /// (k - k_pickup) h + h x StageTimeToleranceSteps &gt;= time, and a step with the input 0 resets it. The step must keep one
+    /// size (the count is of steps).</summary>
+    private sealed class OnTimerOp : Op
+    {
+        private readonly int _a;
+        private readonly double _time;
+        private int _held = -1;   // whole steps since the pickup step; -1 when not picked up
+        private double _out;
+        private double _dt = double.NaN;
+
+        public OnTimerOp(int a, double time)
+        {
+            if (!(time >= 0.0) || !double.IsFinite(time)) throw new ArgumentException("an ontimer needs a finite time of 0 s or more.");
+            _a = a;
+            _time = time;
+        }
+
+        public override void Eval(double[] s, double dt)
+        {
+            double u = s[_a];
+            if (double.IsNaN(u))
+                throw new UserModelException("non-finite", "block " + Block.Id, "the ontimer's input is not a number; the step is refused.");
+            if (!(dt > 0.0) || !double.IsFinite(dt))
+                throw new UserModelException("bad-step", "block " + Block.Id, "an ontimer counts steps of a positive, finite size.");
+            if (double.IsNaN(_dt)) _dt = dt;
+            else if (BitConverter.DoubleToInt64Bits(dt) != BitConverter.DoubleToInt64Bits(_dt))
+                throw new UserModelException("step-changed", "block " + Block.Id,
+                    $"an ontimer counts whole steps of one size; the step changed from {ControlBlocks.Num(_dt)} s to {ControlBlocks.Num(dt)} s.");
+            if (u == 0.0)
+            {
+                _held = -1;
+                _out = 0.0;
+            }
+            else
+            {
+                _held = _held < 0 ? 0 : _held + 1;
+                double elapsed = _held * dt;
+                _out = elapsed + dt * MultiMachineSubtransient.StageTimeToleranceSteps >= _time ? 1.0 : 0.0;
+            }
+            s[Out] = _out;
+        }
+
+        public override void EvalHeld(double[] s) => s[Out] = _out;
+
+        public override void Initialize(double[] s, int[] vals)
+        {
+            double v = s[vals[0]];
+            if (v != 0.0)
+                throw new ArgumentOutOfRangeException(nameof(vals), v, $"block {Block.Id}: an ontimer starts not picked up, so it is initialised with 0.");
+            _held = -1;
+            _out = 0.0;
+            _dt = double.NaN;
+        }
+    }
+
+    /// <summary>RC5 wp32b: the seal-in: 1 from the first step its input is non-zero, for the rest of the run.</summary>
+    private sealed class LatchOp(int a) : Op
+    {
+        private double _out;
+
+        public override void Eval(double[] s, double dt)
+        {
+            double u = s[a];
+            if (double.IsNaN(u))
+                throw new UserModelException("non-finite", "block " + Block.Id, "the latch's input is not a number; the step is refused.");
+            if (u != 0.0) _out = 1.0;
+            s[Out] = _out;
+        }
+
+        public override void EvalHeld(double[] s) => s[Out] = _out;
+
+        public override void Initialize(double[] s, int[] vals)
+        {
+            double v = s[vals[0]];
+            if (v is not (0.0 or 1.0))
+                throw new ArgumentOutOfRangeException(nameof(vals), v, $"block {Block.Id}: a latch is initialised with 0 (open) or 1 (sealed in).");
+            _out = v;
+        }
     }
 
     private sealed class SatPoleOp(int a, SaturatedExciterPole p) : Op
     {
         public override void Eval(double[] s, double dt) => s[Out] = p.Step(s[a], dt);
+        public override void EvalHeld(double[] s) => s[Out] = p.Output;
         public override double Current => p.Output;
         public override void Initialize(double[] s, int[] vals) => p.Initialize(s[vals[0]]);
     }

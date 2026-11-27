@@ -54,7 +54,7 @@ public class SyntheticGbTests
     public void Round_trips_through_the_json_case_format()
     {
         var m = Build();
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-synth-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-synth-{Guid.NewGuid():N}");
         try
         {
             GridSim.Gda.GdaModelWriter.WriteDirectory(m, dir, addGridInfeed: false);

@@ -533,7 +533,7 @@ public static class JsonGridLoader
     {
         try
         {
-            return JsonSerializer.Deserialize(File.ReadAllText(path), info);
+            return JsonSerializer.Deserialize(GridSim.Core.IO.InputFileLimits.ReadAllText(path), info);
         }
         catch (JsonException ex)
         {

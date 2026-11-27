@@ -12,7 +12,7 @@ namespace GridSim.Core.Dynamics.Distributed;
 /// existing scalar consumer keeps working, and stashing the per-domain detail in
 /// <see cref="LastDistributedResult"/>.
 ///
-/// The degenerate case (<= 1 synchronous swing mass, or a forced single domain) delegates to the lumped
+/// The degenerate case (&lt;= 1 synchronous swing mass, or a forced single domain) delegates to the lumped
 /// <see cref="FrequencyDynamics"/> so the reduction to the lumped model is exact - the T0 gate.
 /// <para><b>One instance, one caller at a time</b> (GR-544): <see cref="Simulate"/> stores its spatial detail for
 /// <see cref="LastDistributedResult"/>, which describes the most recent call on this instance. Use one instance per

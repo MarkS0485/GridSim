@@ -22,9 +22,17 @@ public static class NesoFrequencyCsv
     /// <summary>Read the file's samples in file order (lazily). See the type comment for what is refused.</summary>
     /// <exception cref="InvalidDataException">A non-blank line other than the header is not a valid data row.</exception>
     /// <exception cref="ForwardInferenceException">A row is newer than the historical horizon.</exception>
-    public static IEnumerable<FrequencySample> Read(string path)
+    public static IEnumerable<FrequencySample> Read(string path) => ReadCore(() => new StreamReader(path), path, quoteLines: true);
+
+    /// <summary>SEC-01: read a trace that an input file named (a side file): through
+    /// <see cref="GridSim.Core.Security.SideFile.OpenRead"/>, so the read stops at <paramref name="maxBytes"/>, and a refused
+    /// line is named by its number only, never quoted.</summary>
+    internal static IEnumerable<FrequencySample> ReadSideFile(string path, long maxBytes, string what)
+        => ReadCore(() => new StreamReader(GridSim.Core.Security.SideFile.OpenRead(path, maxBytes, what)), path, quoteLines: false);
+
+    private static IEnumerable<FrequencySample> ReadCore(Func<StreamReader> open, string path, bool quoteLines)
     {
-        using var reader = new StreamReader(path);
+        using StreamReader reader = open();
         string? line;
         int lineNumber = 0;          // 1-based, counting every physical line (blank ones too), as an editor shows them
         bool seenNonBlank = false;   // whether the first non-blank line (the only candidate header) has been passed
@@ -41,7 +49,7 @@ public static class NesoFrequencyCsv
                 // damaged FIRST data row, which would hold the digits of a date, is refused rather than taken for a header).
                 if (firstNonBlank && IsHeaderLike(line)) continue;
                 throw new InvalidDataException(
-                    $"NESO frequency file '{path}' line {lineNumber} is not a 'timestamp,Hz' data row ({why}): '{Clip(line)}'. " +
+                    $"NESO frequency file '{path}' line {lineNumber} is not a 'timestamp,Hz' data row ({why})" + (quoteLines ? $": '{Clip(line)}'. " : ". ") +
                     "Every line after the header must be a timestamp, a comma and a finite frequency in Hz above 0.");
             }
 

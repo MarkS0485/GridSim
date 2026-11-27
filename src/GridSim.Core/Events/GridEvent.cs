@@ -54,7 +54,7 @@ public sealed record RecordedAction(
 /// service terms: DC ramps to 5% at 0.2 Hz deviation then to full at 0.5 Hz, within ~1 s; DM ramps
 /// 0.1->0.2 Hz within ~1 s; DR ramps 0.015->0.2 Hz over ~10 s. The knee pair carries the low-gain
 /// segment (DC: 0.2 Hz / 0.05); knee at the deadband with fraction 0 is a plain ramp-from-deadband
-/// (DM/DR); knee <= 0 is a droop line through zero. It enters the swing model as a proportional
+/// (DM/DR); knee &lt;= 0 is a droop line through zero. It enters the swing model as a proportional
 /// responder - replay of what the real system had, not prediction. Kept in BOTH the baseline replay
 /// and counterfactuals: stripping it from a counterfactual would credit the device with response the
 /// system already owned.

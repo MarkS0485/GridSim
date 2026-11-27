@@ -163,7 +163,7 @@ public static partial class MultiPhaseJsonLoader
     public static MultiPhaseFeeder Load(string path)
     {
         if (!File.Exists(path)) throw new FileNotFoundException($"three-phase feeder file not found: {path}", path);
-        return Parse(File.ReadAllText(path), path);
+        return Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path), path);
     }
 
     /// <summary>Validate and build a feeder from JSON text. <paramref name="sourceName"/> is used in every message.</summary>
@@ -190,6 +190,7 @@ public static partial class MultiPhaseJsonLoader
         var buses = new List<PhaseBus>();
         var baseKv = new Dictionary<int, double>();
         var busNames = new Dictionary<int, string>();
+        var busNameSet = new HashSet<string>(StringComparer.Ordinal);   // NUM-13
         int sourceCount = 0;
         JsonElement busArr = ctx.Arr(root, "$", "buses");
         if (busArr.GetArrayLength() < 2) throw ctx.Fail("$.buses", "a feeder needs at least two buses (a source and one more).");
@@ -209,7 +210,8 @@ public static partial class MultiPhaseJsonLoader
                 // N062: an optional display name, unique, so a report can use the published node names.
                 string nm = ctx.Str(b, p, "name");
                 if (nm.Length == 0) throw ctx.Fail($"{p}.name", "must not be empty.");
-                if (busNames.ContainsValue(nm)) throw ctx.Fail($"{p}.name", $"duplicate bus name \"{nm}\".");
+                // NUM-13: a set of the names given so far (ContainsValue scanned every name, quadratic in the buses).
+                if (!busNameSet.Add(nm)) throw ctx.Fail($"{p}.name", $"duplicate bus name \"{nm}\".");
                 busNames[id] = nm;
             }
 
@@ -692,7 +694,7 @@ public static partial class MultiPhaseJsonLoader
     public static MultiPhaseMeasurementSet LoadMeasurements(string path, MultiPhaseFeeder feeder)
     {
         if (!File.Exists(path)) throw new FileNotFoundException($"three-phase measurement file not found: {path}", path);
-        return ParseMeasurements(File.ReadAllText(path), path, feeder);
+        return ParseMeasurements(GridSim.Core.IO.InputFileLimits.ReadAllText(path), path, feeder);
     }
 
     /// <summary>Validate and build a measurement set from JSON text against <paramref name="feeder"/>.</summary>

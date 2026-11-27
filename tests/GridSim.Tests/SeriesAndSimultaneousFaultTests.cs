@@ -301,7 +301,7 @@ public sealed class SeriesAndSimultaneousFaultTests : IDisposable
 
     // ---- the verbs --------------------------------------------------------------------------------------------------
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-faults-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-faults-" + Guid.NewGuid().ToString("N"));
 
     public SeriesAndSimultaneousFaultTests() => Directory.CreateDirectory(_dir);
 

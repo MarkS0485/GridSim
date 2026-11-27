@@ -1,13 +1,25 @@
+using System.Text.Json.Serialization;
 using GridSim.Core.Model;
 
 namespace GridSim.Core.Analysis.MotorStart;
 
-/// <summary>RC3 P8: the starting method. Direct-on-line only in this revision (the motor's terminals are connected to
-/// its bus at the start event, with no starter impedance, autotransformer or soft-starter).</summary>
+/// <summary>RC3 P8: the starting method. Direct-on-line connects the motor's terminals to its bus at the start event.
+/// The reduced-voltage methods (appended after it, so the numeric values keep their meaning) need a
+/// <see cref="MotorStarter"/> on the request and are described there.</summary>
 public enum MotorStartMethod
 {
     /// <summary>Direct-on-line: full network voltage at the start event.</summary>
     DirectOnLine,
+    /// <summary>Star-delta: the winding sees V/sqrt(3) until the switch to delta (open transition).</summary>
+    StarDelta,
+    /// <summary>Autotransformer: the motor sees k V until the switch to full voltage.</summary>
+    Autotransformer,
+    /// <summary>Series reactor: a series impedance between the bus and the motor until it is bypassed.</summary>
+    Reactor,
+    /// <summary>Soft starter: a voltage ramp with an optional current limit, then bypass.</summary>
+    SoftStarter,
+    /// <summary>Variable-frequency drive: constant V/f with a frequency ramp.</summary>
+    Vfd,
 }
 
 /// <summary>RC3 P8: how a motor start ended. A converged electrical state does not by itself establish a successful
@@ -66,7 +78,8 @@ public sealed record MotorStartRequest(
     MotorStartTermination Termination,
     MotorStartPreStartTolerance PreStart,
     int SampleEverySteps = 1,
-    double? MaxVoltageDipPercent = null);
+    double? MaxVoltageDipPercent = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] MotorStarter? Starter = null);
 
 /// <summary>RC3 P8: one generator as AUTHORED in the native case file (before any loader decision): the explicit output
 /// and bounds the fixed-point study requires.</summary>
@@ -115,7 +128,9 @@ public sealed record MotorStartMethodRecord(string ElectricalApproximation, stri
 /// RC3 P8: the motor start result. <see cref="Status"/> is RUNNING, STALLED, NO SOLUTION, HORIZON ENDED or INCOMPLETE
 /// (<see cref="Outcome"/>), with the termination criterion met in <see cref="Termination"/>. The three states are kept
 /// separately: <see cref="Generators"/> (authored against resolved) and <see cref="PreStart"/> (the realised AC
-/// solution). Every measurement that was not taken is null, never zero.
+/// solution). Every measurement that was not taken is null, never zero. A run with a reduced-voltage starter also carries
+/// <see cref="StarterSamples"/> (one per reported sample) and <see cref="StarterTransitions"/>; a direct-on-line run
+/// leaves both null and they are not written.
 /// </summary>
 public sealed record MotorStartResult(
     string Status,
@@ -136,4 +151,6 @@ public sealed record MotorStartResult(
     string? FailedSolverStatus,
     int NetworkSolves,
     IReadOnlyList<MotorStartSample> Samples,
-    IReadOnlyList<string> Reasons);
+    IReadOnlyList<string> Reasons,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<MotorStarterSample>? StarterSamples = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<MotorStarterTransition>? StarterTransitions = null);

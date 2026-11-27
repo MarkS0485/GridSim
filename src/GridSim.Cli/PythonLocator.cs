@@ -20,9 +20,8 @@ namespace GridSim.Cli;
 /// Windows, <c>bin/python</c> elsewhere), when that file exists.</item>
 /// <item>The PATH, folder by folder in order: in each folder <c>python.exe</c> then <c>python3.exe</c> on Windows,
 /// <c>python3</c> then <c>python</c> elsewhere. The search is done here, so PATH order is honoured exactly.</item>
-/// <item>On Windows, the <c>py</c> launcher by name.</item>
-/// <item>Last, the bare names <c>python</c> and <c>python3</c>, as before, for a setup whose interpreter only the
-/// operating system can find (a shim script, for example).</item>
+/// <item>On Windows, the <c>py</c> launcher by its full path in its install folders. No bare name is started on any system
+/// (CLI-10, R3-02); a relative PATH folder is not searched (R3-03).</item>
 /// </list>
 /// <para>A candidate that is the Windows store alias (it exits 9009 without running) is skipped by the caller and the
 /// next one is tried. The caller prints the interpreter and where it came from on every run.</para>
@@ -59,9 +58,15 @@ internal static class PythonLocator
             if (seen.Add(command)) list.Add(new Candidate(command, source));
         }
 
+        // R3-03: a relative PATH entry (".", "bin", ".venv\Scripts") would give a candidate the process start resolves against
+        // the current folder; only fully qualified folders are searched (surrounding quotes, which Windows allows, removed).
         string[] pathDirs = (getEnv("PATH") ?? "")
-            .Split(isWindows ? ';' : ':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        string[] names = isWindows ? new[] { "python.exe", "python3.exe" } : new[] { "python3", "python" };
+            .Split(isWindows ? ';' : ':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(d => d.Trim('"'))
+            .Where(d => FullyQualified(d, isWindows))
+            .ToArray();
+        // R3-13: py.exe too on Windows (the Python install manager puts it on PATH), by its full path as the others.
+        string[] names = isWindows ? new[] { "python.exe", "python3.exe", "py.exe" } : new[] { "python3", "python" };
 
         // 1. The explicit override: that interpreter only.
         string? forced = getEnv(OverrideVariable);
@@ -71,6 +76,12 @@ internal static class PythonLocator
             bool hasFolder = forced.Contains('/') || forced.Contains('\\');
             if (hasFolder)
             {
+                // R4-11: a relative path would be resolved against the current folder (a downloaded case's folder).
+                if (!FullyQualified(forced, isWindows))
+                {
+                    error = $"{OverrideVariable} is set to the relative path '{forced}'; give a full path to a Python interpreter (a relative one would be found from the current folder).";
+                    return Array.Empty<Candidate>();
+                }
                 if (fileExists(forced)) { Add(forced, $"{OverrideVariable}"); return list; }
                 error = $"{OverrideVariable} is set to '{forced}', which does not exist; set it to a Python interpreter, or unset it to search the active virtual environment and PATH.";
                 return Array.Empty<Candidate>();
@@ -88,7 +99,8 @@ internal static class PythonLocator
 
         // 2. The active virtual environment's own interpreter.
         string? venv = getEnv(VirtualEnvVariable);
-        if (!string.IsNullOrWhiteSpace(venv))
+        // R4-11: a relative VIRTUAL_ENV would be resolved against the current folder, so it is skipped.
+        if (!string.IsNullOrWhiteSpace(venv) && FullyQualified(venv.Trim().Trim('"'), isWindows))
         {
             string py = isWindows ? Path.Combine(venv.Trim(), "Scripts", "python.exe") : Path.Combine(venv.Trim(), "bin", "python");
             if (fileExists(py)) Add(py, $"{VirtualEnvVariable}");
@@ -102,10 +114,64 @@ internal static class PythonLocator
                 if (fileExists(full)) Add(full, $"PATH ({dir})");
             }
 
-        // 4 and 5. The launcher, then the bare names the OS resolves (the old behaviour, now the last resort).
-        if (isWindows) Add("py", "py launcher");
-        Add("python", "bare name");
-        Add("python3", "bare name");
+        // 4. CLI-10 / R3-02: on Windows the py launcher by its full path in its two install folders (all users: the Windows
+        // folder; one user: Programs\Python\Launcher under the local application data). No bare name is ever started, on
+        // any system: CreateProcess on Windows, and .NET's own resolution on Linux and macOS (Process.Start looks in the
+        // program's folder and the current folder before PATH there too), would run a python or python3 that sits in the
+        // folder a downloaded case was unpacked to. Step 3 already searched PATH by full path, so nothing is lost; with no
+        // candidate the verb exits 77.
+        if (isWindows)
+        {
+            foreach ((string? root, string[] tail) in new[]
+                     {
+                         (getEnv("SystemRoot") ?? getEnv("windir"), new[] { "py.exe" }),
+                         (getEnv("LOCALAPPDATA"), new[] { "Programs", "Python", "Launcher", "py.exe" }),
+                     })
+            {
+                if (string.IsNullOrWhiteSpace(root)) continue;
+                string py = Path.Combine([root.Trim(), .. tail]);
+                if (fileExists(py)) Add(py, "py launcher");
+            }
+        }
         return list;
+    }
+
+    /// <summary>R4-01: the variable that turns off the py launcher's PATH search for a <c>#!/usr/bin/env</c> shebang (a search
+    /// that, through SearchPathW, also looks in the current folder first).</summary>
+    internal const string LauncherNoSearchVariable = "PYLAUNCHER_NO_SEARCH_PATH";
+
+    /// <summary>
+    /// R4-01: the process start for one candidate. For the py launcher (<c>py.exe</c>) a version, <c>-3</c>, goes before the
+    /// script, so the launcher ignores the script's shebang (crossval.py has <c>#!/usr/bin/env python3</c>, whose PATH search
+    /// would find a python3.exe in the current folder before PATH), and <see cref="LauncherNoSearchVariable"/> = 1 is set in
+    /// the child environment as well. Any other interpreter is started with the arguments as given.
+    /// </summary>
+    internal static System.Diagnostics.ProcessStartInfo StartInfo(string exe, IEnumerable<string> args)
+    {
+        ArgumentNullException.ThrowIfNull(exe);
+        ArgumentNullException.ThrowIfNull(args);
+        var psi = new System.Diagnostics.ProcessStartInfo(exe)
+        {
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        if (string.Equals(Path.GetFileName(exe), "py.exe", StringComparison.OrdinalIgnoreCase))
+        {
+            psi.ArgumentList.Add("-3");
+            psi.Environment[LauncherNoSearchVariable] = "1";
+        }
+        foreach (string x in args) psi.ArgumentList.Add(x);
+        return psi;
+    }
+
+    /// <summary>R3-03: a fully qualified folder for the platform named by <paramref name="isWindows"/> (decided by the flag,
+    /// not the machine, so the rule is tested for both): <c>X:\</c> or a UNC root on Windows, a leading <c>/</c> elsewhere.</summary>
+    private static bool FullyQualified(string dir, bool isWindows)
+    {
+        if (!isWindows) return dir.StartsWith('/');
+        return (dir.Length >= 3 && char.IsAsciiLetter(dir[0]) && dir[1] == ':' && dir[2] is '\\' or '/')
+            || (dir.Length >= 2 && dir[0] is '\\' or '/' && dir[1] is '\\' or '/');
     }
 }

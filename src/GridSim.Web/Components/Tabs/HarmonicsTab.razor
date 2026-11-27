@@ -366,6 +366,10 @@
     /// <see cref="HarmonicSourceChoice.Synthetic"/>, exactly the study <see cref="RunStudy"/> runs.</summary>
     [Parameter] public Func<HarmonicSourceChoice, HarmonicsDto>? RunStudyWith { get; set; }
 
+    /// <summary>The page gate: returns the refusal when the current user may not run the study, else null. Asked before
+    /// every run; a refusal is shown as a failed study and nothing is run.</summary>
+    [Parameter] public Func<string?>? Deny { get; set; }
+
     private HarmonicSourceChoice _choice = HarmonicSourceChoice.Synthetic;
 
     private HarmonicsDto? _result;
@@ -425,6 +429,7 @@
         StateHasChanged();
         try
         {
+            if (Deny?.Invoke() is { } refusal) { _result = HarmonicsDto.Failure(refusal); return; }
             // Offload the heavy per-order solve from the render/sync context so the UI stays responsive.
             HarmonicSourceChoice choice = _choice;   // the choice at the moment of the press
             HarmonicsDto dto = await Task.Run(() => RunStudyWith is not null ? RunStudyWith(choice) : RunStudy!());

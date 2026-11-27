@@ -365,7 +365,7 @@ public class WeccPlantControllerTests
         // ceiling 4 pu against 4.22 pu), which their initialisations refuse; both are left out here, the rest kept.
         string text = WeccRenewableNetworkTests.Dyr(WeccRenewableNetworkTests.RegcRecord, WeccRenewableNetworkTests.ReecRecord, RepcRecord);
         text = string.Join("\n", text.Split('\n').Where(l => !l.Contains("'TGOV1'", StringComparison.Ordinal) && !l.Contains("'SEXS'", StringComparison.Ordinal)));
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-wecc-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-wecc-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

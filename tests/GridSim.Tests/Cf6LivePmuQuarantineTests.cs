@@ -22,7 +22,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Cf6LivePmuQuarantineTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-cf6-quarantine-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-cf6-quarantine-" + Guid.NewGuid().ToString("N"));
 
     public Cf6LivePmuQuarantineTests() => Directory.CreateDirectory(_dir);
 

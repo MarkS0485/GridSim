@@ -27,7 +27,7 @@ public class EstimationMeasurementTests
     [Fact]
     public void Round_trips_through_json()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-mset-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-mset-{Guid.NewGuid():N}.json");
         try
         {
             MeasurementSet original = SampleSet(new DateTime(2024, 3, 1, 12, 0, 0, DateTimeKind.Utc));
@@ -49,7 +49,7 @@ public class EstimationMeasurementTests
     [Fact]
     public void Rejects_a_wrong_schema_tag()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-mset-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-mset-{Guid.NewGuid():N}.json");
         try
         {
             (SampleSet() with { Schema = "gridsim-measurements/999" }).Save(path);
@@ -62,7 +62,7 @@ public class EstimationMeasurementTests
     [Fact]
     public void Rejects_a_timestamp_newer_than_the_historical_horizon()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-mset-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"gridsim-mset-{Guid.NewGuid():N}.json");
         try
         {
             DateTime now = new(2026, 7, 13, 12, 0, 0, DateTimeKind.Utc);

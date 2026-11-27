@@ -305,7 +305,7 @@ internal static partial class PlanningStudyCommand
         reusable = null;
         if (!File.Exists(completePath)) return File.Exists(resultPath) ? "result without a completion record" : null;
         Completion? record;
-        try { record = JsonSerializer.Deserialize<Completion>(File.ReadAllBytes(completePath), OutputJson); }
+        try { record = JsonSerializer.Deserialize<Completion>(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(completePath)).Span, OutputJson); }
         catch (JsonException) { return "unreadable completion record"; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return "completion record unreadable: " + ex.Message; }
         if (record is null || record.SchemaVersion != "gridsim-planning-complete/1" || record.JobId != job.Id) return "completion record is for another job";
@@ -417,7 +417,7 @@ internal static partial class PlanningStudyCommand
 
     internal static PlanningManifest Parse(byte[] bytes)
     {
-        using JsonDocument document = JsonDocument.Parse(bytes);
+        using JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes));
         JsonElement root = document.RootElement;
         Obj(root, "manifest", ["manifestVersion", "master", "projects", "projectOrder", "snapshots", "studies"],
             ["manifestVersion", "master", "snapshots", "studies"]);

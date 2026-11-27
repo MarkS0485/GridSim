@@ -21,7 +21,7 @@ public class ReplayDirectoryWindowFeedTests
         PowerFlowResult truth = new NewtonRaphsonPowerFlow().Solve(model);
         MeasurementSet template = WlsEstimatorTests.ExactFullSet(model, truth);
 
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-feed-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-feed-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -50,7 +50,7 @@ public class ReplayDirectoryWindowFeedTests
         PowerFlowResult truth = new NewtonRaphsonPowerFlow().Solve(model);
         MeasurementSet template = WlsEstimatorTests.ExactFullSet(model, truth);
 
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-feed-bad-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-feed-bad-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

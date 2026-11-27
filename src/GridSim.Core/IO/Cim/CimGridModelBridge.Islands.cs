@@ -69,6 +69,38 @@ public sealed class CimBridgeResult
     /// <summary>Every solved CIM bus (mRID) -> its GridModel bus id (buses joined by a closed switch share one).</summary>
     public IReadOnlyDictionary<string, int> BusIdOfNode { get; }
 
+    private IReadOnlyDictionary<string, int>? _branchIndexOfMrid;
+
+    /// <summary>
+    /// RC5 WP10: every line (ACLineSegment, SeriesCompensator) and two-winding transformer mRID of <see cref="Network"/> ->
+    /// the index of its branch in <see cref="Model"/>.Branches, and every three-winding transformer mRID -> the index of
+    /// its first winding's branch (its windings follow in end order). Built on first use from the order the bridge adds
+    /// branches in (lines in network order, a line whose ends closed switches join left out, then transformers), after the
+    /// model is built, so no number of the model moves. Throws when the count does not reach the model's branch count.
+    /// </summary>
+    public IReadOnlyDictionary<string, int> BranchIndexOfMrid => _branchIndexOfMrid ??= BuildBranchIndex();
+
+    private IReadOnlyDictionary<string, int> BuildBranchIndex()
+    {
+        var d = new Dictionary<string, int>(StringComparer.Ordinal);
+        int k = 0;
+        foreach (CimBranch br in Network.Branches)
+        {
+            int f = BusIdOfNode[br.FromNode], t = BusIdOfNode[br.ToNode];
+            if (f == t && !string.Equals(br.FromNode, br.ToNode, StringComparison.Ordinal)) continue;
+            d[br.MRID] = k++;
+        }
+        foreach (CimTransformer tx in Network.Transformers)
+        {
+            d[tx.MRID] = k;
+            k += tx.Ends.Count == 2 ? 1 : tx.Ends.Count;
+        }
+        if (k != Model.Branches.Count)
+            throw new InvalidOperationException(
+                $"The branch index of the bridged network ({k} branch(es)) does not reach the model's {Model.Branches.Count}.");
+        return d;
+    }
+
     /// <summary>The CIM buses (mRIDs) left out as de-energised islands, in the network's bus order.</summary>
     public IReadOnlyList<string> DroppedNodes { get; }
 

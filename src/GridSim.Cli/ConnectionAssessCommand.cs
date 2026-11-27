@@ -51,8 +51,8 @@ internal static class ConnectionAssessCommand
                 throw new IOException("Result path already exists; use a new path for this invocation.");
             string studyPath = Path.GetFullPath(input);
             byte[] bytes = File.ReadAllBytes(studyPath);
-            using (JsonDocument d = JsonDocument.Parse(bytes)) TransmissionSecurityCommand.CheckDuplicates(d.RootElement);
-            Study s = JsonSerializer.Deserialize<Study>(bytes, TransmissionSecurityCommand.Json) ?? throw new InvalidDataException("Study is null.");
+            using (JsonDocument d = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes))) TransmissionSecurityCommand.CheckDuplicates(d.RootElement);
+            Study s = JsonSerializer.Deserialize<Study>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, TransmissionSecurityCommand.Json) ?? throw new InvalidDataException("Study is null.");
             if (s.SchemaVersion != 1) throw new InvalidDataException("schemaVersion must be 1.");
             if (string.IsNullOrWhiteSpace(s.Label)) throw new InvalidDataException("label must not be empty.");
             if (!(s.PccVoltageKv > 0.0) || !double.IsFinite(s.PccVoltageKv)) throw new InvalidDataException("pccVoltageKv must be finite and above 0.");
@@ -71,7 +71,7 @@ internal static class ConnectionAssessCommand
             if (rules.EndsWith(".json", StringComparison.OrdinalIgnoreCase) || rules.Contains('/') || rules.Contains('\\'))
             {
                 byte[] rb = File.ReadAllBytes(Path.GetFullPath(rules));
-                try { set = ConnectionRuleSet.Parse(Encoding.UTF8.GetString(rb)); } catch (FormatException ex) { throw new InvalidDataException(ex.Message); }
+                try { set = ConnectionRuleSet.Parse(Encoding.UTF8.GetString(rb).TrimStart('\uFEFF')); } catch (FormatException ex) { throw new InvalidDataException(ex.Message); }
                 rulesSource = "file sha256 " + SpecialistStudyCli.Hash(rb);
             }
             else { set = ConnectionRuleSets.Load(rules); rulesSource = "built in"; }
@@ -117,7 +117,7 @@ internal static class ConnectionAssessCommand
     /// <c>thdIncrementalPct</c>), under the quantity names of <see cref="Quantities.FromAssessment"/>.</summary>
     private static IEnumerable<KeyValuePair<string, double>> ImportHarmonicAssess(string path)
     {
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllBytes(path));
+        using JsonDocument doc = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(path)));
         JsonElement result = Child(doc.RootElement, "result") ?? throw new InvalidDataException($"{path}: no 'result' object (is it a harmonic-assess result file?)");
         var d = new SortedDictionary<string, double>(StringComparer.Ordinal);
         if (Child(result, "thdPlanningLevelPct") is JsonElement p && p.ValueKind == JsonValueKind.Number) d["harmonic.thd_planning_level_pct"] = p.GetDouble();

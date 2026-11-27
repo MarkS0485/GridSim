@@ -355,6 +355,7 @@ public static class V2CaseLoader
         ThrowIfAny(shown, "the template controller references", problems);
 
         // ---- Step 4: overrides. ----
+        var unitOverrides = new List<(string At, string Unit, JsonElement Override)>();
         if (manifest.TryGetProperty("overrides", out JsonElement overrides))
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -362,6 +363,9 @@ public static class V2CaseLoader
             foreach (JsonElement ov in overrides.EnumerateArray())
             {
                 string at = $"/overrides/{oi++}";
+                // RC5: an override with a unit member sets one unit's own unit protection values; it is applied to that
+                // unit after the model is built (WithUnitProtection), never to the template.
+                if (ov.TryGetProperty("unit", out JsonElement unitEl)) { unitOverrides.Add((at, unitEl.GetString()!, ov.Clone())); continue; }
                 string target = ov.GetProperty("template").GetString()!;
                 string reason = ov.GetProperty("reason").GetString()!;
                 Template? tpl = templates.Find(target);
@@ -399,7 +403,15 @@ public static class V2CaseLoader
             foreach (JsonElement b in bindings.EnumerateArray())
             {
                 string at = $"{shown}: /bindings/{bi++}/template";
-                string? cls = ClassNameFor(b.GetProperty("template").GetString()!, at, templates, problems);
+                string bref = b.GetProperty("template").GetString()!;
+                // RC5: a rule whose template is a unitProtection template binds unit protection (by unit type), not dynamics.
+                if (templates.Find(bref) is { Kind: UnitProtectionKind })
+                {
+                    if (UnitProtectionClassFor(bref, at, templates, problems) is string pcls)
+                        dtos.ProtectionBindings.Add(new AssetBinding(b.GetProperty("matchType").GetString()!, pcls));
+                    continue;
+                }
+                string? cls = ClassNameFor(bref, at, templates, problems);
                 if (cls is not null) dtos.AssetBindings.Add(new AssetBindingDto { MatchType = b.GetProperty("matchType").GetString()!, Class = cls });
             }
         }
@@ -411,6 +423,8 @@ public static class V2CaseLoader
 
         // RC3 P8: the placed motors' rules the schema cannot express (bus reference, unique names, not also a demand).
         CheckMotors(dtos, problems);
+        // RC5 (SC equivalent writing): the fault-sequence tables, resolved by name (null when the case has none).
+        FaultSequenceTables? faultSequence = ResolveFaultSequence(dtos, problems);
 
         // Placeholder / unmodelled-kind refusals and other v2-only content were collected by the mapper above.
         ThrowIfAny(shown, "the network elements", problems);
@@ -463,6 +477,7 @@ public static class V2CaseLoader
             // generators' order (the balance works on the in-service fleet and re-appends any out-of-service unit).
             GridModel built = JsonGridLoader.Build(caseDtos, Path.GetFileNameWithoutExtension(manifestFull), dispatch: false);
             built = ApplySequenceData(built, dtos);
+            built = ApplyFaultSequence(built, dtos, faultSequence);   // RC5: the model itself when the case has no fault-sequence tables
             model = dispatch && (caseDtos.System?.Dispatch ?? true) ?GridSim.Core.Dispatch.Dispatcher.Balance(built) : built;
         }
         catch (InvalidDataException ex)
@@ -485,6 +500,10 @@ public static class V2CaseLoader
         IReadOnlyList<PlacedMotor> motors = dtos.Motors.Count == 0 ? Array.Empty<PlacedMotor>() : dtos.Motors.Select(m => m.Motor).ToList();
         if (motors.Count > 0)
             notes.Add($"motors: {motors.Count.ToString(CultureInfo.InvariantCulture)} placed motor {(motors.Count == 1 ? "row" : "rows")} carried beside the model for the motor acceleration study; the steady-state power flow does not use them, and a verb that writes the case from the model (convert) does not carry them");
+        // RC5: per-unit protection. A case with no unitProtection template, no protectionTemplate and no per-unit override
+        // takes none of this (the model is the very object built above, as before).
+        if (templates.All.Any(t => t.Kind == UnitProtectionKind) || dtos.ProtectionTemplates.Count > 0 || unitOverrides.Count > 0)
+            model = WithUnitProtection(model, templates, dtos, unitOverrides, kinds, shown, caseName, notes);
         if (!manifest.TryGetProperty("assets", out JsonElement assetList))
             return new V2CaseLoadResult(model, notes) { Motors = motors };
         var assetDocs = new List<(string Name, JsonElement Root)>();
@@ -572,6 +591,33 @@ public static class V2CaseLoader
                     // honesty rule, with the reason the case gave.
                     : new ProvenanceDto { Tag = nameof(Diagnostics.ProvenanceTag.CuratedPlaceholder), Note = $"[VERIFY] set by an override in case '{caseName}': {reason}" };
         }
+
+        /// <summary>RC5: the unit protection class layer of an active unitProtection template: numbers (bare or object form)
+        /// as settings, the two preset strings as presets; provenance from the template's map, then object-form entries,
+        /// then override entries (as <see cref="ToAssetClass"/>). The kind spec has already checked every value.</summary>
+        public Protection.UnitProtectionLayer ToUnitProtectionLayer()
+        {
+            var settings = new Dictionary<string, double>(StringComparer.Ordinal);
+            var prov = new Dictionary<string, AssetClassProvenance>(StringComparer.Ordinal);
+            string? rocof = null, iface = null;
+            foreach (JsonProperty e in Provenance.EnumerateObject()) prov[e.Name] = Prov(e.Value);
+            foreach (JsonProperty p in Params.EnumerateObject())
+            {
+                JsonElement v = p.Value;
+                if (v.ValueKind == JsonValueKind.Object)
+                {
+                    if (v.TryGetProperty("prov", out JsonElement pv)) prov[p.Name] = Prov(pv);
+                    v = v.GetProperty("v");
+                }
+                if (p.Name == "rocofPreset") rocof = v.GetString();
+                else if (p.Name == "interfacePreset") iface = v.GetString();
+                else settings[p.Name] = v.GetDouble();
+            }
+            foreach ((string k, ProvenanceDto v) in OverrideProvenance)
+                prov[k] = new AssetClassProvenance(Enum.Parse<Diagnostics.ProvenanceTag>(v.Tag), v.Note);
+            return new Protection.UnitProtectionLayer(settings, prov, rocof, iface);
+        }
+
 
         /// <summary>The v1 asset class of an active template of a modelled kind, or null (with problems added) when
         /// it holds something an asset class cannot (a non-numeric value, controller references).</summary>
@@ -669,6 +715,144 @@ public static class V2CaseLoader
 
     /// <summary>The asset-class name for a template reference an element or binding makes, or null (problem added)
     /// when it does not resolve, is a placeholder, or is of a kind no asset class models.</summary>
+    /// <summary>RC5: the template kind of a unit protection class default.</summary>
+    internal const string UnitProtectionKind = "unitProtection";
+
+    /// <summary>RC5: the class name of a unitProtection template a generator or binding names, or null (problem added) when
+    /// it does not resolve, is a placeholder or is of another kind.</summary>
+    private static string? UnitProtectionClassFor(string reference, string at, TemplateIndex templates, List<string> problems)
+    {
+        Template? t = templates.Find(reference);
+        if (t is null) { problems.Add($"{at}: template {reference} is neither imported nor a local template of the case."); return null; }
+        if (t.Placeholder) { problems.Add($"{at}: template {reference} is a placeholder; a placeholder holds no values and can never be bound to a unit."); return null; }
+        if (t.Kind != UnitProtectionKind) { problems.Add($"{at}: template {reference} is kind '{t.Kind}'; a unit's protection template must be kind '{UnitProtectionKind}'."); return null; }
+        return t.ClassName;
+    }
+
+    /// <summary>
+    /// RC5 per-unit protection: every active unitProtection template becomes a unit protection class (local templates
+    /// first, then imported, as asset classes); each named generator takes its class from its protectionTemplate, else the
+    /// first matching unitProtection binding rule (exact before prefix, as for asset bindings); each per-unit override (an
+    /// override with a unit member) is checked against the kind spec and laid on that unit alone, its values taking the
+    /// object form's provenance, else the override's, else CuratedPlaceholder [VERIFY] quoting the reason (the template
+    /// override rule). Every problem is listed in one refusal.
+    /// </summary>
+    private static GridModel WithUnitProtection(GridModel model, TemplateIndex templates, MappedCase dtos,
+        List<(string At, string Unit, JsonElement Override)> unitOverrides, KindSpecRegistry kinds, string shown, string caseName,
+        List<string> notes)
+    {
+        var problems = new List<string>();
+        var classes = new List<Protection.UnitProtectionClass>();
+        foreach (Template tpl in templates.All.Where(t => !t.Placeholder && t.Kind == UnitProtectionKind))
+            classes.Add(new Protection.UnitProtectionClass(tpl.ClassName, tpl.Description, tpl.ToUnitProtectionLayer()));
+
+        // Which class each unit takes: its own protectionTemplate, else a binding rule.
+        var own = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach ((string unit, string cls, string at) in dtos.ProtectionTemplates)
+            if (!own.TryAdd(unit, cls)) problems.Add($"{shown}: {at}: generator name '{unit}' is shared by more than one unit with a protectionTemplate; give each unit a unique name.");
+        var rules = new AssetBindingSet(dtos.ProtectionBindings);
+        var classOf = new Dictionary<string, string>(StringComparer.Ordinal);
+        var order = new List<string>();
+        foreach (Generator g in model.AllGenerators)
+        {
+            if (g.Name is not { } name || classOf.ContainsKey(name)) continue;
+            if (rules.Resolve(own.GetValueOrDefault(name), g.Type) is string cls) { classOf[name] = cls; order.Add(name); }
+        }
+
+        List<Protection.UnitProtectionAssignment> units = UnitAssignments(order, classOf, unitOverrides, templates, kinds, shown,
+            $"case '{caseName}'", problems, p => ThrowIfAny(shown, "the unit protection", p));
+
+        Protection.UnitProtectionSet set;
+        try
+        {
+            set = new Protection.UnitProtectionSet(classes, units);
+            model = model.WithUnitProtection(set);
+        }
+        catch (InvalidDataException ex) { throw new InvalidDataException($"{shown}: {ex.Message}", ex); }
+        int stages = set.Resolved.Sum(r => r.Stages.Count);
+        int placeholders = set.Resolved.Sum(r => r.Stages.Count(st => st.Pickup.IsPlaceholder || st.Delay.IsPlaceholder || (st.Diameter?.IsPlaceholder ?? false)));
+        notes.Add($"unit protection: {set.Units.Count.ToString(CultureInfo.InvariantCulture)} {(set.Units.Count == 1 ? "unit" : "units")} with relays of their own "
+            + $"({stages.ToString(CultureInfo.InvariantCulture)} relay {(stages == 1 ? "stage" : "stages")}, {placeholders.ToString(CultureInfo.InvariantCulture)} with a placeholder setting), "
+            + $"{set.Classes.Count.ToString(CultureInfo.InvariantCulture)} unit protection {(set.Classes.Count == 1 ? "template" : "templates")}; the power flow does not use them");
+        return model;
+    }
+
+    /// <summary>RC5: each unit's own protection layer, in <paramref name="order"/>: the per-unit overrides (an override with a
+    /// unit member in a v2 case, a unit entry with params in a unit protection file) checked against the unitProtection kind
+    /// spec after they are laid on the unit's template, each value taking the object form's provenance, else the entry's,
+    /// else CuratedPlaceholder [VERIFY] quoting the reason. <paramref name="origin"/> names the document in that note;
+    /// <paramref name="refuse"/> throws when problems were found. Shared by the v2 case loader and the unit protection file.</summary>
+    private static List<Protection.UnitProtectionAssignment> UnitAssignments(IReadOnlyList<string> order, IReadOnlyDictionary<string, string> classOf,
+        List<(string At, string Unit, JsonElement Override)> unitOverrides, TemplateIndex templates, KindSpecRegistry kinds, string shown,
+        string origin, List<string> problems, Action<List<string>> refuse)
+    {
+        // The per-unit overrides, grouped by unit in manifest order.
+        var unitParams = new Dictionary<string, List<(JsonProperty Param, JsonElement? Prov, string Reason)>>(StringComparer.Ordinal);
+        foreach ((string at, string unit, JsonElement ov) in unitOverrides)
+        {
+            string target = ov.GetProperty("template").GetString()!;
+            Template? tpl = templates.Find(target);
+            if (tpl is null) { problems.Add($"{shown}: {at}/template: {target} is neither imported nor a local template of the case."); continue; }
+            if (tpl.Kind != UnitProtectionKind) { problems.Add($"{shown}: {at}/unit: a per-unit override applies to a '{UnitProtectionKind}' template, but {target} is kind '{tpl.Kind}'."); continue; }
+            if (!classOf.TryGetValue(unit, out string? resolved)) { problems.Add($"{shown}: {at}/unit: unit '{unit}' has no unit protection template (no protectionTemplate and no binding rule matching it), so there is nothing to override."); continue; }
+            if (resolved != tpl.ClassName) { problems.Add($"{shown}: {at}/template: unit '{unit}' takes unit protection template '{resolved}', not {target}; a per-unit override names the unit's own template."); continue; }
+            JsonElement ps = ov.GetProperty("params");
+            if (!ps.EnumerateObject().Any()) { problems.Add($"{shown}: {at}/params: an override must set at least one parameter."); continue; }
+            List<SchemaError> errs = kinds.CheckParams(UnitProtectionKind, tpl.WithOverrides(ps), placeholder: false, at + "/params").ToList();
+            foreach (SchemaError e in errs) problems.Add($"{shown}: {e} (after applying the per-unit override of '{unit}' to {target})");
+            if (errs.Count > 0) continue;
+            if (!unitParams.TryGetValue(unit, out var list)) unitParams[unit] = list = new();
+            JsonElement? prov = ov.TryGetProperty("provenance", out JsonElement pv) ? pv : null;
+            string reason = ov.GetProperty("reason").GetString()!;
+            foreach (JsonProperty p in ps.EnumerateObject())
+            {
+                if (list.Any(x => x.Param.Name == p.Name))
+                    problems.Add($"{shown}: {at}/params/{JsonSchemaSubset.EscapeToken(p.Name)}: '{p.Name}' of unit '{unit}' is overridden more than once.");
+                else list.Add((p, prov, reason));
+            }
+        }
+        refuse(problems);
+
+        var units = new List<Protection.UnitProtectionAssignment>();
+        foreach (string unit in order)
+        {
+            var settings = new Dictionary<string, double>(StringComparer.Ordinal);
+            var provs = new Dictionary<string, AssetClassProvenance>(StringComparer.Ordinal);
+            string? rocof = null, iface = null;
+            var reasons = new List<string>();
+            foreach ((JsonProperty p, JsonElement? prov, string reason) in unitParams.GetValueOrDefault(unit) ?? new())
+            {
+                if (!reasons.Contains(reason)) reasons.Add(reason);
+                JsonElement v = p.Value;
+                AssetClassProvenance? pp = null;
+                if (v.ValueKind == JsonValueKind.Object)
+                {
+                    if (v.TryGetProperty("prov", out JsonElement op)) pp = Prov(op);
+                    v = v.GetProperty("v");
+                }
+                pp ??= prov is JsonElement o ? Prov(o)
+                    : new AssetClassProvenance(Diagnostics.ProvenanceTag.CuratedPlaceholder, $"[VERIFY] set by a per-unit override in {origin} for unit '{unit}': {reason}");
+                if (p.Name == "rocofPreset") rocof = v.GetString();
+                else if (p.Name == "interfacePreset") iface = v.GetString();
+                else { settings[p.Name] = v.GetDouble(); provs[p.Name] = pp; }
+            }
+            units.Add(new Protection.UnitProtectionAssignment(unit, classOf[unit], new Protection.UnitProtectionLayer(settings, provs, rocof, iface))
+            { Reason = reasons.Count == 0 ? null : string.Join("; ", reasons) });
+        }
+
+        return units;
+    }
+
+    /// <summary>RC5: a provenance object ({tag, note}, schema-checked) as an asset-class provenance.</summary>
+    private static AssetClassProvenance Prov(JsonElement p)
+    {
+        string tag = p.GetProperty("tag").GetString()!;
+        if (!Enum.TryParse(tag, ignoreCase: false, out Diagnostics.ProvenanceTag t) || !Enum.IsDefined(t))
+            throw new InvalidDataException($"provenance tag '{tag}' is not a provenance tag.");
+        return new AssetClassProvenance(t, p.GetProperty("note").GetString()!);
+    }
+
+
     private static string? ClassNameFor(string reference, string at, TemplateIndex templates, List<string> problems)
     {
         Template? t = templates.Find(reference);
@@ -703,6 +887,12 @@ public static class V2CaseLoader
         /// <summary>RC3 P8: the placed motors, in network-file order, each with where it was written.</summary>
         public List<(PlacedMotor Motor, string At)> Motors { get; } = new();
 
+        /// <summary>RC5: each generator's own protectionTemplate (unit name, class name, where), in network-file order.</summary>
+        public List<(string Unit, string ClassName, string At)> ProtectionTemplates { get; } = new();
+
+        /// <summary>RC5: the binding rules whose template is a unitProtection template, in manifest order.</summary>
+        public List<AssetBinding> ProtectionBindings { get; } = new();
+
         /// <summary>N234: the fault sequence data of each generator, index-aligned with <see cref="Generators"/> (null
         /// where the element gives none).</summary>
         public List<GeneratorSequenceData?> GeneratorSequence { get; } = new();
@@ -710,7 +900,27 @@ public static class V2CaseLoader
         /// <summary>N234: the fault sequence data of each transformer, index-aligned with <see cref="Transformers"/>
         /// (null where the element gives none).</summary>
         public List<TransformerSequenceData?> TransformerSequence { get; } = new();
+
+        /// <summary>RC5 (SC equivalent writing): the lineWindings entries, in network-file order, each with where it was written.</summary>
+        public List<(LineWindingData Data, string At)> LineWindings { get; } = new();
+
+        /// <summary>RC5: the machineZeroSequence entries, in network-file order.</summary>
+        public List<(string Generator, MachineZeroSequence Z, string At)> MachineZeros { get; } = new();
+
+        /// <summary>RC5: the zeroSequenceMutuals entries, in network-file order.</summary>
+        public List<(string LineA, string LineB, double RPu, double XPu, string At)> Mutuals { get; } = new();
     }
+
+    /// <summary>RC5: a lineWindings entry as written (neutral reactances null = not given).</summary>
+    private sealed record LineWindingData(string Line, WindingConnection FromWinding, WindingConnection ToWinding,
+        double? FromNeutralXPu, double? ToNeutralXPu);
+
+    /// <summary>RC5: the three fault-sequence tables resolved against the lines and generators (indices into the
+    /// built model's lines, which come first among its branches, and into its whole fleet). Null when the case has none.</summary>
+    private sealed record FaultSequenceTables(
+        IReadOnlyList<(int Line, LineWindingData Data)> Windings,
+        IReadOnlyList<(int Generator, MachineZeroSequence Z)> Machines,
+        IReadOnlyList<(int LineA, int LineB, double RPu, double XPu)> Mutuals);
 
     /// <summary>N234: a generator's fault sequence data as written (pu on the unit rating, MBase); null = not given.</summary>
     private sealed record GeneratorSequenceData(double? SubtransientXdPu, double? NegativeSeqXPu);
@@ -746,8 +956,13 @@ public static class V2CaseLoader
                 {
                     case "buses": into.Buses.Add(MapBus(e)); break;
                     case "generators":
-                        into.Generators.Add(MapGenerator(e, at, templates, problems, out GeneratorSequenceData? gs));
+                        GenDto gen = MapGenerator(e, at, templates, problems, out GeneratorSequenceData? gs);
+                        into.Generators.Add(gen);
                         into.GeneratorSequence.Add(gs);
+                        // RC5: the unit's own unit protection template (absent: a binding rule may give it one).
+                        if (e.TryGetProperty("protectionTemplate", out JsonElement upt)
+                            && UnitProtectionClassFor(upt.GetString()!, at + "/protectionTemplate", templates, problems) is string upc)
+                            into.ProtectionTemplates.Add((gen.Name ?? "", upc, at + "/protectionTemplate"));
                         break;
                     case "demands": into.Demands.Add(MapDemand(e)); break;
                     case "lines": into.Lines.Add(MapLine(e, at, templates, problems)); break;
@@ -759,6 +974,15 @@ public static class V2CaseLoader
                     case "boundaries": into.Boundaries.Add(MapBoundary(e)); break;
                     case "protections": into.Protections.Add(MapProtection(e, at, templates, problems)); break;
                     case "motors": into.Motors.Add((MapMotor(e, at, problems), at)); break;
+                    case "lineWindings": if (MapLineWinding(e, at, problems) is LineWindingData lw) into.LineWindings.Add((lw, at)); break;
+                    case "machineZeroSequence":
+                        into.MachineZeros.Add((e.GetProperty("generator").GetString()!,
+                            new MachineZeroSequence(e.GetProperty("rPu").GetDouble(), e.GetProperty("xPu").GetDouble()), at));
+                        break;
+                    case "zeroSequenceMutuals":
+                        into.Mutuals.Add((e.GetProperty("lineA").GetString()!, e.GetProperty("lineB").GetString()!,
+                            e.GetProperty("rPu").GetDouble(), e.GetProperty("xPu").GetDouble(), at));
+                        break;
                     // The schema refuses any other member; this is a second, independent net.
                     default: throw new InvalidDataException($"{file}: unexpected network member '{arr.Name}'.");
                 }
@@ -861,6 +1085,7 @@ public static class V2CaseLoader
                 // N234: P5 (sequence data) is open; these reach the model (applied after the build).
                 case "subtransientXdPu": xdpp = p.Value.GetDouble(); break;
                 case "negativeSeqXPu": x2 = p.Value.GetDouble(); break;
+                case "protectionTemplate": break;   // RC5: read by MapNetwork with the unit's name (unit protection)
                 default: throw new InvalidDataException($"generator: unexpected member '{p.Name}'.");
             }
         }
@@ -1017,6 +1242,181 @@ public static class V2CaseLoader
             nameof(WindingConnection.WyeUngrounded) => WindingConnection.WyeUngrounded,
             _ => throw new InvalidDataException($"{at}: '{s}' is not a winding connection (Delta, WyeGrounded or WyeUngrounded)."),
         };
+    }
+
+    /// <summary>
+    /// RC5 (SC equivalent writing): one <c>lineWindings</c> entry. The schema requires the line name and both windings;
+    /// a neutral reactance must be finite, not negative and on a WyeGrounded side (as for a transformer element), else a
+    /// problem is added naming it and null is returned.
+    /// </summary>
+    private static LineWindingData? MapLineWinding(JsonElement e, string at, List<string> problems)
+    {
+        string line = e.GetProperty("line").GetString()!;
+        JsonElement w = e.GetProperty("windings");
+        WindingConnection wf = ParseWinding(w.GetProperty("from"), at + "/windings/from");
+        WindingConnection wt = ParseWinding(w.GetProperty("to"), at + "/windings/to");
+        double? nFrom = null, nTo = null;
+        if (e.TryGetProperty("neutralXPu", out JsonElement n))
+        {
+            if (n.TryGetProperty("from", out JsonElement f)) nFrom = f.GetDouble();
+            if (n.TryGetProperty("to", out JsonElement t)) nTo = t.GetDouble();
+        }
+        bool ok = true;
+        foreach ((string side, double? xn, WindingConnection wc) in new[] { ("from", nFrom, wf), ("to", nTo, wt) })
+        {
+            if (xn is not double v) continue;
+            if (!(double.IsFinite(v) && v >= 0.0))
+            {
+                problems.Add($"{at}/neutralXPu/{side}: {v.ToString("R", CultureInfo.InvariantCulture)} is not a finite, non-negative reactance (pu on the case base).");
+                ok = false;
+            }
+            if (wc != WindingConnection.WyeGrounded)
+            {
+                problems.Add($"{at}/neutralXPu/{side}: the {side} winding is {wc}, which has no earthed neutral, so a neutral reactance there would never be read.");
+                ok = false;
+            }
+        }
+        return ok ? new LineWindingData(line, wf, wt, nFrom, nTo) : null;
+    }
+
+    /// <summary>
+    /// RC5 (SC equivalent writing): resolve the <c>lineWindings</c>, <c>machineZeroSequence</c> and
+    /// <c>zeroSequenceMutuals</c> entries by name against the lines (in file order, the first branches of the built model)
+    /// and the generators (the whole fleet in file order). Every name must name exactly one element and be named by one
+    /// entry at most; a machine impedance must not be zero; a coupled line may not also carry windings (only lines are
+    /// coupled). Each problem is added, naming the entry. Null when the case has none of the three, so such a case loads
+    /// exactly as before.
+    /// </summary>
+    private static FaultSequenceTables? ResolveFaultSequence(MappedCase dtos, List<string> problems)
+    {
+        if (dtos.LineWindings.Count == 0 && dtos.MachineZeros.Count == 0 && dtos.Mutuals.Count == 0) return null;
+        static Dictionary<string, List<int>> ByName(IEnumerable<string?> names)
+        {
+            var d = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+            int i = 0;
+            foreach (string? s in names)
+            {
+                if (s is not null)
+                {
+                    if (!d.TryGetValue(s, out List<int>? list)) d[s] = list = new List<int>();
+                    list.Add(i);
+                }
+                i++;
+            }
+            return d;
+        }
+        Dictionary<string, List<int>> lines = ByName(dtos.Lines.Select(l => l.Name));
+        Dictionary<string, List<int>> gens = ByName(dtos.Generators.Select(g => g.Name));
+        int? One(Dictionary<string, List<int>> map, string name, string what, string at)
+        {
+            if (!map.TryGetValue(name, out List<int>? hits))
+            {
+                problems.Add($"{at}: there is no {what} named '{name}' in the case's {what}s.");
+                return null;
+            }
+            if (hits.Count > 1)
+            {
+                problems.Add($"{at}: {hits.Count.ToString(CultureInfo.InvariantCulture)} {what}s are named '{name}'; the entry must name exactly one. Give each a unique name.");
+                return null;
+            }
+            return hits[0];
+        }
+
+        var windings = new List<(int Line, LineWindingData Data)>();
+        var wound = new HashSet<int>();
+        foreach ((LineWindingData data, string at) in dtos.LineWindings)
+        {
+            if (One(lines, data.Line, "line", at + "/line") is not int i) continue;
+            if (!wound.Add(i)) { problems.Add($"{at}/line: line '{data.Line}' is named by more than one lineWindings entry."); continue; }
+            windings.Add((i, data));
+        }
+        var machines = new List<(int Generator, MachineZeroSequence Z)>();
+        var earthed = new HashSet<int>();
+        foreach ((string name, MachineZeroSequence z, string at) in dtos.MachineZeros)
+        {
+            if (z.RPu == 0.0 && z.XPu == 0.0)
+            {
+                problems.Add($"{at}: generator '{name}' has a zero zero-sequence impedance; a shunt to earth of zero impedance is not a machine's. Leave the entry out if the machine has no zero-sequence path.");
+                continue;
+            }
+            if (One(gens, name, "generator", at + "/generator") is not int g) continue;
+            if (!earthed.Add(g)) { problems.Add($"{at}/generator: generator '{name}' is named by more than one machineZeroSequence entry."); continue; }
+            machines.Add((g, z));
+        }
+        var mutuals = new List<(int LineA, int LineB, double RPu, double XPu)>();
+        foreach ((string a, string b, double r, double x, string at) in dtos.Mutuals)
+        {
+            int? ia = One(lines, a, "line", at + "/lineA"), ib = One(lines, b, "line", at + "/lineB");
+            if (ia is not int la || ib is not int lb) continue;
+            if (la == lb) { problems.Add($"{at}: line '{a}' is coupled to itself."); continue; }
+            if (wound.Contains(la) || wound.Contains(lb))
+            {
+                problems.Add($"{at}: line '{(wound.Contains(la) ? a : b)}' has winding connections (lineWindings) and is mutually coupled; only lines without windings are coupled.");
+                continue;
+            }
+            mutuals.Add((la, lb, r, x));
+        }
+        return new FaultSequenceTables(windings, machines, mutuals);
+    }
+
+    /// <summary>
+    /// RC5 (SC equivalent writing): put the resolved fault-sequence tables into the built model (after
+    /// <see cref="ApplySequenceData"/>, before dispatch). The lines are the first branches of the built model, in file
+    /// order, and each match is checked by name (an internal error otherwise). Returns <paramref name="model"/> itself
+    /// when <paramref name="tables"/> is null.
+    /// </summary>
+    private static GridModel ApplyFaultSequence(GridModel model, MappedCase dtos, FaultSequenceTables? tables)
+    {
+        if (tables is null) return model;
+        IReadOnlyList<Branch> all = model.Branches;
+        if (all.Count != dtos.Lines.Count + dtos.Transformers.Count)
+            throw new InvalidOperationException($"RC5: the built model holds {all.Count} branches for {dtos.Lines.Count} lines and {dtos.Transformers.Count} transformers written (internal error).");
+        Branch LineAt(int i)
+        {
+            Branch b = all[i];
+            if (!string.Equals(b.Name, dtos.Lines[i].Name, StringComparison.Ordinal))
+                throw new InvalidOperationException($"RC5: branch {i} is '{b.Name}' in the model but line '{dtos.Lines[i].Name}' in the network file (internal error).");
+            return b;
+        }
+
+        List<Branch>? branches = null;
+        if (tables.Windings.Count > 0)
+        {
+            branches = new List<Branch>(all);
+            foreach ((int i, LineWindingData d) in tables.Windings)
+                branches[i] = LineAt(i) with
+                {
+                    FromWinding = d.FromWinding,
+                    ToWinding = d.ToWinding,
+                    FromNeutralXPu = d.FromNeutralXPu ?? 0.0,
+                    ToNeutralXPu = d.ToNeutralXPu ?? 0.0,
+                };
+        }
+        List<Generator>? fleet = null;
+        if (tables.Machines.Count > 0)
+        {
+            IReadOnlyList<Generator> gens = model.AllGenerators;
+            if (gens.Count != dtos.Generators.Count)
+                throw new InvalidOperationException($"RC5: the built model holds {gens.Count} generators for {dtos.Generators.Count} written (internal error).");
+            fleet = new List<Generator>(gens);
+            foreach ((int i, MachineZeroSequence z) in tables.Machines)
+            {
+                if (!string.Equals(gens[i].Name, dtos.Generators[i].Name, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"RC5: generator {i} is '{gens[i].Name}' in the model but '{dtos.Generators[i].Name}' in the network file (internal error).");
+                fleet[i] = gens[i] with { ZeroSequenceZPu = z };
+            }
+        }
+        List<ZeroSequenceMutual>? mutuals = null;
+        if (tables.Mutuals.Count > 0)
+        {
+            mutuals = new List<ZeroSequenceMutual>(tables.Mutuals.Count);
+            foreach ((int a, int b, double r, double x) in tables.Mutuals)
+            {
+                Branch ba = LineAt(a), bb = LineAt(b);
+                mutuals.Add(new ZeroSequenceMutual(a, ba.From, ba.To, b, bb.From, bb.To, r, x));
+            }
+        }
+        return model.CopyWith(generators: fleet, branches: branches, zeroSequenceMutuals: mutuals, generatorsAreWholeFleet: fleet is not null);
     }
 
     /// <summary>
@@ -1284,11 +1684,31 @@ public static class V2CaseLoader
 
     /// <summary>True when <paramref name="full"/> lies inside the folder <paramref name="dir"/> (both full paths). GR-655:
     /// compared by the operating system's rule (case-insensitive on Windows, exact elsewhere), as the case editor's
-    /// IsInside does; a case-insensitive test on Linux treated two different folders as one. Links are not resolved.</summary>
-    private static bool IsInside(string dir, string full)
+    /// IsInside does; a case-insensitive test on Linux treated two different folders as one. A link below the folder is read
+    /// one hop (IO-17) and must stay inside it.</summary>
+    internal static bool IsInside(string dir, string full)
     {
         string d = Path.TrimEndingDirectorySeparator(dir) + Path.DirectorySeparatorChar;
-        return full.StartsWith(d, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+        StringComparison cmp = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (!full.StartsWith(d, cmp)) return false;
+        // IO-17: the text test alone let a symbolic link or junction inside the folder lead out of it (to a network file,
+        // whose schema errors then quoted its values). Each component below the folder that is a link is read one hop
+        // (not followed, so no network call is made) and its target must be a local path inside the folder too.
+        string at = Path.TrimEndingDirectorySeparator(dir);
+        foreach (string part in full[d.Length..].Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries))
+        {
+            at = Path.Combine(at, part);
+            string? target;
+            try { target = new FileInfo(at).LinkTarget; }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { return false; }
+            if (target is null) continue;
+            if (GridSim.Core.Security.SideFile.IsNetworkOrDevice(target)) return false;
+            string resolved;
+            try { resolved = Path.GetFullPath(target, Path.GetDirectoryName(at)!); }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException) { return false; }
+            if (GridSim.Core.Security.SideFile.IsNetworkOrDevice(resolved) || !resolved.StartsWith(d, cmp)) return false;
+        }
+        return true;
     }
 
     /// <summary>Throw one <see cref="InvalidDataException"/> listing every problem (up to <see cref="MaxListedProblems"/>).</summary>
@@ -1299,5 +1719,84 @@ public static class V2CaseLoader
         string more = problems.Count > MaxListedProblems ? $"{Environment.NewLine}  ... and {problems.Count - MaxListedProblems} more" : "";
         throw new InvalidDataException(
             $"{manifest}: JSON v2 case refused at {stage}: {problems.Count} problem(s):{Environment.NewLine}  {list}{more}");
+    }
+
+    /// <summary>
+    /// RC5: a unit protection file (gridsim-unit-protection/1) as a unit protection set, with the v2 rules: each template
+    /// is checked as a v2 case's local template is (kind spec, provenance keys, unique id@rev) and must be an active
+    /// unitProtection template; each unit takes one template of the file; a unit's own values are laid on its template by
+    /// the same code as a v2 per-unit override (<see cref="UnitAssignments"/>). The document is already schema-valid.
+    /// Every problem is listed in one <see cref="InvalidDataException"/>.
+    /// </summary>
+    internal static Protection.UnitProtectionSet UnitProtectionDocument(JsonElement root, string shown, KindSpecRegistry kinds)
+    {
+        var problems = new List<string>();
+        var templates = new TemplateIndex();
+        int ti = 0;
+        foreach (JsonElement t in root.GetProperty("templates").EnumerateArray())
+        {
+            string at = $"/templates/{ti++}";
+            var tpl = Template.From(t.Clone(), $"{shown}, {at}", local: true);
+            if (tpl.Kind != UnitProtectionKind)
+            {
+                problems.Add($"{shown}: {at}/kind: template {tpl.Ref} is kind '{tpl.Kind}'; a unit protection file holds '{UnitProtectionKind}' templates only.");
+                continue;
+            }
+            if (tpl.Placeholder)
+            {
+                problems.Add($"{shown}: {at}/status: template {tpl.Ref} is a placeholder; a placeholder holds no values and can never be bound to a unit.");
+                continue;
+            }
+            foreach (SchemaError e in kinds.CheckParams(tpl.Kind, tpl.Params, tpl.Placeholder, at + "/params")) problems.Add($"{shown}: {e}");
+            foreach (JsonProperty prov in tpl.Provenance.EnumerateObject())
+                if (prov.Name != AssetClass.DefaultKey && !tpl.Params.TryGetProperty(prov.Name, out _))
+                    problems.Add($"{shown}: {at}/provenance/{JsonSchemaSubset.EscapeToken(prov.Name)}: provenance is given for '{prov.Name}', which is not a parameter of this template.");
+            if (!templates.AddLocal(tpl)) problems.Add($"{shown}: {at}: template {tpl.Ref} is defined twice.");
+        }
+        RefuseFile(shown, "the templates", problems);
+
+        var classOf = new Dictionary<string, string>(StringComparer.Ordinal);
+        var order = new List<string>();
+        var unitOverrides = new List<(string At, string Unit, JsonElement Override)>();
+        int ui = 0;
+        foreach (JsonElement u in root.GetProperty("units").EnumerateArray())
+        {
+            string at = $"/units/{ui++}";
+            string unit = u.GetProperty("unit").GetString()!;
+            string reference = u.GetProperty("template").GetString()!;
+            if (templates.Find(reference) is not Template tpl)
+            {
+                problems.Add($"{shown}: {at}/template: unit '{unit}' takes template {reference}, which is not a template of this file.");
+                continue;
+            }
+            if (!classOf.TryAdd(unit, tpl.ClassName))
+            {
+                problems.Add($"{shown}: {at}/unit: unit '{unit}' is listed more than once; give each unit one entry (its template and its own values).");
+                continue;
+            }
+            order.Add(unit);
+            bool hasParams = u.TryGetProperty("params", out _);
+            if (hasParams && !u.TryGetProperty("reason", out _))
+                problems.Add($"{shown}: {at}/reason: unit '{unit}' sets values of its own, so it must say why (reason).");
+            else if (!hasParams && (u.TryGetProperty("reason", out _) || u.TryGetProperty("provenance", out _)))
+                problems.Add($"{shown}: {at}: unit '{unit}' gives a reason or provenance but no params; leave them out, or give the unit's own values.");
+            else if (hasParams) unitOverrides.Add((at, unit, u));
+        }
+        RefuseFile(shown, "the units", problems);
+
+        List<Protection.UnitProtectionAssignment> units = UnitAssignments(order, classOf, unitOverrides, templates, kinds, shown,
+            $"unit protection file '{shown}'", problems, p => RefuseFile(shown, "the units' own values", p));
+        var classes = templates.All.Select(t => new Protection.UnitProtectionClass(t.ClassName, t.Description, t.ToUnitProtectionLayer())).ToList();
+        try { return new Protection.UnitProtectionSet(classes, units); }
+        catch (InvalidDataException ex) { throw new InvalidDataException($"{shown}: {ex.Message}", ex); }
+    }
+
+    private static void RefuseFile(string shown, string stage, List<string> problems)
+    {
+        if (problems.Count == 0) return;
+        string list = string.Join(Environment.NewLine + "  ", problems.Take(MaxListedProblems));
+        string more = problems.Count > MaxListedProblems ? $"{Environment.NewLine}  ... and {(problems.Count - MaxListedProblems).ToString(CultureInfo.InvariantCulture)} more" : "";
+        throw new InvalidDataException(
+            $"{shown}: unit protection file refused at {stage}: {problems.Count.ToString(CultureInfo.InvariantCulture)} problem(s):{Environment.NewLine}  {list}{more}");
     }
 }

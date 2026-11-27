@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using GridSim.Core.IO;
 
 namespace GridSim.Core.Presentation.Workbench;
 
@@ -11,7 +12,13 @@ public abstract record ReportOut;
 public sealed record ReportOutText(string Text) : ReportOut;
 public sealed record ReportOutValue(string Label, string Value, bool Gap) : ReportOut;
 /// <summary>A resolved table. <see cref="GapNote"/> is set (and the rows empty) when the binding found no array.</summary>
-public sealed record ReportOutTable(string Title, IReadOnlyList<string> Headings, IReadOnlyList<IReadOnlyList<string>> Rows, string? GapNote) : ReportOut;
+public sealed record ReportOutTable(string Title, IReadOnlyList<string> Headings, IReadOnlyList<IReadOnlyList<string>> Rows, string? GapNote) : ReportOut
+{
+    /// <summary>Per cell, true when the cell was written from a JSON number (the same shape as <see cref="Rows"/>). The CSV
+    /// writer leaves those cells exactly as they are and applies the formula-injection guard (CWE-1236) to every other
+    /// cell. Null means no cell is a number.</summary>
+    public IReadOnlyList<IReadOnlyList<bool>>? NumericCells { get; init; }
+}
 /// <summary>A resolved plot; <see cref="Plot"/> is null, and <see cref="GapNote"/> set, when the binding could not be drawn.</summary>
 public sealed record ReportOutPlot(string Title, PlotSpec? Plot, string? GapNote) : ReportOut;
 
@@ -46,7 +53,7 @@ public static class ReportRenderer
             throw new ReportException($"The result does not match the template: the template names SHA-256 {template.ResultSha256} and the result is {resultSha}. Nothing was written.");
         ReportTemplate.CheckDuplicates(resultBytes, "result");
         JsonElement result;
-        try { result = JsonDocument.Parse(resultBytes).RootElement.Clone(); }
+        try { result = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(resultBytes)).RootElement.Clone(); }
         catch (JsonException ex) { throw new ReportException("The result is not valid JSON: " + ex.Message); }
 
         var sections = new List<ReportOutSection>();
@@ -140,14 +147,22 @@ public static class ReportRenderer
         }
         var headings = cols.Select(c => c.Unit.Length > 0 ? $"{c.Title} ({c.Unit})" : c.Title).ToList();
         var rows = new List<IReadOnlyList<string>>();
+        var numeric = new List<IReadOnlyList<bool>>();
         foreach (JsonElement row in arr.EnumerateArray())
         {
             var cells = new List<string>(cols.Count);
+            var isNumber = new List<bool>(cols.Count);
             foreach (ReportColumn c in cols)
-                cells.Add(row.ValueKind == JsonValueKind.Object && row.TryGetProperty(c.Key, out JsonElement e) ? Cell(e, c.Decimals) : GapText);
+            {
+                JsonElement e = default;
+                bool has = row.ValueKind == JsonValueKind.Object && row.TryGetProperty(c.Key, out e);
+                cells.Add(has ? Cell(e, c.Decimals) : GapText);
+                isNumber.Add(has && e.ValueKind == JsonValueKind.Number);
+            }
             rows.Add(cells);
+            numeric.Add(isNumber);
         }
-        return new ReportOutTable(tb.Title, headings, rows, null);
+        return new ReportOutTable(tb.Title, headings, rows, null) { NumericCells = numeric };
     }
 
     private static ReportOutPlot Plot(JsonElement result, ReportPlotBlock pb, string id)
@@ -229,7 +244,12 @@ public static class ReportRenderer
         sb.Append('\n');
     }
 
-    private static string MdLine(string s) => s.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal).Replace("|", "\\|", StringComparison.Ordinal);
+    // SEC-25: names from a case file are neutralised as well: & < > as HTML entities (a viewer that renders inline HTML
+    // shows them as text), and the Markdown link and code marks [ ] ` escaped, as the HTML and SVG renderers encode.
+    private static string MdLine(string s) => s.Replace("\r", " ", StringComparison.Ordinal).Replace("\n", " ", StringComparison.Ordinal)
+        .Replace("&", "&amp;", StringComparison.Ordinal).Replace("<", "&lt;", StringComparison.Ordinal).Replace(">", "&gt;", StringComparison.Ordinal)
+        .Replace("`", "\\`", StringComparison.Ordinal).Replace("[", "\\[", StringComparison.Ordinal).Replace("]", "\\]", StringComparison.Ordinal)
+        .Replace("|", "\\|", StringComparison.Ordinal);
 
     // ------------------------------------------------------------------ HTML
 
@@ -306,8 +326,16 @@ public static class ReportRenderer
             {
                 sb.Append("# ").Append(CsvComment(s.Heading == t.Title ? t.Title : s.Heading + ": " + t.Title)).Append('\n');
                 if (t.GapNote is not null) { sb.Append("# no data: ").Append(CsvComment(t.GapNote)).Append("\n\n"); continue; }
-                sb.AppendJoin(',', t.Headings.Select(Csv)).Append('\n');
-                foreach (IReadOnlyList<string> r in t.Rows) sb.AppendJoin(',', r.Select(c => c == GapText ? "" : Csv(c))).Append('\n');
+                sb.AppendJoin(',', t.Headings.Select(h => Csv(CsvFormulaGuard.Neutralise(h)))).Append('\n');
+                for (int ri = 0; ri < t.Rows.Count; ri++)
+                {
+                    // B31 (CWE-1236): a text cell (a name, a label, yes/no) passes the formula-injection guard; a cell
+                    // written from a JSON number is left exactly as it is, so a negative number keeps its minus.
+                    IReadOnlyList<bool>? num = t.NumericCells is { } nc && ri < nc.Count ? nc[ri] : null;
+                    sb.AppendJoin(',', t.Rows[ri].Select((c, ci) =>
+                        c == GapText ? "" : Csv(num is not null && ci < num.Count && num[ci] ? c : CsvFormulaGuard.Neutralise(c))));
+                    sb.Append('\n');
+                }
                 sb.Append('\n');
             }
         sb.Append("# template-sha256 ").Append(doc.Provenance.TemplateSha256).Append('\n');

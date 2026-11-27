@@ -39,7 +39,7 @@ public sealed class WebHostDoc2Tests
 
     private static WebApplicationFactory<Program> Factory(params (string Key, string Value)[] settings)
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-doc2-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-doc2-keys-" + Guid.NewGuid().ToString("N"));
         return new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Auth:KeysDirectory", keys);
@@ -419,7 +419,7 @@ public sealed class WebHostDoc2Tests
     /// under a fresh base folder's results/, and return the base folder (the catalog discovers results/ beneath it).</summary>
     private static string WriteRun(Func<GridModel> model, int frames, string runName)
     {
-        string baseDir = Path.Combine(Path.GetTempPath(), "gridsim-doc2-replay-" + Guid.NewGuid().ToString("N"));
+        string baseDir = TestTemp.Under("gridsim-doc2-replay-" + Guid.NewGuid().ToString("N"));
         string exports = Path.Combine(baseDir, "results", runName, "exports");
         Directory.CreateDirectory(exports);
         var trace = new SolveTrace();

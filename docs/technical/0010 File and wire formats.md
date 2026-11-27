@@ -144,6 +144,26 @@ Every dated input is checked on read against the 169-hour forward-inference hori
 NESO frequency CSV. A timestamp later than now minus 169 hours (within the last 169 hours, or in the future) is refused.
 [Chapter 8](<0008 Provenance and invariants.md>) owns the rule.
 
+### Reader limits
+
+The readers of case and study files refuse a hostile or broken file with a clear message (exit 1) instead of running out
+of stack or memory. Each limit is far above the largest real case in the repository and in the published test systems;
+reaching one means the file is not a real case.
+
+| Reader | Limit | Why |
+|---|---|---|
+| Every case and study file read whole | 256 MiB (`InputFileLimits`) | memory |
+| A file named inside an input file (a side file: a QSTS profile, an event catalogue's trace, a model assignment, the files a dynamics, reliability, study-case, CGMES or protection-audit study names, a script's dynamic data and schemas) | a network (UNC), `\\?\`, `\\.\` or `\??\` path, a reserved device name, a path that on Windows does not start with a drive letter, a path under `/dev`, `/proc` or `/sys`, and a link that leads to any of these are refused before anything is opened; a relative path is read from the naming file's folder; 16 MiB for a model document, 64 MiB for a QSTS CSV, 256 MiB for a case file, 512 MiB for a trace | network access, devices, memory |
+| MATPOWER `.m` | expressions nested at most 64 parentheses or `sqrt` calls deep (real cases use two or three, `135/sqrt(3)`); a run of unary signs is read in a loop; blank lines and `...` continuation lines are read in linear time | stack, time |
+| PSS/E RAW (and RAWX, revision 36) | bus numbers up to 2,147,483,647, with room above the highest for the star points of three-winding transformers (refused naming the highest bus when there is none); a switched shunt block of at most 1,000 steps when shunt control lists them; an LCC tap step above 0 (PSS/E's own rule); a RAWX value of a number field holding a separator, blank, slash or quote, and text holding both quote kinds, are refused (they would change the record's fields) | overflow, memory, hang, silent misread |
+| Turtle (`cgmes-shacl` shapes, RDFS) | `[ ]` and `( )` nested at most 256 deep | stack |
+| RDF/XML (CGMES documents, shapes, RDFS) | elements nested at most 256 deep (a CGMES document nests four or five) | stack |
+| CGMES `.zip`, the unzipped folder and the documents a `cgmes-study` lists | at most 10,000 entries, 256 MiB per document and 512 MiB expanded in all; one level of nested zip; a single CIM `.xml` given as a case is held to the 256 MiB input-file limit | memory (a refusal limit, not a memory bound: each accepted document is held as bytes, UTF-16 text and a parsed tree, about 8 to 12 times its size, so a bundle at the 512 MiB limit can need about 4 to 6 GiB) |
+| HVDC converters (LCC and multi-terminal, from any reader) | a tap step of at least 1e-6 (PSS/E's default is 0.00625), and a tap range of at most 10,000 steps (the tap search moves through at most 10,000 positions, so a finer range is refused rather than searched short) | hang, silent misread |
+| COMTRADE data | a sample number up to 2,147,483,647 | silent wrap |
+| COMTRADE `.cfg` | at most 999,999 analog and as many status channels, and no more channels than the file has lines; sample size in 64-bit arithmetic | memory |
+| DGS | a fixed numeric attribute that is not a number is refused naming its line, table and column | contract |
+
 ## `gridsim-solve-export/1`
 
 The full record of one power-flow solve: the network as solved, the solver's per-iteration working, the converged
@@ -1528,6 +1548,16 @@ The structured result of a console verb, written by the shared result writer whe
 | `exitCode` | integer | The exit code the run ends with. A failing verdict is still written, with its exit code |
 | `summary` | object | The verb's scalar results as `{snake_case_key: value}`, in the order the verb set them |
 | `tables` | object | `{table_name: [ {column: value} ]}`, tables in creation order |
+| `timings` | object, optional | Present only with the global switch `--timings` (`StageTimer`, `src/GridSim.Cli/StageTimer.cs`); written after `tables`. See below |
+
+`timings` holds `unit` (`"ms"`), `startup`, then each of `parse`, `build`, `assemble`, `factor` and `solve` that the verb
+measured (non-negative wall-clock milliseconds, rounded to the microsecond), `write` and `total`, then
+`stages_merged` (the stages folded into the one combined `solve` figure where the verb's code path calls a single solver
+entry point), `stages_not_measured` (stages the verb neither reports nor folds in), and any counts the verb exposes
+(`iterations`, `solves`). Spans are exclusive, so the stages do not overlap: `startup` + the stages + `write` is at
+most `total`. `write` runs from the end of the last measured stage until the document has been rendered; the file write
+itself is after the figure is fixed. With the switch off the document has no `timings` property and every byte is as
+before.
 
 A value is `null`, a string, a boolean, an integer (written as a JSON integer), or a double (written in round-trip form
 as raw digits). A non-finite double is written as the string `"NaN"`, `"Infinity"` or `"-Infinity"`, because JSON has no
@@ -2176,10 +2206,55 @@ capture is exposed by the experimental `pmu-ingest` verb.
 ### CIM
 
 `src/GridSim.Core/IO/Cim/` imports and exports the CIM equipment and topology subset as one RDF/XML document
-(`CimImporter.Parse`, `CimExporter.Export`, `CimGridModelBridge.ToGridModel`). It has no CLI verb. The importer merges
-every description of one mRID inside the single document it is given, so a merged EQ plus TP document imports and
-separate profile files are not read as a set. The format and the mapping are in
+(`CimImporter.Parse`, `CimExporter.Export`, `CimGridModelBridge.ToGridModel`). The single-document importer merges
+every description of one mRID inside the document it is given, so a merged EQ plus TP document imports and
+separate profile files are not read as a set; profile sets and ZIP bundles are read by `cgmes-study` (`--archive`) and
+per-profile files are written by `cgmes-export`, checked by `cgmes-conform`, and `convert` writes `.xml`. The format and the mapping are in
 [chapter 32](<0032 CIM and CGMES import and export.md>).
+
+### PSS/E revision 36, RAWX and COMTRADE
+
+`src/GridSim.Core/IO/Psse/PsseRevision36.cs` reads a revision 36 RAW file by rewriting it as revision 35 text, placing each
+changed record by the field names of its `@!` heading line; `PsseRawx.cs` does the same for RAWX (JSON) from the field names
+in the file; both feed the one revision 35 reader, so a case has one set of rules whichever way it arrives
+(`PsseFieldRemap.cs` holds the revision 35 field order). RAWX reads the two-terminal DC (`twotermdc`, converter fields with
+the suffixes r and i), VSC DC (`vscdc`, suffixes 1 and 2), multi-terminal DC (`ntermdc` with `ntermdcconv`, `ntermdcbus`
+and `ntermdclink` rows naming their link), FACTS (`facts`), impedance correction (`impcor`, one row per point),
+multi-section line (`msline`) and inter-area transfer (`iatransfer`) sections as well. Their section and field names are
+those of PowSyBl's PSS/E model (powsybl-core, MPL-2.0) and its RAWX test case, checked against the independent surge-io
+reader; GNE and substation data in RAWX are still refused by name.
+
+Writing goes the same way round. `PsseRawWriter` writes revision 36 as its revision 35 records under the revision 36
+header, with an `@!` heading line naming the fields of each record group: the release notes say what revision 36 adds
+but not where, so the fields it adds are left to their defaults and the reader places the rest by name.
+`PsseRawxWriter.cs` writes RAWX from the revision 35 RAW text, record by record, each number as the very round-trip
+token the RAW writer wrote; both read back to the revision 35 write's model bit for bit.
+
+### UCTE-DEF writing
+
+`src/GridSim.Core/IO/Ucte/UcteWriter.cs` writes the UCTE-DEF version 02 format (2007-05-01) in the columns of
+`UcteColumns.cs`, the reader's columns copied into one table: nodes under `##Z` country blocks, lines, transformers and
+`##R` regulation. It inverts the reader's conversions (ohm and microsiemens from per unit on the bus base, the load sign
+for generation, the voltage reference from the set point). A bus shunt rides on a transformer whose node 1 is the bus,
+since UCTE-DEF has no node shunt. Given the source read, the writer keeps the file's node codes and, for each
+transformer still as read, the file's own rated voltages, nominal power and `##R` record (and the G and B at a node
+whose shunt is as read), as text, so the reader makes the same ratio, shift and shunt of them. It also keeps each
+branch's status code: 0 (real element), 1 (equivalent element) or 2 (busbar coupler) in service, and 8, 9 or 7, the
+matching out-of-operation code, for a branch switched out after the read. The reader accepts a negative R or X only
+for an equivalent element, so keeping status 1 is what lets such an element read back. The records the read skipped
+(status 7, 8 or 9) are written back as the file had them, in their places, with a skipped transformer's `##R` record.
+Without a source read every branch is a real element, 0 in service and 8 out, except a branch with a negative R or X
+(a series capacitor, a star-point equivalent), which is written as an equivalent element, 1 in service and 9 out, and
+named in the notes, so the file reads back. Otherwise node codes are
+the given country's code character (never `X`, which UCTE keeps for boundary X-nodes), the bus id in five digits, the
+level code and busbar 1, and a ratio or shift is one-step `##R` regulation at the bus levels' rated voltages, with
+nominal power from rating A. Each number is written with as many decimals as its columns hold, so its error is at most
+half a unit in its last written decimal. A UCTE case read and written again with its source read comes back bit for
+bit when the file writes its numbers as plain decimals (no exponent, a digit before the point); a number in another
+form, a transformer or shunt changed after the read, and a case from another format come back to the column
+precision. `src/GridSim.Core/IO/Comtrade/Comtrade.cs` reads and writes IEEE
+C37.111 recordings. The rules and limits are in [manual chapter 2](<../manual/0002 Loading networks.md>) and
+[manual chapter 31](<../manual/0031 Exports and formats.md>).
 
 ### v2 documents
 
@@ -2376,6 +2451,7 @@ buses 5, 7, 8 and 9 as the free directions with `rank` 13 of `stateSize` 17. A r
 | `src/GridSim.Core/IO/SmallSignalExport.cs` | `SmallSignalExport` | Writes `gridsim-smallsignal/1` |
 | `src/GridSim.Cli/Program.cs` | `RunStability`, the `estimate` handler, `RunExport` | The classical export, `fdia-screen.json`, `residuals.csv` and the other CSVs, the solve-export call |
 | `src/GridSim.Cli/CliResultWriter.cs` | `CliResult`, `CliResultWriter`, `CliOutput` | `gridsim-cli-result/1` and its CSV files |
+| `src/GridSim.Cli/StageTimer.cs` | `StageTimer` | the `timings` block of `gridsim-cli-result/1` and the stderr table (`--timings`) |
 | `src/GridSim.Cli/RunInfo.cs` | `RunInfo` | `run-metadata.json` and the `#` header lines |
 | `src/GridSim.Core/IO/Json/GeneratorCostFile.cs` | `GeneratorCostFile` | Reads and writes `gridsim-costs/1` |
 | `src/GridSim.Core/PowerFlow/SwitchedShuntPowerFlow.cs` | `SwitchedShuntPowerFlow.ReadFile` | Reads `gridsim-switched-shunts/1` |

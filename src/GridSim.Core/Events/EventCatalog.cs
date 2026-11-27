@@ -46,7 +46,7 @@ public static class EventCatalog
     /// <summary>Load a catalog file, enforcing the historical horizon on every event timestamp.</summary>
     public static IReadOnlyList<GridEvent> Load(string path, DateTime? utcNow = null)
     {
-        CatalogDoc? doc = JsonSerializer.Deserialize(File.ReadAllText(path), Json.CatalogDoc)
+        CatalogDoc? doc = JsonSerializer.Deserialize(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Json.CatalogDoc)
             ?? throw new InvalidDataException($"Not a GridSim event catalog: {path}");
         // System.Text.Json binds a positional record's missing parameters to null, so any non-catalog
         // JSON (e.g. {} or an unrelated file) deserializes to a non-null doc with null Schema/Events.
@@ -60,7 +60,32 @@ public static class EventCatalog
         if (!string.Equals(doc.Schema, SchemaId, StringComparison.Ordinal))
             throw new InvalidDataException(
                 $"Not a GridSim event catalog: {path} declares schema '{doc.Schema}', but this loader reads '{SchemaId}' only.");
-        return Validate(doc.Events, utcNow);
+        return ResolveTraces(Validate(doc.Events, utcNow), Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".");
+    }
+
+    // SEC-01: the outcomes whose trace was named by a catalogue file (by instance: a trace attached later, as --trace does
+    // with a new outcome, is the user's own file and is not in this table).
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<RecordedOutcome, object> CatalogTraces = new();
+
+    /// <summary>SEC-01: true when <paramref name="outcome"/>'s trace was named by a catalogue file read by <see cref="Load"/>
+    /// (a side file: read through <see cref="GridSim.Core.Security.SideFile"/>, its content never quoted).</summary>
+    internal static bool IsCatalogTrace(RecordedOutcome outcome) => CatalogTraces.TryGetValue(outcome, out _);
+
+    /// <summary>SEC-01: a trace named by the catalogue is a side file. A network or device path is refused at load (nothing is
+    /// opened), and a relative path is resolved against the catalogue's folder, not the working folder, so the verdict does
+    /// not depend on where the command was started.</summary>
+    private static IReadOnlyList<GridEvent> ResolveTraces(IReadOnlyList<GridEvent> events, string catalogDir)
+    {
+        var resolved = new List<GridEvent>(events.Count);
+        foreach (GridEvent e in events)
+        {
+            if (string.IsNullOrWhiteSpace(e.Outcome.NesoTraceCsvPath)) { resolved.Add(e); continue; }
+            string full = GridSim.Core.Security.SideFile.Resolve(e.Outcome.NesoTraceCsvPath, catalogDir, $"event '{e.Id}': nesoTraceCsvPath");
+            RecordedOutcome outcome = e.Outcome with { NesoTraceCsvPath = full };
+            CatalogTraces.AddOrUpdate(outcome, true);
+            resolved.Add(e with { Outcome = outcome });
+        }
+        return resolved;
     }
 
     /// <summary>Find one event by id across a catalog file (falls back to the built-ins).</summary>
@@ -90,6 +115,19 @@ public static class EventCatalog
         // Ids are matched without regard to case (Get), so two ids that differ only in case are one id: the second
         // could never be selected.
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // SEC-15: a null list member is refused by position ("events": [null] dereferenced null with no field named).
+        if (events is null) throw new InvalidDataException("The catalog has no events list.");
+        for (int i = 0; i < events.Count; i++)
+        {
+            GridEvent? x = events[i];
+            if (x is null) throw new InvalidDataException(FormattableString.Invariant($"Event {i} of the catalog is null."));
+            if (x.Losses is not null)
+                for (int k = 0; k < x.Losses.Count; k++)
+                    if (x.Losses[k] is null) throw new InvalidDataException(FormattableString.Invariant($"Event '{x.Id}': loss {k} is null."));
+            if (x.RecordedActions is not null)
+                for (int k = 0; k < x.RecordedActions.Count; k++)
+                    if (x.RecordedActions[k] is null) throw new InvalidDataException(FormattableString.Invariant($"Event '{x.Id}': recorded action {k} is null."));
+        }
         foreach (GridEvent e in events)
         {
             if (string.IsNullOrWhiteSpace(e.Id))
@@ -103,6 +141,19 @@ public static class EventCatalog
                 throw new InvalidDataException($"Event '{e.Id}' has no losses list.");
             if (e.Outcome is null)
                 throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}' has no recorded outcome."));
+            // SEC-35: the outcome's RoCoF window (a negative one was read as "instantaneous") and every response service.
+            if (!(double.IsFinite(e.Outcome.RocofMeasurementWindowS) && e.Outcome.RocofMeasurementWindowS >= 0))
+                throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': rocofMeasurementWindowS {e.Outcome.RocofMeasurementWindowS} must be a finite number of seconds, 0 or more."));
+            if (e.ResponseServices is { } services)
+                for (int k = 0; k < services.Count; k++)
+                {
+                    ResponseService rs = services[k] ?? throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': response service {k} is null."));
+                    if (!(double.IsFinite(rs.Mw) && rs.Mw >= 0) || !(double.IsFinite(rs.DeadbandHz) && rs.DeadbandHz >= 0)
+                        || !(double.IsFinite(rs.FullDeliveryDeviationHz) && rs.FullDeliveryDeviationHz > 0)
+                        || !(double.IsFinite(rs.TimeConstantS) && rs.TimeConstantS >= 0))
+                        throw new InvalidDataException(FormattableString.Invariant(
+                            $"Event '{e.Id}': response service {k} ('{rs.What}') needs MW and a dead band of 0 or more, a full-delivery deviation above 0 Hz and a time constant of 0 s or more, all finite (got {rs.Mw} MW, {rs.DeadbandHz} Hz, {rs.FullDeliveryDeviationHz} Hz, {rs.TimeConstantS} s)."));
+                }
             if (!(double.IsFinite(e.PreEventInertiaMwS) && e.PreEventInertiaMwS > 0))
                 throw new InvalidDataException(FormattableString.Invariant($"Event '{e.Id}': preEventInertiaMwS {e.PreEventInertiaMwS} must be a finite number above 0."));
             if (!(double.IsFinite(e.PreEventDemandMw) && e.PreEventDemandMw > 0))

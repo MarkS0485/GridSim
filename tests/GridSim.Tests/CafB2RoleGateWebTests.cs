@@ -33,7 +33,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class CafB2RoleGateWebTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-b2-rolegate-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-b2-rolegate-" + Guid.NewGuid().ToString("N"));
 
     public CafB2RoleGateWebTests() => Directory.CreateDirectory(_dir);
 

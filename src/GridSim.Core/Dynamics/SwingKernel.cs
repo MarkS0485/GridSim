@@ -276,7 +276,7 @@ public static class SwingKernel
     /// This is Dynamic Containment's shape (5% by 0.2 Hz, 100% by 0.5 Hz). With
     /// <paramref name="kneeDeviationHz"/> equal to the deadband and <paramref name="kneeFraction"/> 0 it
     /// is a ramp from the deadband to full - Dynamic Moderation/Regulation's shape. With
-    /// <paramref name="kneeDeviationHz"/> <= 0 it falls back to the line-through-zero form above.
+    /// <paramref name="kneeDeviationHz"/> &lt;= 0 it falls back to the line-through-zero form above.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static double FastResponseTarget(

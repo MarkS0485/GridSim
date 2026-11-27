@@ -16,7 +16,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class AuditWiringTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-auditwiring-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-auditwiring-{Guid.NewGuid():N}");
 
     public AuditWiringTests() => Directory.CreateDirectory(_dir);
 

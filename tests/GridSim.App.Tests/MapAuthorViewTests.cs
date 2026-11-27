@@ -158,6 +158,14 @@ public sealed class MapAuthorViewTests
         PumpUntil(() => frames >= 2, "two frames");
         Await(w.ViewModel.Registry.Get(RunCommands.PlayPause).RunAsync());
         PumpUntil(() => run.IsPaused, "the pause");
+        // A frame already in flight when the pause lands can still be shown just after it; wait until no frame has
+        // arrived for half a second, so the state a test captures next is the run's last one. Assertions unchanged.
+        for (int i = 0, seen = frames, quiet = 0; i < 200 && quiet < 10; i++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(50);
+            if (frames == seen) quiet++; else { seen = frames; quiet = 0; }
+        }
         Render(w);
         return w;
     }

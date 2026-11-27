@@ -40,6 +40,14 @@ public static class Validator
         {
             case GrammarStatement:
                 break;
+            case GrammarExtensionStatement:
+                break;
+            case StudyStatement study:
+                if (strict) RequireCase(s, session);
+                if (study.Bus is { } sb) CheckName(Noun.Bus, sb, scope, session);
+                break;
+            case ReportStudyStatement:
+                break;
             case LoadCaseStatement l:
                 if (string.IsNullOrWhiteSpace(l.Path.Value)) throw V(l.Path.Pos, "the case path is empty");
                 if (l.Frequency is { } f)
@@ -389,6 +397,9 @@ public static class Validator
                 break;
             case ClearFaultStatement cf:
                 RequireName(Noun.Bus, new Located<string>(cf.Bus.Value, cf.Bus.Pos), session);
+                break;
+            case StudyStatement { Bus: { } studyBus }:
+                RequireName(Noun.Bus, new Located<string>(studyBus.Value, studyBus.Pos), session);
                 break;
             case StepSimStatement ss:
             {

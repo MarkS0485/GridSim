@@ -21,7 +21,7 @@ public sealed class JsonLoaderS4RefusalTests
     {
         string src = UkSource();
         Assert.True(Directory.Exists(src), $"bundled case folder missing: {src}");
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-s4-loader-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-s4-loader-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         foreach (string f in Directory.GetFiles(src)) File.Copy(f, Path.Combine(dir, Path.GetFileName(f)));
         string path = Path.Combine(dir, file);

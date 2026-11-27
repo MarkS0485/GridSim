@@ -1,6 +1,6 @@
 # Security governance
 
-**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This document is the security governance artefact
+This document is the security governance artefact
 for the GridSim state estimator and the services that host it, mapping to CAF Objective A1 (Governance). It
 names the accountable security owner, states the review cadence, and records the change-control discipline
 that governs the security-critical values in the codebase. It is the broader governance artefact that
@@ -68,10 +68,11 @@ calendar alone:
   artefact that evidences it is named and green (`caf-mapping.md` section 2.2 and 10.5).
 
 Between triggers the invariant tests (section 4) fail the test run if a pinned security-critical value is
-changed. The suite runs locally on every build the owner makes for use, and in CI when CI is started by hand or
-called by the release workflow (not on every push), so such a change is caught by the next local run or CI run; it is
-not stopped at the moment it is pushed. At RC-1 the release workflow did not run (section 4.4), so the local suite was
-the check that preceded the release.
+changed. The suite runs locally on every build the owner makes for use, and in CI on every push to `main` of the
+public repository, weekly, by hand and when the release workflow calls it, so such a change is caught by the next local
+run or CI run; it is not stopped at the moment it is pushed to the private development repository. At RC-1 the release
+workflow did not run (section 4.4), so the local suite was the check that preceded the release. RC-3 and RC-4 were
+published through the workflow, behind a green CI matrix.
 
 ---
 
@@ -86,7 +87,7 @@ A change is security-relevant, and therefore belongs under Security, when it:
 
 - changes `ForwardInferenceGuard` behaviour, the horizon value, or the set of dated ingestion seams;
 - changes the audit trail, its persistence, its anchoring, or what is recorded per event;
-- changes authentication, the replay-only gate, or role-based access control (built, not yet enforced by any host);
+- changes authentication, the replay-only gate, or role-based access control (enforced by the web host on its solve surface and the dashboard);
 - changes secrets handling, key-ring protection, or the dependency surface in a way that bears on
   vulnerability exposure;
 - adds, removes or changes a detection control (`FdiaScreen`, the physics-conformance audit) or an incident
@@ -148,22 +149,24 @@ document alone, is what refuses an unreviewed change.
 ### 4.4 Continuous-integration cadence (a risk-accepted deviation)
 
 By owner decision (October 2026, taken while the repository was private, to keep within the free GitHub Actions
-allowance), the CI workflow does not run on every push or pull request, and CodeQL runs only when started by hand.
+allowance), the CI workflow did not run on every push or pull request, and CodeQL runs only when started by hand.
+Since 2026-11-01 (GR-382) CI also runs on every push to `main` and weekly on the public repository, where Actions
+minutes are free; pushes to the private development repository start nothing.
 Development pushes now go to a private repository (`GridSim-dev`); CI and releases run on the public `GridSim`
 repository. The compensating control is twofold: every build the owner makes for use is a production build carrying
-the compliance attestation and checked by the local test suite, and CI is run by hand as the witness of a release. As
+the compliance attestation and checked by the local test suite, and CI is run as the witness of a release. As
 written, the release workflow also calls CI on a release tag and every publishing job needs it (Linux and Windows in
 every SIMD mode, macOS on Apple silicon, Linux and Windows on ARM64; no leg is advisory).
 
 Recorded failure at RC-1: the release workflow refused the RC tag form and did not run, so RC-1 was built and published
 by hand after the local suite, and the three CI runs started by hand after publication (2026-10-31) all failed, the last
 on one desktop-app layout test on one macOS leg. Since 2.1.008 the workflow accepts the RC tag form and that test waits
-for the rows to be shown before measuring them (harness timing only), but no release has been made through the workflow
-and no CI run has been made since, so the witness is still not shown green. The residual is therefore larger than first
-accepted: a defect can sit on `main` until the next local run or CI run finds it, and at RC-1 a release was published
-without a green CI witness. The choice, and whether the witness must be green before a release is published, is reviewed
-at each release review point (section 2); it is an open owner decision at 2.1.010 (`caf-mapping.md` section 9, items 10
-and 12). `caf-mapping.md` section 4.4 and `ssdf-mapping.md` section 7 cite this record.
+for the rows to be shown before measuring them (harness timing only). RC-3 and RC-4 were published through the workflow
+with a green witness: RC-3's release run (run 44012398517) had 30 jobs green, with "NuGet packages" and "Push web image (GHCR)" skipped, the whole CI matrix included, and RC-4's gate passed on
+its re-run once a racy test was fixed. A release published without a green CI witness has not recurred since RC-1. A
+defect can still sit on the private development repository until it reaches the public one. Whether the witness must
+be green before a release is published is reviewed at each release review point (section 2)
+(`caf-mapping.md` section 9, items 10 and 12). `caf-mapping.md` section 4.4 and `ssdf-mapping.md` section 7 cite this record.
 
 ---
 

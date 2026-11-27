@@ -232,7 +232,9 @@ public sealed class AssetDynamicsFleet
             IActiveAssetDynamics a = _active[i];
             AssetStepContext ctx = network
                 ? new AssetStepContext(hz, rocof, phase, dtSeconds, clockS,
-                    voltageOf?.Invoke(a.Bus) ?? 1.0, loadingOf?.Invoke(a.Bus) ?? 0.0)
+                    // SEC-29: a quantity with no delegate is the "no network value" sentinel, not a healthy 1.0 pu / 0.0.
+                    voltageOf is null ? AssetStepContext.NoNetworkVoltagePu : voltageOf(a.Bus),
+                    loadingOf is null ? AssetStepContext.NoNetworkLoadingFraction : loadingOf(a.Bus))
                 : shared;
             AssetActuation act = a.Update(in ctx);
             if (act.TrippedNow)

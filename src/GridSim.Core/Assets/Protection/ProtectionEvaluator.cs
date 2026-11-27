@@ -8,7 +8,7 @@ public enum ProtectionEdge { None, Fired, Restored }
 /// generalised form of the <see cref="GridFollowingInverter"/> RoCoF-trip block: accumulate time over
 /// threshold, emit <see cref="ProtectionEdge.Fired"/> exactly once when the dwell is satisfied, and
 /// (if a finite auto-restore delay is set) emit <see cref="ProtectionEdge.Restored"/> after it. The
-/// caller supplies <paramref name="measuredValue"/> already selected/uplifted for the stage's quantity,
+/// caller supplies <c>measuredValue</c> already selected/uplifted for the stage's quantity,
 /// so this class is quantity-agnostic.
 /// </summary>
 public sealed class ProtectionEvaluator

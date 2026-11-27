@@ -13,7 +13,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class R405RpcProcessTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r405-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r405-" + Guid.NewGuid().ToString("N"));
 
     public R405RpcProcessTests() => Directory.CreateDirectory(_dir);
 
@@ -286,11 +286,12 @@ public sealed class R405RpcProcessTests : IDisposable
             using var stream = client.GetStream();
             using var reader = new StreamReader(stream, new UTF8Encoding(false));
             using var writer = new StreamWriter(stream, new UTF8Encoding(false)) { NewLine = "\n", AutoFlush = true };
-            writer.WriteLine(Req(1, "load", "\"case\":\"case9\""));
+            string token = RpcListenSupport.Token(banner);   // CLI-03: every request over --listen carries the host's token
+            writer.WriteLine(RpcListenSupport.With(Req(1, "load", "\"case\":\"case9\""), token));
             Assert.Equal("case-1", J(reader.ReadLine()!).GetProperty("result").GetProperty("handle").GetString());
-            writer.WriteLine(Req(2, "solve", "\"handle\":\"case-1\""));
+            writer.WriteLine(RpcListenSupport.With(Req(2, "solve", "\"handle\":\"case-1\""), token));
             Assert.True(J(reader.ReadLine()!).GetProperty("result").GetProperty("converged").GetBoolean());
-            writer.WriteLine(Req(3, "shutdown"));
+            writer.WriteLine(RpcListenSupport.With(Req(3, "shutdown"), token));
             Assert.True(J(reader.ReadLine()!).GetProperty("result").GetProperty("stopping").GetBoolean());
             Assert.True(p.WaitForExit(30_000), "the server did not stop after shutdown");
             Assert.Equal(0, p.ExitCode);

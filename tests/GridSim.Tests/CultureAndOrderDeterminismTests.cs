@@ -64,7 +64,7 @@ public class CultureAndOrderDeterminismTests
 
     private static string MakeRun(string csv, params string[] snapshotNames)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-order-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-order-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(dir, "exports"));
         var trace = new SolveTrace();
         GridModel model = IeeeCases.Case9();

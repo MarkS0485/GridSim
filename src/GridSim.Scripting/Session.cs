@@ -8,6 +8,7 @@ using GridSim.Core.IO;
 using GridSim.Core.IO.Json;
 using GridSim.Core.IO.Matpower;
 using GridSim.Core.IO.Psse;
+using GridSim.Core.Licensing;
 using GridSim.Core.Model;
 using GridSim.Core.PowerFlow;
 
@@ -71,7 +72,28 @@ public sealed class Session
     /// <summary>Hosting hook (additive; null means no limit): the work one statement or the whole session may do. See <see cref="SessionLimits"/>.</summary>
     public SessionLimits? Limits { get; set; }
 
+    /// <summary>
+    /// Hosting hook (null: no licence check, the library default): the licence gate a <c>LOAD CASE</c> answers to. When set, a loaded
+    /// model is checked exactly as the command line checks one: a Bundled Network (by location and shipped content, before and after
+    /// the read) is always admitted, any other model must fit the licence's bus limit, and a refusal is an execution error carrying the
+    /// gate's own message. <c>gridsim-script</c> and the desktop console set it from <see cref="LicenceGate.Resolve()"/>.
+    /// </summary>
+    public LicenceGate? Licence { get; set; }
+
+    /// <summary>
+    /// Hosting hook (default false): every path a statement names (<c>LOAD CASE</c>, <c>EXPORT RESULT</c>, the <c>DYNAMICS</c> file and
+    /// <c>SCHEMAS</c> folder of <c>SELECT ENGINE</c>) must lie inside the base folder. A network (UNC) or device path, a path outside the
+    /// base folder and a path through a symbolic link or junction are refused with an execution error. <c>gridsim-script --confine</c> sets it.
+    /// </summary>
+    public bool ConfineToBaseDirectory { get; set; }
+
+    /// <summary>Hosting hook (default false): error messages name the base folder as "the base folder" instead of its absolute path,
+    /// so a host that serves other people does not show where it is installed.</summary>
+    public bool HideBaseDirectory { get; set; }
+
     private long _totalTicks;
+    private long _work;
+    private long _outputChars;
 
     public CaseInfo? Case { get; private set; }
     public Plant? Plant { get; private set; }
@@ -92,6 +114,17 @@ public sealed class Session
     public IReadOnlyList<LoopEntry> Loops => _loops;
     public IReadOnlyList<ProcEntry> ProcEntries => _procEntries;
     public IReadOnlyList<EngineEntry> Engines => _engines;
+
+    /// <summary>RC5 WP11: true once the script's header (<c>GRAMMAR 1 WITH STUDIES</c>) has turned the STUDIES extension on.</summary>
+    public bool StudiesEnabled { get; private set; }
+
+    /// <summary>RC5 WP11: the studies that have run, by name (the latest run of a name), for the STUDIES readings.</summary>
+    public ImmutableDictionary<string, StudyRun> Studies { get; private set; } = ImmutableDictionary<string, StudyRun>.Empty.WithComparers(StringComparer.Ordinal);
+
+    /// <summary>RC5 WP11: every study run, in order (the run record's <c>studies</c> array).</summary>
+    public IReadOnlyList<StudyRun> StudyRuns => _studyRuns;
+
+    private readonly List<StudyRun> _studyRuns = [];
     public PowerFlowOptions SolverOptions => _lastOptions;
     public string SolverName => _lastSolverName;
 
@@ -116,12 +149,13 @@ public sealed class Session
         CaseInfo? Case, Plant? Plant, SolvedState? Solved, EngineKind Engine, LiveEngine? Live, int LiveCount, ReplayEngine? Replay, long Clock,
         List<PendingEvent> Pending, int Statements, int Applied, int Steps, int Outputs, int Inputs, int Decisions, int Loops, int ProcEntries,
         int Engines, int Canonical, int Seq, int Order, PowerFlowOptions Options, string SolverName,
-        Dictionary<string, Value> Globals, ImmutableDictionary<string, ProcStatement> Procs);
+        Dictionary<string, Value> Globals, ImmutableDictionary<string, ProcStatement> Procs,
+        bool StudiesEnabled, ImmutableDictionary<string, StudyRun> Studies, int StudyRuns);
 
     private Snapshot Take() => new(Case, Plant, Solved, EngineKind, Live, Live?.JournalCount ?? 0, Replay, ClockUs,
         [.. Pending], _statements.Count, _applied.Count, _steps.Count, _outputs.Count, _inputs.Count, _decisions.Count, _loops.Count,
         _procEntries.Count, _engines.Count, _canonical.Count, _seq, _pendingOrder, _lastOptions, _lastSolverName,
-        new Dictionary<string, Value>(_globals, StringComparer.Ordinal), Procs);
+        new Dictionary<string, Value>(_globals, StringComparer.Ordinal), Procs, StudiesEnabled, Studies, _studyRuns.Count);
 
     private void Restore(Snapshot s)
     {
@@ -140,6 +174,9 @@ public sealed class Session
         _seq = s.Seq; _pendingOrder = s.Order; _lastOptions = s.Options; _lastSolverName = s.SolverName;
         _globals = s.Globals;
         Procs = s.Procs;
+        StudiesEnabled = s.StudiesEnabled;
+        Studies = s.Studies;
+        _studyRuns.RemoveRange(s.StudyRuns, _studyRuns.Count - s.StudyRuns);
     }
 
     /// <summary>
@@ -164,6 +201,8 @@ public sealed class Session
         catch (ScriptException ex)
         {
             Restore(snap);
+            if (HideBaseDirectory && Redact(ex.Message) is { } hidden && !ReferenceEquals(hidden, ex.Message))
+                throw new ScriptException(ex.Phase, ex.Pos.Line == 0 ? s.Pos : ex.Pos, hidden, ex.Unfinished);
             throw ex.Pos.Line == 0 ? new ScriptException(ex.Phase, s.Pos, ex.Message) : ex;
         }
 #pragma warning disable CA1031 // fail loud: whatever the loader, the file system or the engine throws becomes a script error naming the statement
@@ -171,8 +210,26 @@ public sealed class Session
 #pragma warning restore CA1031
         {
             Restore(snap);
-            throw new ScriptException(ErrorPhase.Execution, s.Pos, ex.GetType().Name + ": " + ex.Message);
+            throw new ScriptException(ErrorPhase.Execution, s.Pos, Redact(ex.GetType().Name + ": " + ex.Message));
         }
+    }
+
+    /// <summary>The message with the base folder's absolute path replaced by "the base folder" when <see cref="HideBaseDirectory"/> is set.</summary>
+    private string Redact(string message) =>
+        HideBaseDirectory && message.Contains(_baseDir, StringComparison.OrdinalIgnoreCase)
+            ? message.Replace(_baseDir, "the base folder", StringComparison.OrdinalIgnoreCase)
+            : message;
+
+    /// <summary>The full path of <paramref name="written"/> (relative to the base folder). Under <see cref="ConfineToBaseDirectory"/> a
+    /// network or device path, a path outside the base folder or one through a link is refused.</summary>
+    internal string ResolvePath(string written, SourcePos pos, string what)
+    {
+        string full = Path.GetFullPath(written, _baseDir);
+        if (!ConfineToBaseDirectory) return full;
+        string why = PathConfinement.Refusal(written, full, _baseDir) ?? "";
+        if (why.Length > 0)
+            throw new ScriptException(ErrorPhase.Execution, pos, $"{what} \"{written}\" is refused: {why}; this session is confined to its base folder");
+        return full;
     }
 
     // ---- execution of statements ---------------------------------------------------------------------------------------
@@ -184,6 +241,7 @@ public sealed class Session
 
     private void ExecStatement(Statement s, Scope scope, StringBuilder o, int depth)
     {
+        Work(s.Pos);
         switch (s)
         {
             case IfStatement i: ExecIf(i, scope, o, depth); break;
@@ -192,6 +250,17 @@ public sealed class Session
             case CallStatement c: ExecCall(c, scope, o, depth); break;
             default: ExecSimple(s, scope, o, depth); break;
         }
+    }
+
+    /// <summary>Hosting limits, checked before every statement, block and loop iteration (nothing happens when the host sets none):
+    /// the host's cancellation, and the session's budget of statements, blocks and loop iterations.</summary>
+    private void Work(SourcePos pos)
+    {
+        if (Limits is not { } lim) return;
+        if (lim.Cancel.IsCancellationRequested)
+            throw new ScriptException(ErrorPhase.Execution, pos, "stopped: the host's time limit for this run was reached");
+        if (lim.MaxStatements is { } max && ++_work > max)
+            throw new ScriptException(ErrorPhase.Execution, pos, $"stopped: this host allows {max} statements, blocks and loop iterations in one session, and they are used up");
     }
 
     private void ExecSimple(Statement s, Scope scope, StringBuilder o, int depth)
@@ -204,9 +273,11 @@ public sealed class Session
         var local = new StringBuilder();
         Run(bound, scope, seq, local);
         string text = local.ToString();
+        if (Limits?.MaxOutputChars is { } maxOut && (_outputChars += text.Length) > maxOut)
+            throw new ScriptException(ErrorPhase.Execution, s.Pos, $"stopped: this host allows {maxOut} characters of output in one session, and this statement goes past it");
         string? outHash = text.Length == 0 ? null : Hex(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
-        if (s is ReportStatement or PrintStatement)
-            _outputs.Add(new OutputEntry(seq, s.Pos.Line, s is ReportStatement ? "report" : "print", s.Canonical(), Encoding.UTF8.GetByteCount(text), outHash!));
+        if (s is ReportStatement or PrintStatement or ReportStudyStatement)
+            _outputs.Add(new OutputEntry(seq, s.Pos.Line, s is PrintStatement ? "print" : "report", s.Canonical(), Encoding.UTF8.GetByteCount(text), outHash!));
         string canon = s.Canonical(), boundText = bound.Canonical();
         _statements.Add(new StatementEntry(seq, s.Pos.Line, s.Pos.Column, ClockUs, canon, outHash, depth, boundText == canon ? null : boundText));
         o.Append(text);
@@ -255,6 +326,7 @@ public sealed class Session
         var local = new StringBuilder();
         foreach (string name in names.ToList())
         {
+            Work(f.Pos);
             Scope sc = scope.Child();
             sc.Vars[f.Var.Value] = Value.Elem(f.Noun, name);
             if (f.Where is { } w && !Evaluator.EvalCond(w, sc, this, []))
@@ -319,6 +391,23 @@ public sealed class Session
         switch (s)
         {
             case GrammarStatement:
+                break;
+            case GrammarExtensionStatement:
+                StudiesEnabled = true;
+                break;
+            case StudyStatement study:
+            {
+                StudyRun run = study.Dynamic is null
+                    ? StudyExtension.Run(study, Case!, Plant!.Model, seq, Plant.Version)
+                    : StudyExtension.RunDynamic(study, Case!, Plant!.Model, seq, Plant.Version, ResolvePath, _baseDir,
+                        (path, sha) => _inputs.Add(new InputEntry(seq, study.Pos.Line, "dynamics", path, sha)));
+                Studies = Studies.SetItem(run.Name, run);
+                _studyRuns.Add(run);
+                o.Append(F($"study {run.Name} ({StudyExtension.Word(run.Kind)}) done\n"));
+                break;
+            }
+            case ReportStudyStatement rs:
+                o.Append(StudyExtension.Report(StudyRunNamed(rs.Name)));
                 break;
             case LoadCaseStatement l: RunLoad(l, seq, o); break;
             case SolveStatement: RunSolve(o); break;
@@ -446,6 +535,21 @@ public sealed class Session
         }
     }
 
+    /// <summary>RC5 WP11: the study of that name, or an execution error naming it.</summary>
+    internal StudyRun StudyRunNamed(Located<string> name) =>
+        Studies.TryGetValue(name.Value, out StudyRun? run) ? run
+            : throw new ScriptException(ErrorPhase.Execution, name.Pos, $"no study named '{name.Value}' has run; run STUDY ... AS {name.Value} first");
+
+    /// <summary>RC5 WP11: a study reading, converted to the script's decimal as every reading is.</summary>
+    internal Value StudyReadingValue(StudyExpr e, Scope scope)
+    {
+        StudyRun run = StudyRunNamed(e.Study);
+        string? element = e.Ref is { } r ? Evaluator.ResolveName(r, e.Noun!.Value, scope) : null;
+        double v = StudyExtension.Read(e, run, element);
+        VType t = StudyExtension.TypeOf(e.Reading);
+        return t.Kind == VKind.Scalar ? Value.Num(Dec(v, e.Pos), null) : Value.Num(Dec(v, e.Pos), t.Unit);
+    }
+
     internal bool InService(Noun noun, string name)
     {
         CaseInfo ci = Case!;
@@ -463,7 +567,9 @@ public sealed class Session
     private void RunLoad(LoadCaseStatement l, int seq, StringBuilder o)
     {
         string written = l.Path.Value;
-        string full = Path.GetFullPath(written, _baseDir);
+        string full = ResolvePath(written, l.Path.Pos, "LOAD CASE");
+        // The command line's rule: a Bundled Network is exempt only when it is bundled both before and after the read.
+        bool bundledBefore = Licence is not null && BundledNetworks.IsBundledV2Case(full);
         GridModel model;
         string kind, sha;
         double? hz = l.Frequency is { } f ? (double)f.Value.Value : null;
@@ -495,6 +601,12 @@ public sealed class Session
         }
         else
             throw new ScriptException(ErrorPhase.Execution, l.Path.Pos, $"cannot load \"{written}\": no such file or folder (relative paths are taken from {_baseDir})");
+
+        if (Licence is { } gate)
+        {
+            GateResult admitted = gate.Check(model.BusCount, bundledBefore && BundledNetworks.IsBundledV2Case(full));
+            if (!admitted.Allowed) throw new ScriptException(ErrorPhase.Execution, l.Path.Pos, admitted.Message);
+        }
 
         GridDiagnostic? bad = model.Validate().FirstOrDefault(d => d.Severity == ValidationSeverity.Error);
         if (bad is not null)
@@ -599,7 +711,16 @@ public sealed class Session
         CaseInfo ci = Case!;
         return s switch
         {
-            FaultStatement f => new ReplayEvent(timeUs, order, s.Canonical(), line, new FaultEffect(Plant!.Model.Buses[ci.BusIndex[f.Bus.Value]].Id, On: true)),
+            FaultStatement f => new ReplayEvent(timeUs, order, s.Canonical(), line, new FaultEffect(Plant!.Model.Buses[ci.BusIndex[f.Bus.Value]].Id, On: true,
+                Type: f.FaultType switch
+                {
+                    null => null,
+                    "THREE_PHASE" => GridSim.Core.Protection.FaultType.ThreePhase,
+                    "SLG" => GridSim.Core.Protection.FaultType.SingleLineToGround,
+                    "LL" => GridSim.Core.Protection.FaultType.LineToLine,
+                    _ => GridSim.Core.Protection.FaultType.DoubleLineToGround,
+                },
+                FaultRPu: f.FaultR is { } fr ? (double)fr.Value : 0.0, FaultXPu: f.FaultX is { } fx ? (double)fx.Value : 0.0)),
             ClearFaultStatement c => new ReplayEvent(timeUs, order, s.Canonical(), line, new FaultEffect(Plant!.Model.Buses[ci.BusIndex[c.Bus.Value]].Id, On: false)),
             _ => throw new ScriptException(ErrorPhase.Execution, s.Pos, "this engine takes faults only"),
         };
@@ -701,7 +822,7 @@ public sealed class Session
         var meta = new SolveExportMeta(sv.Model.Name, "gridsim-script", "", "", 0, "");
         string json = SolveExport.ToJson(sv.Model, sv.Result, sv.Trace, meta).Replace("\r\n", "\n", StringComparison.Ordinal);
         byte[] bytes = new UTF8Encoding(false).GetBytes(json);
-        string full = Path.GetFullPath(e.Path.Value, _baseDir);
+        string full = ResolvePath(e.Path.Value, e.Path.Pos, "EXPORT RESULT");
         if (File.Exists(full))
         {
             if (!File.ReadAllBytes(full).AsSpan().SequenceEqual(bytes))
@@ -746,6 +867,8 @@ public sealed class Session
             default:
             {
                 ReplaySettings rs = EngineSetup.BuildReplay(se);
+                if (rs.DynamicsPath is { } dp) ResolvePath(dp, se.Pos, "DYNAMICS");
+                if (rs.SchemasDir is { } sd) ResolvePath(sd, se.Pos, "SCHEMAS");
                 Replay = ReplayEngine.Create(rs, Plant!, Case!, rs.Kind == ReplayKind.Rms ? FreshSolved().Result : null, _baseDir);
                 if (Replay.DynamicsFile is not null)
                     _inputs.Add(new InputEntry(seq, se.Pos.Line, "dynamics", rs.DynamicsPath!, Replay.DynamicsSha256!));

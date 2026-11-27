@@ -27,7 +27,7 @@ public sealed partial class B3GovernorsDynamicDataTests
     {
         string text = File.ReadAllText(F23Fixture);
         Assert.Contains(find, text, StringComparison.Ordinal);   // the variant really edits the fixture
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-b3-f23-" + Guid.NewGuid().ToString("N") + ".dynamics.json");
+        string path = TestTemp.Under("gridsim-b3-f23-" + Guid.NewGuid().ToString("N") + ".dynamics.json");
         File.WriteAllText(path, text.Replace(find, replace, StringComparison.Ordinal));
         return path;
     }

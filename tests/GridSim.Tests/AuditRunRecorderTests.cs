@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class AuditRunRecorderTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-auditrun-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-auditrun-{Guid.NewGuid():N}");
 
     public AuditRunRecorderTests() => Directory.CreateDirectory(_dir);
 

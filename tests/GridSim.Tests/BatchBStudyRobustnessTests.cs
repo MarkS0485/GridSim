@@ -81,7 +81,7 @@ public sealed class BatchBStudyRobustnessTests
     [Fact]
     public void An_explicit_null_profile_path_exits_1_without_a_crash()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-batchb-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-batchb-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -111,7 +111,7 @@ public sealed class BatchBStudyRobustnessTests
 
     private static (string Dir, string Study) TsStudy(string gen, object? costs)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-batchb-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-batchb-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         string model = Path.Combine(dir, "parallel.m");
         File.WriteAllText(model, Parallel.Replace("GENROW", gen));

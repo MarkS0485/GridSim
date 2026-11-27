@@ -33,7 +33,7 @@ public interface IShiftedSolver
 public sealed class SingularShiftException : Exception
 {
     /// <summary>Make the exception.</summary>
-    public SingularShiftException(Complex sigma) : base($"A - sigma I is singular at sigma = {sigma.Real:R} + j{sigma.Imaginary:R}.") { }
+    public SingularShiftException(Complex sigma) : base(FormattableString.Invariant($"A - sigma I is singular at sigma = {sigma.Real:R} + j{sigma.Imaginary:R}.")) { }
 }
 
 /// <summary>Dense real matrix as an Arnoldi operator (partial-pivot complex LU for the shifted solves).</summary>

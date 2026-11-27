@@ -98,13 +98,17 @@ public static class PsseRawParser
     /// zero-impedance threshold THRSHZ.</summary>
     public const double ZeroImpedanceXPu = 0.0001;
 
+    /// <summary>IO-07: the most steps (N1 to N8) a switched shunt block may have when shunt control lists them one by one;
+    /// a real block has a handful.</summary>
+    public const int MaxShuntBlockSteps = 1000;
+
     /// <summary>Read RAW text into a model. See <see cref="ParseWithDiagnostics"/>.</summary>
     public static GridModel Parse(string text, string? name = null, PsseReadOptions? options = null)
         => ParseWithDiagnostics(text, name, options).Model;
 
     /// <summary>Read a RAW file from disk. The case name defaults to the file stem.</summary>
     public static PsseParseResult ParseFile(string path, PsseReadOptions? options = null)
-        => ParseWithDiagnostics(File.ReadAllText(path), Path.GetFileNameWithoutExtension(path), options);
+        => ParseWithDiagnostics(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Path.GetFileNameWithoutExtension(path), options);
 
     /// <summary>Read RAW text, returning the model with the notes and the metadata the model has no place for.</summary>
     public static PsseParseResult ParseWithDiagnostics(string text, string? name = null, PsseReadOptions? options = null)
@@ -113,11 +117,41 @@ public static class PsseRawParser
         options ??= new PsseReadOptions();
         if (options.FrequencyHz is double fGiven && !(fGiven > 0 && double.IsFinite(fGiven)))
             throw new ArgumentOutOfRangeException(nameof(options), options.FrequencyHz, "The nominal frequency must be a positive, finite number of hertz.");
-        if (options.Revision is int rGiven && !SupportedRevisions.Contains(rGiven))
+        if (options.Revision is int rGiven && !SupportedRevisions.Contains(rGiven) && rGiven != 36)
             throw new ArgumentOutOfRangeException(nameof(options), rGiven, NotSupported(rGiven) + ".");
 
-        var reader = new Reader(PsseText.Lines(text), name, options);
-        return reader.Read();
+        // Revision 36 and RAWX are read by writing them out as the revision 35 text the reader below reads, field by field and
+        // by name; the result then says the revision the file declared.
+        string[] lines;
+        var extraNotes = new List<string>();
+        int? declared = null;
+        if (PsseRawx.LooksLikeRawx(text))
+        {
+            (lines, int rawxRev) = PsseRawx.ToRaw(text, extraNotes);
+            if (options.Revision is int asked && asked != rawxRev)
+                throw new InvalidDataException(FormattableString.Invariant($"the RAWX file says revision {rawxRev} but revision {asked} was asked for; remove one of the two."));
+            declared = rawxRev;
+            options = options with { Revision = null };
+        }
+        else
+        {
+            lines = PsseText.Lines(text);
+            int? peek = PsseRevision36.PeekRevision(lines);
+            if (peek == 36 || (peek is null && options.Revision == 36))
+            {
+                if (peek == 36 && options.Revision is int asked && asked != 36)
+                    throw new InvalidDataException(FormattableString.Invariant($"the file says revision 36 but revision {asked} was asked for; remove one of the two."));
+                lines = PsseRevision36.ToRevision35(lines, extraNotes);
+                declared = 36;
+                options = options with { Revision = null };
+            }
+        }
+
+        var reader = new Reader(lines, name, options);
+        PsseParseResult result = reader.Read();
+        if (declared is int d)
+            result = result with { Revision = d, Notes = extraNotes.Concat(result.Notes).ToList() };
+        return result;
     }
 
     // ------------------------------------------------------------------------------------------------------------
@@ -224,6 +258,89 @@ public static class PsseRawParser
         }
 
         /// <summary>
+        /// KeepAreaInterchange: the controlled areas and the reported ones. An AREA record is controlled when its ISW is a
+        /// bus of the model in that area with an in-service unit, the area holds no slack bus and its PTOL is above 0 MW.
+        /// PDES and PTOL are MW in the file (PSS/E data format) and are kept as they are. Every other area of the model's
+        /// buses is reported only, with a note saying why, so one such record never stops the run.
+        /// </summary>
+        private (IReadOnlyList<PowerFlow.AreaInterchangeSpec>, IReadOnlyList<PowerFlow.AreaMembership>) AreaControl(GridModel model, Dictionary<int, PsseBusMeta> meta)
+        {
+            var busesOf = new SortedDictionary<int, List<int>>();
+            var slackAreas = new HashSet<int>();
+            foreach (Bus b in model.Buses)
+            {
+                if (!meta.TryGetValue(b.Id, out PsseBusMeta? m)) continue;
+                if (!busesOf.TryGetValue(m.Area, out List<int>? list)) busesOf[m.Area] = list = new List<int>();
+                list.Add(b.Id);
+                if (b.Type == BusType.Slack) slackAreas.Add(m.Area);
+            }
+            var specs = new List<PowerFlow.AreaInterchangeSpec>();
+            var seen = new HashSet<int>();
+            int noSwing = 0, slackArea = 0, noBuses = 0;
+            var swingOutside = new List<int>();
+            var badTolerance = new List<int>();
+            var swingNoUnit = new List<int>();
+            var unitBuses = new HashSet<int>(model.Generators.Where(g => !g.PowerFlowOnly).Select(g => g.Bus));
+            foreach (PsseRecord r in _areas)
+            {
+                int area = r.Int(0, "I");
+                if (!seen.Add(area)) throw r.Error(FormattableString.Invariant($"area {area} is defined twice"));
+                int isw = r.Int(1, "ISW", 0);
+                double pdes = r.Real(2, "PDES", 0), ptol = r.Real(3, "PTOL", 10);
+                if (!busesOf.TryGetValue(area, out List<int>? buses)) { noBuses++; continue; }
+                if (slackAreas.Contains(area)) { slackArea++; continue; }
+                if (isw == 0) { noSwing++; continue; }
+                if (!buses.Contains(isw)) { swingOutside.Add(area); continue; }
+                if (!(ptol > 0.0) || !double.IsFinite(ptol) || !double.IsFinite(pdes)) { badTolerance.Add(area); continue; }
+                if (!unitBuses.Contains(isw)) { swingNoUnit.Add(area); continue; }
+                specs.Add(new PowerFlow.AreaInterchangeSpec(area, isw, pdes, ptol, buses.ToArray()));
+            }
+            specs.Sort((a, b) => a.Area.CompareTo(b.Area));
+            var controlled = new HashSet<int>(specs.Select(x => x.Area));
+            var reported = busesOf.Where(kv => !controlled.Contains(kv.Key)).Select(kv => new PowerFlow.AreaMembership(kv.Key, kv.Value.ToArray())).ToList();
+            _notes.Add(FormattableString.Invariant($"area interchange: {specs.Count} area(s) controlled, {reported.Count} reported only."));
+            if (slackArea > 0) _notes.Add(FormattableString.Invariant($"area interchange: {slackArea} area(s) hold a slack bus, which absorbs the remainder; reported only."));
+            if (noSwing > 0) _notes.Add(FormattableString.Invariant($"area interchange: {noSwing} area(s) have no swing bus (ISW 0); reported only."));
+            if (swingOutside.Count > 0) _notes.Add(FormattableString.Invariant($"area interchange: the swing bus (ISW) of area(s) {string.Join(", ", swingOutside)} is not a bus of the model in that area; reported only."));
+            if (badTolerance.Count > 0) _notes.Add(FormattableString.Invariant($"area interchange: area(s) {string.Join(", ", badTolerance)} give PTOL 0 MW or less (or a PDES or PTOL that is not a number), so no export can be held within it; reported only."));
+            if (swingNoUnit.Count > 0) _notes.Add(FormattableString.Invariant($"area interchange: the swing bus (ISW) of area(s) {string.Join(", ", swingNoUnit)} has no in-service unit to adjust; reported only."));
+            if (noBuses > 0) _notes.Add(FormattableString.Invariant($"area interchange: {noBuses} AREA record(s) have no bus in the model; read past."));
+            return (specs, reported);
+        }
+
+        /// <summary>
+        /// RemoteRegulation: one control per controlling bus, from the first in-service unit there with a remote IREG, in
+        /// file order. Kept only when the controlling bus is PV and the regulated bus is PQ, and only for the first bus to
+        /// name a regulated bus (RMPCT sharing is not modelled). Every other unit holds its own bus, as before, counted in
+        /// a note.
+        /// </summary>
+        private IReadOnlyList<PowerFlow.RemoteVoltageControl> RemoteControls(GridModel model, List<(int Bus, int Ireg, double Vs, int Line)> units, int genRemote)
+        {
+            var typeOf = new Dictionary<int, BusType>(model.Buses.Count);
+            foreach (Bus b in model.Buses) typeOf.TryAdd(b.Id, b.Type);
+            var hasUnit = new HashSet<int>(model.Generators.Select(g => g.Bus));
+            var controls = new List<PowerFlow.RemoteVoltageControl>();
+            var byBus = new Dictionary<int, (int Ireg, double Vs)>();
+            var regulated = new HashSet<int>();
+            int notPv = 0, notPq = 0, shared = 0, disagree = 0;
+            foreach ((int bus, int ireg, double vs, int _) in units)
+            {
+                if (byBus.TryGetValue(bus, out var first)) { if (first.Ireg != ireg || first.Vs != vs) disagree++; continue; }
+                byBus[bus] = (ireg, vs);
+                if (!typeOf.TryGetValue(bus, out BusType t) || t != BusType.Pv || !hasUnit.Contains(bus)) { notPv++; continue; }
+                if (!typeOf.TryGetValue(ireg, out BusType rt) || rt != BusType.Pq) { notPq++; continue; }
+                if (!regulated.Add(ireg)) { shared++; continue; }
+                controls.Add(new PowerFlow.RemoteVoltageControl(bus, ireg, vs));
+            }
+            _notes.Add(FormattableString.Invariant($"{genRemote} generator(s) regulate a remote bus (IREG); {controls.Count} remote voltage control(s) hold the remote bus at VS by moving the unit's set point (--remote-vreg)."));
+            if (notPv > 0) _notes.Add(FormattableString.Invariant($"remote regulation: {notPv} controlling bus(es) are not PV buses with an in-service unit; those units hold their own bus."));
+            if (notPq > 0) _notes.Add(FormattableString.Invariant($"remote regulation: {notPq} regulated bus(es) are generator or swing buses, which hold their own voltage; those units hold their own bus."));
+            if (shared > 0) _notes.Add(FormattableString.Invariant($"remote regulation: {shared} bus(es) regulate a bus another bus already regulates; sharing (RMPCT) is not modelled, so they hold their own bus."));
+            if (disagree > 0) _notes.Add(FormattableString.Invariant($"remote regulation: {disagree} unit(s) give a different IREG or VS from the first unit at their bus; the first unit's are used."));
+            return controls;
+        }
+
+        /// <summary>
         /// The regulating bank for one in-service switched shunt (<see cref="PsseReadOptions.ApplyShuntControl"/>), or null
         /// with the reason it stays fixed (null reason: locked, MODSW 0, which is not noted). Applied: MODSW 1 (discrete
         /// voltage control) of its own bus (SWREM / SWREG 0 or the shunt's bus), band VSWLO..VSWHI, blocks (Ni, Bi) all of
@@ -258,6 +375,10 @@ public static class PsseRawParser
                 int n = r.Int(v35 ? i + 1 : i, $"N{k + 1}", 0);
                 double b = r.Real(v35 ? i + 2 : i + 1, $"B{k + 1}", 0);
                 if (n < 0) throw r.Error(FormattableString.Invariant($"N{k + 1} is {n}; a block count must be 0 or more"));
+                // IO-07: the units are listed one by one below, so the count from the file sizes that list (2,000,000,000
+                // asked for 16 GB). A real block has a handful of steps; above MaxShuntBlockSteps the record is refused.
+                if (n > MaxShuntBlockSteps)
+                    throw r.Error(FormattableString.Invariant($"N{k + 1} is {n}; a switched shunt block has at most {MaxShuntBlockSteps} steps"));
                 if (n == 0 || b == 0) continue;
                 if (size == 0) size = Math.Abs(b);
                 else if (Math.Abs(b) != size) mixed = true;
@@ -659,10 +780,11 @@ public static class PsseRawParser
                 {
                     int lines = r.Int(1, "NCONV") + r.Int(2, "NDCBS") + r.Int(3, "NDCLN");
                     if (lines < 0) throw r.Error("NCONV, NDCBS and NDCLN must not be negative");
-                    var rec = new PsseRecord[lines + 1];
-                    rec[0] = r;
-                    for (int k = 0; k < lines; k++) rec[k + 1] = cur.Continuation(key, r, $"line {k + 2} of the multi-terminal DC record");
-                    _mtdc.Add(rec);
+                    // The counts come from the file: the record grows with the lines actually read (the file ending first is the
+                    // error it always was), so a large count allocates nothing before the data is there.
+                    var rec = new List<PsseRecord>(Math.Min(lines, 64) + 1) { r };
+                    for (int k = 0; k < lines; k++) rec.Add(cur.Continuation(key, r, $"line {k + 2} of the multi-terminal DC record"));
+                    _mtdc.Add(rec.ToArray());
                     break;
                 }
                 case MultiSectionS: _multiSection++; break;
@@ -786,6 +908,10 @@ public static class PsseRawParser
             double tr = c.Real(7, "TR", 1.0), tap = c.Real(8, "TAP", 1.0), tmx = c.Real(9, "TMX", 1.5), tmn = c.Real(10, "TMN", 0.51), stp = c.Real(11, "STP", 0.00625);
             if (!(tr > 0) || !(tap > 0) || !(tmn > 0) || !(tmx >= tmn) || stp < 0)
                 throw c.Error(FormattableString.Invariant($"the {end}'s transformer ratio {tr}, tap {tap} and limits {tmn} .. {tmx} (step {stp}) must be positive with TMX at or above TMN"));
+            // NUM-20: PSS/E requires a positive tap step. A step of 0 never moved the firing-angle tap search, which then
+            // never ended; it is refused here (and the search guards against it too).
+            if (!(stp >= GridModel.MinTapStep))
+                throw c.Error(FormattableString.Invariant($"the {end}'s tap step STP is {stp}; it must be at least {GridModel.MinTapStep} (PSS/E's default is 0.00625)"));
             int xcapIdx = _rev >= 35 ? 17 : 16;
             double xcap = c.Real(xcapIdx, "XCAP", 0);
             return (new LccConverter(bus, nb, anmx, anmn, rcv, xcv, ebas, tr, tap, tmx, tmn, stp), xcap != 0);
@@ -812,8 +938,11 @@ public static class PsseRawParser
             if (pwf < 0 || pwf > 1) throw c.Error(FormattableString.Invariant($"PWF is {pwf}; the power weighting fraction must be in 0..1"));
             if (maxq < minq) throw c.Error(FormattableString.Invariant($"MAXQ {maxq} is below MINQ {minq}"));
             if (remot != 0 && remot != bus) return (null, true);
+            // PSS/E TYPE 2: a positive DCSET feeds power into the AC network at IBUS. GridSim's DcSetpoint is the MW drawn
+            // from the bus, so the order is negated here (0.0 - x keeps a zero order +0).
+            double setpoint = type == 2 ? 0.0 - dcset : dcset;
             return (new VscConverter(bus, type == 1 ? VscDcControl.DcVoltage : VscDcControl.Power, mode == 1 ? VscAcControl.Voltage : VscAcControl.PowerFactor,
-                dcset, acset, aloss, bloss, minloss, smax, imax, pwf, maxq, minq), false);
+                setpoint, acset, aloss, bloss, minloss, smax, imax, pwf, maxq, minq), false);
         }
 
         // ---- Model ----------------------------------------------------------------------------------------------
@@ -970,8 +1099,11 @@ public static class PsseRawParser
             // --- Generators ----------------------------------------------------------------------------------------
             var gens = new List<Generator>();
             var machineKeys = new List<PsseMachineKey>();
+            var machineZx = new List<double>();   // WP3a: ZX per record, read leniently (the model does not use it)
+            var machineZr = new List<double>();   // ZR per record, read the same way (for the CGMES DY export)
             var machineSeen = new Dictionary<(int, string), int>();
             int genOffKept = 0, genIsolated = 0, genRemote = 0, genZeroMbase = 0;
+            var remoteUnits = new List<(int Bus, int Ireg, double Vs, int Line)>();   // RemoteRegulation only: in-service IREG units
             foreach (PsseRecord r in _gens)
             {
                 int bus = r.Int(0, "I");
@@ -992,6 +1124,7 @@ public static class PsseRawParser
                 if (mbase == 0) { mbase = _sbase; genZeroMbase++; }
                 int ireg = r.Int(7, "IREG", 0);
                 if (ireg != 0 && ireg != bus) { BusOf(r, ireg, "IREG"); genRemote++; }
+                if (_options.RemoteRegulation && inService && ireg != 0 && ireg != bus) remoteUnits.Add((bus, ireg, r.Real(6, "VS", 1.0), r.Line));
                 if (!inService) genOffKept++;
                 gens.Add(new Generator(
                     Bus: bus,
@@ -1005,15 +1138,24 @@ public static class PsseRawParser
                     MBase: mbase,
                     InService: inService));
                 machineKeys.Add(new PsseMachineKey(bus, id));
+                string? zxText = r.Raw(v35 ? 11 : 10);
+                machineZx.Add(zxText is null ? 1.0
+                    : double.TryParse(zxText.Replace('D', 'E').Replace('d', 'e'), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out double zx) && double.IsFinite(zx) ? zx : double.NaN);
+                string? zrText = r.Raw(v35 ? 10 : 9);
+                machineZr.Add(zrText is null ? 0.0
+                    : double.TryParse(zrText.Replace('D', 'E').Replace('d', 'e'), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out double zr) && double.IsFinite(zr) ? zr : double.NaN);
             }
             if (genOffKept > 0) _notes.Add(FormattableString.Invariant($"kept {genOffKept} out-of-service generator(s) in the model, marked out of service (not solved)."));
             if (genIsolated > 0) _notes.Add(FormattableString.Invariant($"skipped {genIsolated} generator(s) on dropped isolated (IDE 4) bus(es)."));
             if (genZeroMbase > 0) _notes.Add(FormattableString.Invariant($"{genZeroMbase} generator(s) give MBASE 0; their machine base is the system base ({_sbase.ToString("R", CultureInfo.InvariantCulture)} MVA)."));
-            if (genRemote > 0) _notes.Add(FormattableString.Invariant($"{genRemote} generator(s) regulate a remote bus (IREG); GridSim holds the set point VS at the unit's own bus instead, as MATPOWER does, so those voltages differ from PSS/E's."));
+            if (genRemote > 0 && !_options.RemoteRegulation) _notes.Add(FormattableString.Invariant($"{genRemote} generator(s) regulate a remote bus (IREG); GridSim holds the set point VS at the unit's own bus instead, as MATPOWER does, so those voltages differ from PSS/E's."));
 
             // --- Branches ------------------------------------------------------------------------------------------
             var branches = new List<Branch>();
             var branchKeys = new List<PsseBranchKey>();
+            var meteredAtTo = new Dictionary<int, Estimation.BranchEnd>();   // KeepAreaInterchange only: model branches metered at J
             var skippedKeys = new List<PsseBranchKey>();   // records read but not in the model (out of service, dangling)
             int brOff = 0, brDangling = 0, zeroZ = 0;
             // PSS/E identifies a branch by its buses and circuit id; two records with one identity are refused whatever their status.
@@ -1027,7 +1169,7 @@ public static class PsseRawParser
             }
             foreach (PsseRecord r in _branches)
             {
-                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));   // a negative J marks the metered end
+                int i = r.Int(0, "I"), j = r.AbsInt(1, "J");   // a negative J marks the metered end
                 BusOf(r, i, "bus I");
                 BusOf(r, j, "bus J");
                 if (i == j) throw r.Error(FormattableString.Invariant($"both ends are bus {i}"));
@@ -1044,6 +1186,9 @@ public static class PsseRawParser
                 if (giV != 0 || biV != 0) { BusAcc.Add(ref Acc(i).Gs, giV * _sbase); BusAcc.Add(ref Acc(i).Bs, biV * _sbase); }
                 if (gjV != 0 || bjV != 0) { BusAcc.Add(ref Acc(j).Gs, gjV * _sbase); BusAcc.Add(ref Acc(j).Bs, bjV * _sbase); }
                 string? name = v34 && r.Str(6).Length > 0 ? r.Str(6) : null;
+                // The metered end: a negative J, or MET 2 (revision 33 and later; MET follows ST). Otherwise bus I.
+                if (_options.KeepAreaInterchange && (r.Int(1, "J") < 0 || (!V30 && r.Code(st + 1, "MET", 1, 1, 2) == 2)))
+                    meteredAtTo[branches.Count] = Estimation.BranchEnd.To;
                 branches.Add(new Branch(i, j, rr, x, b, RateAMva: r.Real(rate, "RATE A", 0), RateBMva: r.Real(rate + 1, "RATE B", 0),
                     RateCMva: r.Real(rate + 2, "RATE C", 0), Name: name));
                 branchKeys.Add(new PsseBranchKey("branch", i, j, 0, ckt, 0));
@@ -1053,7 +1198,7 @@ public static class PsseRawParser
             int swDevOff = 0;
             foreach (PsseRecord r in _switching)
             {
-                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
+                int i = r.Int(0, "I"), j = r.AbsInt(1, "J");
                 BusOf(r, i, "bus I");
                 BusOf(r, j, "bus J");
                 if (i == j) throw r.Error(FormattableString.Invariant($"both ends are bus {i}"));
@@ -1084,8 +1229,16 @@ public static class PsseRawParser
             var stars = new List<Bus>();
             var starIds = new List<int>();
             int maxBus = busRec.Keys.Max();
-            int starBase = 1;
-            while (starBase <= maxBus) starBase *= 10;   // the next power of ten above the highest bus number
+            // The next power of ten above the highest bus number, in long arithmetic (IO-02: in int it wrapped for a bus
+            // number of 1,410,065,408 or more and reached 0, so the loop never ended). The star buses are numbered from it,
+            // so it and every star number must fit a bus number (an int); a file whose bus numbers leave no room is refused.
+            long starBaseLong = 1;
+            while (starBaseLong <= maxBus) starBaseLong *= 10;
+            int threeWinding = _transformers.Count(t => t.Length > 0 && t[0].Has(2) && t[0].Int(2, "K", 0) != 0);
+            if (threeWinding > 0 && starBaseLong + threeWinding > int.MaxValue)
+                throw new InvalidDataException(FormattableString.Invariant(
+                    $"PSS/E case: the highest bus number is {maxBus}, which leaves no room to number the star points of its {threeWinding} three-winding transformer(s) (the star buses are numbered from {starBaseLong}, above every bus number, and a bus number must be at most {int.MaxValue})."));
+            int starBase = (int)Math.Min(starBaseLong, int.MaxValue);   // used only when there is a three-winding unit
             int xfOff = 0, xfTapControl = 0, xfImpTable = 0, xfImpOutside = 0, xfImpTapped = 0, xfMag = 0, xfOtherControl = 0;
             var threeW = new List<(Branch Branch, PsseBranchKey Key, TapControl? Control, int OwnBus)>();
             // Tap control (ApplyTapControl only): each controlled winding's branch index, its control and the ratio its
@@ -1094,7 +1247,7 @@ public static class PsseRawParser
             foreach (PsseRecord[] t in _transformers)
             {
                 PsseRecord r1 = t[0], r2 = t[1];
-                int i = r1.Int(0, "I"), j = Math.Abs(r1.Int(1, "J")), k = Math.Abs(r1.Int(2, "K", 0));
+                int i = r1.Int(0, "I"), j = r1.AbsInt(1, "J"), k = r1.AbsInt(2, "K", 0);
                 bool three = k != 0;
                 BusOf(r1, i, "bus I");
                 BusOf(r1, j, "bus J");
@@ -1233,6 +1386,15 @@ public static class PsseRawParser
                 {
                     if (!Live(i) || !Live(j)) { brDangling++; skippedKeys.Add(new PsseBranchKey("transformer", i, j, 0, ckt, 0)); continue; }
                     if (g != 0 || bm != 0) { BusAcc.Add(ref Acc(i).Gs, g * _sbase); BusAcc.Add(ref Acc(i).Bs, bm * _sbase); }
+                    // PSS/E's two-winding unit is t1:1, then Z, then 1:t2, with Z on the system base. Moving the bus-J ratio
+                    // t2 = w[1] to the from side (GridSim's single tap t1/t2) refers Z through it: Vi/(t1/t2) - Vj = Z t2^2 Ij,
+                    // so R and X are multiplied by w2^2 (PSS/E PAG eq. 4.21b; OpenIPSL TwoWindingTransformer; PowerModels.jl).
+                    // This applies for every CZ, after the base change above, and also to the impedance-table base below.
+                    // When w2 = 1 the factor is exactly 1.0, so those units are unchanged. A three-winding unit's star side is
+                    // at 1.0 and needs no factor.
+                    double w2sq = w[1] * w[1];
+                    zr[0] *= w2sq;
+                    zx[0] *= w2sq;
                     double r12 = zr[0], x12 = zx[0];
                     if (factors[0] is (double fr2, double fi2)) (r12, x12) = (zr[0] * fr2 - zx[0] * fi2, zr[0] * fi2 + zx[0] * fr2);
                     if (tapSpecs[0] is TapControl tc2)
@@ -1242,6 +1404,9 @@ public static class PsseRawParser
                         if (tables[0] is { } t2) { tc2 = tc2 with { Correction = new TapImpedanceCorrection(zr[0], zx[0], tc2.Cod == 3 ? 1.0 : w[1], t2) }; xfImpTapped++; }
                         controlled.Add((branches.Count, tc2, w[1], i, $"{i}-{j} {ckt}"));
                     }
+                    // NMETR names the non-metered end (2, winding 2, by default), so NMETR 1 meters at bus J.
+                    if (_options.KeepAreaInterchange && r1.Code(9, "NMETR", 2, 1, 2) == 1)
+                        meteredAtTo[branches.Count] = Estimation.BranchEnd.To;
                     branches.Add(new Branch(i, j, r12, x12, 0, TapRatio: w[0] / w[1], PhaseShiftDeg: ang[0],
                         RateAMva: rates[0].A, RateBMva: rates[0].B, RateCMva: rates[0].C, IsTransformer: true,
                         Name: xname.Length > 0 ? xname : null));
@@ -1425,6 +1590,9 @@ public static class PsseRawParser
                     double setvl = c.Real(12, "SETVL");
                     if (rcv < 0 || xcv < 0 || !(ebas > 0) || !(tr > 0) || !(tap > 0) || !(tmn > 0) || !(tmx >= tmn) || stp < 0)
                         throw c.Error(FormattableString.Invariant($"converter {ib}'s commutating impedance, EBAS, ratio, tap and limits must be valid (non-negative impedance, positive base, ratio and taps, TPMX at or above TPMN)"));
+                    // R2-01: a tap step of at least GridModel.MinTapStep (TSTP 0 or a tiny step never moved the tap search).
+                    if (!(stp >= GridModel.MinTapStep))
+                        throw c.Error(FormattableString.Invariant($"converter {ib}'s tap step TSTP is {stp}; it must be at least {GridModel.MinTapStep} (PSS/E's default is 0.00625)"));
                     if (ib == vconv && !(setvl > 0)) throw c.Error(FormattableString.Invariant($"the voltage converter's SETVL is {setvl}; its scheduled DC voltage must be above 0 kV"));
                     if (ib != vconv && setvl == 0) throw c.Error(FormattableString.Invariant($"converter {ib} has SETVL 0; an order-holding converter needs a power or current order"));
                     var on = dcBuses.Where(x => x.AcBus == ib).ToList();
@@ -1549,7 +1717,7 @@ public static class PsseRawParser
             // --- Assemble buses ----------------------------------------------------------------------------------
             var genBuses = new HashSet<int>(gens.Where(g => g.InService).Select(g => g.Bus));
             var buses = new List<Bus>();
-            int slack = 0, demoted = 0, unusableLimits = 0, zipBuses = 0;
+            int slack = 0, demoted = 0, unusableLimits = 0, zipBuses = 0, machinesOnLoadBuses = 0;
             foreach (int id in order)
             {
                 PsseRecord r = busRec[id];
@@ -1558,6 +1726,7 @@ public static class PsseRawParser
                 int ide = r.Int(3, "IDE", 1);
                 BusType type = ide == 3 ? BusType.Slack : ide == 2 ? BusType.Pv : BusType.Pq;
                 if (type == BusType.Pv && !genBuses.Contains(id)) { type = BusType.Pq; demoted++; }
+                if (ide == 1 && genBuses.Contains(id)) machinesOnLoadBuses++;
                 if (type == BusType.Slack)
                 {
                     slack++;
@@ -1597,6 +1766,10 @@ public static class PsseRawParser
             if (slack > 1) _notes.Add(FormattableString.Invariant($"{slack} swing (IDE 3) buses; treating as a multi-island system."));
             if (isolated.Count > 0) _notes.Add(FormattableString.Invariant($"dropped {isolated.Count} isolated (IDE 4) bus(es) and any connected elements."));
             if (demoted > 0) _notes.Add(FormattableString.Invariant($"solved {demoted} PV (IDE 2) bus(es) with no in-service generator as PQ, as PSS/E and MATPOWER do."));
+            // PSS/E defines IDE 1 as a load bus, or another bus without a generator boundary condition, so such a machine
+            // holds no voltage. GridSim injects its PG + jQG as a fixed injection, as MATPOWER and powsybl do. Whether PSS/E
+            // itself counts that injection is not confirmed, so the count is listed.
+            if (machinesOnLoadBuses > 0) _notes.Add(FormattableString.Invariant($"{machinesOnLoadBuses} load (IDE 1) bus(es) have an in-service machine; its PG + jQG is solved as a fixed injection with no voltage control, as MATPOWER and powsybl do."));
             if (unusableLimits > 0) _notes.Add(FormattableString.Invariant($"{unusableLimits} bus(es) carry NVHI / NVLO that are not usable as voltage limits; the global band applies to them."));
             if (zipBuses > 0) _notes.Add(FormattableString.Invariant($"{zipBuses} bus(es) are ZIP loads (constant-current parts)."));
 
@@ -1631,7 +1804,7 @@ public static class PsseRawParser
             var equipmentSources = new List<PsseEquipmentSource>();
             foreach (PsseRecord r in _branches)
             {
-                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
+                int i = r.Int(0, "I"), j = r.AbsInt(1, "J");
                 string id = r.Str(2, "1");
                 bool inService = r.Code(_rev >= 34 ? 23 : 13, "ST", 1, 0, 1) == 1;
                 bool retained = inService && Live(i) && Live(j) && RetainedBranch("branch", i, j, id);
@@ -1639,7 +1812,7 @@ public static class PsseRawParser
             }
             foreach (PsseRecord r in _switching)
             {
-                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
+                int i = r.Int(0, "I"), j = r.AbsInt(1, "J");
                 string id = r.Str(2, "1");
                 bool inService = r.Code(16, "STAT", 1, 0, 1) == 1;
                 bool retained = inService && Live(i) && Live(j) && RetainedBranch("switching device", i, j, id);
@@ -1648,7 +1821,7 @@ public static class PsseRawParser
             foreach (PsseRecord[] unit in _transformers)
             {
                 PsseRecord r = unit[0];
-                int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J")), k = Math.Abs(r.Int(2, "K", 0));
+                int i = r.Int(0, "I"), j = r.AbsInt(1, "J"), k = r.AbsInt(2, "K", 0);
                 bool three = k != 0;
                 string id = r.Str(3, "1");
                 int status = r.Code(11, "STAT", 1, 0, 1, 2, 3, 4);
@@ -1716,8 +1889,18 @@ public static class PsseRawParser
                 throw new InvalidDataException($"PSS/E RAW case '{caseName}' is invalid:" + Environment.NewLine + "  " +
                     string.Join(Environment.NewLine + "  ", errors));
 
+            // Area interchange and remote regulation (each only with its option): side data, the model is unchanged.
+            (IReadOnlyList<PowerFlow.AreaInterchangeSpec> areaSpecs, IReadOnlyList<PowerFlow.AreaMembership> areaReported) =
+                _options.KeepAreaInterchange ? AreaControl(model, meta) : (Array.Empty<PowerFlow.AreaInterchangeSpec>(), Array.Empty<PowerFlow.AreaMembership>());
+            IReadOnlyList<PowerFlow.RemoteVoltageControl> remoteControls =
+                _options.RemoteRegulation ? RemoteControls(model, remoteUnits, genRemote) : Array.Empty<PowerFlow.RemoteVoltageControl>();
+
             return new PsseParseResult(model, _notes)
             {
+                AreaInterchange = areaSpecs,
+                AreaReported = areaReported,
+                BranchMeteredEnds = meteredAtTo,
+                RemoteVoltageControls = remoteControls,
                 Revision = _rev,
                 Titles = titles,
                 BusMeta = meta,
@@ -1726,6 +1909,8 @@ public static class PsseRawParser
                 ZoneNames = zoneNames,
                 OwnerNames = ownerNames,
                 MachineKeys = machineKeys,
+                MachineSourceReactances = machineZx,
+                MachineSourceResistances = machineZr,
                 LoadSources = Array.AsReadOnly(_loads.Select(r =>
                 {
                     int loadBus = r.Int(0, "I");

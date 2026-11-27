@@ -32,8 +32,8 @@ page. Each release is built by `.github/workflows/release.yml` from the tagged c
 `ubuntu-latest` and checks the tag against the version, builds, runs `dotnet test GridSim.slnx -c Release --no-build`
 (normal CPU mode, no `continue-on-error`) and runs the vulnerable-package check; every later job needs `verify`. Each
 command line archive is then smoke-tested and given the published-output tests on a runner of its own operating
-system. The ship scope is the command line tool, the WPF and Avalonia desktop apps, the `GridSim.Core`
-NuGet package and the replay-only web container image. The release page carries:
+system. What is published is the command line tool and the WPF and Avalonia desktop apps. The `GridSim.Core`
+NuGet package and the container images are on the roadmap and not published (see below). The release page carries:
 
 | Archive | Contents |
 |---|---|
@@ -44,14 +44,17 @@ NuGet package and the replay-only web container image. The release page carries:
 | `gridsim-app-<version>-win-x64.zip` | the Avalonia desktop app (`GridSim.App.Desktop.exe`) for Windows x64 |
 | `gridsim-app-<version>-linux-x64.tar.gz` | the Avalonia desktop app (`GridSim.App.Desktop`) for Linux x64 |
 | `SHA256SUMS.txt` | the SHA-256 checksum of every other file on the page |
-| `gridsim-<version>.sbom.json`, `gridsim-web-<version>.sbom.json`, `gridsim-core-<version>.sbom.json`, `gridsim-app-<version>.sbom.json`, `gridsim-wpf-<version>.sbom.json` | CycloneDX software bills of materials for the command line tool, the web image, the `GridSim.Core` package, the Avalonia app and the WPF app |
+| `gridsim-<version>.sbom.json`, `gridsim-web-<version>.sbom.json`, `gridsim-core-<version>.sbom.json`, `gridsim-app-<version>.sbom.json`, `gridsim-wpf-<version>.sbom.json` | CycloneDX software bills of materials for the command line tool, the web image, the `GridSim.Core` package, the Avalonia app and the WPF app (the web image and the package are on the roadmap, so their bills of materials come ahead of them) |
 
-The other two artefacts are not on the release page:
+**Containers and the NuGet package are on the roadmap.** Neither the `GridSim.Core` NuGet package nor a container
+image (the web app or the command line tool) is published yet. They wait for broader validation, and shipping GridSim as
+a code library also needs a safe way to handle licences, which is still to come, so do not look for them on a feed or a
+registry. The groundwork is there:
 
-| Artefact | Where | Use |
-|---|---|---|
-| `GridSim.Core` NuGet package | the repository's GitHub Packages NuGet feed | `dotnet add package GridSim.Core --version <version>` with that feed configured as a package source |
-| Web app container image | `ghcr.io/<owner>/gridsim-web:<version>` | `docker run --rm -p 127.0.0.1:5540:8080 ghcr.io/<owner>/gridsim-web:<version>`; replay-only (the solve API and the simulation socket are not served); deployment settings are in `docs/developer/deploy/README.md` |
+- `Dockerfile` (web app, replay-only in Production) and `Dockerfile.cli` (command line tool) build on your own machine;
+  the commands are in [ch. 3](<0003 Configuration.md>) and in `docs/developer/deploy/README.md`.
+- The release workflow already packs and signs `GridSim.Core` and builds and probes both images, keeping them as
+  workflow artefacts. The jobs that would push them are switched off, and stay off until the project decides otherwise.
 
 A macOS desktop app is not in a release: build it from source (below).
 `GridSim.Gda` and the GDA data are not release artefacts either: the `gda` verbs are in the command line tool, but
@@ -64,8 +67,8 @@ the executable from that folder; keep `data/` next to it, because the executable
 
 **Signatures.** When the release was built with the project's code-signing certificate, `gridsim.exe` carries an
 Authenticode signature (check it in the file's Properties, Digital Signatures tab, or with
-`Get-AuthenticodeSignature gridsim.exe` in PowerShell) and the NuGet package is signed
-(`dotnet nuget verify GridSim.Core.<version>.nupkg`). Without the certificate the release is built unsigned and its
+`Get-AuthenticodeSignature gridsim.exe` in PowerShell). The release workflow signs the NuGet package it builds in the
+same way, but that package is not published yet. Without the certificate the release is built unsigned and its
 workflow log and run summary say so; a maintainer who sets the repository variable `GRIDSIM_ALLOW_UNSIGNED_RELEASE` to
 `false` makes signing required, and the release then stops before it builds anything. For maintainers: the release workflow reads the certificate from the repository secrets
 `SIGNING_CERT_PFX_BASE64` (the `.pfx` file, base64-encoded) and `SIGNING_CERT_PASSWORD`, plus the optional repository

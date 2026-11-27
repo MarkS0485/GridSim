@@ -85,7 +85,7 @@ public sealed record GdaTimeSeries(string Name, IReadOnlyList<GdaTimeStep> Steps
         // N256: the step fields are checked on the raw document FIRST, so a step with a null timeUtc is refused naming
         // the step (the deserialiser would otherwise fail first with a bare JsonException).
         RequireStepFields(path);
-        GdaTimeSeries s = JsonSerializer.Deserialize(File.ReadAllText(path), Json.GdaTimeSeries)
+        GdaTimeSeries s = JsonSerializer.Deserialize(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Json.GdaTimeSeries)
             ?? throw new InvalidDataException($"Not a GDA time-series: {path}");
         // D-DOC-177 (October 2026, docs-session finding): System.Text.Json binds a positional record's missing member to
         // null, so a file with no "steps" array (an unrelated JSON object, a typo such as "step") loaded with Steps null
@@ -112,7 +112,7 @@ public sealed record GdaTimeSeries(string Name, IReadOnlyList<GdaTimeStep> Steps
     /// </summary>
     private static void RequireStepFields(string path)
     {
-        using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+        using JsonDocument doc = JsonDocument.Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path));
         if (doc.RootElement.ValueKind != JsonValueKind.Object) return;   // not a series object: the reader refuses it
         JsonElement? steps = null;
         foreach (JsonProperty p in doc.RootElement.EnumerateObject())

@@ -112,7 +112,8 @@ internal static class SaveGate
             errors.AddRange(ProvenanceProblems(d));
 
         // Stage the current state of the case's own files in a fresh temporary folder.
-        string stage = Path.Combine(Path.GetTempPath(), "gridsim-edit-" + Guid.NewGuid().ToString("N"));
+        // IO-26: a user-only folder (0700 on Unix), not one made with the process umask in the shared temp folder.
+        string stage = Directory.CreateTempSubdirectory("gridsim-edit-").FullName;
         var newWarnings = new List<string>();
         var allWarnings = new List<string>();
         try
@@ -219,7 +220,7 @@ internal static class SaveGate
         if (!checksPassed)
             return ($"{NotRun} while the schema, semantic or licence checks fail; fix those, then save or check again.", null);
 
-        string stage = Path.Combine(Path.GetTempPath(), "gridsim-edit-" + Guid.NewGuid().ToString("N"));
+        string stage = Directory.CreateTempSubdirectory("gridsim-edit-").FullName;   // IO-26
         string caseDir = Path.Combine(stage, "case");
         try
         {

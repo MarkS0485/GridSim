@@ -33,6 +33,11 @@ public static class ProtectionAssessment
         var verdicts = new List<RelayVerdict>();
         foreach (IProtectionRelay relay in ProtectionRegistry.All)
             verdicts.AddRange(relay.Evaluate(ctx));
+        // RC5 per-unit protection: each unit's own relays, after every network element, only when the model carries any
+        // (GridModel.UnitProtection null, every model without unit protection, leaves the verdict list exactly as before).
+        // A fault study passes its fault currents or its sequence study: that state is a snapshot with no duration.
+        if (model.UnitProtection is { } units)
+            verdicts.AddRange(UnitRelayAssessment.Evaluate(ctx, units, faultSnapshot: faultCurrentPuByBus is not null || sequence is not null));
         return new ProtectionReport(verdicts, s, trajectory is not null);
     }
 

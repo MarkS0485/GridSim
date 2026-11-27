@@ -63,7 +63,7 @@ Fixed file names (each optional unless noted; unknown keys are refused):
   format in physical units (ohm/mile, ft, kW are outside the closed vocabulary, which is why v2 holds the per-unit form).
   The dist3ph element set is defined by the schema's `$defs`, not as kind specs (see the schema's description).
 
-## 2. What can be expressed: the 16 kinds
+## 2. What can be expressed: the 17 kinds
 
 Each kind is a parameter contract; a template is one concrete, versioned set of values for a kind.
 
@@ -78,9 +78,10 @@ Each kind is a parameter contract; a template is one concrete, versioned set of 
 | `transformerType` | 13 | Transformer electrical type (per unit, percent on rating, X/R) |
 | `oltc` | 10 | Tap changer control (target, step, deadband, limits, inter-tap delay) and transformer thermal state |
 | `protection` | 36 | Relay settings (RoCoF, df/dt, under / over frequency and voltage, overcurrent and others) |
-| `exciter` | 51 | SEXS, IEEE Type 1, alternator-rectifier (EXAC1, ESAC1A) or static ESST4B excitation system |
-| `governor` | 36 | Speed governor (lumped and per-machine TGOV1, IEEEG1 with rate limits and LP fractions, hydro, GAST) |
-| `pss` | 9 | PSS1A power system stabiliser |
+| `unitProtection` | 31 | RC5: the relays a generating unit carries itself (27 / 59, 32, 40, 81U / 81O, 81R, 78 stages, ENA RoCoF and G99 interface presets): a class default a generator takes by `protectionTemplate` or a binding rule, with per-unit values on top from a case override with a `unit` member (see section 2.2) |
+| `exciter` | 131 | SEXS, IEEE Type 1, alternator-rectifier (EXAC1, ESAC1A, ESAC8B), static ESST4B, potential-source static EXST1 / ESST1A, compound-source static ESST3A, static SCRX or dc commutator ESDC1A / EXDC2 / IEEEX1 excitation system |
+| `governor` | 110 | Speed governor (lumped and per-machine TGOV1, IEEEG1 with rate limits and LP fractions, hydro, GAST, GGOV1, WSIEG1, IEEEG3) |
+| `pss` | 55 | Power system stabiliser: PSS1A, IEEEST, or the dual-input PSS2A / PSS2B / PSS2C |
 | `harmonicSpectrum` | 100 | Harmonic current source: magnitude and phase per order 2-50 (G5 Issue 5 spectra exist) |
 | `site` | 2 | A named site with generation / demand slots, for sites not modelled in any public data |
 | `gridCodeProfile` | 14 | Grid-code frequency and voltage limits (not bound from a case yet) |
@@ -131,7 +132,10 @@ A standalone document, given to the RMS study with `gridsim stability <case> --r
 - **Machine template** (`synchronousMachine`): required `xdPu`, `xdpPu`, `xdppPu`, `xqPu`, `xqpPu`, `xqppPu` (X''d must
   equal X''q, the round-rotor network fold), `tdopS`, `tdoppS`, `tqopS`, `tqoppS`; optional `inertiaH` (absent: the
   case's own H, said in a note), `damping` (absent: 0), `xlPu` (stator leakage, below X''d; absent: 0),
-  `saturationS10` with `saturationS12` (PSS/E S(1.0), S(1.2); GENROU saturation on |psi''| on both axes, N045). Any other
+  `saturationS10` with `saturationS12` (PSS/E S(1.0), S(1.2); GENROU saturation on |psi''| on both axes, N045).
+  `model` (absent: `GENROU`) may be `GENTPJ`, which also takes `saturationKis` (saturation on |psi''| + Kis |It|), or
+  `GENCLS`, the classical machine, which takes only `xdpPu` with optional `inertiaH` and `damping`, and no exciter or
+  stabiliser. Any other
   machine parameter (`unitTransformerXPu`, `fuelType`, `capacityFactor`, the synthesis ratios) is refused: it belongs to
   the case or to synthesis, and a number that would be ignored is an error. All on the machine base.
 - **Controllers** (the machine template's `controllers` slots): `exciter` with `model` `SEXS` (required `sexsLeadS`,
@@ -144,22 +148,72 @@ A standalone document, given to the RMS study with `gridsim stability <case> --r
   `acSatE2`, `acSatSe2`; ESAC1A also `acOutputMinPu` / `acOutputMaxPu` VRMIN / VRMAX) or `ESST4B` (the static exciter,
   which reads the terminal voltage and current and the field current; all required: `st4bKpr`, `st4bKir`, `st4bVrMaxPu`,
   `st4bVrMinPu`, `st4bTaS`, `st4bKpm`, `st4bKim`, `st4bVmMaxPu`, `st4bVmMinPu`, `st4bKg`, `st4bKp`, `st4bKi`, `st4bVbMaxPu`,
-  `st4bKc`, `st4bXlPu`, `st4bThetapDeg`); `pss` with `model` `PSS1A` (required `gain`, `washoutS`, `lead1S`,
-  `lag1S`, `lead2S`, `lag2S`; optional output limits; needs an exciter); `governor` with `model` `TGOV1` (required
+  `st4bKc`, `st4bXlPu`, `st4bThetapDeg`), `EXST1` or `ESST1A` (the potential-source static exciters, which read the
+  terminal voltage and the field current: required `st1ViMaxPu`, `st1ViMinPu`, `st1TcS`, `st1TbS`, `st1Ka`, `st1TaS`,
+  `st1VrMaxPu`, `st1VrMinPu`, `st1Kc`, `st1Kf`, `st1TfS`, optional `st1TrS`; ESST1A also requires `st1aTc1S`, `st1aTb1S`,
+  `st1aVaMaxPu`, `st1aVaMinPu`, `st1aKlr`, `st1aIlrPu` and takes `st1aVos` 1 or 2), `SCRX` (required `scrxLeadS`,
+  `scrxLagS`, `scrxGain`, `scrxExciterTimeS`, `scrxFieldMinPu`, `scrxFieldMaxPu`, `scrxSourceSwitch` 0 bus fed or 1 solid
+  fed; optional `scrxCrowbarRatio` rc/rfd) or `ESDC1A` (required `dc1aKa`, `dc1aTaS`, `dc1aTbS`, `dc1aTcS`, `dc1aVrMaxPu`,
+  `dc1aVrMinPu`, `dc1aKe`, `dc1aTeS`, `dc1aKf`, `dc1aTf1S`; optional `dc1aTrS` and the saturation points `dc1aSatE1`,
+  `dc1aSatSe1`, `dc1aSatE2`, `dc1aSatSe2`; `EXDC2` and `IEEEX1` take the same parameters), `ESAC8B` (required `ac8bKp`,
+  `ac8bKi`, `ac8bKd`, `ac8bTdS`, `ac8bKa`, `ac8bTaS`, `ac8bVrMaxPu`, `ac8bVrMinPu`, `ac8bTeS`, `ac8bKe`; optional `ac8bTrS`,
+  the saturation points `ac8bSatE1`..`ac8bSatSe2`, and `ac8bKc`, `ac8bKdExc`, which the PSS/E record does not carry) or
+  `ESST3A` (required `st3aViMaxPu`, `st3aViMinPu`, `st3aKm`, `st3aTcS`, `st3aTbS`, `st3aKa`, `st3aTaS`, `st3aVrMaxPu`,
+  `st3aVrMinPu`, `st3aKg`, `st3aKp`, `st3aKi`, `st3aVbMaxPu`, `st3aKc`, `st3aXlPu`, `st3aVgMaxPu`, `st3aThetapDeg`,
+  `st3aTmS`, `st3aVmMaxPu`, `st3aVmMinPu`; optional `st3aTrS`); `pss` with `model` `PSS1A` (required `gain`, `washoutS`, `lead1S`,
+  `lag1S`, `lead2S`, `lag2S`; optional output limits; needs an exciter), `IEEEST` (required `ieeestInput` 1 speed or 3
+  electrical power, `ieeestT1S`..`ieeestT6S`, `ieeestKs`; optional filter `ieeestA1S`, `ieeestA3S`, `ieeestA5S`, output
+  limits and the `ieeestVcuPu` / `ieeestVclPu` cut-offs), or `PSS2A` / `PSS2B` (required `pss2Input1`, `pss2Input2`,
+  `pss2M`, `pss2N`, `pss2Tw1S`, `pss2Tw2S`, `pss2T6S`, `pss2Tw3S`, `pss2Tw4S`, `pss2T7S`, `pss2Ks2`, `pss2Ks3`, `pss2T8S`,
+  `pss2T9S`, `pss2Ks1`, `pss2T1S`..`pss2T4S`; optional output limits; PSS2B also requires `pss2bT10S`, `pss2bT11S` and
+  takes the input limits `pss2bInput1MaxPu`..`pss2bInput2MinPu`; PSS2C takes the PSS2B parameters and also requires
+  `pss2cT12S`, `pss2cT13S`, with the optional output-logic pair `pss2cPssOnPu`, `pss2cPssOffPu`); `governor` with `model` `TGOV1` (required
   `droopPu`, `tgov1ValveTimeS`, `tgov1ReheatLeadS`, `tgov1ReheatLagS`; optional `turbineDampingPu`, `valveMinPu`,
   `valveMaxPu`), `IEEEG1` (required `droopPu`, `ieeeg1LagS` T1, `ieeeg1LeadS` T2, `ieeeg1ValveTimeS` T3, `ieeeg1ChestS`
   T4, `ieeeg1ReheatS` T5, `ieeeg1CrossoverS` T6, `ieeeg1LpS` T7; optional `ieeeg1K1`..`ieeeg1K8` (summing to 1; absent:
   K1 = 1, the rest 0), `valveMinPu`, `valveMaxPu`, `ieeeg1UoPuPerS`, `ieeeg1UcPuPerS` (valve rate limits, unit
   `MW/s/MW`, i.e. pu of the machine base per second)), `GAST` (the simple gas turbine: required `droopPu` R, `gastValveTimeS` T1,
   `gastTurbineTimeS` T2, `gastExhaustTimeS` T3, `gastAmbientLimitPu` AT, `gastTemperatureGain` KT; optional `valveMinPu`,
-  `valveMaxPu`, `turbineDampingPu` DTURB) or `HYGOV` (GridSim's transient-droop hydro governor with the
+  `valveMaxPu`, `turbineDampingPu` DTURB), `GGOV1` (the GE general governor: required `ggov1Rselect` 1, 0, -1 or -2,
+  `ggov1Flag` 0 or 1, `droopPu` R, `ggov1TpelecS`, `ggov1MaxErrPu`, `ggov1MinErrPu`, `ggov1Kpgov`, `ggov1Kigov`,
+  `ggov1Kdgov`, `ggov1TdgovS`, `valveMaxPu` Vmax, `valveMinPu` Vmin, `ggov1TactS`, `ggov1Kturb`, `ggov1WfnlPu`,
+  `ggov1TbS`, `ggov1TcS`, `ggov1TfloadS`, `ggov1Kpload`, `ggov1Kiload`, `ggov1LdrefPu`, `ggov1RopenPuPerS`,
+  `ggov1RclosePuPerS`; optional `turbineDampingPu` Dm (0 or above), `ggov1Kimw`, `ggov1AsetPuPerS`, `ggov1Ka`, `ggov1TaS`,
+  `ggov1TrateMw` (above 0: the per-unit values are on the turbine rating), `ggov1TsaS`, `ggov1TsbS`, `ggov1RupPuPerS`,
+  `ggov1RdownPuPerS`, and `ggov1TengS` and `ggov1DbPu`, which must be 0), `WSIEG1` (the WECC modified IEEE type 1:
+  required `wsieg1K`, `wsieg1T1S`..`wsieg1T7S`, `wsieg1UoPuPerS`, `wsieg1UcPuPerS`, `valveMaxPu` PMAX, `valveMinPu`
+  PMIN; optional `wsieg1K1`..`wsieg1K8` (summing to 1; absent: K1 = 1), the gain table `wsieg1Gv1`, `wsieg1Pgv1` ..
+  `wsieg1Gv5`, `wsieg1Pgv5` (all 0: the identity), `wsieg1Iblock` 0 to 3, and the deadbands `wsieg1Db1Pu`,
+  `wsieg1ErrPu`, `wsieg1Db2Pu`, which must be 0) or `HYGOV` (GridSim's transient-droop hydro governor with the
   ideal water column: required `droopPu` (Rp), `hygovTransientDroopPu`, `hygovResetTimeS`, `hygovGateTimeS`,
-  `hygovWaterTimeS`; optional gate limits as `valveMinPu` / `valveMaxPu`). The lumped governor (`model` `lumped`) and
+  `hygovWaterTimeS`; optional gate limits as `valveMinPu` / `valveMaxPu`) or `IEEEG3` (the IEEE 1973 hydro governor:
+  required `ieeeg3TgS`, `ieeeg3TpS`, `ieeeg3UoPuPerS`, `ieeeg3UcPuPerS`, `valveMaxPu` PMAX, `valveMinPu` PMIN, `droopPu`
+  sigma, `ieeeg3TransientDroopPu` delta, `ieeeg3TrS`, `ieeeg3TwS`; optional turbine coefficients `ieeeg3A11`, `ieeeg3A13`,
+  `ieeeg3A21`, `ieeeg3A23`, absent: 0.5, 1, 1.5, 1). The lumped governor (`model` `lumped`) and
   its `governorTimeConstantS` / `responsiveFraction` are the frequency model's, not a machine's, and are refused here.
   Absent valve floors are 0, so a motoring unit needs an explicit negative `valveMinPu`; every governor and exciter must
   be able to hold the solved operating point inside its limits, or the study stops with the reason (R252).
 - **Provenance** decides the label: the RMS output drops INDICATIVE only when the file covers every machine and every
   value is `Recorded` or `DerivedFromRecorded`.
+
+### 2.2 Unit protection (RC5): class default and per-unit override
+
+The relays a generating unit carries itself (81U / 81O, 81R, 78, 27 / 59, 32, 40) have settings that belong to the unit,
+not its technology. The class default is a template of kind `unitProtection` (local or imported; per-parameter
+provenance, placeholders CuratedPlaceholder with `[VERIFY]`). A generator takes it with its optional `protectionTemplate`
+member, or by a binding rule whose template is a `unitProtection` template (matched on the unit's `type`, as dynamics
+bindings are; the unit's own reference wins). One unit's own values go on top through an override with a `unit` member
+(the generator name): `params` (bare or `{v, prov}`), `reason`, `"shadow": "explicit"`, optional `provenance`; a value
+without a source becomes CuratedPlaceholder `[VERIFY]` quoting the reason. Resolution per setting: unit override, else
+template, else absent (never invented). `rocofPreset` (`legacy`, `legacy-high-impedance`, `modern`) and
+`interfacePreset` (`g99-hv`, `g99-lv`) expand to values cited to EREC G59 / G99. Every existing case loads and solves
+unchanged; the full rules and the sources are in the technical manual, chapter 28, "Unit protection (RC5)".
+
+For a study bound to a PSS/E RAW case (`dynamics-study --unit-protection`), the same templates and per-unit values go in a
+unit protection file, `gridsim-unit-protection/1` (`schemas/unitprotection/unit-protection.schema.json`, validated with
+the v2 schema set): `templates` (each kind `unitProtection`, v2 library shape) and `units` (`unit`, `template`, optional
+`params` with `reason` and `provenance`). A unit is named by its PSS/E machine key `<bus>:<id>` (the RAW generator record's
+bus number and machine ID, quotes and surrounding blanks removed, case kept), for example `101:1`.
 
 ## 3. The rules GridSim enforces (output requirements from the off)
 
@@ -229,7 +283,7 @@ A standalone document, given to the RMS study with `gridsim stability <case> --r
 ## 6. Where to look
 
 - Schemas: `schemas/v1/`, `schemas/v2/` (start with `case.schema.json`, `network.schema.json`, `library.schema.json`,
-  `common.schema.json`), kinds in `schemas/v2/kinds/`.
+  `common.schema.json`), kinds in `schemas/v2/kinds/`; the unit protection file in `schemas/unitprotection/`.
 - Examples: the bundled v1 folders under `data/` (`data/uk` is small); v2 test fixtures under
   `tests/GridSim.Tests/fixtures/v2/`; library placeholders under `data/library/placeholders/`.
 - Docs: the GridSim technical chapters on file formats and the v2 schema (`docs/technical/`), and `docs/developer/submodules.md`.

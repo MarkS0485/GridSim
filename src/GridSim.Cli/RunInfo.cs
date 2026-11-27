@@ -88,7 +88,8 @@ public static class RunInfo
             }
             else if (OperatingSystem.IsMacOS())
             {
-                var psi = new System.Diagnostics.ProcessStartInfo("sysctl", "-n machdep.cpu.brand_string")
+                // R3-04: by its full path (a bare name is resolved against the current folder before PATH by .NET on macOS).
+                var psi = new System.Diagnostics.ProcessStartInfo("/usr/sbin/sysctl", "-n machdep.cpu.brand_string")
                 {
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,

@@ -606,7 +606,7 @@ are skipped), which grows linearly, while the dense footprint grows with `n^2`. 
 LU, whose column `k` depends on the fill of columns `0 .. k-1` (sequential by data dependency) and whose pivoting and
 fill are data-dependent over irregular index structures; and Newton pays a fresh Jacobian transfer and a
 kernel launch on every iteration. The measurements in `docs/developer/benchmarks/history/server-results-2026-07/a100-results.md` (each GPU compared with its
-own co-located EPYC, one solve at a time, a validated driver stack) confirm it:
+own co-located EPYC, one solve at a time, a checked driver stack) confirm it:
 
 - `case2869pegase`: 68 ms `cpu-sparse` (A100 host), 65 ms (H100 host); `cuda-sparse` 4,851 ms and 4,320 ms;
   `cuda-dense` 54,886 ms and 44,496 ms; the CPU dense engine of that run took 46,695 ms.
@@ -663,7 +663,7 @@ sites are not covered by it.
 | `CriticalResidualVarianceFraction` | `1e-8` | `NumericTolerances.cs` | A measurement with `Omega_ii <= 1e-8 * sigma_i^2` is critical (`BadDataAnalysis.CriticalFloor`) |
 | `PowerFlowOptions.Tolerance` | `1e-8` pu | `PowerFlow/PowerFlowOptions.cs` | Largest mismatch at which Newton stops |
 | `PowerFlowOptions.MaxIterations` | 30 | `PowerFlowOptions.cs` | Newton iteration cap |
-| `PowerFlowOptions.MaxQLimitPasses` | 12 | `PowerFlowOptions.cs` | Q-limit outer-loop passes |
+| `PowerFlowOptions.MaxQLimitPasses` | 100 | `PowerFlowOptions.cs` | Q-limit outer-loop passes |
 | `NewtonShell.MaxUndampedStep` | `0.4` (rad or pu) | `PowerFlow/NewtonShell.cs` | Largest component applied undamped; larger steps are scaled so the largest equals it |
 | `NewtonShell.VmFloorPu` | `0.01` pu (`0.2` before 2.1.073) | `NewtonShell.cs` | Floor on a PQ voltage magnitude after an update |
 | `NewtonShell.QLimitTolMva`, `RevertVoltTolPu` | `1e-3` MVA, `1e-4` pu | `NewtonShell.cs` | Q-limit comparison slack; PQ to PV revert deadband |

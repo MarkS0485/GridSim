@@ -24,7 +24,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class N151ShellAuditIrlsHarmonicsTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-n151-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-n151-{Guid.NewGuid():N}");
 
     public N151ShellAuditIrlsHarmonicsTests() => Directory.CreateDirectory(_dir);
 

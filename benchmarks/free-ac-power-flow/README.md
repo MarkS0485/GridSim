@@ -1,5 +1,12 @@
 # AC power-flow benchmark
 
+> The authoritative harness is now the
+> [GridSim-Harness repository](https://github.com/MarkS0485/GridSim-Harness):
+> the Linux launcher, the suite runner, the scheduler, the tests, the case
+> set up to 82,000 buses and every later fix live there. This folder is an
+> earlier snapshot, kept because the published results cite it. Run and
+> change the benchmark from GridSim-Harness.
+
 The benchmark compares balanced AC load flow across nine solver paths.
 The default case is MATPOWER 8.1 PEGASE with 1,354 buses. See the [results and pre-run
 criteria](https://marks0485.github.io/GridSim/developer/benchmarks/)

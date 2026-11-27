@@ -28,7 +28,7 @@ public sealed class PostRc3CliJTests
     [Fact]
     public void CLI21_interpose_refuses_a_second_positional_with_exit_2()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-postrc3-j-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-postrc3-j-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

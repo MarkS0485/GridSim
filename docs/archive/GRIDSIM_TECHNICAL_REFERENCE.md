@@ -29187,7 +29187,7 @@ October 2026 (D-DOC-096 / 097 / 098):
 | Flag | Default | Meaning |
 |---|---|---|
 | `--bus` | required (or `--all-buses`) | Fault bus id. |
-| `--type` | `3ph` | `3ph` (three-phase), `ll` (line-to-line), `slg` (single-line-to-earth, on the zero-sequence network) or `dlg` (double-line-to-earth, the earth current `|3 I0|`). |
+| `--type` | `3ph` | `3ph` (three-phase), `ll` (line-to-line), `slg` (single-line-to-earth, on the zero-sequence network) or `dlg` (double-line-to-earth, the earth current `\|3 I0\|`). |
 | `--objective` | `max` | `max` (voltage factor c = 1.10 HV / 1.05 LV, equipment rating) or `min` (c = 1.00 / 0.95, protection sensitivity). |
 | `--tb` | 0.10 | Breaker minimum time delay (s) for Ib and the DC component; above 0. |
 | `--tk` | 1.0 | Fault duration (s) for Ith; above 0. |

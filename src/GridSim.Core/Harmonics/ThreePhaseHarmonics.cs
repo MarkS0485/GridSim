@@ -142,7 +142,9 @@ public static class ThreePhaseHarmonicPenetration
         // source is part of the reference (zero harmonic voltage); buses switched together share one set of unknowns.
         var reduced = new Dictionary<int, int>();
         var busIds = new List<int>();
-        int sourceId = model.Buses.First(b => b.IsSource).Id;
+        // ANA-12: a feeder with no source bus is refused by name ("Sequence contains no matching element" before).
+        int sourceId = (model.Buses.FirstOrDefault(b => b.IsSource)
+            ?? throw new ArgumentException("Three-phase harmonic study: the feeder has no source bus, so there is no harmonic reference.", nameof(model))).Id;
         int sourceNode = nodeOf[sourceId];
         var unknownOfNode = new Dictionary<int, int>();
         int m = 0;

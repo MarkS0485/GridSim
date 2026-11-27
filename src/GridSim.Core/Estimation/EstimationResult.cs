@@ -5,7 +5,7 @@ using GridSim.Core.Numerics;
 namespace GridSim.Core.Estimation;
 
 /// <summary>Terminal outcome of a state estimation. <see cref="EstimationResult.Converged"/> is true
-/// <b>only</b> for <see cref="Converged"/>; every other value means the estimate is not trustworthy -
+/// <b>only</b> for <see cref="EstimationStatus.Converged"/>; every other value means the estimate is not trustworthy -
 /// the same doctrine as <see cref="PowerFlowStatus"/>.</summary>
 /// <summary>The chi-square bad-data test's outcome: whether it ran, and if so whether J passed.</summary>
 public enum ChiSquareOutcome
@@ -92,6 +92,15 @@ public sealed class EstimationResult
     /// </summary>
     public bool IrlsCapReached { get; internal set; }
 
+    /// <summary>The largest finite normalised residual |r_i| / sqrt(Omega_ii) of the final pass, or NaN when the
+    /// normalised residuals were not computed (no redundancy, bad-data detection off, a robust method, or
+    /// <see cref="EstimationOptions.LeanResiduals"/> with a passed chi-square test). Reported whether or not anything was
+    /// removed, and never acted on unless <see cref="EstimationOptions.LnrDetection"/> is on.</summary>
+    public double MaxNormalizedResidual { get; internal set; } = double.NaN;
+
+    /// <summary>The measurement with <see cref="MaxNormalizedResidual"/>, or null when that is NaN.</summary>
+    public Measurement? MaxNormalizedResidualMeasurement { get; internal set; }
+
     /// <summary>GR-518: how many times the Feasible method's interior guard set a voltage magnitude up to its floor
     /// (<see cref="FeasibilityConstraints.VmFloor"/>) over the whole estimate. 0 for every other method and whenever the
     /// guard never had to act. A non-zero count means the state leaned on the backstop, not on the measurements.</summary>
@@ -144,7 +153,7 @@ public sealed class EstimationResult
     /// with the declared sigmas; NaN when there is no redundancy to test against.</summary>
     public required double ChiSquareThreshold { get; init; }
 
-    /// <summary>True when J(x^) <= <see cref="ChiSquareThreshold"/> (vacuously true with no
+    /// <summary>True when J(x^) &lt;= <see cref="ChiSquareThreshold"/> (vacuously true with no
     /// redundancy - an undetectable gross error is still possible then). Also true when the test never ran
     /// (unobservable, non-converged or non-finite runs, bad-data detection off): read
     /// <see cref="ChiSquareTest"/> for whether it actually ran (R261). N208 (October 2026): the estimate export does not

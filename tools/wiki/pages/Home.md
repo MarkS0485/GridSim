@@ -14,7 +14,7 @@ mark@gridsimdigitaltwin.co.uk.
 Every numerical result is double precision end to end and deterministic to the bit, and the core solvers are
 cross-checked against independent open-source tools.
 
-The latest release is [2.1.073 RC-4](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.073-RC-4), with ready-built Windows, Linux and
+The latest release is [2.1.105 RC-5](https://github.com/MarkS0485/GridSim/releases/tag/v2.1.105-RC-5), with ready-built Windows, Linux and
 macOS (Apple silicon) binaries. The full documentation lives on the project site; this wiki is only a short front
 door.
 

@@ -261,7 +261,7 @@ public class Cf5CliFollowUpTests
     [Fact]
     public void Dist3ph_harmonics_stamps_the_feeder_converters_only_when_asked()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-cf5-afe-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-cf5-afe-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

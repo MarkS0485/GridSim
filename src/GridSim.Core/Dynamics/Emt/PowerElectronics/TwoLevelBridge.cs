@@ -87,7 +87,7 @@ public sealed class TwoLevelBridge : IConverterModel
         ArgumentNullException.ThrowIfNull(pwm);
         return Add(net, name, dcPositive, dcNegative, ac, ValveKind.GatedDiode, valve,
             (t, leg, upper) => upper ? pwm.UpperOn(t, leg) : !pwm.UpperOn(t, leg),
-            $"two-level voltage-source converter, switched valves (gated diodes), sine PWM carrier {pwm.CarrierHz:R} Hz, carrier phase {pwm.CarrierPhaseFraction:R} of a period, no dead time");
+            FormattableString.Invariant($"two-level voltage-source converter, switched valves (gated diodes), sine PWM carrier {pwm.CarrierHz:R} Hz, carrier phase {pwm.CarrierPhaseFraction:R} of a period, no dead time"));
     }
 }
 

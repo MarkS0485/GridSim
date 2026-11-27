@@ -621,18 +621,24 @@ internal static class Dist3phMeshCommand
             else
             {
                 if (!File.Exists(file)) { Console.Error.WriteLine($"error: case file not found: {file}"); return CliExit.InputError; }
-                byte[] bytes = File.ReadAllBytes(file!);
+                // CLI-08: the verb's own case format is held to the licence's bus limit like every other network (it used to be
+                // solved at any size): one bus per node of the case ("nodes", or the two nodes of a "swer" case), bundled only by
+                // the content rule checked before and after the read.
+                byte[] bytes = GridSim.Core.Licensing.BundledNetworks.BundledAcrossLoad(file!, () => File.ReadAllBytes(file!), out bool meshBundled);
                 sha = CaseIdentity.Hash(bytes);
-                using (JsonDocument doc = JsonDocument.Parse(bytes, new JsonDocumentOptions { AllowTrailingCommas = false }))
+                int meshBuses;
+                using (JsonDocument doc = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes), new JsonDocumentOptions { AllowTrailingCommas = false }))
                 {
                     TransmissionSecurityCommand.CheckDuplicates(doc.RootElement);
                     parsed = Parse(doc.RootElement);
+                    meshBuses = doc.RootElement.TryGetProperty("nodes", out JsonElement nodeList) && nodeList.ValueKind == JsonValueKind.Array ? nodeList.GetArrayLength() : 2;
                 }
+                Gated.AdmitCount(meshBuses, meshBundled);
             }
             if (values.TryGetValue("--steps", out string? sf))
             {
                 if (!File.Exists(sf)) { Console.Error.WriteLine($"error: steps file not found: {sf}"); return CliExit.InputError; }
-                using JsonDocument sd = JsonDocument.Parse(File.ReadAllBytes(sf), new JsonDocumentOptions { AllowTrailingCommas = false });
+                using JsonDocument sd = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(File.ReadAllBytes(sf)), new JsonDocumentOptions { AllowTrailingCommas = false });
                 TransmissionSecurityCommand.CheckDuplicates(sd.RootElement);
                 steps = ParseSteps(sd.RootElement);
             }

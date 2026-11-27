@@ -145,7 +145,7 @@ public sealed partial class B5ConverterModelsTests
     [Fact]
     public void N291_the_cli_fleet_verb_takes_the_forming_switches()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-b5-n291-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-b5-n291-" + Guid.NewGuid().ToString("N"));
         try
         {
             CliProcess.Result r = CliProcess.RunBuilt("fleet", "--event", "gb-largest-loss-1320", "--forming", "vsm",

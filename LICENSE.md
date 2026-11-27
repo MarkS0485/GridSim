@@ -5,7 +5,7 @@
 Copyright (C) 2026 Mark Shirley (MarkS0485). All rights reserved.
 
 This licence covers **GridSim** (the power-grid simulator: GridSim.Core, GridSim.Gda,
-and the CLI, Web, WPF and GPU front-ends) and **GDA** (the Grid Data Archive ingestion
+and the CLI, Web, WPF and GPU front-ends) and **GDA** (the Grid Data Analysis ingestion
 and network-model tooling) - together **"the Software"**. From version 1.3.0 the
 Software is **source-available, proprietary** software. It is not open source.
 Releases published before version 1.3.0 under the GNU GPL v3.0-or-later remain

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gridsim.local/schemas/usermodel/gridsim-plugins-1.schema.json",
+  "title": "gridsim-plugins/1: the model plug-in configuration (RC5 WP12)",
+  "description": "The only way a model plug-in is loaded: dynamics-study --model-plugins <file> or gridsim user-model check-plugin <file>. Each assembly path resolves inside root (no escape, no absolute path outside, no network or device path, no symbolic link or junction), its bytes must hash to sha256, it must carry [GridSimModelPlugin(1)] and pass the determinism lint. Every check runs on every entry before anything is loaded. The listed ids must be unique and must not be the id of a shipped declarative model. Every object forbids unknown members; a duplicate member is refused by the parser.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "assemblies"],
+  "properties": {
+    "schema": { "const": "gridsim-plugins/1" },
+    "root": { "type": "string", "description": "The folder the assembly paths resolve in. Relative to this file; defaults to this file's folder." },
+    "assemblies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "models"],
+        "properties": {
+          "path": { "type": "string", "description": "The assembly file, relative to root (or absolute inside it)." },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "The SHA-256 of the file's exact bytes, lower-case hex." },
+          "models": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[A-Z0-9_]{1,16}$" }, "description": "The model ids to take from the assembly." }
+        }
+      }
+    }
+  }
+}

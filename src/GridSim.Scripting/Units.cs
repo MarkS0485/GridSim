@@ -2,8 +2,10 @@ using System.Globalization;
 
 namespace GridSim.Scripting;
 
-/// <summary>The unit types of grammar v1. A unit is a type: a quantity of the wrong unit is refused at validation.</summary>
-public enum Unit { Mw, Mvar, Mva, Pu, Kv, Hz, Ms, S, Deg }
+/// <summary>The unit types of grammar v1. A unit is a type: a quantity of the wrong unit is refused at validation. <see cref="Ka"/>
+/// (RC5 WP11) is the unit of the STUDIES extension's IK reading only: it is not in <see cref="Units.All"/>, so no number can be
+/// written in it and no grammar 1 message names it.</summary>
+public enum Unit { Mw, Mvar, Mva, Pu, Kv, Hz, Ms, S, Deg, Ka }
 
 public static class Units
 {
@@ -11,7 +13,7 @@ public static class Units
     public static string Keyword(Unit u) => u switch
     {
         Unit.Mw => "MW", Unit.Mvar => "MVAR", Unit.Mva => "MVA", Unit.Pu => "PU", Unit.Kv => "KV",
-        Unit.Hz => "HZ", Unit.Ms => "MS", Unit.S => "S", Unit.Deg => "DEG",
+        Unit.Hz => "HZ", Unit.Ms => "MS", Unit.S => "S", Unit.Deg => "DEG", Unit.Ka => "KA",
         _ => throw new ArgumentOutOfRangeException(nameof(u)),
     };
 

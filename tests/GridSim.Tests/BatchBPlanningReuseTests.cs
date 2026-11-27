@@ -8,7 +8,7 @@ public sealed class BatchBPlanningReuseTests
     [Fact]
     public void A_locked_completion_record_is_reported_as_a_write_failure_not_an_unhandled_exception()
     {
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-batchb-plan-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-batchb-plan-" + Guid.NewGuid().ToString("N"));
         try
         {
             string fixture = PlanningStudyExpansionTests.FixtureDir();

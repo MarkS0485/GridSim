@@ -13,7 +13,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr403CliExitCodeBehaviourTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-gr403-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-gr403-" + Guid.NewGuid().ToString("N"));
 
     public Gr403CliExitCodeBehaviourTests() => Directory.CreateDirectory(_dir);
 

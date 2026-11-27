@@ -552,7 +552,7 @@ public sealed partial class V2CaseLoaderTests
     /// <summary>A fresh temp folder, deleted on dispose.</summary>
     private sealed class TempFolder : IDisposable
     {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gridsim-v2load-" + Guid.NewGuid().ToString("N"));
+        public string Path { get; } = TestTemp.Under("gridsim-v2load-" + Guid.NewGuid().ToString("N"));
         public TempFolder() => Directory.CreateDirectory(Path);
         public void Dispose() { try { Directory.Delete(Path, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }

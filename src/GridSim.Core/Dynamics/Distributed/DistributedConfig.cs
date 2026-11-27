@@ -47,7 +47,7 @@ public sealed record DistributedConfig
 
     /// <summary>
     /// Optional externally-provided per-corridor propagation delay tau (seconds), keyed by (fromBus, toBus)
-    /// - e.g. GDA's `propagation_delays` lake product streamed over the GDA<->GridSim bridge. When a domain
+    /// - e.g. GDA's `propagation_delays` lake product streamed over the GDA&lt;->GridSim bridge. When a domain
     /// pair's representative buses are found here, that measured/derived tau is used instead of GridSim's
     /// first-order model. Null => always use the first-order model.
     /// </summary>

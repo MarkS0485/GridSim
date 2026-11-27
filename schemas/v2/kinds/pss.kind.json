@@ -2,16 +2,20 @@
   "schema": "gridsim-kind/2",
   "kind": "pss",
   "title": "Power system stabiliser",
-  "description": "PSS1A stabiliser on the speed signal. Dynamics wiring: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired).",
+  "description": "Power-system stabiliser: PSS1A on the speed signal, IEEEST, or the dual-input PSS2A / PSS2B (speed and electrical power). Dynamics wiring: Mark-gated. markGated (N312, October 2026): false on every parameter a gridsim-dynamics/2 file feeds into the RMS study (F23, wired).",
   "params": {
     "model": {
       "type": "enum",
       "values": [
-        "PSS1A"
+        "PSS1A",
+        "IEEEST",
+        "PSS2A",
+        "PSS2B",
+        "PSS2C"
       ],
       "required": true,
       "markGated": false,
-      "description": "Power system stabiliser model.",
+      "description": "Power system stabiliser model. IEEEST takes the ieeest... parameters; PSS2A and PSS2B take the pss2... parameters (PSS2B also the pss2b... ones). Their inputs are rotor speed deviation (code 1) or electrical power on the machine base (code 3). PSS2C (IEEE 421.5-2016) takes the PSS2B parameters plus pss2cT12S and pss2cT13S (a fourth lead-lag) and, optionally, the output-logic thresholds pss2cPssOnPu and pss2cPssOffPu.",
       "codeDefaults": []
     },
     "gain": {
@@ -131,6 +135,411 @@
           "value": 0.1
         }
       ]
+    },
+    "ieeestInput": {
+      "type": "integer",
+      "unit": "1",
+      "min": 1,
+      "max": 3,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST input code ICS: 1 rotor speed deviation, 3 electrical power (machine base). Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestA1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST filter lag A1 (s). Default 0.",
+      "codeDefaults": []
+    },
+    "ieeestA3S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST filter lag A3 (s). Default 0.",
+      "codeDefaults": []
+    },
+    "ieeestA5S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST filter lead A5 (s); above 0 needs A1 or A3 above 0. Default 0. (The second-order A2, A4, A6 are not modelled.)",
+      "codeDefaults": []
+    },
+    "ieeestT1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST lead time constant T1 (s); a stage with both times 0 is bypassed. Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestT2S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST lag time constant T2 (s); a stage with both times 0 is bypassed. Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestT3S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST lead time constant T3 (s); a stage with both times 0 is bypassed. Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestT4S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST lag time constant T4 (s); a stage with both times 0 is bypassed. Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestT5S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST washout numerator T5 (s) of KS sT5/(1 + sT6). Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestT6S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST washout denominator T6 (s), above 0. Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestKs": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST gain KS. Required for model IEEEST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeestOutputMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST output upper limit LSMAX (pu). Default unlimited.",
+      "codeDefaults": []
+    },
+    "ieeestOutputMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST output lower limit LSMIN (pu). Default unlimited.",
+      "codeDefaults": []
+    },
+    "ieeestVcuPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST output cut-off VCU (pu terminal voltage): Vs = 0 while Vt is above it; 0 (the default) ignores it.",
+      "codeDefaults": []
+    },
+    "ieeestVclPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEST output cut-off VCL (pu terminal voltage): Vs = 0 while Vt is below it; 0 (the default) ignores it.",
+      "codeDefaults": []
+    },
+    "pss2Input1": {
+      "type": "integer",
+      "unit": "1",
+      "min": 1,
+      "max": 3,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B input 1 code ICS1: 1 rotor speed deviation, 3 electrical power (machine base). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Input2": {
+      "type": "integer",
+      "unit": "1",
+      "min": 1,
+      "max": 3,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B input 2 code ICS2: 1 rotor speed deviation, 3 electrical power (machine base). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2M": {
+      "type": "integer",
+      "unit": "1",
+      "min": 0,
+      "max": 8,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B ramp-tracking filter order M (M x N at most 8; 0 bypasses the filter). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2N": {
+      "type": "integer",
+      "unit": "1",
+      "min": 0,
+      "max": 8,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B ramp-tracking filter order N (M x N at most 8; 0 bypasses the filter). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Tw1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B first washout on input 1, above 0 time constant TW1 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Tw2S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B second washout on input 1; 0 bypasses it time constant TW2 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T6S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B lag on input 1 time constant T6 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Tw3S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B first washout on input 2, above 0 time constant TW3 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Tw4S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B second washout on input 2; 0 bypasses it time constant TW4 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T7S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B lag on input 2 time constant T7 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T8S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B ramp-tracking filter lead time constant T8 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T9S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B ramp-tracking filter lag time constant T9 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B first lead time constant T1 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T2S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B first lag time constant T2 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T3S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B second lead time constant T3 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2T4S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B second lag time constant T4 (s). Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Ks1": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B stabiliser gain KS1. Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Ks2": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B input 2 path gain KS2. Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2Ks3": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B input 2 mixing gain KS3. Required for models PSS2A, PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2OutputMaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B output upper limit VSTMAX (pu). Default unlimited.",
+      "codeDefaults": []
+    },
+    "pss2OutputMinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2A / PSS2B output lower limit VSTMIN (pu). Default unlimited.",
+      "codeDefaults": []
+    },
+    "pss2bT10S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2B third lead time constant T10 (s). Required for models PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2bT11S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2B third lag time constant T11 (s). Required for models PSS2B and PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2bInput1MaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2B input 1 upper limit VS1MAX. Default unlimited.",
+      "codeDefaults": []
+    },
+    "pss2bInput1MinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2B input 1 lower limit VS1MIN. Default unlimited.",
+      "codeDefaults": []
+    },
+    "pss2bInput2MaxPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2B input 2 upper limit VS2MAX. Default unlimited.",
+      "codeDefaults": []
+    },
+    "pss2bInput2MinPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2B input 2 lower limit VS2MIN. Default unlimited.",
+      "codeDefaults": []
+    },
+    "pss2cT12S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2C fourth lead time constant T12 (s); T12 = T13 = 0 bypasses the stage. Required for model PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2cT13S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "PSS2C fourth lag time constant T13 (s). Required for model PSS2C in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "pss2cPssOnPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2C output logic: the stabiliser switches on when the electrical power rises above this (pu on the machine base). Give with pss2cPssOffPu; absent: no output logic.",
+      "codeDefaults": []
+    },
+    "pss2cPssOffPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "PSS2C output logic: the stabiliser switches off when the electrical power falls below this (pu on the machine base), at most pss2cPssOnPu.",
+      "codeDefaults": []
     }
   }
 }

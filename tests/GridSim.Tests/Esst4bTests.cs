@@ -134,7 +134,7 @@ public class Esst4bTests
         string dyr = "     6 'GENROU' 1   7.0  0.03  0.50  0.05  3.0  0.0  1.60  1.55  0.25  0.40  0.18  0.12  0.0  0.0 /\n"
                    + "     6 'ESST4B' 1   0.0  3.15  3.15  1.0  -0.87  0.01  1.0  0.0  1.0  -0.87  0.0  6.5  0.0  11.0  0.113  0.0  0.0 /";
         PsseDyrResult r = PsseDyrReader.Read(dyr, raw, "case14", new PsseDyrOptions { SourceName = "st4b.dyr" });
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-esst4b-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-esst4b-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

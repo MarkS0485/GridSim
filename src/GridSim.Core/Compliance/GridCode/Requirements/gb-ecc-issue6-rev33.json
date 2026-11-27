@@ -1,0 +1,57 @@
+{
+  "schema": "gridsim-gridcode-requirements/1",
+  "id": "gb-ecc-issue6-rev33",
+  "code": "gb-ecc",
+  "title": "GB Grid Code, European Connection Conditions (ECC), Issue 6 Revision 33 (11 June 2025)",
+  "frtShape": "Figure 3 of Regulation (EU) 2016/631, which Figures ECC.6.3.15.2 to ECC.6.3.15.7 use: U = Uret from fault inception up to and including tclear, a line from (tclear, Uclear) to (trec1, Urec1), Urec1 to trec2, a line from (trec2, Urec1) to (trec3, Urec2), Urec2 after trec3. The shape is read from the figure.",
+  "frtProfiles": [
+    { "clause": "ECC.6.3.15.2", "appliesTo": "Type B synchronous power generating module", "moduleTypes": ["B"], "technologies": ["synchronous"], "kvAtLeast": null, "kvBelow": null,
+      "uret": 0.3, "uclear": 0.7, "urec1": 0.7, "urec2": 0.9, "tclear": 0.14, "trec1": 0.14, "trec2": 0.45, "trec3": 1.5 },
+    { "clause": "ECC.6.3.15.3", "appliesTo": "Type C and D synchronous power generating module connected below 110 kV", "moduleTypes": ["C", "D"], "technologies": ["synchronous"], "kvAtLeast": null, "kvBelow": 110,
+      "uret": 0.1, "uclear": 0.7, "urec1": 0.7, "urec2": 0.9, "tclear": 0.14, "trec1": 0.14, "trec2": 0.45, "trec3": 1.5 },
+    { "clause": "ECC.6.3.15.4", "appliesTo": "Type D synchronous power generating module connected at or above 110 kV", "moduleTypes": ["D"], "technologies": ["synchronous"], "kvAtLeast": 110, "kvBelow": null,
+      "uret": 0, "uclear": 0.25, "urec1": 0.5, "urec2": 0.9, "tclear": 0.14, "trec1": 0.25, "trec2": 0.45, "trec3": 1.5 },
+    { "clause": "ECC.6.3.15.5", "appliesTo": "Type B, C and D power park module connected below 110 kV", "moduleTypes": ["B", "C", "D"], "technologies": ["ppm", "ppm-gfm"], "kvAtLeast": null, "kvBelow": 110,
+      "uret": 0.10, "uclear": 0.10, "urec1": 0.10, "urec2": 0.85, "tclear": 0.14, "trec1": 0.14, "trec2": 0.14, "trec3": 2.2 },
+    { "clause": "ECC.6.3.15.6", "appliesTo": "Type D power park module connected at or above 110 kV", "moduleTypes": ["D"], "technologies": ["ppm", "ppm-gfm"], "kvAtLeast": 110, "kvBelow": null,
+      "uret": 0, "uclear": 0, "urec1": 0, "urec2": 0.85, "tclear": 0.14, "trec1": 0.14, "trec2": 0.14, "trec3": 2.2 },
+    { "clause": "ECC.6.3.15.6", "appliesTo": "DC connected power park module", "moduleTypes": ["B", "C", "D"], "technologies": ["dc-ppm"], "kvAtLeast": null, "kvBelow": null,
+      "uret": 0, "uclear": 0, "urec1": 0, "urec2": 0.85, "tclear": 0.14, "trec1": 0.14, "trec2": 0.14, "trec3": 2.2 },
+    { "clause": "ECC.6.3.15.7", "appliesTo": "HVDC system and remote end HVDC converter station", "moduleTypes": ["B", "C", "D"], "technologies": ["hvdc"], "kvAtLeast": null, "kvBelow": null,
+      "uret": 0, "uclear": 0, "urec1": 0, "urec2": 0.85, "tclear": 0.14, "trec1": 0.14, "trec2": 0.14, "trec3": 2.2 }
+  ],
+  "frtConditions": [
+    { "clause": "ECC.6.3.15.1.2-.3", "text": "Stay connected and stable for balanced and unbalanced faults while the voltage at the connection point stays on or above the line (phase to phase; phase to earth for unbalanced faults)." },
+    { "clause": "ECC.6.3.15.8", "text": "Pre-fault at rated MW and maximum leading power factor, pre-fault voltage 1.0 pu, post-fault voltage not below 0.9 pu." },
+    { "clause": "ECC.6.3.15.8(vii)", "text": "Within 0.5 s of the voltage returning to at least 0.9 pu, active power is back to at least 90 % of its pre-fault level." }
+  ],
+  "recovery": { "clause": "ECC.6.3.15.8(vii)", "voltagePu": 0.9, "delaySeconds": 0.5, "fraction": 0.9 },
+  "reactive": [
+    { "clause": "ECC.6.3.2.1.1", "appliesTo": "Type B synchronous power generating module", "moduleTypes": ["B"], "technologies": ["synchronous"], "powerFactor": 0.95, "qPerPmax": 0.3286841051788632, "testVoltagesPu": [1.0], "figureRead": false },
+    { "clause": "ECC.6.3.2.2.1", "appliesTo": "Type B power park module", "moduleTypes": ["B"], "technologies": ["ppm", "ppm-gfm"], "powerFactor": 0.95, "qPerPmax": 0.3286841051788632, "testVoltagesPu": [1.0], "figureRead": false },
+    { "clause": "Figure ECC.6.3.2.3", "appliesTo": "Type C and D synchronous power generating module", "moduleTypes": ["C", "D"], "technologies": ["synchronous"], "powerFactor": 0.92, "qPerPmax": 0.42599821613620475, "testVoltagesPu": [0.95, 1.0, 1.05], "figureRead": true }
+  ],
+  "reactiveNotTranscribed": { "clause": "Figure ECC.6.3.2.4(a)-(d)", "text": "figure not transcribed: the power park module U-Q/Pmax polygon cannot be read exactly from the published figure; give uqProfile corners with their citation" },
+  "lfsmO": { "clause": "ECC.6.3.7.1.1-.2", "thresholdHz": 50.4, "thresholdFsmHz": 50.5, "droop": 0.10, "minDroop": 0.02, "responseSeconds": 10, "pref": "output" },
+  "lfsmU": { "clause": "ECC.6.3.7.2.1-.2", "moduleTypes": ["C", "D"], "thresholdHz": 49.5, "droop": 0.10, "pref": "output" },
+  "fsm": { "clause": "ECC.6.3.7.3.3, Table 6.3.7.3.3(a) and (b)", "moduleTypes": ["C", "D"], "dp1PerPmax": 0.10, "insensitivityHz": 0.015, "deadbandHz": 0, "droopMin": 0.03, "droopMax": 0.05,
+    "t1WithInertiaMaxSeconds": 2, "t1WithoutInertiaMaxSeconds": 1, "t2Seconds": 10,
+    "trajectory": "at or above the full line of Figure 6 of Regulation (EU) 2016/631: 0 up to t1, a line from (t1, 0) to (t2, dP1), then dP1 (read from the figure)" },
+  "rocof": [
+    { "clause": "ECC.6.3.13.2", "technologies": ["synchronous", "ppm"], "limitHzPerSecond": 1.0, "windowSeconds": 0.5 },
+    { "clause": "ECC.6.3.13.2", "technologies": ["ppm-gfm"], "limitHzPerSecond": 2.0, "windowSeconds": 0.5 },
+    { "clause": "ECC.6.3.13.3", "technologies": ["hvdc"], "limitHzPerSecond": 2.5, "windowSeconds": 1.0 },
+    { "clause": "ECC.6.3.13.4", "technologies": ["dc-ppm"], "limitHzPerSecond": 2.0, "windowSeconds": 1.0 }
+  ],
+  "frequencyBands": {
+    "clause": "ECC.6.1.2.1.2",
+    "rows": [
+      { "area": "GB", "lowHz": 47.0, "highHz": 47.5, "minSeconds": 20, "printed": "at least 20 s" },
+      { "area": "GB", "lowHz": 47.5, "highHz": 49.0, "minSeconds": 5400, "printed": "90 minutes" },
+      { "area": "GB", "lowHz": 49.0, "highHz": 51.0, "minSeconds": null, "printed": "continuous" },
+      { "area": "GB", "lowHz": 51.0, "highHz": 51.5, "minSeconds": 5400, "printed": "90 minutes" },
+      { "area": "GB", "lowHz": 51.5, "highHz": 52.0, "minSeconds": 900, "printed": "15 minutes" }
+    ]
+  },
+  "noTrip": { "clause": "ECC.6.1.2.1.3", "lowHz": 47.5, "highHz": 51.5, "text": "no disconnection by frequency or speed relays between 47.5 Hz and 51.5 Hz" }
+}

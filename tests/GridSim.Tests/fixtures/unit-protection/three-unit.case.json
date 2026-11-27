@@ -1,0 +1,99 @@
+{
+  "schema": "gridsim-case/2",
+  "name": "Unit protection three-unit",
+  "description": "RC5 per-unit protection reference: two unitProtection templates (class defaults), one taken by a protectionTemplate and one by a binding rule, and a per-unit override on each unit. Hand-written, not a real network; the unit values carry Synthetic provenance because they are test values, not any unit's protection schedule.",
+  "system": {
+    "baseMva": 100,
+    "frequencyHz": 50,
+    "dispatch": false
+  },
+  "network": [
+    "three-unit.network.json"
+  ],
+  "localTemplates": [
+    {
+      "id": "gridsim.local.ccgt-placeholder",
+      "rev": 1,
+      "kind": "unitProtection",
+      "status": "active",
+      "title": "Synchronous unit placeholder protection",
+      "description": "A generic synchronous-unit default: placeholder values until the unit's schedule is known.",
+      "params": {
+        "uv1Pu": 0.8,
+        "uv1DelayS": 2.0,
+        "ov1Pu": 1.15,
+        "ov1DelayS": 2.0,
+        "reversePowerPu": 0.02,
+        "reversePowerDelayS": 5.0,
+        "loe1OffsetPu": 0.1,
+        "loe1DiameterPu": 1.0,
+        "loe1DelayS": 0.1,
+        "uf1Hz": 47.0,
+        "uf1DelayS": 2.0,
+        "of1Hz": 52.0,
+        "of1DelayS": 2.0
+      },
+      "provenance": {
+        "_default": {
+          "tag": "CuratedPlaceholder",
+          "note": "[VERIFY] generic class default, not any unit's protection schedule"
+        }
+      }
+    },
+    {
+      "id": "gridsim.local.g99-embedded",
+      "rev": 1,
+      "kind": "unitProtection",
+      "status": "active",
+      "title": "G99 embedded generation (HV)",
+      "description": "Distribution-connected generation at HV: the EREC G99 Issue 2 Table 10.1 interface protection.",
+      "params": {
+        "interfacePreset": "g99-hv"
+      },
+      "provenance": {
+        "_default": {
+          "tag": "CuratedPlaceholder",
+          "note": "[VERIFY] nothing set explicitly; every value comes from the preset"
+        }
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "matchType": "chp",
+      "template": "gridsim.local.g99-embedded@1"
+    }
+  ],
+  "overrides": [
+    {
+      "template": "gridsim.local.ccgt-placeholder@1",
+      "unit": "CCGT B",
+      "params": {
+        "uf1Hz": {
+          "v": 47.5,
+          "prov": {
+            "tag": "Synthetic",
+            "note": "test value standing in for this unit's protection schedule"
+          }
+        },
+        "rocofPreset": "modern"
+      },
+      "reason": "CCGT B's own underfrequency pickup and the modern loss-of-mains RoCoF setting",
+      "shadow": "explicit"
+    },
+    {
+      "template": "gridsim.local.g99-embedded@1",
+      "unit": "Embedded C",
+      "params": {
+        "reversePowerPu": 0.05,
+        "reversePowerDelayS": 2.0
+      },
+      "reason": "Embedded C's reverse power protection from its connection agreement",
+      "shadow": "explicit",
+      "provenance": {
+        "tag": "Synthetic",
+        "note": "test value standing in for this unit's connection agreement"
+      }
+    }
+  ]
+}

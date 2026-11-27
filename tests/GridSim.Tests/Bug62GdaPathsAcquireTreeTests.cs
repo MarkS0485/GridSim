@@ -14,7 +14,7 @@ public sealed class Bug62GdaPathsAcquireTreeTests
 {
     private static string NewRoot()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-bug62-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-bug62-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

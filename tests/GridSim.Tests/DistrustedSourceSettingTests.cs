@@ -31,7 +31,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class DistrustedSourceSettingTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-b2-distrust-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-b2-distrust-" + Guid.NewGuid().ToString("N"));
 
     public DistrustedSourceSettingTests() => Directory.CreateDirectory(_dir);
 

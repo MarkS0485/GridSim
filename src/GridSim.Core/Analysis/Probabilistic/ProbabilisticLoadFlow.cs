@@ -1,3 +1,4 @@
+using System.Globalization;
 using GridSim.Core.Diagnostics;
 using GridSim.Core.Model;
 using GridSim.Core.Numerics;
@@ -72,8 +73,11 @@ public sealed record PlfResult(
 /// Probabilistic load flow over uncertain loads and generation. Defined order: validate, derive streams, draw every
 /// sample in index order, transform to the input space (Cholesky in fixed row order), evaluate each sample independently
 /// on its own model copy, collect in index order, reduce by the fixed tree, quantiles by the type 7 estimator on the
-/// frozen-sorted sample. Samples that fail to converge keep their row with a status and stay in the denominator of every
-/// probability; mean, standard deviation and quantiles use the converged samples (their count is stated).
+/// frozen-sorted sample. Samples that fail to converge keep their row with a status (<see cref="PlfResult.FailedSamples"/>);
+/// every statistic, the probabilities included, is over the converged samples only, so it is conditional on convergence
+/// (ANA-20: a failed sample used to stay in the denominator of every probability as "no violation", and the failed draws
+/// are the heaviest, so the probabilities were biased low). A run with any failed sample is INCOMPLETE, with the failed
+/// count in its reason; one where every sample converged is COMPLETE, with the same numbers as before.
 ///
 /// <para><b>Convolution</b> applies only where the quantity is a sum of independent terms: a DC flow with independent
 /// inputs. An AC evaluator or correlated inputs make it OUT OF SCOPE, with the reason; nothing is approximated.</para>
@@ -330,7 +334,7 @@ public static class ProbabilisticLoadFlow
             double? ex = null, exSe = null;
             if (br.RateAMva > 0)
             {
-                (ex, exSe) = Proportion(exceed, b * (long)total, total, layout, req.Method);
+                (ex, exSe) = Proportion(exceed, b * (long)total, ok, layout, req.Method);
             }
             branchRows.Add(new BranchStatistics(branches[b], br.From, br.To, br.Name ?? "", br.RateAMva, mean, mse, sd, quant, ex, exSe, null));
             AddDigest(digestValues, mean, mse, sd, quant, ex);
@@ -340,15 +344,19 @@ public static class ProbabilisticLoadFlow
         {
             double[] vals = ok.Select(i => volt[v * (long)total + i]).ToArray();
             (double mean, double? mse, double sd, double[] quant) = Summarise(vals, ok, layout, req.Method, qp, req.MaxThreads);
-            (double? lowP, _) = Proportion(vlow, v * (long)total, total, layout, req.Method);
-            (double? highP, _) = Proportion(vhigh, v * (long)total, total, layout, req.Method);
+            (double? lowP, _) = Proportion(vlow, v * (long)total, ok, layout, req.Method);
+            (double? highP, _) = Proportion(vhigh, v * (long)total, ok, layout, req.Method);
             busRows.Add(new BusVoltageStatistics(model.Buses[buses[v]].Id, mean, mse, sd, quant, lowP ?? double.NaN, highP ?? double.NaN));
             AddDigest(digestValues, mean, mse, sd, quant, lowP);
             digestValues.Add(highP ?? double.NaN);
         }
         digestValues.Add(failed.Count);
         ProbabilisticProvenance prov = ProbabilisticProvenance.ForSampled(req.Seed, req.Domain, req.Method, layout, x, digestValues);
-        return new PlfResult(ProbabilisticStatus.Complete, null, method, evaluator, total, ok.Length, failed.Count, qp, errorModel,
+        // ANA-20: a run with failed samples is not complete; its statistics are conditional on convergence.
+        string plfStatus = failed.Count == 0 ? ProbabilisticStatus.Complete : ProbabilisticStatus.Incomplete;
+        string? reason = failed.Count == 0 ? null : string.Create(CultureInfo.InvariantCulture,
+            $"{failed.Count} of {total} samples did not converge; every statistic and probability is over the {ok.Length} converged samples (conditional on convergence).");
+        return new PlfResult(plfStatus, reason, method, evaluator, total, ok.Length, failed.Count, qp, errorModel,
             branchRows, busRows, failed, prov);
     }
 
@@ -410,25 +418,30 @@ public static class ProbabilisticLoadFlow
         return (mean, se, sd, quant);
     }
 
-    // The proportion of ALL samples (non-converged ones in the denominator) with the flag set, and its error.
-    private static (double? P, double? Se) Proportion(byte[] flags, long offset, int total, SampleLayout layout, ProbabilisticMethod method)
+    // ANA-20: the proportion of the CONVERGED samples (okIndex, ascending) with the flag set, and its error; each replicate's
+    // proportion over its own converged samples (no error when a replicate has none). With every sample converged the
+    // sums, divisors and order are those of the old all-sample form, so the numbers are unchanged bit for bit.
+    private static (double? P, double? Se) Proportion(byte[] flags, long offset, int[] okIndex, SampleLayout layout, ProbabilisticMethod method)
     {
+        int n = okIndex.Length;
         double count = 0;
-        for (int i = 0; i < total; i++) count += flags[offset + i];
-        double p = count / total;
+        for (int j = 0; j < n; j++) count += flags[offset + okIndex[j]];
+        double p = count / n;
         double? se = null;
-        if (method == ProbabilisticMethod.MonteCarlo) se = Math.Sqrt(p * (1.0 - p) / total);
+        if (method == ProbabilisticMethod.MonteCarlo) se = Math.Sqrt(p * (1.0 - p) / n);
         else if (method == ProbabilisticMethod.QuasiMonteCarloShifted)
         {
+            var c = new double[layout.Replicates];
+            var m = new int[layout.Replicates];
+            for (int j = 0; j < n; j++) { int r = layout.ReplicateOf(okIndex[j]); c[r] += flags[offset + okIndex[j]]; m[r]++; }
             var reps = new double[layout.Replicates];
-            for (int r = 0; r < layout.Replicates; r++)
+            bool all = true;
+            for (int r = 0; r < layout.Replicates; r++) { if (m[r] == 0) { all = false; break; } reps[r] = c[r] / m[r]; }
+            if (all)
             {
-                double c = 0;
-                for (int i = 0; i < layout.SamplesPerReplicate; i++) c += flags[offset + (long)r * layout.SamplesPerReplicate + i];
-                reps[r] = c / layout.SamplesPerReplicate;
+                double rm = SampleStatistics.Mean(reps, 1);
+                se = Math.Sqrt(SampleStatistics.Variance(reps, rm, 1) / layout.Replicates);
             }
-            double rm = SampleStatistics.Mean(reps, 1);
-            se = Math.Sqrt(SampleStatistics.Variance(reps, rm, 1) / layout.Replicates);
         }
         return (p, se);
     }

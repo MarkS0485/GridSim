@@ -12,7 +12,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr684UserCaseNamedWscc9Tests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-gr684-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-gr684-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {

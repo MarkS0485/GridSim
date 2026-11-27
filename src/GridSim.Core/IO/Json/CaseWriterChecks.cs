@@ -41,8 +41,10 @@ internal static class CaseWriterChecks
     }
 
     /// <summary>A writer whose format cannot hold a two-terminal LCC link refuses a model that has one, naming the links,
-    /// rather than write a case whose power flow differs from the model's.</summary>
-    public static void RefuseLccLinks(GridModel model, string writer)
+    /// rather than write a case whose power flow differs from the model's. RC5: <paramref name="zeroSequenceCarried"/>
+    /// true (the JSON v2 writer's fault-sequence write) lets zero-sequence mutual couplings and machine zero-sequence
+    /// impedances through, because that write carries them; every other refusal is unchanged.</summary>
+    public static void RefuseLccLinks(GridModel model, string writer, bool zeroSequenceCarried = false)
     {
         if (model.LccLinks.Count > 0)
             throw new InvalidDataException(
@@ -68,7 +70,7 @@ internal static class CaseWriterChecks
             throw new InvalidDataException(
                 $"{writer}: the model has {model.TransformerFlowControls.Count} transformer flow control(s) ({string.Join(", ", model.TransformerFlowControls.Select(f => f.Transformer))}), " +
                 "which this format cannot hold; the written case's regulated power flow would differ from the model's.");
-        if (model.ZeroSequenceMutuals.Count > 0 || model.AllGenerators.Any(g => g.ZeroSequenceZPu is not null))
+        if (!zeroSequenceCarried && (model.ZeroSequenceMutuals.Count > 0 || model.AllGenerators.Any(g => g.ZeroSequenceZPu is not null)))
             throw new InvalidDataException(
                 $"{writer}: the model has zero-sequence mutual couplings ({model.ZeroSequenceMutuals.Count}) or machine zero-sequence impedances ({model.AllGenerators.Count(g => g.ZeroSequenceZPu is not null)}), " +
                 "which this format cannot hold; the written case's fault currents would differ from the model's.");

@@ -109,7 +109,7 @@ public static class PmuChannelMapFile
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         FileDto? dto;
-        try { dto = JsonSerializer.Deserialize(File.ReadAllText(path), Json.FileDto); }
+        try { dto = JsonSerializer.Deserialize(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Json.FileDto); }
         catch (JsonException ex) { throw new InvalidDataException($"PMU channel map '{path}' is not valid JSON: {ex.Message}", ex); }
         if (dto is null) throw new InvalidDataException($"PMU channel map '{path}' is empty (JSON null).");
 

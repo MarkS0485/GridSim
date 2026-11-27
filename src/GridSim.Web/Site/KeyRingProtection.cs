@@ -65,6 +65,27 @@ internal static class KeyRingProtection
     /// <c>Auth__KeyPreviousCertificatePassword</c>).</summary>
     public const string PreviousCertificatePasswordSetting = "Auth:KeyPreviousCertificatePassword";
 
+    /// <summary>2.1.074 RC-4-Fixes: configuration key that makes an unencrypted key ring a start-up refusal
+    /// (environment variable <c>Auth__RequireKeyProtection</c>; default false, which keeps the warning only).</summary>
+    public const string RequireProtectionSetting = "Auth:RequireKeyProtection";
+
+    /// <summary>
+    /// With <see cref="RequireProtectionSetting"/> true, stop start-up when the decided <paramref name="plan"/> stores the keys
+    /// unencrypted (Linux without a certificate, or <c>Auth:KeyProtection=none</c>). Unset or false changes nothing. Any value
+    /// that is not true or false stops start-up naming the setting.
+    /// </summary>
+    public static void RequireEncryptedIfAsked(IConfiguration config, Plan plan)
+    {
+        string raw = (config[RequireProtectionSetting] ?? "").Trim();
+        if (raw.Length == 0) return;
+        if (!bool.TryParse(raw, out bool require))
+            throw new InvalidOperationException($"GridSim.Web: configuration setting {RequireProtectionSetting} must be true or false; it is '{raw}'.");
+        if (require && plan.Protector == Protector.None)
+            throw new InvalidOperationException(
+                $"GridSim.Web: {RequireProtectionSetting} is true but the data-protection key ring would be stored unencrypted. "
+                + $"Set {CertificatePathSetting} to a PKCS#12 certificate with its private key (or {ModeSetting}=dpapi on Windows), or remove {RequireProtectionSetting}.");
+    }
+
     /// <summary>The protector the host ends up using.</summary>
     public enum Protector
     {

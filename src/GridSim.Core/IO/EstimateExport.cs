@@ -32,7 +32,7 @@ public static class EstimateExport
         EstimationTrace? trace = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(model, measurements, result, meta, trace));
+        AtomicText.Write(path, /* IO-22 */ ToJson(model, measurements, result, meta, trace));
     }
 
     public static string ToJson(

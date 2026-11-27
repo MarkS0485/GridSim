@@ -22,7 +22,7 @@ public class F038ConnectedCapacityTests : IDisposable
 
     public F038ConnectedCapacityTests()
     {
-        _root = Path.Combine(Path.GetTempPath(), "gridsim-f038-" + Guid.NewGuid().ToString("N"));
+        _root = TestTemp.Under("gridsim-f038-" + Guid.NewGuid().ToString("N"));
         string neso = Path.Combine(_root, "NESO", "RAWData");
 
         // TEC register:

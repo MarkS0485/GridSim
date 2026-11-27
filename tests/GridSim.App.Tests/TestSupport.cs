@@ -26,7 +26,7 @@ internal sealed class TempFolder : IDisposable
 {
     public TempFolder()
     {
-        Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gridsim-app-tests-" + Guid.NewGuid().ToString("N"));
+        Path = TestTemp.Under("gridsim-app-tests-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Path);
     }
 

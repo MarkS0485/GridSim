@@ -16,7 +16,7 @@ public sealed class CgmesStudyCliProcessTests
     /// <summary>Copy the fixture bundle into a fresh folder and write a study file binding it.</summary>
     private static (string Directory, string Study, string BundleSha) Prepare(string? bundleSha = null, string extra = "")
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-cgmes-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-cgmes-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         string[] files = ["p3_EQ.xml", "p3_TP.xml", "p3_SSH.xml", "p3_SV.xml"];
         string[] types = ["EQ", "TP", "SSH", "SV"];

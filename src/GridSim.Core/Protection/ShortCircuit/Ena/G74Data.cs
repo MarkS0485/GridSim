@@ -47,7 +47,7 @@ public sealed record G74Data(IReadOnlyList<G74GeneratorData> Generators, IReadOn
                 foreach (JsonElement e in ge.EnumerateArray())
                 {
                     string w = $"generators[{i++}]";
-                    int bus = (int)Num(e, "bus", w, problems, true);
+                    int bus = BusNumber(e, w, problems);
                     string? name = e.ValueKind == JsonValueKind.Object && e.TryGetProperty("name", out JsonElement ne) && ne.ValueKind == JsonValueKind.String ? ne.GetString() : null;
                     double x1 = Num(e, "xdTransPu", w, problems), xd = Num(e, "xdSyncPu", w, problems);
                     double t2 = Num(e, "tdSubS", w, problems), t1 = Num(e, "tdTransS", w, problems);
@@ -65,7 +65,7 @@ public sealed record G74Data(IReadOnlyList<G74GeneratorData> Generators, IReadOn
                     string w = $"motors[{i++}]";
                     string name = e.ValueKind == JsonValueKind.Object && e.TryGetProperty("name", out JsonElement ne) && ne.ValueKind == JsonValueKind.String ? ne.GetString()! : "";
                     if (name.Length == 0) problems.Add($"{w}: name is required");
-                    int bus = (int)Num(e, "bus", w, problems, true);
+                    int bus = BusNumber(e, w, problems);
                     double mva = Num(e, "ratedMva", w, problems), ilr = Num(e, "lockedRotorCurrentRatio", w, problems);
                     string model = e.ValueKind == JsonValueKind.Object && e.TryGetProperty("decay", out JsonElement de) && de.ValueKind == JsonValueKind.String ? de.GetString()! : "";
                     MotorDecayModel dm = MotorDecayModel.Exponential;
@@ -79,6 +79,19 @@ public sealed record G74Data(IReadOnlyList<G74GeneratorData> Generators, IReadOn
             if (problems.Count > 0) throw new FormatException("g74 data: " + string.Join("; ", problems));
             return new G74Data(gens, motors);
         }
+    }
+
+    /// <summary>ANA-15: a bus number must be a whole number in the int range ("bus": 2.7 was read as bus 2, and a value out of
+    /// range as an unspecified int); a problem line otherwise.</summary>
+    private static int BusNumber(JsonElement e, string where, List<string> problems)
+    {
+        if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty("bus", out JsonElement v) || v.ValueKind != JsonValueKind.Number)
+        { problems.Add($"{where}: 'bus' is required and must be a number"); return 0; }
+        if (v.TryGetInt32(out int bus)) return bus;
+        double d = v.GetDouble();   // a whole number written with a point (2.0) is still that bus
+        if (double.IsFinite(d) && d == Math.Floor(d) && d >= int.MinValue && d <= int.MaxValue) return (int)d;
+        problems.Add($"{where}: 'bus' must be a whole bus number (got {v.GetRawText()})");
+        return 0;
     }
 
     private static double Num(JsonElement e, string key, string where, List<string> problems, bool allowAnySign = false)

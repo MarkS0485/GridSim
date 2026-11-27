@@ -76,7 +76,7 @@ public sealed class ProvenanceManifest
     public static ProvenanceManifest Load(string path)
     {
         string text;
-        try { text = File.ReadAllText(path); }
+        try { text = GridSim.Core.IO.InputFileLimits.ReadAllText(path); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             throw new IOException($"provenance manifest '{path}' cannot be read: {ex.Message}", ex);

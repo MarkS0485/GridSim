@@ -25,7 +25,7 @@ public sealed class Doc11OpfContingencyStorageTests
 
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc11-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc11-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

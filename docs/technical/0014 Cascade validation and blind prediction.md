@@ -122,7 +122,7 @@ nadirs), the RoCoF range, a one-at-a-time tornado with the other parameters at t
 
 | Rule | Value | Where |
 |---|---|---|
-| 2019 replay residual | `|model - recorded| < 0.10` Hz | `Base_model_reproduces_2019_when_fed_the_recorded_facts` |
+| 2019 replay residual | `\|model - recorded\| < 0.10` Hz | `Base_model_reproduces_2019_when_fed_the_recorded_facts` |
 | 2019 recorded nadir pinned | 48.8 Hz to 1 decimal place | same test |
 | 2023 forward residual | `recorded - model` in `[0.15, 0.45]` Hz (positive means the model is too deep) | `Base_model_forward_estimates_2023_to_within_a_few_tenths_Hz` |
 | 2023 recorded nadir pinned | 49.275 Hz to 3 decimal places | same test |
@@ -133,7 +133,7 @@ nadirs), the RoCoF range, a one-at-a-time tornado with the other parameters at t
 | Envelope brackets the record | 48.787 Hz (the recorded 76 s minimum, ch. 13) lies between the 2500 MW and 500 MW nadirs | same test |
 | Ride-through counterfactual | a 10 Hz/s fleet at 1290 MW trips 0 units | `No_dg_fleet_means_no_cascade_and_a_shallower_fall` |
 | Sweep brackets trip and no trip | `CascadeIsPossible`, `NadirMinHz < NadirMaxHz`, 2 samples for k = 1, tag `UnvalidatedAtScale` | `AssetEnvelopeTests.Sweeping_the_trip_threshold_brackets_cascade_and_no_cascade` |
-| Back-test gate | `|nadir err| <= 0.05` Hz and `|RoCoF err| <= 0.05` Hz/s and `|nadir time err| <= 2.0` s | `AssetValidation.Compare`, `ValidationTolerance.Default` |
+| Back-test gate | `\|nadir err\| <= 0.05` Hz and `\|RoCoF err\| <= 0.05` Hz/s and `\|nadir time err\| <= 2.0` s | `AssetValidation.Compare`, `ValidationTolerance.Default` |
 
 The 2019 band is a replay check and the 2023 band is a documented miss: the test fails if the miss shrinks below
 0.15 Hz or grows above 0.45 Hz, so a change to the base arrest model shows up in either direction.

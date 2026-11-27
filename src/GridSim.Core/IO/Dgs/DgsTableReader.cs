@@ -28,7 +28,16 @@ namespace GridSim.Core.IO.Dgs;
 /// <summary>A DGS file that cannot be read: every problem named with its line number.</summary>
 public sealed class DgsFormatException : Exception
 {
-    public DgsFormatException(IReadOnlyList<string> problems) : base("DGS file refused: " + string.Join(" ", problems)) => Problems = problems;
+    /// <summary>IO-15: the message lists at most this many problems, then "... and N more" (the full list is
+    /// <see cref="Problems"/>).</summary>
+    public const int MaxListedProblems = 50;
+
+    public DgsFormatException(IReadOnlyList<string> problems) : base("DGS file refused: " + Listed(problems)) => Problems = problems;
+
+    private static string Listed(IReadOnlyList<string> problems)
+        => problems.Count <= MaxListedProblems
+            ? string.Join(" ", problems)
+            : string.Join(" ", problems.Take(MaxListedProblems)) + " ... and " + (problems.Count - MaxListedProblems).ToString(System.Globalization.CultureInfo.InvariantCulture) + " more.";
     public IReadOnlyList<string> Problems { get; }
 }
 
@@ -53,18 +62,36 @@ public sealed class DgsRow
         return v.Length == 0 ? null : v;
     }
 
-    /// <summary>A real value, or null when absent or empty. Numbers were checked when the file was read.</summary>
+    /// <summary>A real value, or null when absent or empty. IO-09: the importer reads fixed attributes as numbers whatever
+    /// type the header declared them, so a value that is not a finite number is refused here, naming the line, the table
+    /// and the column (it used to surface as a bare FormatException, an "internal error").</summary>
     public double? Real(string column)
     {
         string? t = Text(column);
-        return t is null ? null : double.Parse(t, NumberStyles.Float, CultureInfo.InvariantCulture);
+        if (t is null) return null;
+        if (!double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out double v) || !double.IsFinite(v))
+            throw Bad(column, t, "a number");
+        return v;
     }
 
-    /// <summary>An integer value, or null when absent or empty.</summary>
+    /// <summary>An integer value, or null when absent or empty. A whole number written as a real (<c>1.0</c>, <c>1e0</c>, as
+    /// a column declared <c>r</c> holds it) is accepted; anything else is refused naming the line, the table and the column
+    /// (IO-09).</summary>
     public long? Int(string column)
     {
         string? t = Text(column);
-        return t is null ? null : long.Parse(t, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+        if (t is null) return null;
+        if (long.TryParse(t, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out long v)) return v;
+        if (double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out double d) && double.IsFinite(d)
+            && d == Math.Floor(d) && Math.Abs(d) <= 9.007199254740992e15)
+            return (long)d;
+        throw Bad(column, t, "a whole number");
+    }
+
+    private DgsFormatException Bad(string column, string value, string expected)
+    {
+        string shown = value.Length <= 40 ? value : value[..40] + "...";
+        return new DgsFormatException([FormattableString.Invariant($"line {Line}: table {_table.Name}, column {column}: '{shown}' is not {expected}.")]);
     }
 }
 
@@ -106,6 +133,7 @@ public static class DgsTableReader
     public static DgsFile Read(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
+        const int MaxProblems = 1000;
         var problems = new List<string>();
         if (text.Length > 0 && text[0] == '﻿') text = text.Substring(1);
         string[] lines = text.Split('\n');
@@ -116,6 +144,12 @@ public static class DgsTableReader
         for (int n = 0; n < lines.Length; n++)
         {
             int lineNo = n + 1;
+            // IO-15: a large file that is not DGS gave one problem per line, all held and joined into one message.
+            if (problems.Count >= MaxProblems)
+            {
+                problems.Add(FormattableString.Invariant($"reading stopped at line {lineNo} after {MaxProblems} problems; the rest of the file was not checked."));
+                break;
+            }
             string line = lines[n].TrimEnd('\r');
             if (line.Trim().Length == 0) continue;
             if (line.StartsWith("$$", StringComparison.Ordinal))

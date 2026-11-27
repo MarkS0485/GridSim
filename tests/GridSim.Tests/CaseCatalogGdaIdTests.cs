@@ -13,7 +13,7 @@ public sealed class CaseCatalogGdaIdTests
 {
     private static string NewBaseDir(params string[] gdaModels)
     {
-        string baseDir = Path.Combine(Path.GetTempPath(), "gridsim-gda-ids-" + Guid.NewGuid().ToString("N"));
+        string baseDir = TestTemp.Under("gridsim-gda-ids-" + Guid.NewGuid().ToString("N"));
         foreach (string name in gdaModels)
         {
             string dir = Path.Combine(baseDir, "gda-out", name);

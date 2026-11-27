@@ -12,7 +12,7 @@ public sealed class DynamicsStudyCliProcessTests
 
     private sealed class Folder : IDisposable
     {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gridsim-dynamics-study-" + Guid.NewGuid().ToString("N"));
+        public string Path { get; } = TestTemp.Under("gridsim-dynamics-study-" + Guid.NewGuid().ToString("N"));
         public Folder()
         {
             Directory.CreateDirectory(Path);

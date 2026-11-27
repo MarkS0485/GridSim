@@ -106,7 +106,7 @@ public static class LinePartitioner
             if (ReferenceEquals(model.Net(l.PartitionA), model.Net(l.PartitionB))) continue;
             if (l.TravelSeconds < dt * (1.0 - 1e-12))
                 throw DomainRefusal.Mark(new ArgumentException(
-                    $"line '{l.Name}' joins partitions '{l.PartitionA}' and '{l.PartitionB}' but its travel time {l.TravelSeconds:R} s is shorter than the step {dt:R} s: a partition may only be cut at a line the step does not exceed"));
+                    FormattableString.Invariant($"line '{l.Name}' joins partitions '{l.PartitionA}' and '{l.PartitionB}' but its travel time {l.TravelSeconds:R} s is shorter than the step {dt:R} s: a partition may only be cut at a line the step does not exceed")));
             double q = l.TravelSeconds / dt;
             double rq = Math.Round(q);
             if (Math.Abs(q - rq) < 1e-9) q = rq;

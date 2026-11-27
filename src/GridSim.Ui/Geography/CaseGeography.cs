@@ -105,7 +105,7 @@ public sealed class CaseGeography
         if (!File.Exists(path)) return false;
         try
         {
-            geography = Parse(File.ReadAllText(path));
+            geography = Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path));
             return true;
         }
         catch (Exception ex) when (ex is JsonException or FormatException or IOException or UnauthorizedAccessException

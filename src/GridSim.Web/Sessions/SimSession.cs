@@ -49,6 +49,9 @@ public sealed class SimSession : IAsyncDisposable
     // The supervisor that drives the backoff schedule after a lost stream; null unless the host turned it on
     // (GridSim:BridgeReconnect). Disposed in DisposeAsync before the client.
     private readonly BridgeReconnectSupervisor? _reconnect;
+    // The host's security-event recorder (its audit log), or null when it keeps none. Each reconnect attempt and the final
+    // give-up are written through it as AvailabilityDegraded events (never throws into the session).
+    private readonly Action<GridSim.Core.Diagnostics.SecurityEventKind, string>? _securityAudit;
     // Set (under _gate) once DisposeAsync has begun, so a reconnect still in flight never installs a new client that
     // nothing would dispose.
     private bool _bridgeSwapClosed;
@@ -230,8 +233,10 @@ public sealed class SimSession : IAsyncDisposable
         GridBridgeClient? bridge = null, string bridgeCase = "", Uri? bridgeEndpoint = null,
         string bridgeSource = "presolved", SessionCycleService? cycle = null,
         ResilienceOptions? bridgeResilience = null, bool bridgeReconnect = false,
-        Func<TimeSpan, CancellationToken, Task>? reconnectDelay = null)
+        Func<TimeSpan, CancellationToken, Task>? reconnectDelay = null,
+        Action<GridSim.Core.Diagnostics.SecurityEventKind, string>? securityAudit = null)
     {
+        _securityAudit = securityAudit;
         SessionId = sessionId;
         Source = source;
         Topology = topology;
@@ -352,8 +357,9 @@ public sealed class SimSession : IAsyncDisposable
     /// session's <see cref="Error"/>. False (the default) keeps the unsupervised behaviour: a lost stream stays lost.</param>
     public static SimSession CreateBridge(string sessionId, Uri endpoint, string bridgeCase,
         string bridgeSource, ResilienceOptions? resilience, Func<GridModel, GridSim.Core.Licensing.GateResult> licence,
-        bool reconnect = false) =>
-        CreateBridgeCore(sessionId, endpoint, bridgeCase, bridgeSource, resilience, licence, reconnect, reconnectDelay: null);
+        bool reconnect = false, Action<GridSim.Core.Diagnostics.SecurityEventKind, string>? securityAudit = null) =>
+        CreateBridgeCore(sessionId, endpoint, bridgeCase, bridgeSource, resilience, licence, reconnect, reconnectDelay: null,
+            securityAudit: securityAudit);
 
     /// <summary>Test seam for <see cref="CreateBridge"/>: the same session, with the supervisor's backoff wait replaced
     /// by <paramref name="reconnectDelay"/> (null: the real <see cref="Task.Delay(TimeSpan, CancellationToken)"/>), so a
@@ -361,7 +367,8 @@ public sealed class SimSession : IAsyncDisposable
     /// <see cref="ResilienceOptions.BackoffDelay"/>.</summary>
     internal static SimSession CreateBridgeCore(string sessionId, Uri endpoint, string bridgeCase,
         string bridgeSource, ResilienceOptions? resilience, Func<GridModel, GridSim.Core.Licensing.GateResult> licence,
-        bool reconnect, Func<TimeSpan, CancellationToken, Task>? reconnectDelay)
+        bool reconnect, Func<TimeSpan, CancellationToken, Task>? reconnectDelay,
+        Action<GridSim.Core.Diagnostics.SecurityEventKind, string>? securityAudit = null)
     {
         ArgumentNullException.ThrowIfNull(licence);
         var client = new GridBridgeClient();
@@ -371,7 +378,7 @@ public sealed class SimSession : IAsyncDisposable
         var session = new SimSession(sessionId, FeedSource.Bridge, new TopologyDto(), live: null, replay: null,
             stepMinutes: 0, bridge: client, bridgeCase: bridgeCase, bridgeEndpoint: endpoint,
             bridgeSource: bridgeSource, bridgeResilience: resilience, bridgeReconnect: reconnect,
-            reconnectDelay: reconnectDelay);
+            reconnectDelay: reconnectDelay, securityAudit: securityAudit);
         session._bridgeLicence = licence;
         return session;
     }
@@ -933,12 +940,24 @@ public sealed class SimSession : IAsyncDisposable
         string line = string.Create(CultureInfo.InvariantCulture,
             $"Bridge connection lost ({s.Cause.Message}); reconnect attempt {s.Attempt}{of} in {s.Delay.TotalSeconds:0.###} s.");
         Console.Error.WriteLine($"GridSim.Web: warning: bridge session {SessionId}: {line}");
+        AuditReconnect(string.Create(CultureInfo.InvariantCulture,
+            $"bridge session {SessionId}: connection lost ({s.Cause.GetType().Name}); reconnect attempt {s.Attempt}{of} scheduled in {s.Delay.TotalSeconds:0.###} s"));
         Warning = line;
         RaiseState();
     }
 
+    // One security event per reconnect report (CAF B5/C1). Exception type names only: a message may quote the endpoint.
+    private void AuditReconnect(string reason)
+    {
+        try { _securityAudit?.Invoke(GridSim.Core.Diagnostics.SecurityEventKind.AvailabilityDegraded, reason); }
+        catch (Exception ex) { Console.Error.WriteLine($"GridSim.Web: error: bridge session {SessionId}: the reconnect could not be audited: {ex.Message}"); }
+    }
+
     private void OnReconnectAttemptCompleted(BridgeReconnectAttempt a)
     {
+        AuditReconnect(a.Succeeded
+            ? string.Create(CultureInfo.InvariantCulture, $"bridge session {SessionId}: reconnected on attempt {a.Attempt}")
+            : string.Create(CultureInfo.InvariantCulture, $"bridge session {SessionId}: reconnect attempt {a.Attempt} failed ({a.Failure!.GetType().Name})"));
         Console.Error.WriteLine(a.Succeeded
             ? string.Create(CultureInfo.InvariantCulture, $"GridSim.Web: bridge session {SessionId}: reconnected on attempt {a.Attempt}.")
             : string.Create(CultureInfo.InvariantCulture, $"GridSim.Web: warning: bridge session {SessionId}: reconnect attempt {a.Attempt} failed ({a.Failure!.GetType().Name}: {a.Failure.Message})."));
@@ -947,6 +966,8 @@ public sealed class SimSession : IAsyncDisposable
     private void OnReconnectGaveUp(BridgeReconnectGiveUp g)
     {
         Console.Error.WriteLine($"GridSim.Web: error: bridge session {SessionId}: {g.Reason}");
+        AuditReconnect(string.Create(CultureInfo.InvariantCulture,
+            $"bridge session {SessionId}: gave up reconnecting after {g.Attempts} attempts ({g.LastFailure.GetType().Name})"));
         Error = g.Reason;
         lock (_gate) Playing = false;
         RaiseState();

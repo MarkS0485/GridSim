@@ -779,7 +779,7 @@ covers.
 | Lower inertia steepens RoCoF and deepens the nadir; frequency recovers above the nadir | `FrequencyDynamicsTests.Lower_inertia_steepens_rocof_and_deepens_nadir`, `FrequencyDynamicsTests.Frequency_recovers_above_the_nadir` |
 | A surplus drives frequency up | `FrequencyDynamicsTests.Generation_loss_drives_frequency_down_load_gain_up` |
 | `NominalHz`, `DroopPu`, `DampingPctPerHz`, `ResponsiveFraction` and `GovernorTimeConstantS` keep their documented defaults (9 decimals) | `FrequencyCalibrationTests.Documented_defaults_are_unchanged` |
-| The ambient sample is inside the operational band with max `|RoCoF|` below 0.05 Hz/s | `FrequencyCalibrationTests.Measured_trace_is_ambient_not_a_trip` |
+| The ambient sample is inside the operational band with max `\|RoCoF\|` below 0.05 Hz/s | `FrequencyCalibrationTests.Measured_trace_is_ambient_not_a_trip` |
 | A round trip of the swing equation at the ambient RoCoF: the imbalance implied by the sample (`2E * RoCoF / f0`, checked to lie in 1 to 500 MW) fed to `Simulate` returns that RoCoF (3 decimals). It is self-consistency of one equation, not independent validation | `FrequencyCalibrationTests.Model_reproduces_the_ambient_rocof_scale` |
 | Device rotational inertia is pure stored energy: adding it equals adding the same MW.s of system inertia | `DynamicsConfigInvariantTests.Device_inertia_is_pure_half_J_omega_squared` (initial RoCoF, nadir and settle value, 12 decimals) |
 | Fast response leaves the initial RoCoF unchanged (12 decimals) and lifts the nadir by more than 1e-4 Hz; zero device settings equal no device (9 decimals) | `DynamicsConfigInvariantTests.Fast_response_does_not_reduce_inertia`, `TsgbDynamicsTests.Fast_response_lifts_the_nadir`, `TsgbDynamicsTests.Defaults_match_no_device` |

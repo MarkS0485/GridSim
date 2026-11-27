@@ -26,7 +26,7 @@ public sealed class R404LineConstantsCliTests : IDisposable
          "conductors":[{"name":"A","role":"phase","x_m":0.0,"height_m":10.0,"resistance_ohm_per_km":0.0,"gmr_m":0.01,"radius_m":0.01}]}
         """;
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r404-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r404-" + Guid.NewGuid().ToString("N"));
 
     public R404LineConstantsCliTests() => Directory.CreateDirectory(_dir);
 

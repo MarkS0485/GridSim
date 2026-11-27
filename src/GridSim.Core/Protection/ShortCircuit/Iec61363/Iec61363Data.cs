@@ -39,7 +39,7 @@ public sealed record Iec61363Data(IReadOnlyList<Iec61363GeneratorData> Generator
                 foreach (JsonElement e in ge.EnumerateArray())
                 {
                     string w = $"generators[{i++}]";
-                    int bus = (int)Num(e, "bus", w, problems, true);
+                    int bus = BusNumber(e, w, problems);
                     string? name = Str(e, "name") is { Length: > 0 } s ? s : null;
                     double x1 = Num(e, "xdTransPu", w, problems), xd = Num(e, "xdSyncPu", w, problems);
                     double t2 = Num(e, "tdSubS", w, problems), t1 = Num(e, "tdTransS", w, problems), ta = Num(e, "taS", w, problems);
@@ -57,7 +57,7 @@ public sealed record Iec61363Data(IReadOnlyList<Iec61363GeneratorData> Generator
                     string w = $"motors[{i++}]";
                     string name = Str(e, "name");
                     if (name.Length == 0) problems.Add($"{w}: name is required");
-                    motors.Add(new Iec61363MotorData(name, (int)Num(e, "bus", w, problems, true), Num(e, "ratedMva", w, problems),
+                    motors.Add(new Iec61363MotorData(name, BusNumber(e, w, problems), Num(e, "ratedMva", w, problems),
                         Num(e, "lockedRotorCurrentRatio", w, problems), Num(e, "acTimeConstantS", w, problems), Num(e, "taS", w, problems)));
                 }
             }
@@ -68,6 +68,19 @@ public sealed record Iec61363Data(IReadOnlyList<Iec61363GeneratorData> Generator
 
     private static string Str(JsonElement e, string key) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(key, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString()! : "";
+
+    /// <summary>ANA-15: a bus number must be a whole number in the int range ("bus": 2.7 was read as bus 2, and a value out of
+    /// range as an unspecified int); a problem line otherwise.</summary>
+    private static int BusNumber(JsonElement e, string where, List<string> problems)
+    {
+        if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty("bus", out JsonElement v) || v.ValueKind != JsonValueKind.Number)
+        { problems.Add($"{where}: 'bus' is required and must be a number"); return 0; }
+        if (v.TryGetInt32(out int bus)) return bus;
+        double d = v.GetDouble();   // a whole number written with a point (2.0) is still that bus
+        if (double.IsFinite(d) && d == Math.Floor(d) && d >= int.MinValue && d <= int.MaxValue) return (int)d;
+        problems.Add($"{where}: 'bus' must be a whole bus number (got {v.GetRawText()})");
+        return 0;
+    }
 
     private static double Num(JsonElement e, string key, string where, List<string> problems, bool allowAnySign = false)
     {

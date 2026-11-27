@@ -45,19 +45,19 @@ public sealed record ProtectionModel(AssetClassLibrary Library, IReadOnlyList<Pr
         {
             if (!Library.Contains(pi.ClassName))
             {
-                problems.Add($"device '{pi.Name}' uses class '{pi.ClassName}', which is not in the class library");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' uses class '{pi.ClassName}', which is not in the class library"));
                 continue;
             }
             AssetClass cls = Library.Get(pi.ClassName);
             if (cls.Kind != AssetKind.Protection)
-                problems.Add($"device '{pi.Name}' uses class '{pi.ClassName}', which is kind {cls.Kind}, not protection");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' uses class '{pi.ClassName}', which is kind {cls.Kind}, not protection"));
             if (!busIds.Contains(pi.MonitorBus))
-                problems.Add($"device '{pi.Name}' monitors bus {pi.MonitorBus}, which is not a bus of model '{model.Name}'");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' monitors bus {pi.MonitorBus}, which is not a bus of model '{model.Name}'"));
 
             // D-DOC-094 (October 2026): the capacity is the MW the device trips or sheds; the schema says minimum 0, but
             // nothing checked it, so a negative value loaded and added a negative infeed loss (a gain) when it tripped.
             if (!(pi.CapacityMw >= 0.0) || !double.IsFinite(pi.CapacityMw))
-                problems.Add($"device '{pi.Name}' has capacityMw {pi.CapacityMw}, which must be a finite number of 0 MW or more");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' has capacityMw {pi.CapacityMw}, which must be a finite number of 0 MW or more"));
 
             // D-DOC-093 (October 2026): an overload stage (overloadTripFraction) reads the loading of the in-service
             // branches at its monitor bus, each as its MVA over its RateA; a branch with no rating (RateA 0) reads as
@@ -70,21 +70,21 @@ public sealed record ProtectionModel(AssetClassLibrary Library, IReadOnlyList<Pr
                 foreach (Model.Branch br in model.Branches)
                     if (br.InService && br.RateAMva > 0.0 && (br.From == pi.MonitorBus || br.To == pi.MonitorBus)) { rated = true; break; }
                 if (!rated)
-                    problems.Add($"device '{pi.Name}' (class '{pi.ClassName}') has an overload stage ({AssetParams.OverloadTripFraction}), but no in-service "
-                        + $"branch at its monitor bus {pi.MonitorBus} has a rating (RateA > 0), so its loading always reads 0 and the stage could never operate");
+                    problems.Add(FormattableString.Invariant($"device '{pi.Name}' (class '{pi.ClassName}') has an overload stage ({AssetParams.OverloadTripFraction}), but no in-service ")
+                        + FormattableString.Invariant($"branch at its monitor bus {pi.MonitorBus} has a rating (RateA > 0), so its loading always reads 0 and the stage could never operate"));
             }
 
             bool recloser = cls.Params.ContainsKey(AssetParams.AutoRecloseDelayS);
             bool hasTarget = !string.IsNullOrWhiteSpace(pi.TargetBranch);
             if (recloser && !hasTarget)
-                problems.Add($"device '{pi.Name}' is a recloser (class '{pi.ClassName}' sets {AssetParams.AutoRecloseDelayS}) but names no TargetBranch to open");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' is a recloser (class '{pi.ClassName}' sets {AssetParams.AutoRecloseDelayS}) but names no TargetBranch to open"));
             else if (recloser && !branchNameCount.ContainsKey(pi.TargetBranch!))
-                problems.Add($"device '{pi.Name}' targets branch '{pi.TargetBranch}', which is not a branch of model '{model.Name}'");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' targets branch '{pi.TargetBranch}', which is not a branch of model '{model.Name}'"));
             else if (recloser && branchNameCount[pi.TargetBranch!] > 1)
-                problems.Add($"device '{pi.Name}' targets branch '{pi.TargetBranch}', a name {branchNameCount[pi.TargetBranch!]} branches of model " +
-                             $"'{model.Name}' share, so operating it would open all of them; give the target branch a unique name");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' targets branch '{pi.TargetBranch}', a name {branchNameCount[pi.TargetBranch!]} branches of model ") +
+                             FormattableString.Invariant($"'{model.Name}' share, so operating it would open all of them; give the target branch a unique name"));
             else if (!recloser && hasTarget)
-                problems.Add($"device '{pi.Name}' names TargetBranch '{pi.TargetBranch}', but class '{pi.ClassName}' is not a recloser (no {AssetParams.AutoRecloseDelayS}), so it would never open it");
+                problems.Add(FormattableString.Invariant($"device '{pi.Name}' names TargetBranch '{pi.TargetBranch}', but class '{pi.ClassName}' is not a recloser (no {AssetParams.AutoRecloseDelayS}), so it would never open it"));
         }
         if (problems.Count > 0)
             throw new InvalidDataException("Protection placement is invalid:" + Environment.NewLine + "  " +

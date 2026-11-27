@@ -12,7 +12,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class DirectorySecretStoreTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-secrets-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-secrets-{Guid.NewGuid():N}");
 
     public DirectorySecretStoreTests() => Directory.CreateDirectory(_dir);
 

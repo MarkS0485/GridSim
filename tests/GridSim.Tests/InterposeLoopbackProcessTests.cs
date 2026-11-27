@@ -55,7 +55,7 @@ public sealed class InterposeLoopbackProcessTests : IDisposable
     private static readonly byte[] TestFrCon = { 0x68, 0x04, 0x83, 0x00, 0x00, 0x00 };
     private static byte[] SAck(int nr) => new byte[] { 0x68, 0x04, 0x01, 0x00, (byte)((nr << 1) & 0xFE), (byte)((nr >> 7) & 0xFF) };
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-n230-interpose-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-n230-interpose-" + Guid.NewGuid().ToString("N"));
 
     public InterposeLoopbackProcessTests() => Directory.CreateDirectory(_dir);
 

@@ -103,7 +103,7 @@ public sealed class D06GdaRootEnvironmentTests
     [Fact]
     public void The_gda_verb_refuses_a_missing_GDA_DATA_ROOT_with_exit_1_naming_only_the_variable()
     {
-        string missing = Path.Combine(Path.GetTempPath(), "gridsim-d06-missing-" + Guid.NewGuid().ToString("N"));
+        string missing = TestTemp.Under("gridsim-d06-missing-" + Guid.NewGuid().ToString("N"));
         var r = CliProcess.RunBuiltWithEnvironment(new Dictionary<string, string?>
         {
             ["GDA_DATA_ROOT"] = missing,

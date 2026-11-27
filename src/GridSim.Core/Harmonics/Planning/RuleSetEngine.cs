@@ -69,6 +69,8 @@ public sealed record ConnectionRuleSet(string Id, string Title, RuleProvenance P
                 foreach (JsonElement e in re.EnumerateArray())
                 {
                     string w = $"rules[{i++}]";
+                    // ANA-24: an entry that is not an object is a problem line, not an InvalidOperationException.
+                    if (e.ValueKind != JsonValueKind.Object) { problems.Add($"{w}: a rule must be an object"); continue; }
                     string rid = Str(e, "id");
                     if (rid.Length == 0 || !ids.Add(rid)) problems.Add($"{w}: id is required and must be unique");
                     string cmp = Str(e, "comparison");
@@ -185,7 +187,7 @@ public static class RuleSetEngine
         {
             RuleResult Make(RuleOutcome o, double? v, double? margin, string reason) =>
                 new(r.Id, r.Topic, r.Clause.Length == 0 ? "AWAITING STANDARD TEXT" : r.Clause, o, r.Quantity, v, r.Limit, r.LimitHigh, r.Unit, margin, reason);
-            if (scopeStatus == "OUTSIDE") { results.Add(Make(RuleOutcome.OutOfScope, null, null, $"PCC {pccVoltageKv:R} kV is outside the voltage range of rule set '{set.Id}'")); continue; }
+            if (scopeStatus == "OUTSIDE") { results.Add(Make(RuleOutcome.OutOfScope, null, null, FormattableString.Invariant($"PCC {pccVoltageKv:R} kV is outside the voltage range of rule set '{set.Id}'"))); continue; }
             string? skipped = null; bool unmet = false;
             foreach (RuleCondition c in r.When)
             {

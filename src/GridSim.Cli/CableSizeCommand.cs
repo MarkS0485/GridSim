@@ -20,7 +20,7 @@ internal static class CableSizeCommand
         string tablePath = Path.GetFullPath(q.Tables, Path.GetDirectoryName(inv.InputPath) ?? ".");
         byte[] tableBytes = File.ReadAllBytes(tablePath);
         CableTables tables;
-        try { tables = CableTables.Parse(System.Text.Encoding.UTF8.GetString(tableBytes)); }
+        try { tables = CableTables.Parse(System.Text.Encoding.UTF8.GetString(tableBytes).TrimStart('\uFEFF')); }
         catch (FormatException ex) { throw new InvalidDataException(ex.Message); }
         CableSizingResult result = CableSizing.Compute(q.Label, tables, q.Circuit);
         object json = new

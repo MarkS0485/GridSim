@@ -1,0 +1,3 @@
+# SHA-256 of the GridSim program file (gridsim.dll, or the single-file gridsim) of each shipped release, one per line:
+#   <64 hex digits>  <file name>
+# Empty until releases are listed: every build is then UNSUPPORTED BUILD.

@@ -12,7 +12,7 @@ namespace GridSim.Core.Simulation;
 ///
 /// <para>The two transforms are the study's two independent axes and the codebase's real-vs-synthetic
 /// separation is load-bearing here: <see cref="ScaleSynchronousInertia"/> scales REAL (1/2)Jw^2 that
-/// enters E; <see cref="SetGfmFraction"/> changes how much of the CONVERTER fleet is grid-forming
+/// enters E; <see cref="SetGfmFraction(GridModel, double, string, string)"/> changes how much of the CONVERTER fleet is grid-forming
 /// (which becomes virtual df/dt control inertia in the forming denominator, never real E). Neither
 /// touches the other's quantity: scaling never rewrites a binding, and setting the GFM fraction never
 /// rewrites an <see cref="Generator.H"/>.</para>
@@ -26,7 +26,7 @@ public static class GridInertiaTransforms
     /// (a byte-identical copy of the generators); <c>scale==0</c> is a genuine H=0 grid
     /// (<c>sum(H*MBase)==0</c>, so <see cref="GridModel.SystemInertiaGvaS"/>==0). This is REAL
     /// (1/2)Jw^2 energy in E - never synthetic. Inline <see cref="Generator.DynamicsClass"/> tags are
-    /// preserved, so this composes AFTER <see cref="SetGfmFraction"/> without disturbing the fleet.
+    /// preserved, so this composes AFTER <see cref="SetGfmFraction(GridModel, double, string, string)"/> without disturbing the fleet.
     /// </summary>
     public static GridModel ScaleSynchronousInertia(GridModel m, double scale)
     {

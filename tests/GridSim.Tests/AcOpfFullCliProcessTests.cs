@@ -13,7 +13,7 @@ public sealed class AcOpfFullCliProcessTests
 {
     private static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-acopf-full-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-acopf-full-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

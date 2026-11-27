@@ -108,6 +108,39 @@ public static class SubtransientInit
         /// machine fields of the record are not read for it.
         /// </summary>
         public Wecc.WeccPlant? Renewable { get; init; }
+
+        /// <summary>
+        /// WP3a (RC5): the GENTPJ stator-current saturation term Kis (machine base, finite; WECC data runs from -0.3 to 0.4): saturation is
+        /// evaluated on <c>|psi''| + Kis |It|</c>. 0 (the default) is GENROU, and every number is the historical one.
+        /// Read only when <see cref="Saturation"/> is set.
+        /// </summary>
+        public double SaturationKis { get; init; }
+
+        /// <summary>
+        /// WP6 (RC5): the unit's SVC or STATCOM model (<see cref="Csvgn1Data"/>, <see cref="Statcom1Data"/>) when the case holds
+        /// the compensator as a generator, as PSS/E does; null (the default) for every other unit. A unit that carries one is
+        /// converter plant in the RMS study (<see cref="IsConverterUnit"/>), its own unit at its bus, injecting reactive power
+        /// only from its power-flow output (its scheduled active power must be 0). The machine fields are not read for it.
+        /// </summary>
+        public RmsFactsData? Facts { get; init; }
+
+        /// <summary>
+        /// RC5 WP12: the unit's user injection model (<see cref="Plugins.UserDeviceModel"/> of role injection: a plug-in, or a
+        /// declarative <c>gridsim-model/1</c> document of role <c>injection</c>); null (the default) for every other unit. A unit
+        /// that carries one is converter plant in the RMS study (<see cref="IsConverterUnit"/>), its own unit at its bus, driven
+        /// by the model from its power-flow output. The machine fields are not read for it.
+        /// <para>RC5 WP32: it may also hold a contract 2 machine plug-in (<see cref="Plugins.IUserMachine"/>, role machine): a
+        /// Norton source with a constant admittance on the same route, its own unit at its bus.</para>
+        /// </summary>
+        public Plugins.UserDeviceModel? UserInjection { get; init; }
+
+        /// <summary>
+        /// RC5 WP23: the unit's IEC 61400-27-1 style Type 4A or 4B wind turbine model (<see cref="Iec61400.Iec61400Data"/>, built
+        /// from public sources); null (the default) for every other unit. A unit that carries one is converter plant in the RMS
+        /// study (<see cref="IsConverterUnit"/>), its own unit at its bus, a current source driven by
+        /// <see cref="Iec61400.Iec61400State"/> from its power-flow output. The machine fields are not read for it.
+        /// </summary>
+        public Iec61400.Iec61400Data? Iec61400 { get; init; }
     }
 
     /// <summary>
@@ -119,7 +152,8 @@ public static class SubtransientInit
     public static bool IsConverterUnit(Generator gen, MachineData? data)
     {
         ArgumentNullException.ThrowIfNull(gen);
-        return gen.IsConverterInterfaced || data?.Renewable is not null;
+        return gen.IsConverterInterfaced || data?.Renewable is not null || data?.Facts is not null || data?.UserInjection is not null
+            || data?.Iec61400 is not null;
     }
 
     public sealed record Prepared(
@@ -168,7 +202,16 @@ public static class SubtransientInit
         IReadOnlyList<int> MachineTerminal,
         IReadOnlyList<Complex> MachineAdmittance,
         IReadOnlyList<int> ConverterBusIndex,
-        IReadOnlyDictionary<int, Complex> InitialVoltageByBus);
+        IReadOnlyDictionary<int, Complex> InitialVoltageByBus)
+    {
+        /// <summary>The load each bus's dynamic loads take (MW, Mvar), which is not in its constant load admittance. Null
+        /// without dynamic loads.</summary>
+        public IReadOnlyDictionary<int, (double P, double Q)>? DynamicLoadByBus { get; init; }
+
+        /// <summary>Each dynamic load's Norton stamp (bus index, admittance pu), in load list order. Null without dynamic
+        /// loads.</summary>
+        public IReadOnlyList<(int Index, Complex Y)>? DynamicLoadStamps { get; init; }
+    }
 
     /// <summary>Prepare the fixed point from a solved <paramref name="result"/> and per-machine
     /// <paramref name="data"/> (machine base, aligned to <c>model.Generators</c>). When
@@ -207,6 +250,50 @@ public static class SubtransientInit
             qInjByBus[result.BusIds[i]] = result.QInjMvar[i];
         }
 
+        // WP3b (RC5): dynamic loads (RmsLoadedMachineData). Null when there are none, and then every line below is the
+        // historical one: the bus loads are stamped from Bus.Pd and Bus.Qd exactly as before.
+        IReadOnlyList<DynamicLoadData>? dynamicLoads = data is RmsLoadedMachineData { Loads.Count: > 0 } loaded ? loaded.Loads : null;
+        Dictionary<int, (double P, double Q)>? dynamicByBus = null;
+        if (dynamicLoads is not null)
+        {
+            if (!sparse)
+                throw new NotSupportedException("Dynamic loads need the sparse RMS network; the dense Kron oracle has none.");
+            dynamicByBus = new Dictionary<int, (double P, double Q)>();
+            foreach (DynamicLoadData dl in dynamicLoads)
+            {
+                if (!busIndex.TryGetValue(dl.BusId, out int dbi))
+                    throw new ArgumentException($"{dl.Label}: bus {dl.BusId} is not in the model.", nameof(data));
+                // RC5 WP12: a user-model load may be purely reactive (0 MW), not empty; every coded load keeps the rule above 0 MW.
+                if (dl is Plugins.UserDynamicLoadData
+                    ? !(dl.PMw >= 0.0) || !double.IsFinite(dl.PMw) || !double.IsFinite(dl.QMvar) || (dl.PMw == 0.0 && dl.QMvar == 0.0)
+                    : !(dl.PMw > 0.0) || !double.IsFinite(dl.PMw) || !double.IsFinite(dl.QMvar))
+                    throw new ArgumentException(dl is Plugins.UserDynamicLoadData
+                        ? $"{dl.Label}: a user-model load must take a finite active power of 0 MW or above and a finite reactive power, not both 0."
+                        : $"{dl.Label}: the load must take a finite active power above 0 MW and a finite reactive power.", nameof(data));
+                (double P, double Q) acc = dynamicByBus.GetValueOrDefault(dl.BusId);
+                dynamicByBus[dl.BusId] = (acc.P + dl.PMw, acc.Q + dl.QMvar);
+            }
+            foreach (KeyValuePair<int, (double P, double Q)> kv in dynamicByBus)
+            {
+                Bus lb = model.Buses[busIndex[kv.Key]];
+                if (!(kv.Value.P <= lb.Pd))
+                    throw new ArgumentException($"The dynamic loads at bus {kv.Key} take {ControlBlocks.Num(kv.Value.P)} MW, more than the bus load of {ControlBlocks.Num(lb.Pd)} MW.", nameof(data));
+            }
+        }
+
+        // WP6 (RC5): network devices with RMS models (RmsLoadedMachineData.Devices). Null when there are none, and then every
+        // line below is the historical one: the RMS network leaves every HVDC link, FACTS device and compensator out, as it
+        // always has. deviceByBus holds the power each bound link takes from its AC bus in the power flow (MW, Mvar).
+        IReadOnlyList<RmsNetworkDeviceData>? networkDevices = data is RmsLoadedMachineData { Devices.Count: > 0 } withDevices ? withDevices.Devices : null;
+        IReadOnlyList<RmsDeviceBinding.DeviceTerminal>? deviceTerminals = null;
+        Dictionary<int, (double P, double Q)>? deviceByBus = null;
+        if (networkDevices is not null)
+        {
+            if (!sparse)
+                throw new NotSupportedException("Network device models need the sparse RMS network; the dense Kron oracle has none.");
+            (deviceTerminals, deviceByBus) = RmsDeviceBinding.Bind(model, result, networkDevices, vByBus, baseMva);
+        }
+
         var schedPByBus = new Dictionary<int, double>();
         var genCountByBus = new Dictionary<int, int>();
         var loadByBus = new Dictionary<int, (double Pd, double Qd)>();
@@ -228,6 +315,51 @@ public static class SubtransientInit
                 throw new ArgumentException($"Generator {k} at bus {model.Generators[k].Bus} is a power-flow-only unit but its dynamic data carries a WECC model chain ({data[k].Renewable!.Chain}); a power-flow-only unit has no dynamic model.", nameof(data));
             if (!convertersAsCurrentSources)
                 throw new ArgumentException($"Generator {k} at bus {model.Generators[k].Bus} carries a WECC model chain, which needs converters as current sources (convertersAsCurrentSources: true).", nameof(data));
+        }
+        // WP6 (RC5): an SVC or STATCOM model held on a generator (MachineData.Facts). With none anywhere nothing here runs.
+        for (int k = 0; k < g; k++)
+        {
+            if (data[k]?.Facts is not { } fx) continue;
+            Generator fg = model.Generators[k];
+            string fw = $"Generator {k} at bus {fg.Bus} ({fx.Model})";
+            if (fg.PowerFlowOnly)
+                throw new ArgumentException($"{fw} is a power-flow-only unit; a power-flow-only unit has no dynamic model.", nameof(data));
+            if (!convertersAsCurrentSources)
+                throw new ArgumentException($"{fw} needs converters as current sources (convertersAsCurrentSources: true).", nameof(data));
+            if (data[k].Renewable is not null)
+                throw new ArgumentException($"{fw} also carries a WECC model chain; a unit takes one dynamic model.", nameof(data));
+            if (fg.Pg != 0.0)
+                throw new ArgumentException($"{fw} is scheduled at {ControlBlocks.Num(fg.Pg)} MW; an SVC or STATCOM held as a generator injects reactive power only, so its active power must be 0.", nameof(data));
+        }
+        // RC5 WP12: a user injection model held on a generator (MachineData.UserInjection). With none anywhere nothing here runs.
+        for (int k = 0; k < g; k++)
+        {
+            if (data[k]?.UserInjection is not { } ui) continue;
+            Generator ug = model.Generators[k];
+            string uw = $"Generator {k} at bus {ug.Bus} ({ui.Model})";
+            // RC5 WP32: or a contract 2 machine model, which takes the same route (a Norton source on its own bus).
+            if (ui.Role is not ("injection" or "machine"))
+                throw new ArgumentException($"{uw}: the model has role {ui.Role}; a generator takes an injection or machine model.", nameof(data));
+            if (ug.PowerFlowOnly)
+                throw new ArgumentException($"{uw} is a power-flow-only unit; a power-flow-only unit has no dynamic model.", nameof(data));
+            if (!convertersAsCurrentSources)
+                throw new ArgumentException($"{uw} needs converters as current sources (convertersAsCurrentSources: true).", nameof(data));
+            if (data[k].Renewable is not null || data[k].Facts is not null)
+                throw new ArgumentException($"{uw} also carries a WECC chain or an SVC/STATCOM model; a unit takes one dynamic model.", nameof(data));
+        }
+        // RC5 WP23: an IEC 61400-27-1 Type 4 wind turbine model (MachineData.Iec61400). With none anywhere nothing here runs.
+        for (int k = 0; k < g; k++)
+        {
+            if (data[k]?.Iec61400 is not { } iec) continue;
+            Generator ig = model.Generators[k];
+            string iw = $"Generator {k} at bus {ig.Bus} ({iec.Description})";
+            if (ig.PowerFlowOnly)
+                throw new ArgumentException($"{iw} is a power-flow-only unit; a power-flow-only unit has no dynamic model.", nameof(data));
+            if (!convertersAsCurrentSources)
+                throw new ArgumentException($"{iw} needs converters as current sources (convertersAsCurrentSources: true).", nameof(data));
+            if (data[k].Renewable is not null || data[k].Facts is not null || data[k].UserInjection is not null)
+                throw new ArgumentException($"{iw} also carries a WECC chain, an SVC/STATCOM or a user injection model; a unit takes one dynamic model.", nameof(data));
+            Iec61400.Iec61400Data.Validate(iec);
         }
         bool IsConverterAt(int k) => convertersAsCurrentSources && IsConverterUnit(model.Generators[k], data[k]);
         // A unit that is neither a converter nor power-flow-only but has no inertia cannot be integrated as a
@@ -279,10 +411,13 @@ public static class SubtransientInit
         for (int i = 0; i < n; i++)
         {
             Bus bus = model.Buses[i];
-            if (bus.Pd == 0 && bus.Qd == 0) continue;
+            double pd = bus.Pd, qd = bus.Qd;
+            // WP3b: the part a dynamic load takes is not a constant admittance (never true without dynamic loads).
+            if (dynamicByBus is not null && dynamicByBus.TryGetValue(bus.Id, out (double P, double Q) taken)) { pd -= taken.P; qd -= taken.Q; }
+            if (pd == 0 && qd == 0) continue;
             Complex v = vByBus.TryGetValue(bus.Id, out Complex vv) ? vv : Complex.One;
             double v2 = Math.Max(MinVoltageSquaredPu, v.Magnitude * v.Magnitude);
-            Stamp(i, i, Complex.Conjugate(new Complex(bus.Pd, bus.Qd) / baseMva) / v2);
+            Stamp(i, i, Complex.Conjugate(new Complex(pd, qd) / baseMva) / v2);
         }
 
         int gm = machineCount;
@@ -320,6 +455,9 @@ public static class SubtransientInit
             (double pdBus, double qdBus) = loadByBus.GetValueOrDefault(gen.Bus);
             double busGenP = pInjByBus.GetValueOrDefault(gen.Bus) + pdBus;
             double busGenQ = qInjByBus.GetValueOrDefault(gen.Bus) + qdBus;
+            // WP6 (RC5): with device models bound, a link's power at this bus is its own unit's, not the generators' (the power
+            // flow's injection here is net of it). Never true without device data.
+            if (deviceByBus is not null && deviceByBus.TryGetValue(gen.Bus, out (double P, double Q) drawn)) { busGenP += drawn.P; busGenQ += drawn.Q; }
             double schedP = schedPByBus.GetValueOrDefault(gen.Bus);
             int count = genCountByBus.GetValueOrDefault(gen.Bus, 1);
             double share = Math.Abs(schedP) > MinScheduledPowerMw ? gen.Pg / schedP : 1.0 / Math.Max(1, count);
@@ -345,10 +483,16 @@ public static class SubtransientInit
                 // Vd = E''d + X''d Iq while the initialisation assumed X''q, so the "self-consistent fixed point"
                 // is not stationary and the run starts with a spurious transient. Enforce the equality the fold
                 // assumes (MachineData documents it) instead of silently mixing the two.
+                // DYN-12: X'' is folded into the network as 1 / (j X''), so it must be a finite reactance above 0. MachineData
+                // is a public record with no validation; X''d = X''q = 0 passed the equality test below and gave a
+                // non-finite stamp, and a negative X'' was accepted.
+                if (!(md.Xdpp > 0.0) || !double.IsFinite(md.Xdpp) || !(md.Xqpp > 0.0) || !double.IsFinite(md.Xqpp))
+                    throw new ArgumentException(FormattableString.Invariant(
+                        $"Generator {machineIdx[mi]} at bus {gen.Bus}: X''d = {md.Xdpp} and X''q = {md.Xqpp}; each must be a finite reactance above 0 pu."), nameof(data));
                 double xppScale = Math.Max(Math.Abs(md.Xdpp), Math.Abs(md.Xqpp));
                 if (!(Math.Abs(md.Xdpp - md.Xqpp) <= SubtransientSaliencyRelativeTolerance * xppScale))
                     throw new ArgumentException(
-                        $"Generator {machineIdx[mi]} at bus {gen.Bus}: X''d = {md.Xdpp} and X''q = {md.Xqpp} differ. The subtransient " +
+                        FormattableString.Invariant($"Generator {machineIdx[mi]} at bus {gen.Bus}: X''d = {md.Xdpp} and X''q = {md.Xqpp} differ. The subtransient ") +
                         "network interface folds a single round-rotor X'' into the network, so X''d must equal X''q.", nameof(data));
                 (vt, pShare, qShare) = Terminal(gen);
             }
@@ -368,6 +512,8 @@ public static class SubtransientInit
                     if (other.Bus == rb) { (_, double po, double qo) = Terminal(other); assignedP += po; assignedQ += qo; }
                 pShare = (pInjByBus.GetValueOrDefault(rb) + pdBus) / baseMva - assignedP;
                 qShare = (qInjByBus.GetValueOrDefault(rb) + qdBus) / baseMva - assignedQ;
+                // WP6 (RC5): as in Terminal, a bound link's power at this bus is its own (never true without device data).
+                if (deviceByBus is not null && deviceByBus.TryGetValue(rb, out (double P, double Q) drawnRef)) { pShare += drawnRef.P / baseMva; qShare += drawnRef.Q / baseMva; }
                 synthetics.Add(gen.Name!);
             }
             genBuses[k] = gen.Bus;
@@ -385,8 +531,12 @@ public static class SubtransientInit
             // N045: the GENROU q-axis saturation scale, on the machine's OWN reactances (no unit transformer in it).
             double? satScale = md.Saturation is null ? null
                 : SubtransientMachine.QAxisSaturationRatio(md.Xd, md.Xq, md.Xdpp, md.Xl);
+            if (!double.IsFinite(md.SaturationKis))
+                throw new ArgumentException($"Generator {k} at bus {gen.Bus}: the GENTPJ saturation term Kis must be finite (got {md.SaturationKis}).", nameof(data));
+            double kisSys = md.SaturationKis * toSys;   // WP3a: Kis |It| is a flux, so Kis converts like a reactance
             machines[k] = new MultiMachineSubtransient.Machine(
-                xd, xdp, xdpp, xq, xqp, xqpp, md.Tdop, md.Tdopp, md.Tqop, md.Tqopp, md.Saturation, satScale);
+                xd, xdp, xdpp, xq, xqp, xqpp, md.Tdop, md.Tdopp, md.Tqop, md.Tqopp, md.Saturation, satScale)
+                { SaturationKis = md.Saturation is null ? 0.0 : kisSys };
             h[k] = md.H * mBase / baseMva;
             // The damping D in MachineData is on the machine's own base (pu power per pu speed on MBase, the PSS/E
             // GENROU / GENSAL convention the DYR reader maps straight in). The kernel's swing equation
@@ -431,7 +581,8 @@ public static class SubtransientInit
             if (md.Saturation is { } satCurve)
             {
                 Complex ePP = vt + new Complex(0.0, xdpp) * it;
-                double s = satCurve.Se(ePP.Magnitude) * satScale!.Value;
+                // WP3a: GENTPJ evaluates the curve on |E''| + Kis |It|; Kis = 0 keeps the historical expression.
+                double s = (kisSys == 0.0 ? satCurve.Se(ePP.Magnitude) : satCurve.Se(ePP.Magnitude + kisSys * it.Magnitude)) * satScale!.Value;
                 if (s > 0.0) xqAngle = xqpp + (xq - xqpp) / (1.0 + s);
             }
             Complex eqPhasor = vt + new Complex(0.0, xqAngle) * it;
@@ -450,7 +601,9 @@ public static class SubtransientInit
             double edpp = vd - xqpp * iq;
             // Saturation field-current increment: N045, the GENROU d-axis term E''q*Se(|E''|) (it was E'q*Se(E'q), d-axis
             // only); the RMS integrator subtracts exactly the same expression, so the seeded field is an equilibrium.
-            double se = md.Saturation is { } satD ? satD.GenrouIncrements(eqpp, edpp, satScale!.Value).D : 0.0;
+            double se = md.Saturation is not { } satD ? 0.0
+                : kisSys == 0.0 ? satD.GenrouIncrements(eqpp, edpp, satScale!.Value).D
+                : satD.GentpjIncrements(eqpp, edpp, satScale!.Value, kisSys * it.Magnitude).D;
 
             delta0[k] = delta;
             eqp0[k] = eqp; edp0[k] = edp; eqpp0[k] = eqpp; edpp0[k] = edpp;
@@ -478,7 +631,8 @@ public static class SubtransientInit
         // so without WECC data the groups and their order are exactly the historical ones) and is a current source, never
         // grid-forming: its group is not Forming and gets no Norton stamp.
         foreach (IGrouping<(int Bus, bool Blocks, bool Forming, int Wecc), int> grp in convIdx
-            .GroupBy(k => data[k].Renewable is not null
+            .GroupBy(k => data[k].Renewable is not null || data[k].Facts is not null || data[k].UserInjection is not null
+                    || data[k].Iec61400 is not null
                 ? (model.Generators[k].Bus, false, false, k)
                 : (model.Generators[k].Bus, model.Generators[k].EffectiveConverterFaultCurrentPu <= 0.0,
                     model.Generators[k].GridForming, -1))
@@ -506,7 +660,22 @@ public static class SubtransientInit
             // the machines' swing now integrates at (RmsTransientStability.ResolveNominalHz). For a 50 Hz model this is
             // the same 50.0 as the default, so every existing study is bit-identical.
             cp = cp with { NominalHz = model.FrequencyHz };
-            var unit = grp.Key.Wecc >= 0
+            // WP6 (RC5): a unit with an SVC or STATCOM model is driven by it (none without MachineData.Facts).
+            RmsFactsData? factsModel = grp.Key.Wecc >= 0 ? data[grp.Key.Wecc].Facts : null;
+            // RC5 WP12: a unit with a user injection model is driven by it (none without MachineData.UserInjection).
+            Plugins.UserDeviceModel? injectionModel = grp.Key.Wecc >= 0 ? data[grp.Key.Wecc].UserInjection : null;
+            // RC5 WP23: a unit with an IEC 61400 model is driven by it (none without MachineData.Iec61400).
+            Iec61400.Iec61400Data? iecModel = grp.Key.Wecc >= 0 ? data[grp.Key.Wecc].Iec61400 : null;
+            var unit = iecModel is not null
+                ? new RmsConverterUnit(grp.Key.Bus, name, rating, p0, q0, v0, new RmsConverterParameters { NominalHz = model.FrequencyHz }, BaseMva: baseMva)
+                    { Iec61400 = iecModel }
+                : injectionModel is not null
+                ? new RmsConverterUnit(grp.Key.Bus, name, rating, p0, q0, v0, new RmsConverterParameters { NominalHz = model.FrequencyHz }, BaseMva: baseMva)
+                    { DynamicLoad = new Plugins.UserDevicePlan(injectionModel, new Plugins.InjectionStart(p0, q0, v0.Real, v0.Imaginary, rating), name) }
+                : factsModel is not null
+                ? new RmsConverterUnit(grp.Key.Bus, name, rating, 0.0, q0, v0, new RmsConverterParameters { NominalHz = model.FrequencyHz }, BaseMva: baseMva)
+                    { Device = RmsDeviceBinding.GeneratorFacts(factsModel, name, baseMva, p0, q0, v0) }
+                : grp.Key.Wecc >= 0
                 ? new RmsConverterUnit(grp.Key.Bus, name, rating, p0, q0, v0, new RmsConverterParameters { NominalHz = model.FrequencyHz }, BaseMva: baseMva)
                     { Wecc = data[grp.Key.Wecc].Renewable, WeccMeasurement = WeccMeasurementOf(model, data[grp.Key.Wecc].Renewable!, grp.Key.Bus, busIndex, vByBus) }
                 : new RmsConverterUnit(grp.Key.Bus, name, rating, p0, q0, v0, cp, BaseMva: baseMva);
@@ -516,7 +685,37 @@ public static class SubtransientInit
             // WECC: a voltage-source model (REGC_B, REGFM_A1) stamps its source admittance the same way; every other WECC
             // unit has none, so without such a unit the stamps are exactly the historical ones.
             if (grp.Key.Forming || unit.Wecc?.NortonImpedance is not null) { int bi = busIndex[grp.Key.Bus]; Stamp(bi, bi, unit.NortonAdmittance); }
+            // RC5 WP12: a user injection model's own admittance (none for a pure current source).
+            if (injectionModel is not null && unit.NortonAdmittance != Complex.Zero) { int bi = busIndex[grp.Key.Bus]; Stamp(bi, bi, unit.NortonAdmittance); }
         }
+
+        // WP3b (RC5): each dynamic load is a unit on its bus (a converter node), after the converter plant, in list order: its
+        // model is initialised at the solved voltage and its Norton admittance stamped. None without dynamic loads.
+        List<(int Index, Complex Y)>? dynamicStamps = dynamicLoads is null ? null : new List<(int Index, Complex Y)>();
+        if (dynamicLoads is not null)
+            foreach (DynamicLoadData dl in dynamicLoads)
+            {
+                Complex vd = vByBus.TryGetValue(dl.BusId, out Complex vdl) ? vdl : Complex.One;
+                DynamicLoadPlan plan = dl.Plan(vd, baseMva, model.FrequencyHz);
+                double loadMva = new Complex(dl.PMw, dl.QMvar).Magnitude / baseMva;
+                var loadUnit = new RmsConverterUnit(dl.BusId, dl.Label, loadMva, -dl.PMw / baseMva, -dl.QMvar / baseMva, vd,
+                    new RmsConverterParameters { NominalHz = model.FrequencyHz }, BaseMva: baseMva) { DynamicLoad = plan };
+                units.Add(loadUnit);
+                if (!convNodes.Contains(dl.BusId)) { convNodes.Add(dl.BusId); keep.Add(busIndex[dl.BusId]); }
+                int bi = busIndex[dl.BusId];
+                Stamp(bi, bi, plan.NortonAdmittance);
+                dynamicStamps!.Add((bi, plan.NortonAdmittance));
+            }
+
+        // WP6 (RC5): each network device terminal is a unit on its bus (a converter node, current source, no stamp), after the
+        // dynamic loads, in device list order. None without device data.
+        if (deviceTerminals is not null)
+            foreach (RmsDeviceBinding.DeviceTerminal dt in deviceTerminals)
+            {
+                units.Add(new RmsConverterUnit(dt.Bus, dt.Name, dt.RatingPu, dt.P0, dt.Q0, dt.V0,
+                    new RmsConverterParameters { NominalHz = model.FrequencyHz }, BaseMva: baseMva) { Device = dt.Plan });
+                if (!convNodes.Contains(dt.Bus)) { convNodes.Add(dt.Bus); keep.Add(busIndex[dt.Bus]); }
+            }
 
         // WECC: a plant controller's regulated bus and flow-branch buses are retained as converter nodes with no injection,
         // after every unit bus, in RmsConverterUnit.NodeBuses order (the order the kernel uses). Without WECC plant
@@ -543,7 +742,11 @@ public static class SubtransientInit
                 trip!.GetRange(0, branchCellCount).ToArray(),
                 trip.GetRange(branchCellCount, trip.Count - branchCellCount).ToArray(),
                 machineStampAt, (int[])terminal.Clone(), (Complex[])yGenAt.Clone(), (int[])convBus.Clone(),
-                new Dictionary<int, Complex>(vByBus));
+                new Dictionary<int, Complex>(vByBus))
+            {
+                DynamicLoadByBus = dynamicByBus,
+                DynamicLoadStamps = dynamicStamps,
+            };
             return new Prepared(machines, h, damping, pm, efd, delta0, eqp0, edp0, eqpp0, edpp0, new Complex[0, 0],
                 genBuses, null, units.Count > 0 ? units : null, held.Count > 0 ? held : null, net, netF,
                 synthetics.Count > 0 ? synthetics : null) { Basis = basis };

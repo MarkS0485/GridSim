@@ -71,15 +71,22 @@ public sealed class EmtNetwork
     /// <summary>(from-bus, to-bus, element id) for each series branch - lets a caller resolve a current probe.</summary>
     public IReadOnlyList<(int From, int To, int ElementId)> SeriesBranchIds { get; }
 
+    /// <summary>R7-03: element id -&gt; how the case names the branch it came from (its position in the branch list, its
+    /// end buses and its name), for each travelling-wave line built from a <see cref="GridModel"/>; empty otherwise.
+    /// Used only in messages; it never enters the solve.</summary>
+    public IReadOnlyDictionary<int, string> ElementLabels { get; }
+
     public EmtNetwork(int nodeCount, IReadOnlyList<EmtElement> elements,
         IReadOnlyDictionary<int, int>? busToNode = null,
-        IReadOnlyList<(int, int, int)>? seriesBranchIds = null)
+        IReadOnlyList<(int, int, int)>? seriesBranchIds = null,
+        IReadOnlyDictionary<int, string>? elementLabels = null)
     {
         if (nodeCount <= 0) throw new ArgumentOutOfRangeException(nameof(nodeCount), "EMT network needs at least one node.");
         NodeCount = nodeCount;
         Elements = elements;
         BusToNode = busToNode ?? new Dictionary<int, int>();
         SeriesBranchIds = seriesBranchIds ?? Array.Empty<(int, int, int)>();
+        ElementLabels = elementLabels ?? new Dictionary<int, string>();
     }
 
     /// <summary>
@@ -119,6 +126,7 @@ public sealed class EmtNetwork
 
         var elements = new List<EmtElement>();
         var seriesIds = new List<(int, int, int)>();
+        var labels = new Dictionary<int, string>();
         int id = 0;
 
         for (int bi = 0; bi < model.Branches.Count; bi++)
@@ -156,6 +164,7 @@ public sealed class EmtNetwork
                 int lid = id++;
                 elements.Add(new BergeronLine(lid, f, t, zc, tau)); // lossless: series R dropped in this mode
                 seriesIds.Add((br.From, br.To, lid));
+                labels[lid] = BranchLabel(bi, br);
                 continue;
             }
 
@@ -271,7 +280,7 @@ public sealed class EmtNetwork
             elements.Add(new VoltageSource(id++, node, s.Rs, emf));
         }
 
-        return new EmtNetwork(busToNode.Count, elements, busToNode, seriesIds);
+        return new EmtNetwork(busToNode.Count, elements, busToNode, seriesIds, labels);
     }
 
     /// <summary>R078: how a refused branch is named in an error: its position in the model's branch list, its end

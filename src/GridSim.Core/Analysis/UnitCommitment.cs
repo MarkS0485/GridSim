@@ -183,8 +183,11 @@ public static class UnitCommitment
         for (int g = 0; g < G; g++) units[g] = BuildUnit(gens[g], g, options.Units?[g] ?? new UcUnitData(), options.QuadraticSegments, notes);
 
         double loadMw = model.Buses.Sum(b => b.Pd);
+        // B33: the buses' shunt conductance Gs is a constant-power DC load. It is a shunt, not demand, so the period load
+        // scale does not apply to it; with no Gs the demand is exactly the scaled load, as before.
+        double shuntMw = DcDemand.ShuntMw(model);
         var demand = new double[T];
-        for (int t = 0; t < T; t++) demand[t] = loadMw * scale[t];
+        for (int t = 0; t < T; t++) demand[t] = shuntMw == 0.0 ? loadMw * scale[t] : loadMw * scale[t] + shuntMw;
 
         var lp = new LpBuilder();
         var u = new int[G, T];
@@ -444,8 +447,10 @@ public static class UnitCommitment
             double costG = 0;
             for (int t = 0; t < T; t++)
             {
-                on[t] = x[u[g, t]] == 1.0;
-                started[t] = x[v[g, t]] == 1.0;
+                // ANA-25: read as on / started above one half (the branch-and-bound may return a whole column as
+                // 0.9999999999); an exact == 1.0 reported such a unit off at Pmin with its segments and their cost dropped.
+                on[t] = x[u[g, t]] > 0.5;
+                started[t] = x[v[g, t]] > 0.5;
                 double p = un.Pmin * x[u[g, t]];
                 double segCost = 0;
                 // An off unit's segments are held at 0 by its capacity row (sum s <= (Pmax - Pmin) u = 0); reading them only

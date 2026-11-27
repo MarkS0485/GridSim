@@ -47,6 +47,8 @@ WRITER_VERBS = (
     "cgmes-conform",   # R4-11b
     "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",   # RC4 study verbs
     "study-case", "case-diff", "result-diff", "report",   # RC4 study verbs
+    "protection-eval", "protection-grade", "acopf-opt", "acscopf", "reconfig", "grid-code", "reduce", "cgmes-shacl",   # RC5
+    "breaking-change",   # RC5 run journal: validate, import and list reports
 )
 
 #: The writer verbs whose own ``--out`` names the verb's own result file or folder (a study result, a diff, a report, an import
@@ -55,6 +57,7 @@ WRITER_VERBS = (
 OWN_OUT_VERBS = (
     "probabilistic", "reliability-network", "flicker", "filter-design", "harmonic-assess", "connection-assess",
     "study-case", "case-diff", "result-diff", "report",
+    "acopf-opt", "acscopf", "reconfig", "grid-code", "reduce",
 )
 
 #: The CLI's alternative spellings of writer verbs, mapped to the canonical name (the name in the result document).
@@ -62,6 +65,17 @@ ALIASES = {"n-1": "nminus1", "n-2": "nminus2", "nminus1minus1": "n-1-1"}
 
 #: The flags the wrapper itself owns: it names the result file, so a caller may not.
 _RESULT_FLAGS = ("--json", "--csv", "--out")
+
+def _check_result_flags(name, argv):
+    """Refuse ``--json``, ``--csv`` and ``--out`` in ``argv``: the wrapper names the result file. ``--out`` is passed
+    through for the verbs in ``OWN_OUT_VERBS``, where it names the verb's own output. ``GridSim.run`` and
+    ``Session.run_verb`` share this one check."""
+    for flag in _RESULT_FLAGS:
+        if flag == "--out" and name in OWN_OUT_VERBS:
+            continue
+        if flag in argv:
+            raise ValueError(f"{flag} is the wrapper's to give: it writes the result to a temporary file and reads it back")
+
 
 #: JSON has no NaN or infinity, so the CLI writes those three values as these strings (manual chapter 19).
 _NAMED_FLOATS = {"NaN": math.nan, "Infinity": math.inf, "-Infinity": -math.inf}
@@ -196,11 +210,7 @@ class GridSim:
         """
         name = canonical(verb)
         argv = [str(a) for a in args]
-        for flag in _RESULT_FLAGS:
-            if flag == "--out" and name in OWN_OUT_VERBS:
-                continue
-            if flag in argv:
-                raise ValueError(f"{flag} is the wrapper's to give: it writes the result to a temporary file and reads it back")
+        _check_result_flags(name, argv)
         with tempfile.TemporaryDirectory(prefix="gridsim-py-") as tmp:
             out = os.path.join(tmp, "result.json")
             cmd = self.command + [name, *argv, "--json", out]

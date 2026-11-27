@@ -12,7 +12,7 @@ public class RtuPointMapDuplicateAddressTests
 {
     private static string Write(string json)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"pm-n080-{Guid.NewGuid():N}.json");
+        string path = TestTemp.Under($"pm-n080-{Guid.NewGuid():N}.json");
         File.WriteAllText(path, json);
         return path;
     }

@@ -134,7 +134,7 @@ public sealed partial class Cf2OpenCodeFindingsTests
     [Fact]
     public void N226_a_malformed_setting_stops_the_web_host_at_start_up()
     {
-        string keys = Path.Combine(Path.GetTempPath(), "gridsim-n226-keys-" + Guid.NewGuid().ToString("N"));
+        string keys = TestTemp.Under("gridsim-n226-keys-" + Guid.NewGuid().ToString("N"));
         using var f = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("Auth:KeysDirectory", keys);

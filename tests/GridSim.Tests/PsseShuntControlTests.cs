@@ -166,7 +166,7 @@ public class PsseShuntControlTests
     [Fact]
     public void Shunt_control_on_the_command_line_switches_the_bank_in_the_case_solve_and_in_pf()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-shunts-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-shunts-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

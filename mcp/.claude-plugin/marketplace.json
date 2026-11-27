@@ -1,0 +1,17 @@
+{
+  "name": "gridsim-dev",
+  "owner": {
+    "name": "Mark Shirley"
+  },
+  "metadata": {
+    "description": "GridSim plugins for AI tools, for local development installs."
+  },
+  "plugins": [
+    {
+      "name": "gridsim",
+      "source": "./gridsim-mcp",
+      "description": "GridSim's deterministic power-system solver for AI tools: build, solve, study and check networks on your own machine, offline, with a hash-chained study record. GridSim is installed separately.",
+      "version": "0.1.0"
+    }
+  ]
+}

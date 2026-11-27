@@ -123,7 +123,7 @@ public sealed class LicenceGate
         return Resolve(
             explicitToken,
             Environment.GetEnvironmentVariable(EnvVar),
-            ReadFileToken(LicenceFilePath),
+            ReadLicenceFileToken(),
             verifier);
     }
 
@@ -184,7 +184,7 @@ public sealed class LicenceGate
             if (busCount > free.BusLimit)
                 return GateResult.Deny(
                     $"Your {Entitlement.Tier.DisplayName()} licence does not apply: {majorReason}. The free {free.Tier.DisplayName()} " +
-                    $"tier applies meanwhile: this network has {busCount:N0} buses and the free tier allows {free.BusLimit:N0}.");
+                    FormattableString.Invariant($"tier applies meanwhile: this network has {busCount:N0} buses and the free tier allows {free.BusLimit:N0}."));
             return GateResult.Ok();
         }
 
@@ -195,9 +195,9 @@ public sealed class LicenceGate
             Entitlement free = Entitlement.FreeDefault;
             if (busCount > free.BusLimit)
                 return GateResult.Deny(
-                    $"Your {Entitlement.Tier.DisplayName()} licence starts on {Entitlement.Issued:yyyy-MM-dd} (UTC) and does not " +
-                    $"apply before then, so the free {free.Tier.DisplayName()} tier applies: this network has {busCount:N0} buses " +
-                    $"and the free tier allows {free.BusLimit:N0}. Check the computer's date, or ask: {ContactEmail}");
+                    FormattableString.Invariant($"Your {Entitlement.Tier.DisplayName()} licence starts on {Entitlement.Issued:yyyy-MM-dd} (UTC) and does not ") +
+                    FormattableString.Invariant($"apply before then, so the free {free.Tier.DisplayName()} tier applies: this network has {busCount:N0} buses ") +
+                    FormattableString.Invariant($"and the free tier allows {free.BusLimit:N0}. Check the computer's date, or ask: {ContactEmail}"));
             return GateResult.Ok();
         }
 
@@ -207,16 +207,16 @@ public sealed class LicenceGate
             Entitlement free = Entitlement.FreeDefault;
             if (busCount > free.BusLimit)
                 return GateResult.Deny(
-                    $"Your {Entitlement.Tier.DisplayName()} licence expired on {Entitlement.Expires:yyyy-MM-dd}, so the " +
-                    $"free {free.Tier.DisplayName()} tier applies: this network has {busCount:N0} buses and the free tier " +
-                    $"allows {free.BusLimit:N0}. Licences are free at present: to renew or ask about a new term, contact {ContactEmail}");
+                    FormattableString.Invariant($"Your {Entitlement.Tier.DisplayName()} licence expired on {Entitlement.Expires:yyyy-MM-dd}, so the ") +
+                    FormattableString.Invariant($"free {free.Tier.DisplayName()} tier applies: this network has {busCount:N0} buses and the free tier ") +
+                    FormattableString.Invariant($"allows {free.BusLimit:N0}. Licences are free at present: to renew or ask about a new term, contact {ContactEmail}"));
             return GateResult.Ok();
         }
 
         if (!Entitlement.IsUnlimited && busCount > Entitlement.BusLimit)
             return GateResult.Deny(
-                $"This network has {busCount:N0} buses; your {Entitlement.Tier.DisplayName()} licence allows " +
-                $"{Entitlement.BusLimit:N0}. A larger licence removes the limit. Licences are free at present: ask {ContactEmail}");
+                FormattableString.Invariant($"This network has {busCount:N0} buses; your {Entitlement.Tier.DisplayName()} licence allows ") +
+                FormattableString.Invariant($"{Entitlement.BusLimit:N0}. A larger licence removes the limit. Licences are free at present: ask {ContactEmail}"));
 
         return GateResult.Ok();
     }
@@ -258,13 +258,15 @@ public sealed class LicenceGate
         // the future (D-DOC-086) and a key for another major version (F27) all get the free tier's rules, but the line
         // used to print the key's own limit ("unlimited buses") next to EXPIRED. It now prints the free cap and says why.
         bool freeRulesApply = FreeRulesApply;
+        // SEC-03: every number and date in the invariant culture (a Thai or Saudi calendar printed the wrong year, and some
+        // cultures group digits with a non-ASCII space).
         string limit = freeRulesApply
-            ? $"{Entitlement.FreeDefault.BusLimit:N0} buses (the free tier applies)"
-            : e.IsUnlimited ? "unlimited buses" : $"{e.BusLimit:N0} buses";
-        string expiry = e.IsNotYetValid ? $"NOT YET VALID (starts {e.Issued:yyyy-MM-dd})"
+            ? FormattableString.Invariant($"{Entitlement.FreeDefault.BusLimit:N0} buses (the free tier applies)")
+            : e.IsUnlimited ? "unlimited buses" : FormattableString.Invariant($"{e.BusLimit:N0} buses");
+        string expiry = e.IsNotYetValid ? FormattableString.Invariant($"NOT YET VALID (starts {e.Issued:yyyy-MM-dd})")
                       : e.Expires == DateOnly.MaxValue ? "no expiry"
-                      : e.IsExpired ? $"EXPIRED {e.Expires:yyyy-MM-dd}"
-                      : $"expires {e.Expires:yyyy-MM-dd}";
+                      : e.IsExpired ? FormattableString.Invariant($"EXPIRED {e.Expires:yyyy-MM-dd}")
+                      : FormattableString.Invariant($"expires {e.Expires:yyyy-MM-dd}");
         // N215 (October 2026): the fields are separated by an ASCII " | " (Sep). They used to be separated by the non-ASCII
         // middle dot U+00B7, which a legacy console code page prints as "?" or mojibake; the fields and their order are
         // unchanged.
@@ -299,10 +301,27 @@ public sealed class LicenceGate
         if (!FitsMajorVersion(ent, BuildInfo.MajorVersion, out string majorReason))
             throw new LicenceException($"Licence key rejected: {majorReason}");
 
-        string path = Path.GetFullPath(targetPath);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, bare + Environment.NewLine);
+        WriteLicenceFile(targetPath, bare);
         return ent;
+    }
+
+    /// <summary>
+    /// Write a verified key to the licence file at <paramref name="targetPath"/>, creating its folder. A file that cannot be
+    /// written (a read-only folder, such as the /licence mount of a container) is refused by name with a
+    /// <see cref="LicenceException"/>, like a rejected key, instead of ending the program with an unhandled I/O error.
+    /// </summary>
+    internal static void WriteLicenceFile(string targetPath, string bareToken)
+    {
+        string path = Path.GetFullPath(targetPath);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, bareToken + Environment.NewLine);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new LicenceException($"Could not write the licence file '{path}': {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -322,11 +341,45 @@ public sealed class LicenceGate
         return Install(content);
     }
 
-    private static string? ReadFileToken(string path)
+    /// <summary>
+    /// The key held in the licence file at <paramref name="path"/>, or null when there is no file to read: the path does
+    /// not exist, names a folder, or cannot be read. Null means "no licence installed", so a GRIDSIM_LICENCE_FILE that
+    /// names a missing file (a container with nothing mounted at /licence) runs at the free tier and never stops the
+    /// program starting. A file that exists but holds a bad key returns that key, which resolution then rejects by name.
+    /// </summary>
+    internal static string? ReadFileToken(string path)
     {
-        try { return File.Exists(path) ? ExtractToken(File.ReadAllText(path)) : null; }
-        catch (IOException) { return null; }
-        catch (UnauthorizedAccessException) { return null; }
+        // SEC-13: the start-up contract ("a missing or unreadable key never stops the software starting") holds for every
+        // failure: any file-system refusal is "no licence installed", and at most MaxLicenceFileBytes are read, so a
+        // GRIDSIM_LICENCE_FILE naming /dev/zero or a huge file is not read until memory runs out on every command.
+        try
+        {
+            if (!File.Exists(path)) return null;
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            var buffer = new byte[MaxLicenceFileBytes + 1];
+            int total = 0, n;
+            while (total < buffer.Length && (n = fs.Read(buffer, total, buffer.Length - total)) > 0) total += n;
+            if (total > MaxLicenceFileBytes) return null;
+            return ExtractToken(new System.Text.UTF8Encoding(false).GetString(buffer, 0, total).TrimStart('\uFEFF'));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException
+                                   or System.Security.SecurityException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>SEC-13: a licence file is a key and a few comment lines; anything longer is not read.</summary>
+    internal const int MaxLicenceFileBytes = 64 * 1024;
+
+    /// <summary>SEC-13: the licence file's token, with a malformed or over-long GRIDSIM_LICENCE_FILE (which
+    /// <see cref="Path.GetFullPath(string)"/> refuses) read as no licence installed instead of stopping start-up.</summary>
+    private static string? ReadLicenceFileToken()
+    {
+        string path;
+        try { path = LicenceFilePath; }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException or System.Security.SecurityException) { return null; }
+        return ReadFileToken(path);
     }
 
     /// <summary>
@@ -347,6 +400,7 @@ public sealed class LicenceGate
             if (keyLine) key.Append(line);
             else if (key.Length > 0) break;   // the key ends at the first blank or comment line after it
         }
-        return key.Length > 0 ? key.ToString() : content.Trim();
+        // SEC-14: a file of comment lines only holds no key: it is "no licence installed", not a key rejected as bad base64.
+        return key.ToString();
     }
 }

@@ -25,7 +25,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class N194UkpnReplicaTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-n194-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-n194-{Guid.NewGuid():N}");
 
     public N194UkpnReplicaTests() => Directory.CreateDirectory(_root);
 

@@ -14,7 +14,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr287ParquetMixedVintagesTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-gr287-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-gr287-" + Guid.NewGuid().ToString("N"));
 
     public void Dispose()
     {

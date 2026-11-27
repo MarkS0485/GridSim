@@ -124,7 +124,7 @@ public sealed class AuditLogWriter : IDisposable
             string lockPath = fullPath + ".lock";
             try
             {
-                lockFile = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                lockFile = new FileStream(lockPath, UserOnlyFile.Options(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None));   // SEC-09
             }
             catch (IOException ex)
             {
@@ -138,7 +138,7 @@ public sealed class AuditLogWriter : IDisposable
             // Step 2: the log itself. FileShare.Read lets verifiers read it; nobody else may write to it.
             try
             {
-                stream = new FileStream(fullPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read);
+                stream = new FileStream(fullPath, UserOnlyFile.Options(FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read));   // SEC-09
             }
             catch (IOException ex)
             {

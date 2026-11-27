@@ -65,7 +65,9 @@ public sealed class CellModel
     /// <summary>
     /// Advance the electrochemical state by <paramref name="dt"/> seconds at constant <paramref name="current"/>
     /// (A, discharge positive). Returns the heat generated (J): irreversible <c>I^2 R0 + V1^2/R1 + V2^2/R2</c>
-    /// plus reversible entropic <c>I T dU/dT</c>. Temperature is advanced by the pack's thermal model.
+    /// plus reversible entropic <c>-I T dU/dT</c> (Bernardi, Pawlikowski and Newman 1985: q = I (U - V) - I T dU/dT with
+    /// discharge-positive current). A cell whose OCV falls with temperature (dU/dT below 0) heats on discharge and cools on
+    /// charge. Temperature is advanced by the pack's thermal model.
     /// </summary>
     public double Step(double current, double dt)
     {
@@ -79,7 +81,7 @@ public sealed class CellModel
         double qIrr = current * current * r0 * dt
             + 0.5 * (V1 * V1 + v1n * v1n) / r1 * dt
             + 0.5 * (V2 * V2 + v2n * v2n) / r2 * dt;
-        double qRev = current * TemperatureK * c.EntropicCoefficient[Soc] * dt;
+        double qRev = -current * TemperatureK * c.EntropicCoefficient[Soc] * dt;
         V1 = v1n; V2 = v2n;
 
         // Charge throughput.

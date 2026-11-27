@@ -18,7 +18,7 @@ public sealed class AuditLogFileTests : IDisposable
     private static readonly DateTime T0 = new(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc);
 
     // Every test gets its own scratch directory, removed afterwards.
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-audit-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-audit-{Guid.NewGuid():N}");
 
     public AuditLogFileTests() => Directory.CreateDirectory(_dir);
 

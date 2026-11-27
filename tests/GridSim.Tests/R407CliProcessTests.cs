@@ -9,7 +9,7 @@ public sealed class R407CliProcessTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-r407-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-r407-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

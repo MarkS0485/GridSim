@@ -271,7 +271,7 @@ public sealed class UiStarLegsTests
     /// x <paramref name="legX"/>), projected to v2 into a fresh temporary folder, with the overlay (or without).</summary>
     private sealed class ThreeWindingCase : IDisposable
     {
-        private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-starlegs-" + Guid.NewGuid().ToString("N"));
+        private readonly string _root = TestTemp.Under("gridsim-starlegs-" + Guid.NewGuid().ToString("N"));
 
         public ThreeWindingCase(bool withOverlay = true, string? legR = null, string? legX = null, string overlay = Overlay)
         {

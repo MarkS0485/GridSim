@@ -36,6 +36,52 @@ anonymous build statistics; `Directory.Build.targets` replaces that target with 
 repository runs it. The CI workflows also set `AVALONIA_TELEMETRY_OPTOUT=1`, Avalonia's own switch; set it in your
 shell as well if you build Avalonia projects outside this repository. Do not remove either.
 
+The same file stamps every assembly with the marker `TelemetryOff=true`. At start-up every app (the Avalonia desktop
+app, the WPF dashboard, the `gridsim` CLI, the web app, the case editor and `gridsim-script`) runs
+`GridSim.Core.Diagnostics.TelemetryGuard` before
+anything else; it exits with code 78, writing one line that names the reason to the error stream and the trace log,
+when an app assembly lacks the marker, a telemetry library or injected agent (Application Insights, an OpenTelemetry
+exporter or its automatic instrumentation, Azure Monitor, Sentry, Dynatrace, AppDynamics and the others on its
+denylists) is loaded now or later, an environment variable would switch on an exporter (`OTEL_EXPORTER_*`,
+`APPLICATIONINSIGHTS_CONNECTION_STRING`, `SENTRY_DSN`, `DD_API_KEY` and the rest), configure an APM agent
+(`DD_AGENT_HOST`, `DD_ENV`, `DD_SERVICE`, `NEW_RELIC_APP_NAME`, `DT_TENANT`, `APPDYNAMICS_*` and the rest) or load an agent
+(`DOTNET_STARTUP_HOOKS`, `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`, `CORECLR_ENABLE_PROFILING=1`, `CORECLR_PROFILER*` and
+the rest), `AVALONIA_TELEMETRY_OPTOUT` is set to anything but 1 or true, or the guard itself fails. So `dotnet watch`,
+Hot Reload and a profiler-based coverage tool make the apps, and the tests that host the web app or run the CLI, exit
+with code 78; use `dotnet run`, and coverlet if you want coverage. Neither Avalonia nor ASP.NET Core sends telemetry at run time by default; the guard keeps it that way. It
+checks what is loaded and configured, not network traffic. Never add a telemetry package to any project:
+`TelemetryGuardTests` reads every app and web package graph and fails if one appears. The full lists are in technical
+ch. 35, section Telemetry.
+
+### Developing with the telemetry guard
+
+The guard is strict everywhere, by Mark's ruling: it has no developer mode and no switch that loosens it, in a Debug
+build as in a release. So these make every GridSim app exit with code 78, by design:
+
+- `dotnet watch` and Hot Reload, from the command line or an IDE: they load their change applier through
+  `DOTNET_STARTUP_HOOKS`;
+- profiler-based coverage and performance tools (dotnet-coverage in its dynamic mode, dotCover, dotTrace and the
+  like): they set `CORECLR_ENABLE_PROFILING` and `CORECLR_PROFILER*`;
+- an IDE's browser refresh or Browser Link for the web app: it loads a hosting-startup assembly through
+  `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES`;
+- an APM agent on your machine whose variables are in your shell (Datadog, New Relic, Dynatrace, AppDynamics and the
+  others above).
+
+Work without them:
+
+- Edit, then `dotnet build GridSim.slnx` and start the app with `dotnet run --project <project>` (or the built
+  executable). Stop it and run it again to see a change; there is no live reload.
+- In an IDE, start or debug the app with Hot Reload (and, for the web app, browser refresh) switched off in the IDE's
+  settings. A plain debug session (breakpoints, stepping, watches) needs none of the refused variables; if the app
+  still exits, the line names the variable the IDE set.
+- Run the tests with `dotnet test`, not `dotnet watch test`; the tests that host the web app or start the CLI run the
+  real guard, and `TelemetryGuardAllAppsTests.The_test_host_itself_passes_the_environment_check` names the variable at
+  fault when the shell carries one.
+- For coverage, use a tool that instruments the assemblies at build time instead of loading a profiler (coverlet does);
+  none is part of this repository.
+- If the exit line names a variable your shell sets for other work (an APM agent's, say), unset it for the GridSim
+  shell; the line says which.
+
 ## Conventions
 
 - Per change: code + tests + docs + CHANGELOG entry (ascending, newest at bottom) + commit.

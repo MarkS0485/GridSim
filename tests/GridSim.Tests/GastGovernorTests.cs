@@ -112,7 +112,7 @@ public class GastGovernorTests
             "     6 'GAST'   1   0.05  0.4  0.1  3.0  1.2  2.0  1.1  0.0  0.02 /");
         PsseDyrResult r = PsseDyrReader.Read(dyr, raw, "case14", new PsseDyrOptions { SourceName = "gast.dyr" });
         Assert.Equal(1, r.Machines);
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-gast-test-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-gast-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         MachineDynamicsSet set;
         try

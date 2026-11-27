@@ -23,16 +23,45 @@ never the sweep). The two engines are bit-identical on the CPU, so the same mode
 
 `DistributionFactors.Build` (`src/GridSim.Core/Analysis/DistributionFactors.cs`) forms the DC model every other DC analysis
 uses. A branch takes part when it is in service, its series reactance `X` is not zero and both end buses exist in the model.
-Resistance, line charging, tap ratio and phase shift are ignored, and every voltage magnitude is 1 pu:
+The model is MATPOWER's (`makeBdc` and the DC branch of `runpf`): tap ratios, phase shifts and bus shunt conductance
+are included; resistance, line charging and the shunt susceptance `Bs` are ignored, every voltage magnitude is 1 pu and
+there are no losses. What was checked is agreement with an independent NumPy transcription of MATPOWER's `makeBdc`
+(see Verification below). pandapower ports `makeBdc` and is expected to give the same model, but no pandapower run has
+been compared, so that equivalence is not verified:
 
 ```
-b_l       = 1 / X_l                                    (per-unit susceptance of branch l; X in pu on BaseMva)
+tap_l     = TapRatio_l, read as 1 when it is 0                (a negative or non-finite tap is refused by name)
+b_l       = (1 / X_l) / tap_l                                 (per-unit susceptance; MATPOWER's order of operations)
+phi_l     = PhaseShiftDeg_l * pi / 180                        (positive from -> to, the AC model's sign)
+Pfinj_l   = -b_l * phi_l                                      (flow offset of branch l, pu)
+Pbusinj   = +Pfinj_l at from(l), -Pfinj_l at to(l), summed over branches
 B'[i,i]   = sum of b_l over participating branches at bus i
 B'[i,j]   = - sum of b_l over participating branches joining i and j       (i != j)
 every island reference bus: its row and column are removed from B'
-theta     = B'^-1 * (P / BaseMva)                      (reference angles are 0; P is the net injection in MW)
-f_l       = b_l * (theta_from(l) - theta_to(l)) * BaseMva                  (MW, positive from -> to)
+rhs_i     = P_i / BaseMva - Pbusinj_i - Gs_i / BaseMva        (P is the net injection Pg - Pd in MW; Gs in MW at 1 pu)
+theta     = B'^-1 * rhs                                       (reference angles are 0)
+f_l       = (b_l * (theta_from(l) - theta_to(l)) + Pfinj_l) * BaseMva
+          = b_l * (theta_from(l) - theta_to(l) - phi_l) * BaseMva          (MW, positive from -> to)
 ```
+
+A positive shift therefore reduces the from -> to flow; on the right-hand side it acts as `+b phi` at the from bus and
+`-b phi` at the to bus. Gs is a constant-power load. Within one island the shift injections sum to zero, so the island's
+reference supplies the island's whole imbalance including its Gs: total scheduled generation meets `sum Pd + sum Gs`,
+MATPOWER's `Pg = Pinj + Pload + Gs`. A model with no tap other than 0 or 1, no phase shift and no Gs is computed by exactly the
+instructions of the reactance-only model, so its results are the same bits as before these terms were added: a tap of
+exactly 1 (or 0) takes the expression `1 / X_l` itself, and with no shift and no Gs the shift and Gs tables are never
+created, so the right-hand side and the flows run only the reactance-only code.
+
+The Newton DC-start seed and the inner DC passes of `acopf` use a reactance-only view of the model (every tap 1, every
+shift 0, every Gs 0). The seed only picks a start point for a Newton retry, and moving it would change which retries
+converge; the `acopf` loss loop measures losses from an AC solve that already draws Gs, so counting Gs in its DC demand
+would count it twice.
+
+Verification: the DC power flow is checked against an independent NumPy transcription of MATPOWER `makeBdc` and `rundcpf`
+(`tools/crossval/pf/dcpf_fidelity.py`) on case9, case14, case30, case57, case118, case300, cigre_mv, the GB reduced
+MATPOWER file and synthetic tap, shift and Gs variants, to a normwise bound of 4096 machine epsilons (each value within
+4096 eps of the reference, scaled by the largest reference magnitude of its kind). That is verification against an
+independent implementation of the same equations; the DC model is not validated against measurements of a real grid.
 
 Parallel branches add. B' is stamped in branch order into a `CsrMatrix` and factored once by `SparseLu.Factor` (minimum-degree
 ordering, partial pivoting; [ch. 3](<0003 Power flow.md>)). If the factorisation finds B' singular even with
@@ -49,7 +78,7 @@ their first bus in model order. The reference of each island is chosen as follow
 |---|---|
 | Holds the overall slack: `slackBusId` if given and present, else the first `Slack` bus, else bus index 0 | That slack |
 | Any other island with a `Slack` bus | The first `Slack` bus in model order |
-| Any other island with generators | The bus holding the largest single `|Pg|` (first in model order among ties) |
+| Any other island with generators | The bus holding the largest single `\|Pg\|` (first in model order among ties) |
 | An island with no generator (dead island) | Its first bus, so that B' stays non-singular |
 
 The overall slack's reference is first in the reference list and becomes `DistributionFactors.SlackBusId`. With one island nothing
@@ -57,7 +86,8 @@ changes from the single-slack formulation: the same reference, the same matrix, 
 islands is the AC island rule of `IslandPartition` ([ch. 3](<0003 Power flow.md>)), with one difference: the DC rule counts an
 island as having a generator when any generator sits on it, even one at `Pg = 0`, while the AC pre-pass blacks out an island
 whose generators all have `Pg = 0`. Such an island is a live island to the DC model and a dead one to the AC solve. `DcIsland`
-records the reference bus id, the bus ids, whether the island has any generator, and its total `Pd`.
+records the reference bus id, the bus ids, whether the island has any generator, its total `Pd` and its total `Gs`
+(`ShuntLoadMw`).
 
 ### DC power flow
 
@@ -67,10 +97,12 @@ injection of each bus as the sum of in-service `Pg` minus `Pd` (accumulated in m
 reference's entry dropped), solves `B' theta = P` with the one factorisation, and forms the flows
 `b_l (theta_from - theta_to) BaseMva` exactly as `DcFlows` does (the two share the right-hand-side and flow code, so they
 give the same bits). Angles are returned in degrees, every island reference at 0. Each island's reference injects
-`-(sum of the other buses' net injections in the island)`: the DC model is lossless, so that is the whole imbalance.
+`-(sum of the other buses' net injections in the island) + (the island's total Gs)`: the DC model is lossless, so that is
+the whole imbalance.
 Loading is `|flow| / RateAMva x 100`, 0 for an unrated branch. The result (`DcPowerFlowResult`) holds the bus ids, angles
 and net injections, the branch flows and loadings, and one `DcIslandBalance` per island (reference bus, bus count, load,
-scheduled generation, reference injection, whether the island has a generator).
+scheduled generation, reference injection, whether the island has a generator, and its shunt conductance load
+`ShuntLoadMw`).
 
 `RunDcpf` (`src/GridSim.Cli/Program.cs`) prints one line per island, the number of rated branches above
 `ContingencyAnalysis.OverloadThresholdPercent` (100) of `RateA`, and the `--top` branches (12 by default, 0 prints none) with
@@ -95,7 +127,8 @@ PTDF[l,k] = b_l * (theta_from(l) - theta_to(l))         (dimensionless: MW per M
 
 `PtdfColumn(busId)` returns an all-zero column when the bus is a reference bus (the slack column is identically zero) or is not in the
 model. Every branch of another island has a zero entry. One column is one solve; `Ptdf()` builds the whole matrix and is memory-heavy
-beyond small cases. Flow under any injection is `f = f0 + PTDF * P`, where `f0` is the flow of the fixed loads.
+beyond small cases. Flow under any injection is `f = f0 + PTDF * P`, where `f0` is the flow of the fixed loads, which carries the
+phase-shift offsets and the Gs loads (with a shifter the map from injections to flows is affine, not linear).
 
 ### LODF
 
@@ -122,11 +155,11 @@ generation cost; the overload `Solve(model, DcOpfOptions)` adds cost curves and 
 ```
 variables    Pg_i  (i = 1..g)           s_l  (l = 1..L)         dispatch in MW; one slack per rated line
 minimise     sum_i cost_i * Pg_i
-subject to   sum_i Pg_i = D                                      D = sum over buses of Pd
+subject to   sum_i Pg_i = D                                      D = sum over buses of (Pd + Gs)
              sum_i PTDF[l, bus_i] * Pg_i + s_l = RateA_l - f0_l  one row per rated line l kept by the screen below
              Pmin_i <= Pg_i <= Pmax_i                            Pmax_i = 1e6 MW when infinite
              0 <= s_l <= 2 * RateA_l
-f0_l   = DC flow on line l with every Pg = 0 and the loads at -Pd           (FlowsFrom)
+f0_l   = DC flow on line l with every Pg = 0, the loads at -Pd, Gs and shifts (FlowsFrom)
 flow_l = f0_l + sum_i PTDF[l, bus_i] * Pg_i = RateA_l - s_l      so -RateA_l <= flow_l <= +RateA_l on every kept line
 ```
 
@@ -337,7 +370,7 @@ D       = sum of Pd over buses
 losses  = 0
 for iter = 0 .. maxIterations - 1:
     scale = (D + losses) / D                      (1.0 when D <= 0)
-    dc    = DcOptimalPowerFlow.Solve(ScaleLoads(model, scale), options)   (loads Pd and Qd scaled; fuel-type or cost-curve costs)
+    dc    = DcOptimalPowerFlow.Solve(LegacyView(ScaleLoads(model, scale)), options)   (loads Pd and Qd scaled; taps 1, shifts and Gs 0; fuel-type or cost-curve costs)
     if iter == 0 and StaysInfeasible(dc):  return Converged = false, Iterations = 0, Failure = DcDispatchInfeasible, StoppedAtInfeasibleFirstPass
     ac    = Newton(model with each generator's Pg := dc.Dispatch[i].Pg)                  (the UNscaled model)
     if not ac.Converged:  return Converged = false, Iterations = iter, Losses = NaN, Cost = NaN, Failure = AcPowerFlowNotConverged
@@ -402,6 +435,316 @@ Details that follow from the code:
   covers `D + losses_previous`.
 - A DC-OPF that throws `InvalidOperationException` (for example a singular DC model) reaches the CLI as exit 1. A Newton solve cannot
   throw on a singular Jacobian: the step reports non-convergence.
+
+### Loss and reactive power OPF, taps and shunts (`acopf-opt`)
+
+`AcOpfExtended` (`src/GridSim.Core/Analysis/Opf/AcOpfExtended.cs`) is a copy of `AcOpfInteriorPoint` (MATPOWER's MIPS,
+step for step), generalised. `AcOpfInteriorPoint` itself is not edited. With one network block, no controls and the
+cost objective the copy keeps the variable order, the row order and every loop order of the original, so the two give
+the same bits: objective, every Pg, Qg, Vm and Va, the iteration count and the log (test T0 on case9 and case30).
+
+One addition to MIPS: when the barrier parameter falls below machine epsilon while feasibility, gradient and cost
+change already meet their tolerances, the copy ends as converged "at the barrier floor", where MIPS reports a
+breakdown. Both tests read the same z'mu, so a complementarity tolerance below about 2.2e-15 x (number of
+inequalities) / (centring x (1 + |x|inf)) cannot be met before the barrier floor. Case9 losses with a complementarity
+tolerance of 1e-15 broke down at iteration 18 and now converge there to the SciPy loss minimum. The ordinary
+convergence test comes first, so a run that converges in MIPS gives the same bits here.
+
+A second addition, for the losses and reactive power objectives only: a feasibility correction at the barrier floor.
+An AC-SCOPF outage block has no objective of its own, so a direction of its state that the network leaves free (a
+slack unit's voltage after the outage, say) is held by the barrier alone. With z mu = gamma on every row and the next
+barrier sigma gamma, the primal-dual step moves only sigma (0.1) of the Newton step of the barrier towards the block's
+analytic centre, because the dual update takes the rest. The error in that direction falls by 1 - sigma = 0.9 per
+iteration. Each full step leaves an equality residual of order |Y| |dx|^2, which falls by 0.81, while the barrier
+falls by 0.1. The barrier reaches machine epsilon long before the residual reaches the 1e-12 tolerance: about 130
+iterations would be needed. The two-bus cable case of the tests (line R 0.015, X 0.15; cable R 0.01, X 0.10, B 1.5;
+outage of the cable) reached the barrier floor at iteration 18 with a feasibility of 7e-9, a mismatch of 7e-7 pu.
+Double precision is not the limit: the rounding of g is about u x sum |Y_ik| V_i V_k, near 1e-14 pu, or 1e-16 after
+the 1 + |z|inf scaling. So the tolerance stays at 1e-12, and when the barrier floor is reached with gradient and cost
+change met but feasibility not, the point is projected onto g = 0 by Newton steps of min 1/2 d'Wd subject to g + J d =
+0, with W the identity plus the barrier weights of the inequality rows (a variable on a binding limit stays put). The
+projection converges quadratically: on the cable case one step takes the feasibility from 7e-9 to 5e-16, moving the
+block by 1.4e-7 pu. The result is then held to the same feasibility, gradient and cost-change tolerances, so the
+correction moves the objective by less than 1e-12 (1 + |f|) scaled, 1e-8 (1 + |f|) MW. If it fails any of them the run
+ends as a numerical failure that says so.
+
+A problem with no feasible point. An interior point method on an infeasible problem does not converge: the feasibility
+measure stops falling while the multipliers of the constraints that conflict grow without bound, until the Newton
+system is singular or the steps vanish (Nocedal and Wright, Numerical Optimization, 2nd ed., 19.1). When a run breaks
+down after the feasibility condition stayed above its tolerance and above half its value of four iterations before
+while the complementarity grew, the status is `Infeasible`, not `NumericalFailure`, and the message says "likely
+infeasible" and names the inequality constraints with the largest final multipliers (at least a thousandth of the
+largest, eight at most). The signature is evidence of an empty feasible set, not a proof of one; a phase-1 solve is the
+proof. A run that
+converges is not touched. `acopf-opt case30 --objective rpo` is one: with the five units off the slack bus held at their
+case output, no point meets the case's ratings, as an independent phase-1 check shows. That check (`tools/crossval/opf/case30_rpo_phase1.py`,
+SciPy) finds that every rating must be raised by at least 2.49 % (factor 1.0248577965), with 6-8 and 21-22 at their
+ratings, bus 7 at Vmin, buses 25 and 29 at Vmax, the slack unit at Qmin and unit 5 at Qmax. GridSim names the same
+constraints but the slack unit's Qmin, reports ratings x 1.0 and x 1.02 infeasible, and converges at x 1.026 and x 1.1. The cable case's round-2 base loss matches SciPy to 1.2e-13 MW, inside the
+stated 1e-8 (1 + |x|inf) MW. The cost objective never takes this path and is unchanged bit for bit.
+
+Objectives:
+
+- `Cost`: the units' polynomial cost curves, as `acopf-full`.
+- `Losses`: f = sum of Pg in MW. The demand is fixed, so this is the losses plus a constant (a linear cost of 1 per MW
+  on every unit; Wood and Wollenberg, *Power Generation, Operation and Control*, 3rd ed., ch. 8). The gradient is the
+  system base on each Pg variable and the Hessian is 0; the objective scale stays 1e-4.
+- `ReactivePower`: `Losses` with Pmin = Pmax = the case Pg for every unit not at a slack bus (equal bounds become
+  MIPS's fixed rows). The controls are then the units' Q (through the voltages), the taps and the shunts.
+
+`Losses` and `ReactivePower` do not read the cost curves, so units without one are accepted.
+
+Controls are extra variables after the units' Q, taps first, then shunts, in the order of the controls file:
+
+- A tap on branch k is u = 1/tau (tau on the from side), bounded by [1/MaxTap, 1/MinTap]. The reported shadow prices
+  of a tap's limits are per unit of tau: the multiplier of a bound on u times u^2 (d(1/tau)/dtau = -1/tau^2). A test
+  checks them against the central difference of the optimum in the limit. A transformer whose OLTC or reactive power
+  flow control has an impedance correction table is refused as a tap control, because the OPF stamps the case R and X
+  at every tap. With ys = 1/(R + jX) and
+  the case phase shift phi (MATPOWER branch model; Zimmerman, Murillo-Sanchez and Thomas, IEEE Trans. PWRS 26(1), 2011):
+  Yff = u^2 (ys + j bc/2), Yft = -u ys e^{j phi}, Ytf = -u ys e^{-j phi}, Ytt = ys + j bc/2. The end power is the
+  existing pair term with (g, b) scaled by u plus an own term in u^2 at the from end:
+  P = d(u) Va^2 g0 + u Va Vb p0, Q = -d(u) Va^2 b0 + u Va Vb q0, with d(u) = u^2 at the from end and 1 at the to end.
+  The new derivatives are d/du = dd(u) Va^2 g0 + Va Vb p0, d2/du2 = 2 Va^2 w0 (from end), d2/du dVa = 4 u Va w0 (from
+  end) and the cross terms d2/du dz = (pair derivative)/u. The fixed admittance matrix is built with the controlled
+  branches out of service; the island check runs on the full network. A rated tap branch's flow rows carry the u
+  gradient.
+- A shunt s at bus i is b_s in pu on the system base, bounded by [Bmin, Bmax]/Sbase, added to the bus's own case
+  shunt. It adds -b_s Vi^2 to the reactive balance (the sign of a `Bus.Bs` stamp): d/db = -Vi^2, d/dVi = -2 b_s Vi,
+  d2/dVi db = -2 Vi, d2/dVi2 = -2 b_s.
+
+The analytic gradient and Hessian with taps and shunts (including a rated tap branch with a phase shift) are checked
+against central finite differences in the tests.
+
+Rounding (`OpfRounding`, a stated heuristic, not a mixed-integer optimum): after the continuous optimum each control in
+variable order is put on its grid (tau = MinTap + n StepPu, B = Bmin + n step) at the nearest point; a tie
+(|frac - 0.5| <= 1e-9) goes to the point nearer the case value, then to the lower one. All controls are fixed (as
+fixed rows) and the same objective is solved again. If that does not converge or breaks a limit by more than 1e-6 pu,
+the controls are flipped one at a time, in variable order, to their other neighbour, and the first flip that converges
+within every limit is kept. If none does, the result is "rounded point infeasible" with the continuous optimum. Nothing
+further is searched.
+
+Phase-shifter angles (`pst` in the controls file) are further variables after the shunts, one per named branch. The
+variable is the shift phi in radians; the file and the report use degrees. The range comes from the file (`minDeg`,
+`maxDeg`) or from the branch's active power flow control (PSS/E COD 3), and the step (`stepDeg`) from the same places;
+a step of 0 means the angle is continuous and the rounding holds it at its continuous optimum. The branch keeps its
+case ratio tau. On the MATPOWER branch model the shift enters only the transfer terms: Yft = -ys e^{j phi} / tau and
+Ytf = -ys e^{-j phi} / tau, so dYft/dphi = j Yft and dYtf/dphi = -j Ytf, and Yff and Ytt do not depend on phi. The power
+entering at the from end is then the fixed-branch pair term at the angle t = theta_f - theta_t - phi, and at the to end
+at t = theta_t - theta_f + phi. So the derivative in phi is the derivative in theta_a times the sign of phi in t (-1 at
+the from end, +1 at the to end), and the second derivatives follow: d2/dphi2 = -Va Vb psi, d2/dphi dtheta_a =
+-sg Va Vb psi, d2/dphi dtheta_b = sg Va Vb psi, d2/dphi dVa = sg Vb psi', d2/dphi dVb = sg Va psi' (psi = wP p0 + wQ q0,
+sg the sign). A rated phase-shifter branch's flow rows carry phi through the same functions. A branch with both a tap
+control and an angle control is refused, as is an angle control whose COD 3 control has an impedance correction table.
+The reported shadow price of an angle limit is per degree (the multiplier per radian times pi/180). With no angle
+control the variable vector, every row and every loop are those of 2.1.107: the `acopf-opt` result files and console
+output on case9 and case30 (all three objectives, and case9 with a shunt control) and the `acscopf` ones on case9
+(preventive and corrective) hash to the same bytes as the 2.1.107 build gave.
+
+Verification of the angle: two buses held at 1 pu, 100 MW drawn at bus 2 (a reactive-only unit there), line A
+0.01 + j0.1 pu and line B 0.02 + j0.1 pu with the phase shifter at its from end. The loss minimum is at
+phi = 1.95248 degrees by the OPF and by SciPy plus mpmath on the exact two-line losses (`tools/crossval/opf/pst_two_line.py`),
+with losses 0.6851386175019902 MW, against 0.77125686559531 MW at phi = 0 and the DC current-divider bound
+0.6667 MW. The test holds the losses to the loss path's 1e-8 (1 + |x|inf) MW and the angle to 1e-3 degrees, which is
+what that bound allows on a loss curvature of 148 MW/rad^2. The gradient and Hessian with an angle control on case9
+branch 7-8 match central finite differences.
+
+Neighbours rounding (`--rounding neighbours`, opt-in; the default stays the flip rule above): every discrete control
+gets its floor and ceil grid points around the continuous optimum (one point when the optimum is on the grid, or at the
+end of the range). Every combination is solved with the controls fixed, 2^m solves for the m controls with two points,
+in Gray-code order, so successive combinations differ in one control. Each solve starts from the interior point
+method's own starting point, so each result is exactly the fixed-control solve of that combination, whatever the
+order. The best feasible objective is kept; a tie goes to the lowest combination index (bit q set when the q-th
+two-point control is at its ceil). More than 12 discrete controls are refused (4096 solves). The result is optimal over
+the floor/ceil neighbours of the continuous optimum. It is not a global mixed-integer optimum. On a two-tap radial
+feeder (both taps 0.005 + j0.05 pu, loads 40 + j20 and 60 + j30 MVA, bus voltages up to 1.05 pu) the nearest point
+(both taps up) is feasible, so the flip rule keeps it at 0.81112 MW of losses, while the combination with the second tap
+down is feasible too and gives 0.80521 MW; neighbours mode finds it, and the test checks it against a direct
+enumeration of all four combinations, bit for bit.
+
+### AC security-constrained OPF (`acscopf`)
+
+`AcScopf` (Capitanescu et al., EPSR 81(8), 2011, eqs. 1-5; Monticelli, Pereira and Granville, IEEE Trans. PWRS 2(1),
+1987) stacks network blocks in one problem of the MIPS copy: block 0 is the base case and each secured branch outage c
+is its own block of (Va, Vm, Pg, Qg) on the network with c out, in contingency order. Coupling rows:
+
+- preventive: Pg_c = Pg_0 for each unit not at a slack bus (equality rows);
+- corrective: |Pg_c - Pg_0| <= R_g as two inequality rows per such unit, R_g from `--ramp-mw` or a ramp file.
+
+Slack-bus units are free in each block (within their limits) to take the change in losses. Qg and Vm are free within
+their limits in every block, so post-outage voltage control is allowed. The objective is block 0's cost (or losses).
+Post-outage branch limits use the `DcScopf` rating rule (RateB or RateC where given, else RateA). The KKT matrix is
+block-diagonal plus the coupling rows, and the sparse LU solves it.
+
+Constraint generation: solve block 0; then, after each solve, screen every listed outage not yet in the problem with an
+AC Newton (the contingency family's engine: 100 iterations, reactive limits on, the OLTC loop; units at the base-case
+dispatch with the block-0 voltages as set-points, the slack taking the losses). Every outage that does not converge,
+puts a branch above its post-outage rating by more than 1e-6 MVA or a bus outside its voltage limits by more than
+1e-6 pu is added, in index order, and the problem is solved again from scratch. It stops when nothing is added; the
+round cap is 20 solves. An outage that islands the network is listed, not secured.
+
+Then every secured outage is screened again at the final dispatch, in the same way (in corrective mode with the unit
+outputs of that outage's block, the re-dispatch the problem allows). A block lets the unit voltages move after its
+outage, while the screen holds them at their base-case values, so a block can meet its limits while the screen does
+not. If any secured outage fails, the status is `SecuredOutageFailsScreen`, not `Optimal`; the outages are listed in
+`UnresolvedSecuredOutages`, and the verb prints no optimum and exits 3. On case9 with every rating scaled by 0.75,
+outages 7 and 8 are secured and both fail at the final dispatch (outage 7 leaves branch 5-6 at 115.35 MVA against
+112.5; outage 8 puts bus 4 at 1.1021 pu).
+
+Verification: the two-bus pair of parallel lines j0.1 (RateA 100 MVA, both voltages fixed at 1.0) has its single-line
+transfer limit at |S| = 1 pu, P = cos(asin(0.05)) pu = 99.87492177719089 MW, so the preventive cost is
+2502.501564456182 and the corrective cost with a 30 MW ramp is 1902.5015644561822 (with 60 MW, 1500). The tests pin
+these, and on case9 with ratings scaled by 0.75 they check that the secured set is exactly what the screens added,
+that every unsecured outage passes the screen at the final dispatch, and that the two secured outages that fail it are
+reported. A two-bus case with a charging cable (its outage drops the far bus to 0.912 pu with the sending voltage held,
+from the closed-form two-bus voltage equation) is reported `SecuredOutageFailsScreen`.
+
+General outages (`AcScopfOptions.Outages`, `ScopfOutage`; the verb's `--outages FILE` and `--n2`): each outage removes
+a set of branches and a set of units, so it can be an N-2 pair, a generator outage or a mix. The old branch list
+(`Contingencies`) still works and is mapped to one-branch outages; giving both lists is refused. With the new list the
+ids in the result are positions in that list, and every outage has a label (its name, else for example
+"branches 0+1" or "generator 2").
+
+- A block removes the outage's branches from its network.
+- A removed unit's Pg and Qg are held at 0 in that block. Its variables stay in the vector, so the layout does not
+  change, and it has no coupling row in that block.
+- The lost output dP (the sum of the removed units' base-case Pg) is shared by governor droop, as PSS/E ACCC's dispatch
+  by governor droop and PowerFactory's "according to primary control" share it. Each remaining synchronous unit with a
+  dispatch range (Pmax above Pmin) takes the fixed fraction alpha_g = w_g / sum w, with the weights of the contingency
+  screen's `GovernorDroop` mode (`ContingencyAnalysis.ParticipationWeights`: the effective MVA base, a uniform droop;
+  power-flow-only and converter units take no part). A unit off the reference bus then has the coupling row
+  Pg_c - Pg_0 - alpha_g dP = 0 (preventive) or |Pg_c - Pg_0 - alpha_g dP| <= R_g (corrective). dP is a sum of base-case
+  variables, so the row is linear in them. The units at the reference bus are free in the block: they take their own
+  share and the change in losses. Every unit's Pmin .. Pmax holds in every block, so the optimum keeps the reserve each
+  unit needs for its share; the slack bus no longer takes the whole lost output.
+- When an outage removes every unit of a slack bus, the reference moves to the bus of the largest remaining unit by case
+  |Pg| (first in model order on a tie), the rule of the contingency screen (`ContingencyAnalysis.ReelectReference`). The
+  old slack bus keeps its angle as the angle reference and its voltage is free. Taking out every unit is refused.
+- The screen of an outage removes its branches and drops its units. When it removes a unit, the reference moves as in the
+  block, each unit off the reference bus is checked for room for its share (Pg + alpha_g dP within Pmin .. Pmax, by
+  1e-6 MW), and `ContingencyAnalysis.ShareLostPower` moves the dispatch before the power flow. When every share fits, the
+  sharing places exactly those shares; if the reference bus's units reach their limits, the sharing passes the rest on to
+  other units, which the block does not allow, so the screen fails there too. After the power flow the reference bus's P
+  and Q must lie within its units' ranges (1e-6 MW and MVAr). In corrective mode a secured outage is re-screened with its
+  block's outputs, which already hold the shares. The screen of a branch-only outage is unchanged.
+- An outage whose branches split the network is listed under islanding and not secured.
+- N-2: `--n2 pairs` takes every unordered pair of the `--contingencies` branches (or of every in-service branch), in
+  lexicographic index order. The count grows as n^2 / 2, so more than 5000 pairs are refused unless `--max-outages`
+  raises the cap.
+
+With one-branch outages in branch order the new list gives the same bits as the old one: status, rounds, secured set,
+objective and every block variable (test, case9 with ratings x 0.75, preventive and corrective).
+
+Verification of generator outages, by hand: bus 1 (slack) has G1 at 10 per MWh; bus 2 draws 100 MW and has G2 at 5
+with Pmax 60 and G3 at 30; the line is lossless, and G1 and G3 each take half of G2's output after it is lost.
+Corrective, G1 Pmax 60, G3 Pmax 50, ramp 5 MW: G1c <= 60 makes G3c >= 40, and G3c <= G3 + G2/2 + 5, so the optimum is
+G2 = 60, G3 = 5, G1 = 35, cost 800, with G1c = 60 and G3c = 40 after the outage. Preventive, G1 Pmax 80, G3 Pmax 25:
+G3's reserve for its share binds (G3 + G2/2 <= 25), so G2 = 50, G1 = 50, G3 = 0, cost 750, with G1c = 75 and G3c = 25.
+The tests run these at the 1e-12 settings with both voltages held, so no direction is left to the barrier alone. The
+units' outputs then form a linear programme whose optimum is a vertex; each equality row is met to 5e-12 pu and each
+active limit to 2e-12 divided by its multiplier, so working each output back through the active rows gives bounds of
+at most 8e-9 MW per unit and 1.8e-7 per hour on the cost (derived in the tests). An outage of the slack unit moves the
+reference to bus 2 and is screened there. N-2 is checked by equivalence: the block of
+the pair {0, 1} on three parallel lines equals the block of outage {1} on the case with branch 0 already out, to 1e-9.
+
+### Feeder reconfiguration (`reconfig`)
+
+`FeederReconfiguration` is branch exchange with best improvement (Civanlar, Grainger, Yin and Lee, IEEE Trans. PWRD
+3(3), 1988; Baran and Wu, IEEE Trans. PWRD 4(2), 1989). The start is the case's in-service set, which must be radial and
+connected (a loop or an unreached bus is named). The switchable set is every branch that is not a transformer, or a
+given list. One pass: for each open switchable branch c in index order, and each in-service switchable branch o on the
+tree path between c's ends in index order, the swap (close c, open o) is solved by `BackwardForwardSweep` with the `pf`
+radial options and rejected if the sweep does not converge, a bus falls below its VminPu (else 0.94 pu) or, when asked,
+a branch exceeds RateA. The lowest-loss swap is taken; a later candidate replaces the incumbent only when lower by more
+than 1e-9 MW, so ties go to the lower c, then the lower o. It stops when the best gain is below the minimum (1e-6 MW)
+or at the swap cap (100). Every loop runs in index order, with no hashing. The `reconfig` verb reads a MATPOWER file
+with `MatpowerParser.ParseWithOpenBranches`, which keeps status 0 branches out of service instead of dropping them
+(the default reader, used everywhere else, is unchanged), so a published feeder's tie switches are present.
+
+On case33bw (ties 33-37 open) it makes seven swaps from 202.67712645600 kW to 139.55134722 kW with branches 7, 9, 14,
+32 and 37 open (MATPOWER rows), the published optimum (Goswami and Basu, IEEE Trans. PWRD 7(3), 1992), which an
+exhaustive check over all 50 751 radial configurations found to be the global minimum. Branch exchange is a local
+search, so on other feeders the global optimum is not guaranteed.
+
+### Distribution optimisation (`dist-opt`)
+
+Three deterministic discrete searches in `GridSim.Core.Analysis.DistributionOptimisation`. None draws a random number;
+every loop runs in index order, and a trial replaces the incumbent only when it is strictly better, so ties go to the
+lowest index.
+
+**Comparison rule (capacitor placement and VVO).** Every trial is one Newton power flow (`NewtonRaphsonPowerFlow`,
+tolerance 1e-10 pu by default, generator reactive limits on); a trial that does not converge is rejected. Trials are
+compared lexicographically: first the total voltage violation V_viol = sum over buses of max(0, Vmin - V) +
+max(0, V - Vmax) (the bus's own limits where it has them, else the band given, 0.95 to 1.05 by default), then the
+objective. Violations within 1e-12 pu count as equal. So an infeasible start first moves into the band, and from a
+feasible point an infeasible trial is never taken.
+
+Two objectives count as equal when they differ by no more than the objective tie, which follows from the solve
+tolerance and the objective's size:
+
+```
+noise_MW = 2 x N_bus x tol x BaseMVA        each bus mismatch is within tol pu, so the losses (or the demand) of the
+                                            solved state are within the sum over the buses; 2 covers the slack and
+                                            the incremental losses that carry the error to it
+tie      = noise_MW x (objective per MW) + 8 x 2^-52 x max(|obj_a|, |obj_b|)
+```
+
+The objective per MW is 1 in VVO (losses or demand, both MW) and energy value x hours per year in capacitor placement;
+the capital cost is added exactly and carries no solver noise. The relative term covers the rounding of the sums that
+form the objective. On case33bw (33 buses, 10 MVA, tol 1e-10) the loss noise is 6.6e-8 MW, so two placements whose
+annual cost differs by less than 6.6e-8 x 50 x 8760 = 0.029 at 50 per MWh count as equal and the lower index wins.
+
+**Regulating devices.** The trial solve is a plain Newton power flow: it does not run the regulating loop of OLTCs or
+transformer flow controls (the steady-state solve's tap loop). A case with an OLTC that is not one of the controls (in
+capacitor placement, any OLTC), or with a transformer flow control, is refused by name, rather than solved with those
+devices held at their case settings. HVDC links, FACTS devices, static var compensators and induction machines are
+solved inside the Newton solve, as in `pf`.
+
+**Neighbour confirmation.** After a search, every combination of one step down, no change or one step up of the
+confirmed controls is solved (3^m - 1 power flows, positions out of range skipped), in lexicographic order of the offsets.
+The best combination that beats the incumbent replaces it, and the search runs again from there; each round strictly
+improves, so it ends (or stops at the round cap, 100, and says so). In VVO, m is every control, and more than 8 is
+refused by name before any solve. In capacitor placement, m is the number of buses holding a bank after the greedy
+search; when it is above 8, the confirmation covers the 8 banks the greedy search changed last (each greedy step has its
+own number, so the choice is fixed), and the result names the banks it did not cover (`unconfirmed` rows).
+
+**Capacitor placement (`CapacitorPlacement`).** Objective, after Grainger and Lee (IEEE Trans. PAS-100(3), 1981): the
+annual loss cost P_loss x c_E x T (energy value per MWh, hours per year, default 1 and 8760) plus the capital cost, a
+fixed cost per installed bank plus a cost per Mvar. Each candidate bus has an ascending list of bank sizes starting at
+0 Mvar (a given list, or the same sizes at every PQ bus). A bank is a constant admittance: its size is added to the
+bus's Bs (Mvar injected at 1 pu, positive for a capacitor). Greedy by marginal benefit: each round tries every candidate
+at its next size and keeps the best trial; it stops when none improves. The confirmation covers the buses that hold a
+bank (the 8 changed last when more than 8 do). This is a heuristic (common practice), not a global optimum. On the two-bus feeder of the tests (R = 0.01,
+X = 0.1 pu, load 0.5 + j0.3 pu, 10 Mvar steps) it takes 10, 20 and 30 Mvar with losses 0.308944, 0.270638 and
+0.253402 MW and stops, as the closed form says (40 Mvar gives 0.258576 MW); a cost per Mvar just above the last
+saving stops it at 20 Mvar.
+
+**Volt/VAr optimisation (`VoltVarOptimisation`).** Controls: the OLTCs named (each transformer's TapRatio on the grid
+MinTap + k x StepPu, the grid the tap optimiser snaps to; a starting ratio off the grid is moved to the nearest point
+and noted), then switched capacitor banks (off or on). An OLTC with an impedance correction table (a PSS/E TAB) sets the
+transformer's R and X from the table at every trial ratio other than the case's own, as the tap loop of the steady-state
+solve does; at the case's ratio the case's R and X stand. The result notes the table. Objective: the losses, or the demand, the real power the loads
+draw at their solved voltages (Pd x (Ap V^2 + Bp V + Cp)); only voltage-dependent loads respond, so the demand objective
+is conservation voltage reduction. Method: discrete coordinate descent in the fixed control order, taps first; for each
+control the trials one step down and one step up are solved, the better is taken at once if it beats the incumbent,
+and sweeps repeat until one moves nothing; then the confirmation over every control. The result is a local discrete
+optimum. On a constant-impedance load behind an OLTC (X = 0.01 pu, step 0.00625) it raises the ratio one step per sweep
+to tau = 1.05, the last step with V >= 0.95 (V = 0.952333, demand 0.906939 pu), from the closed form
+V = (1/tau) / |1 + j0.01|. With constant-power load and the loss objective it takes the highest voltage inside Vmax.
+
+**Phase balancing (`PhaseBalancing`).** On a phase-frame (`dist3ph-mesh`) case, a single-phase load is a load of one
+leg from a phase wire to the neutral or to earth; moving it changes only that wire. The proxy objective is the largest
+deviation of a phase's real power from the mean of the phases (fixed loads included; a phase-to-phase leg counts half
+to each phase). When the number of assignments, the product over the movable loads of their allowed phase counts, is at
+most 3^12 = 531 441, every assignment is searched (no power flow), in lexicographic order of the assignment vector, so
+the lexicographically smallest best assignment wins; twelve loads free on three phases is the largest such search, and
+loads held to fewer phases allow more loads. Above that, greedy: the largest load (by the size of its real power) first,
+each to its allowed phase of least power so far, or, for a generating load (negative real power), of most power so far,
+which it relieves. Then one `Newton3Ph` solve before and one
+after: the neutral current in the head branch and the voltage unbalance factor |V2| / |V1| at the head node (phase to
+neutral) reported come from those solves, not from the proxy. On the six-load feeder of the tests (10 to 50 kW, all on
+phase a) it reaches 60/60/60 kW, and the head neutral current before balancing (847.346 A) is checked against an
+independent SciPy solve of the same circuit.
 
 ### Continuation power flow
 
@@ -471,6 +814,34 @@ The file is written before the report, and `[cpf] PV curves: N converged point(s
 error. `cpf case9` gives 12 points of 9 buses, 108 rows. `stress --pv-out` writes the same layout with a `load_factor` column
 in place of `lambda` for the voltages of its own grid of re-dispatched load points, up to its reported max loadability; the two
 curves answer different questions, as the two verbs do.
+
+### QV modal analysis (`qv-modal`)
+
+`QvModalAnalysis` (`GridSim.Core.Analysis.VoltageStability`) follows Gao, Morison and Kundur, "Voltage stability
+evaluation using modal analysis", IEEE Trans. PWRS 7(4), 1992 (also Kundur, *Power System Stability and Control*, section
+14.3). At a converged power-flow state it takes the Newton engines' polar Jacobian (same formulas; dP/dV and dQ/dV per
+unit of |V|; a ZIP load's voltage derivative on the diagonal) and splits it into J_Ptheta (angles of every non-slack bus),
+J_PV, J_Qtheta and J_QV (magnitudes of the PQ buses of the solved state, so a PV bus held at a reactive limit counts as
+PQ). With the angle equations eliminated at constant P,
+
+`J_R = J_QV - J_Qtheta J_Ptheta^-1 J_PV`,
+
+computed with one dense LU of J_Ptheta (partial pivoting) and a column-by-column solve. J_R is not symmetric in general,
+so its eigenpairs come from `GeneralEigen.Decompose`, the general real eigen solver `modal-full` uses, with right vectors
+xi and left vectors psi normalised so psi^H xi = 1. A bus's participation in mode i is `P_ki = eta_ik xi_ki` with the
+left row vector eta = psi^H, divided by the mode's sum so the factors sum to 1 to rounding. An eigenvalue above 0 means
+the mode is voltage stable, below 0 unstable, and its size measures the distance to instability; the buses with the
+largest participation are where the mode is weakest.
+
+Two-bus check: `V1 = 1` at angle 0, `X = 0.1`, `R = 0`, load `0.5 + j0.2` pu at bus 2. The power flow gives
+`V2 = 0.9782482306186262` and `theta2 = -2.929765360158135` degrees, and with `P = V sin(theta) / X`,
+`Q = (V^2 - V cos(theta)) / X` the four blocks are `V cos(theta)/X`, `sin(theta)/X`, `V sin(theta)/X` and
+`(2V - cos(theta))/X`, so `J_R = (2V - sec(theta)) / X = 9.55187689798278`. At the nose `2V cos(theta) = 1` and J_R is 0.
+Scaling that load at constant power factor, the nose is at `P = sqrt(29) - 2 = 3.385164807` pu; J_R is about 4.11 at 90 %
+of the nose load, 1.40 at 99 % and 0.456 at 99.9 % (it falls as the square root of the remaining margin).
+
+Scope: the standard power-flow Jacobian only. Reactive limits are as solved, there are no dynamic models, and there is
+no branch or generator participation.
 
 ### Tap optimiser
 
@@ -1066,6 +1437,9 @@ ten GSP buses to an rms deviation of 0.0032 pu from 1.000 pu. A higher ratio on 
 
 ## Source map
 
+QV modal analysis: `src/GridSim.Core/Analysis/VoltageStability/QvModalAnalysis.cs` (`QvModalAnalysis`, `QvModalResult`,
+`QvMode`) and `src/GridSim.Cli/QvModalCommand.cs` (the `qv-modal` verb).
+
 | File | Type | Responsibility |
 |---|---|---|
 | `src/GridSim.Core/Analysis/DcOptimalPowerFlow.cs` | `DcOptimalPowerFlow`, `DcOpfOptions` | Merit order, security LP build, island dispatch, fuel cost table, price assembly, result records. |
@@ -1081,6 +1455,24 @@ ten GSP buses to an rms deviation of 0.0032 pu from 1.000 pu. A higher ratio on 
 | `src/GridSim.Core/Analysis/DcOpfHybridColumns.cs` | `DcOpfHybridColumns` | Column storage (single or dense) for the basis inverse and the Gauss-Jordan matrix. |
 | `src/GridSim.Core/Numerics/BoundedSimplex.cs` | `BoundedSimplex`, `LpStatus` | The dense two-phase bounded-variable simplex and its constants. |
 | `src/GridSim.Core/Analysis/DistributionFactors.cs` | `DistributionFactors`, `DcIsland` | DC model, islands, PTDF, LODF, DC flows. |
+| `src/GridSim.Core/Analysis/Opf/AcOpfExtended.cs` | `AcOpfExtended`, `AcOpfObjective`, `AcOpfExtendedOptions`, `AcOpfExtendedResult` | The MIPS copy: objectives, tap and shunt controls, stacked network blocks and coupling rows. |
+| `src/GridSim.Core/Analysis/Opf/OpfControls.cs` | `OpfControlSet`, `OpfTapControl`, `OpfShuntControl` | The controls and the `gridsim-opf-controls/1` reader. |
+| `src/GridSim.Core/Analysis/Opf/OpfRounding.cs` | `OpfRounding`, `OpfRoundingResult` | The discrete rounding and re-solve rule. |
+| `src/GridSim.Core/Analysis/Opf/AcScopf.cs` | `AcScopf`, `AcScopfOptions`, `AcScopfResult` | The AC-SCOPF, its AC screen and constraint generation. |
+| `src/GridSim.Core/Analysis/Opf/ScopfOutageFile.cs` | `ScopfOutage`, `ScopfOutageFile` | General SCOPF outages (branches and units), N-2 pairs and the `gridsim-scopf-outages/1` file. |
+| `tests/GridSim.Tests/Rc5Wp14OpfScopfTests.cs` | | The phase-shifter angle, neighbours rounding, generator and N-2 outages, and the bit-identity pins. |
+| `tools/crossval/opf/pst_two_line.py` | | The SciPy and mpmath reference for the phase-shifter loss minimum. |
+| `src/GridSim.Core/Analysis/Opf/OptimisationReport.cs` | `OptimisationReport` | The CSV and JSON result tables of the optimisation verbs. |
+| `src/GridSim.Core/Analysis/Reconfiguration/FeederReconfiguration.cs` | `FeederReconfiguration`, `ReconfigOptions`, `ReconfigResult` | Branch exchange on a radial feeder. |
+| `src/GridSim.Cli/OptimisationCommands.cs` | `OptimisationCommands` | The `acopf-opt`, `acscopf` and `reconfig` verbs. |
+| `src/GridSim.Core/Analysis/DistributionOptimisation/DistOptOptions.cs` | `DistOptCommon`, `DistOpt`, `DistOptStatus` | The voltage band, the trial power flow, the comparison rule and the neighbour confirmation. |
+| `src/GridSim.Core/Analysis/DistributionOptimisation/CapacitorPlacement.cs` | `CapacitorPlacement`, `CapPlaceOptions`, `CapPlaceResult` | Greedy capacitor placement and sizing with confirmation. |
+| `src/GridSim.Core/Analysis/DistributionOptimisation/VoltVarOptimisation.cs` | `VoltVarOptimisation`, `VvoOptions`, `VvoResult` | Coordinate descent over OLTC taps and switched banks, losses or demand. |
+| `src/GridSim.Core/Analysis/DistributionOptimisation/PhaseBalancing.cs` | `PhaseBalancing`, `PhaseBalanceOptions`, `PhaseBalanceResult` | Single-phase load moves on the proxy, verified by `Newton3Ph`. |
+| `src/GridSim.Core/Analysis/DistributionOptimisation/DistOptReport.cs` | `DistOptReport` | The result rows of `dist-opt`. |
+| `src/GridSim.Cli/DistOptCommand.cs` | `DistOptCommand` | The `dist-opt` verb and its `gridsim-distopt/1` settings file. |
+| `tests/GridSim.Tests/Rc5Wp33DistOptTests.cs` | | The closed-form two-bus cases, the phase-balancing feeder, determinism, the cap, the verb and the journal. |
+| `tests/GridSim.Tests/Rc5Wp7OptimisationTests.cs` | | The MIPS copy bit for bit, the analytic two-bus cases, the SciPy loss optima, the SCOPF pair, case33bw. |
 | `src/GridSim.Core/Analysis/AcOptimalPowerFlow.cs` | `AcOptimalPowerFlow`, `AcOpfResult` | The loss loop around the DC-OPF. |
 | `src/GridSim.Core/Analysis/ContinuationPowerFlow.cs` | `ContinuationPowerFlow`, `PvCurve` | Load scaling, the multiplier bisection and the PV trace. |
 | `src/GridSim.Core/Analysis/TapOptimizer.cs` | `TapOptimizer`, `TapSchedule`, `TapSetting` | Tap objective, penalties, snap-to-grid, result. |
@@ -1118,7 +1510,34 @@ ten GSP buses to an rms deviation of 0.0032 pu from 1.000 pu. A higher ratio on 
 - `taps` minimises the deviation of every bus from one target; each OLTC's own target and deadband are checked after the search, not optimised.
 - The preventive SCOPF (`DcScopf`) takes linear costs only (an explicit cost per unit or the fuel-type cost), secures
   single-branch outages only (no generator outage, no corrective action) and needs one connected network. A post-outage limit left out of the final LP holds to within 1e-6 MW.
-- `ptdf`, `lodf`, `dcpf` and the DC-OPF use series reactance only; resistance, charging, tap ratios and phase shifts are ignored.
+- `acopf-opt` controls are continuous taps, shunts and phase-shifter angles: branch angle-difference limits and
+  discrete unit Q steps are not modelled. A branch cannot have both a tap control and an angle control. There is no
+  flow-target mode for a phase shifter inside the OPF; the power flow's COD 3 control is separate and unchanged. The
+  flip rounding is a stated heuristic, and neighbours rounding is a local discrete search over the floor/ceil
+  neighbours; neither is a mixed-integer optimum.
+- `acscopf` fails loud (not converged) when the secured set is infeasible: on case9 with every rating scaled by 0.7 the
+  outage of branch 7-8 leaves bus 7 on branch 6-7 alone, whose bus-7 end then carries the 105.95 MVA load against a
+  105 MVA rating.
+- `acscopf` secures branch outages (one, two or more per outage) and unit outages. After a unit outage the slack units
+  take up its output (preventive) or the other units move within their ramps (corrective); there is no governor or AGC
+  participation model, no reserve product, no bus outage and no outage of a unit at a slack bus. There is no
+  post-outage tap or shunt control, no PV/PQ switching inside the OPF blocks (the screen has it), and no decomposition,
+  so the problem grows with each secured outage. N-2 is enumeration plus constraint generation, so its cost grows with
+  the pair count.
+- The phase-shifter angle, neighbours rounding, generator outages and N-2 are verified on closed-form cases, SciPy and
+  equivalence tests. They have not been compared with PowerFactory or PSS/E OPF.
+- `reconfig` is a local search (branch exchange); balanced feeders only (not `dist3ph`), one snapshot (no time
+  series). It is checked against the published case33bw optimum and constructed cases, not against vendor tools.
+- `dist-opt` searches are heuristic or local discrete searches with exhaustive confirmation on small neighbourhoods,
+  not a mixed-integer global optimum. They work on one snapshot (no load-duration curve). Capacitor placement and VVO
+  are for balanced cases; VVO does not move the step regulators of a three-phase case, and reconfiguration with
+  three-phase losses is not provided. Their trial solves do not regulate OLTCs outside the controls or transformer
+  flow controls, so such cases are refused rather than solved with those devices fixed. They are verified on closed-form cases and an independent SciPy solve, not
+  compared with vendor distribution optimisation tools.
+- `ptdf`, `lodf`, `dcpf` and the DC-OPF use MATPOWER's DC model (`makeBdc`): b = (1/x)/tap, phase shifts and bus Gs are
+  included; resistance, charging and Bs are ignored, voltages are 1 pu and the model is lossless. The Newton DC-start seed
+  and the inner DC passes of `acopf` keep the reactance-only view (every tap 1, no shift, no Gs): the seed so that which
+  AC retries converge does not change, and the `acopf` passes because the AC solve already draws Gs and counts it as loss.
 - The loss decomposition is by branch and zone only; it does not allocate losses to generators or loads.
 
 ## See also

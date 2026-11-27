@@ -224,7 +224,7 @@ public sealed class R414AdaptiveStudyTests(ITestOutputHelper output)
     [Fact]
     public void The_cli_adds_an_adaptive_section_only_when_asked_and_leaves_the_fixed_step_cases_untouched()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-r414-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-r414-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

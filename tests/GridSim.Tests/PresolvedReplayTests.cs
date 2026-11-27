@@ -20,7 +20,7 @@ public class PresolvedReplayTests : IDisposable
 
     public PresolvedReplayTests()
     {
-        _dir = Path.Combine(Path.GetTempPath(), $"gridsim-replay-{Guid.NewGuid():N}");
+        _dir = TestTemp.Under($"gridsim-replay-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(_dir, "exports"));
 
         // Three identical case9 snapshots at ticks 1, 50, 100.
@@ -112,7 +112,7 @@ public class PresolvedReplayTests : IDisposable
         // Test changed 2026-10-19 (renamed from ..._tolerates_a_malformed_row): GR-872 made a row whose key cell is
         // missing or not a whole number a broken file that fails loud (it used to be skipped, silently dropping that
         // frame's telemetry). The good file now loads without the garbage row, and the garbage row is proved REFUSED.
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-state-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-state-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(dir, "exports"));
         try
         {

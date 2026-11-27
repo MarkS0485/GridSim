@@ -44,7 +44,7 @@ public sealed class WebSecurityDoc2Tests
 
     private static string NewTempDir(string prefix)
     {
-        string d = Path.Combine(Path.GetTempPath(), prefix + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under(prefix + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }
@@ -470,7 +470,7 @@ public sealed class WebSecurityDoc2Tests
         Refused("needs Windows", false, ("Auth:KeyProtection", "dpapi-machine"));
         Refused("needs Auth:KeyCertificatePath", true, ("Auth:KeyProtection", "certificate"));
         Refused("use one of auto, dpapi", true, ("Auth:KeyProtection", "rot13"));
-        Refused("does not exist", false, ("Auth:KeyProtection", "certificate"), ("Auth:KeyCertificatePath", Path.Combine(Path.GetTempPath(), "no-such-" + Guid.NewGuid().ToString("N") + ".pfx")));
+        Refused("does not exist", false, ("Auth:KeyProtection", "certificate"), ("Auth:KeyCertificatePath", TestTemp.Under("no-such-" + Guid.NewGuid().ToString("N") + ".pfx")));
         Refused("has no private key", false, ("Auth:KeyProtection", "certificate"), ("Auth:KeyCertificatePath", WriteTestPfx(withPrivateKey: false)));
     }
 

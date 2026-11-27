@@ -30,7 +30,7 @@ internal static class PypsaCsv
         if (!File.Exists(path))
             throw new FileNotFoundException($"PyPSA file not found: '{path}' (full path {Path.GetFullPath(path)}).", path);
         string file = Path.GetFileName(path);
-        string[] lines = File.ReadAllText(path, Encoding.UTF8).TrimStart('﻿').Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
+        string[] lines = GridSim.Core.IO.InputFileLimits.ReadAllText(path, Encoding.UTF8).TrimStart('﻿').Replace("\r\n", "\n").Replace('\r', '\n').Split('\n');
 
         int first = Array.FindIndex(lines, l => l.Trim().Length > 0);
         if (first < 0) throw new InvalidDataException($"{file}: the file is empty (a header row is required: {string.Join(",", header)}).");

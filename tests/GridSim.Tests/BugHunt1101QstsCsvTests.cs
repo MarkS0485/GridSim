@@ -9,7 +9,7 @@ public sealed partial class BugHunt1101WebTests
 {
     private static double[] QstsCsv(string content, string? columnJson, bool? header = null)
     {
-        string path = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-" + Guid.NewGuid().ToString("N") + ".csv");
+        string path = TestTemp.Under("gridsim-bh1101-" + Guid.NewGuid().ToString("N") + ".csv");
         File.WriteAllText(path, content);
         try
         {

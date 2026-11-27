@@ -14,7 +14,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class CliFilesTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-clifiles-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-clifiles-" + Guid.NewGuid().ToString("N"));
 
     public CliFilesTests() => Directory.CreateDirectory(_dir);
 

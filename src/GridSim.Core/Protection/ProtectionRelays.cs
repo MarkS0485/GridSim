@@ -75,8 +75,8 @@ public sealed class UnderVoltageRelay : IProtectionRelay
             bool op = vm < pu;
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Bus, id, ctx.BusName(id), op,
                 vm, "pu", pu, margin, null,
-                op ? $"Vm {vm:F3} pu at {ctx.BusName(id)} is below the {pu:F2} pu undervoltage pickup"
-                   : $"Vm {vm:F3} pu ({(vm - pu):+0.000;-0.000} of pickup)",
+                op ? FormattableString.Invariant($"Vm {vm:F3} pu at {ctx.BusName(id)} is below the {pu:F2} pu undervoltage pickup")
+                   : FormattableString.Invariant($"Vm {vm:F3} pu ({(vm - pu):+0.000;-0.000} of pickup)"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -99,8 +99,8 @@ public sealed class OverVoltageRelay : IProtectionRelay
             bool op = vm > pu;
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Bus, id, ctx.BusName(id), op,
                 vm, "pu", pu, margin, null,
-                op ? $"Vm {vm:F3} pu at {ctx.BusName(id)} is above the {pu:F2} pu overvoltage pickup"
-                   : $"Vm {vm:F3} pu ({(pu - vm):+0.000;-0.000} below pickup)",
+                op ? FormattableString.Invariant($"Vm {vm:F3} pu at {ctx.BusName(id)} is above the {pu:F2} pu overvoltage pickup")
+                   : FormattableString.Invariant($"Vm {vm:F3} pu ({(pu - vm):+0.000;-0.000} below pickup)"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -132,11 +132,11 @@ public sealed class DirectionalPowerRelay : IProtectionRelay
                 pg = SolvedGeneration.UnitOutput(ctx.Model, res, g).PMw;
             double margin = -pg - thr; // reverse (pg negative) beyond threshold => margin>0
             bool op = pg < -thr;
-            string nm = gens[g].Name ?? $"gen@bus {gens[g].Bus}";
+            string nm = gens[g].Name ?? FormattableString.Invariant($"gen@bus {gens[g].Bus}");
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Generator, g, nm, op,
                 pg, "MW", -thr, margin, null,
-                op ? $"{nm} is absorbing {(-pg):F1} MW (reverse/motoring past the {thr:F0} MW pickup)"
-                   : $"{nm} exporting {pg:F1} MW",
+                op ? FormattableString.Invariant($"{nm} is absorbing {(-pg):F1} MW (reverse/motoring past the {thr:F0} MW pickup)")
+                   : FormattableString.Invariant($"{nm} exporting {pg:F1} MW"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -168,11 +168,11 @@ public sealed class UnderCurrentRelay : IProtectionRelay
             double margin = floor - i; // operate when i below the floor
             bool op = i < floor;
             LineFlow lf = ctx.Flows[l];
-            string nm = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+            string nm = lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Branch, l, nm, op,
                 i, "pu", floor, margin, null,
-                op ? $"{nm} carrying {i:E2} pu current (effectively de-energized, below the {floor:E1} pu undercurrent floor)"
-                   : $"{nm} carrying {i:F3} pu current",
+                op ? FormattableString.Invariant($"{nm} carrying {i:E2} pu current (effectively de-energized, below the {floor:E1} pu undercurrent floor)")
+                   : FormattableString.Invariant($"{nm} carrying {i:F3} pu current"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -207,11 +207,11 @@ public sealed class ThermalOverloadRelay : IProtectionRelay
                 t = l2 > p2 ? tau * DetMath.Log(l2 / (l2 - p2)) : (double?)null;
             }
             LineFlow lf = ctx.Flows[l];
-            string nm = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+            string nm = lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Branch, l, nm, op,
                 load, "xRateA", pickup, margin, t,
-                op ? $"{nm} loaded to {load * 100:F0}% of RateA ({lf.RatingMva:F0} MVA); thermal replica trips in {t:F0} s"
-                   : $"{nm} at {load * 100:F0}% of RateA",
+                op ? FormattableString.Invariant($"{nm} loaded to {load * 100:F0}% of RateA ({lf.RatingMva:F0} MVA); thermal replica trips in {t:F0} s")
+                   : FormattableString.Invariant($"{nm} at {load * 100:F0}% of RateA"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -240,11 +240,11 @@ public sealed class InstantaneousOvercurrentRelay : IProtectionRelay
             double margin = m - mult;
             bool op = m > mult;
             LineFlow lf = ctx.Flows[l];
-            string nm = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+            string nm = lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Branch, l, nm, op,
                 m, "xIn", mult, margin, op ? 0.0 : (double?)null,
-                op ? $"{nm} current {m:F2}x rated exceeds the {mult:F2}x instantaneous pickup (trips instantly)"
-                   : $"{nm} at {m:F2}x rated current",
+                op ? FormattableString.Invariant($"{nm} current {m:F2}x rated exceeds the {mult:F2}x instantaneous pickup (trips instantly)")
+                   : FormattableString.Invariant($"{nm} at {m:F2}x rated current"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -283,11 +283,11 @@ public sealed class TimeOvercurrentRelay : IProtectionRelay
                 Coordination.OvercurrentCurve.IecStandardInverse);
             double? t = op ? tms * k / (DetMath.Pow(bigM, alpha) - 1.0) : (double?)null;
             LineFlow lf = ctx.Flows[l];
-            string nm = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+            string nm = lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
             c.Add(op, new RelayVerdict(Device, Function, ProtectionLocation.Branch, l, nm, op,
                 m, "xIn", mult, margin, t,
-                op ? $"{nm} current {m:F2}x rated over the {mult:F2}x pickup; IEC standard-inverse trips in {t:F1} s"
-                   : $"{nm} at {m:F2}x rated current",
+                op ? FormattableString.Invariant($"{nm} current {m:F2}x rated over the {mult:F2}x pickup; IEC standard-inverse trips in {t:F1} s")
+                   : FormattableString.Invariant($"{nm} at {m:F2}x rated current"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -317,7 +317,7 @@ public sealed class DistanceRelay : IProtectionRelay
             double zline = ctx.ZLineMagPu[l];
             if (zline <= MinLineImpedancePu) continue;
             LineFlow lf = ctx.Flows[l];
-            string nm = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+            string nm = lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
 
             // Both relays of the line, then the one that decides the verdict.
             EndView from, to;
@@ -335,21 +335,26 @@ public sealed class DistanceRelay : IProtectionRelay
             }
             else
             {
-                from = See(ctx.ZAppMagPu[l], ctx.ZAppAngleDeg[l], ctx.ZLineAngleDeg[l], zline, s);
-                to = See(ctx.ZAppToMagPu[l], ctx.ZAppToAngleDeg[l], ctx.ZLineAngleDeg[l], zline, s);
+                // ANA-02: an end whose voltage has collapsed (a bolted fault at its bus) is not measured: V^2 / conj(S) is
+                // rounding noise there, and this element has no memory voltage to take the direction from.
+                from = Collapsed(ctx.VmOf(lf.From), 1.0) && double.IsFinite(ctx.ZAppMagPu[l]) ? NotMeasured()
+                    : See(ctx.ZAppMagPu[l], ctx.ZAppAngleDeg[l], ctx.ZLineAngleDeg[l], zline, s);
+                to = Collapsed(ctx.VmOf(lf.To), 1.0) && double.IsFinite(ctx.ZAppToMagPu[l]) ? NotMeasured()
+                    : See(ctx.ZAppToMagPu[l], ctx.ZAppToAngleDeg[l], ctx.ZLineAngleDeg[l], zline, s);
             }
             bool useTo = Decides(to, from);
             EndView e = useTo ? to : from;
             string loop = useTo ? toLoop : fromLoop;
-            string endNote = (useTo ? $" (relay at the to end, bus {lf.To})" : "") + (loop.Length > 0 ? $" [{loop} loop]" : "");
+            string endNote = (useTo ? FormattableString.Invariant($" (relay at the to end, bus {lf.To})") : "") + (loop.Length > 0 ? FormattableString.Invariant($" [{loop} loop]") : "");
 
             bool op = e.Hit is not null;
             double outerReach = s.DistanceZone3Reach * zline;
-            string dev = op ? $"21-Z{e.Hit!.Value.zone}" : "21";
+            string dev = op ? FormattableString.Invariant($"21-Z{e.Hit!.Value.zone}") : "21";
             c.Add(op, new RelayVerdict(dev, Function, ProtectionLocation.Branch, l, nm, op,
                 e.Zapp, "pu", op ? e.Hit!.Value.reachFrac * zline : outerReach, e.Margin, op ? e.Hit!.Value.t : (double?)null,
-                op ? $"{nm} apparent Z {e.Zapp:F3} pu is inside Zone {e.Hit!.Value.zone} (reach {e.Hit!.Value.reachFrac * zline:F3} pu, line Z {zline:F3}); operates in {e.Hit!.Value.t:F1} s{endNote}"
-                   : $"{nm} apparent Z {e.Zapp:F2} pu (line Z {zline:F3}, {(e.Forward ? "forward" : "reverse")}){endNote}",
+                op ? FormattableString.Invariant($"{nm} apparent Z {e.Zapp:F3} pu is inside Zone {e.Hit!.Value.zone} (reach {e.Hit!.Value.reachFrac * zline:F3} pu, line Z {zline:F3}); operates in {e.Hit!.Value.t:F1} s{endNote}")
+                   : e.Collapsed ? FormattableString.Invariant($"{nm} not measured: the relay voltage collapsed (close-in fault at its bus; no memory voltage) (line Z {zline:F3}){endNote}")
+                   : FormattableString.Invariant($"{nm} apparent Z {e.Zapp:F2} pu (line Z {zline:F3}, {(e.Forward ? "forward" : "reverse")}){endNote}"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -371,10 +376,12 @@ public sealed class DistanceRelay : IProtectionRelay
         foreach ((System.Numerics.Complex dv, System.Numerics.Complex di, string name) in new[] { (va - vb, ia - ib, "a-b"), (vb - vc, ib - ic, "b-c"), (vc - va, ic - ia, "c-a") })
         {
             // No measurable loop current reads as an infinite impedance, which no zone reaches (the positive-sequence rule).
+            // ANA-02: a collapsed loop voltage (a bolted fault at the bus) is not measured either.
             (double mag, double ang) = di.Magnitude > ProtectionContext.MinApparentPowerPu
                 ? ((dv / di).Magnitude, DetMath.Phase(dv / di) * 180.0 / Math.PI)
                 : (double.PositiveInfinity, 0.0);
-            EndView v = See(mag, ang, zlineAngleDeg, zline, s);
+            EndView v = di.Magnitude > ProtectionContext.MinApparentPowerPu && Collapsed(dv.Magnitude, Math.Sqrt(3.0))
+                ? NotMeasured() : See(mag, ang, zlineAngleDeg, zline, s);
             if (first || Decides(v, best)) { best = v; bestLoop = name; first = false; }
         }
         return (best, bestLoop);
@@ -382,11 +389,28 @@ public sealed class DistanceRelay : IProtectionRelay
 
     /// <summary>What one end's relay sees: its apparent impedance, whether that is in the forward direction, the
     /// zone it falls in (null = none) and its signed margin to the outer zone (&gt; 0 = operated).</summary>
-    private readonly record struct EndView(double Zapp, bool Forward, (int zone, double reachFrac, double t)? Hit, double Margin);
+    private readonly record struct EndView(double Zapp, bool Forward, (int zone, double reachFrac, double t)? Hit, double Margin)
+    {
+        /// <summary>ANA-02: the end's voltage collapsed, so it was not measured.</summary>
+        public bool Collapsed { get; init; }
+    }
+
+    /// <summary>ANA-02: a relay voltage at or below <see cref="ProtectionContext.MinDistanceLoopVoltageFraction"/> of its
+    /// nominal (<paramref name="nominalPu"/>) has collapsed.</summary>
+    private static bool Collapsed(double vPu, double nominalPu) => vPu <= ProtectionContext.MinDistanceLoopVoltageFraction * nominalPu;
+
+    /// <summary>ANA-02: a collapsed end: no zone, no direction, never the closest to operating.</summary>
+    private static EndView NotMeasured() =>
+        new(double.PositiveInfinity, false, null, double.NegativeInfinity) { Collapsed = true };
 
     private static EndView See(double zapp, double zappAngleDeg, double zlineAngleDeg, double zline, ProtectionSettings s)
     {
-        double angDiff = Math.Abs(zappAngleDeg - zlineAngleDeg);
+        // ANA-02: the angle difference is wrapped to (-180, 180] before the window test (an apparent impedance at -179
+        // degrees and a line at +179 degrees are 2 degrees apart, not 358).
+        double d = zappAngleDeg - zlineAngleDeg;
+        d -= 360.0 * Math.Floor((d + 180.0) / 360.0);
+        if (d == -180.0) d = 180.0;
+        double angDiff = Math.Abs(d);
         bool forward = angDiff <= s.DistanceAngleWindowDeg;
         (int zone, double reachFrac, double t)? hit = null;
         if (forward)
@@ -444,8 +468,8 @@ public sealed class UnderFrequencyRelay : IProtectionRelay
         string src = trajectory is not null ? "run minimum" : "operating";
         return new RelayVerdict("81U", "Underfrequency", ProtectionLocation.System, -1, "system", op,
             f, "Hz", pu, pu - f, null,
-            op ? $"{src} frequency {f:F3} Hz is below the {pu:F1} Hz underfrequency pickup"
-               : $"{src} frequency {f:F3} Hz (>{pu:F1} Hz)",
+            op ? FormattableString.Invariant($"{src} frequency {f:F3} Hz is below the {pu:F1} Hz underfrequency pickup")
+               : FormattableString.Invariant($"{src} frequency {f:F3} Hz (>{pu:F1} Hz)"),
             ProtectionConfidence.Grounded);
     }
 
@@ -467,8 +491,8 @@ public sealed class UnderFrequencyRelay : IProtectionRelay
             return null;
         return new RelayVerdict(device, function, ProtectionLocation.System, -1, "system", false,
             0, "Hz", pickupHz, double.NegativeInfinity, null,
-            $"the {pickupHz:F1} Hz pickup is written for a {settings.SettingsNominalHz:0.###} Hz system and this system is "
-            + $"{systemNominalHz:0.###} Hz, so it does not apply; give settings for a {systemNominalHz:0.###} Hz system "
+            FormattableString.Invariant($"the {pickupHz:F1} Hz pickup is written for a {settings.SettingsNominalHz:0.###} Hz system and this system is ")
+            + FormattableString.Invariant($"{systemNominalHz:0.###} Hz, so it does not apply; give settings for a {systemNominalHz:0.###} Hz system ")
             + "(protection-check --uf and --of together)",
             ProtectionConfidence.NotCheckable);
     }
@@ -497,8 +521,8 @@ public sealed class OverFrequencyRelay : IProtectionRelay
         string src = trajectory is not null ? "run maximum" : "operating";
         return new RelayVerdict("81O", "Overfrequency", ProtectionLocation.System, -1, "system", op,
             f, "Hz", pu, f - pu, null,
-            op ? $"{src} frequency {f:F3} Hz is above the {pu:F1} Hz overfrequency pickup"
-               : $"{src} frequency {f:F3} Hz (<{pu:F1} Hz)",
+            op ? FormattableString.Invariant($"{src} frequency {f:F3} Hz is above the {pu:F1} Hz overfrequency pickup")
+               : FormattableString.Invariant($"{src} frequency {f:F3} Hz (<{pu:F1} Hz)"),
             ProtectionConfidence.Grounded);
     }
 }
@@ -527,8 +551,8 @@ public sealed class RocofRelay : IProtectionRelay
         bool op = r > pu;
         return new RelayVerdict("81R", "RoCoF", ProtectionLocation.System, -1, "system", op,
             r, "Hz/s", pu, r - pu, null,
-            op ? $"peak |df/dt| {r:F3} Hz/s exceeds the {pu:F2} Hz/s RoCoF trip"
-               : $"peak |df/dt| {r:F3} Hz/s (<{pu:F2} Hz/s)",
+            op ? FormattableString.Invariant($"peak |df/dt| {r:F3} Hz/s exceeds the {pu:F2} Hz/s RoCoF trip")
+               : FormattableString.Invariant($"peak |df/dt| {r:F3} Hz/s (<{pu:F2} Hz/s)"),
             ProtectionConfidence.Grounded);
     }
 }
@@ -562,8 +586,8 @@ public sealed class VectorShiftLomRelay : IProtectionRelay
         bool op = vs > pu;
         return new RelayVerdict("78", "Vector shift / LoM", ProtectionLocation.System, -1, "system", op,
             vs, "deg", pu, vs - pu, null,
-            op ? $"peak vector shift {vs:F1} deg exceeds the {pu:F0} deg loss-of-mains pickup"
-               : $"peak vector shift {vs:F1} deg (<{pu:F0} deg)",
+            op ? FormattableString.Invariant($"peak vector shift {vs:F1} deg exceeds the {pu:F0} deg loss-of-mains pickup")
+               : FormattableString.Invariant($"peak vector shift {vs:F1} deg (<{pu:F0} deg)"),
             ProtectionConfidence.Generic);
     }
 }
@@ -589,8 +613,8 @@ public sealed class DifferentialRelay : IProtectionRelay
                 // no intentional delay), so its operating time is 0, as the 50 element's is. It used to carry no time,
                 // which sorted the protection of the faulted busbar itself behind every timed element.
                 d, "pu", pu, margin, op ? 0.0 : (double?)null,
-                op ? $"busbar differential {d:E2} pu at {ctx.BusName(id)} exceeds the {pu:F2} pu bias pickup (internal fault)"
-                   : $"busbar differential {d:E2} pu at {ctx.BusName(id)} (balanced)",
+                op ? FormattableString.Invariant($"busbar differential {d:E2} pu at {ctx.BusName(id)} exceeds the {pu:F2} pu bias pickup (internal fault)")
+                   : FormattableString.Invariant($"busbar differential {d:E2} pu at {ctx.BusName(id)} (balanced)"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -638,7 +662,7 @@ public sealed class GroundFaultRelay : IProtectionRelay
     private static string NameOf(ProtectionContext ctx, int l)
     {
         LineFlow lf = ctx.Flows[l];
-        return lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+        return lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
     }
 
     private static IEnumerable<RelayVerdict> EarthOvercurrent(ProtectionContext ctx)
@@ -660,8 +684,8 @@ public sealed class GroundFaultRelay : IProtectionRelay
             bool opI = m > mi;
             inst.Add(opI, new RelayVerdict("50N", "Instantaneous earth fault", ProtectionLocation.Branch, l, nm, opI,
                 m, "xIn", mi, m - mi, opI ? 0.0 : (double?)null,
-                opI ? $"{nm} residual current {m:F2}x rated exceeds the {mi:F2}x instantaneous earth-fault pickup (trips instantly)"
-                    : $"{nm} residual current {m:F2}x rated",
+                opI ? FormattableString.Invariant($"{nm} residual current {m:F2}x rated exceeds the {mi:F2}x instantaneous earth-fault pickup (trips instantly)")
+                    : FormattableString.Invariant($"{nm} residual current {m:F2}x rated"),
                 ProtectionConfidence.Generic));
 
             double mt = st.EarthFaultTimeMultiple;
@@ -670,8 +694,8 @@ public sealed class GroundFaultRelay : IProtectionRelay
             double? t = opT ? st.EarthFaultTms * k / (DetMath.Pow(bigM, alpha) - 1.0) : (double?)null;
             timed.Add(opT, new RelayVerdict("51N", "Time earth fault", ProtectionLocation.Branch, l, nm, opT,
                 m, "xIn", mt, m - mt, t,
-                opT ? $"{nm} residual current {m:F2}x rated over the {mt:F2}x pickup; IEC standard-inverse trips in {t:F2} s"
-                    : $"{nm} residual current {m:F2}x rated",
+                opT ? FormattableString.Invariant($"{nm} residual current {m:F2}x rated over the {mt:F2}x pickup; IEC standard-inverse trips in {t:F2} s")
+                    : FormattableString.Invariant($"{nm} residual current {m:F2}x rated"),
                 ProtectionConfidence.Generic));
         }
         foreach (RelayVerdict v in inst.Emit()) yield return v;
@@ -693,8 +717,8 @@ public sealed class GroundFaultRelay : IProtectionRelay
             bool op = m > p;
             c.Add(op, new RelayVerdict("46", "Negative sequence", ProtectionLocation.Branch, l, nm, op,
                 m, "xIn", p, m - p, op ? st.NegativeSequenceTimeS : (double?)null,
-                op ? $"{nm} negative-sequence current {m:F2}x rated exceeds the {p:F2}x pickup; definite time {st.NegativeSequenceTimeS:F2} s"
-                   : $"{nm} negative-sequence current {m:F2}x rated",
+                op ? FormattableString.Invariant($"{nm} negative-sequence current {m:F2}x rated exceeds the {p:F2}x pickup; definite time {st.NegativeSequenceTimeS:F2} s")
+                   : FormattableString.Invariant($"{nm} negative-sequence current {m:F2}x rated"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();
@@ -766,13 +790,13 @@ public sealed class GroundFaultRelay : IProtectionRelay
             }
             bool op = best.zone > 0;
             double zlm = z1l.Magnitude;
-            string endNote = best.end == 1 ? $" (relay at the to end, bus {br.To})" : "";
-            c.Add(op, new RelayVerdict(op ? $"21N-Z{best.zone}" : "21N", "Earth-fault distance", ProtectionLocation.Branch, l, nm, op,
+            string endNote = best.end == 1 ? FormattableString.Invariant($" (relay at the to end, bus {br.To})") : "";
+            c.Add(op, new RelayVerdict(op ? FormattableString.Invariant($"21N-Z{best.zone}") : "21N", "Earth-fault distance", ProtectionLocation.Branch, l, nm, op,
                 best.zapp, "pu", op ? best.reach * zlm : s.DistanceZone3Reach * zlm, bestMargin, op ? best.time : (double?)null,
-                op ? $"{nm} phase-{best.phase} earth-loop Z {best.zapp:F3} pu is inside Zone {best.zone} (reach {best.reach * zlm:F3} pu, line Z {zlm:F3}); operates in {best.time:F1} s{endNote}"
+                op ? FormattableString.Invariant($"{nm} phase-{best.phase} earth-loop Z {best.zapp:F3} pu is inside Zone {best.zone} (reach {best.reach * zlm:F3} pu, line Z {zlm:F3}); operates in {best.time:F1} s{endNote}")
                    : anyEndReleased
-                       ? $"{nm} earth-loop Z {best.zapp:F2} pu (line Z {zlm:F3}){endNote}"
-                       : $"{nm} no residual current above the {s.EarthDistanceResidualReleaseFraction * 100.0:F0}% release at either end: earth loops not measured (line Z {zlm:F3})",
+                       ? FormattableString.Invariant($"{nm} earth-loop Z {best.zapp:F2} pu (line Z {zlm:F3}){endNote}")
+                       : FormattableString.Invariant($"{nm} no residual current above the {s.EarthDistanceResidualReleaseFraction * 100.0:F0}% release at either end: earth loops not measured (line Z {zlm:F3})"),
                 ProtectionConfidence.Generic));
         }
         return c.Emit();

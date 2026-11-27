@@ -55,7 +55,11 @@ else
 }
 
 @code {
-    private IReadOnlyList<CaseEntry> ListedCases => Catalog.EntriesFor(Access.AnonymousRole);
+    [CascadingParameter] public Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState>? AuthState { get; set; }
+
+    // The listing follows the request's anonymous role, which is the loopback default only for a direct loopback request.
+    private IReadOnlyList<CaseEntry> ListedCases => Catalog.EntriesFor(Access.IdentityFor(
+        AuthState is { IsCompletedSuccessfully: true } done ? done.Result.User : null, null).Role);
 
     // A replay-only instance never shows the solver case picker: land straight on the raw public-data replay.
     // NavigateTo in OnInitialized is the standard redirect (it also flows correctly through static prerender).

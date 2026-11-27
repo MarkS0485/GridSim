@@ -91,11 +91,19 @@ public static class PsseSeqReader
         ZeroLine = "ZERO SEQUENCE NON-TRANSFORMER BRANCH", ZeroMutual = "ZERO SEQUENCE MUTUAL IMPEDANCE",
         ZeroXfmr = "ZERO SEQUENCE TRANSFORMER", ZeroSwShunt = "ZERO SEQUENCE SWITCHED SHUNT";
 
+    private const string SystemWide = "SYSTEM-WIDE", GeneratorsAll = "GENERATOR", LoadsAll = "LOAD", LinesAll = "ZERO SEQ. NON-TRANSFORMER BRANCH",
+        MutualAll = "ZERO SEQ. MUTUAL", XfmrAll = "ZERO SEQ. TRANSFORMER", SwShuntAll = "ZERO SEQ. SWITCHED SHUNT",
+        FixedAll = "ZERO SEQ. FIXED SHUNT", InductionAll = "INDUCTION MACHINE", NcsTable = "NON-CONVENTIONAL SOURCE TABLE",
+        NcsMachine = "NON-CONVENTIONAL SOURCE MACHINE";
+
+    private static readonly string[] Sections33 = { GeneratorsAll, LoadsAll, LinesAll, MutualAll, XfmrAll, SwShuntAll, FixedAll, InductionAll };
+    private static readonly string[] Sections35 = { SystemWide, GeneratorsAll, LoadsAll, LinesAll, MutualAll, XfmrAll, SwShuntAll, FixedAll, InductionAll, NcsTable, NcsMachine };
+
     private static readonly string[] Sections = { PosGen, NegGen, ZeroGen, NegLoad, ZeroLoad, ZeroLine, ZeroMutual, ZeroXfmr, ZeroSwShunt };
 
     /// <summary>Read a SEQ file from disk and apply it. See <see cref="Apply"/>.</summary>
     public static PsseSeqResult ReadFile(string path, PsseParseResult raw, PsseSeqOptions? options = null)
-        => Apply(File.ReadAllText(path), raw, options);
+        => Apply(GridSim.Core.IO.InputFileLimits.ReadAllText(path), raw, options);
 
     /// <summary>Apply the SEQ text to <paramref name="raw"/> (the case read from the matching RAW file).</summary>
     public static PsseSeqResult Apply(string text, PsseParseResult raw, PsseSeqOptions? options = null)
@@ -113,36 +121,53 @@ public static class PsseSeqReader
         if (ic != 0)
             throw id.Error($"IC is {ic}: this is a change case (data to add to sequence data already in memory), not a whole set; only IC 0 can be read");
         int rev = id.Has(1) ? id.Int(1, "REV") : 0;
-        if (rev != 0 && rev != SupportedRevision)
-            throw id.Error($"the file says revision {rev}; this reader reads the revision {SupportedRevision} sequence layout only (later revisions add transformer fields this layout would misread)");
+        bool newLayout = rev is 33 or 34 or 35 or 36;
+        if (rev != 0 && rev != SupportedRevision && !newLayout)
+            throw id.Error($"the file says revision {rev}; this reader reads the sequence layouts of revisions 30, 33, 34, 35 and 36 only (other revisions would be guessed at)");
+        if (newLayout && raw.Revision == SupportedRevision)
+            throw id.Error($"the file says revision {rev} but the RAW case is revision {SupportedRevision}; a sequence file takes the layout of its RAW case's revision, and a revision {SupportedRevision} case reads the revision {SupportedRevision} layout");
         if (rev == 0 && raw.Revision != SupportedRevision)
             throw id.Error($"the file does not say its revision and the RAW case is revision {raw.Revision}; this reader reads the revision {SupportedRevision} sequence layout only, which a revision {raw.Revision} SEQ file does not follow");
 
         // ---- Sections ----------------------------------------------------------------------------------------------
+        string[] sectionList = !newLayout ? Sections : rev >= 35 ? Sections35 : Sections33;
         var records = new Dictionary<string, List<PsseRecord>>(StringComparer.Ordinal);
         foreach (string s in Sections) records[s] = new List<PsseRecord>();
+        var fileRecords = new Dictionary<string, List<PsseRecord>>(StringComparer.Ordinal);
+        foreach (string s in sectionList) fileRecords[s] = new List<PsseRecord>();
+        if (!newLayout) fileRecords = records;
         bool ended = false;
         int read = 0;
-        for (int si = 0; si < Sections.Length && !ended; si++)
+        for (int si = 0; si < sectionList.Length && !ended; si++)
         {
             while (true)
             {
-                PsseRecord? r = cur.Next(Sections[si]);
-                if (r is null && records[Sections[si]].Count > 0)
-                    throw records[Sections[si]][^1].Error($"the file ends inside the {Sections[si]} data with no terminating 0 record; the file is truncated");
+                PsseRecord? r = cur.Next(sectionList[si]);
+                if (r is null && fileRecords[sectionList[si]].Count > 0)
+                    throw fileRecords[sectionList[si]][^1].Error($"the file ends inside the {sectionList[si]} data with no terminating 0 record; the file is truncated");
                 if (r is null || r.IsEndOfData) { ended = true; break; }
                 if (r.IsTerminator) { read = si + 1; break; }
-                records[Sections[si]].Add(r);
+                // Revision 35 and 36: the system-wide records are keyword lines. A file that starts its generator data straight
+                // away (no system-wide section and no terminator for it) is read as such.
+                if (newLayout && sectionList[si] == SystemWide && !char.IsLetter(r.Raw(0)?[0] ?? ' '))
+                {
+                    cur = new PsseLineCursor(lines, r.Line - 1, "SEQ");
+                    read = si + 1;
+                    break;
+                }
+                fileRecords[sectionList[si]].Add(r);
             }
         }
         if (!ended)
         {
             PsseRecord? after = cur.Next("END OF DATA");
             if (after is not null && !after.IsEndOfData)
-                throw after.Error("a record follows the last section (zero-sequence switched shunts); the file should end there or with Q");
+                throw after.Error(newLayout
+                    ? "a record follows the last section; the file should end there or with Q"
+                    : "a record follows the last section (zero-sequence switched shunts); the file should end there or with Q");
         }
-        else if (read < Sections.Length)
-            notes.Add($"the file stops after {read} of the {Sections.Length} sections; the rest are taken as empty.");
+        else if (read < sectionList.Length)
+            notes.Add($"the file stops after {read} of the {sectionList.Length} sections; the rest are taken as empty.");
 
         // ---- Lookups into the RAW case -----------------------------------------------------------------------------
         GridModel model = raw.Model;
@@ -178,6 +203,7 @@ public static class PsseSeqReader
             unmodelled[kind] = (c.Count + 1, c.FirstLine == 0 ? r.Line : c.FirstLine);
         }
         int skippedRecords = 0;
+        if (newLayout) ConvertNewLayout(fileRecords, records, Unmodelled, notes);
 
         // ---- Generators: X''d and X2 on MBASE -------------------------------------------------------------------------
         int MachineOf(PsseRecord r, HashSet<int> seen, string what)
@@ -248,7 +274,7 @@ public static class PsseSeqReader
         var seenLine = new HashSet<int>();
         foreach (PsseRecord r in records[ZeroLine])
         {
-            int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J"));
+            int i = r.Int(0, "I"), j = r.AbsInt(1, "J");
             string ckt = r.Str(2, "1");
             double r0 = r.Real(3, "RLINZ", 0), x0 = r.Real(4, "XLINZ", 0);
             if (r0 < 0) throw r.Error($"RLINZ is {r0}; a zero-sequence resistance must not be negative");
@@ -267,7 +293,7 @@ public static class PsseSeqReader
         var mutuals = new List<ZeroSequenceMutual>();
         foreach (PsseRecord r in records[ZeroMutual])
         {
-            int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J")), k = r.Int(3, "K"), l = Math.Abs(r.Int(4, "L"));
+            int i = r.Int(0, "I"), j = r.AbsInt(1, "J"), k = r.Int(3, "K"), l = r.AbsInt(4, "L");
             string c1 = r.Str(2, "1"), c2 = r.Str(5, "1");
             double rm = r.Real(6, "RM", 0), xm = r.Real(7, "XM", 0);
             double bij1 = r.Real(8, "BIJ1", 0), bij2 = r.Real(9, "BIJ2", 1), bkl1 = r.Real(10, "BKL1", 0), bkl2 = r.Real(11, "BKL2", 1);
@@ -287,7 +313,7 @@ public static class PsseSeqReader
         var seenXf = new HashSet<int>();
         foreach (PsseRecord r in records[ZeroXfmr])
         {
-            int i = r.Int(0, "I"), j = Math.Abs(r.Int(1, "J")), k = Math.Abs(r.Int(2, "K", 0));
+            int i = r.Int(0, "I"), j = r.AbsInt(1, "J"), k = r.AbsInt(2, "K", 0);
             string ckt = r.Str(3, "1");
             if (k != 0)
                 throw r.Error("a three-winding transformer's zero-sequence record; GridSim's winding model covers two-winding units only, so the sequence data cannot be applied");
@@ -351,5 +377,69 @@ public static class PsseSeqReader
             ZeroSequenceLines = lines0,
             ZeroSequenceTransformers = xf0,
         };
+    }
+
+    /// <summary>
+    /// The revision 33 to 36 sequence records (one generator section, one load section, a transformer record with its
+    /// grounding data on each winding) as the revision 30 section records the rest of the reader applies, with what
+    /// GridSim has no element for counted through <paramref name="unmodelled"/>. Codes the reader cannot place are refused,
+    /// never guessed: a transformer zero-sequence data code CZ0 or grounding code CZG other than 1, and a connection code
+    /// other than 1 to 4 (revisions 33 and 34) or 11 to 14 (revisions 35 and 36; the same four earth paths).
+    /// </summary>
+    private static void ConvertNewLayout(Dictionary<string, List<PsseRecord>> file, Dictionary<string, List<PsseRecord>> records,
+        Action<string, PsseRecord> unmodelled, List<string> notes)
+    {
+        static PsseRecord Make(PsseRecord src, string section, params string?[] fields) => new(fields, src.Line, section, src.Comment, "SEQ");
+        static string Num(string? v) => string.IsNullOrEmpty(v) ? "" : v;
+        static bool NonZero(PsseRecord r, int index, string name) => r.Real(index, name, 0) != 0;
+        static string R(double v) => v.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+
+        foreach (PsseRecord r in file[GeneratorsAll])
+        {
+            string? id1 = r.Raw(0), id2 = r.Raw(1);
+            if (NonZero(r, 3, "ZXPPDV") || NonZero(r, 2, "ZRPOS")) records[PosGen].Add(Make(r, PosGen, id1, id2 ?? "1", Num(r.Raw(2)), Num(r.Raw(3))));
+            if (NonZero(r, 7, "ZXNEGDV") || NonZero(r, 6, "ZRNEG")) records[NegGen].Add(Make(r, NegGen, id1, id2 ?? "1", Num(r.Raw(6)), Num(r.Raw(7))));
+            if (NonZero(r, 8, "ZR0") || NonZero(r, 9, "ZX0DV")) records[ZeroGen].Add(Make(r, ZeroGen, id1, id2 ?? "1", Num(r.Raw(8)), Num(r.Raw(9))));
+            if (NonZero(r, 11, "ZRG") || NonZero(r, 12, "ZXG")) unmodelled("generator grounding impedance (ZRG, ZXG)", r);
+        }
+        foreach (PsseRecord r in file[LoadsAll])
+        {
+            // The revision 33 and later load record (PNEG, QNEG in MW and Mvar, then a grounding flag before the zero-sequence
+            // fields) is not confirmed against the published layout, and mapping it onto the revision 30 GNEG, BNEG, GZERO and
+            // BZERO fields would shift the zero-sequence data and mis-state the units. It is refused, not guessed at.
+            throw r.Error("the LOAD section of a revision 33 or later sequence file is not read: its field layout and units are not confirmed. "
+                + "Remove the section's records (an empty LOAD section is accepted) or convert the load data to a revision 30 file");
+        }
+        records[ZeroLine].AddRange(file[LinesAll]);
+        records[ZeroMutual].AddRange(file[MutualAll]);
+        foreach (PsseRecord r in file[XfmrAll])
+        {
+            int k = r.Int(2, "K", 0);
+            int cz0 = r.Int(4, "CZ0", 1), czg = r.Int(5, "CZG", 1);
+            if (k == 0 && cz0 != 1)
+                throw r.Error($"CZ0 is {cz0}; only 1 (zero-sequence impedance in pu on the system base) is read, other data codes are not guessed at");
+            if (k == 0 && czg != 1)
+                throw r.Error($"CZG is {czg}; only 1 (grounding impedance in pu on the system base) is read, other data codes are not guessed at");
+            int cc = r.Int(6, "CC", 1);
+            int cc30 = cc is >= 11 and <= 14 ? cc - 10 : cc;
+            if (k == 0 && (cc30 < 1 || cc30 > 4))
+                throw r.Error($"connection code CC {cc} is not modelled; codes 1 to 4 (revisions 33, 34) or 11 to 14 (revisions 35, 36) are");
+            double rg1 = r.Real(7, "RG1", 0), xg1 = r.Real(8, "XG1", 0), rg2 = r.Real(11, "RG2", 0), xg2 = r.Real(12, "XG2", 0);
+            // The 30 layout has one grounding impedance: the grounded winding's (CC 2: winding 1, CC 3: winding 2); CC 1 carries
+            // both so that any of them refuses, as the 30 layout does.
+            double rg = cc30 == 3 ? rg2 : cc30 == 2 ? rg1 : rg1 + rg2, xg = cc30 == 3 ? xg2 : cc30 == 2 ? xg1 : xg1 + xg2;
+            records[ZeroXfmr].Add(Make(r, ZeroXfmr, r.Raw(0), r.Raw(1), r.Raw(2) ?? "0", r.Raw(3) ?? "1",
+                cc30.ToString(System.Globalization.CultureInfo.InvariantCulture), R(rg), R(xg), Num(r.Raw(9)), Num(r.Raw(10)), Num(r.Raw(13)), Num(r.Raw(14))));
+            if (k == 0 && (NonZero(r, 15, "RNUTRL") || NonZero(r, 16, "XNUTRL"))) unmodelled("transformer neutral impedance (RNUTRL, XNUTRL)", r);
+        }
+        foreach (PsseRecord r in file[SwShuntAll])
+            for (int b = 2; b < r.Count; b++)
+                if (r.Real(b, "BZ", 0) != 0) { unmodelled("zero-sequence switched shunt block", r); break; }
+        foreach (PsseRecord r in file[FixedAll])
+            if (NonZero(r, 2, "GZERO") || NonZero(r, 3, "BZERO")) unmodelled("zero-sequence fixed shunt", r);
+        foreach (PsseRecord r in file[InductionAll]) unmodelled("induction machine sequence record", r);
+        if (file.TryGetValue(NcsTable, out List<PsseRecord>? t1)) foreach (PsseRecord r in t1) unmodelled("non-conventional source fault contribution record", r);
+        if (file.TryGetValue(NcsMachine, out List<PsseRecord>? t2)) foreach (PsseRecord r in t2) unmodelled("non-conventional source machine record", r);
+        notes.Add("sequence data read in the revision 33 to 36 layout: machine X''d, X2 and Z0 from ZXPPDV, ZXNEGDV and ZR0, ZX0DV; the transformer zero-sequence impedance from R01, X01 and the winding grounding impedance RG1 or RG2.");
     }
 }

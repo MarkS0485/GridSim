@@ -12,7 +12,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class UkpnUnplacedDemandTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-ukpn-unplaced-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-ukpn-unplaced-{Guid.NewGuid():N}");
 
     public UkpnUnplacedDemandTests() => Directory.CreateDirectory(_root);
 

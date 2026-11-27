@@ -18,7 +18,7 @@ public sealed partial class BugHunt1101WebTests
     [Fact]
     public void B188_an_oversized_log_is_rotated_and_its_visits_are_kept_as_one_number()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-usage-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-bh1101-usage-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
@@ -53,7 +53,7 @@ public sealed partial class BugHunt1101WebTests
     [InlineData("lots")]
     public void B188_a_malformed_rotation_size_stops_start_up_naming_the_setting(string value)
     {
-        string log = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-usage-" + Guid.NewGuid().ToString("N"), "usage.jsonl");
+        string log = TestTemp.Under("gridsim-bh1101-usage-" + Guid.NewGuid().ToString("N"), "usage.jsonl");
         var ex = Assert.Throws<InvalidOperationException>(() => new PresenceService(UsageConfig(log, value)));
         Assert.Contains(PresenceService.MaxLogBytesKey, ex.Message, StringComparison.Ordinal);
     }
@@ -61,7 +61,7 @@ public sealed partial class BugHunt1101WebTests
     [Fact]
     public void B188_the_default_rotation_size_is_16_mib()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-usage-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-bh1101-usage-" + Guid.NewGuid().ToString("N"));
         try
         {
             using var presence = new PresenceService(UsageConfig(Path.Combine(dir, "usage.jsonl"), null));

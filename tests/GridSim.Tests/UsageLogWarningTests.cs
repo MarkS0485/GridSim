@@ -20,7 +20,7 @@ public sealed class UsageLogWarningTests
 
     private static string NewTempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-usage-log-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-usage-log-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

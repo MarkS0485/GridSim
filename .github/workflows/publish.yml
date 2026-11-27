@@ -1,6 +1,13 @@
 name: Publish packages
 
-# Packs GridSim.Core and pushes it to THIS repository's GitHub Packages NuGet feed.
+# Packs, signs and attests GridSim.Core, keeps it as the workflow artefact `package-core`, and (switched off by
+# default) pushes it to THIS repository's GitHub Packages NuGet feed.
+#
+# ROADMAP, NOT PUBLISHED: the NuGet package is a roadmap item. The groundwork is real and runs on every release (job
+# `publish`: pack, sign, attest, keep as an artefact), but nothing is pushed. Job `push` runs only when the repository
+# variable GRIDSIM_PUBLISH_PACKAGES is exactly 'true' (it is unset, so the job is skipped), and never for a release
+# candidate. Do not set the variable without the owner's say-so: shipping GridSim as a consumable library needs a safe
+# way to handle licences first, and broader validation. Only job `push` holds the `packages: write` permission.
 #
 # F25 (Ruling R1, 2026-10-04): GridSim.Core is the only NuGet package that ships. GridSim.Gda is not a
 # release artefact (GDA is a model the author uses, not a product; its project is marked IsPackable=false),
@@ -14,7 +21,7 @@ name: Publish packages
 # fails). A certificate without its password fails the run. See the header of release.yml.
 #
 # No NuGet.org account and no manually-created secret are needed: every run is
-# handed a built-in GITHUB_TOKEN, and the `packages: write` permission below lets
+# handed a built-in GITHUB_TOKEN, and the `packages: write` permission of job `push` lets
 # it push to the feed. The feed URL is derived from the repo owner, so nothing is
 # hard-coded to a particular fork.
 #
@@ -45,6 +52,11 @@ on:
         required: false
         type: string
         default: ''
+      prerelease:
+        description: 'True for a release-candidate tag: the package is packed but never pushed'
+        required: false
+        type: boolean
+        default: false
     secrets:
       # F13: not required by the call itself; absent -> the package is pushed unsigned with a warning, or the signing step
       # fails when GRIDSIM_ALLOW_UNSIGNED_RELEASE is 'false' (GR-359).
@@ -62,8 +74,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
-  packages: write   # lets the built-in GITHUB_TOKEN push to GitHub Packages
+  contents: read   # the push permission (packages: write) is held by job `push` alone
 
 # Build telemetry off on every leg (Mark, 2026-10-20): Avalonia's opt-out switch. Directory.Build.targets also
 # replaces Avalonia.BuildServices' AvaloniaStats target with an empty one; AvaloniaTelemetryOptOutTests pins both.
@@ -81,7 +92,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   publish:
-    name: Pack & push (GitHub Packages)
+    name: Pack, sign and attest (nothing is pushed here)
     needs: gate
     # Run after a passed gate, or when the gate was skipped because release.yml called this workflow (its gates passed
     # first). A failed or cancelled gate stops the package. always() is needed so a skipped gate does not skip this job.
@@ -91,7 +102,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write       # push to GitHub Packages
       id-token: write       # SLSA-4: the Sigstore identity for the package's provenance attestation
       attestations: write   # SLSA-4: store the attestation with the repository
     steps:
@@ -230,6 +240,31 @@ jobs:
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
         with:
           subject-path: 'artifacts/*.nupkg'
+
+      # Kept for job `push` (and for anyone who wants to inspect the signed package); not a release-* artefact, so it
+      # never reaches the Release page.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: package-core
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+
+  # ROADMAP, OFF BY DEFAULT: nothing is published yet, pending broader validation. Runs only when the repository variable
+  # GRIDSIM_PUBLISH_PACKAGES is 'true' and the run is not for a release candidate. Do not set the variable without the
+  # owner's say-so. The package it pushes is the one signed and attested by job `publish`, byte for byte.
+  push:
+    name: Push to GitHub Packages (off by default)
+    needs: publish
+    if: vars.GRIDSIM_PUBLISH_PACKAGES == 'true' && inputs.prerelease != true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write       # push to GitHub Packages
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: package-core
+          path: artifacts
 
       # dotnet nuget push doesn't expand wildcards, so enumerate and push each.
       # --skip-duplicate makes re-running for an already-published version a no-op.

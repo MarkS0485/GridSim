@@ -84,7 +84,7 @@ public static class SolveExport
         double? tightenedTolerancePu = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(model, result, trace, meta, slackQNote, physics, estimate, tightenedTolerancePu));
+        AtomicText.Write(path, /* IO-22 */ ToJson(model, result, trace, meta, slackQNote, physics, estimate, tightenedTolerancePu));
     }
 
     /// <summary>Post-RC3 audit IO-25: the model content the export has no member for, one line per kind (null when there

@@ -87,6 +87,17 @@ lives, so a later release can lift it deliberately.
 - **Engine efficiency.** The dense Newton engine still builds its dense arrays on the CPU path although the CPU step
   is solved by the sparse LU. This costs time and memory on large cases, not accuracy. (The sweep's result assembly
   indexes the generators by bus once since GR-501.) (`NewtonRaphsonPowerFlow`.)
+- **Area interchange covers tie lines only.** `AreaInterchangePowerFlow` counts the flow on tie branches. Loads
+  assigned to another area (PSS/E's tie-lines-and-loads option) are not offered, because GridSim's loads have no area
+  of their own. Inter-area transfer schedules are read past, as before. A three-winding transformer's windings are
+  metered at their winding bus, and its NMETR is not read. (`AreaInterchangePowerFlow`, `PsseRawParser`.)
+- **Remote voltage regulation is an outer loop with one controlling bus per regulated bus.** The set point of the
+  controlling PV bus is moved between solves; PSS/E solves the remote voltage inside the Newton step. Both meet the same
+  equations when no limit binds; once a reactive limit binds the set point is frozen and the regulated bus is reported
+  off target, until another control's step brings the unit off its limit (frozen controls are re-checked after every
+  solve). Sharing one regulated bus between several buses (PSS/E RMPCT) is refused, and switched shunts and FACTS
+  devices do not regulate remotely through this loop. Neither control has been compared with a PSS/E solve; both are
+  verified on closed forms. (`RemoteVoltagePowerFlow`.)
 - **`IslandReport.LostGenMw` is always zero.** An island is blacked out only when none of its generators produces
   power, so the lost generation it books is zero by construction; the field is kept for the report's shape as a
   documented zero (design decision, GR-491), pinned by `Gr491IslandLostGenTests`. (`IslandPartition`.)
@@ -172,9 +183,21 @@ lives, so a later release can lift it deliberately.
   step between consecutive samples; a step above a quarter turn trips `PhaseStepGuardTripped` (GR-096) and the command
   line prints a WARNING beside the verdict, which is still the count's. Raise `--ppd` when it appears.
   (`MinorLoopNyquist`.)
-- **The small-signal GFM RoCoF leg excludes the inverters' own injection.** The COI RoCoF that a grid-forming df/dt
-  term reads is the machine-driven part only; including the inverter power state is a valid state-space term that
-  would move the eigenvalues. (`SmallSignalAssembler`.)
+- **The small-signal GFM RoCoF leg reads the full COI df/dt.** The rate that a grid-forming df/dt term reads includes
+  the inverters' own power as well as the machine-driven terms, as the speed rows give it. The inverter power is a lag
+  state, so there is no algebraic loop. (`SmallSignalAssembler`.)
+- **The adaptive RMS step control gives rotor angles a fixed error scale.** The error scale of a state is
+  `atol + rtol * max(|y|, |y_new|)`, except for the rotor angles, whose scale is `atol + rtol * 1 rad` whatever their
+  size. Rotor angles are integrated as absolute angles, not against the centre of inertia, so a run held off nominal
+  frequency lets them grow: a 0.5 % offset at 50 Hz takes them to about 94 rad in 60 s. A scale that grew with the
+  angle would be about 93 times looser there than at 1 rad at the defaults (`rtol 1e-6`, `atol 1e-8`), and would depend
+  on where the network's angle reference sits. With the fixed scale the step control is the same at any angle offset:
+  shifting every angle by 2 pi k gives the same steps. A centre-of-inertia scale was measured as well and
+  rejected: it costs up to 18 % more steps (case118 at `rtol 1e-8`) and tightens a machine near the centre of inertia
+  to `atol` for no physical reason. In practice the speed states, or the 0.05 s step cap, set the step in most runs,
+  so the change moved results by less than the existing error of the default tolerances: at most 1.9e-4 degrees of
+  rotor-angle difference on case118 (16.5 of 53 bits), with no verdict or critical clearing time changed.
+  (`AdaptiveStepController`, `AdaptiveSwingKernel`.)
 - **Converter iteration failures do not decide stability.** In the RMS study the converter current fixed point (50
   passes) may stop unsettled; the step carries on with the last iterate and the failure is counted
   (`ConverterIterationFailures`, in the events export). The critical clearing time and the stability verdicts read
@@ -202,6 +225,26 @@ lives, so a later release can lift it deliberately.
   and refuses a reporting frequency within 1e-4 of the fundamental; a grid-following converter's small-signal droop
   is scaled by its `MBase`, so a record without a rating takes the default 100 MVA (a zero, negative or non-finite
   rating is refused). (`ImpedanceStabilityScan`, `SmallSignalAssembler`, `LinearInverterModel`.)
+- **The RMS multi-terminal DC grid steps its DC network implicitly.** MTDC1 integrates each DC bus's W = Vdc^2 by
+  backward Euler, solved by Newton's method, while the converters' powers are held over the step as every RMS device's
+  are. Forward Euler would be unstable: a bus's time constant is about 2 H R, 2e-4 s for H = 0.01 s and R = 0.01 pu,
+  far below an RMS step. Trapezoidal would be stable but would ring: it is A-stable and not L-stable, so at
+  dt / tau = 25 its step factor is -0.85 where backward Euler's is 0.038. Backward Euler is first order, the same order
+  as the held-power coupling every RMS device uses. With a constant power the step is still the exact straight-line
+  rise in W. The droop control is explicit: its order uses the DC voltage at the start of the step and the DC power
+  follows a step later. On a DC bus on its own that loop is stable exactly when dt is below 2 H V0 / Kd (whatever the
+  lag Tp), and MTDC1 refuses a longer step by name; lines to other buses only widen the stable range. The power flow
+  solves a multi-terminal link with line-commutated converters; MTDC1 starts on that solution and runs every converter
+  as a voltage-source converter, lossless like the power flow's. On a very low-resistance DC line the start is only as
+  balanced as rounding allows (about 1.3e-9 pu of power on a 1e-6 pu line, from the power flow's cancelling terms and the
+  per-unit rounding of the DC voltages), and the droop
+  converters take up that difference. A DC voltage converter's current limit is not fed back to the DC grid.
+  (`MtdcDcNetwork`, `MtdcGridState`.)
+- **VSC1's voltage converter limit is fed back only on request.** By default VSC1's DC side follows the power
+  converter's current limit but not the DC voltage converter's, so with a fault at the voltage converter's bus the DC side
+  does not balance. `Vsc1Data.DcFollowsLimitedPower` feeds that limit back too, cutting the power converter's power to
+  what the voltage converter can deliver plus losses. It stays off by default because turning it on moves results
+  whenever that limit binds. (`VscLinkState`.)
 
 ## Distribution feeders and harmonics
 
@@ -331,6 +374,33 @@ lives, so a later release can lift it deliberately.
   model's constructors refuse a bad value with it); the loaders turn System.Text.Json's other refusals of the input into
   `InvalidDataException`, and any other exception surfaces as the defect it is. (`CaseSession`, `JsonGridLoader`,
   `V2CaseLoader`.)
+- **PSS/E revision 36 and RAWX writing.** Revision 36 is written as the revision 35 records with an `@!` heading line
+  per record group; the fields revision 36 added (load, shunt, generator and induction machine names, DROOPNAME, BYPASS,
+  the new sections) are left to their defaults, because no public source gives their positions. GridSim's reader places
+  every field by the heading; whether PSS/E 36 reads such a file by heading or by position is not known, and neither
+  writer has been checked against a vendor-written file. RAWX section and field names follow PowSyBl's PSS/E model and
+  the surge-io reader; where the two differ (`r1_2` against `r1-2` for the transformer impedance) the writer uses
+  PowSyBl's and the reader takes both. (`PsseRawWriter`, `PsseRawxWriter`, `PsseRawx`.)
+- **PSS/E SEQ load records stay refused.** A non-empty load section in a revision 33 or later SEQ file is refused, because
+  no second public source confirming the record's layout was found (the manuals' public copies were not readable, and the
+  open readers checked do not read the section). `PsseSeqReader`.
+- **UCTE-DEF writing is to the precision of its columns.** UCTE-DEF numbers are fixed-width text (R and X in six
+  columns, B in eight, power in seven), so a case from MATPOWER, RAW or JSON comes back to half a unit in the last
+  written decimal, not bit for bit, and `convert` reports the difference. A ratio or phase shift goes through one-step
+  `##R` regulation, so it comes back to the precision of the five-column du and theta. A UCTE case written back with its
+  source read keeps each unchanged transformer's rated voltages, nominal power and `##R` record as the file's text, so
+  it comes back bit for bit when the file writes plain decimals. UCTE-DEF has no node shunt, so a bus shunt must ride on
+  a transformer whose node 1 is the bus or the case is refused; nor does it hold the start voltages of PQ buses, bus
+  voltage limits, ratings B and C or unit data beyond the power-flow record. A synthesised node code starts with the
+  country's code character, which the caller names (`--ucte-country`), since every code character but `X` is some
+  country and `X` marks an X-node: other UCTE tools take X-nodes as boundary points (PowSyBl turns them into dangling
+  lines), so a case written with X codes would not load there as the same network. An X-node read from a UCTE file
+  keeps its code. Branch status codes (real, equivalent, busbar coupler, and out of operation) and the file's own
+  out-of-operation records are kept only with the source read; a case from another format is written with real
+  elements (0, 8 when out of service), except that a branch with a negative R or X is written as an equivalent element
+  (1, 9 when out of service), since UCTE-DEF lets only an equivalent element carry a negative impedance; the notes
+  name each such branch. Only the ten UCTE voltage levels are written. Not checked against a vendor-written
+  file. (`UcteWriter`.)
 - **Generator cost files by index.** A cost file that addresses units by index with an out-of-service unit in the middle
   of `generation.json` is refused when the loader dropped rows, and is otherwise matched in file order (pinned by a test since GR-661). (`GeneratorCostFile`.)
 

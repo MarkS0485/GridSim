@@ -188,7 +188,7 @@ public class JsonSchemaSubsetTests
 
     [Fact]
     public void A_missing_directory_is_refused()
-        => Assert.Throws<DirectoryNotFoundException>(() => JsonSchemaSubset.LoadDirectory(Path.Combine(Path.GetTempPath(), "gridsim-no-such-schema-dir-" + Guid.NewGuid())));
+        => Assert.Throws<DirectoryNotFoundException>(() => JsonSchemaSubset.LoadDirectory(TestTemp.Under("gridsim-no-such-schema-dir-" + Guid.NewGuid())));
 
     // ----- $ref resolution -----
 

@@ -6,7 +6,7 @@ namespace GridSim.Core.Physics.Experimental;
 /// <summary>
 /// EXPERIMENTAL: a propagating electromechanical-wave field for visualisation. A disturbance at one bus
 /// does not reach the whole system at once - it spreads as an electromechanical wave at a FINITE speed
-/// (the same physics <see cref="PropagationDelay"/> models and <see cref="ContinuumWaveModel"/> gives
+/// (the same physics <see cref="GridSim.Core.Dynamics.Distributed.PropagationDelay"/> models and <see cref="ContinuumWaveModel"/> gives
 /// the frequency of). This computes, per bus, an amplitude and a PHASE DELAY (time-of-flight from the
 /// source), so an animator can draw <c>amplitude_i * cos(2*pi*f*t - phase_i)</c> and show the ripple
 /// travelling outward at the wave speed - the fluid analogy made visible.

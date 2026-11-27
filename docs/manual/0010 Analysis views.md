@@ -140,7 +140,7 @@ board of three columns.
 | DEMAND, GENERATION | `SimFrame.DemandMw` and `GenerationMw`, in GW to 2 decimals. |
 | LOSSES | `PowerFlowResult.TotalLossMw`, in MW. |
 | LARGEST LOSS `* live N-1` | `FrequencyRiskPresenter.LargestSecuredUnit`: the largest positive output of any single unit in this frame, synchronous, converter-connected or an interconnector import (a grid infeed at a model boundary is not a unit and is skipped). Shows `-` when nothing generates. |
-| TRANSMISSION BOUNDARIES | One row per boundary the case defines, from `BoundaryAnalysis.Evaluate`: signed flow `sum(direction x PFromMw)` over the boundary's branches, the limit, and loading `|flow| / limit x 100`. A limit of 0 means no limit authored, so loading is 0 and the boundary is never overloaded. The bar runs to 120 % and takes the loading colour. Cases without boundaries show an empty panel. |
+| TRANSMISSION BOUNDARIES | One row per boundary the case defines, from `BoundaryAnalysis.Evaluate`: signed flow `sum(direction x PFromMw)` over the boundary's branches, the limit, and loading `\|flow\| / limit x 100`. A limit of 0 means no limit authored, so loading is 0 and the boundary is never overloaded. The bar runs to 120 % and takes the loading colour. Cases without boundaries show an empty panel. |
 | GENERATION STACK | Dispatched MW by fuel (`max(0, Pg)` summed per fuel), biggest first, with the share of the total. Above it, SYNCHRONOUS and CONVERTER output in GW. |
 
 The LARGEST LOSS tile carries one sub-line: `3,600 MW * Dogger Bank cluster (not secured)`. The 3,600 MW figure is
@@ -316,7 +316,7 @@ more, and a flat bar in muted colour otherwise. With no boundary model the panel
 | Constraint costs | Up to 12 constraints. The lake carries a daily cost, shown as an hourly rate `daily / 24 / 1000` in `GBP k/h`. A dot is red when binding. |
 | IMBALANCE PRICE | The latest price and a sparkline of the last 48 settlement periods (one day). It takes one sample per settlement period by the same rule as the MARKET trace (`ImbalancePriceTrace`), and keeps half as many. |
 | BM STABILITY DELTA | Up to 30 acceptances graded by inertia effect. A synchronous unit with an OFFER kind reads an up triangle followed by `inertia` (green), and a synchronous unit with any other kind reads a down triangle followed by `inertia` (red). A non-synchronous unit reads `neutral` (muted). A row with no synchronous tag reads `watch` (amber). The header summarises `n improving * n reducing * n neutral`. |
-| INTERCONNECTORS | Links ordered by absolute flow with signed MW. A link with `|flow|` below 0.5 MW (`StatusLampRules.IdleInterconnectorMw`) is left out. Importing links are amber. A red dot marks members of a correlated corridor. |
+| INTERCONNECTORS | Links ordered by absolute flow with signed MW. A link with `\|flow\|` below 0.5 MW (`StatusLampRules.IdleInterconnectorMw`) is left out. Importing links are amber. A red dot marks members of a correlated corridor. |
 
 ### Clickable
 
@@ -493,7 +493,7 @@ discontinuity and integrates nothing.
 
 | Card | Formula |
 |---|---|
-| MAINS CLOCK DIVERGENCE | Banked `Hzs = sum((f - 50) x dt)` with dt in seconds. Clock error in seconds is `|banked| / 50`, shown `fast` or `slow`. The note reads `net fast  -  regeneration window open` above +0.5, `net slow  -  the grid owes energy` below -0.5 and `running true to 50 Hz` otherwise. |
+| MAINS CLOCK DIVERGENCE | Banked `Hzs = sum((f - 50) x dt)` with dt in seconds. Clock error in seconds is `\|banked\| / 50`, shown `fast` or `slow`. The note reads `net fast  -  regeneration window open` above +0.5, `net slow  -  the grid owes energy` below -0.5 and `running true to 50 Hz` otherwise. |
 | POTENTIAL MISSED REGEN | `sum(max(0, S) x dt)` in MWh, valued at GBP 80 per MWh (`RegenPricePerMwh`) and as homes powered for a day at 8 kWh per home-day (`HomeKwhPerDay`). The price carries the tag `(assumed)` and the homes line carries none. |
 | GRID BATTERY BESS | A narrative 500 MW, 1,000 MWh battery (`BessCapMw`, `BessCapMwh`) that takes `0.25 x S` (`BessResponseFraction`) clamped to its power, stops charging at 95 % state of charge and discharging at 5 %, starts at 50 %, and reads CHARGING above +10 MW, DISCHARGING below -10 MW and STANDBY inside that band (`BessModeDeadbandMw`), where the power text reads `holding`. |
 
@@ -584,7 +584,7 @@ reveals. The explorer refreshes per frame only while its gate is set, which the 
 |---|---|---|
 | GENERATORS | Non-interconnector generators | Dispatched output in GW, with a bar of `sum Pg / sum Pmax` |
 | GENERATOR PHASORS | Same count | `ANGLE SPREAD`: max minus min `VaDeg` over all buses, in degrees. Colour: red-amber above 30 degrees, amber above 15, green otherwise. Bar scaled to 60 degrees. |
-| INTERCONNECTORS | Interconnector generators | Net `Pg` in GW, signed: `NET IMPORT` or `NET EXPORT`, or `BALANCED` when `|net|` is below the shared 0.5 MW idle cut-off (`StatusLampRules.IdleInterconnectorMw`) |
+| INTERCONNECTORS | Interconnector generators | Net `Pg` in GW, signed: `NET IMPORT` or `NET EXPORT`, or `BALANCED` when `\|net\|` is below the shared 0.5 MW idle cut-off (`StatusLampRules.IdleInterconnectorMw`) |
 | TRANSFORMERS | Transformer branches | `MEAN LOADING`: mean `LoadingPercent` over rated transformers |
 | CABLES & LINES | Non-transformer branches | `PEAK CIRCUIT LOADING`: the highest `LoadingPercent` among rated circuits |
 | SUBSTATIONS | Buses | Count of buses outside 0.94 to 1.06 pu, or `ALL IN VOLTAGE BAND` |
@@ -727,7 +727,7 @@ losses whole MW.
 | Shaft horsepower | `Pgen / 745.7 W`, in family cars at 130 hp and Formula 1 cars at 1,000 hp. |
 | Grid speed | `f / 50 x 3000` rpm, and blade-tip speed `2 pi f x 0.9 m` (`LpBladeTipRadiusM`) against 343 m/s. |
 | Stored spin | `SystemInertiaGvaS` GVA.s taken as GJ, times 277.78 kWh per GJ, in EVs at 60 kWh, homes at 8 kWh per day and kettle boils at 0.1 kWh. |
-| Live braking power | `2 x E x |RoCoF| / f` in MW (E in MW.s) and hp. DELIVERING when RoCoF is below -1e-4 Hz/s, SOAKING UP above +1e-4, COASTING otherwise. Also RoCoF in rpm per second, `|RoCoF| x 60`. |
+| Live braking power | `2 x E x \|RoCoF\| / f` in MW (E in MW.s) and hp. DELIVERING when RoCoF is below -1e-4 Hz/s, SOAKING UP above +1e-4, COASTING otherwise. Also RoCoF in rpm per second, `\|RoCoF\| x 60`. |
 | The load | Demand as kettles at 3 kW, homes at 0.5 kW mean draw and showers at 8.5 kW. Losses as homes and kettles. |
 
 **THE TWIST** is the one panel the view tags as real (`THIS ONE IS REAL`). It takes the solved bus voltage angles
@@ -827,8 +827,8 @@ law is violated` in red, and a violated non-hard law does not reject. The same a
 
 ### Experimental models
 
-All are opt-in, provenance-tagged and off the validated solver path. The panel is headed
-`EXPERIMENTAL MODELS  *  opt-in, off the validated path`.
+All are opt-in, provenance-tagged and separate from the standard solver path. The panel is headed
+`EXPERIMENTAL MODELS  *  opt-in, separate from the standard solver path`.
 
 | Model | Shows | Skipped when |
 |---|---|---|

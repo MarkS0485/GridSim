@@ -387,7 +387,7 @@ judgement.
 | `feasible` (alias `constrained-physics`) | `constrained`, plus a floor of 1e-6 pu on every voltage, generator reactive output held in its limits, branch angle differences held under 90 degrees, and an audit of the converged state against the hard physical laws. | As `wls`. | Dense. Refused above 3,000 buses. |
 | `huber` | Iteratively reweighted least squares. Residuals within 1.345 sigma count quadratically, beyond it linearly. | Down-weighting, no removal. Prints no chi-square verdict. | At most 50 reweighting passes. |
 | `lav` (alias `lav-lp`) | Least absolute values, solved exactly as a sequence of linear programmes: minimises the sum of absolute standardised residuals. | Fits through outliers, no removal. Prints its objective and no chi-square verdict. | Dense. Refused above 2,000 states. |
-| `lav-irls` | Least absolute values by reweighting (weight `1/max(|r|, 1e-3)` on the standardised residual): an approximation of `lav` whose weights do not settle. | As `lav`. A `NOTE` line says it is approximate. | At most 10 reweighting passes. |
+| `lav-irls` | Least absolute values by reweighting (weight `1/max(\|r\|, 1e-3)` on the standardised residual): an approximation of `lav` whose weights do not settle. | As `lav`. A `NOTE` line says it is approximate. | At most 10 reweighting passes. |
 | `schweppe-gm` (alias `gm`) | Huber on the leverage-adjusted residual, so an error on a high-leverage row is not masked. | Down-weighting, no removal. Prints no chi-square verdict. | At most 50 reweighting passes. |
 
 An unknown method name is refused before any work, with the accepted names:

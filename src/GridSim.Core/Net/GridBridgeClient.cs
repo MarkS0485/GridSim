@@ -10,7 +10,7 @@ using GridSim.Core.Simulation;
 namespace GridSim.Core.Net;
 
 /// <summary>
-/// The GridSim side of the GDA<->GridSim bridge. Wraps a <see cref="ClientWebSocket"/> over one socket that carries
+/// The GridSim side of the GDA&lt;->GridSim bridge. Wraps a <see cref="ClientWebSocket"/> over one socket that carries
 /// both the state stream and request/response (forked from the RoCoF app's <c>server.py</c> transport). On connect it
 /// runs a receive loop that deserialises each <see cref="BridgeProtocol"/> message by its <c>type</c>:
 /// <list type="bullet">

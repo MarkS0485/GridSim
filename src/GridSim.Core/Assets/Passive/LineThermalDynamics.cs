@@ -45,7 +45,8 @@ public sealed class LineThermalDynamics : IPassiveAssetDynamics
         // Thermal state chases loading^2 (heating ~ I^2 R); a first-order lag stepped exactly (ThermalLag, #190: the
         // old explicit Euler with tau = max(dt, 60 tauMin) lost the lag entirely once a tick reached tau).
         double drive = ctx.LoadingFraction * ctx.LoadingFraction;
-        _thermal = ThermalLag.Step(_thermal, Math.Max(drive, _ambient), dt, _thermalTauS);
+        // SEC-29: a non-finite loading ("no network value") holds the thermal state rather than poisoning it.
+        if (double.IsFinite(drive)) _thermal = ThermalLag.Step(_thermal, Math.Max(drive, _ambient), dt, _thermalTauS);
         double derate = _derateFull * Math.Clamp(_thermal, 0.0, 1.0);
         return new PlantStateUpdate(TapRatio: null, RatingDerateFraction: derate, ThermalStatePu: _thermal);
     }

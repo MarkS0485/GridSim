@@ -24,7 +24,7 @@ namespace GridSim.Tests;
 public sealed class Doc5FrequencyEvidenceAssetTests : IDisposable
 {
     private readonly ITestOutputHelper _out;
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc5-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc5-" + Guid.NewGuid().ToString("N"));
 
     public Doc5FrequencyEvidenceAssetTests(ITestOutputHelper output)
     {

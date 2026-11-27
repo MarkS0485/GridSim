@@ -344,7 +344,11 @@ public sealed class DgsImportTests
         // Off-nominal ratio: rated 115 kV against a 110 kV terminal on the high side, 33 against 33 on the low side.
         Assert.Equal((115.0 / 110.0) / (33.0 / 33.0), t.TapRatio);
         Assert.Equal(40.0, t.RateAMva);
-        Assert.Equal(-12.0, r.Model.Shunts.Single().Bs);
+        // Bs = +qcapn = +12 (was -12, a sign error). Proof: the YBus stamp is Y_ii += (Gs + jBs) / S, so the power the
+        // shunt draws is |V|^2 (Gs - jBs) and its reactive injection is Q = +Bs |V|^2 (MATPOWER: BS is the MVAr injected
+        // at 1 pu). A 12 MVAr capacitor injects 12 MVAr at 1 pu, so Bs = +12; -12 made it a 12 MVAr reactor. Independent
+        // reference: MATPOWER's BS convention, and GridSim's own CGMES reader (Bs = +bPerSection), which agrees with it.
+        Assert.Equal(12.0, r.Model.Shunts.Single().Bs);
         Assert.Equal(DgsObjectOutcome.Approximated, r.Objects.Single(o => o.Id == "TR1").Outcome);   // i0tr is not modelled
         Assert.Contains("magnetising", r.Objects.Single(o => o.Id == "TR1").Note, StringComparison.Ordinal);
         PowerFlowResult s = new NewtonRaphsonPowerFlow().Solve(r.Project().Model);

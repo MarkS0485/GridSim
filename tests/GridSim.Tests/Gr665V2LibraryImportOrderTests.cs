@@ -13,7 +13,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr665V2LibraryImportOrderTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-gr665-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-gr665-" + Guid.NewGuid().ToString("N"));
     private string CaseDir => Path.Combine(_root, "case");
     private string DataDir => Path.Combine(_root, "data");
     private static string SchemasDir => Path.Combine(CliProcess.Root(), "schemas", "v2");

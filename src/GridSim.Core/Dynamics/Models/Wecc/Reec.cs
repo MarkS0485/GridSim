@@ -266,13 +266,15 @@ public sealed class Reec : IReecModel
     private double QPath(ReecParameters p, double qlim, double verr, double vp, double iqmax) =>
         p.QFlag == 1 ? Math.Clamp(p.Kvp * verr + _s3, -iqmax, iqmax) : _s4;
 
-    // Ipmin, and the state-of-charge cut-offs of REEC_C (which may also force Ipmax to 0).
+    // Ipmin, and the state-of-charge cut-offs of REEC_C (which may also force Ipmax to 0). EPRI 3002027129 Fig. 4-7:
+    // the current limit gives Ipmin = -Ipmax first; then "if SOC >= SOCmax, Ipmin = 0; elseif SOC <= SOCmin, Ipmax = 0".
+    // At SOCmin only discharge stops: Ipmin keeps -Ipmax of the current limit, so the store can still charge.
     private double IpMin(ReecParameters p, ref double ipmax)
     {
         if (p.Variant != ReecVariant.C) return 0.0;
-        if (_soc <= p.SocMin) ipmax = 0.0;
         double ipmin = -ipmax;
         if (_soc >= p.SocMax) ipmin = 0.0;
+        else if (_soc <= p.SocMin) ipmax = 0.0;
         return ipmin;
     }
 
@@ -284,10 +286,26 @@ public sealed class Reec : IReecModel
         _ipmaxLast = o.Ipmax;
         if (!o.Dip)
         {
-            if (p.VFlag == 1) _s2 = WeccBlocks.Integrate(_s2, p.Kqi, o.QErr, dt, p.Vmin, p.Vmax);
-            if (p.QFlag == 1) _s3 = WeccBlocks.Integrate(_s3, p.Kvi, o.VErr, dt, -o.Iqmax, o.Iqmax);
+            // The non-windup integrators s2 and s3 are linked (WECC, Report on WT3 Model Description, 2013, footnote 1 to
+            // Figure 3-3): when s3 is at its upper limit and ds3 > 0, ds3 is set to 0 and so is ds2 if it is also
+            // positive; the same at the lower limit with both negative. Away from the limits this is the clamped
+            // forward-Euler step it always was.
+            double ds2 = p.VFlag == 1 ? p.Kqi * o.QErr : 0.0;
+            if (p.QFlag == 1)
+            {
+                double ds3 = p.Kvi * o.VErr;
+                if (_s3 >= o.Iqmax && ds3 > 0.0) { ds3 = 0.0; if (ds2 > 0.0) ds2 = 0.0; }
+                else if (_s3 <= -o.Iqmax && ds3 < 0.0) { ds3 = 0.0; if (ds2 < 0.0) ds2 = 0.0; }
+                _s3 = Math.Clamp(_s3 + ds3 * dt, -o.Iqmax, o.Iqmax);
+            }
             else _s4 = WeccBlocks.Lag(_s4, o.S4Target, p.Tiq, dt);
+            if (p.VFlag == 1) _s2 = Math.Clamp(_s2 + ds2 * dt, p.Vmin, p.Vmax);
             _pord = Math.Clamp(WeccBlocks.Lag(_pord, o.Psel, p.Tpord, dt), p.Pmin, p.Pmax);
+        }
+        else if (p.Tpord <= WeccBlocks.InstantSeconds)
+        {
+            // Same footnote: with Tpord = 0 the lag and the freeze of s5 are bypassed; the Pmax / Pmin limits still apply.
+            _pord = Math.Clamp(o.Psel, p.Pmin, p.Pmax);
         }
         // Order of the rate limit and the speed multiplication with PFlag = 1 (bug hunt 2026-10-29, finding 29; confirmed
         // 2026-10-31, GitHub issue #5): the rate limit acts on Pref (state s6) and the speed multiplies its output

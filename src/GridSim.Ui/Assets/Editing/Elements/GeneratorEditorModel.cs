@@ -39,7 +39,7 @@ public sealed class GeneratorEditorModel : ElementEditorModel
         new(Identity, "name", "bus", "type", "role", "inService", "powerFlowOnly"),
         new(RealPower, "capacityMva", "outputMw", "capacityFactor", "pMinMw", "pMaxMw"),
         new(Reactive, "qMinMvar", "qMaxMvar", "qOutputMvar", "voltageSetpoint"),
-        new(Dynamics, "inertiaH", "unitTransformerXPu", "subtransientXdPu", "negativeSeqXPu", "template", "dynamicsClass"),
+        new(Dynamics, "inertiaH", "unitTransformerXPu", "subtransientXdPu", "negativeSeqXPu", "template", "protectionTemplate", "dynamicsClass"),
         new(Converter, "converter", "converterInterfaced", "converterFaultCurrentPu", "gridForming"),
     };
 

@@ -56,13 +56,18 @@ public static class TsgbSizer
         DynamicsConfig baseCfg = baseConfig ?? new DynamicsConfig();
         double f0 = baseCfg.NominalHz;
         double loss = Math.Abs(lossMw);
+        // DYN-22: device inertia the base configuration already holds counts toward the requirement and stays in every
+        // trial run; the sizing is the synthetic inertia ON TOP of it. It was ignored in the requirement and then
+        // overwritten in the runs, so the need was overstated by it. With no base device inertia (the default) every
+        // number is as before.
+        double baseDevice = baseCfg.DeviceRotationalInertiaMwS;
 
         // 1) Synthetic inertia: E_total >= f0loss / (2targetRoCoF); supply the shortfall.
         double synthetic = 0;
         if (targetMaxRocofHzPerS > MinRocofTargetHzPerS)
         {
             double eRequired = f0 * loss / (2.0 * targetMaxRocofHzPerS);
-            synthetic = Math.Max(0.0, eRequired - systemInertiaMwS);
+            synthetic = Math.Max(0.0, eRequired - systemInertiaMwS - baseDevice);
         }
 
         // 2) Fast response: binary-search the smallest MW that lifts the nadir to target.
@@ -85,6 +90,6 @@ public static class TsgbSizer
         FrequencyResponse Run(double synth, double ffrMw) =>
             FrequencyDynamics.Simulate(systemInertiaMwS, demandMw,
                 new[] { new FrequencyEvent(FrequencyDynamics.DesignEventSeconds, -loss) },
-                baseCfg with { DeviceRotationalInertiaMwS = synth, FastResponseMw = ffrMw });
+                baseCfg with { DeviceRotationalInertiaMwS = baseDevice == 0.0 ? synth : baseDevice + synth, FastResponseMw = ffrMw });
     }
 }

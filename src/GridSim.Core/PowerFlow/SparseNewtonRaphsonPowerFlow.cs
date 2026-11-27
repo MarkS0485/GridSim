@@ -57,19 +57,20 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
     /// power-flow angle start (<see cref="NewtonShell.SolveWithRetry"/>).</summary>
     private PowerFlowResult SolveAc(GridModel model, PowerFlowOptions? options)
         => NewtonShell.SolveWithRetry(options ?? new PowerFlowOptions(), model, NewtonShell.ModelIndex(model),
-            (o, dcStart) => { PowerFlowResult? r = SolveAcAttempt(model, o, dcStart, out bool failed, out double startMis); return (r, failed, startMis, SlackQNote); },
+            (o, dcStart) => { PowerFlowResult? r = SolveAcAttempt(model, o, dcStart, out bool failed, out NewtonShell.NewtonRunEnd runEnd); return (r, failed, runEnd, SlackQNote); },
             state => SlackQNote = (string?)state);
 
     /// <summary>One complete solve. With <paramref name="dcStart"/> the start angles come from the DC power flow
     /// (<see cref="NewtonShell.TrySeedDcAngles"/>), and null is returned when that start cannot be formed.
     /// <paramref name="newtonFailed"/> says whether the last Newton run failed to converge (the retry trigger; the
-    /// Q-limit pass cap is not), and <paramref name="runStartMismatch"/> is that run's mismatch at its own start point,
-    /// before its first step (with the result's final mismatch, the stall test of <see cref="NewtonShell.Stalled"/>).</summary>
+    /// Q-limit pass cap is not), and <paramref name="runEnd"/> says how that run ended: its mismatch at its own start point,
+    /// its mismatch before its last step, its steps and whether the cap stopped it (with the result's final mismatch, the
+    /// stall test of <see cref="NewtonShell.Stalled(NewtonShell.NewtonRunEnd, double)"/>).</summary>
     private PowerFlowResult? SolveAcAttempt(GridModel model, PowerFlowOptions opt, bool dcStart, out bool newtonFailed,
-        out double runStartMismatch)
+        out NewtonShell.NewtonRunEnd runEnd)
     {
         newtonFailed = false;
-        runStartMismatch = double.NaN;
+        runEnd = new NewtonShell.NewtonRunEnd(double.NaN, double.NaN, 0, false);
         int n = model.BusCount;
         var index = new Dictionary<int, int>(n);
         for (int i = 0; i < n; i++) index[model.Buses[i].Id] = i;
@@ -119,7 +120,7 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         for (int qp = 0; qp < qPasses; qp++)
         {
             switchPending = false;
-            (converged, int iters, maxMis, runStartMismatch) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qp, spec, @base);
+            (converged, int iters, maxMis, runEnd) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qp, spec, @base);
             totalIters += iters;
             newtonFailed = !converged;
             if (!opt.EnforceQLimits) break;
@@ -152,19 +153,19 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         // to be reported converged on the previous types' voltages.
         if (switchPending)
         {
-            (converged, int capIters, maxMis, runStartMismatch) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qPasses, spec, @base);
+            (converged, int capIters, maxMis, runEnd) = RunNewton(_sparse, _directFallback, y, effType, Vm, Va, Pspec, Qspec, P, Q, opt, trace, qPasses, spec, @base);
             totalIters += capIters;
             newtonFailed = !converged;
             converged = false;
         }
 
         ComputeInjections(y, Vm, Va, P, Q);
-        SlackQNote = NewtonShell.DiagnoseSlackQ(n, type0, Q, Qd, qMinBus, qMaxBus, @base, Vm, spec.Zip);
+        SlackQNote = NewtonShell.DiagnoseSlackQ(n, type0, Q, Qd, qMinBus, qMaxBus, @base, Vm, spec.Zip, model.Buses);
         // N071: report the bus types the solve ended with (a PV bus pinned at a Q limit reads PQ), index == model order.
-        return NewtonShell.AssembleResult(model, n, Vm, Va, P, Q, @base, converged, totalIters, maxMis, id => index[id], effType);
+        return NewtonShell.AssembleResult(model, n, Vm, Va, P, Q, @base, converged, totalIters, maxMis, id => index[id], effType, diverged: !converged && runEnd.Diverged);
     }
 
-    private static (bool, int, double, double) RunNewton(
+    private static (bool, int, double, NewtonShell.NewtonRunEnd) RunNewton(
         ISparseLinearSolver sparse,
         CpuSparseLuSolver? directFallback,
         ComplexCsr y, BusType[] type, double[] Vm, double[] Va,
@@ -198,8 +199,8 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
         var slots = new int[4 * y.RowPtr[n]];
         CsrMatrix jac = BuildJacobianStructure(y, pPos, qPos, m, slots);
 
-        bool converged = false;
-        double maxMis = double.PositiveInfinity, startMis = double.NaN;
+        bool converged = false, diverged = false;
+        double maxMis = double.PositiveInfinity, startMis = double.NaN, lastStepFrom = double.NaN;
         // Iteration cap (October 2026 docs-programme finding): the loop used to be 'for (; iter < MaxIterations; iter++)'
         // with the mismatch test at the TOP of the body, so after the last allowed step the loop ended without ever
         // evaluating the new state: a solve that the final step had converged was reported MaxIterations, with the
@@ -232,6 +233,8 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
             for (int k = 0; k < m; k++) maxMis = Math.Max(maxMis, Math.Abs(f[k]));
             if (iter == 0) startMis = maxMis;   // the retry's stall test (NewtonShell.Stalled); read only after the run
             if (maxMis < opt.Tolerance) { converged = true; break; }
+            // The divergence stop (PowerFlowOptions.DivergeLimitPu): reads the mismatch just computed and ends the pass; no step changes.
+            if (NewtonShell.DivergedBeyondLimit(opt, startMis, maxMis)) { diverged = true; break; }
             if (iter >= opt.MaxIterations) break;   // cap reached: the final state's mismatch has just been evaluated
 
             double[] mism = trace is null ? Array.Empty<double>() : (double[])f.Clone();
@@ -254,9 +257,11 @@ public sealed class SparseNewtonRaphsonPowerFlow : IPowerFlowSolver
             // the mismatch and the raw Newton step are captured. Damping (below) is applied after.
             trace?.CaptureIteration(iter, maxMis, mism, dx, null);
 
+            lastStepFrom = maxMis;   // the retry's stall test only (NewtonShell.Stalled); never read by the iteration
             NewtonShell.ApplyStep(n, pPos, qPos, dx, maxAbs, Vm, Va);
         }
-        return (converged, iter, maxMis, startMis);
+        return (converged, iter, maxMis,
+            new NewtonShell.NewtonRunEnd(startMis, lastStepFrom, iter, !converged && !diverged && iter >= opt.MaxIterations, diverged));
     }
 
     /// <summary>Bus power injections P/Q (pu) over the nonzero cells of Y. Internal so the estimate projection

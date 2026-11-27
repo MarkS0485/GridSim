@@ -29,9 +29,9 @@ public sealed record HarmonicStateEstimate(
 /// least-squares solve, reusing the complex-solver seam for both the impedance columns and the small normal
 /// equations. It never nowcasts: harmonic measurements are dated inputs guarded upstream like any other.
 ///
-/// <para><b>Experimental</b> (R062, October 2026): Core API and tests only; no CLI verb or production caller. Still
-/// needs: an input format for dated harmonic voltage measurements (guarded like every other dated input), a CLI
-/// surface (for example under the harmonics verb), and validation against an independent reference.</para>
+/// <para><b>Experimental</b> (R062, October 2026): reached from the CLI by the <c>harmonic-se</c> verb (dated
+/// <c>gridsim-harmonic-meas/1</c> measurement files, guarded like every other dated input), which prints and writes an
+/// EXPERIMENTAL label. Still needs validation against an independent reference.</para>
 /// </summary>
 public static class HarmonicStateEstimator
 {
@@ -54,6 +54,10 @@ public static class HarmonicStateEstimator
         int n = model.BusCount;
         var index = new Dictionary<int, int>(n);
         for (int i = 0; i < n; i++) index[model.Buses[i].Id] = i;
+        // ANA-12: a candidate source bus is checked like a measurement bus (it threw KeyNotFoundException).
+        for (int j = 0; j < candidateSourceBuses.Count; j++)
+            if (!index.ContainsKey(candidateSourceBuses[j]))
+                throw new ArgumentException(FormattableString.Invariant($"Harmonic state estimation: candidate source {j} names bus {candidateSourceBuses[j]}, which is not in the model."), nameof(candidateSourceBuses));
 
         ComplexCsr y = FrequencyDependentYBus.Build(model, order, opt);
 

@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Cf6Dist3phV2ConvertersTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-cf6-v2conv-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-cf6-v2conv-" + Guid.NewGuid().ToString("N"));
 
     public Cf6Dist3phV2ConvertersTests() => Directory.CreateDirectory(_dir);
 

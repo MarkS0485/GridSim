@@ -280,6 +280,15 @@
     private async Task RunStudy(string id)
     {
         if (_project is null || _busy) return;
+        // A study run is an on-demand analysis: the same band as POST /api/solve (AccessControl.SolveRole), audited the same way.
+        System.Security.Claims.ClaimsPrincipal? who = AuthState is { IsCompletedSuccessfully: true } done ? done.Result.User : null;
+        if (Access.RefusalFor(Access.IdentityFor(who, null), AccessControl.SolveRole, AccessControl.WorkbenchStudyOperation) is { } why)
+        {
+            _studyId = id;
+            _report = "";
+            _result = new WorkbenchResultDto(id, "", "REFUSED", "Refused", why, [], []);
+            return;
+        }
         _busy = true;
         _studyId = id;
         _report = "";

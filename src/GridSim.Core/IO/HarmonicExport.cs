@@ -44,7 +44,7 @@ public static class HarmonicExport
         IReadOnlyList<double>? fundamentalVm = null)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
-        File.WriteAllText(path, ToJson(model, sources, penetration, indices, meta, scan, compliance, modelOptions, sweep, fundamentalVm));
+        AtomicText.Write(path, /* IO-22 */ ToJson(model, sources, penetration, indices, meta, scan, compliance, modelOptions, sweep, fundamentalVm));
     }
 
     /// <summary>

@@ -146,7 +146,7 @@ public class CgmesWriterTests
     [Fact]
     public void Convert_writes_cgmes_and_shows_the_values_it_could_not_hold()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-convert-cgmes-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-convert-cgmes-" + Guid.NewGuid().ToString("N"));
         try
         {
             string output = Path.Combine(dir, "case30.xml");

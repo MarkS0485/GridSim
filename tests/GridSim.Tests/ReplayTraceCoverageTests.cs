@@ -33,7 +33,7 @@ public class ReplayTraceCoverageTests
     private static string WriteTrace(Func<string[], IEnumerable<string>> pick)
     {
         string[] lines = File.ReadAllLines(FullTrace());
-        string path = Path.Combine(Path.GetTempPath(), $"gridsim-trace-{Guid.NewGuid():N}.csv");
+        string path = TestTemp.Under($"gridsim-trace-{Guid.NewGuid():N}.csv");
         File.WriteAllLines(path, pick(lines));
         return path;
     }

@@ -125,14 +125,14 @@ public static class WatchList
         if (r.Status != PowerFlowStatus.Converged)
         {
             yield return new WatchItem(WatchCategory.Convergence, "system",
-                $"power flow did not converge ({r.Status})", Consequence: 1.0, Proximity: 1.0);
+                FormattableString.Invariant($"power flow did not converge ({r.Status})"), Consequence: 1.0, Proximity: 1.0);
         }
         else if (maxIter > 0)
         {
             double prox = Math.Clamp((double)r.Iterations / maxIter, 0, 1);
             if (prox >= ConvergenceStrainFraction) // only worth listing when the solve is genuinely straining
                 yield return new WatchItem(WatchCategory.Convergence, "system",
-                    $"power flow took {r.Iterations}/{maxIter} iterations (approaching stress limit)",
+                    FormattableString.Invariant($"power flow took {r.Iterations}/{maxIter} iterations (approaching stress limit)"),
                     Consequence: 1.0, Proximity: prox);
         }
     }
@@ -159,7 +159,7 @@ public static class WatchList
             double loading = lf.RatingMva > 0 ? Mva(lf) / lf.RatingMva : 0.0;
             if (loading < opt.ThermalWatchFraction) continue;
 
-            string name = lf.Name.Length > 0 ? lf.Name : $"branch {lf.From}-{lf.To}";
+            string name = lf.Name.Length > 0 ? lf.Name : FormattableString.Invariant($"branch {lf.From}-{lf.To}");
             double proximity = Math.Clamp(loading, 0, 1);
             double consequence = Math.Clamp(Mva(lf) / maxFlow, 0, 1);
             double? lead = timeToTrip.TryGetValue(li, out double tt) ? tt : (double?)null;
@@ -185,7 +185,7 @@ public static class WatchList
         var refById = new Dictionary<int, double>(model.Buses.Count);
         foreach (Bus b in model.Buses)
         {
-            nameById[b.Id] = b.Name ?? $"bus {b.Id}";
+            nameById[b.Id] = b.Name ?? FormattableString.Invariant($"bus {b.Id}");
             double? setpoint = b.Type is BusType.Slack or BusType.Pv ? VoltageSetpoint.ForBus(model, b.Id) : null;
             refById[b.Id] = setpoint ?? Analysis.VoltageLimits.NominalPu;
         }
@@ -194,14 +194,14 @@ public static class WatchList
         {
             if (!refById.TryGetValue(r.BusIds[i], out double vRef))
                 throw new InvalidOperationException(
-                    $"Watch-list: the solved result has bus {r.BusIds[i]}, which is not in model '{model.Name}'.");
+                    FormattableString.Invariant($"Watch-list: the solved result has bus {r.BusIds[i]}, which is not in model '{model.Name}'."));
             double dev = Math.Abs(r.Vm[i] - vRef);
             if (dev < opt.VoltageWatchBandPu) continue;
             double proximity = Math.Clamp(dev / opt.VoltageLimitBandPu, 0, 1);
             // A voltage excursion is serious but usually local: a fixed-moderate consequence, scaled a little
             // by how far out of band it already is.
             double consequence = Math.Clamp(VoltageConsequenceBase + VoltageConsequenceSlope * proximity, 0, 1);
-            string nm = nameById.GetValueOrDefault(r.BusIds[i], $"bus {r.BusIds[i]}");
+            string nm = nameById.GetValueOrDefault(r.BusIds[i], FormattableString.Invariant($"bus {r.BusIds[i]}"));
             bool low = r.Vm[i] < vRef;
             string against = vRef == Analysis.VoltageLimits.NominalPu ? "" : FormattableString.Invariant($" against its {vRef:F3} pu setpoint");
             yield return new WatchItem(WatchCategory.VoltageLimit, nm,

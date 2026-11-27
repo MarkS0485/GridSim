@@ -41,7 +41,7 @@ public sealed record ReportTemplate(string Title, string? ResultSha256, IReadOnl
         ArgumentNullException.ThrowIfNull(bytes);
         CheckDuplicates(bytes, "template");
         JsonElement root;
-        try { root = JsonDocument.Parse(bytes, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Disallow }).RootElement.Clone(); }
+        try { root = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Disallow }).RootElement.Clone(); }
         catch (JsonException ex) { throw new ReportException("The template is not valid JSON: " + ex.Message); }
         Obj(root, "template", ["schema", "title", "resultSha256", "sections"], ["schema", "title", "sections"]);
         if (Str(root.GetProperty("schema"), "schema") != Schema) throw new ReportException($"The template's schema must be \"{Schema}\".");
@@ -145,7 +145,7 @@ public sealed record ReportTemplate(string Title, string? ResultSha256, IReadOnl
         var stack = new Stack<HashSet<string>?>();
         try
         {
-            var reader = new Utf8JsonReader(bytes, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Disallow });
+            var reader = new Utf8JsonReader(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, new JsonReaderOptions { CommentHandling = JsonCommentHandling.Disallow });
             while (reader.Read())
             {
                 switch (reader.TokenType)
@@ -176,21 +176,49 @@ public sealed record ReportTemplate(string Title, string? ResultSha256, IReadOnl
         {
             w.WriteStartObject();
             w.WriteString("schema", Schema);
-            string studyId = Walk(root, "study", "id") ?? "result";
+            // A CLI result (gridsim-cli-result/1, written by a verb's --json) has a verb, an exit code, a flat summary
+            // object and tables that are plain arrays of row objects; a workbench result has a study, a status and tables
+            // that are objects holding title, columns and rows.
+            bool cli = Walk(root, "schema") == CliResultSchema;
+            string studyId = (cli ? Walk(root, "verb") : Walk(root, "study", "id")) ?? "result";
             w.WriteString("title", "Study report: " + studyId);
             w.WriteStartArray("sections");
-            Section(w, "Summary", () =>
-            {
-                Value(w, "Study", "/study/id");
-                Value(w, "Kind", "/study/kind");
-                Value(w, "Case", "/case/name");
-                Value(w, "Status", "/status");
-                Value(w, "Outcome", "/outcome");
-                Value(w, "Reason", "/reason");
-            });
+            if (cli)
+                Section(w, "Summary", () =>
+                {
+                    Value(w, "Verb", "/verb");
+                    Value(w, "Exit code", "/exitCode");
+                    if (root.TryGetProperty("summary", out JsonElement summary) && summary.ValueKind == JsonValueKind.Object)
+                        foreach (JsonProperty s in summary.EnumerateObject()) Value(w, s.Name, "/summary/" + Esc(s.Name));
+                });
+            else
+                Section(w, "Summary", () =>
+                {
+                    Value(w, "Study", "/study/id");
+                    Value(w, "Kind", "/study/kind");
+                    Value(w, "Case", "/case/name");
+                    Value(w, "Status", "/status");
+                    Value(w, "Outcome", "/outcome");
+                    Value(w, "Reason", "/reason");
+                });
             if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("tables", out JsonElement tables) && tables.ValueKind == JsonValueKind.Object)
                 foreach (JsonProperty t in tables.EnumerateObject())
                 {
+                    if (t.Value.ValueKind == JsonValueKind.Array)
+                    {
+                        // A table that is the row array itself (a CLI result): bind the array; the columns are the keys of
+                        // its first row, which the renderer takes when the template names none.
+                        Section(w, t.Name, () =>
+                        {
+                            w.WriteStartObject();
+                            w.WriteString("type", "table");
+                            w.WriteString("title", t.Name);
+                            w.WriteString("path", "/tables/" + Esc(t.Name));
+                            w.WriteEndObject();
+                        });
+                        continue;
+                    }
+                    if (t.Value.ValueKind != JsonValueKind.Object) continue;
                     string title = t.Value.ValueKind == JsonValueKind.Object && t.Value.TryGetProperty("title", out JsonElement tt) && tt.ValueKind == JsonValueKind.String ? tt.GetString()! : t.Name;
                     Section(w, title, () =>
                     {
@@ -218,6 +246,7 @@ public sealed record ReportTemplate(string Title, string? ResultSha256, IReadOnl
             if (root.ValueKind == JsonValueKind.Object && root.TryGetProperty("plots", out JsonElement plots) && plots.ValueKind == JsonValueKind.Object)
                 foreach (JsonProperty p in plots.EnumerateObject())
                 {
+                    if (p.Value.ValueKind != JsonValueKind.Object) continue;
                     string title = p.Value.TryGetProperty("title", out JsonElement tt) && tt.ValueKind == JsonValueKind.String ? tt.GetString()! : p.Name;
                     Section(w, title, () =>
                     {
@@ -236,6 +265,9 @@ public sealed record ReportTemplate(string Title, string? ResultSha256, IReadOnl
         }
         return new UTF8Encoding(false).GetString(ms.ToArray()) + "\n";
     }
+
+    // The schema tag of a CLI verb's --json result (GridSim.Cli CliResultWriter.Schema).
+    private const string CliResultSchema = "gridsim-cli-result/1";
 
     private static string Esc(string name) => name.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
 

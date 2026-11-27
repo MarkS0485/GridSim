@@ -7,7 +7,8 @@ namespace GridSim.Core.Lines;
 /// Overhead line constants from geometry. Defined order: validate geometry; primitive Z (earth-return, ohm/km) and Maxwell
 /// potential coefficients P (perfect ground, km/F) over every conductor; Kron-eliminate grounded wires (Z) and take the
 /// phase capacitance as the inverse of the Kron-reduced P block (a grounded wire sits at zero potential); transposition average (three phases only); symmetrical components (three phases only). Every stage is kept
-/// in the result. Single-core cables with sheath and armour, and the CLI verb, are deferred.
+/// in the result. Buried single-core cables with sheath and armour are solved by Cables.CableConstantsSolver (the
+/// <c>line-constants --cable</c> path); this overhead solver is unchanged by it.
 /// </summary>
 public static class LineConstantsSolver
 {

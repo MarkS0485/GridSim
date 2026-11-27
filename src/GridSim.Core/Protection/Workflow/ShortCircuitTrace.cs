@@ -14,6 +14,9 @@ public sealed record FaultSpec(int? Bus, int? Branch, double Fraction)
     public static FaultSpec AtBus(int bus) => new(bus, null, 0.0);
     public static FaultSpec AlongBranch(int branch, double fraction) => new(null, branch, fraction);
     public string Label => Bus is int b ? $"bus {b}" : $"branch {Branch} at {Fraction.ToString("R", CultureInfo.InvariantCulture)}";
+    /// <summary>RC5 WP17: true when the faulted line has just been closed onto the fault (read only by a 21's
+    /// switch-onto-fault setting in the placed-element evaluation). False by default.</summary>
+    public bool Energisation { get; init; }
 }
 
 /// <summary>One device at one fault. <see cref="Direction"/> is true when the fault is on the far side of the device's

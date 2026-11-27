@@ -197,7 +197,7 @@ public sealed class UiHostFrameEqualityTests
         int epoch = host.Epoch;
         string solver = host.ActiveSolver!;
 
-        string missing = Path.Combine(Path.GetTempPath(), $"gridsim-ui-missing-{Guid.NewGuid():N}");
+        string missing = TestTemp.Under($"gridsim-ui-missing-{Guid.NewGuid():N}");
         LiveLoadResult bad = host.LoadLive(new ModelSource("missing", missing), SolverKind.Auto, FreeLicence());
         Assert.False(bad.Loaded);
         Assert.Null(bad.Model);
@@ -222,7 +222,7 @@ public sealed class UiHostFrameEqualityTests
     public void A_licensed_model_above_the_tier_cap_is_refused_with_the_gates_own_message()
     {
         // A tier of 5 buses and a model that is not a Bundled Network: case9 copied out of data/ (9 buses).
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-ui-licence-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-ui-licence-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         try
         {
@@ -371,7 +371,7 @@ public sealed class UiHostFrameEqualityTests
     /// <summary>A pre-solved run of <paramref name="count"/> case9 snapshots, as CultureAndOrderDeterminismTests writes one.</summary>
     private static string MakeRun(int count)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-ui-run-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-ui-run-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(dir, "exports"));
         var trace = new SolveTrace();
         GridModel model = IeeeCases.Case9();

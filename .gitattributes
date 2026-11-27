@@ -4,7 +4,24 @@
 # The container build files are shell-adjacent and read by Linux tooling: keep them LF on every checkout (GR-420).
 # They are not in the bundled-data manifest (data/bundled.sha256), so this does not change any recorded hash.
 Dockerfile text eol=lf
+Dockerfile.cli text eol=lf
 .dockerignore text eol=lf
 
 # RC3 P7: the planning acceptance fixture is digest-bound (master.case.sha256 hashes exact bytes): never convert it.
 tests/GridSim.Tests/fixtures/planning/** -text
+
+# RC5 WP8: the grid-code requirement files are embedded and hashed byte for byte (the grid-code result records the
+# requirements sha256): store and check out with no line-ending conversion, so the hash is the same on every OS.
+src/GridSim.Core/Compliance/GridCode/Requirements/*.json -text
+
+# RC5 (run journal): the breaking-change map is embedded and its sha256 is recorded in every validate report and pinned
+# by a test: store and check out with no line-ending conversion, so the hash is the same on every OS.
+src/GridSim.Core/Journal/breaking-changes.json -text
+src/GridSim.Core/Journal/volatile-fields.json -text
+
+# RC5 WP30: the public OpenSCD sample SCL file is pinned by its sha256 in a test: no line-ending conversion.
+tests/GridSim.Tests/fixtures/openscd-scl/** -text
+
+# MCP plugin: the docs snapshot is hashed byte for byte in its MANIFEST.json and compared with the checkout's extract:
+# store and check out with no line-ending conversion, so the hashes are the same on every OS.
+mcp/gridsim-mcp/server/docs_snapshot/** -text

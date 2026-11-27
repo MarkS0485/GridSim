@@ -64,6 +64,33 @@ public sealed record PowerFlowOptions
 
     private readonly int _maxIterations = 30;
 
+    /// <summary>
+    /// The divergence stop (pu), default <see cref="DefaultDivergeLimitPu"/>. A Newton, fast-decoupled or Gauss-Seidel
+    /// pass stops early, with status <see cref="PowerFlowStatus.Diverged"/>, as soon as its largest power mismatch
+    /// exceeds the larger of this limit and the mismatch at the pass's own starting point (the starting-point term is
+    /// there because a flat start on a large case can itself sit above the limit). The check only reads the mismatch
+    /// already computed for the convergence test and stops the loop: no step is changed, so a solve that converges is
+    /// bit-for-bit what it was. <see cref="double.PositiveInfinity"/> turns the stop off (every pass then runs to
+    /// <see cref="MaxIterations"/>, as before). Validated when set: above 0 (NaN and zero or negative values are refused).
+    /// </summary>
+    public double DivergeLimitPu
+    {
+        get => _divergeLimitPu;
+        init
+        {
+            if (!(value > 0.0))
+                throw new ArgumentOutOfRangeException(nameof(DivergeLimitPu), value,
+                    "PowerFlowOptions.DivergeLimitPu must be above 0 pu (or +Infinity to turn the stop off).");
+            _divergeLimitPu = value;
+        }
+    }
+
+    private readonly double _divergeLimitPu = DefaultDivergeLimitPu;
+
+    /// <summary>The default divergence limit (pu): above this a power flow is fundamentally broken, and no starting point
+    /// will fix it.</summary>
+    public const double DefaultDivergeLimitPu = 10.0;
+
     /// <summary>Start PQ buses from a flat 1.00 instead of their model values.</summary>
     public bool FlatStart { get; init; } = false;
 
@@ -71,7 +98,7 @@ public sealed record PowerFlowOptions
     public bool EnforceQLimits { get; init; } = true;
 
     /// <summary>Cap on PV->PQ switching passes.</summary>
-    public int MaxQLimitPasses { get; init; } = 12;
+    public int MaxQLimitPasses { get; init; } = 100;
 
     /// <summary>
     /// Opt-in: also <em>revert</em> a bus that was switched PV-&gt;PQ back to PV when it
@@ -84,10 +111,11 @@ public sealed record PowerFlowOptions
 
     /// <summary>
     /// The Newton engines' automatic retry from a DC power-flow angle start (<see cref="NewtonShell.SolveWithRetry"/>),
-    /// on by default. When the ordinary Newton solve stalls or diverges (<see cref="NewtonShell.Stalled"/>), the case is
+    /// on by default. When the ordinary Newton solve stalls or diverges (<see cref="NewtonShell.Stalled(NewtonShell.NewtonRunEnd, double)"/>), the case is
     /// solved once more with the same options, the bus angles started from the DC power flow. It never runs when the
     /// ordinary solve converges, nor when the iteration cap stops a solve that is still converging, so
-    /// <see cref="MaxIterations"/> is honoured. <c>false</c> turns the retry off: a solve that does not converge is then
+    /// <see cref="MaxIterations"/> is honoured, and never when <see cref="MaxIterations"/> is 1 or less (one step is no
+    /// evidence of a stall). <c>false</c> turns the retry off: a solve that does not converge is then
     /// reported exactly as the ordinary solve ended.
     /// </summary>
     public bool RetryFromDcStart { get; init; } = true;
@@ -97,6 +125,11 @@ public sealed record PowerFlowOptions
     /// (admittance matrix, bus spec, per-iteration mismatch/correction/Jacobian, Q-limit switching)
     /// into it for export. <c>null</c> (default) = no capture, zero overhead. See
     /// <see cref="Diagnostics.SolveTrace"/>.
+    /// <para>The trace records the ordinary solve only: the automatic retry (<see cref="RetryFromDcStart"/>) runs without
+    /// one. When <see cref="PowerFlowResult.NewtonRetry"/> is <see cref="NewtonRetryOutcome.Converged"/>, the trace holds
+    /// the failed first attempt, while the result's state, <see cref="PowerFlowResult.Iterations"/> and
+    /// <see cref="PowerFlowResult.MaxMismatch"/> are the retry's (the first attempt's are in
+    /// <see cref="PowerFlowResult.NewtonRetryNote"/>). For every other outcome the trace describes the reported solve.</para>
     /// </summary>
     public Diagnostics.SolveTrace? Trace { get; init; }
 

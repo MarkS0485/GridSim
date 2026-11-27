@@ -52,8 +52,9 @@ internal static class StudyCaseCommand
             ModelGroupSet? groupSet = null;
             if (studyCase.Groups is not null)
             {
-                string groupsPath = Path.GetFullPath(studyCase.Groups.Path, baseDir);
-                byte[] groupBytes = File.ReadAllBytes(groupsPath);
+                // R1-02: the files the study case names are side files (no network or device path, a size limit).
+                string groupsPath = GridSim.Core.Security.SideFile.Resolve(studyCase.Groups.Path, baseDir, "groups.path");
+                byte[] groupBytes = GridSim.Core.Security.SideFile.ReadAllBytes(groupsPath, GridSim.Core.Security.SideFile.CaseMaxBytes, "groups.path");
                 if (!string.Equals(PlanningFingerprints.Sha256(groupBytes), studyCase.Groups.Sha256, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException("Groups document SHA256 mismatch. Resolved identity: " + PlanningFingerprints.Sha256(groupBytes));
                 groupSet = ModelGroupsDocument.Parse(groupBytes);
@@ -63,7 +64,7 @@ internal static class StudyCaseCommand
             }
 
             // 2. Resolve the master with the approved loader and check the complete input manifest.
-            string casePath = Path.GetFullPath(studyCase.Master.Path, baseDir);
+            string casePath = GridSim.Core.Security.SideFile.Resolve(studyCase.Master.Path, baseDir, "master.case.path");
             if (!Directory.Exists(casePath) && !(File.Exists(casePath) && casePath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidDataException("master.case.path must name a native JSON case directory or v2 case manifest: " + casePath);
             List<PlanningInputFile> inputs = PlanningStudyCommand.SeamInputs(casePath, root);

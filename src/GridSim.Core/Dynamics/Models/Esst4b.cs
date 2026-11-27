@@ -63,8 +63,8 @@ public sealed class Esst4b
         foreach ((double v, string n) in new[] { (kpr, "KPR"), (kpm, "KPM"), (thetapDeg, "THETAP") })
             if (!double.IsFinite(v)) throw new ArgumentOutOfRangeException(n, v, $"ESST4B: {n} must be finite.");
         if (!(vbMax > 0) || double.IsNaN(vbMax)) throw new ArgumentOutOfRangeException(nameof(vbMax), vbMax, "ESST4B: VBMAX must be above 0.");
-        if (double.IsNaN(vrMin) || double.IsNaN(vrMax) || !(vrMax >= vrMin)) throw new ArgumentException($"ESST4B needs VRMAX >= VRMIN (got {vrMin}, {vrMax}).", nameof(vrMax));
-        if (double.IsNaN(vmMin) || double.IsNaN(vmMax) || !(vmMax >= vmMin)) throw new ArgumentException($"ESST4B needs VMMAX >= VMMIN (got {vmMin}, {vmMax}).", nameof(vmMax));
+        if (double.IsNaN(vrMin) || double.IsNaN(vrMax) || !(vrMax >= vrMin)) throw new ArgumentException(FormattableString.Invariant($"ESST4B needs VRMAX >= VRMIN (got {vrMin}, {vrMax})."), nameof(vrMax));
+        if (double.IsNaN(vmMin) || double.IsNaN(vmMax) || !(vmMax >= vmMin)) throw new ArgumentException(FormattableString.Invariant($"ESST4B needs VMMAX >= VMMIN (got {vmMin}, {vmMax})."), nameof(vmMax));
         if (kp == 0 && ki == 0) throw new ArgumentException("ESST4B: KP and KI are both 0, so the power source gives no voltage.", nameof(kp));
         if (kir == 0 && kim == 0) throw new ArgumentException("ESST4B with KIR = KIM = 0 has a steady voltage error that depends on the terminal quantities; GridSim needs an integral gain in at least one regulator.", nameof(kir));
         if (kir == 0 && kpr == 0) throw new ArgumentException("ESST4B: KPR and KIR are both 0, so the outer regulator does nothing.", nameof(kpr));
@@ -109,7 +109,7 @@ public sealed class Esst4b
     /// <summary>Record the initial field; the states are set on the first <see cref="Step"/> from its measurements.</summary>
     public void Initialize(double efd)
     {
-        if (!(efd > 0) || !double.IsFinite(efd)) throw new ArgumentOutOfRangeException(nameof(efd), efd, $"ESST4B: a controlled rectifier exciter gives a positive field voltage; the initial field Efd = {efd} pu cannot be held.");
+        if (!(efd > 0) || !double.IsFinite(efd)) throw new ArgumentOutOfRangeException(nameof(efd), efd, FormattableString.Invariant($"ESST4B: a controlled rectifier exciter gives a positive field voltage; the initial field Efd = {efd} pu cannot be held."));
         _efd = efd;
         _pending = true;
     }
@@ -117,7 +117,7 @@ public sealed class Esst4b
     private void Settle(double vtRe, double vtIm, double itRe, double itIm)
     {
         double vb = Vb(vtRe, vtIm, itRe, itIm, _efd);
-        if (!(vb > 0)) throw new InvalidOperationException($"ESST4B: the power source voltage VB is {vb} pu at the initial operating point, so no field can be held.");
+        if (!(vb > 0)) throw new InvalidOperationException(FormattableString.Invariant($"ESST4B: the power source voltage VB is {vb} pu at the initial operating point, so no field can be held."));
         double vm = _efd / vb;
         ControlBlocks.RequireEquilibriumWithinLimits("ESST4B", "inner regulator output VM = Efd / VB", vm, _vmMin, _vmMax, "efd");
         double u2 = _kim > 0 ? 0.0 : vm / _kpm;

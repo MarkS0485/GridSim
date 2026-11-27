@@ -1,6 +1,9 @@
 using System.Globalization;
 using GridSim.Core.IO;
+using GridSim.Core.IO.Cim;
 using GridSim.Core.IO.Cim.Profiles;
+using GridSim.Core.IO.Psse;
+using GridSim.Core.Model;
 using GridSim.Core.IO.Cim.Zip;
 using GridSim.Core.Model.Substations;
 using GridSim.Core.PowerFlow;
@@ -17,11 +20,11 @@ namespace GridSim.Cli;
 internal static class CgmesExportCommand
 {
     private static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
-    private static readonly string[] Allowed = { "--dir", "--cgmes-version", "--open", "--close", "--unspecified", "--sv" };
+    private static readonly string[] Allowed = { "--dir", "--cgmes-version", "--open", "--close", "--unspecified", "--sv", "--profiles", "--geo", "--dyr", "--model" };
 
     private sealed class UsageException(string message) : Exception(message);
 
-    public static int Run(List<string> a)
+    public static int Run(List<string> a, Func<string, GridModel> load)
     {
         const string verb = "cgmes-export";
         try
@@ -43,6 +46,19 @@ internal static class CgmesExportCommand
             }
             if (input is null || !flags.TryGetValue("--dir", out string? dir))
                 throw new UsageException("usage: gridsim cgmes-export <substations.json> --dir <folder> [--cgmes-version 2.4.15|3.0] [--open a,b] [--close c] [--unspecified refuse|normal] [--sv none|solve]");
+            // WP24: --model bus-branch --cgmes-version 3.0 writes a case file as CGMES 3.0 EQ, TP, SSH and SV documents
+            // (CgmesBusBranch30Writer), with any --profiles in 3.0 too. Without --model the routes below are unchanged.
+            if (flags.TryGetValue("--model", out string? form))
+            {
+                if (form != "bus-branch") throw new UsageException($"--model expected bus-branch but got '{form}'");
+                if (flags.GetValueOrDefault("--cgmes-version", "2.4.15") != "3.0")
+                    throw new UsageException("--model bus-branch writes the CGMES 3.0 per-profile documents, so it needs --cgmes-version 3.0 (for CGMES 2.4.15 use --profiles, or convert to a .xml file).");
+                return RunProfiles(input, dir, flags, load, v3: true);
+            }
+            // RC5 WP10: --profiles takes the bus-branch route (a case file, CgmesWriter plus the DL, GL, SC and DY documents).
+            if (flags.ContainsKey("--profiles")) return RunProfiles(input, dir, flags, load, v3: false);
+            foreach (string only in new[] { "--geo", "--dyr" })
+                if (flags.ContainsKey(only)) throw new UsageException($"{only} is read only with --profiles (the bus-branch export with the DL, GL, SC and DY profiles).");
             CgmesVersion version = flags.GetValueOrDefault("--cgmes-version", "2.4.15") switch
             {
                 "2.4.15" => CgmesVersion.V2_4_15,
@@ -117,6 +133,137 @@ internal static class CgmesExportCommand
             catch (SubstationTopologyException ex) { Console.Error.WriteLine($"error: {verb}: {ex.Message}"); return CliExit.InputError; }
         }
         catch (UsageException ex) { Console.Error.WriteLine($"error: {verb}: {ex.Message}"); return CliExit.Usage; }
+    }
+
+    /// <summary>
+    /// RC5 WP10: <c>cgmes-export &lt;case&gt; --dir &lt;folder&gt; --profiles dl,gl,sc,dy [--geo &lt;gridsim-geo.json&gt;] [--dyr &lt;file.dyr&gt;]</c>.
+    /// The case (any case file the CLI reads) is written by CgmesWriter as <c>&lt;name&gt;_EQ.xml</c> (the same bytes as
+    /// <c>convert</c> writes to a .xml file) and each requested profile as its own document (CgmesExtraProfiles). CGMES
+    /// 2.4.15 only.
+    /// </summary>
+    private static int RunProfiles(string input, string dir, Dictionary<string, string> flags, Func<string, GridModel> load, bool v3)
+    {
+        const string verb = "cgmes-export";
+        foreach (string nb in new[] { "--open", "--close", "--unspecified", "--sv" })
+            if (flags.ContainsKey(nb)) throw new UsageException($"{nb} is a node-breaker option; --profiles writes a bus-branch case.");
+        if (!v3 && flags.GetValueOrDefault("--cgmes-version", "2.4.15") != "2.4.15")
+            throw new UsageException("--profiles writes CGMES 2.4.15 only: the bus-branch document the profiles refer to is a CGMES 2.4.15 document.");
+        var kinds = new List<CgmesProfileKind>();
+        foreach (string p in Split(flags.GetValueOrDefault("--profiles")))
+        {
+            CgmesProfileKind k = p.ToLowerInvariant() switch
+            {
+                "dl" => CgmesProfileKind.DL,
+                "gl" => CgmesProfileKind.GL,
+                "sc" => CgmesProfileKind.SC,
+                "dy" => CgmesProfileKind.DY,
+                _ => throw new UsageException($"--profiles expected a comma list of dl, gl, sc and dy but got '{p}'"),
+            };
+            if (kinds.Contains(k)) throw new UsageException($"--profiles names {p} twice");
+            kinds.Add(k);
+        }
+        if (kinds.Count == 0 && (!v3 || flags.ContainsKey("--profiles"))) throw new UsageException("--profiles expected a comma list of dl, gl, sc and dy");
+        if (flags.ContainsKey("--geo") && !kinds.Contains(CgmesProfileKind.GL)) throw new UsageException("--geo is read only with --profiles gl.");
+        if (flags.ContainsKey("--dyr") && !kinds.Contains(CgmesProfileKind.DY)) throw new UsageException("--dyr is read only with --profiles dy.");
+        if (kinds.Contains(CgmesProfileKind.GL) && !flags.ContainsKey("--geo")) throw new UsageException("--profiles gl needs --geo <gridsim-geo.json>.");
+        if (kinds.Contains(CgmesProfileKind.DY) && !flags.ContainsKey("--dyr")) throw new UsageException("--profiles dy needs --dyr <file.dyr>.");
+
+        GridModel model;
+        try { model = load(input); }
+        catch (Exception ex) when (ex is not UsageException)
+        {
+            Console.Error.WriteLine($"error: {verb}: {ex.Message}");
+            return CliExit.CaseLoadFailure(ex);
+        }
+        try
+        {
+            GeoSidecar? geo = null;
+            if (flags.TryGetValue("--geo", out string? geoPath))
+            {
+                if (!File.Exists(geoPath)) { Console.Error.WriteLine($"error: {verb}: geographical sidecar '{geoPath}' does not exist."); return CliExit.InputError; }
+                geo = GeoSidecar.Read(File.ReadAllText(geoPath));
+            }
+            IReadOnlyList<PsseDyrRecord>? dyr = null;
+            IReadOnlyList<PsseMachineKey>? keys = null;
+            IReadOnlyList<double>? ras = null;
+            if (flags.TryGetValue("--dyr", out string? dyrPath))
+            {
+                if (!File.Exists(dyrPath)) { Console.Error.WriteLine($"error: {verb}: DYR file '{dyrPath}' does not exist."); return CliExit.InputError; }
+                PsseParseResult? raw = Gated.LastPsse;
+                if (raw is null) { Console.Error.WriteLine($"error: {verb}: --dyr names machines by PSS/E bus and ID, so the case must be a PSS/E .raw file."); return CliExit.InputError; }
+                keys = CgmesDynamicsProfile.KeysOf(raw);
+                ras = CgmesDynamicsProfile.ArmatureResistancesOf(raw);
+                if (keys.Count != model.Generators.Count) { Console.Error.WriteLine($"error: {verb}: the case's in-service machines are not the .raw file's."); return CliExit.InputError; }
+                dyr = PsseDyrReader.ReadRecords(File.ReadAllText(dyrPath));
+            }
+            if (v3) return WriteBusBranch30(model, dir, kinds, new CgmesExtraOptions(kinds, CgmesVersion.V3_0, geo, dyr, keys, MachineArmatureResistances: ras));
+            CgmesWriteResult w = CgmesWriter.Write(model);
+            CgmesExtraResult extra = CgmesExtraProfiles.Write(model, w, new CgmesExtraOptions(kinds, CgmesVersion.V2_4_15, geo, dyr, keys, MachineArmatureResistances: ras));
+            string name = model.Name ?? "case";
+            string full = Path.GetFullPath(dir);
+            var files = new List<(string Kind, string Path, int Bytes)>();
+            try
+            {
+                files.Add(("EQ", NeverOverwrite.WriteAllText(Path.Combine(full, name + "_EQ.xml"), w.Text), System.Text.Encoding.UTF8.GetByteCount(w.Text)));
+                foreach (CgmesProfileFile f in extra.Files)
+                    files.Add((f.Kind.ToString(), NeverOverwrite.WriteAllText(Path.Combine(full, f.FileName), f.Text), System.Text.Encoding.UTF8.GetByteCount(f.Text)));
+            }
+            catch (IOException ex) { Console.Error.WriteLine($"error: {verb}: cannot write: {ex.Message}"); return CliExit.InputError; }
+            Console.WriteLine($"cgmes-export - {name}: CGMES 2.4.15 bus-branch, {files.Count} document(s) written to {full} (profiles {string.Join(", ", kinds)}).");
+            foreach (var f in files) Console.WriteLine("  " + f.Path);
+            foreach (CgmesOmission o in extra.Omissions) Console.WriteLine($"  omitted [{o.Profile}] {o.Item}: {o.Reason}");
+            foreach (string n in w.Notes) Console.WriteLine("  note: " + n);
+            foreach (string n in extra.Notes) Console.WriteLine("  note: " + n);
+            CliResult? rep = CliOutput.Report;
+            if (rep is not null)
+            {
+                rep.Set("case", name).Set("cgmes_version", "2.4.15").Set("documents", files.Count).Set("omissions", extra.Omissions.Count)
+                   .Set("profiles", string.Join(",", kinds));
+                CliResultTable ft = rep.Table("files", "profile", "path", "bytes");
+                foreach (var f in files) ft.Row(f.Kind, f.Path, f.Bytes);
+                CliResultTable ot = rep.Table("omissions", "profile", "item", "reason");
+                foreach (CgmesOmission o in extra.Omissions) ot.Row(o.Profile.ToString(), o.Item, o.Reason);
+                rep.Complete();
+            }
+            return CliExit.Ok;
+        }
+        catch (InvalidDataException ex) { Console.Error.WriteLine($"error: {verb}: {ex.Message}"); return CliExit.InputError; }
+    }
+
+    /// <summary>WP24: the CGMES 3.0 bus-branch documents (EQ, TP, SSH, SV) and any requested profiles, in 3.0.</summary>
+    private static int WriteBusBranch30(GridModel model, string dir, List<CgmesProfileKind> kinds, CgmesExtraOptions options)
+    {
+        const string verb = "cgmes-export";
+        CgmesBusBranch30Result r = CgmesBusBranch30Writer.Write(model, options.ScenarioTime);
+        CgmesExtraResult? extra = kinds.Count > 0 ? CgmesExtraProfiles.Write(model, r, options) : null;
+        string name = model.Name ?? "case";
+        string full = Path.GetFullPath(dir);
+        var all = r.Files.Concat(extra?.Files ?? Array.Empty<CgmesProfileFile>()).ToList();
+        var files = new List<(string Kind, string Path, int Bytes)>();
+        try
+        {
+            foreach (CgmesProfileFile f in all)
+                files.Add((f.Kind.ToString(), NeverOverwrite.WriteAllText(Path.Combine(full, f.FileName), f.Text), System.Text.Encoding.UTF8.GetByteCount(f.Text)));
+        }
+        catch (IOException ex) { Console.Error.WriteLine($"error: {verb}: cannot write: {ex.Message}"); return CliExit.InputError; }
+        var omissions = r.Omissions.Concat(extra?.Omissions ?? Array.Empty<CgmesOmission>()).ToList();
+        Console.WriteLine($"cgmes-export - {name}: CGMES 3.0 bus-branch, {files.Count} document(s) written to {full}" + (kinds.Count > 0 ? $" (profiles {string.Join(", ", kinds)})." : "."));
+        foreach (var f in files) Console.WriteLine("  " + f.Path);
+        foreach (CgmesOmission o in omissions) Console.WriteLine($"  omitted [{o.Profile}] {o.Item}: {o.Reason}");
+        foreach (string n in r.Notes) Console.WriteLine("  note: " + n);
+        foreach (string n in extra?.Notes ?? Array.Empty<string>()) Console.WriteLine("  note: " + n);
+        CliResult? rep = CliOutput.Report;
+        if (rep is not null)
+        {
+            rep.Set("case", name).Set("cgmes_version", "3.0").Set("documents", files.Count).Set("omissions", omissions.Count)
+               .Set("profiles", string.Join(",", kinds)).Set("model", "bus-branch");
+            CliResultTable ft = rep.Table("files", "profile", "path", "bytes");
+            foreach (var f in files) ft.Row(f.Kind, f.Path, f.Bytes);
+            CliResultTable ot = rep.Table("omissions", "profile", "item", "reason");
+            foreach (CgmesOmission o in omissions) ot.Row(o.Profile.ToString(), o.Item, o.Reason);
+            rep.Complete();
+        }
+        return CliExit.Ok;
     }
 
     public static int RunConform(List<string> a)

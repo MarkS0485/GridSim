@@ -16,7 +16,7 @@ public sealed class Doc6EmtCliProcessTests
 
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc6-emt-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc6-emt-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

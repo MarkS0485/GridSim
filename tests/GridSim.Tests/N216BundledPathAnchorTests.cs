@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class N216BundledPathAnchorTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-n216-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-n216-" + Guid.NewGuid().ToString("N"));
 
     public N216BundledPathAnchorTests() => Directory.CreateDirectory(_dir);
 

@@ -89,6 +89,7 @@ public static class GdaReplayLoop
                 // Step length from the series itself (the gap to the next timestamp; the last reuses the previous gap).
                 double stepHours = i + 1 < series.Steps.Count ? (series.Steps[i + 1].TimeUtc - step.TimeUtc).TotalHours
                     : i > 0 ? (step.TimeUtc - series.Steps[i - 1].TimeUtc).TotalHours : LiveSolveSettings.GdaSingleStepHours;
+                // NUM-24: the hour of day in UTC (the series' own clock); a storage schedule is read in UTC here.
                 double hour = step.TimeUtc.Hour + step.TimeUtc.Minute / 60.0;
                 storageSteps!.Add(storage.Advance(i, hour, Math.Max(stepHours, LiveSolveSettings.GdaMinStepHours), m.Buses.Sum(b => b.Pd), double.NaN));
                 m = storage.Apply(m);

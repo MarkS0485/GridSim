@@ -95,7 +95,12 @@ public static partial class RmsTransientStability
 /// <item><c>fault:BUS@t</c> a bolted fault at bus BUS (<see cref="RmsBusFault"/>); <c>clear:BUS@t</c> its clearance;</item>
 /// <item><c>trip:K@t</c> branch K (0-based index into the case's branch list) trips; <c>reclose:K@t</c> it closes again;</item>
 /// <item><c>load:BUS:P:Q@t</c> a load step of P MW and Q Mvar at bus BUS (negative to shed);</item>
-/// <item><c>gentrip:G@t</c> generator G (0-based index into the case's generator list) trips.</item>
+/// <item><c>gentrip:G@t</c> generator G (0-based index into the case's generator list) trips;</item>
+/// <item><c>sfault:TYPE:BUS@t</c> or <c>sfault:TYPE:BUS:R:X@t</c> a sequence fault (<see cref="RmsSequenceFault"/>) of TYPE
+/// <c>3ph</c>, <c>slg</c>, <c>ll</c> or <c>llg</c> at bus BUS, bolted or through Zf = R + jX pu on the system base; it is
+/// cleared by <c>clear:BUS@t</c>;</item>
+/// <item><c>lfault:TYPE:K:D@t</c> or <c>lfault:TYPE:K:D:R:X@t</c> the same fault a fraction D (0 &lt; D &lt; 1, from the
+/// From bus) along branch K (<see cref="RmsBranchSequenceFault"/>); <c>lclear:K@t</c> its clearance.</item>
 /// </list>
 /// Numbers are invariant-culture. Anything else is refused (FormatException) naming the item and the expected form; the
 /// physical checks (bus exists, branch in range, ...) are <see cref="RmsTransientStability.StudyEvents"/>'s.
@@ -103,7 +108,8 @@ public static partial class RmsTransientStability
 public static class RmsEventSpec
 {
     /// <summary>The forms the parser accepts, for messages and help.</summary>
-    public const string Forms = "fault:BUS@t, clear:BUS@t, trip:BRANCH@t, reclose:BRANCH@t, load:BUS:PMW:QMVAR@t, gentrip:GEN@t";
+    public const string Forms = "fault:BUS@t, clear:BUS@t, trip:BRANCH@t, reclose:BRANCH@t, load:BUS:PMW:QMVAR@t, gentrip:GEN@t, "
+        + "sfault:TYPE:BUS[:R:X]@t, lfault:TYPE:BRANCH:FRACTION[:R:X]@t, lclear:BRANCH@t (TYPE 3ph, slg, ll or llg)";
 
     /// <summary>Parse an event list (see the class note). At least one event.</summary>
     public static IReadOnlyList<RmsEvent> Parse(string text)
@@ -132,6 +138,26 @@ public static class RmsEventSpec
                 case "reclose": Need(1); list.Add(new RmsBranchReclose(t, Int(parts[1], i, item, "branch index"))); break;
                 case "load": Need(3); list.Add(new RmsLoadStep(t, Int(parts[1], i, item, "bus"), Number(parts[2], i, item, "MW"), Number(parts[3], i, item, "Mvar"))); break;
                 case "gentrip": Need(1); list.Add(new RmsGeneratorTrip(t, Int(parts[1], i, item, "generator index"))); break;
+                case "sfault":
+                {
+                    if (parts.Length != 3 && parts.Length != 5)
+                        throw new FormatException($"event {i + 1} '{item}': 'sfault' takes TYPE:BUS or TYPE:BUS:R:X ({Forms}).");
+                    double r = parts.Length == 5 ? Number(parts[3], i, item, "fault resistance") : 0.0;
+                    double x = parts.Length == 5 ? Number(parts[4], i, item, "fault reactance") : 0.0;
+                    list.Add(new RmsSequenceFault(t, Int(parts[2], i, item, "bus"), Type(parts[1], i, item), r, x));
+                    break;
+                }
+                case "lfault":
+                {
+                    if (parts.Length != 4 && parts.Length != 6)
+                        throw new FormatException($"event {i + 1} '{item}': 'lfault' takes TYPE:BRANCH:FRACTION or TYPE:BRANCH:FRACTION:R:X ({Forms}).");
+                    double r = parts.Length == 6 ? Number(parts[4], i, item, "fault resistance") : 0.0;
+                    double x = parts.Length == 6 ? Number(parts[5], i, item, "fault reactance") : 0.0;
+                    list.Add(new RmsBranchSequenceFault(t, Int(parts[2], i, item, "branch index"), Number(parts[3], i, item, "fraction"),
+                        Type(parts[1], i, item), r, x));
+                    break;
+                }
+                case "lclear": Need(1); list.Add(new RmsBranchFaultClear(t, Int(parts[1], i, item, "branch index"))); break;
                 default: throw new FormatException($"event {i + 1} '{item}': unknown kind '{kind}' ({Forms}).");
             }
         }
@@ -159,6 +185,16 @@ public static class RmsEventSpec
             throw new FormatException($"event {i + 1} '{item}': the {what} '{s}' is not a finite number.");
         return v;
     }
+
+    /// <summary>A fault type word: 3ph, slg, ll or llg (any case).</summary>
+    private static GridSim.Core.Protection.FaultType Type(string s, int i, string item) => s.Trim().ToLowerInvariant() switch
+    {
+        "3ph" => GridSim.Core.Protection.FaultType.ThreePhase,
+        "slg" => GridSim.Core.Protection.FaultType.SingleLineToGround,
+        "ll" => GridSim.Core.Protection.FaultType.LineToLine,
+        "llg" => GridSim.Core.Protection.FaultType.DoubleLineToGround,
+        _ => throw new FormatException($"event {i + 1} '{item}': the fault type '{s}' is not 3ph, slg, ll or llg."),
+    };
 
     private static int Int(string s, int i, string item, string what)
     {

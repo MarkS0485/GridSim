@@ -193,7 +193,7 @@ public sealed class TransmissionSecurityW3FixtureTests
     [Fact]
     public void Failed_invocations_leave_no_result_that_looks_current()
     {
-        string directory = Path.Combine(Path.GetTempPath(), "gridsim-security-w3-" + Guid.NewGuid().ToString("N"));
+        string directory = TestTemp.Under("gridsim-security-w3-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         try
         {

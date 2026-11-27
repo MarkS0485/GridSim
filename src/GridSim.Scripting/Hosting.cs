@@ -9,8 +9,17 @@ namespace GridSim.Scripting;
 /// </summary>
 /// <param name="MaxTicksPerStep">Most engine ticks one <c>STEP SIM</c> may take.</param>
 /// <param name="MaxTotalTicks">Most engine ticks the whole session may step.</param>
-/// <param name="Cancel">Checked before every simple statement; a cancelled token stops the run with an error.</param>
-public sealed record SessionLimits(long? MaxTicksPerStep = null, long? MaxTotalTicks = null, CancellationToken Cancel = default);
+/// <param name="Cancel">Checked before every statement, every block and every loop iteration; a cancelled token stops the run with an error.</param>
+public sealed record SessionLimits(long? MaxTicksPerStep = null, long? MaxTotalTicks = null, CancellationToken Cancel = default)
+{
+    /// <summary>Most units of work the whole session may do: each simple statement run, each block or procedure call entered and each
+    /// element a FOR EACH visits counts one. Over it the statement is refused with an execution error. Null: no limit.</summary>
+    public long? MaxStatements { get; init; }
+
+    /// <summary>Most characters of output the whole session may produce. Over it the statement is refused with an execution error as soon
+    /// as the text passes the limit, so a run never gathers more. Null: no limit.</summary>
+    public long? MaxOutputChars { get; init; }
+}
 
 /// <summary>
 /// What a statement does, for a host that gates it by role (RC4: Operator for state-changing verbs when hosted).
@@ -56,7 +65,7 @@ public static class StatementEffects
 
     private static bool IsStateChangingVerb(Statement s) =>
         s is SolveStatement or TripStatement or CloseStatement or SetStatement or FaultStatement or ClearFaultStatement
-            or SelectEngineStatement or StepSimStatement or AtStatement or ExportResultStatement;
+            or SelectEngineStatement or StepSimStatement or AtStatement or ExportResultStatement or StudyStatement;
 }
 
 /// <summary>What <see cref="InteractiveConsole.Submit"/> did with one typed line.</summary>
@@ -93,6 +102,7 @@ public sealed class InteractiveConsole
     private readonly List<string> _pending = [];
     private readonly Action<string>? _sink;
     private int _line;
+    private long _pendingChars;
 
     /// <param name="baseDirectory">Relative LOAD and EXPORT paths are taken from here.</param>
     /// <param name="recordSink">Called with each recorded line as it is recorded (the console writes it to its file at once); null for none.</param>
@@ -111,6 +121,10 @@ public sealed class InteractiveConsole
     /// <summary>True while the lines read so far open a block that is not closed.</summary>
     public bool InBlock => _pending.Count > 0;
 
+    /// <summary>Hosting hook (null means no limit, the console's setting): the most characters an open block may gather before its END.
+    /// A line that takes the block past it refuses the whole block (recorded as comments) with a syntax error at the block's first line.</summary>
+    public long? MaxPendingChars { get; set; }
+
     /// <summary>The lines recorded so far.</summary>
     public IReadOnlyList<string> RecordedLines => _recorded;
 
@@ -127,6 +141,15 @@ public sealed class InteractiveConsole
         ArgumentNullException.ThrowIfNull(input);
         int firstLine = _line + 1;
         _pending.Add(input);
+        _pendingChars += input.Length + 1;
+        if (MaxPendingChars is { } cap && _pendingChars > cap)
+        {
+            var over = new ScriptException(ErrorPhase.Syntax, new SourcePos(firstLine, 1), $"the open block is over this host's limit of {cap} characters; it was not run");
+            Record($"# REFUSED ({over.Pos.Line}:{over.Pos.Column}) {over.Message}");
+            foreach (string l in _pending) Record("# " + l);
+            ClearPending();
+            return new ConsoleReply(ConsoleReplyKind.Refused, "", over);
+        }
         try
         {
             Statement? s = Parser.ParseStatementText(string.Join("\n", _pending), firstLine);
@@ -147,7 +170,7 @@ public sealed class InteractiveConsole
         {
             Record($"# REFUSED ({e.Pos.Line}:{e.Pos.Column}) {e.Message}");
             foreach (string l in _pending) Record("# " + l);
-            _pending.Clear();
+            ClearPending();
             return new ConsoleReply(ConsoleReplyKind.Refused, "", e);
         }
     }
@@ -155,7 +178,13 @@ public sealed class InteractiveConsole
     private void FlushPending()
     {
         foreach (string l in _pending) Record(l);
+        ClearPending();
+    }
+
+    private void ClearPending()
+    {
         _pending.Clear();
+        _pendingChars = 0;
     }
 
     /// <summary>Close the recording: an unfinished block is kept as comments, and the run record is written from the session.</summary>
@@ -165,7 +194,7 @@ public sealed class InteractiveConsole
         {
             Record("# UNFINISHED BLOCK, not run:");
             foreach (string l in _pending) Record("# " + l);
-            _pending.Clear();
+            ClearPending();
         }
         var enc = new UTF8Encoding(false);
         string gss = string.Concat(_recorded.Select(l => l + "\n"));

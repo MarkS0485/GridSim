@@ -147,7 +147,7 @@ public sealed class UiColourRampsTests
         // GeographyData used to carry Palette.Frozen(Fuels.Classify(tech).Color) per asset, and Fuels.Classify(tech).Color
         // is Palette.FromHex(FuelTaxonomy.Classify(tech).Color): the neutral marker must carry exactly those bytes, and
         // every point must be the old equirectangular projection, bit for bit.
-        string baseDir = Path.Combine(Path.GetTempPath(), $"gridsim-ui-geo-{Guid.NewGuid():N}");
+        string baseDir = TestTemp.Under($"gridsim-ui-geo-{Guid.NewGuid():N}");
         string geo = Path.Combine(baseDir, "gda-out", "geo");
         Directory.CreateDirectory(geo);
         try

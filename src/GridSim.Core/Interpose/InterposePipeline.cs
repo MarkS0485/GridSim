@@ -7,7 +7,7 @@ namespace GridSim.Core.Interpose;
 /// The interposer pipeline for one protocol stream: raw frame -> <see cref="FrameCorrection"/> ->
 /// <see cref="IRtuProtocol.Decode"/> -> window accumulation -> a horizon-guarded
 /// <see cref="MeasurementSet"/> per window. It holds no transport or I/O - the CLI drives it, calling
-/// <see cref="Ingest"/> as frames arrive and <see cref="FlushWindow"/> when a window elapses - so it is
+/// <see cref="Ingest"/> as frames arrive and <see cref="FlushWindow(DateTime, DateTime?)"/> when a window elapses - so it is
 /// fully unit-testable by feeding frames directly.
 /// </summary>
 public sealed class InterposePipeline
@@ -24,7 +24,7 @@ public sealed class InterposePipeline
 
     /// <summary>Windows that could not be mapped to a measurement set because a point did not fit its crosswalk
     /// binding (for example a 32-bit Modbus binding whose second register was not in the same response). Each such
-    /// window is discarded whole and counted here; <see cref="FlushWindow"/> still throws so the caller can log why.</summary>
+    /// window is discarded whole and counted here; <see cref="FlushWindow(DateTime, DateTime?)"/> still throws so the caller can log why.</summary>
     public long MapErrors { get; private set; }
 
     /// <summary>Raw points accumulated in the current, not-yet-flushed window (repeats of one address included;

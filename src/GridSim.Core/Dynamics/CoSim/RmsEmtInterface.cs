@@ -150,7 +150,7 @@ public sealed class RmsEmtInterface
         if (options.ExchangeEverySteps < 1 || !(options.FrequencyHz > 0) || !(stepSeconds > 0)) throw Refuse($"{name}: exchange interval, frequency and step must be positive.");
         double cycle = 1.0 / (options.FrequencyHz * stepSeconds);
         int n = (int)Math.Round(cycle);
-        if (Math.Abs(cycle - n) > 1e-6 * cycle || n < 8) throw Refuse($"{name}: one cycle ({1.0 / options.FrequencyHz:R} s) must be a whole number (at least 8) of {stepSeconds:R} s steps for the phasor measurement.");
+        if (Math.Abs(cycle - n) > 1e-6 * cycle || n < 8) throw Refuse(FormattableString.Invariant($"{name}: one cycle ({1.0 / options.FrequencyHz:R} s) must be a whole number (at least 8) of {stepSeconds:R} s steps for the phasor measurement."));
         rms.Capture();
         var itf = new RmsEmtInterface(name, rms, options) { _held = rms.Equivalent };
         BoundaryEquivalent eq = itf._held;
@@ -190,9 +190,9 @@ public sealed class RmsEmtInterface
             }
         }
         net.Add(new Monitor($"{name}.mon", itf, boundary, iSense, options, n, meas, cur));
-        itf.Description = $"RMS-EMT interface '{name}': {options.Form} equivalent at the fundamental ({options.FrequencyHz:R} Hz) at a three-phase boundary; fixed exchange every "
-            + $"{options.ExchangeEverySteps} step(s) = {options.ExchangeEverySteps * stepSeconds:R} s; EMT to RMS: positive-sequence "
-            + (options.Form == CoSimForm.Thevenin ? "current" : "voltage") + $" phasor from a {n}-step fundamental-cycle DFT; RMS to EMT: zero-order-hold phasor with continuous phase; "
+        itf.Description = FormattableString.Invariant($"RMS-EMT interface '{name}': {options.Form} equivalent at the fundamental ({options.FrequencyHz:R} Hz) at a three-phase boundary; fixed exchange every ")
+            + FormattableString.Invariant($"{options.ExchangeEverySteps} step(s) = {options.ExchangeEverySteps * stepSeconds:R} s; EMT to RMS: positive-sequence ")
+            + (options.Form == CoSimForm.Thevenin ? "current" : "voltage") + FormattableString.Invariant($" phasor from a {n}-step fundamental-cycle DFT; RMS to EMT: zero-order-hold phasor with continuous phase; ")
             + "an RMS event reaches the EMT side after at most one exchange interval plus one step; the equivalent impedance is fixed for the run and fitted at the fundamental only, "
             + "so what the RMS side does off the fundamental (waves, resonances) is not represented; bit-repeatable with itself, not bit-comparable with the all-EMT or the all-RMS run.";
         return itf;

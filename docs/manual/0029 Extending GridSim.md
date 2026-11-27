@@ -135,7 +135,8 @@ engine in the on-load tap-changer loop.
 
 - `Converged` is `true` only when `Status` is `PowerFlowStatus.Converged`: the mismatch met `PowerFlowOptions.Tolerance`
   (`1e-8` pu) and every solved value is finite. A NaN or infinity anywhere is `PowerFlowStatus.NonFinite`; hitting
-  `MaxIterations` (30) is `PowerFlowStatus.MaxIterations`. On every path the arrays keep their length; a `NonFinite` result
+  `MaxIterations` (30) is `PowerFlowStatus.MaxIterations`; a mismatch that rises above `DivergeLimitPu` (10 pu) and above the
+  starting mismatch stops the pass early as `PowerFlowStatus.Diverged`. On every path the arrays keep their length; a `NonFinite` result
   may hold the non-finite values that caused it.
 - `LineFlows` has exactly one entry per `model.Branches` entry, in the same order. Consumers pair `LineFlows[i]` with
   `Branches[i]`, so a failure path returns zero-flow placeholders rather than an empty list (`BackwardForwardSweep.NonRadial`

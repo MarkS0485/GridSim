@@ -33,7 +33,7 @@ from urllib.parse import quote
 # ---------------------------------------------------------------------------
 SITE_BASE = "https://marks0485.github.io/GridSim/"   # single place for the site URL
 REPO_URL = "https://github.com/MarkS0485/GridSim"
-RELEASE_URL = REPO_URL + "/releases/tag/v2.1.073-RC-4"   # as used by README.md
+RELEASE_URL = REPO_URL + "/releases/tag/v2.1.105-RC-5"   # as used by README.md
 
 CLI_CHAPTER_REL = "docs/manual/0019 CLI reference.md"
 CLI_PAGE_NAME = "CLI-quick-reference.md"

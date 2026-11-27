@@ -137,8 +137,15 @@ public static partial class RmsTransientStability
         GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
         IReadOnlyList<RmsEvent> events, double? f0, double stepSeconds, double durationSeconds, double slipLimitRad,
         IReadOnlyList<RmsExciter?>? exciters,
-        Func<SubtransientInit.Prepared, Action<double, IRmsNetwork, Complex[], Complex[]>>? observerFor)
+        Func<SubtransientInit.Prepared, Action<double, IRmsNetwork, Complex[], Complex[]>>? observerFor,
+        Action<FullModelUnitRelays, SubtransientInit.Prepared>? unitRelaysOut = null,
+        Action<IRmsNetwork, List<StageSequenceFault>>? stageFaultsOut = null,
+        RmsStepSchedule? schedule = null,
+        IReadOnlyList<GridSim.Core.Dynamics.Plugins.UserRelayBinding>? userRelays = null)
     {
+        // RC5 stage 6: unitRelaysOut non-null asks for the units' own relays in the run (StudyEventsWithUnitRelays); every
+        // statement it adds is guarded by it, and with it null this body is the historical one.
+        bool relaysOn = unitRelaysOut is not null;
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(result);
         ArgumentNullException.ThrowIfNull(data);
@@ -150,7 +157,7 @@ public static partial class RmsTransientStability
                 "The RMS event study's duration must be positive and finite.");
         if (!(slipLimitRad > 0.0))
             throw new ArgumentOutOfRangeException(nameof(slipLimitRad), slipLimitRad, "The slip limit must be positive.");
-        if (events.Count == 0)
+        if (events.Count == 0 && !relaysOn)
             throw new ArgumentException("The RMS event study needs at least one event (use Study for a single "
                 + "fault-and-clear, or give the disturbances to schedule).", nameof(events));
 
@@ -195,6 +202,13 @@ public static partial class RmsTransientStability
         var trips = new List<RmsMachineTrip>();
         var stages = new List<RmsNetworkStage>();
         var busIds = new HashSet<int>(model.Buses.Select(b => b.Id));
+        // RC5 stage 6: each stage's cumulative state, so a stage can be rebuilt with relay-tripped machines out (relays only).
+        var snapshots = relaysOn ? new List<StageState>() : null;
+        // WP2 (RC5): the sequence faults in place (RmsSequenceFault, RmsBranchSequenceFault) and their sequence networks.
+        // Built only when the list holds one, so every historical event list takes exactly the path it took before.
+        var seqFaults = new List<ActiveSequenceFault>();
+        RmsSequenceNetworks? seqNet = events.Any(e => e is RmsSequenceFault or RmsBranchSequenceFault)
+            ? new RmsSequenceNetworks(model, basis, slotOfGenerator, p.Machines.Count) : null;
 
         for (int k = 0; k < ordered.Count; k++)
         {
@@ -204,14 +218,55 @@ public static partial class RmsTransientStability
             {
                 case RmsBusFault f:
                     RequireBus(busIds, f.BusId, what, nameof(events));
-                    if (faultedBuses.Contains(f.BusId))
+                    if (faultedBuses.Contains(f.BusId) || seqFaults.Any(s => !s.OnBranch && s.BusId == f.BusId))
                         throw new ArgumentException($"{what}: bus {f.BusId} is already faulted at that time.", nameof(events));
                     faultedBuses.Add(f.BusId);
                     break;
                 case RmsFaultClear c:
                     RequireBus(busIds, c.BusId, what, nameof(events));
-                    if (!faultedBuses.Remove(c.BusId))
+                    if (!faultedBuses.Remove(c.BusId) && seqFaults.RemoveAll(s => !s.OnBranch && s.BusId == c.BusId) == 0)
                         throw new ArgumentException($"{what}: there is no fault in place at bus {c.BusId} to clear at that "
+                            + "time (a clearance must follow its fault).", nameof(events));
+                    break;
+                case RmsSequenceFault sf:
+                {
+                    RequireBus(busIds, sf.BusId, what, nameof(events));
+                    Complex zf = SequenceFaultImpedance(sf.Type, sf.FaultResistancePu, sf.FaultReactancePu, what, nameof(events));
+                    if (faultedBuses.Contains(sf.BusId) || seqFaults.Any(s => !s.OnBranch && s.BusId == sf.BusId))
+                        throw new ArgumentException($"{what}: bus {sf.BusId} is already faulted at that time.", nameof(events));
+                    RequireEarthFaultModel(model, sf.Type, what, nameof(events));
+                    RequireOneUnbalancedFault(seqFaults, sf.Type, what, nameof(events));
+                    seqFaults.Add(new ActiveSequenceFault(i, sf, sf.Type, zf, sf.BusId, -1, 0.0));
+                    break;
+                }
+                case RmsBranchSequenceFault bf:
+                {
+                    if (bf.BranchIndex < 0 || bf.BranchIndex >= model.Branches.Count)
+                        throw new ArgumentOutOfRangeException(nameof(events), bf.BranchIndex,
+                            $"{what}: the model has {model.Branches.Count} branches (0 to {model.Branches.Count - 1}).");
+                    Complex zf = SequenceFaultImpedance(bf.Type, bf.FaultResistancePu, bf.FaultReactancePu, what, nameof(events));
+                    if (!(bf.Fraction > 0.0 && bf.Fraction < 1.0))
+                        throw new ArgumentOutOfRangeException(nameof(events), bf.Fraction,
+                            $"{what}: the fraction along the branch must lie strictly between 0 and 1 (at an end, fault the bus).");
+                    if (!model.Branches[bf.BranchIndex].InService)
+                        throw new ArgumentException($"{what}: the branch is out of service in the model.", nameof(events));
+                    if (trippedBranches.Contains(bf.BranchIndex))
+                        throw new ArgumentException($"{what}: the branch is tripped at that time.", nameof(events));
+                    if (seqFaults.Any(s => s.OnBranch && s.BranchIndex == bf.BranchIndex))
+                        throw new ArgumentException($"{what}: the branch is already faulted at that time.", nameof(events));
+                    try { GridSim.Core.Protection.Workflow.FaultAlongLine.Build(model, bf.BranchIndex, bf.Fraction); }
+                    catch (InvalidOperationException ex) { throw new ArgumentException($"{what}: {ex.Message}", nameof(events), ex); }
+                    RequireEarthFaultModel(model, bf.Type, what, nameof(events));
+                    RequireOneUnbalancedFault(seqFaults, bf.Type, what, nameof(events));
+                    seqFaults.Add(new ActiveSequenceFault(i, bf, bf.Type, zf, -1, bf.BranchIndex, bf.Fraction));
+                    break;
+                }
+                case RmsBranchFaultClear bc:
+                    if (bc.BranchIndex < 0 || bc.BranchIndex >= model.Branches.Count)
+                        throw new ArgumentOutOfRangeException(nameof(events), bc.BranchIndex,
+                            $"{what}: the model has {model.Branches.Count} branches (0 to {model.Branches.Count - 1}).");
+                    if (seqFaults.RemoveAll(s => s.OnBranch && s.BranchIndex == bc.BranchIndex) == 0)
+                        throw new ArgumentException($"{what}: there is no fault in place on branch {bc.BranchIndex} to clear at that "
                             + "time (a clearance must follow its fault).", nameof(events));
                     break;
                 case RmsBranchTrip b:
@@ -268,12 +323,83 @@ public static partial class RmsTransientStability
             // One stage per distinct time: build it after the last event at this time.
             bool lastAtThisTime = k + 1 == ordered.Count || ordered[k + 1].Event.AtSeconds != ev.AtSeconds;
             if (lastAtThisTime)
-                stages.Add(new RmsNetworkStage(ev.AtSeconds,
-                    BuildEventStage(model, basis, trippedBranches, faultedBuses, loadBuses, loadDelta, machineOut)));
+            {
+                // WP2: the stage form of the sequence faults in place (null without any, so the stage is the historical one).
+                List<StageSequenceFault>? stageSeq = seqNet?.Stage(seqFaults, trippedBranches, loadBuses, loadDelta, machineOut, faultedBuses);
+                SparseRmsNetwork stageNet = BuildEventStage(model, basis, trippedBranches, faultedBuses, loadBuses, loadDelta,
+                    machineOut, stageSeq);
+                stages.Add(new RmsNetworkStage(ev.AtSeconds, stageNet));
+                stageFaultsOut?.Invoke(stageNet, stageSeq ?? new List<StageSequenceFault>());
+                snapshots?.Add(new StageState(new List<int>(trippedBranches), new List<int>(faultedBuses), new List<int>(loadBuses),
+                    new Dictionary<int, (double P, double Q)>(loadDelta), (bool[])machineOut.Clone(),
+                    seqNet is null ? null : new List<ActiveSequenceFault>(seqFaults)));
+            }
+        }
+
+        if (schedule is not null)
+        {
+            // WP21 (RC5): a step-schedule run. The units' own relays are built for one fixed step; refused.
+            if (relaysOn)
+                throw new ArgumentException("A step schedule cannot run the units' own relays: their timers count steps of one fixed size.", nameof(schedule));
+            RequireScheduleCapableModels(data, schedule, controllers);
+            return MultiMachineSubtransient.SimulateCore(
+                p.Machines, p.H, p.Damping, p.Pm, p.Efd, p.Delta0, p.Eqp0, p.Edp0, p.Eqpp0, p.Edpp0, p.Network!,
+                nominalHz, schedule.Windows[0].StepSeconds, durationSeconds, stages, slipLimitRad, exciters: null, voltageReferencePu: null,
+                mechanicalPower: ScheduledGovernorHook(p, governors), converters: p.Converters, synchronismMachines: connectedMachines,
+                fieldControllers: controllers, machineTrips: trips.Count > 0 ? trips : null,
+                stepObserver: observerFor?.Invoke(p), unitRelays: null, schedule: schedule);
         }
 
         // R061 governors: fresh governors for this run, or no hook at all (the constant-Pm path).
         Func<int, double, double>? mechanicalPower = governors is null ? null : GovernorHook(p, governors, stepSeconds);
+        if (relaysOn)
+        {
+            // RC5 stage 6: the relay host; a stage's network rebuilt from its own cumulative state with the mask's machines out.
+            var baseState = new StageState(new List<int>(), new List<int>(), new List<int>(), new Dictionary<int, (double P, double Q)>(),
+                new bool[p.Machines.Count]);
+            IRmsNetwork NetworkFor(int stage, bool[] relayOut)
+            {
+                StageState st = stage < 0 ? baseState : snapshots![stage];
+                var outSet = (bool[])st.MachineOut.Clone();
+                for (int i = 0; i < outSet.Length && i < relayOut.Length; i++) outSet[i] |= relayOut[i];
+                List<StageSequenceFault>? seq = st.SeqFaults is null || seqNet is null ? null
+                    : seqNet.Stage(st.SeqFaults, st.TrippedBranches, st.LoadBuses, st.LoadDelta, outSet, st.FaultedBuses);
+                return BuildEventStage(model, basis, st.TrippedBranches, st.FaultedBuses, st.LoadBuses, st.LoadDelta, outSet, seq);
+            }
+            // RC5 WP32: userRelays (contract 2 relay plug-ins) is null on every existing path, and the host is then built as before.
+            // RC5 wp32b: with a branch-bound user relay, the host may also rebuild a stage with relay-opened branches out (the
+            // stage's own tripped branches with them, as one set), and reads which branches a stage has out already.
+            BranchRelaySupport? branchSupport = null;
+            if (userRelays is not null && userRelays.Any(b => b?.BranchIndex is not null))
+            {
+                foreach ((RmsEvent ev, int index) in ordered)
+                    if (ev is RmsBranchSequenceFault bsf && userRelays.Any(b => b?.BranchIndex == bsf.BranchIndex))
+                        throw new ArgumentException($"events[{index}] ({ev.Describe()}): a branch relay is bound to that branch, and a fault "
+                            + "along the branch splits it, so the current at its end is not the branch's own; fault a bus, or bind the relay elsewhere.", nameof(userRelays));
+                IRmsNetwork NetworkWithBranchesFor(int stage, bool[] relayOut, bool[] branchOut)
+                {
+                    StageState st = stage < 0 ? baseState : snapshots![stage];
+                    var outSet = (bool[])st.MachineOut.Clone();
+                    for (int i = 0; i < outSet.Length && i < relayOut.Length; i++) outSet[i] |= relayOut[i];
+                    var tripped = new List<int>(st.TrippedBranches);
+                    for (int j = 0; j < branchOut.Length; j++) if (branchOut[j] && !tripped.Contains(j)) tripped.Add(j);
+                    List<StageSequenceFault>? seq = st.SeqFaults is null || seqNet is null ? null
+                        : seqNet.Stage(st.SeqFaults, tripped, st.LoadBuses, st.LoadDelta, outSet, st.FaultedBuses);
+                    return BuildEventStage(model, basis, tripped, st.FaultedBuses, st.LoadBuses, st.LoadDelta, outSet, seq);
+                }
+                bool ScheduledOut(int stage, int branch) => stage >= 0 && snapshots![stage].TrippedBranches.Contains(branch);
+                branchSupport = new BranchRelaySupport(basis.BusIndex, NetworkWithBranchesFor, ScheduledOut);
+            }
+            var host = new FullModelUnitRelays(model, model.UnitProtection, slotOfGenerator, p.Machines, nominalHz, stepSeconds, NetworkFor, userRelays,
+                branchSupport);
+            unitRelaysOut!(host, p);
+            return MultiMachineSubtransient.SimulateCore(
+                p.Machines, p.H, p.Damping, p.Pm, p.Efd, p.Delta0, p.Eqp0, p.Edp0, p.Eqpp0, p.Edpp0, p.Network!,
+                nominalHz, stepSeconds, durationSeconds, stages, slipLimitRad, exciters: null, voltageReferencePu: null,
+                mechanicalPower: mechanicalPower, converters: p.Converters, synchronismMachines: connectedMachines,
+                fieldControllers: controllers, machineTrips: trips.Count > 0 ? trips : null,
+                stepObserver: observerFor?.Invoke(p), unitRelays: host.Count > 0 ? host : null);
+        }
         return MultiMachineSubtransient.Simulate(
             p.Machines, p.H, p.Damping, p.Pm, p.Efd, p.Delta0, p.Eqp0, p.Edp0, p.Eqpp0, p.Edpp0, p.Network!,
             nominalHz, stepSeconds, durationSeconds, stages, slipLimitRad, converters: p.Converters,
@@ -282,6 +408,65 @@ public static partial class RmsTransientStability
             mechanicalPower: mechanicalPower,
             machineTrips: trips.Count > 0 ? trips : null,
             stepObserver: observerFor?.Invoke(p));
+    }
+
+    /// <summary>
+    /// WP21 (RC5): a composite load with the fuller WECC parts (<see cref="CompositeLoadData.Extensions"/>: motor D, the
+    /// under-voltage relays, the tap changer) counts whole steps of one size in its timers, so it cannot follow a change of
+    /// step. A schedule with more than one step size is refused for such a load. It is refused too for a user or plug-in
+    /// model (a user injection, a user dynamic load, or a user or plug-in field controller), because GridSim cannot check
+    /// that such a model takes the step on each call (2.1.126; <c>dynamics-study</c> already refused them). Every library
+    /// model takes the step on each call.
+    /// </summary>
+    private static void RequireScheduleCapableModels(IReadOnlyList<SubtransientInit.MachineData> data, RmsStepSchedule schedule,
+        IReadOnlyList<IRmsFieldController?>? controllers)
+    {
+        if (schedule.IsUniform) return;
+        const string why = " GridSim cannot check that it takes the step on each call, so it cannot run on a step schedule with more than one step size.";
+        for (int i = 0; i < data.Count; i++)
+            if (data[i].UserInjection is not null)
+                throw new ArgumentException($"Machine data {i} has a user or plug-in injection model." + why, nameof(schedule));
+        if (controllers is not null)
+            for (int i = 0; i < controllers.Count; i++)
+                if (controllers[i] is RmsExciter { IsUserDefined: true } ux)
+                    throw new ArgumentException($"The field controller of machine {i} is a user or plug-in model ({ux.Kind})." + why, nameof(schedule));
+        if (data is not RmsLoadedMachineData loaded) return;
+        foreach (DynamicLoadData l in loaded.Loads)
+        {
+            if (l is CompositeLoadData { Extensions: not null } c)
+                throw new ArgumentException($"The composite load at bus {c.BusId} has the fuller WECC parts, whose timers count whole steps of one "
+                    + "size; it cannot run on a step schedule with more than one step size.", nameof(schedule));
+            if (l is GridSim.Core.Dynamics.Plugins.UserDynamicLoadData u)
+                throw new ArgumentException($"The dynamic load at bus {u.BusId} is a user or plug-in model." + why, nameof(schedule));
+        }
+    }
+
+    /// <summary>RC5 stage 6: the cumulative event state of one network stage (copies), for a rebuild with machines out.</summary>
+    private sealed record StageState(List<int> TrippedBranches, List<int> FaultedBuses, List<int> LoadBuses,
+        Dictionary<int, (double P, double Q)> LoadDelta, bool[] MachineOut, List<ActiveSequenceFault>? SeqFaults = null);
+
+    /// <summary>WP2: an earth fault (single or double line to ground) needs a zero-sequence network GridSim can represent
+    /// (<see cref="GridSim.Core.Protection.ShortCircuit.Iec60909.RequireRepresentableZeroSequence"/>); refused, naming the
+    /// event, when it cannot. Three-phase and line-to-line faults never touch the zero sequence.</summary>
+    private static void RequireEarthFaultModel(GridModel model, GridSim.Core.Protection.FaultType type, string what, string paramName)
+    {
+        if (type is not (GridSim.Core.Protection.FaultType.SingleLineToGround or GridSim.Core.Protection.FaultType.DoubleLineToGround)) return;
+        try { GridSim.Core.Protection.ShortCircuit.Iec60909.RequireRepresentableZeroSequence(model); }
+        catch (InvalidOperationException ex) { throw new ArgumentException($"{what}: {ex.Message}", paramName, ex); }
+    }
+
+    /// <summary>Two unbalanced sequence faults in place at once (a cross-country fault) couple the negative- and
+    /// zero-sequence networks at two points. One equivalent shunt per fault in the positive sequence cannot represent that,
+    /// so the second is refused, naming the first. A three-phase fault beside an unbalanced one is exact and allowed.</summary>
+    private static void RequireOneUnbalancedFault(List<ActiveSequenceFault> inPlace, GridSim.Core.Protection.FaultType type,
+        string what, string paramName)
+    {
+        if (type == GridSim.Core.Protection.FaultType.ThreePhase) return;
+        foreach (ActiveSequenceFault s in inPlace)
+            if (s.Type != GridSim.Core.Protection.FaultType.ThreePhase)
+                throw new ArgumentException($"{what}: events[{s.EventIndex}] ({s.Event.Describe()}) is still in place. Two unbalanced "
+                    + "faults at once (a cross-country fault) couple the sequence networks at two points, which the equivalent-shunt "
+                    + "method cannot represent; clear the first fault before the second.", paramName);
     }
 
     private static void RequireBus(HashSet<int> busIds, int busId, string what, string paramName)
@@ -317,19 +502,31 @@ public static partial class RmsTransientStability
     /// same triplets in the same order, and so the same factorisation bits.</summary>
     private static SparseRmsNetwork BuildEventStage(
         GridModel model, SubtransientInit.SparseNetworkBasis basis, List<int> trippedBranches, List<int> faultedBuses,
-        List<int> loadBuses, Dictionary<int, (double P, double Q)> loadDelta, bool[] machineOut)
+        List<int> loadBuses, Dictionary<int, (double P, double Q)> loadDelta, bool[] machineOut,
+        IReadOnlyList<StageSequenceFault>? sequenceFaults = null)
     {
         var triplets = new List<(int Row, int Col, Complex V)>(basis.BranchCells.Count + basis.OtherStamps.Count + 8);
 
+        // WP2: a line faulted part-way along (and in service) leaves the Y-bus like a tripped branch; its Kron-reduced split
+        // stamps come in step 4b. Without such a fault this is the tripped list itself, so the branch network is as before.
+        List<int> removed = trippedBranches;
+        if (sequenceFaults is not null)
+            foreach (StageSequenceFault s in sequenceFaults)
+                if (s.Fault.OnBranch && s.Energised && !removed.Contains(s.Fault.BranchIndex))
+                {
+                    if (ReferenceEquals(removed, trippedBranches)) removed = new List<int>(trippedBranches);
+                    removed.Add(s.Fault.BranchIndex);
+                }
+
         // 1. The branch network: the base cells while every branch is in, else the Y-bus rebuilt without the tripped
         //    branches (marked out of service, which YBus skips; every other branch, tap and bus shunt as in the model).
-        if (trippedBranches.Count == 0)
+        if (removed.Count == 0)
         {
             triplets.AddRange(basis.BranchCells);
         }
         else
         {
-            var tripped = new HashSet<int>(trippedBranches);
+            var tripped = new HashSet<int>(removed);
             var branches = new List<Branch>(model.Branches.Count);
             for (int j = 0; j < model.Branches.Count; j++)
                 branches.Add(tripped.Contains(j) ? model.Branches[j] with { InService = false } : model.Branches[j]);
@@ -362,9 +559,32 @@ public static partial class RmsTransientStability
             triplets.Add((bi, bi, new Complex(SubtransientInit.BoltedFaultShuntPu, 0.0)));
         }
 
+        // 4b. WP2: each sequence fault in place: its equivalent shunt at the fault bus, or the reduced stamps of its split
+        //     line. A fault on a tripped line adds nothing.
+        if (sequenceFaults is not null)
+            foreach (StageSequenceFault s in sequenceFaults)
+                if (s.Energised) triplets.AddRange(s.Stamps);
+
         // A tripped machine has no admittance in the network's machine list either, so it carries no current.
         var yGen = basis.MachineAdmittance.ToArray();
         for (int m = 0; m < machineOut.Length && m < yGen.Length; m++) if (machineOut[m]) yGen[m] = Complex.Zero;
+
+        // DYN-17: a branch trip that leaves a bus with nothing connected (no branch, load, shunt or machine: a tee point
+        // fed by the one tripped line) gave a zero row, and the factorisation failed with the fault network's "singular
+        // (an island with no source or earth path?)" in a study with no fault, naming neither the trip nor the bus. The
+        // stage is checked first and the bus is named.
+        if (removed.Count > 0)
+        {
+            var live = new bool[basis.BusCount];
+            foreach ((int row, int col, Complex val) in triplets)
+                if (val != Complex.Zero) { live[row] = true; live[col] = true; }
+            for (int m = 0; m < yGen.Length && m < basis.MachineTerminal.Count; m++)
+                if (yGen[m] != Complex.Zero && basis.MachineTerminal[m] >= 0 && basis.MachineTerminal[m] < live.Length) live[basis.MachineTerminal[m]] = true;
+            foreach (KeyValuePair<int, int> kv in basis.BusIndex.OrderBy(kv => kv.Value))
+                if (kv.Value < live.Length && !live[kv.Value])
+                    throw new InvalidOperationException(FormattableString.Invariant(
+                        $"after the branch trip(s) of this event stage (branch index {string.Join(", ", removed.OrderBy(i => i))}) bus {kv.Key} has nothing connected (no branch, load, shunt or machine), so the network cannot be solved; trip the bus with it, or leave the branch in."));
+        }
         return new SparseRmsNetwork(basis.BusCount, triplets, basis.MachineTerminal.ToArray(), yGen,
             basis.ConverterBusIndex.ToArray());
     }

@@ -113,7 +113,7 @@ public static class G55StagedAssessment
         if (e is null || e.Count == 0) throw new ArgumentException("A G5/5 assessment needs at least one item of equipment.", nameof(e));
         foreach (G55Equipment x in e)
             if (!(x.RatingKva > 0.0) || !double.IsFinite(x.RatingKva))
-                throw new ArgumentException($"Equipment '{x.Id}': the rating must be finite and above 0 kVA; got {x.RatingKva:R}.", nameof(e));
+                throw new ArgumentException(FormattableString.Invariant($"Equipment '{x.Id}': the rating must be finite and above 0 kVA; got {x.RatingKva:R}."), nameof(e));
     }
 
     private static void RequireSsc(double sscMva)
@@ -145,14 +145,14 @@ public static class G55StagedAssessment
             double reference = tech == G55Technology.SinglePhaseRectifier ? Table19SinglePhaseReferenceMva : Table19ThreePhaseReferenceMva;
             double permitted = sscMva / reference * Table19(tech);
             return new G55Substage("1C-1", "7.4.1", s <= permitted ? G55Outcome.Pass : G55Outcome.Fail, s, permitted, "kVA",
-                $"Sequ {s:R} kVA against Table 19 {Table19(tech):R} kVA at {reference:R} MVA scaled by equation (11) to {sscMva:R} MVA.");
+                FormattableString.Invariant($"Sequ {s:R} kVA against Table 19 {Table19(tech):R} kVA at {reference:R} MVA scaled by equation (11) to {sscMva:R} MVA."));
         }
         if (SixAndAfeOnly(equipment))
         {
             double min = Eq12SixPulse * SumKva(equipment, G55Technology.SixPulse) + Eq12ActiveFrontEnd * SumKva(equipment, G55Technology.ActiveFrontEnd);
             double have = sscMva * 1000.0;
             return new G55Substage("1C-2", "7.4.2", have >= min ? G55Outcome.Pass : G55Outcome.Fail, min, have, "kVA",
-                $"Minimum short-circuit power by equation (12) {min:R} kVA against the PCC's {have:R} kVA.");
+                FormattableString.Invariant($"Minimum short-circuit power by equation (12) {min:R} kVA against the PCC's {have:R} kVA."));
         }
         return new G55Substage("1C", "7.4", G55Outcome.NotApplicable, null, null, "",
             "Stage 1C covers one technology, or a mix of six-pulse and active-front-end only; this mix goes to Stage 2C.");
@@ -178,7 +178,7 @@ public static class G55StagedAssessment
             double permitted = sscMva / reference * (headroom / (0.25 * pl)) * Table19(tech);
             double s = equipment.Sum(x => x.RatingKva);
             return new G55Substage("1D-1", "7.5.1", s <= permitted ? G55Outcome.Pass : G55Outcome.Fail, s, permitted, "kVA",
-                $"Sequ {s:R} kVA against {permitted:R} kVA (equations 13, 15 or 17: V{h} headroom {headroom:R} % of {pl:R} % planning level).");
+                FormattableString.Invariant($"Sequ {s:R} kVA against {permitted:R} kVA (equations 13, 15 or 17: V{h} headroom {headroom:R} % of {pl:R} % planning level)."));
         }
         if (SixAndAfeOnly(equipment))
         {
@@ -191,7 +191,7 @@ public static class G55StagedAssessment
                 return new G55Substage("1D-2", "7.5.2", G55Outcome.Fail, double.PositiveInfinity, have, "kVA", "No 5th harmonic headroom: the background is at or above the planning level.");
             double min = num / headroom;
             return new G55Substage("1D-2", "7.5.2", have >= min ? G55Outcome.Pass : G55Outcome.Fail, min, have, "kVA",
-                $"Minimum short-circuit power by equation (19) {min:R} kVA (5th headroom {headroom:R} %) against the PCC's {have:R} kVA.");
+                FormattableString.Invariant($"Minimum short-circuit power by equation (19) {min:R} kVA (5th headroom {headroom:R} %) against the PCC's {have:R} kVA."));
         }
         return new G55Substage("1D", "7.5", G55Outcome.NotApplicable, null, null, "", "Stage 1D follows 1C: this mix of technologies is outside it.");
     }
@@ -211,14 +211,14 @@ public static class G55StagedAssessment
             double s = equipment.Sum(x => x.RatingKva);
             double permitted = sscMva / Table21ReferenceMva * Table21(tech);
             return new G55Substage("2A-1", "8.2.1", s <= permitted ? G55Outcome.Pass : G55Outcome.Fail, s, permitted, "kVA",
-                $"Sequ {s:R} kVA against Table 21 {Table21(tech):R} kVA at 60 MVA scaled by equation (22) to {sscMva:R} MVA.");
+                FormattableString.Invariant($"Sequ {s:R} kVA against Table 21 {Table21(tech):R} kVA at 60 MVA scaled by equation (22) to {sscMva:R} MVA."));
         }
         if (SixAndAfeOnly(equipment))
         {
             double min = Eq23SixPulse * SumKva(equipment, G55Technology.SixPulse) + Eq23ActiveFrontEnd * SumKva(equipment, G55Technology.ActiveFrontEnd);
             double have = sscMva * 1000.0;
             return new G55Substage("2A-2", "8.2.2", have >= min ? G55Outcome.Pass : G55Outcome.Fail, min, have, "kVA",
-                $"Minimum short-circuit power by equation (23) {min:R} kVA against the PCC's {have:R} kVA.");
+                FormattableString.Invariant($"Minimum short-circuit power by equation (23) {min:R} kVA against the PCC's {have:R} kVA."));
         }
         return new G55Substage("2A", "8.2", G55Outcome.NotApplicable, null, null, "", "This mix of technologies is outside Stage 2A; it goes to Stage 2C.");
     }
@@ -244,7 +244,7 @@ public static class G55StagedAssessment
             double permitted = sscMva / Table21ReferenceMva * (headroom / (0.25 * pl)) * Table21(tech);
             double s = equipment.Sum(x => x.RatingKva);
             return new G55Substage("2B-1", "8.3.1", s <= permitted ? G55Outcome.Pass : G55Outcome.Fail, s, permitted, "kVA",
-                $"Sequ {s:R} kVA against {permitted:R} kVA (equations 24 or 26: V{h} headroom {headroom:R} % of {pl:R} %).");
+                FormattableString.Invariant($"Sequ {s:R} kVA against {permitted:R} kVA (equations 24 or 26: V{h} headroom {headroom:R} % of {pl:R} %)."));
         }
         if (SixAndAfeOnly(equipment))
         {
@@ -256,7 +256,7 @@ public static class G55StagedAssessment
                 return new G55Substage("2B-2", "8.3.2", G55Outcome.Fail, double.PositiveInfinity, have, "kVA", "No 5th harmonic headroom: the background is at or above the planning level.");
             double min = (Eq28SixPulse * SumKva(equipment, G55Technology.SixPulse) + Eq28ActiveFrontEnd * SumKva(equipment, G55Technology.ActiveFrontEnd)) / headroom;
             return new G55Substage("2B-2", "8.3.2", have >= min ? G55Outcome.Pass : G55Outcome.Fail, min, have, "kVA",
-                $"Minimum short-circuit power by equation (28) {min:R} kVA (5th headroom {headroom:R} %) against the PCC's {have:R} kVA.");
+                FormattableString.Invariant($"Minimum short-circuit power by equation (28) {min:R} kVA (5th headroom {headroom:R} %) against the PCC's {have:R} kVA."));
         }
         return new G55Substage("2B", "8.3", G55Outcome.NotApplicable, null, null, "", "This mix of technologies is outside Stage 2B; it goes to Stage 2C.");
     }

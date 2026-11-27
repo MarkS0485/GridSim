@@ -1,6 +1,6 @@
 # SLSA build provenance mapping
 
-**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This document maps GridSim's build and release integrity to
+This document maps GridSim's build and release integrity to
 the SLSA Build track (SLSA is `Supply-chain Levels for Software Artifacts`, version 1.0). It is the evidence behind the
 authenticity-and-integrity obligation of CAF v4.0 principle A4.b, and a companion to `ssdf-mapping.md` (which maps
 the development lifecycle) and `caf-mapping.md` (which maps the running system). Scope, status vocabulary and the
@@ -51,9 +51,15 @@ the NuGet package, over the signed bytes it pushes, after signing and before the
 the source `<Version>`, the Release is marked a pre-release, its files pass the same gates and are attested, and no
 NuGet package or container image is pushed for a candidate (`BugHunt1101WebTests`, `B195_*`).
 
+**What exists for RC-3 and RC-4.** Both were published by pushing the tag, so the workflow built, attested and
+published them as pre-releases. The RC-3 release run (run 44012398517) had 30 jobs green, with "NuGet packages" and "Push web image (GHCR)" skipped; the green jobs include the whole CI matrix and the
+`reproducible` job. RC-4's first run stopped at the CI gate on a racy test; the test was fixed, the tag moved to the
+fixed commit and the re-run published the release. A downloader checks a file's provenance with
+`gh attestation verify <file> -R <owner>/GridSim`.
+
 **What exists for RC-1.** The workflow did not build RC-1. At RC-1 it accepted only a `vMAJOR.MINOR.PATCH` tag, so it
 stopped in its first step on `v2.0.195-rc1.0` and on `v2.1.000-RC-1`; the RC-1 Release (2.1.000, 2026-10-31) was built,
-signed and uploaded by hand from the owner's build machine. No release has been made through the workflow since. No RC-1
+signed and uploaded by hand from the owner's build machine. No RC-1
 file has a provenance attestation. What a downloader can check is: the Authenticode signatures on the three Windows
 executables and the author signature on the NuGet package (one self-signed certificate, checked by its thumbprint), and
 `SHA256SUMS.txt` with the SHA-256 values listed in `RC1.md`. The checksums are uploaded by the same hand as the files
@@ -94,7 +100,7 @@ Since 2026-11-01 the release workflow has a reproducible-build check (job `repro
 linux-x64 CLI on a fresh runner from a fresh checkout with the cli job's exact command and SBOM hash, and compares
 every file of the shipped archive with the rebuild by SHA-256, failing on any difference (`SlsaSupplyChainPinTests`).
 It covers the Linux CLI only (the Windows binary is signed after the build, with a timestamp in the signature, and
-the macOS build runs on a separate image) and it has never run because no release has been made through the workflow.
+the macOS build runs on a separate image), and it passed in the RC-3 and RC-4 release runs; RC-1 was not built by the workflow.
 It is one of the jobs the Release job waits for (`needs: [ verify, ci, cli, web-image, sbom, reproducible, desktop ]`,
 pinned by `WorkflowReleaseGateTests`), so a non-reproducible Linux CLI stops the release. The determinism tests compare numerical results, not assembly bytes.
 
@@ -104,7 +110,7 @@ the manifest hash to the build identity and reports a verdict, `IsCompliant`, wh
 every in-scope control recorded Achieved; a build that is not a release build reports `NOT ATTESTED` and
 `gridsim compliance verify` exits 1. At this release five of the 18 in-scope controls are recorded Partially achieved
 (`caf-mapping.md` section 9), including, since 2.1.008, `supply-chain` and `secure-sdlc-attestation`, whose
-descriptions name the gap this document records: no published release has yet been made through `release.yml`. A
+descriptions name the gap this document records. A
 release build therefore reads `NOT COMPLIANT`. A running binary reports all of this, with the source-tree state and
 the reason a build is not a release build, through `gridsim compliance verify` and the web `/compliance` endpoint.
 
@@ -114,16 +120,16 @@ the reason a build is not a release build, through `gridsim compliance verify` a
 
 ### 3.1 Build L1, provenance exists and describes the build
 
-**Status: Partially achieved for RC-1.** The running binary records its version, commit and build SDK
+**Status: Partially achieved for RC-1; RC-3 and RC-4 carry the workflow's provenance.** The running binary records its version, commit and build SDK
 (`BuildProvenance`), the CLI SBOM describes what is in the CLI, and `SHA256SUMS.txt` fixes the artefact digests. No
 provenance statement in the SLSA format exists for any RC-1 file, the published SBOM covers the CLI only, and how each
-file was built is recorded only in `RC1.md`. The workflow, had it run, would produce L1 provenance for the Release
+file was built is recorded only in `RC1.md`. The workflow produces L1 provenance for the Release
 files, including the desktop archives, with five SBOMs.
 
 ### 3.2 Build L2, signed provenance from a hosted build platform
 
 **Status: Not achieved for RC-1** (RC-1 was built on the owner's machine, not a hosted build platform, and carries no
-signed provenance). Written into the workflow, not exercised:
+signed provenance). RC-3 and RC-4 were built on the hosted platform with signed provenance. In the workflow:
 
 - Hosted build platform: GitHub Actions (`release.yml`), on hosted runners.
 - Build-platform-signed provenance: `actions/attest-build-provenance` signs a SLSA provenance statement for every
@@ -169,13 +175,13 @@ asserted.
 
 ## 5. Honest residuals
 
-1. **No release has been built by the workflow.** At RC-1 it refused the RC tag form (accepted since 2.1.008). Since
+1. **RC-1 was not built by the workflow; RC-3 and RC-4 were.** At RC-1 it refused the RC tag form (accepted since 2.1.008). Since
    2026-11-01 (GA-5, an owner decision) its ship scope matches what RC-1 shipped for the desktop apps (WPF for win-x64,
    Avalonia for win-x64 and linux-x64, each with its own SBOM and the same signing step as the CLI); it still differs
    from RC-1 in the CLI (it builds osx-arm64 as well and names the archives `gridsim-<version>-<rid>`, where RC-1 used
    `gridsim-cli-<version>-<rid>` with no macOS CLI), in the NuGet package (pushed to the feed, not attached to the
-   Release) and in carrying five SBOMs where RC-1 has one. The signing, SBOM-injection, attestation and CI-gate steps are written
-   and pinned by tests that read the workflow file, and have never executed for a published file (`caf-mapping.md`
+   Release) and in carrying five SBOMs where RC-1 has one. The signing, SBOM-injection, attestation and CI-gate steps are pinned by tests that read the workflow file, and
+   they ran in the RC-3 and RC-4 release runs (`caf-mapping.md`
    section 9, item 10).
 2. **RC-1 was built on the owner's development machine**, so the build environment is not separated from development
    and is recorded only in `RC1.md` (SDK 10.0.401, Windows 11 build 26300).
@@ -186,7 +192,7 @@ asserted.
    file to the workflow run. A local restore is not in locked mode (CI and the image build are).
 4. **No published NuGet package carries a provenance attestation**, and no web image was published at RC-1. Since
    2026-11-01 `publish.yml` attests the package it pushes (after signing, before the push), so the next package
-   published through the workflow carries one; none has been published through it yet.
+   published through the workflow carries one; no package has been published through it yet (a release candidate pushes none).
 5. **The signing certificate is self-signed: accepted residual (owner decision, 2026-11-01).** A consumer's machine
    does not trust the Authenticode or NuGet signature unless the published certificate
    (`signing/gridsim-signing.cer`, thumbprint `86DD43B731D2B8A5133972F7B7C91C0FDA8EB721`) is imported; the Linux
@@ -196,10 +202,9 @@ asserted.
 6. **GitHub Actions were referenced by version tag, not commit SHA - closed 2026-11-01.** Every `uses:` line in every
    workflow now names a full commit SHA with its release tag in a comment; Dependabot's github-actions ecosystem
    proposes SHA bumps. Recorded here so the numbering of the residuals stays stable.
-7. **Reproducible-build check written, not yet exercised (narrowed 2026-11-01).** The build hash is an identity
+7. **Reproducible-build check (narrowed 2026-11-01).** The build hash is an identity
    label, not an integrity proof. The workflow's `reproducible` job rebuilds the linux-x64 CLI independently and
-   compares it byte for byte with the shipped archive; it covers that one archive and has never run (no release through
-   the workflow). Since 2026-11-01 it gates the Release job: `reproducible` is in its `needs` list, which a test pins, so
+   compares it byte for byte with the shipped archive; it covers that one archive and passed in the RC-3 and RC-4 release runs. Since 2026-11-01 it gates the Release job: `reproducible` is in its `needs` list, which a test pins, so
    a non-reproducible Linux CLI stops the release.
 8. **No SLSA L3 build isolation.** Recorded as a residual.
 

@@ -14,8 +14,8 @@ public enum BusType
 /// <summary>
 /// A node in the network. Loads are folded onto the bus (MATPOWER convention):
 /// <see cref="Pd"/>/<see cref="Qd"/> are the demand here, in MW / MVAr. A shunt
-/// admittance (e.g. a capacitor bank) is given as <see cref="Gs"/>/<see cref="Bs"/>,
-/// the MW / MVAr it would draw at 1.0 p.u. voltage.
+/// admittance (e.g. a capacitor bank) is given as <see cref="Gs"/>/<see cref="Bs"/> at 1.0 p.u. voltage:
+/// Gs is the MW it draws and Bs the MVAr it injects, so a capacitor has a positive Bs (Y_ii += (Gs + jBs) / BaseMva).
 /// </summary>
 public sealed record Bus(
     int Id,
@@ -383,7 +383,9 @@ public enum VscDcControl
 {
     /// <summary>TYPE 1: the DC voltage, DCSET kV.</summary>
     DcVoltage = 1,
-    /// <summary>TYPE 2: an active power order, DCSET MW drawn from its AC bus (negative: sent to the bus).</summary>
+    /// <summary>TYPE 2: an active power order. <see cref="VscConverter.DcSetpoint"/> is the MW drawn from its AC bus
+    /// (negative: sent to the bus). PSS/E's DCSET has the opposite sign (positive feeds the AC network), so the RAW
+    /// reader and writer negate it.</summary>
     Power = 2,
 }
 
@@ -696,6 +698,44 @@ public sealed class GridModel
     public Assets.Protection.ProtectionModel? Protections { get; init; } = null;
 
     /// <summary>
+    /// RC5 per-unit protection: the relays each generating unit carries itself (81U/81O, 81R, 78, 27/59, 32, 40), with
+    /// settings resolved per unit (the unit's own value, else its unit protection class default, else absent), keyed by
+    /// unit name. Null (the default, and every case that gives no unit protection) means no unit carries relays of its
+    /// own, and every study is exactly what it was before. Read-only: set it with <see cref="WithUnitProtection"/>, and
+    /// <see cref="CopyWith"/> carries it.
+    /// </summary>
+    public Protection.UnitProtectionSet? UnitProtection => _unitProtection;
+    private Protection.UnitProtectionSet? _unitProtection;
+
+    /// <summary>
+    /// A copy of this model (<see cref="CopyWith"/> with no arguments: every property carried by reference) whose
+    /// <see cref="UnitProtection"/> is <paramref name="unitProtection"/>. Every unit the set names must be a generator of
+    /// this model with a name no other generator shares; otherwise <see cref="InvalidDataException"/> lists each one.
+    /// </summary>
+    public GridModel WithUnitProtection(Protection.UnitProtectionSet? unitProtection)
+    {
+        if (unitProtection is not null)
+        {
+            var count = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (Generator g in _allGenerators)
+                if (g.Name is { } n) count[n] = count.GetValueOrDefault(n) + 1;
+            var problems = new List<string>();
+            foreach (Protection.ResolvedUnitProtection u in unitProtection.Resolved)
+            {
+                int c = count.GetValueOrDefault(u.Unit);
+                if (c == 0) problems.Add($"unit '{u.Unit}' has unit protection but is not a generator of model '{Name}'");
+                else if (c > 1) problems.Add($"unit '{u.Unit}' has unit protection but {c} generators of model '{Name}' share that name; give the unit a unique name");
+            }
+            if (problems.Count > 0)
+                throw new InvalidDataException("Unit protection is invalid:" + Environment.NewLine + "  " +
+                    string.Join(Environment.NewLine + "  ", problems));
+        }
+        GridModel copy = CopyWith();
+        copy._unitProtection = unitProtection;
+        return copy;
+    }
+
+    /// <summary>
     /// How many generator rows of the source file the loader could not keep (a MATPOWER <c>mpc.gen</c> row on an
     /// isolated or undefined bus has no bus to sit on and is skipped). Zero for every loader that keeps every row.
     /// When it is above zero, position k of <see cref="AllGenerators"/> is no longer row k of the file, so anything
@@ -823,6 +863,8 @@ public sealed class GridModel
             TransformerFlowControls = transformerFlowControls ?? TransformerFlowControls,
             ZeroSequenceMutuals = zeroSequenceMutuals ?? ZeroSequenceMutuals,
         };
+        // RC5: per-unit protection is keyed by unit name and carried as it is (a read-only property, so it is set here).
+        copy._unitProtection = _unitProtection;
         // Keep the in-service list by reference where it is unchanged (the setter above would otherwise rebuild an
         // equal but new array whenever the fleet holds an out-of-service unit).
         if (inServiceSame is not null) copy._inServiceGenerators = inServiceSame;
@@ -876,6 +918,9 @@ public sealed class GridModel
         return !(sp.IsKnownType && sp.Kind != Dynamics.Distributed.DomainKind.Synchronous);
     }
 
+    /// <summary>R2-01: the smallest HVDC converter tap step a model may carry (a real step is 0.00625 or a few times that).</summary>
+    public const double MinTapStep = 1e-6;
+
     /// <summary>
     /// Structurally validate the model, returning a list of human-readable diagnostics
     /// (never throws). <see cref="ValidationSeverity.Error"/> diagnostics describe faults
@@ -888,6 +933,22 @@ public sealed class GridModel
     /// decide what to do with these: hard fail on errors (the JSON, MATPOWER and PyPSA loaders), or (for a data-merge
     /// pipeline like the GDA builder) collect them as notes and carry on.
     /// </summary>
+    /// <summary>R4-03: the tap positions between a converter's limits at its step (the search moves through at most
+    /// <see cref="PowerFlow.LccDcLinks.MaxTapPositions"/> of them; a range that needs more would stop the search short and
+    /// give a tap the full search would not choose, so it is refused). A non-finite range counts as too many.</summary>
+    private static double TapPositions(double tapMin, double tapMax, double step)
+    {
+        double n = Math.Abs(tapMax - tapMin) / step;
+        return double.IsFinite(n) ? n : double.PositiveInfinity;
+    }
+
+    private static string TapRangeMessage(string who, double tapMin, double tapMax, double step)
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return $"{who}'s tap range {tapMin.ToString("R", inv)} to {tapMax.ToString("R", inv)} at a step of {step.ToString("R", inv)} has "
+            + $"{Math.Ceiling(TapPositions(tapMin, tapMax, step)).ToString("R", inv)} positions, more than the {PowerFlow.LccDcLinks.MaxTapPositions.ToString(inv)} the tap search moves through; use a larger step.";
+    }
+
     public IReadOnlyList<GridDiagnostic> Validate()
     {
         var diags = new List<GridDiagnostic>();
@@ -955,7 +1016,30 @@ public sealed class GridModel
             if (br.R == 0.0 && br.X == 0.0)
                 diags.Add(new GridDiagnostic(ValidationSeverity.Error,
                     $"Branch {label} ({br.From}->{br.To}) has zero series impedance (R = X = 0), so its admittance 1 / (R + jX) is not finite; give it a reactance or merge its two buses."));
+            // NUM-08: an impedance so small that 1 / |z|^2 overflows (R = X = 1e-320) is as non-finite as zero; it ended in
+            // an internal LU message. Far below any real branch (|z| under about 1e-154 pu).
+            else if (double.IsFinite(br.R) && double.IsFinite(br.X) && !double.IsFinite(1.0 / (br.R * br.R + br.X * br.X)))
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                    FormattableString.Invariant($"Branch {label} ({br.From}->{br.To}) has a series impedance so small (R = {br.R:R}, X = {br.X:R}) that its admittance 1 / (R + jX) is not finite; give it a reactance or merge its two buses.")));
         }
+
+        // 3b2. R2-01: every HVDC converter's tap step is a finite number of at least MinTapStep (PSS/E requires a positive
+        //      step; one of 0, or below the rounding of the tap, never moved the tap search, which then never ended). Checked
+        //      here so a converter from any reader, or built in code, is held to it.
+        foreach (LccDcLink l in LccLinks)
+            foreach ((string end, LccConverter c) in new[] { ("rectifier", l.Rectifier), ("inverter", l.Inverter) })
+                if (!(double.IsFinite(c.TapStep) && c.TapStep >= MinTapStep))
+                    diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                        $"Two-terminal DC link {l.Name}: the {end}'s tap step {c.TapStep.ToString("R", inv)} is not a finite step of at least {MinTapStep.ToString("R", inv)} (PSS/E's default is 0.00625)."));
+                else if (TapPositions(c.TapMin, c.TapMax, c.TapStep) > PowerFlow.LccDcLinks.MaxTapPositions)
+                    diags.Add(new GridDiagnostic(ValidationSeverity.Error, TapRangeMessage($"Two-terminal DC link {l.Name}: the {end}", c.TapMin, c.TapMax, c.TapStep)));
+        foreach (MtdcLink l in MtdcLinks)
+            foreach (MtdcConverter c in l.Converters)
+                if (!(double.IsFinite(c.TapStep) && c.TapStep >= MinTapStep))
+                    diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                        $"Multi-terminal DC link {l.Name}: converter {c.Bus.ToString(inv)}'s tap step {c.TapStep.ToString("R", inv)} is not a finite step of at least {MinTapStep.ToString("R", inv)} (PSS/E's default is 0.00625)."));
+                else if (TapPositions(c.TapMin, c.TapMax, c.TapStep) > PowerFlow.LccDcLinks.MaxTapPositions)
+                    diags.Add(new GridDiagnostic(ValidationSeverity.Error, TapRangeMessage($"Multi-terminal DC link {l.Name}: converter {c.Bus.ToString(inv)}", c.TapMin, c.TapMax, c.TapStep)));
 
         // 3c. D-DOC-082 (October 2026): every island needs its own reference bus. An island is a set of buses joined by
         //     IN-SERVICE branches (the solver's own view); an island with no slack has no angle reference and no bus to
@@ -999,9 +1083,9 @@ public sealed class GridModel
         foreach (Bus b in Buses)
         {
             if (b.VminPu is double lo && !(double.IsFinite(lo) && lo > 0))
-                diags.Add(new GridDiagnostic(ValidationSeverity.Error, $"Bus {b.Id} VminPu {lo} is not a finite voltage above 0 pu."));
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error, FormattableString.Invariant($"Bus {b.Id} VminPu {lo} is not a finite voltage above 0 pu.")));
             if (b.VmaxPu is double hi && !(double.IsFinite(hi) && hi > 0))
-                diags.Add(new GridDiagnostic(ValidationSeverity.Error, $"Bus {b.Id} VmaxPu {hi} is not a finite voltage above 0 pu."));
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error, FormattableString.Invariant($"Bus {b.Id} VmaxPu {hi} is not a finite voltage above 0 pu.")));
             if (b.VminPu is double l2 && b.VmaxPu is double h2 && double.IsFinite(l2) && double.IsFinite(h2) && !(l2 <= h2))
                 diags.Add(new GridDiagnostic(ValidationSeverity.Error, $"Bus {b.Id} VminPu {l2} is above its VmaxPu {h2}."));
         }
@@ -1023,6 +1107,20 @@ public sealed class GridModel
         for (int k = 0; k < Oltcs.Count; k++)
         {
             Oltc o = Oltcs[k];
+            // NUM-16: the record's numbers. A step of 0 made every out-of-band OLTC look pinned at a limit, a negative one
+            // stepped the wrong way, MinTap above MaxTap froze the tap, and QSTS divided its operation count by the step.
+            if (!(double.IsFinite(o.StepPu) && o.StepPu > 0))
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                    FormattableString.Invariant($"OLTC on transformer '{o.Transformer}' has tap step {o.StepPu}; it must be a finite number above 0.")));
+            if (!(double.IsFinite(o.MinTap) && double.IsFinite(o.MaxTap) && o.MinTap <= o.MaxTap))
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                    FormattableString.Invariant($"OLTC on transformer '{o.Transformer}' has tap range {o.MinTap} to {o.MaxTap}; both must be finite and MinTap at most MaxTap.")));
+            if (!(double.IsFinite(o.DeadbandPu) && o.DeadbandPu >= 0))
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                    FormattableString.Invariant($"OLTC on transformer '{o.Transformer}' has dead band {o.DeadbandPu} pu; it must be a finite number, 0 or more.")));
+            if (!(double.IsFinite(o.TargetVpu) && o.TargetVpu > 0))
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error,
+                    FormattableString.Invariant($"OLTC on transformer '{o.Transformer}' has target voltage {o.TargetVpu} pu; it must be a finite voltage above 0.")));
             if (!busIds.Contains(o.ControlsBus))
                 diags.Add(new GridDiagnostic(ValidationSeverity.Warning,
                     $"OLTC on transformer '{o.Transformer}' controls nonexistent bus {o.ControlsBus}."));
@@ -1064,7 +1162,7 @@ public sealed class GridModel
         void RequireFinite(double value, string what)
         {
             if (!double.IsFinite(value))
-                diags.Add(new GridDiagnostic(ValidationSeverity.Error, $"{what} is not a finite number ({value})."));
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error, FormattableString.Invariant($"{what} is not a finite number ({value}).")));
         }
         foreach (Bus b in Buses)
         {
@@ -1100,7 +1198,7 @@ public sealed class GridModel
             // A voltage set-point must be a positive magnitude: Vg <= 0 solved to a mirrored state (Newton) or was
             // replaced by 1.0 without a word (the sweep).
             if (double.IsFinite(g.Vg) && !(g.Vg > 0))
-                diags.Add(new GridDiagnostic(ValidationSeverity.Error, $"Generator {label} Vg {g.Vg} is not a voltage set-point above 0 pu."));
+                diags.Add(new GridDiagnostic(ValidationSeverity.Error, FormattableString.Invariant($"Generator {label} Vg {g.Vg} is not a voltage set-point above 0 pu.")));
             // The limits may be +/-Infinity ("no limit") but never NaN: a NaN limit makes every comparison false, so
             // reactive-limit enforcement and every audit silently skipped the unit.
             foreach ((double v, string what) in new[] { (g.Qmin, "Qmin"), (g.Qmax, "Qmax"), (g.Pmin, "Pmin"), (g.Pmax, "Pmax") })

@@ -1,0 +1,3 @@
+# The full git commit of each published GridSim release (the commit its tag points at), one per line:
+#   <40 or 64 hex digits>  <tag>
+# Empty until releases are listed: every build is then UNSUPPORTED BUILD.

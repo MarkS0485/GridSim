@@ -36,7 +36,7 @@ public static class EstimateExportResiduals
     public static EstimateExportResidualTable Load(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
-        string text = File.ReadAllText(path);   // IOException / FileNotFoundException propagate as input errors
+        string text = GridSim.Core.IO.InputFileLimits.ReadAllText(path);   // IOException / FileNotFoundException propagate as input errors
         JsonDocument doc;
         try { doc = JsonDocument.Parse(text); }
         catch (JsonException ex) { throw new InvalidDataException($"'{path}' is not valid JSON: {ex.Message}", ex); }

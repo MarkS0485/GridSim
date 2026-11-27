@@ -1,6 +1,6 @@
 # Model and simulation credibility assessment (NASA-STD-7009 framing)
 
-**Assurance statement. Status as at GridSim 2.1.010 (reviewed 2026-11-01; RC-1 released 2026-10-31 as 2.1.000).** This document assesses the credibility of GridSim as a
+This document assesses the credibility of GridSim as a
 computational model, using the credibility factors of NASA-STD-7009 (Standard for Models and Simulations) as the
 scoring frame, and noting the ASME V&V 20 verification-and-validation framing where it applies to the solver
 cross-checks. It is a companion to the security-facing assurance set (`caf-mapping.md`, `ssdf-mapping.md`,
@@ -54,7 +54,7 @@ expects.
 
 ## 3. Validation (is the right maths being solved)
 
-**Evidence: strong.**
+**Evidence: strong.** Independent programs and published benchmarks, solving the same equations, give the same numbers. The validation is against independent tools; GridSim is not validated against the real grid.
 
 - The Python cross-validation harnesses under `tools/crossval/` re-solve GridSim's problems in independent tools and
   compare every bus: power flow against pandapower, cases against the MATPOWER library, dynamics against SciPy
@@ -71,7 +71,7 @@ expects.
 - Published benchmark results are reproduced: IEEE 14/30/57/118/300 bus cases, the IEEE 123-node and 4-node
   distribution feeders against their published voltages and currents, and the GB reduced and 2224-bus models with
   independent PYPOWER cross-checks.
-- Real measured grid data is compared (a comparison, not a validation; nothing in GridSim is validated, at any scale):
+- Real measured grid data is compared (a comparison, not a validation against the real grid):
   the 9 August 2019 GB frequency event is reconstructed from first principles
   (`Asset2019EventTests`), scoped honestly as a mechanism-and-envelope reproduction rather than a point prediction,
   because only one such GB cascade event exists to compare against (documented in
@@ -111,14 +111,15 @@ inputs, that is a layer above the engine.
 dense versus sparse solver, SIMD tier, CPU and operating system all produce identical results. The CI matrix runs the
 suite against the same pins on Linux and Windows (normal, AVX2 off, which also holds the non-FMA axis, hardware
 intrinsics off, forced 256-bit, and forced AVX-512 where the runner has it, otherwise reported NOT CHECKED), on macOS
-on Apple silicon and on Linux and Windows ARM64 (normal and hardware intrinsics off), with no advisory leg. It runs by
-hand, and the release workflow that would gate on it did not build RC-1. For RC-1 the evidence is the local suite on
+on Apple silicon and on Linux and Windows ARM64 (normal and hardware intrinsics off), with no advisory leg. It runs on every push to `main`, weekly, and as
+the gate of the release workflow, and RC-3's release run passed every leg. RC-1 was published before the workflow
+accepted a release-candidate tag; its evidence is the local suite on
 the 2.0.200 code (GridSim.Tests 10,291 passed and 31 skipped by the RAM gate on an 8 GB machine, GridSim.App.Tests 310
 passed, the QSTS, impedance-stability and PSS/E slices also with hardware intrinsics off and with AVX2 off; `RC1.md`);
-the full suite in every SIMD tier and the large cases the RAM gate skips were not run for RC-1, and no CI run on `main`
-has passed since the history reset (the last, on 2.1.002, failed one desktop-app layout test on one macOS leg). These
+the full suite in every SIMD tier and the large cases the RAM gate skips were not run for RC-1, and at RC-1 no CI run on
+`main` had passed since the history reset (the last, on 2.1.002, failed one desktop-app layout test on one macOS leg). These
 tests compare numerical results; they are not a reproducible-build check of the binaries (the release workflow's
-`reproducible` job, written 2026-11-01 and not yet run, is that check for the linux-x64 CLI). Robustness across
+`reproducible` job, green in the RC-3 release run, is that check for the linux-x64 CLI). Robustness across
 input regimes is exercised by the benchmark corpus (transmission, distribution, GB models) and the hardware runs in
 `docs/developer/benchmarks/history/server-results-2026-07/` (A100, H100, MI300, CPU).
 
@@ -127,7 +128,7 @@ input regimes is exercised by the benchmark corpus (transmission, distribution, 
 **Evidence: moderate.** The benchmark corpus, the per-release CHANGELOG discipline, and the recorded validation
 figures tied to specific tool versions (pandapower 3.5.5, NumPy 2.4.6, SciPy 1.18.1, pinned in the cross-validation
 workflow, whose hand-started run on 2026-10-31 passed) give a traceable use and check history. The first public
-release candidate (RC-1, 2.1.000) was released on 2026-10-31. The engine is young and RC-1 has no recorded field use,
+release candidate (RC-1, 2.1.000) was released on 2026-10-31, and RC-2, RC-3 and RC-4 have followed. The engine is young and no release has recorded field use,
 so use history is recorded as moderate rather than strong.
 
 ## 8. Management (is the model under configuration control)
@@ -153,7 +154,7 @@ effort, which is not a property of the engine and is not assessed here.
 | Validation | `tools/crossval/*` vs pandapower/MATPOWER/SciPy; benchmark reproduction; 2019 GB event | Strong |
 | Input pedigree | `ProvenanceTag`; benchmark SHA-256 provenance; forward-inference guard | Strong |
 | Results uncertainty | `mc_estimate_sweep.py` only; no formal UQ | Thin (bounded, accepted) |
-| Results robustness | cross-solver/tier/CPU/OS bit identity; benchmark and hardware runs; RC-1 local suite (CI matrix by hand, not green since the reset) | Moderate to strong |
+| Results robustness | cross-solver/tier/CPU/OS bit identity; benchmark and hardware runs; CI matrix on every push and at release (green for RC-3) | Moderate to strong |
 | Use history | benchmark corpus; versioned validation figures | Moderate |
 | Management | single-version contract; CHANGELOG; constitutional tests (commit history before RC 1.0 not in the repository) | Strong |
 | People | not a property of the engine | Out of scope |

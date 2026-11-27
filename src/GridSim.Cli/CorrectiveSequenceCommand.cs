@@ -88,8 +88,8 @@ internal static class CorrectiveSequenceCommand
             if (output is not null && (File.Exists(output) || Directory.Exists(output)))
                 throw new IOException("Result path already exists; use a new path for this invocation.");
             byte[] bytes = File.ReadAllBytes(input);
-            using (JsonDocument document = JsonDocument.Parse(bytes)) CheckDuplicates(document.RootElement);
-            Request request = JsonSerializer.Deserialize<Request>(bytes, Json)
+            using (JsonDocument document = JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes))) CheckDuplicates(document.RootElement);
+            Request request = JsonSerializer.Deserialize<Request>(GridSim.Core.IO.Utf8Json.WithoutBom(bytes).Span, Json)
                 ?? throw new InvalidDataException("Study is null.");
             if (request.SchemaVersion != 1 || request.Case is null || request.Voltage is null || request.Ratings is null ||
                 request.Policy is null || request.Policy.Eligible is null || request.Sequences is null ||

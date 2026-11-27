@@ -331,7 +331,11 @@ $ gridsim replay-event gb-2023-12-22 --trace data/neso/gb-2023-12-22-frequency.c
 ...
 ```
 
-A catalogue event can carry its own trace path in `outcome.nesoTraceCsvPath`, and `--trace` overrides it.
+A catalogue event can carry its own trace path in `outcome.nesoTraceCsvPath`, and `--trace` overrides it. A relative
+path is read from the catalogue's folder, not the working folder, so the verdict does not depend on where the command is
+started. A network (UNC) or device path is refused when the catalogue is loaded, nothing is opened, and the trace may be at most
+512 MiB. A trace the catalogue names that is not there is said in the summary ("the catalogue names the trace ..., which
+was not found; no RMSE"), and a line of it that is not a data row is named by its number, not quoted.
 
 ### The measured 2019 catalogue
 

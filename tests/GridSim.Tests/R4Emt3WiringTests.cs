@@ -18,7 +18,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class R4Emt3WiringTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r4emt3w-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r4emt3w-" + Guid.NewGuid().ToString("N"));
 
     public R4Emt3WiringTests() => Directory.CreateDirectory(_dir);
 

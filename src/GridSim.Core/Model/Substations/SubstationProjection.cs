@@ -93,6 +93,8 @@ public sealed class SubstationProjectionResult
     public required double GenerationMwTotal { get; init; }
     public required double GenerationMwConnected { get; init; }
     public required IReadOnlyList<string> Warnings { get; init; }
+    /// <summary>WP24: the star-point bus of each projected three-winding transformer, keyed by its id (empty when the model has none).</summary>
+    public IReadOnlyDictionary<string, int> StarPoints { get; init; } = new ReadOnlyDictionary<string, int>(new Dictionary<string, int>());
 
     /// <summary>The bus a node is on, or null.</summary>
     public ProjectedBus? BusOf(string node) =>
@@ -268,6 +270,45 @@ public static class SubstationProjection
             BranchOf(x.Id, NbEquipmentKind.Transformer, x.NodeHv, x.NodeLv, x.Id + ".hv", x.Id + ".lv",
                 (f, t) => new Branch(f, t, x.R, x.X, x.B, x.TapRatio, x.PhaseShiftDeg, x.RateAMva, x.Id, IsTransformer: true));
 
+        // WP24: three-winding transformers. Each projected unit gets a star bus, numbered after every node-based bus id
+        // (NodeRank: after the node count; Compact: after the bus count), in ordinal id order, and one branch per winding from
+        // the winding's bus to the star with the star impedance (ThreeWindingStar, the PSS/E reader's expression), the
+        // winding's ratio and shift, as the RAW reader builds a unit. A unit with fewer than two windings on buses is left out
+        // (as the RAW reader leaves out a unit with fewer than two live windings); a winding whose node is on no bus is left
+        // out of a unit that keeps the other two. A model without such units is projected exactly as before.
+        var starBuses = new List<Bus>();
+        var starPoints = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        int starBase = options.Numbering == BusNumbering.NodeRank ? nodes.Length : busRoots.Count;
+        foreach (NbTransformer3W x in model.Transformers3W.OrderBy(x => x.Id, StringComparer.Ordinal))
+        {
+            string[] ends = { "hv", "mv", "lv" };
+            int[] wb = { BusOfNode(x.NodeHv), BusOfNode(x.NodeMv), BusOfNode(x.NodeLv) };
+            int live = wb.Count(b => b >= 0);
+            if (live < 2)
+            {
+                int dead = Array.FindIndex(wb, b => b < 0);
+                var (d, why) = Why(x.NodeOf(dead));
+                outcomes.Add(new EquipmentOutcome(x.Id, NbEquipmentKind.Transformer3W, d,
+                    $"terminal '{x.Id}.{ends[dead]}': {why}; fewer than two windings are on buses, so the unit is left out.", 0, 0));
+                continue;
+            }
+            int star = starBase + starBuses.Count + 1;
+            double kvHv = model.NominalKvOf(x.NodeHv) ?? 0;
+            starBuses.Add(new Bus(star, BusType.Pq, 0, 0, 0, x.B * model.BaseMva, kvHv, 1.0, Name: x.Id + " star point"));
+            starPoints[x.Id] = star;
+            var s = x.Star();
+            double[] sr = { s.R1, s.R2, s.R3 }, sx = { s.X1, s.X2, s.X3 };
+            var left = new List<string>();
+            for (int n = 0; n < 3; n++)
+            {
+                if (wb[n] < 0) { left.Add($"winding {n + 1} ('{x.Id}.{ends[n]}': {Why(x.NodeOf(n)).Why})"); continue; }
+                branches.Add(new Branch(wb[n], star, sr[n], sx[n], 0, x.RatioOf(n), x.ShiftOf(n), 0, $"{x.Id} winding {n + 1}", IsTransformer: true));
+                projectedBranches.Add(new ProjectedBranch(branches.Count - 1, x.Id, x.Id + "." + ends[n], x.Id + ".star", wb[n], star));
+            }
+            outcomes.Add(new EquipmentOutcome(x.Id, NbEquipmentKind.Transformer3W, EquipmentDisposition.Connected,
+                left.Count == 0 ? $"three windings on buses; star point bus {star}." : $"star point bus {star}; left out: {string.Join(", ", left)}.", 0, 0));
+        }
+
         var pd = new Dictionary<int, double>(); var qd = new Dictionary<int, double>();
         var gs = new Dictionary<int, double>(); var bs = new Dictionary<int, double>();
         double demandTotal = 0, demandServed = 0, genTotal = 0, genConnected = 0;
@@ -325,6 +366,7 @@ public static class SubstationProjection
             gridBuses.Add(new Bus(pb.BusId, type, pd.GetValueOrDefault(pb.BusId), qd.GetValueOrDefault(pb.BusId),
                 gs.GetValueOrDefault(pb.BusId), bs.GetValueOrDefault(pb.BusId), pb.NominalKv, vm, Name: pb.RepresentativeNode));
         }
+        gridBuses.AddRange(starBuses);
         if (gridBuses.Count > 0 && gridBuses.All(b => b.Type != BusType.Slack))
             warnings.Add("no bus holds a slack generator in this switching state; a solver needs a reference.");
 
@@ -361,6 +403,7 @@ public static class SubstationProjection
             GenerationMwTotal = genTotal,
             GenerationMwConnected = genConnected,
             Warnings = warnings.AsReadOnly(),
+            StarPoints = new ReadOnlyDictionary<string, int>(starPoints),
         };
     }
 

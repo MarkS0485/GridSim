@@ -17,7 +17,7 @@ public class ConvertAndValidateTests
 {
     private static string TempDir(string tag)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-f24-{tag}-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under($"gridsim-f24-{tag}-" + Guid.NewGuid().ToString("N"));
         return dir;
     }
 

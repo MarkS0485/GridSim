@@ -17,7 +17,7 @@ public sealed class MotorStartV2RowsTests
 {
     private sealed class Temp : IDisposable
     {
-        public string Dir { get; } = Path.Combine(Path.GetTempPath(), "gridsim-motor-rows-" + Guid.NewGuid().ToString("N"));
+        public string Dir { get; } = TestTemp.Under("gridsim-motor-rows-" + Guid.NewGuid().ToString("N"));
         public Temp() => Directory.CreateDirectory(Dir);
         public string Write(string name, string text) { string p = Path.Combine(Dir, name); File.WriteAllText(p, text); return p; }
         public string Copy(string fixture) { string p = Path.Combine(Dir, fixture); File.Copy(Fixture(fixture), p); return p; }

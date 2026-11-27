@@ -11,7 +11,7 @@
     "id": { "$ref": "#/$defs/name" },
     "title": { "type": "string" },
     "description": { "type": "string" },
-    "role": { "enum": ["exciter", "governor", "stabiliser", "generic"] },
+    "role": { "enum": ["exciter", "governor", "stabiliser", "generic", "injection", "load", "relay"], "description": "injection and load (RC5 WP12): an injection takes vm and gives ip and iq (active and reactive current exporting positive, on the unit MBASE); a load takes vm and gives p and q (drawn power as multiples of the load PMw and QMvar); both are initialised from p0, q0 and v0. relay: takes vm, f (Hz, declared 1), p, q, dfdt (Hz/s, declared 1/s), speed and i, and gives trip (0 for no action, otherwise the whole-number reason code); it has no initialisation inputs." },
     "source": { "type": "string", "minLength": 1, "pattern": "\\S", "description": "The public source of the structure (required)." },
     "parameters": { "type": "array", "items": { "$ref": "#/$defs/parameter" } },
     "derived": { "type": "array", "items": { "$ref": "#/$defs/derived" } },
@@ -105,12 +105,14 @@
         "id": { "$ref": "#/$defs/name" },
         "type": {
           "enum": ["gain", "div", "sum", "product", "lag", "leadlag", "washout", "integrator", "pi", "limit", "ratelimit", "deadband",
-                   "table1d", "expsat", "min", "max", "switch", "const", "hold", "delay", "satpole"],
-          "description": "The closed catalogue. Parameters per type: gain k; div d; lag gain, time, [min, max]; leadlag lead, lag; washout time (a second input defers the state update to that value); integrator gain, [min, max]; pi kp, ki, [min, max]; limit min, max; ratelimit rise, fall; deadband lower, upper; table1d (the table member); expsat a, b; switch threshold; const value; delay steps (a literal whole number); satpole te, ke, a, b; sum needs signs; hold, product, min, max take none."
+                   "table1d", "expsat", "min", "max", "switch", "const", "hold", "delay", "satpole", "expr", "ontimer", "latch"],
+          "description": "The closed catalogue. Parameters per type: gain k; div d; lag gain, time, [min, max]; leadlag lead, lag; washout time (a second input defers the state update to that value); integrator gain, [min, max]; pi kp, ki, [min, max]; limit min, max; ratelimit rise, fall; deadband lower, upper; table1d (the table member); expsat a, b; switch threshold; const value; delay steps (a literal whole number); satpole te, ke, a, b; sum needs signs; hold, product, min, max take none; expr (RC5 WP12) takes the expr text and its output unit, and no params; ontimer time (an on-delay timer counted in whole steps, initialised with 0); latch takes none (a seal-in, initialised with 0 or 1)."
         },
         "inputs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
         "params": { "type": "object", "additionalProperties": { "$ref": "#/$defs/paramRef" } },
         "signs": { "type": "string", "pattern": "^[+-]+$" },
+        "expr": { "type": "string", "description": "RC5 WP12, expr blocks only: numbers (no exponent), in0..in7, @Param, + - * /, unary -, brackets, min, max, abs, sqrt, exp, clamp(x, lo, hi); evaluated in its written order." },
+        "unit": { "$ref": "#/$defs/unit", "description": "RC5 WP12, expr blocks only: the declared output unit (it is not inferred)." },
         "table": {
           "type": "object",
           "additionalProperties": false,

@@ -17,7 +17,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr374SignedAnchorV2Tests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-gr374-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-gr374-{Guid.NewGuid():N}");
 
     public Gr374SignedAnchorV2Tests() => Directory.CreateDirectory(_dir);
 

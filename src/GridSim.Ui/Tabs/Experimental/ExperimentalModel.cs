@@ -60,7 +60,7 @@ public class TraceRowModel : ObservableModel
 /// wave (dominant inter-area mode + its area split), Bialek power-flow tracing (top generator -> load
 /// allocations), and flow-based carbon intensity. Heavy traces are skipped on very large cases and the
 /// wave degrades gracefully when a case carries no per-machine inertia. Reads any solved
-/// <see cref="SimFrame"/>; every model here is provenance-tagged and off the validated solver path.
+/// <see cref="SimFrame"/>; every model here is provenance-tagged and separate from the standard solver path.
 ///
 /// <para>UI programme Phase 1.6 (third tab batch): this is the logic of the WPF <c>Views/ExperimentalVm.cs</c>, moved
 /// here line for line so the Avalonia app shows the same tab from the same code. Every displayed string and number is

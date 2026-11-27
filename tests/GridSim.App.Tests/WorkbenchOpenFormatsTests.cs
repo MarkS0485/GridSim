@@ -56,7 +56,7 @@ public sealed class WorkbenchOpenFormatsTests
         int buses = vm.Project!.Model.Buses.Count;
         Assert.True(buses > 0);
 
-        string zip = Path.Combine(Path.GetTempPath(), "wb-cgmes-" + Guid.NewGuid().ToString("N") + ".zip");
+        string zip = TestTemp.Under("wb-cgmes-" + Guid.NewGuid().ToString("N") + ".zip");
         try
         {
             System.IO.Compression.ZipFile.CreateFromDirectory(dir, zip);
@@ -71,7 +71,7 @@ public sealed class WorkbenchOpenFormatsTests
     public void An_unreadable_or_unknown_file_says_why_and_the_gate_still_applies_to_the_new_formats()
     {
         var vm = new WorkbenchViewModel();
-        string txt = Path.Combine(Path.GetTempPath(), "wb-" + Guid.NewGuid().ToString("N") + ".txt");
+        string txt = TestTemp.Under("wb-" + Guid.NewGuid().ToString("N") + ".txt");
         File.WriteAllText(txt, "x");
         try
         {

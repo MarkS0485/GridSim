@@ -1,0 +1,100 @@
+{
+  "schema": "gridsim-network/2",
+  "description": "RC5 per-unit protection reference network without any unit protection (three-unit.network.json minus CCGT B's protectionTemplate).",
+  "buses": [
+    {
+      "id": 1,
+      "name": "Hydro 132kV",
+      "baseKv": 132,
+      "type": "slack",
+      "vm": 1.0
+    },
+    {
+      "id": 2,
+      "name": "CCGT 132kV",
+      "baseKv": 132,
+      "type": "pv",
+      "vm": 1.0
+    },
+    {
+      "id": 3,
+      "name": "Town 33kV",
+      "baseKv": 33,
+      "type": "pq"
+    }
+  ],
+  "generators": [
+    {
+      "name": "Hydro A",
+      "bus": 1,
+      "type": "hydro",
+      "role": "slack",
+      "capacityMva": 300,
+      "outputMw": 100,
+      "pMinMw": 0,
+      "pMaxMw": 300,
+      "qMinMvar": -200,
+      "qMaxMvar": 200,
+      "voltageSetpoint": 1.0,
+      "inertiaH": 3.0
+    },
+    {
+      "name": "CCGT B",
+      "bus": 2,
+      "type": "ccgt",
+      "role": "pv",
+      "capacityMva": 150,
+      "outputMw": 80,
+      "pMinMw": 0,
+      "pMaxMw": 150,
+      "qMinMvar": -100,
+      "qMaxMvar": 100,
+      "voltageSetpoint": 1.0,
+      "inertiaH": 5.0
+    },
+    {
+      "name": "Embedded C",
+      "bus": 3,
+      "type": "chp",
+      "role": "pq",
+      "capacityMva": 50,
+      "outputMw": -20,
+      "pMinMw": -50,
+      "pMaxMw": 50,
+      "qMinMvar": 0,
+      "qMaxMvar": 0,
+      "inertiaH": 2.0
+    }
+  ],
+  "demands": [
+    {
+      "name": "Town",
+      "bus": 3,
+      "pMw": 140,
+      "qMvar": 30
+    }
+  ],
+  "lines": [
+    {
+      "name": "L12",
+      "from": 1,
+      "to": 2,
+      "rPu": 0.01,
+      "xPu": 0.05
+    },
+    {
+      "name": "L13",
+      "from": 1,
+      "to": 3,
+      "rPu": 0.02,
+      "xPu": 0.08
+    },
+    {
+      "name": "L23",
+      "from": 2,
+      "to": 3,
+      "rPu": 0.02,
+      "xPu": 0.08
+    }
+  ]
+}

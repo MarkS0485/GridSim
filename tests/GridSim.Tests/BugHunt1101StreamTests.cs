@@ -249,7 +249,7 @@ public sealed partial class BugHunt1101WebTests
     [Fact]
     public void B174_the_cli_listens_on_loopback_by_default_and_refuses_an_open_listener_without_a_client_rule()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-bh1101-interpose-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-bh1101-interpose-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

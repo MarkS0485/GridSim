@@ -635,7 +635,7 @@ public sealed class UiLineRoutePagesTests
     [Fact]
     public void The_Line_routes_setting_is_off_by_default_and_round_trips_through_the_settings_file()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-5d-settings-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-5d-settings-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

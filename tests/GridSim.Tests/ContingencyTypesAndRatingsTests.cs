@@ -58,7 +58,7 @@ public class ContingencyTypesAndRatingsTests
             Assert.Equal(B(m.Branches[i].RateCMva), B(back.Branches[i].RateCMva));
         }
 
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-f20-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-f20-" + Guid.NewGuid().ToString("N"));
         try
         {
             JsonCaseWriter.WriteDirectory(m, dir);
@@ -75,7 +75,7 @@ public class ContingencyTypesAndRatingsTests
     [Fact]
     public void Json_rating_b_and_c_are_per_circuit_like_rating_a()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-f20j-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-f20j-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

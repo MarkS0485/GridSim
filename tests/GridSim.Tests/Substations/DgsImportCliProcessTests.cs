@@ -10,7 +10,7 @@ public sealed class DgsImportCliProcessTests
 {
     private static string Dir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-r411c-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-r411c-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

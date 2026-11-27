@@ -324,18 +324,133 @@ The first line names the case, its bus count and its branch count. The nine bran
 (the reactive loss is negative because the lines' charging exceeds their series consumption). The residual line is the
 check that the branch losses and the bus shunt draw add up to the solver's total.
 
+### acopf-opt
+
+Minimise the losses of case9 instead of its cost:
+
+```
+gridsim acopf-opt case9 --objective losses
+```
+
+The losses fall from 3.307 MW at the cost optimum to 2.316 MW, with the voltages at buses 1, 6 and 8 at their 1.10 pu
+limit. `--objective rpo` holds every unit off the slack bus at its case output and moves only voltages, reactive output,
+taps and shunts: on case9 the losses are 4.010 MW. To let taps and shunts move, give a controls file:
+
+```
+{ "format": "gridsim-opf-controls/1", "taps": "oltcs",
+  "shunts": [ { "bus": 5, "bMinMvar": 0, "bMaxMvar": 50, "stepMvar": 10 } ] }
+```
+
+```
+gridsim acopf-opt mycase.m --objective rpo --controls controls.json --out result.csv
+```
+
+The run prints the continuous optimum, then rounds every tap and shunt to its step grid and solves again with them
+fixed. If the rounded point breaks a limit, it tries each control's other neighbour in turn and says which one it kept.
+
+A phase shifter's angle can be a control too. Name the branch and its angle range in the controls file:
+
+```
+{ "format": "gridsim-opf-controls/1",
+  "pst": [ { "branch": "PS1", "minDeg": -30, "maxDeg": 30, "stepDeg": 1 } ] }
+```
+
+On two parallel lines (0.01 + j0.1 and 0.02 + j0.1 pu) carrying 100 MW, an angle of 1.95 degrees on the second line
+cuts the losses from 0.771 MW to 0.685 MW. To search every floor/ceil combination of the discrete controls instead of
+the nearest point and single flips, add `--rounding neighbours` (up to 12 controls). It reports the best feasible
+combination of those neighbours, which is not a global mixed-integer optimum.
+
+### acscopf
+
+Secure case9 against every branch outage, preventive:
+
+```
+gridsim acscopf case9
+```
+
+Each round prints the outages in the problem and the outages the AC screen added. Outages that cut off a unit (the
+generator transformers on case9) are listed as islanding and not secured. At the end the secured outages are screened
+again at the final dispatch. If one still fails (its block let the unit voltages move, the screen holds them), the run
+ends `SecuredOutageFailsScreen` with exit 3 and names it, instead of reporting an optimum. Corrective mode lets each
+unit move by up to its ramp after an outage:
+
+```
+gridsim acscopf case9 --mode corrective --ramp-mw 30 --post-rating B
+```
+
+To secure against the loss of a unit, or of two branches at once, give the outages in a file:
+
+```
+{ "format": "gridsim-scopf-outages/1",
+  "outages": [ { "generators": [1] }, { "branches": [3, 4], "name": "double circuit" } ] }
+```
+
+```
+gridsim acscopf mycase.m --mode corrective --ramp-mw 15 --outages outages.json
+```
+
+After a unit outage the other synchronous units share its output by governor droop, in proportion to their effective
+MVA base (MBASE, or the system base when a unit has none), and the reference bus also takes the change in losses.
+Power-flow-only and converter-interfaced units take no share. Each unit must keep room for its share, so the optimum holds that reserve.
+In corrective mode the units may then move within their ramps. An outage of the slack unit moves the reference to the bus
+of the largest remaining unit. `--n2 pairs` secures every pair of branches (of `--contingencies`, or of all branches);
+above 5000 pairs it asks for `--max-outages`.
+
+### reconfig
+
+Reduce the losses of the 33-bus feeder by moving its open points:
+
+```
+gridsim reconfig data/matpower/dist/case33bw.m
+```
+
+It makes seven swaps, from 202.68 kW to 139.55 kW, and ends with branches 6, 8, 13, 31 and 36 open (GridSim indices,
+from 0), the published optimum for this feeder. `--respect-ratings` also rejects any configuration that puts a branch
+above its RATE_A.
+
+### dist-opt
+
+Place capacitor banks on the 33-bus feeder, sized against their cost. Write the settings to `cap.json`:
+
+```
+{
+  "format": "gridsim-distopt/1",
+  "common": { "vminPu": 0.9 },
+  "capplace": { "candidates": [ { "bus": 18, "stepsMvar": [0, 0.3, 0.6] }, { "bus": 33, "stepsMvar": [0, 0.3, 0.6] } ],
+                "energyCostPerMwh": 50, "costPerMvar": 100 }
+}
+```
+
+then run:
+
+```
+gridsim dist-opt data/matpower/dist/case33bw.m --mode capplace --params cap.json --out cap.csv
+```
+
+It prints each greedy step (bus, size, losses, objective), the banks chosen, the annual loss cost, the capital cost and
+the voltage range. `--mode vvo` moves OLTC taps and switched banks to cut the losses, or, with `"objective": "demand"`,
+to lower the voltage-dependent load inside the band (conservation voltage reduction). `--mode phase-balance` takes a
+`dist3ph-mesh` case file and moves single-phase loads between phases, then reports the head-branch neutral current
+before and after from two unbalanced solves. All three are local, deterministic searches; the CLI reference gives the
+settings file in full.
+
 ## Reading the output
 
 ### dcpf
 
 ```
-DC power flow - <case> (<buses> buses, <branches> branches)  [linear: series reactance only; ...; lossless]
+DC power flow - <case> (<buses> buses, <branches> branches)  [linear: series reactance only; R, charging, shunts, taps and phase shifts ignored; |V| = 1 pu; lossless]
+DC power flow - <case> (<buses> buses, <branches> branches)  [linear: series reactance with tap ratios, phase shifts and shunt conductance Gs (MATPOWER makeBdc); R, charging and Bs ignored; |V| = 1 pu; lossless]
   island ref bus R   N buses  demand D MW  scheduled generation G MW  reference injects X MW
   K of M rated branch(es) above 100% of RateA
   largest flows:
       branch I   name   from -> to   F MW   L% of R MVA
 ```
 
+- **Banner.** One of the two first lines is printed. The first ("series reactance only") is printed for a case with no
+  in-service tap ratio other than 0 or 1, no phase shift and no bus shunt conductance Gs; such a case is solved exactly
+  as before these terms were added, so its output is unchanged. The second ("MATPOWER makeBdc") is printed when the case
+  has any of them, and names the terms that then enter the DC model.
 - **Island lines.** One line per DC island. `ref bus` is the island's reference (angle 0), chosen as the slack when the
   island holds it. `demand` is the sum of the island's loads. `scheduled generation` is the sum of the in-service `Pg`,
   the reference bus's units included. `reference injects` is what the reference bus must inject for the island to balance
@@ -440,7 +555,8 @@ AC-OPF (full AC, primal-dual interior point) - <case> (<buses> buses, <units> un
 - Exit 0 when converged; 3 when not (`not converged` or `numerical failure`, with the iteration log on stderr and no
   dispatch, because the point is not an optimum); 1 when the case does not load or is refused (a unit without a cost
   curve, a piecewise-linear cost, a dispatchable load, a voltage-dependent load, crossed limits, a zero-impedance branch, no
-  slack bus, more than one island); 2 for an unknown case name or a bad or foreign flag.
+  slack bus, more than one island, or DC links, FACTS devices, static var compensators or induction machines, which this
+  AC-OPF does not model and names with their counts); 2 for an unknown case name or a bad or foreign flag.
 
 ### cpf
 
@@ -1192,12 +1308,12 @@ The angle of bus 3 is -3.6287 degrees: (10 x 0.1 + 20 x (-1.0)) / 300 = -0.06333
      ```
 
      ```
-$ gridsim acopf case118 --top 3
-ACOPF (DC dispatch + AC loss loop) - IEEE 118-bus (118 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
-acopf: the AC power flow at the DC-OPF dispatch of loss pass 0 (passes count from 0) did not converge: MaxIterations after 38 iteration(s), largest mismatch 6.210E-001 pu, lowest voltage 0.7966 pu where it stopped. The DC dispatch is chosen without voltages or reactive power, so it can be a point the network cannot carry within the units' reactive limits: the case's physics at that dispatch, not a solver fault.
-acopf: every unit is priced the same (50 GBP/MWh: the case gives no fuel types), so that dispatch is one arbitrary optimum of a degenerate LP; '--costs case' dispatches on the case's own cost curves (a .m file's mpc.gencost).
-[exit 3]
-```
+     $ gridsim acopf case118 --top 3
+     ACOPF (DC dispatch + AC loss loop) - IEEE 118-bus (118 buses)  [not a full AC-OPF: no voltage, reactive-power or AC branch-flow limits]
+     acopf: the AC power flow at the DC-OPF dispatch of loss pass 0 (passes count from 0) did not converge: MaxIterations after 38 iteration(s), largest mismatch 6.210E-001 pu, lowest voltage 0.7966 pu where it stopped. The DC dispatch is chosen without voltages or reactive power, so it can be a point the network cannot carry within the units' reactive limits: the case's physics at that dispatch, not a solver fault.
+     acopf: every unit is priced the same (50 GBP/MWh: the case gives no fuel types), so that dispatch is one arbitrary optimum of a degenerate LP; '--costs case' dispatches on the case's own cost curves (a .m file's mpc.gencost).
+     [exit 3]
+     ```
 
   2. `acopf: the DC-OPF dispatch of loss pass 0 (passes count from 0) is infeasible (no dispatch meets the demand within
      the units' limits and the rated lines' limits), and no later pass can be feasible: the loss loop only raises demand,
@@ -1217,15 +1333,15 @@ acopf: every unit is priced the same (50 GBP/MWh: the case gives no fuel types),
   loads multiplied by 2.5:
 
   ```
-$ gridsim cpf docs/_captures/opf/overloaded-case9.m
-CPF - overloaded-case9 (9 buses)  [load scaled uniformly, slack absorbs the balance]
-  max loadability lambda = 0.94921875  (base demand 787.5 MW -> 747.5 MW at the last converged point; nose bracketed to 0.001)
-  margin -5.08% above base load
-note: overloaded-case9.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
-note: overloaded-case9.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
-cpf: the base case (lambda = 1) did not converge; only a lighter load did (largest converged lambda 0.94921875, margin -5.08%), so the case as given has no loadability margin. Exit 3.
-[exit 3]
-```
+  $ gridsim cpf docs/_captures/opf/overloaded-case9.m
+  CPF - overloaded-case9 (9 buses)  [load scaled uniformly, slack absorbs the balance]
+    max loadability lambda = 0.94921875  (base demand 787.5 MW -> 747.5 MW at the last converged point; nose bracketed to 0.001)
+    margin -5.08% above base load
+  note: overloaded-case9.m: nominal frequency not given (MATPOWER files carry none); assumed 50 Hz - pass the real value if this is, for example, a 60 Hz system (gridsim: --frequency-hz 60).
+  note: overloaded-case9.m: read mpc.gencost (3 row(s)); the costs are carried on the generators and used by dcopf / acopf when asked (--costs case); without it the OPF uses the fuel-type merit order.
+  cpf: the base case (lambda = 1) did not converge; only a lighter load did (largest converged lambda 0.94921875, margin -5.08%), so the case as given has no loadability margin. Exit 3.
+  [exit 3]
+  ```
 
   The two `note:` lines come from the MATPOWER reader on standard error: the file gives no nominal frequency, so 50 Hz is
   assumed, and its `gencost` table was read. The case does not solve as given (`gridsim docs/_captures/opf/overloaded-case9.m --once`
@@ -1235,13 +1351,13 @@ cpf: the base case (lambda = 1) did not converge; only a lighter load did (large
   `--max-steps 5` the search stops at lambda 2.0, which is 0.373 below the real limit:
 
   ```
-$ gridsim cpf case9 --max-steps 5
-CPF - IEEE 9-bus (WSCC) (9 buses)  [load scaled uniformly, slack absorbs the balance]
-  max loadability lambda = 2  (base demand 315.0 MW -> 630.0 MW at the last converged point; NOT bracketed: --max-steps 5 ran out with every solve converged, so lambda is only a lower bound)
-  margin 100.00% above base load
-cpf: --max-steps 5 ran out before the nose was bracketed to --min-step 0.001; the lambda above is a lower bound, not the loadability limit. Raise --max-steps (or --min-step). Exit 3.
-[exit 3]
-```
+  $ gridsim cpf case9 --max-steps 5
+  CPF - IEEE 9-bus (WSCC) (9 buses)  [load scaled uniformly, slack absorbs the balance]
+    max loadability lambda = 2  (base demand 315.0 MW -> 630.0 MW at the last converged point; NOT bracketed: --max-steps 5 ran out with every solve converged, so lambda is only a lower bound)
+    margin 100.00% above base load
+  cpf: --max-steps 5 ran out before the nose was bracketed to --min-step 0.001; the lambda above is a lower bound, not the loadability limit. Raise --max-steps (or --min-step). Exit 3.
+  [exit 3]
+  ```
 
 
   The verb does not print how many power flows it ran (the result file of `--json`, `--csv` or `--out` carries it as `solves`), so keep `--max-steps` well above what the search needs. The default of 200 is ten times the 20 solves case9 takes.
@@ -1250,35 +1366,35 @@ cpf: --max-steps 5 ran out before the nose was bracketed to --min-step 0.001; th
   9-bus (WSCC)' has no bus 99.`:
 
   ```
-$ gridsim ptdf case9 --bus 1
-PTDF - IEEE 9-bus (WSCC) (9 buses): +1 MW injected at bus 1 (withdrawn at slack 1) flows on:
-[exit 0]
-```
+  $ gridsim ptdf case9 --bus 1
+  PTDF - IEEE 9-bus (WSCC) (9 buses): +1 MW injected at bus 1 (withdrawn at slack 1) flows on:
+  [exit 0]
+  ```
 
 - **`ptdf` and `lodf` without `--bus` or `--branch` exit 2.** The verb loads and factors the case first, then checks the
   flag:
 
   ```
-$ gridsim ptdf case9
-usage: gridsim ptdf <case> --bus <busId>
-[exit 2]
-```
+  $ gridsim ptdf case9
+  usage: gridsim ptdf <case> --bus <busId>
+  [exit 2]
+  ```
 
   ```
-$ gridsim lodf case9
-usage: gridsim lodf <case> --branch <0..8>
-[exit 2]
-```
+  $ gridsim lodf case9
+  usage: gridsim lodf <case> --branch <0..8>
+  [exit 2]
+  ```
 
   The two usage lines differ: `lodf` shows the valid branch range for the case.
 - **`taps` needs on-load tap changers.** A case with none exits 1. The built-in IEEE cases and the bundled MATPOWER cases
   have none, because a MATPOWER transformer carries a fixed off-nominal ratio and no tap limits:
 
   ```
-$ gridsim taps case9
-taps: case 'IEEE 9-bus (WSCC)' has no on-load tap changers to schedule.
-[exit 1]
-```
+  $ gridsim taps case9
+  taps: case 'IEEE 9-bus (WSCC)' has no on-load tap changers to schedule.
+  [exit 1]
+  ```
 
 - **`taps` chooses the objective, not the OLTC.** The target is the `--target` value for every bus. After the schedule a
   block lists every OLTC whose controlled bus would sit outside its own target and deadband, so its local regulator would
@@ -1289,60 +1405,60 @@ taps: case 'IEEE 9-bus (WSCC)' has no on-load tap changers to schedule.
   different case. `losses` is covered too, even though its case argument is optional:
 
   ```
-$ gridsim dcopf --dir data/uk
-error: dcopf does not take --dir (it is not one of dcopf's flags, so it would be silently ignored). Run 'gridsim dcopf --help' for the flags dcopf takes, or see docs/manual/0019 CLI reference.md.
-[exit 2]
-```
+  $ gridsim dcopf --dir data/uk
+  error: dcopf does not take --dir (it is not one of dcopf's flags, so it would be silently ignored). Run 'gridsim dcopf --help' for the flags dcopf takes, or see docs/manual/0019 CLI reference.md.
+  [exit 2]
+  ```
 
   ```
-$ gridsim losses --dir data/uk
-error: losses does not take --dir (it is not one of losses's flags, so it would be silently ignored). Run 'gridsim losses --help' for the flags losses takes, or see docs/manual/0019 CLI reference.md.
-[exit 2]
-```
+  $ gridsim losses --dir data/uk
+  error: losses does not take --dir (it is not one of losses's flags, so it would be silently ignored). Run 'gridsim losses --help' for the flags losses takes, or see docs/manual/0019 CLI reference.md.
+  [exit 2]
+  ```
 
   Pass the folder as the case argument.
 - **A flag that belongs to another verb is refused.** Each verb accepts the flags its section of the
   [CLI reference](<0019 CLI reference.md>) names. Any other flag exits 2 and names the flag and the verb:
 
   ```
-$ gridsim taps uk --step 3
-error: taps does not take --step (it is not one of taps's flags, so it would be silently ignored). Run 'gridsim taps --help' for the flags taps takes, or see docs/manual/0019 CLI reference.md.
-[exit 2]
-```
+  $ gridsim taps uk --step 3
+  error: taps does not take --step (it is not one of taps's flags, so it would be silently ignored). Run 'gridsim taps --help' for the flags taps takes, or see docs/manual/0019 CLI reference.md.
+  [exit 2]
+  ```
 
   ```
-$ gridsim losses uk --top 3
-error: losses does not take --top (it is not one of losses's flags, so it would be silently ignored). Run 'gridsim losses --help' for the flags losses takes, or see docs/manual/0019 CLI reference.md.
-[exit 2]
-```
+  $ gridsim losses uk --top 3
+  error: losses does not take --top (it is not one of losses's flags, so it would be silently ignored). Run 'gridsim losses --help' for the flags losses takes, or see docs/manual/0019 CLI reference.md.
+  [exit 2]
+  ```
 
   `--costs` and `--prices` belong to `dcopf` and `acopf` only:
 
   ```
-$ gridsim ptdf case9 --bus 1 --costs case
-error: --costs applies to dcopf and acopf only (got 'ptdf').
-[exit 2]
-```
+  $ gridsim ptdf case9 --bus 1 --costs case
+  error: --costs applies to dcopf and acopf only (got 'ptdf').
+  [exit 2]
+  ```
 - **An unknown case name exits 2; a missing file exits 1.** `dcopf`, `acopf`, `cpf`, `taps`, `ptdf`, `lodf` and `dcpf`
   print `error loading case '<arg>': <reason>`, and `losses` prints `error: losses: <reason>`:
 
   ```
-$ gridsim dcopf nosuchcase
-error loading case 'nosuchcase': unknown case 'nosuchcase' (built-in names: case118, case14, case145, case24, case30, case300, case57, case9, cigre, gb, gb-full, gb-network-2224, gb-reduced, gb-reduced-29, gb-synthetic, ieee9, pypsa-gb-reduced, pypsa-gb-zonal, rts, synthetic, uk; or a case folder, or a MATPOWER .m file, or a JSON v2 case manifest .json)
-[exit 2]
-```
+  $ gridsim dcopf nosuchcase
+  error loading case 'nosuchcase': unknown case 'nosuchcase' (built-in names: case118, case14, case145, case24, case30, case300, case57, case9, cigre, gb, gb-full, gb-network-2224, gb-reduced, gb-reduced-29, gb-synthetic, ieee9, pypsa-gb-reduced, pypsa-gb-zonal, rts, synthetic, uk; or a case folder, or a MATPOWER .m file, or a JSON v2 case manifest .json)
+  [exit 2]
+  ```
 
   ```
-$ gridsim losses nosuchcase
-error: losses: unknown case 'nosuchcase' (built-in names: case118, case14, case145, case24, case30, case300, case57, case9, cigre, gb, gb-full, gb-network-2224, gb-reduced, gb-reduced-29, gb-synthetic, ieee9, pypsa-gb-reduced, pypsa-gb-zonal, rts, synthetic, uk; or a case folder, or a MATPOWER .m file, or a JSON v2 case manifest .json)
-[exit 2]
-```
+  $ gridsim losses nosuchcase
+  error: losses: unknown case 'nosuchcase' (built-in names: case118, case14, case145, case24, case30, case300, case57, case9, cigre, gb, gb-full, gb-network-2224, gb-reduced, gb-reduced-29, gb-synthetic, ieee9, pypsa-gb-reduced, pypsa-gb-zonal, rts, synthetic, uk; or a case folder, or a MATPOWER .m file, or a JSON v2 case manifest .json)
+  [exit 2]
+  ```
 
   ```
-$ gridsim losses nosuch.m
-error: MATPOWER case file not found: 'nosuch.m' (full path nosuch.m).
-[exit 1]
-```
+  $ gridsim losses nosuch.m
+  error: MATPOWER case file not found: 'nosuch.m' (full path nosuch.m).
+  [exit 1]
+  ```
 
   A second case argument to `losses` exits 2.
 - **A generator with `Pmin` above `Pmax` exits 1** in `dcopf` and `acopf`, with `[dcopf] DC-OPF: generator 0 ('' at bus 1)
@@ -1361,16 +1477,19 @@ error: MATPOWER case file not found: 'nosuch.m' (full path nosuch.m).
   polynomial up to quadratic with a non-negative quadratic term, or a convex piecewise-linear curve; a cubic term, a
   concave curve and a unit without a curve are refused. Start-up and shut-down costs are carried, not optimised. Prices are
   lossless DC prices: energy plus congestion, no marginal-loss component.
-- `dcpf` is linear: it uses series reactance only, schedules the generation the case holds and lets the reference bus of each
-  island absorb the imbalance, so it is not a loss-aware solution and it does not enforce a rating.
+- `dcpf` is linear, with MATPOWER's DC model (`makeBdc`): series reactance with tap ratios (b = 1/(x tap)), phase shifts
+  as injections and bus shunt conductance Gs as a constant-power load. Resistance, charging and shunt susceptance Bs are
+  ignored and every voltage is 1 pu. It schedules the generation the case holds and lets the reference bus of each island
+  absorb the imbalance (Gs included), so it is not a loss-aware solution and it does not enforce a rating.
 - `cpf` is a bisection on a uniform load multiplier, not a continuation method: it has no predictor, no corrector and no
   parameterisation that passes the nose. Newton-Raphson restarts from the case's stored voltages at every multiplier, and
   non-convergence is taken to mean the nose is passed.
 - `cpf` scales the loads only, in a fixed direction, and takes the whole increase on the slack bus. Generator active-power
   limits, branch ratings and a limit on the slack are not checked.
 - `taps` pairs an OLTC with a branch by name; a name that matches no branch, or several, is refused.
-- `ptdf` and `lodf` use the series reactance only. Resistance, charging, tap ratios and phase shifts are ignored, and every
-  voltage is 1 pu.
+- `ptdf` and `lodf` use the same DC model as `dcpf`: series reactance divided by the tap ratio. A PTDF or LODF is the
+  response to a unit injection, so phase shifts and Gs do not change it; they enter the flows themselves. Resistance,
+  charging and Bs are ignored, and every voltage is 1 pu.
 - `losses` allocates losses to branches and zones, not to generators or loads.
 
 ## See also

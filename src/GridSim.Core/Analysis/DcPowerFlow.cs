@@ -15,8 +15,11 @@ namespace GridSim.Core.Analysis;
 /// is lossless): minus the sum of every other bus's net injection. Compare with the reference bus's own scheduled net
 /// injection to see how much it picks up.</param>
 /// <param name="HasGeneration">False when no generator sits on the island: its load cannot really be supplied.</param>
+/// <param name="ShuntLoadMw">The island's bus shunt conductance load (sum of Gs, MW at 1 pu; B33). With it the island
+/// balances as scheduled generation = <c>LoadMw + ShuntLoadMw</c>, and the reference injection includes it.</param>
 public sealed record DcIslandBalance(
-    int ReferenceBusId, int BusCount, double LoadMw, double ScheduledGenerationMw, double ReferenceInjectionMw, bool HasGeneration);
+    int ReferenceBusId, int BusCount, double LoadMw, double ScheduledGenerationMw, double ReferenceInjectionMw, bool HasGeneration,
+    double ShuntLoadMw = 0.0);
 
 /// <summary>The result of a <see cref="DcPowerFlow"/> solve.</summary>
 /// <param name="BusIds">Bus ids in model order.</param>
@@ -37,15 +40,33 @@ public sealed record DcPowerFlowResult(
 /// factorisation, the same per-island references and the same flow products as its <c>DcFlows</c>, which the DC-OPF
 /// and the PTDF / LODF verbs already use), so there is one DC model in GridSim, not two.
 ///
-/// Convention (that of <see cref="DistributionFactors"/>): only series reactance enters; resistance, line charging,
-/// shunts, tap ratios and phase shifts are ignored; voltage magnitudes are 1 pu; there are no losses, so each island's
-/// reference bus picks up exactly the island's imbalance. Injections are the in-service generators' Pg minus the bus
-/// demand Pd. Nothing here is iterative, so there is no convergence question; a network whose DC model cannot be
+/// Convention (that of <see cref="DistributionFactors"/>, MATPOWER's <c>makeBdc</c> and <c>rundcpf</c>, B33): series
+/// reactance with tap ratios (b = (1/X)/tap), phase shifts as injections (the flow on a shifted branch is
+/// b (theta_from - theta_to - phi)) and bus shunt conductance Gs as a constant-power load; resistance, line charging and
+/// the shunt susceptance Bs are ignored; voltage magnitudes are 1 pu; there are no losses, so each island's reference bus
+/// picks up exactly the island's imbalance, Gs included (scheduled generation = demand + Gs). The reported injections
+/// (<see cref="DcPowerFlowResult.PInjMw"/>) are the in-service generators' Pg minus the bus demand Pd; a model with no
+/// tap other than 0 or 1, no shift and no Gs gives the reactance-only result bit for bit. Nothing here is iterative, so
+/// there is no convergence question; a network whose DC model cannot be
 /// formed (an in-service zero-reactance branch that is the only link between two islands, or a singular B') throws
-/// <see cref="InvalidOperationException"/> from <see cref="DistributionFactors.Build"/>.
+/// <see cref="InvalidOperationException"/> from <see cref="DistributionFactors.Build(GridModel, int?)"/>.
 /// </summary>
 public static class DcPowerFlow
 {
+    /// <summary>B33: true when the network has anything MATPOWER's makeBdc adds to the reactance-only DC model: an
+    /// in-service branch with a tap ratio other than 0 or 1 or a non-zero phase shift, or a bus with a non-zero shunt
+    /// conductance. When false, every DC result is computed by the reactance-only instructions, bit for bit, and text that
+    /// names the DC model keeps its earlier wording.</summary>
+    public static bool UsesMakeBdcTerms(GridModel model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        foreach (var br in model.Branches)
+            if (br.InService && ((br.TapRatio != 0.0 && br.TapRatio != 1.0) || br.PhaseShiftDeg != 0.0)) return true;
+        foreach (var bus in model.Buses)
+            if (bus.Gs != 0.0) return true;
+        return false;
+    }
+
     /// <summary>Solve the DC power flow of <paramref name="model"/>.</summary>
     public static DcPowerFlowResult Solve(GridModel model)
     {
@@ -86,7 +107,7 @@ public static class DcPowerFlow
     /// Entry i of the result is BIT-IDENTICAL to <see cref="Solve(GridModel)"/>(<paramref name="models"/>[i]), or with a
     /// positive <paramref name="diagonalPreference"/> to <see cref="Solve(GridModel, double)"/> under the same rule.
     ///
-    /// <para>How. Each model's reduced susceptance B' is built exactly as <see cref="Solve"/> builds it. Models whose B'
+    /// <para>How. Each model's reduced susceptance B' is built exactly as <see cref="Solve(GridModel)"/> builds it. Models whose B'
     /// has the same sparsity structure form a family (a Monte Carlo over reactances on one topology is one family);
     /// each family is factored and solved <see cref="MultiCaseSparseLu.Lanes"/> models at a time, one model per SIMD
     /// lane (<see cref="SparseLuFamily"/>), and every lane holds exactly the bits the single-model factorisation and
@@ -101,9 +122,9 @@ public static class DcPowerFlow
     /// only the time taken, never a bit. With the opt-in <paramref name="diagonalPreference"/> the pivot order is stable
     /// and every lane shares (gb-full: 32 of 32 at a 10% spread, 32 factorisations in about a third of the time).</para>
     ///
-    /// <para>Failures are as loud as <see cref="Solve"/>'s: a model the DC model cannot represent, or whose B' is
+    /// <para>Failures are as loud as <see cref="Solve(GridModel)"/>'s: a model the DC model cannot represent, or whose B' is
     /// singular, throws <see cref="InvalidOperationException"/> naming its position in the batch (the lowest such
-    /// position when several fail), with <see cref="Solve"/>'s own exception as the inner exception.</para>
+    /// position when several fail), with <see cref="Solve(GridModel)"/>'s own exception as the inner exception.</para>
     /// </summary>
     /// <param name="models">The models (none null).</param>
     /// <param name="maxDegreeOfParallelism">Most batches in flight at once; -1 (the default) lets the runtime choose, 1
@@ -135,19 +156,19 @@ public static class DcPowerFlow
         });
 
         // Stage 2: families by B' structure, in model order (the first unassigned model's B' is the template), cut into
-        // batches of up to Lanes models.
-        var familyOf = new int[count];
-        Array.Fill(familyOf, -1);
-        int familyCount = 0;
-        var batches = new List<(SparseLuFamily Family, int[] Members, bool First)>();
+        // batches of up to Lanes models. The grouping hashes each structure (FamilyAssignments), so it is linear in the
+        // number of models; families, members and batches are exactly those of a pairwise scan in model order.
+        var bPrimes = new CsrMatrix?[count];
+        for (int i = 0; i < count; i++) bPrimes[i] = prepared[i]?.BPrime;
+        int[] familyOf = FamilyAssignments(bPrimes, out int familyCount);
+        var familyMembers = new List<int>?[familyCount];
         for (int i = 0; i < count; i++)
+            if (familyOf[i] >= 0) (familyMembers[familyOf[i]] ??= new List<int>()).Add(i);
+        var batches = new List<(SparseLuFamily Family, int[] Members, bool First)>();
+        for (int f = 0; f < familyCount; f++)
         {
-            if (prepared[i] is null || familyOf[i] >= 0) continue;
-            var family = new SparseLuFamily(prepared[i]!.BPrime, diagonalPreference);
-            int f = familyCount++;
-            var members = new List<int>();
-            for (int j = i; j < count; j++)
-                if (prepared[j] is not null && familyOf[j] < 0 && family.IsMember(prepared[j]!.BPrime)) { familyOf[j] = f; members.Add(j); }
+            List<int> members = familyMembers[f]!;
+            var family = new SparseLuFamily(prepared[members[0]]!.BPrime, diagonalPreference);
             for (int k = 0; k < members.Count; k += MultiCaseSparseLu.Lanes)
                 batches.Add((family, members.GetRange(k, Math.Min(MultiCaseSparseLu.Lanes, members.Count - k)).ToArray(), k == 0));
         }
@@ -211,6 +232,67 @@ public static class DcPowerFlow
         }
     }
 
+    /// <summary>
+    /// The family of each matrix by sparsity structure (order, row pointers, column indices): entry i is the family of
+    /// <paramref name="patterns"/>[i], or -1 for a null entry. Families are numbered 0, 1, ... in the order of their first
+    /// member, and two matrices share a family exactly when their structures are equal, so the numbering is the one a
+    /// pairwise scan in index order gives. Each structure is hashed once (FNV-1a, 64-bit, a fixed function of the
+    /// integers, never the runtime's per-process seed) and compared in full only with the templates of the same hash, so
+    /// the cost is linear in the number of matrices times their stored entries, not quadratic in the number of families.
+    /// Only lookups are made in the hash table, never an enumeration, so its layout cannot reach the result.
+    /// </summary>
+    internal static int[] FamilyAssignments(IReadOnlyList<CsrMatrix?> patterns, out int familyCount)
+    {
+        ArgumentNullException.ThrowIfNull(patterns);
+        int count = patterns.Count;
+        var familyOf = new int[count];
+        var templates = new List<CsrMatrix>();
+        var byHash = new Dictionary<ulong, List<int>>();
+        for (int i = 0; i < count; i++)
+        {
+            CsrMatrix? a = patterns[i];
+            if (a is null) { familyOf[i] = -1; continue; }
+            ulong h = StructureHash(a);
+            if (!byHash.TryGetValue(h, out List<int>? candidates)) byHash[h] = candidates = new List<int>(1);
+            int found = -1;
+            foreach (int f in candidates)
+                if (SameStructure(templates[f], a)) { found = f; break; }
+            if (found < 0)
+            {
+                found = templates.Count;
+                templates.Add(a);
+                candidates.Add(found);
+            }
+            familyOf[i] = found;
+        }
+        familyCount = templates.Count;
+        return familyOf;
+    }
+
+    // The test SparseLuFamily.IsMember makes: the same order, row pointers and column indices.
+    private static bool SameStructure(CsrMatrix t, CsrMatrix a)
+        => a.N == t.N && a.RowPtr.AsSpan().SequenceEqual(t.RowPtr) && a.ColIdx.AsSpan().SequenceEqual(t.ColIdx);
+
+    private static ulong StructureHash(CsrMatrix a)
+    {
+        const ulong offset = 14695981039346656037UL, prime = 1099511628211UL;
+        ulong h = offset;
+        h = Mix(h, a.N);
+        h = Mix(h, a.RowPtr.Length);
+        foreach (int v in a.RowPtr) h = Mix(h, v);
+        h = Mix(h, a.ColIdx.Length);
+        foreach (int v in a.ColIdx) h = Mix(h, v);
+        return h;
+
+        // FNV-1a over the four bytes of v, least significant first.
+        static ulong Mix(ulong h, int v)
+        {
+            uint u = unchecked((uint)v);
+            for (int b = 0; b < 4; b++) { h ^= (u >> (8 * b)) & 0xFF; h = unchecked(h * prime); }
+            return h;
+        }
+    }
+
     // Net scheduled injection per bus (MW): in-service generation minus demand, accumulated in model order.
     private static Dictionary<int, double> NetInjections(GridModel model)
     {
@@ -250,10 +332,13 @@ public static class DcPowerFlow
                 gen += genByBus.GetValueOrDefault(id);
                 if (id != isl.ReferenceBusId) others += netByBus.GetValueOrDefault(id);
             }
-            double refInj = -others;
+            // B33: the phase-shift injections of an island sum to zero, so only the island's Gs (the reference's own
+            // included) adds to what the reference supplies: MATPOWER's Pg = Pinj + Pload + Gs.
+            double gsIsland = isl.ShuntLoadMw;
+            double refInj = gsIsland == 0.0 ? -others : -others + gsIsland;
             int refIdx = firstIndex.TryGetValue(isl.ReferenceBusId, out int ri) ? ri : -1;
             if (refIdx >= 0) pInj[refIdx] = refInj;
-            islands.Add(new DcIslandBalance(isl.ReferenceBusId, isl.BusIds.Count, isl.LoadMw, gen, refInj, isl.HasGeneration));
+            islands.Add(new DcIslandBalance(isl.ReferenceBusId, isl.BusIds.Count, isl.LoadMw, gen, refInj, isl.HasGeneration, gsIsland));
         }
 
         var loading = new double[flows.Length];

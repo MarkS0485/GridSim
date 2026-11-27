@@ -20,7 +20,7 @@ public sealed class TripAvailabilityTests : IDisposable
     public TripAvailabilityTests()
     {
         // A two-frame case9 replay directory.
-        _dir = Path.Combine(Path.GetTempPath(), $"gridsim-tripavail-{Guid.NewGuid():N}");
+        _dir = TestTemp.Under($"gridsim-tripavail-{Guid.NewGuid():N}");
         Directory.CreateDirectory(Path.Combine(_dir, "exports"));
         var trace = new SolveTrace();
         GridModel model = IeeeCases.Case9();

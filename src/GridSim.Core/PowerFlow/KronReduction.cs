@@ -14,7 +14,7 @@ namespace GridSim.Core.PowerFlow;
 /// coefficients: the imaginary part of the reduced admittance between two retained buses is their
 /// synchronising susceptance.
 ///
-/// Uses sequential single-node elimination (Y_ij <- Y_ij - Y_ik*Y_kj / Y_kk), the numerically standard
+/// Uses sequential single-node elimination (Y_ij &lt;- Y_ij - Y_ik*Y_kj / Y_kk), the numerically standard
 /// form; equivalent to Y_kept - Y_ke*Y_ee^-1*Y_ek but without forming the inverse.
 /// </summary>
 public static class KronReduction

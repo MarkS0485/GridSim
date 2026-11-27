@@ -148,7 +148,7 @@ public static class DgsClassMap
         }),
         new("ElmShnt", M, "shunt", "A capacitor of qcapn MVAr (shtype 2 only).", new[]
         {
-            A("qcapn", M, Un, "MVAr", "Bs", "Bs = -qcapn (a capacitor draws negative MVAr at 1 pu)"),
+            A("qcapn", M, Un, "MVAr", "Bs", "Bs = +qcapn (a capacitor injects qcapn MVAr at 1 pu)"),
             A("shtype", M, Un, "", "kind", "present and not 2: refused"),
             A("outserv", M, Ok, "", "omitted", "1: left out and listed as out of service"),
             A("loc_name", C, Un, "", "identity", ""),

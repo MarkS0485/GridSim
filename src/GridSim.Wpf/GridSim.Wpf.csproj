@@ -17,6 +17,8 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RootNamespace>GridSim.Wpf</RootNamespace>
     <AssemblyName>GridSim.Wpf</AssemblyName>
+    <!-- The entry point is Program.Main, which runs the telemetry guard before WPF's generated App.Main. -->
+    <StartupObject>GridSim.Wpf.Program</StartupObject>
     <ApplicationIcon />
     <!-- Include the release restore graph in the normal lock file, as for the CLI. -->
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>

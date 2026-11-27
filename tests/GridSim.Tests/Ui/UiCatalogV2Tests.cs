@@ -23,7 +23,7 @@ namespace GridSim.Tests.Ui;
 /// </summary>
 public sealed class UiCatalogV2Tests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "gridsim-catalog-v2-" + Guid.NewGuid().ToString("N"));
+    private readonly string _root = TestTemp.Under("gridsim-catalog-v2-" + Guid.NewGuid().ToString("N"));
 
     public UiCatalogV2Tests() => Directory.CreateDirectory(_root);
 

@@ -20,6 +20,11 @@ public enum DynamicsUnmodelledPolicy
 /// <summary>A machine by its native RAW identity: bus number and machine ID (the key DYR records use).</summary>
 public sealed record DynamicsMachineId(int Bus, string Id)
 {
+    /// <summary>The machine identifier, trimmed once here (ANA-22): "1 " and "1" are the same machine everywhere (one place
+    /// trimmed, the user-model overlay and the duplicate checks did not, so the second of two models on one unit silently
+    /// replaced the first).</summary>
+    public string Id { get; init; } = Id is null ? Id! : Id.Trim();
+
     /// <summary>The label used in messages and channel names.</summary>
     public override string ToString() => $"machine '{Id}' at bus {Bus}";
 }
@@ -46,11 +51,28 @@ public enum DynamicsEventKind
     MachineTrip,
     /// <summary>A constant-admittance load step at a bus (MW, Mvar; negative to shed).</summary>
     LoadStep,
+    /// <summary>WP2: a three-phase, single line to ground, line to line or double line to ground fault at a bus, bolted or
+    /// through a fault impedance (<see cref="GridSim.Core.Dynamics.Models.RmsSequenceFault"/>); cleared by a FaultClear.</summary>
+    SequenceFault,
+    /// <summary>WP2: the same fault a fraction along a line (<see cref="GridSim.Core.Dynamics.Models.RmsBranchSequenceFault"/>).</summary>
+    LineFault,
+    /// <summary>WP2: the clearance of a fault along a line (<see cref="GridSim.Core.Dynamics.Models.RmsBranchFaultClear"/>).</summary>
+    LineFaultClear,
 }
 
 /// <summary>One requested event. Exactly the identity fields its kind needs are set (checked by the runner).</summary>
 public sealed record DynamicsEventRequest(DynamicsEventKind Kind, double AtSeconds, int? Bus = null,
-    DynamicsBranchId? Branch = null, DynamicsMachineId? Machine = null, double? PMw = null, double? QMvar = null);
+    DynamicsBranchId? Branch = null, DynamicsMachineId? Machine = null, double? PMw = null, double? QMvar = null)
+{
+    /// <summary>WP2: the fault type of a SequenceFault or LineFault event.</summary>
+    public GridSim.Core.Protection.FaultType? FaultType { get; init; }
+    /// <summary>WP2: the fault resistance (pu on the system base) of a SequenceFault or LineFault event; 0 when not given.</summary>
+    public double? FaultRPu { get; init; }
+    /// <summary>WP2: the fault reactance (pu on the system base) of a SequenceFault or LineFault event; 0 when not given.</summary>
+    public double? FaultXPu { get; init; }
+    /// <summary>WP2: the fraction along the line (from its From bus) of a LineFault event.</summary>
+    public double? Fraction { get; init; }
+}
 
 /// <summary>The monitored channel kinds.</summary>
 public enum DynamicsChannelKind
@@ -136,4 +158,77 @@ public sealed record DynamicsStudyRequest(
     IReadOnlyList<DynamicsChannelRequest> Channels, IReadOnlyList<DynamicsCaseRequest> Cases,
     int MaxParallelism = 1,
     IReadOnlyList<UserModelAssignment>? UserModels = null,
-    DynamicsAdaptiveRequest? Adaptive = null);   // RC4 R4-14: opt-in variable-step companion run; null = the incumbent study, unchanged
+    DynamicsAdaptiveRequest? Adaptive = null)   // RC4 R4-14: opt-in variable-step companion run; null = the incumbent study, unchanged
+{
+    /// <summary>
+    /// RC5 (opt-in): the units' own relays for the full-model companion run only, with or without <see cref="Adaptive"/>:
+    /// each events row is also re-run on the full-model fixed-step engine with them acting (the result's
+    /// <see cref="DynamicsStudyResult.FullModelUnitRelays"/>); the fixed-step rows and any adaptive rows are unchanged. Null
+    /// (every existing request) leaves the study exactly as it was. Give unit protection once: setting this and
+    /// <see cref="DynamicsAdaptiveRequest.UnitProtection"/> (which drives both companion runs) is an input error.
+    /// </summary>
+    public GridSim.Core.Protection.UnitProtectionSet? UnitProtection { get; init; }
+
+    /// <summary>
+    /// WP6 (RC5, opt-in): RMS models for network devices of the case (an SVC, a STATCOM, an LCC or a VSC link, each bound by
+    /// name; see <see cref="GridSim.Core.Dynamics.Models.RmsNetworkDeviceData"/>). Null or empty (every existing request): the
+    /// study leaves those devices out of the RMS network, exactly as before.
+    /// </summary>
+    public IReadOnlyList<GridSim.Core.Dynamics.Models.RmsNetworkDeviceData>? Devices { get; init; }
+
+    /// <summary>
+    /// RC5 WP12 (opt-in): plug-in governor and exciter models bound to machines (<see cref="PluginModelAssignment"/>), applied
+    /// after <see cref="UserModels"/> by the same route. Null or empty (every existing request): the study is exactly as before.
+    /// Every result that uses one carries the plug-in id, the assembly SHA-256, the contract version and the label
+    /// OUTSIDE THE VERIFIED CONTRACT in its coverage notes.
+    /// </summary>
+    public IReadOnlyList<PluginModelAssignment>? PluginModels { get; init; }
+
+    /// <summary>
+    /// WP21 (RC5, opt-in): a step schedule for the events rows (<see cref="GridSim.Core.Dynamics.Models.RmsStepSchedule"/>): the
+    /// full model takes fixed steps inside each window. The no-event interval and the critical clearing time rows keep
+    /// <see cref="StepSeconds"/>. Null (every existing request): the study is exactly as before.
+    /// </summary>
+    public GridSim.Core.Dynamics.Models.RmsStepSchedule? StepSchedule { get; init; }
+
+    /// <summary>
+    /// WP21 (RC5, opt-in): the error-controlled step for the events rows
+    /// (<see cref="GridSim.Core.Dynamics.Models.RmsErrorControl"/>). The no-event interval and the critical clearing time rows
+    /// keep <see cref="StepSeconds"/>. Null (every existing request): the study is exactly as before. Not with
+    /// <see cref="StepSchedule"/>.
+    /// </summary>
+    public GridSim.Core.Dynamics.Models.RmsErrorControlOptions? ErrorControl { get; init; }
+
+    /// <summary>
+    /// RC5 WP23 (opt-in): units of the case modelled as IEC 61400-27-1 style Type 4A or 4B wind turbines
+    /// (<see cref="GridSim.Core.Dynamics.Models.Iec61400.Iec61400Data"/>, built from public sources), each named by its native
+    /// identity. Such a unit takes no DYR record; its coverage row reads BOUND with the model's description. Null or empty (every
+    /// existing request): the study is exactly as before. Not with <see cref="Adaptive"/>, <see cref="StepSchedule"/> or
+    /// <see cref="ErrorControl"/>.
+    /// </summary>
+    public IReadOnlyList<Iec61400StudyUnit>? Iec61400Units { get; init; }
+
+    /// <summary>
+    /// RC5 WP32 (opt-in): injection, machine and load models (<see cref="DeviceModelAssignment"/>): a plug-in or declarative
+    /// injection model, or a contract 2 machine plug-in, driving a unit as converter plant on its own bus; a plug-in or
+    /// declarative load model taking part of a bus load. Every result that uses a plug-in carries its provenance and the label
+    /// OUTSIDE THE VERIFIED CONTRACT in its coverage notes. Null or empty (every existing request): the study is exactly as
+    /// before. Not with <see cref="Adaptive"/>, <see cref="StepSchedule"/> or <see cref="ErrorControl"/>.
+    /// </summary>
+    public IReadOnlyList<DeviceModelAssignment>? DeviceModels { get; init; }
+
+    /// <summary>
+    /// RC5 wp32b (opt-in): user relays (<see cref="RelayModelAssignment"/>): a relay plug-in or a declarative relay bound to a
+    /// unit or to a branch. With them, each events row is also re-run on the full-model fixed-step engine with the relays acting
+    /// (and the units' own relays, when unit protection is given), as additional evidence in
+    /// <see cref="DynamicsStudyResult.FullModelUnitRelays"/>; the rows of the study are unchanged and decide its status. Null or
+    /// empty (every existing request): the study is exactly as before. Not with <see cref="Adaptive"/>,
+    /// <see cref="StepSchedule"/> or <see cref="ErrorControl"/>.
+    /// </summary>
+    public IReadOnlyList<RelayModelAssignment>? RelayModels { get; init; }
+}
+
+/// <summary>RC5 WP23: one unit of a dynamics study modelled as an IEC 61400-27-1 style Type 4 wind turbine.</summary>
+/// <param name="Machine">The unit, by native identity (bus, id).</param>
+/// <param name="Data">The model data (per unit on the unit's MVA base).</param>
+public sealed record Iec61400StudyUnit(DynamicsMachineId Machine, GridSim.Core.Dynamics.Models.Iec61400.Iec61400Data Data);

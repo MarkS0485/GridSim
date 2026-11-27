@@ -15,7 +15,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr316UkpnDemandPerLicenceAreaTests : IDisposable
 {
-    private readonly string _root = Path.Combine(Path.GetTempPath(), $"gridsim-gr316-{Guid.NewGuid():N}");
+    private readonly string _root = TestTemp.Under($"gridsim-gr316-{Guid.NewGuid():N}");
 
     public Gr316UkpnDemandPerLicenceAreaTests() => Directory.CreateDirectory(_root);
 

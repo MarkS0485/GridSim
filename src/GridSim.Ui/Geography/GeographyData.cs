@@ -125,7 +125,7 @@ public sealed class GeographyData
         if (!File.Exists(path)) return list;
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+            using JsonDocument doc = JsonDocument.Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path));
             if (!doc.RootElement.TryGetProperty("features", out JsonElement feats)) return list;
             foreach (JsonElement ft in feats.EnumerateArray())
             {
@@ -179,7 +179,7 @@ public sealed class GeographyData
         if (!File.Exists(path)) return list;
         try
         {
-            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(path));
+            using JsonDocument doc = JsonDocument.Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path));
             if (!doc.RootElement.TryGetProperty("features", out JsonElement feats)) return list;
             var colourByTech = new Dictionary<string, UiColour>(StringComparer.OrdinalIgnoreCase);
             foreach (JsonElement ft in feats.EnumerateArray())

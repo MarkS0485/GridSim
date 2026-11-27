@@ -60,6 +60,14 @@ public sealed class Iec104Protocol : IRtuProtocol, IRtuSessionState
     private readonly HashSet<int> _collidedIoas = new();
     private long _casduCollisions;
     private string? _firstCollision;
+    private long _untrackedIoas;
+
+    /// <summary>SEC-21: the most information object addresses one link's collision table holds.</summary>
+    public const int MaxTrackedIoas = 65_536;
+
+    /// <summary>SEC-21: arrivals of a new IOA once the table was full; those IOAs are not checked for a second common
+    /// address. 0 on any link that stays within <see cref="MaxTrackedIoas"/> points.</summary>
+    public long UntrackedAddresses { get { lock (_addressLock) return _untrackedIoas; } }
 
     /// <summary>GR-306: points (by IOA alone) whose IOA has arrived with two common addresses on one link; each is marked
     /// <see cref="RtuQuality.Invalid"/>. Always 0 under <see cref="Iec104PointKey.CasduIoa"/>.</summary>
@@ -86,7 +94,14 @@ public sealed class Iec104Protocol : IRtuProtocol, IRtuSessionState
     {
         lock (_addressLock)
         {
-            if (!_casduByIoa.TryGetValue(ioa, out int first)) { _casduByIoa[ioa] = casdu; return _collidedIoas.Contains(ioa); }
+            if (!_casduByIoa.TryGetValue(ioa, out int first))
+            {
+                // SEC-21: the table is bounded. An IOA is 24 bits, so a peer sweeping the range grew it to 16.7 million
+                // entries in one session; past the cap a new IOA is not tracked for collisions and is counted.
+                if (_casduByIoa.Count >= MaxTrackedIoas) { _untrackedIoas++; return _collidedIoas.Contains(ioa); }
+                _casduByIoa[ioa] = casdu;
+                return _collidedIoas.Contains(ioa);
+            }
             if (first != casdu && _collidedIoas.Add(ioa))
                 _firstCollision ??= string.Create(System.Globalization.CultureInfo.InvariantCulture,
                     $"IOA {ioa} arrived with common address {casdu} after common address {first} on one link");

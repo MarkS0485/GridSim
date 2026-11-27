@@ -60,7 +60,7 @@ public sealed record AnsiData(IReadOnlyList<AnsiSourceData> Sources, IReadOnlyLi
 
     private static AnsiSourceData Source(JsonElement e, string w, List<string> problems, string? forcedName)
     {
-        int bus = (int)Num(e, "bus", w, problems, true);
+        int bus = BusNumber(e, w, problems);
         string? name = forcedName ?? (Str(e, "name") is { Length: > 0 } s ? s : null);
         string cls = Str(e, "class");
         if (cls.Length == 0) problems.Add($"{w}: 'class' (a label for the machine type) is required");
@@ -81,6 +81,19 @@ public sealed record AnsiData(IReadOnlyList<AnsiSourceData> Sources, IReadOnlyLi
 
     private static string Str(JsonElement e, string key) =>
         e.ValueKind == JsonValueKind.Object && e.TryGetProperty(key, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString()! : "";
+
+    /// <summary>ANA-15: a bus number must be a whole number in the int range ("bus": 2.7 was read as bus 2, and a value out of
+    /// range as an unspecified int); a problem line otherwise.</summary>
+    private static int BusNumber(JsonElement e, string where, List<string> problems)
+    {
+        if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty("bus", out JsonElement v) || v.ValueKind != JsonValueKind.Number)
+        { problems.Add($"{where}: 'bus' is required and must be a number"); return 0; }
+        if (v.TryGetInt32(out int bus)) return bus;
+        double d = v.GetDouble();   // a whole number written with a point (2.0) is still that bus
+        if (double.IsFinite(d) && d == Math.Floor(d) && d >= int.MinValue && d <= int.MaxValue) return (int)d;
+        problems.Add($"{where}: 'bus' must be a whole bus number (got {v.GetRawText()})");
+        return 0;
+    }
 
     private static double Num(JsonElement e, string key, string where, List<string> problems, bool allowAnySign = false)
     {

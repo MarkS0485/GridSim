@@ -211,7 +211,7 @@ public class R072LoadabilityAndRestoreTests
     [Fact]
     public void Restore_writes_its_result_file()
     {
-        string json = Path.Combine(Path.GetTempPath(), $"gridsim-restore-{Guid.NewGuid():N}.json");
+        string json = TestTemp.Under($"gridsim-restore-{Guid.NewGuid():N}.json");
         try
         {
             CliProcess.Result r = CliProcess.RunBuilt("restore", "case9", "--order", "#1,#2", "--json", json);

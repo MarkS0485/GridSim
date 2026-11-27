@@ -23,7 +23,7 @@ namespace GridSim.Core.Numerics;
 /// to determinism: what matters is that the rounding is the same everywhere). Proved bit for bit against Java 21
 /// <c>StrictMath</c> by <c>FdlibmStrictMathVectorTests</c>.
 ///
-/// <see cref="Math.Sqrt"/>, <see cref="Math.Abs"/>, <see cref="Math.Floor"/>, <see cref="Math.Round"/>,
+/// <see cref="Math.Sqrt"/>, <see cref="Math.Abs(double)"/>, <see cref="Math.Floor(double)"/>, <see cref="Math.Round(double)"/>,
 /// <see cref="Math.CopySign"/>, <see cref="Math.ScaleB"/> and <see cref="Math.IEEERemainder"/> stay on System.Math:
 /// IEEE 754 defines each of them exactly (the square root is correctly rounded; the rest are exact), so every
 /// conforming implementation gives the same bits. <see cref="Complex"/>'s arithmetic, <see cref="Complex.Magnitude"/>

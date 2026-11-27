@@ -12,6 +12,13 @@ as the code implements it, including the Python scripts in the GDA repository th
 `Applications/` and `Scripts/` in the `v1` directory of the GDA repository). Nothing from the lake is committed to this
 repository.
 
+GDA (Grid Data Analysis) is the author's own tool. It is not public and will not be made public, and GridSim's GDA work
+exists for the author's own use. It is documented here because understanding the interface has value to readers. Readers do
+not get GDA, its code or its data lake, and no help is given to reconstruct it. Building the smaller parts this chapter
+describes, on your own data, is a legitimate and intended use: an LTDS reader, a demand-replay series, a bridge client, an
+estimated-state store. The Python scripts and the bridge server cited below are on the GDA side, in the author's GDA; they
+are described so that the wire format and the stored shapes are clear, not as something to obtain.
+
 Two rules cross every seam. Every dated input and every streamed frame is held behind the same 169-hour
 no-forward-inference horizon, enforced independently on both ends of the bridge
 ([ch. 8, Provenance and invariants](<0008 Provenance and invariants.md>)). Every figure the builder cannot take
@@ -804,6 +811,8 @@ taken follows the enumeration order of the pending table and is not defined. Ser
 asset tables) are guarded by locks so two concurrent first requests do not each launch the same multi-second solve.
 
 #### The 169-hour horizon, on both ends
+
+The horizon is a safety invariant, not a setting. Real-time observation of a national grid is a security matter, so GridSim is built so that it cannot be used for it: not by the public, and not by the author either. It is enforced independently at every stage, built into the code paths and the test suite as an invariant ([ch. 8, Provenance and invariants](<0008 Provenance and invariants.md>), `ForwardInferenceGuard`), and there is no option, environment variable or licence that changes it.
 
 The no-forward-inference horizon is `ForwardInferenceGuard.HorizonHours` = 169.0 hours (7 days plus 1 hour;
 `src/GridSim.Core/Diagnostics/ForwardInferenceGuard.cs`). A stamp is rejected when it is strictly newer than

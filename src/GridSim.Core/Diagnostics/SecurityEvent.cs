@@ -73,7 +73,7 @@ public enum SecurityEventKind
 ///
 /// <para><b>Restriction aware.</b> A security entry carries no future-dated grid claim: a horizon-violation
 /// event records the horizon and the rejected stamp inside its free-text reason, never as the entry's
-/// <c>StateTimeUtc</c>. The optional <paramref name="stateTimeUtc"/> is for an event that genuinely concerns a
+/// <c>StateTimeUtc</c>. The optional <c>stateTimeUtc</c> is for an event that genuinely concerns a
 /// permitted-age (present/past) grid instant; leave it null for a refusal.</para>
 ///
 /// <para><b>No secrets.</b> The reason is plain text (hashed, not encrypted): never put a credential in it.</para>

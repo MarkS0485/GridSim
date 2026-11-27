@@ -15,8 +15,10 @@ public sealed class V2KindSpecStructureTests
     // ------------------------------------------------------------------------------ the real files
 
     [Fact]
-    public void The_kinds_folder_holds_the_fifteen_parameter_kinds_and_the_site_kind_and_nothing_unexpected()
+    public void The_kinds_folder_holds_the_sixteen_parameter_kinds_and_the_site_kind_and_nothing_unexpected()
     {
+        // Renamed 2026-11-20 (RC5, unitProtection added to KindFileSet.ParameterKinds): was
+        // The_kinds_folder_holds_the_fifteen_parameter_kinds_and_the_site_kind_and_nothing_unexpected. Body unchanged.
         // Renamed 2026-10 (DOC-17 D-DOC-222): was The_kinds_folder_holds_the_fifteen_slice3_kinds_and_nothing_unexpected.
         // The body is unchanged apart from the renamed lists; site is now required (below) rather than merely tolerated.
         string dir = KindFileSet.KindsDirectory();

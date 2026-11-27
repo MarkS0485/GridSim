@@ -97,6 +97,7 @@ public static partial class FaultAnalysis
             return shunts;
         }
         var pos = Shunts(g => g.FaultSourceReactancePu(subtransientXdPu));
+        for (int p = 0; p < ports.Count; p++) RequireFaultSource(model, index, dead, ports[p], faultBusIds[p], subtransientXdPu, convertersFeed: false);   // ANA-05
         var neg = Shunts(g => g.FaultSourceNegativeSeqReactancePu(subtransientXdPu));
         return (pos, neg, v0, dead, index);
     }

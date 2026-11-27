@@ -206,7 +206,7 @@ public sealed class UiCaseAuthoringTests
         Assert.True(BundledNetworks.IsBundledPath(uk), "data/uk must be a bundled case here");
         Dictionary<string, byte[]> shipped = Files(uk);
         Dictionary<string, string> hashes = Directory.EnumerateFiles(uk).ToDictionary(p => p, BundledNetworks.ContentHash, StringComparer.Ordinal);
-        string users = Path.Combine(Path.GetTempPath(), "gridsim-authoring-users-" + Guid.NewGuid().ToString("N"));
+        string users = TestTemp.Under("gridsim-authoring-users-" + Guid.NewGuid().ToString("N"));
         try
         {
             // The real data roots: the location rule makes the case bundled.
@@ -257,8 +257,8 @@ public sealed class UiCaseAuthoringTests
     public void Save_As_never_overwrites_never_writes_a_bundled_location_and_never_its_own_folder()
     {
         // A fake data root holding a copy of data/uk at <root>/uk: bundled by location, so nothing near data/ is touched.
-        string root = Path.Combine(Path.GetTempPath(), "gridsim-authoring-root-" + Guid.NewGuid().ToString("N"));
-        string other = Path.Combine(Path.GetTempPath(), "gridsim-authoring-other-" + Guid.NewGuid().ToString("N"));
+        string root = TestTemp.Under("gridsim-authoring-root-" + Guid.NewGuid().ToString("N"));
+        string other = TestTemp.Under("gridsim-authoring-other-" + Guid.NewGuid().ToString("N"));
         try
         {
             string uk = Path.Combine(root, "uk");
@@ -411,7 +411,7 @@ public sealed class UiCaseAuthoringTests
         foreach (string k in before.Keys.Where(k => k != V1Projector.NetworkFileName)) Assert.Equal(before[k], after[k]);
         Assert.False(a.IsDirty);
 
-        string target = Path.Combine(Path.GetTempPath(), "gridsim-authoring-overlay-" + Guid.NewGuid().ToString("N"));
+        string target = TestTemp.Under("gridsim-authoring-overlay-" + Guid.NewGuid().ToString("N"));
         try
         {
             AuthoringReport copy = a.SaveAs(target);
@@ -443,7 +443,7 @@ public sealed class UiCaseAuthoringTests
         AuthoringReport badCheck = b.Check();
         Assert.Equal(AuthoringOutcome.CheckFailed, badCheck.Outcome);
         Assert.Equal(problems, badCheck.Errors.Select(e => e.Message).OrderBy(m => m, StringComparer.Ordinal));
-        string badTarget = Path.Combine(Path.GetTempPath(), "gridsim-authoring-overlay-" + Guid.NewGuid().ToString("N"));
+        string badTarget = TestTemp.Under("gridsim-authoring-overlay-" + Guid.NewGuid().ToString("N"));
         AuthoringReport badCopy = b.SaveAs(badTarget);
         Assert.Equal(AuthoringOutcome.Refused, badCopy.Outcome);
         Assert.False(Directory.Exists(badTarget));
@@ -475,7 +475,7 @@ public sealed class UiCaseAuthoringTests
     [Fact]
     public void A_case_that_cannot_be_opened_is_refused_with_the_engines_reason()
     {
-        string missing = Path.Combine(Path.GetTempPath(), "gridsim-authoring-missing-" + Guid.NewGuid().ToString("N"));
+        string missing = TestTemp.Under("gridsim-authoring-missing-" + Guid.NewGuid().ToString("N"));
         CaseAuthoringException ex = Assert.Throws<CaseAuthoringException>(() => OpenV1(missing));
         Assert.StartsWith("AUTHOR could not open the case " + missing + ": ", ex.Message, StringComparison.Ordinal);
     }

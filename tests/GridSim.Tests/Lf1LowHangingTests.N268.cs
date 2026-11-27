@@ -123,7 +123,7 @@ public partial class Lf1LowHangingTests
     /// <summary>Write the case into a fresh temp folder, run <paramref name="act"/> on the manifest path, clean up.</summary>
     private static T N268WithCase<T>(string manifest, Func<string, T> act)
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-lf1-n268-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-lf1-n268-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {

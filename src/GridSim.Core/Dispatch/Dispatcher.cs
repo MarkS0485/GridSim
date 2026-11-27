@@ -70,7 +70,9 @@ public static class Dispatcher
     /// </summary>
     public static BalanceResult BalanceDetailed(GridModel model, double lossAllowance = 0.02)
     {
-        int slackBusId = model.Buses.First(b => b.Type == BusType.Slack).Id;
+        // SEC-23: a model with no slack bus is refused by name ("Sequence contains no matching element" before).
+        int slackBusId = (model.Buses.FirstOrDefault(b => b.Type == BusType.Slack)
+            ?? throw new InvalidDataException($"Dispatch: model '{model.Name}' has no slack bus, so there is no marginal plant to balance it.")).Id;
         double totalDemand = model.Buses.Sum(b => b.Pd);
 
         // Exactly one generator on the slack bus is the marginal plant that absorbs the

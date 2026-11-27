@@ -22,7 +22,7 @@ public sealed class PostRc3AppSaveAsGeographyTests
         File.WriteAllBytes(Path.Combine(f.CaseDir, CaseGeography.FileName), bytes);
         Assert.True(CaseGeography.TryLoad(f.CaseDir, out _, out string? p0), p0);
 
-        string target = Path.Combine(Path.GetTempPath(), "gridsim-saveas-geo-" + Guid.NewGuid().ToString("N"));
+        string target = TestTemp.Under("gridsim-saveas-geo-" + Guid.NewGuid().ToString("N"));
         try
         {
             CaseAuthoring a = CaseAuthoring.Open(AssetCaseSource.V2(f.ManifestPath), GridSim.Tests.Editor.CaseSessionTests.Unlimited(), Array.Empty<string>());
@@ -40,7 +40,7 @@ public sealed class PostRc3AppSaveAsGeographyTests
     public void Save_As_of_a_v2_case_without_geography_json_writes_none()
     {
         using var f = new UiOverlayFixture(withOverlay: false);
-        string target = Path.Combine(Path.GetTempPath(), "gridsim-saveas-nogeo-" + Guid.NewGuid().ToString("N"));
+        string target = TestTemp.Under("gridsim-saveas-nogeo-" + Guid.NewGuid().ToString("N"));
         try
         {
             CaseAuthoring a = CaseAuthoring.Open(AssetCaseSource.V2(f.ManifestPath), GridSim.Tests.Editor.CaseSessionTests.Unlimited(), Array.Empty<string>());

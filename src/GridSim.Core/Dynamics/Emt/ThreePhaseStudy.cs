@@ -178,7 +178,16 @@ public static class Emt3Runner
 
     /// <summary>Build the network and run it.</summary>
     /// <exception cref="ArgumentException">The study refers to a missing bus, element or phase, or an element is unusable.</exception>
-    public static Emt3Result Run(Emt3Study study)
+    public static Emt3Result Run(Emt3Study study) => Run(study, null);
+
+    /// <summary>
+    /// RC5 WP27: build the network, let <paramref name="extend"/> add elements to it, and run it. The hook is called once,
+    /// after every element of the study has been added and before the outputs are resolved, with the network and a
+    /// function that returns the three phase nodes (a, b, c) of a study bus (an unknown bus is refused). With a null hook
+    /// this is exactly <see cref="Run(Emt3Study)"/>. The co-simulation verb uses it to place an RMS-EMT interface at a bus.
+    /// </summary>
+    /// <exception cref="ArgumentException">The study refers to a missing bus, element or phase, or an element is unusable.</exception>
+    public static Emt3Result Run(Emt3Study study, Action<NodalNetwork, Func<string, int[]>>? extend)
     {
         ArgumentNullException.ThrowIfNull(study);
         static Exception R(string m) => DomainRefusal.Mark(new ArgumentException(m));
@@ -351,6 +360,7 @@ public static class Emt3Runner
             converters.Add(AddConverter(net, c, dcBuses, perPhase));
         }
         if (study.Hvdc is { Count: > 0 } hvdcList) AddHvdc(net, study.StepS, hvdcList, perPhase, NewName, converters);
+        extend?.Invoke(net, bus => { NeedBus("The interface", bus); return Nodes(net, bus); });
 
         var probes = new List<NodalProbe>();
         var seen = new HashSet<string>(StringComparer.Ordinal);

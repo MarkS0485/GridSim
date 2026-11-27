@@ -20,7 +20,7 @@ public sealed class R415eSplitPhaseSwerCliTests : IDisposable
     private static Complex C(double r, double i) => new(r, i);
     private static double Abs(Complex c) => Math.Sqrt(c.Real * c.Real + c.Imaginary * c.Imaginary);
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r415e-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r415e-" + Guid.NewGuid().ToString("N"));
 
     public R415eSplitPhaseSwerCliTests() => Directory.CreateDirectory(_dir);
 

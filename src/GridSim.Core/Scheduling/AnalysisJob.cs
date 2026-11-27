@@ -31,7 +31,7 @@ public sealed class AnalysisJob
     public double SeedCoreMs { get; init; } = 1.0;
 
     /// <summary>
-    /// The work. Runs on a single worker thread against <paramref name="ctx"/>'s immutable frame. The
+    /// The work. Runs on a single worker thread against <c>ctx</c>'s immutable frame. The
     /// <see cref="System.Threading.CancellationToken"/> is <c>None</c> for High jobs and the cycle's
     /// deadline token for Low jobs - a cooperative job should honour it (the solver core takes one through
     /// PowerFlowOptions.Cancellation, so a long re-solve given it aborts at the deadline). Returns the analysis output (cast by the

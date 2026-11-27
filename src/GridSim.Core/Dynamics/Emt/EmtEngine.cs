@@ -194,7 +194,29 @@ public sealed class EmtEngine
                                           Tapped = sc.Tap != 1.0, S = capS });
                     break;
                 case BergeronLine ln:
+                    // DYN-18 (ruling 14): a line whose travel time is shorter than the step was stretched to one step (a 45 us
+                    // line at a 100 us step became 2.2 times its electrical length, inductance and charging alike), then
+                    // refused (2.1.161). It is now modelled as a pi branch of the same line, never stretched: the lossless
+                    // line's own series L = Zc tau and its charging C = tau / Zc, half at each end (the series R is dropped in
+                    // this mode, as for every travelling-wave line). Each converted line is listed (PiConvertedLines) and the
+                    // emt verb names it with a provenance note. A line at least one step long is a Bergeron line as before.
+                    if (ln.TauSeconds < dt * (1.0 - 1e-12))
+                    {
+                        double lPi = ln.SurgeImpedance * ln.TauSeconds;
+                        double cHalf = ln.TauSeconds / ln.SurgeImpedance / 2.0;
+                        branches.Add(new Br { K = ln.From, M = ln.To, Kind = Kind.SeriesRl, R = 0.0, L = lPi, History = true, ElementId = ln.Id,
+                                              Tapped = false, S = TapScale(ln.Id, ln.From, ln.To, 1.0) });
+                        if (ln.From != EmtNetwork.Ground)
+                            branches.Add(new Br { K = ln.From, M = EmtNetwork.Ground, Kind = Kind.Capacitor, C = cHalf, History = true, ElementId = ln.Id });
+                        if (ln.To != EmtNetwork.Ground)
+                            branches.Add(new Br { K = ln.To, M = EmtNetwork.Ground, Kind = Kind.Capacitor, C = cHalf, History = true, ElementId = ln.Id });
+                        _piConverted.Add(new PiConvertedLine(ln.Id, ln.From, ln.To, ln.TauSeconds, dt, network.ElementLabels.GetValueOrDefault(ln.Id)));
+                        break;
+                    }
                     int nDelay = Math.Max(1, (int)Math.Round(ln.TauSeconds / dt));
+                    // R5-06: the largest relative rounding of a travel time to whole steps, reported once per run.
+                    double rounding = Math.Abs(nDelay * dt - ln.TauSeconds) / ln.TauSeconds;
+                    if (rounding > LargestTravelTimeRounding) { LargestTravelTimeRounding = rounding; LargestTravelTimeRoundingLine = ln.Id; }
                     lines.Add(new Line { K = ln.From, M = ln.To, ElementId = ln.Id, N = nDelay, Yc = 1.0 / ln.SurgeImpedance, BufK = new double[nDelay], BufM = new double[nDelay] });
                     break;
                 case SwitchElement sw:
@@ -609,6 +631,24 @@ public sealed class EmtEngine
     /// pure-resistance series arm) joins them to ground, a source or a capacitor-held node (R026). Zero for a
     /// network where every node has a resistive path to a reference.</summary>
     public int InitialConditionFloatingNodes { get; private set; }
+
+    /// <summary>R5-06: the largest relative change of a travelling-wave line's travel time when it is rounded to whole steps,
+    /// |N dt - tau| / tau (0 with no such line), and that line's id (-1 with none). A travel time between one and two steps
+    /// moves by up to a third (tau = 1.4 dt becomes one step, 29 % shorter).</summary>
+    public double LargestTravelTimeRounding { get; private set; }
+
+    /// <summary>R5-06: the line of <see cref="LargestTravelTimeRounding"/> (-1 with no travelling-wave line).</summary>
+    public int LargestTravelTimeRoundingLine { get; private set; } = -1;
+
+    private readonly List<PiConvertedLine> _piConverted = new();
+
+    /// <summary>DYN-18 (ruling 14): the travelling-wave lines whose travel time is shorter than the step, each modelled as a
+    /// pi branch of the same line (series L = Zc tau, charging C = tau / Zc split between the ends), in element order. Empty
+    /// when every line is at least one step long.</summary>
+    public IReadOnlyList<PiConvertedLine> PiConvertedLines => _piConverted;
+
+    /// <summary>R5-06: the rounding above which a run says so (10 %).</summary>
+    public const double TravelTimeRoundingNoteThreshold = 0.10;
 
     /// <summary>True when a branch conducts in the rest initial-condition solve: a resistor, or a series arm
     /// with no inductance (a pure-R coupler, R026 - it was treated as open). Inductive arms are open at rest

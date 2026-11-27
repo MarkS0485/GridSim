@@ -52,9 +52,16 @@ public sealed record WebScriptResult(ScriptRunStatus Status, string Message, str
 /// the server and is refused here (the run record and the recorded session are offered as downloads instead).</para>
 ///
 /// <para><b>Limits.</b> A script is at most <see cref="MaxScriptBytes"/> bytes; one <c>STEP SIM</c> at most <see cref="MaxTicksPerStep"/>
-/// engine ticks and a session <see cref="MaxTotalTicks"/>; output is cut at <see cref="MaxOutputChars"/>; and a run takes a solve slot of
-/// <see cref="WebLimits"/> and stops at its solve timeout (checked before every statement; a statement already running finishes, as a
-/// solve does elsewhere on this host, and holds the slot until it does). The grammar always terminates; these bound how long.</para>
+/// engine ticks and a session <see cref="MaxTotalTicks"/>; a session runs at most <see cref="MaxStatements"/> statements, blocks and loop
+/// iterations and produces at most <see cref="MaxSessionOutputChars"/> characters of output (checked as it is produced); the page shows
+/// the first <see cref="MaxOutputChars"/>; an open block of the interactive console gathers at most <see cref="MaxScriptBytes"/>
+/// characters; and a run takes a solve slot of <see cref="WebLimits"/> and stops at its solve timeout (checked before every statement,
+/// block and loop iteration; a statement already running finishes, as a solve does elsewhere on this host, and holds the slot until it
+/// does). The grammar always terminates; these bound how long and how much.</para>
+///
+/// <para><b>Files and paths.</b> The <c>DYNAMICS</c> file of <c>SELECT ENGINE</c> must lie in the folder of a model the catalogue lists
+/// to the caller; a <c>SCHEMAS</c> folder is not offered (the shipped schemas are found on their own). The page lists models by paths
+/// relative to the console's base folder, and error messages name that folder as "the base folder", never its absolute path.</para>
 /// </summary>
 public sealed class WebScriptConsole
 {
@@ -81,6 +88,12 @@ public sealed class WebScriptConsole
     public const long MaxTotalTicks = 400_000;
     public const int MaxOutputChars = 256 * 1024;
 
+    /// <summary>Most statements, blocks and loop iterations one run or interactive session may execute.</summary>
+    public const long MaxStatements = 200_000;
+
+    /// <summary>Most characters of output one run or interactive session may produce (the page shows the first <see cref="MaxOutputChars"/>).</summary>
+    public const long MaxSessionOutputChars = 4 * 1024 * 1024;
+
     private readonly CaseCatalog _catalog;
     private readonly AccessControl _access;
     private readonly WebLimits _limits;
@@ -100,14 +113,23 @@ public sealed class WebScriptConsole
     /// <summary>The limits as one sentence, shown on the page.</summary>
     public string LimitsText =>
         $"A script may be up to {MaxScriptBytes / 1024} KB; one STEP SIM at most {MaxTicksPerStep:N0} engine ticks and a session {MaxTotalTicks:N0}; "
+        + $"a session runs at most {MaxStatements:N0} statements, blocks and loop iterations; "
         + $"output is cut at {MaxOutputChars / 1024} KB; a run stops at the host's solve timeout ({_limits.SolveTimeout.TotalSeconds:0} s) and needs a free solve slot.";
 
     /// <summary>The models <c>LOAD CASE</c> may name, with the path to write: catalogue entries that are files or folders the caller may see.</summary>
     public IReadOnlyList<(CaseEntry Entry, string Statement)> LoadableCases(OperationRole role) =>
         _catalog.EntriesFor(role)
             .Where(e => !e.IsReplay && e.Path.Length > 0)
-            .Select(e => (e, "LOAD CASE \"" + e.Path.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""))
+            .Select(e => (e, "LOAD CASE \"" + Shown(e.Path).Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal) + "\""))
             .ToList();
+
+    /// <summary>A catalogue path as the page shows it: relative to the console's base folder (so the page never shows where the server is installed).</summary>
+    private string Shown(string path)
+    {
+        string full = Path.GetFullPath(path, _baseDirectory);
+        string rel = Path.GetRelativePath(_baseDirectory, full);
+        return Path.IsPathRooted(rel) ? full : rel;
+    }
 
     // ---------------------------------------------------------------- policy
 
@@ -129,6 +151,9 @@ public sealed class WebScriptConsole
                     return RefusalPrefix + "EXPORT RESULT writes a file on the server and is not offered on the web console; download the run record instead.";
                 case LoadCaseStatement l:
                     if (LoadRefusal(l, who, checkLicence) is { } load) return load;
+                    break;
+                case SelectEngineStatement se:
+                    if (EngineFileRefusal(se, who) is { } files) return files;
                     break;
             }
             if (s is SolveStatement) needsSolve = true;
@@ -184,13 +209,44 @@ public sealed class WebScriptConsole
         return null;
     }
 
+    /// <summary>The refusal of a <c>SELECT ENGINE</c> file setting: <c>SCHEMAS</c> is not offered, and a <c>DYNAMICS</c> file must lie in the
+    /// folder of a model the catalogue lists to the caller.</summary>
+    private string? EngineFileRefusal(SelectEngineStatement se, IdentityContext who)
+    {
+        foreach (SettingClause c in se.Settings)
+        {
+            if (c.Key.Value == "SCHEMAS")
+                return RefusalPrefix + "SELECT ENGINE ... SCHEMAS names a folder of the server and is not offered on the web console; the shipped schemas are used.";
+            if (c.Key.Value != "DYNAMICS" || c.Name is not { } name) continue;
+            string written = name.Value;
+            string full;
+            try { full = Path.GetFullPath(written, _baseDirectory); }
+            catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                return RefusalPrefix + "DYNAMICS: not a usable path.";
+            }
+            bool listed = !GridSim.Scripting.PathConfinement.IsNetworkOrDevice(written)
+                && _catalog.EntriesFor(who.Role).Where(e => !e.IsReplay && e.Path.Length > 0).Any(e => InFolderOf(e, full));
+            if (!listed)
+                return RefusalPrefix + "DYNAMICS reads only a file in the folder of a model the catalogue lists; it does not read other files of the server.";
+        }
+        return null;
+    }
+
+    private bool InFolderOf(CaseEntry e, string full)
+    {
+        string entry = Path.GetFullPath(e.Path, _baseDirectory);
+        string folder = Directory.Exists(entry) ? entry : Path.GetDirectoryName(entry) ?? entry;
+        return GridSim.Scripting.PathConfinement.Refusal(full, full, folder) is null;
+    }
+
     private static bool SamePath(string a, string b) =>
         string.Equals(a.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), b.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     private Func<Statement, Session, string?> GateFor(IdentityContext who) => (s, session) => Refusal(s, session, who);
 
-    private static SessionLimits LimitsFor(CancellationToken cancel) => new(MaxTicksPerStep, MaxTotalTicks, cancel);
+    private static SessionLimits LimitsFor(CancellationToken cancel) => new(MaxTicksPerStep, MaxTotalTicks, cancel) { MaxStatements = MaxStatements, MaxOutputChars = MaxSessionOutputChars };
 
     // ---------------------------------------------------------------- check and run
 
@@ -225,7 +281,7 @@ public sealed class WebScriptConsole
         timeout.CancelAfter(_limits.SolveTimeout);
         using var writer = new CappedWriter(MaxOutputChars);
         SolveRun<RunResult> run = await _limits.RunSolveAsync(
-            () => Runner.Run(bytes, new RunOptions(_baseDirectory, writer, GateFor(who), LimitsFor(timeout.Token))), cancellationToken).ConfigureAwait(false);
+            () => Runner.Run(bytes, new RunOptions(_baseDirectory, writer, GateFor(who), LimitsFor(timeout.Token), HideBaseDirectory: true)), cancellationToken).ConfigureAwait(false);
         switch (run.Status)
         {
             case SolveRunStatus.Busy:
@@ -276,8 +332,9 @@ public sealed class WebScriptConsole
         {
             _host = host;
             Who = who;
-            _console = new InteractiveConsole(host._baseDirectory);
+            _console = new InteractiveConsole(host._baseDirectory) { MaxPendingChars = MaxScriptBytes };
             _console.Session.Gate = host.GateFor(who);
+            _console.Session.HideBaseDirectory = true;
         }
 
         public IdentityContext Who { get; }

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace GridSim.Core.Dynamics.Models;
 
 /// <summary>Which alternator-rectifier excitation system an <see cref="AcExciter"/> is.</summary>
@@ -76,16 +78,16 @@ public sealed class AcExciter
             if (!(v >= 0) || !double.IsFinite(v)) throw new ArgumentOutOfRangeException(n, v, $"{who}: {n} must be a finite number, 0 or above.");
         if (!double.IsFinite(exciterConstant)) throw new ArgumentOutOfRangeException(nameof(exciterConstant), exciterConstant, $"{who}: KE must be finite.");
         if (double.IsNaN(regulatorMinPu) || double.IsNaN(regulatorMaxPu) || !(regulatorMaxPu >= regulatorMinPu))
-            throw new ArgumentException($"{who}: the regulator limits must satisfy max >= min (got {regulatorMinPu}, {regulatorMaxPu}).", nameof(regulatorMaxPu));
+            throw new ArgumentException(FormattableString.Invariant($"{who}: the regulator limits must satisfy max >= min (got {regulatorMinPu}, {regulatorMaxPu})."), nameof(regulatorMaxPu));
         if (variant == AcExciterVariant.Exac1)
         {
             if (!double.IsNegativeInfinity(outputMinPu) || !double.IsPositiveInfinity(outputMaxPu))
                 throw new ArgumentException("EXAC1 carries its VR limits on the regulator lag; it has no separate output limits.", nameof(outputMinPu));
         }
         else if (double.IsNaN(outputMinPu) || double.IsNaN(outputMaxPu) || !(outputMaxPu >= outputMinPu))
-            throw new ArgumentException($"ESAC1A needs VRMAX >= VRMIN (got {outputMinPu}, {outputMaxPu}).", nameof(outputMaxPu));
+            throw new ArgumentException(FormattableString.Invariant($"ESAC1A needs VRMAX >= VRMIN (got {outputMinPu}, {outputMaxPu})."), nameof(outputMaxPu));
         if (lagSeconds == 0 && leadSeconds != 0)
-            throw new ArgumentException($"{who}: a lead TC of {leadSeconds} s with no lag TB is not a proper lead-lag; TB = TC = 0 bypasses it.", nameof(lagSeconds));
+            throw new ArgumentException(FormattableString.Invariant($"{who}: a lead TC of {leadSeconds} s with no lag TB is not a proper lead-lag; TB = TC = 0 bypasses it."), nameof(lagSeconds));
 
         (_satA, _satB) = SaturationFit(who, satE1, satSe1, satE2, satSe2);
         _variant = variant;
@@ -106,17 +108,37 @@ public sealed class AcExciter
     /// <summary>
     /// The quadratic saturation through (E1, SE1) and (E2, SE2): VE*SE(VE) = B (VE - A)^2 for VE above A. From
     /// SE(E) = B (E - A)^2 / E at both points, (E1 - A) / (E2 - A) = sqrt(SE1 E1 / (SE2 E2)) = r, so
-    /// A = (E1 - r E2) / (1 - r) and B = SE2 E2 / (E2 - A)^2. Both SE 0: no saturation (A = 0, B = 0). One of them 0, a
-    /// point at or below 0, equal points, or a curve that does not rise (r not below 1 with E1 below E2) is refused.
+    /// A = (E1 - r E2) / (1 - r) and B = SE2 E2 / (E2 - A)^2. Both SE 0: no saturation (A = 0, B = 0). DYN-02 (ruling 15):
+    /// one SE 0 is the curve starting at that point, A = E1 and B = SE2 E2 / (E2 - E1)^2 (with the SE 0 point called 1).
+    /// A point at or below 0, equal points, or a curve that does not rise is refused.
+    /// <para>DYN-01: the two points are taken in either order. IEEE 421.5 names E1 the point at the ceiling and E2 the one
+    /// at 75 % of it, so its sample data has E1 above E2 (DC1A: 3.1 / 0.33, 2.3 / 0.10); other data sets list them the
+    /// other way. A quadratic through two points does not depend on which one is called 1: swapping them turns r into 1 / r
+    /// and A = (E2 - E1 / r) / (1 - 1 / r) = (E1 - r E2) / (1 - r), the same A, so the same B and the same curve. The points
+    /// are sorted by E before the fit, so data in the ascending order fits exactly as before, bit for bit.</para>
     /// </summary>
     internal static (double A, double B) SaturationFit(string who, double e1, double se1, double e2, double se2)
     {
+        static string F(double v) => v.ToString("R", CultureInfo.InvariantCulture);
         if (se1 == 0 && se2 == 0) return (0, 0);
+        // DYN-02 (ruling 15): one SE of 0 with the other above 0 (EXDC2's E1 = 0, SE1 = 0) is the curve that starts at the SE 0
+        // point: A = E there, B = SE E / (E - A)^2 at the other point, so it passes through both. The point with SE 0 must
+        // lie below the other (a curve starting above its own positive point cannot pass through it). Said in the DYR
+        // reader's notes (SaturationStartsAtZeroPoint).
+        if ((se1 == 0) != (se2 == 0) && se1 >= 0 && se2 >= 0)
+        {
+            (double ez, double ep, double sep) = se1 == 0 ? (e1, e2, se2) : (e2, e1, se1);
+            if (!(double.IsFinite(ez) && double.IsFinite(ep) && ez >= 0 && ep > ez))
+                throw new ArgumentException($"{who}: the saturation point with SE 0 (E {F(ez)}) must lie below the other (E {F(ep)}, SE {F(sep)}) for a curve that starts there; got E1 {F(e1)}, SE1 {F(se1)}, E2 {F(e2)}, SE2 {F(se2)}.");
+            double dz = ep - ez;
+            return (ez, sep * ep / (dz * dz));
+        }
         if (!(se1 > 0) || !(se2 > 0) || !(e1 > 0) || !(e2 > 0) || !double.IsFinite(e1) || !double.IsFinite(e2))
-            throw new ArgumentException($"{who}: the saturation points need E1, E2, SE(E1) and SE(E2) all above 0 (or both SE 0 for none); got E1 {e1}, SE1 {se1}, E2 {e2}, SE2 {se2}.");
-        if (!(e2 > e1)) throw new ArgumentException($"{who}: the saturation points need E2 above E1 (got E1 {e1}, E2 {e2}).");
+            throw new ArgumentException($"{who}: the saturation points need E1, E2, SE(E1) and SE(E2) all above 0 (or both SE 0 for none); got E1 {F(e1)}, SE1 {F(se1)}, E2 {F(e2)}, SE2 {F(se2)}.");
+        if (e1 == e2) throw new ArgumentException($"{who}: the two saturation points have the same E ({F(e1)}); they must differ.");
+        if (e1 > e2) { (e1, e2) = (e2, e1); (se1, se2) = (se2, se1); }   // DYN-01: the same curve in either order
         double r = Math.Sqrt(se1 * e1 / (se2 * e2));
-        if (!(r < 1)) throw new ArgumentException($"{who}: E1*SE(E1) must be below E2*SE(E2) for a rising saturation curve (got {e1 * se1} and {e2 * se2}).");
+        if (!(r < 1)) throw new ArgumentException($"{who}: E*SE(E) must rise from the lower point to the higher one for a rising saturation curve (got {F(e1 * se1)} at E {F(e1)} and {F(e2 * se2)} at E {F(e2)}).");
         double a = (e1 - r * e2) / (1 - r);
         double d = e2 - a;
         return (a, se2 * e2 / (d * d));
@@ -147,10 +169,14 @@ public sealed class AcExciter
     /// sqrt((Efd^2 + (KC IFD)^2) / 0.75) on the second, Efd / 1.732 + KC IFD on the third), taking the first branch
     /// whose IN it reproduces. Fails loud when none does (a field the rectifier cannot deliver).
     /// </summary>
-    internal double SolveVe(double efd, double ifd)
+    internal double SolveVe(double efd, double ifd) => SolveVe(Kind, _kc, efd, ifd);
+
+    /// <summary>WP19 (RC5): <see cref="SolveVe(double, double)"/> for any rectifier loading factor <paramref name="kc"/>, so the
+    /// other alternator-rectifier exciters (<see cref="Esac8b"/>) share the one inverse of FEX.</summary>
+    internal static double SolveVe(string kind, double kc, double efd, double ifd)
     {
-        if (!(efd > 0)) throw new ArgumentOutOfRangeException(nameof(efd), efd, $"{Kind}: a diode rectifier gives a positive field voltage; the initial field Efd = {efd} pu cannot be held.");
-        double k = _kc * ifd;
+        if (!(efd > 0)) throw new ArgumentOutOfRangeException(nameof(efd), efd, FormattableString.Invariant($"{kind}: a diode rectifier gives a positive field voltage; the initial field Efd = {efd} pu cannot be held."));
+        double k = kc * ifd;
         if (k <= 0) return efd;
         double v1 = efd + 0.577 * k;
         if (k / v1 <= 0.433) return v1;
@@ -160,7 +186,7 @@ public sealed class AcExciter
         double v3 = efd / 1.732 + k;
         double in3 = k / v3;
         if (in3 > 0.75 && in3 <= 1.0) return v3;
-        throw new InvalidOperationException($"{Kind}: no exciter voltage gives Efd = {efd} pu at field current {ifd} pu with KC = {_kc} (the rectifier regulation curve is not invertible there).");
+        throw new InvalidOperationException(FormattableString.Invariant($"{kind}: no exciter voltage gives Efd = {efd} pu at field current {ifd} pu with KC = {kc} (the rectifier regulation curve is not invertible there)."));
     }
 
     /// <summary>The regulator output VR the exciter needs at the equilibrium with field <paramref name="efd"/> (field

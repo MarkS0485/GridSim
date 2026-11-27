@@ -29,7 +29,7 @@ public sealed partial class BugHunt1029Tests
     /// <summary>A private copy of the bundled data/uk case (a v1 case folder), to break one file of.</summary>
     private static string BHCopyUkCase()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-bh-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-bh-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         foreach (string f in Directory.GetFiles(Path.Combine(CliProcess.Root(), "data", "uk")))
             File.Copy(f, Path.Combine(dir, Path.GetFileName(f)));

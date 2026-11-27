@@ -13,7 +13,7 @@ public enum DomainKind
 
 /// <summary>
 /// GridSim-owned mapping from a generator's fuel/technology TYPE (the string
-/// <see cref="GridSim.Gda.FuelMap"/> produces) to its synchronous machine speed - pole count and
+/// <c>GridSim.Gda.FuelMap</c> produces) to its synchronous machine speed - pole count and
 /// rpm - and domain kind. GDA supplies only the type label; grouping machines into "speed domains"
 /// by mechanical speed / pole ratio is GridSim physics (LOS sec. 2.7/sec. 5.5).
 ///

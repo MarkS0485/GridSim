@@ -47,7 +47,7 @@ public static class SparseLu
     /// ordering depends only on the sparsity PATTERN, which is fixed across the Newton iterations of
     /// one power-flow pass (same topology, same bus types) - so a caller that solves the same
     /// structure repeatedly (the NR loop) computes <see cref="Ordering"/> once and calls this each
-    /// iteration, skipping the ordering re-derivation. The result is bit-identical to <see cref="Factor"/>
+    /// iteration, skipping the ordering re-derivation. The result is bit-identical to <see cref="Factor(CsrMatrix)"/>
     /// because the ordering is a pure function of the structure. Returns null when singular.
     /// </summary>
     internal static SparseLuFactorization? FactorWithOrdering(CsrMatrix a, int[] q)
@@ -122,7 +122,7 @@ public static class SparseLu
     internal static int[] Ordering(CsrMatrix a) => MinimumDegreeOrdering.Order(a);
 
     /// <summary>Numeric factorization of an already-prepared CSC matrix with a precomputed
-    /// ordering - skips the CSR->CSC conversion and ordering that <see cref="Factor"/> redoes per call.
+    /// ordering - skips the CSR->CSC conversion and ordering that <see cref="Factor(CsrMatrix)"/> redoes per call.
     /// Returns null when singular.</summary>
     internal static SparseLuFactorization? FactorPrepared(int n, int[] ap, int[] ai, double[] ax, int[] q)
     {

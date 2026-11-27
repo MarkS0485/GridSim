@@ -14,7 +14,12 @@ public static partial class RmsTransientStability
     /// <summary>R4-14: an adaptive RMS event study: the variable-step run, the prepared fleet it started from and the devices
     /// the loop did not evaluate.</summary>
     public sealed record AdaptiveStudy(AdaptiveSwingResult Run, SubtransientInit.Prepared Prepared,
-        IReadOnlyList<RelayNotEvaluated> RelaysNotEvaluated, string ModelDeclaration);
+        IReadOnlyList<RelayNotEvaluated> RelaysNotEvaluated, string ModelDeclaration)
+    {
+        /// <summary>RC5 stage 3: the unit relay stages the loop did not evaluate, with reasons; null when unit relays were
+        /// not asked for.</summary>
+        public IReadOnlyList<UnitRelayNotEvaluated>? UnitRelaysNotEvaluated { get; init; }
+    }
 
     /// <summary>What the adaptive path represents, stated in every result.</summary>
     public const string AdaptiveModelDeclaration =
@@ -38,6 +43,30 @@ public static partial class RmsTransientStability
         GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
         IReadOnlyList<RmsEvent> events, AdaptiveOptions options, BoundDeviceSet? devices = null,
         double? f0 = null, double durationSeconds = StudyDefaultDurationSeconds, double slipLimitRad = DefaultSlipLimitRad)
+        => StudyEventsAdaptiveCore(model, result, data, events, options, devices, f0, durationSeconds, slipLimitRad, unitRelays: false);
+
+    /// <summary>
+    /// RC5 stage 3: <see cref="StudyEventsAdaptive"/> with each unit's own relays in the loop (opt-in): the stages of
+    /// <see cref="GridModel.UnitProtection"/> (81U / 81O, 81R, 27 / 59, 32, 78; see <see cref="UnitRelaysInLoop"/>) are
+    /// evaluated at every state of the run, and an operating stage trips its unit (the machine is disconnected) while the
+    /// run continues. Refused when the model carries no unit protection. Every other input and rule is
+    /// <see cref="StudyEventsAdaptive"/>'s; the run without unit relays is that method's, unchanged.
+    /// </summary>
+    public static AdaptiveStudy StudyEventsAdaptiveWithUnitRelays(
+        GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
+        IReadOnlyList<RmsEvent> events, AdaptiveOptions options, BoundDeviceSet? devices = null,
+        double? f0 = null, double durationSeconds = StudyDefaultDurationSeconds, double slipLimitRad = DefaultSlipLimitRad)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        if (model.UnitProtection is null)
+            throw new ArgumentException("The model carries no unit protection, so there are no unit relays to put in the loop.", nameof(model));
+        return StudyEventsAdaptiveCore(model, result, data, events, options, devices, f0, durationSeconds, slipLimitRad, unitRelays: true);
+    }
+
+    private static AdaptiveStudy StudyEventsAdaptiveCore(
+        GridModel model, PowerFlowResult result, IReadOnlyList<SubtransientInit.MachineData> data,
+        IReadOnlyList<RmsEvent> events, AdaptiveOptions options, BoundDeviceSet? devices,
+        double? f0, double durationSeconds, double slipLimitRad, bool unitRelays)
     {
         ArgumentNullException.ThrowIfNull(model);
         ArgumentNullException.ThrowIfNull(result);
@@ -89,6 +118,10 @@ public static partial class RmsTransientStability
             relays = new RelayInLoop(devices, options.EventTimeToleranceSeconds);
             if (relays.Count > 0) source = new BranchCurrentSource(model, basis, relays, topology);
         }
+        UnitRelaysInLoop? unitLoop = unitRelays
+            ? new UnitRelaysInLoop(model, model.UnitProtection!, slotOfGenerator, basis.BusIndex, basis.BusCount, model.BaseMva, nominalHz,
+                options.EventTimeToleranceSeconds)
+            : null;
 
         AdaptiveSwingResult run = AdaptiveSwingKernel.Run(new AdaptiveSwingProblem
         {
@@ -96,8 +129,14 @@ public static partial class RmsTransientStability
             F0 = nominalHz, DurationSeconds = durationSeconds, SlipLimitRad = slipLimitRad,
             SynchronismMachines = connectedMachines, Topology = topology,
             Relays = relays is { Count: > 0 } ? relays : null, CurrentSource = source, Options = options,
+            UnitRelays = unitLoop is { Count: > 0 } ? unitLoop : null,
         });
-        return new AdaptiveStudy(run, p, relays?.NotEvaluated ?? Array.Empty<RelayNotEvaluated>(), AdaptiveModelDeclaration);
+        if (unitLoop is not null)
+            run = run with { UnitRelays = run.UnitRelays ?? Array.Empty<AdaptiveUnitRelayRecord>() };
+        return new AdaptiveStudy(run, p, relays?.NotEvaluated ?? Array.Empty<RelayNotEvaluated>(), AdaptiveModelDeclaration)
+        {
+            UnitRelaysNotEvaluated = unitLoop?.NotEvaluated,
+        };
     }
 
     /// <summary>R4-14: the adaptive critical clearing time of a bolted fault cleared by tripping branches: the fault is applied at
@@ -122,7 +161,7 @@ public static partial class RmsTransientStability
     }
 
     /// <summary>The cumulative network state of the scheduled events, with the relay-tripped branches kept beside it.</summary>
-    private sealed class AdaptiveEventTopology : IAdaptiveTopology
+    private sealed class AdaptiveEventTopology : IAdaptiveTopology, IAdaptiveUnitTripTopology
     {
         private readonly GridModel _model;
         private readonly SubtransientInit.SparseNetworkBasis _basis;
@@ -140,6 +179,9 @@ public static partial class RmsTransientStability
         private List<int> _loadBuses = new();
         private Dictionary<int, (double P, double Q)> _loadDelta = new();
         private bool[] _machineOut;
+        // RC5 stage 3: machines disconnected by their unit's own relay (none for every run without unit relays).
+        private bool[] _unitOut;
+        private bool _anyUnitOut;
 
         public AdaptiveEventTopology(GridModel model, SubtransientInit.SparseNetworkBasis basis, IReadOnlyList<RmsEvent> events,
             int[] slotOfGenerator, int connectedMachines, int machineCount, IRmsNetwork initial)
@@ -148,6 +190,7 @@ public static partial class RmsTransientStability
             Initial = initial;
             _busIds = new HashSet<int>(model.Buses.Select(b => b.Id));
             _machineOut = new bool[machineCount];
+            _unitOut = new bool[machineCount];
             _ordered = events.Select((ev, index) => (Event: ev, Index: index)).OrderBy(x => x.Event.AtSeconds).ToList();
             for (int k = 0; k < _ordered.Count; k++)
             {
@@ -164,12 +207,32 @@ public static partial class RmsTransientStability
 
         public IReadOnlyList<double> ScheduledTimes => _times;
 
-        public IReadOnlyList<bool> MachineOut => _machineOut;
+        public IReadOnlyList<bool> MachineOut => _anyUnitOut ? Combined() : _machineOut;
+
+        private bool[] Combined()
+        {
+            var all = new bool[_machineOut.Length];
+            for (int i = 0; i < all.Length; i++) all[i] = _machineOut[i] || _unitOut[i];
+            return all;
+        }
+
+        /// <inheritdoc/>
+        public IRmsNetwork? ApplyUnitTrip(int slot)
+        {
+            if (_machineOut[slot] || _unitOut[slot]) return Build();
+            int outNow = 0;
+            for (int i = 0; i < _connected; i++) if (_machineOut[i] || _unitOut[i]) outNow++;
+            if (slot < _connected && outNow + 1 >= _connected) return null;
+            _unitOut[slot] = true;
+            _anyUnitOut = true;
+            return Build();
+        }
 
         private void Reset()
         {
             _scheduledTripped = new List<int>(); _relayTripped.Clear(); _faulted = new List<int>(); _loadBuses = new List<int>();
             _loadDelta = new Dictionary<int, (double P, double Q)>(); _machineOut = new bool[_machineOut.Length];
+            _unitOut = new bool[_unitOut.Length]; _anyUnitOut = false; NoConnectedMachine = false;
         }
 
         /// <summary>Whether a branch is open now (out in the model, tripped by a scheduled event or tripped by a relay).</summary>
@@ -179,8 +242,13 @@ public static partial class RmsTransientStability
         public IRmsNetwork ApplyScheduled(int index, out string description)
         {
             description = ApplyGroup(index);
-            return _relayTripped.Count == 0 ? _prebuilt[index] : Build();
+            // No machine left: nothing to build; the kernel stops at this instant and never uses the network returned.
+            if (NoConnectedMachine) return _prebuilt[index];
+            return _relayTripped.Count == 0 && !_anyUnitOut ? _prebuilt[index] : Build();
         }
+
+        /// <inheritdoc/>
+        public bool NoConnectedMachine { get; private set; }
 
         public IRmsNetwork ApplyRelayTrip(int branchIndex)
         {
@@ -191,7 +259,7 @@ public static partial class RmsTransientStability
         private IRmsNetwork Build()
         {
             List<int> tripped = _scheduledTripped.Union(_relayTripped).OrderBy(i => i).ToList();
-            return BuildEventStage(_model, _basis, tripped, _faulted, _loadBuses, _loadDelta, _machineOut);
+            return BuildEventStage(_model, _basis, tripped, _faulted, _loadBuses, _loadDelta, _anyUnitOut ? Combined() : _machineOut);
         }
 
         private string ApplyGroup(int g)
@@ -240,6 +308,15 @@ public static partial class RmsTransientStability
                         if (_machineOut[slot]) throw new ArgumentException($"{what}: the generator is already tripped by an earlier event.");
                         _machineOut[slot] = true;
                         if (_machineOut.Count(x => x) >= _connected) throw new ArgumentException($"{what}: it would trip the last connected machine.");
+                        // RC5: a scheduled trip of a machine its unit relay already disconnected changes nothing more.
+                        // 2.1.075: with the machines unit relays have disconnected, this trip may leave none connected (the
+                        // dry run, which has no unit trips, cannot see that); the kernel then stops (NoConnectedMachine).
+                        if (_anyUnitOut)
+                        {
+                            int outNow = 0;
+                            for (int m = 0; m < _connected; m++) if (_machineOut[m] || _unitOut[m]) outNow++;
+                            if (outNow >= _connected) NoConnectedMachine = true;
+                        }
                         break;
                     default:
                         throw new ArgumentException($"{what}: unknown event kind {ev.GetType().Name}.");

@@ -40,7 +40,7 @@ public static class ResultDiff
 
     private static JsonDocument Parse(byte[] bytes, string what)
     {
-        try { return JsonDocument.Parse(bytes); }
+        try { return JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes)); }
         catch (JsonException ex) { throw new StudyCaseException($"The {what} is not valid JSON: {ex.Message}"); }
     }
 

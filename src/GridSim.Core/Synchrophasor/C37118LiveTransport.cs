@@ -136,8 +136,6 @@ public sealed class C37118StreamFramer
 /// <see cref="Timeout"/> has passed (whichever is first); a receive that ends by timeout says so.</summary>
 /// <param name="DataFrames">DATA frames to collect (1 or more).</param>
 /// <param name="Timeout">The longest the receive may run (above zero).</param>
-/// <param name="DataFrames">How many DATA frames to collect.</param>
-/// <param name="Timeout">The longest the receive may take.</param>
 /// <param name="UdpSource">GR-818: UDP only. When set, a datagram from any other source address is dropped and
 /// counted (<see cref="C37118LiveCapture.ForeignDatagrams"/>), never added to the capture. The port is not compared,
 /// because a PMU may send from any ephemeral port. Bug #173: on a socket bound to anything but loopback it is REQUIRED,

@@ -194,9 +194,9 @@ for pass = 0, 1, 2, ...:
     if DetectBadData is false or mChi - s <= 0:  stop (chi-square not run)   (mChi: rows other than prior-solved)
     if method is robust:  J against the declared weights, chi-square test, stop (no removal loop)
     J = sum_i w_i (z_i - h_i)^2;  threshold = chi-square(mChi - s, ChiSquareConfidence);  passed = J <= threshold
-    if passed and LeanResiduals:  stop
+    if passed and LeanResiduals and not LnrDetection:  stop
     (rN, critical) = step.NormalizedResiduals(x, r)
-    if passed:  stop
+    if passed and not LnrDetection:  stop
     worst = argmax rN over rows that are not critical, not backfill rows, finite, and above the threshold (3.0)
     if there is none or removed.Count >= MaxBadDataRemovals:  stop (failure is reported, not force-fitted)
     remove the worst row (optionally backfill it), record it with this pass number;  continue with the next pass
@@ -211,6 +211,17 @@ failure; if it still passes, the singularity comes from the constraint block and
 
 If the observability gate fails on a bad-data pass after the first, the result keeps the chi-square values of the
 previous pass. Read `Status` before reading the chi-square fields.
+
+`MaxNormalizedResidual` and `MaxNormalizedResidualMeasurement` give the largest finite normalised residual of the final
+pass and its row, whenever the normalised residuals were computed (NaN and null otherwise). They are reported only.
+
+`LnrDetection` (off by default) tests the largest normalised residual even when the chi-square test passes. The
+chi-square test loses power as the degrees of freedom grow: a single error of 8 sigma on one row of case14's full set
+(more than 100 degrees of freedom) passes it, while its normalised residual is well above 3. With one error b on row i
+of an otherwise exact set, linear WLS gives J = b^2 S_ii / sigma_i^2 = rN_i^2 (S = I - H G^-1 H' W), which the test
+uses. It is off by default because with no bad data some row exceeds 3 by chance on a large set (about one set in four
+at 100 rows, nine in ten at 1,000, treating the residuals as independent), so it can remove good data. It applies to
+the WLS removal loop only; the robust methods never remove.
 
 ### Gauss-Newton step and trust cap
 
@@ -820,7 +831,7 @@ injections come from the `PInjMw` and `QInjMvar` rows (duplicates summed, unmeas
 | Bus | Model |
 |---|---|
 | slack | keeps its reference role and generator; `Pd = Qd = 0`; absorbs the imbalance |
-| measured `P >= PvThresholdMw` (50 MW) | PV at `PvSetpointPu` (1.01 pu), `Pd = 0`, `Qd = -Q`, reactive range `+-QCapabilityRatio * max(|P|, MinQCapabilityBaseMva)` (0.6, 100 MVA) |
+| measured `P >= PvThresholdMw` (50 MW) | PV at `PvSetpointPu` (1.01 pu), `Pd = 0`, `Qd = -Q`, reactive range `+-QCapabilityRatio * max(\|P\|, MinQCapabilityBaseMva)` (0.6, 100 MVA) |
 | everything else | PQ with `Pd = -P`, `Qd = -Q` |
 
 The solve runs with `EnforceQLimits` and at most `PriorSolveMaxIterations` (100) iterations. `ApplyVoltagePrior` then
@@ -921,12 +932,12 @@ squares of the parts. The source tag on each row names its composition.
 
 | Component | Sigma | Source tag |
 |---|---|---|
-| Interconnector flow | `max(5 MW, 2 % * |MW|)` | `ic` |
-| Demand pseudo, national-scaled | `max(5 MW, 25 % * |P_load|)` | `pseudo-demand` |
-| Demand pseudo, group-anchored | `max(5 MW, 15 % * |P_load|)` | `pseudo-demand-group` |
-| `QInjMvar` demand pseudo | `max(10 MVAr, 30 % * |Q_load|)` | `pseudo-demand` |
+| Interconnector flow | `max(5 MW, 2 % * \|MW\|)` | `ic` |
+| Demand pseudo, national-scaled | `max(5 MW, 25 % * \|P_load\|)` | `pseudo-demand` |
+| Demand pseudo, group-anchored | `max(5 MW, 15 % * \|P_load\|)` | `pseudo-demand-group` |
+| `QInjMvar` demand pseudo | `max(10 MVAr, 30 % * \|Q_load\|)` | `pseudo-demand` |
 | Switched-compensation widening | adds `(range / sqrt(12))^2` in quadrature | `...+comp-range` |
-| Zero-centred reactive pseudo (metered bus, no demand row) | `max(50, 0.3 * |P|)` | `pseudo-reactive` |
+| Zero-centred reactive pseudo (metered bus, no demand row) | `max(50, 0.3 * \|P\|)` | `pseudo-reactive` |
 | Virtual zero injection (pure switching nodes) | 10 MW (P), 20 MVAr (Q) | `virtual-zero-injection` |
 | Slack voltage reference | 1.02 pu, sigma 0.005 | `reference` |
 | Voltage-schedule prior at every other bus | 1.01 pu, sigma 0.03 | `pseudo-voltage-schedule` |
@@ -945,7 +956,7 @@ Constrained method promotes to hard equalities. The sets are horizon-guarded on 
 
 | Name | Default | Unit | Meaning | Source symbol |
 |---|---|---|---|---|
-| Tolerance | 1e-8 | rad or pu | convergence threshold on `max |dx|` | `EstimationOptions.Tolerance` |
+| Tolerance | 1e-8 | rad or pu | convergence threshold on `max \|dx\|` | `EstimationOptions.Tolerance` |
 | Max iterations | 30 | iterations | inner Gauss-Newton cap per solve | `EstimationOptions.MaxIterations` |
 | Flat start | true | flag | start at `Vm = 1`, slack angle | `EstimationOptions.FlatStart` |
 | Warm start | none | state | start from a solved or estimated state, matched by bus id | `EstimationOptions.WarmStart` |
@@ -975,7 +986,7 @@ Loop and numerical constants:
 | Exact LAV accept ratio | 0.1 | ratio | accept a step when actual / predicted decrease reaches this | `WlsStateEstimator.LavLpAcceptRatio` |
 | Exact LAV expand ratio | 0.75 | ratio | above this the proximal weight shrinks | `WlsStateEstimator.LavLpExpandRatio` |
 | Exact LAV proximal growth | 4 | x | factor the proximal weight grows or shrinks by | `WlsStateEstimator.LavLpProximalGrowth` |
-| Exact LAV proximal start | 1e-3 | x | first nonzero proximal weight, as a fraction of `max_i w_i max|H_i|` | `WlsStateEstimator.LavLpProximalStart` |
+| Exact LAV proximal start | 1e-3 | x | first nonzero proximal weight, as a fraction of `max_i w_i max\|H_i\|` | `WlsStateEstimator.LavLpProximalStart` |
 | Exact LAV stationary decrease | 1e-12 | relative | a predicted decrease at or below this times `1 + objective` is stationary | `WlsStateEstimator.LavLpStationaryRelativeDecrease` |
 | LAV residual floor | 1e-3 | sigma | floor on `r~` in `1/r~` | `WlsStateEstimator.LavResidualFloor` |
 | IRLS weight tolerance | 1e-3 | relative | stop when no weight factor moves more | `WlsStateEstimator.IrlsWeightTolerance` |
@@ -984,7 +995,7 @@ Loop and numerical constants:
 | Critical fraction | 1e-8 | fraction | critical when `Omega_ii <= sigma_i^2 * this` | `NumericTolerances.CriticalResidualVarianceFraction` |
 | Pivot floor | 1e-12 | relative | relative pivot floor of the rank proof and the LU | `NumericTolerances.RelativePivotFloor` |
 | Constraint weight scale | 1e4 | x | constraint pseudo-weight over the largest free weight | `NumericTolerances.HardConstraintWeightScale` |
-| Zero-flow magnitude | 1e-12 | pu | `|I|` row left empty at or below this `|S|` | `MeasurementModel.ZeroFlowMagnitudePu` |
+| Zero-flow magnitude | 1e-12 | pu | `\|I\|` row left empty at or below this `\|S\|` | `MeasurementModel.ZeroFlowMagnitudePu` |
 | Zero-flow magnitude squared | 1e-24 | pu^2 | angle-of-current row has only the `Va` term at or below this | `MeasurementModel.ZeroFlowMagnitudeSquaredPu` |
 | Base MVA tolerance | 1e-9 | MVA | set versus model base mismatch | `MeasurementSet.BaseMvaMatchToleranceMva` |
 | Horizon | 169 | hours | minimum age of a dated input | `ForwardInferenceGuard.HorizonHours` |
@@ -1133,7 +1144,7 @@ WLS, QR, Constrained and Feasible agree to the printed digits on clean data; the
 the table. The captures below are the same set under each method
 (`J`, iterations summed over IRLS passes, and the worst error against truth):
 
-| `--method` | Iterations | `J` | max `|dVm|` (pu) | max `|dVa|` (deg) |
+| `--method` | Iterations | `J` | max `\|dVm\|` (pu) | max `\|dVa\|` (deg) |
 |---|---|---|---|---|
 | `wls` | 5 | 80.01 | 1.330E-003 | 2.248E-001 |
 | `qr` | 5 | 80.01 | 1.330E-003 | 2.248E-001 |

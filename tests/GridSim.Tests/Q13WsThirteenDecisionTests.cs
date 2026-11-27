@@ -30,7 +30,7 @@ public sealed class Q13WsThirteenDecisionTests
 
     private static string WriteCase(string busesJson)
     {
-        string dir = Path.Combine(Path.GetTempPath(), $"gridsim-q13-basekv-{Guid.NewGuid():N}");
+        string dir = TestTemp.Under($"gridsim-q13-basekv-{Guid.NewGuid():N}");
         Directory.CreateDirectory(dir);
         File.WriteAllText(Path.Combine(dir, "system.json"), """{ "name": "q13", "baseMva": 100 }""");
         File.WriteAllText(Path.Combine(dir, "buses.json"), busesJson);

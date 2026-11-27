@@ -15,7 +15,7 @@ public class PsseCliTests
 
     private static string TempDir()
     {
-        string d = Path.Combine(Path.GetTempPath(), "gridsim-psse-" + Guid.NewGuid().ToString("N"));
+        string d = TestTemp.Under("gridsim-psse-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(d);
         return d;
     }

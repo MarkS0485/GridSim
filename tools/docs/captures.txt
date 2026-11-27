@@ -837,6 +837,8 @@ v2-schema | small-losses | losses docs/_captures/v2-schema/inputs/small/small.ca
 v2-schema | small-pf | pf docs/_captures/v2-schema/inputs/small/small.case.json
 v2-schema | small-validate | validate docs/_captures/v2-schema/inputs/small/small.case.json
 v2-schema | v1-validate | validate data/uk/buses.json
+v2-schema | unit-protection-validate | validate docs/_captures/v2-schema/inputs/unit-protection/unit-protection.case.json
+v2-schema | unit-protection-check | protection-check docs/_captures/v2-schema/inputs/unit-protection/unit-protection.case.json
 # breakers rated for the highest system voltage Um (362 kV on the 345 kV case9 buses)
 iec60909 | breaker-adequate-um | iec60909 case9 --bus 5 --breaker 362,6,2,2
 iec60909 | breaker-bus7-adequate-um | iec60909 case9 --bus 7 --breaker 362,5,2,2,1

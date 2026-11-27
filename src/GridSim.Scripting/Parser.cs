@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace GridSim.Scripting;
 
@@ -16,6 +17,14 @@ public static class Grammar
 
     /// <summary>How deep blocks (FOR, IF, PROC bodies) may nest.</summary>
     public const int MaxBlockDepth = 8;
+
+    /// <summary>How deep brackets, minus signs, NOT and function arguments may nest inside one expression or condition. A deeper
+    /// one is refused as a syntax error at the token that goes past the limit, before anything runs.</summary>
+    public const int MaxExpressionNesting = 64;
+
+    /// <summary>How many operations deep one expression or condition may be (a chain <c>a + b + c</c> is two deep). A deeper one is
+    /// refused as a syntax error at the operator that goes past the limit; split it with LET.</summary>
+    public const int MaxExpressionDepth = 256;
 
     public static readonly IReadOnlyList<string> Verbs =
     [
@@ -35,6 +44,13 @@ public static class Grammar
 
     /// <summary>True for a word a value name may not use: a verb, a keyword, a noun, a reading, an engine or a unit.</summary>
     public static bool IsReserved(string word) => ReservedWords.Contains(word);
+
+    /// <summary>RC5 WP11: the words of the STUDIES extension. They are keywords only in a script whose header is
+    /// <c>GRAMMAR 1 WITH STUDIES</c>; everywhere else they are free names, exactly as in grammar 1.</summary>
+    public static IReadOnlySet<string> ExtensionReserved { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "STUDY", "STUDIES", "CONTINGENCY", "SHORTCIRCUIT", "OPF", "AS", "VIOLATIONS", "WORST", "OBJECTIVE", "IK", "KA",
+    };
 }
 
 /// <summary>
@@ -47,8 +63,14 @@ public sealed class Parser
     private readonly IReadOnlyList<Token> _t;
     private int _i;
     private int _depth;
+    private int _nest;     // brackets, minus signs, NOT and function arguments open around the token being read
+    private int _height;   // how many operations deep the expression or condition last returned is
+    private bool _studies; // RC5 WP11: the script's header turned the STUDIES extension on
 
     private Parser(IReadOnlyList<Token> tokens) { _t = tokens; }
+
+    /// <summary>A word a name may not use here: grammar 1's reserved words, and the extension's in a STUDIES script.</summary>
+    private bool Reserved(string word) => Grammar.IsReserved(word) || (_studies && Grammar.ExtensionReserved.Contains(word));
 
     /// <summary>Parse a whole script. A syntax error anywhere refuses the whole script (nothing runs).</summary>
     public static IReadOnlyList<Statement> ParseScript(string text)
@@ -62,8 +84,8 @@ public sealed class Parser
             list.Add(p.ParseLine(inBlock: false));
         }
         for (int k = 1; k < list.Count; k++)
-            if (list[k] is GrammarStatement g)
-                throw new ScriptException(ErrorPhase.Syntax, g.Pos, "GRAMMAR must be the first statement of a script");
+            if (list[k] is GrammarStatement or GrammarExtensionStatement)
+                throw new ScriptException(ErrorPhase.Syntax, list[k].Pos, "GRAMMAR must be the first statement of a script");
         return list;
     }
 
@@ -102,6 +124,25 @@ public sealed class Parser
 
     private static ScriptException Err(Token at, string message) => new(ErrorPhase.Syntax, at.Pos, message);
 
+    /// <summary>Open one level of expression nesting at <paramref name="at"/>; refused past <see cref="Grammar.MaxExpressionNesting"/>
+    /// (or, as a second guard, when the thread's stack is nearly used up). Every call is paired with <see cref="Leave"/> in a finally.</summary>
+    private void Enter(Token at)
+    {
+        if (_nest >= Grammar.MaxExpressionNesting || !RuntimeHelpers.TryEnsureSufficientExecutionStack())
+            throw Err(at, $"the expression nests too deeply: grammar 1 allows at most {Grammar.MaxExpressionNesting} levels of brackets, minus signs, NOT and function arguments inside one another");
+        _nest++;
+    }
+
+    private void Leave() => _nest--;
+
+    /// <summary>Record how many operations deep the node being returned is; refused past <see cref="Grammar.MaxExpressionDepth"/>.</summary>
+    private void Height(int h, Token at)
+    {
+        if (h > Grammar.MaxExpressionDepth)
+            throw Err(at, $"the expression is too deep: grammar 1 allows at most {Grammar.MaxExpressionDepth} operations inside one another; split it with LET");
+        _height = h;
+    }
+
     private Statement ParseLine(bool inBlock)
     {
         Statement s = ParseStatement(allowAt: true, inBlock);
@@ -133,6 +174,16 @@ public sealed class Parser
                 int ver = int.Parse(n.Text, CultureInfo.InvariantCulture);
                 if (ver != Grammar.Version)
                     throw Err(n, $"this build implements grammar {Grammar.Version}, the script asks for grammar {ver}");
+                if (Peek.Is("WITH"))
+                {
+                    // RC5 WP11: GRAMMAR 1 WITH STUDIES (grammar 1 refused this line as "unexpected WITH", so accepting it keeps the promise).
+                    Next();
+                    Token x = Next();
+                    if (!x.Is(StudyExtension.Studies))
+                        throw Err(x, $"expected the name of a grammar extension after WITH (the one extension is {StudyExtension.Studies}), found {x.Describe()}");
+                    _studies = true;
+                    return new GrammarExtensionStatement(v.Pos, new Located<int>(ver, n.Pos), [StudyExtension.Studies]);
+                }
                 return new GrammarStatement(v.Pos, new Located<int>(ver, n.Pos));
             }
             case "LOAD":
@@ -181,7 +232,24 @@ public sealed class Parser
             case "FAULT":
             {
                 ExpectKeyword("BUS", "after FAULT");
-                return new FaultStatement(v.Pos, ExpectNameRef("the bus name in double quotes"));
+                NameRef faultBus = ExpectNameRef("the bus name in double quotes");
+                // WP2: an optional fault type, then an optional impedance (WITH R n PU X n PU).
+                string? faultType = null;
+                foreach (string ft in new[] { "THREE_PHASE", "SLG", "LL", "LLG" })
+                    if (Peek.Is(ft)) { Next(); faultType = ft; break; }
+                Quantity? faultR = null, faultX = null;
+                if (faultType is not null && Peek.Is("WITH"))
+                {
+                    Next();
+                    ExpectKeyword("R", "after WITH (the fault resistance, as in WITH R 0 PU X 0.05 PU)");
+                    Located<Quantity> r = ExpectQuantity("the fault resistance in PU");
+                    if (r.Value.Unit != Unit.Pu) throw new ScriptException(ErrorPhase.Syntax, r.Pos, "the fault resistance is in PU (system base)");
+                    ExpectKeyword("X", "after the fault resistance (the fault reactance, as in X 0.05 PU)");
+                    Located<Quantity> x = ExpectQuantity("the fault reactance in PU");
+                    if (x.Value.Unit != Unit.Pu) throw new ScriptException(ErrorPhase.Syntax, x.Pos, "the fault reactance is in PU (system base)");
+                    faultR = r.Value; faultX = x.Value;
+                }
+                return new FaultStatement(v.Pos, faultBus, faultType, faultR, faultX);
             }
             case "CLEAR":
             {
@@ -197,6 +265,7 @@ public sealed class Parser
                 else if (k.Is("BRANCHES")) kind = ReportKind.Branches;
                 else if (k.Is("ELEMENTS")) kind = ReportKind.Elements;
                 else if (k.Is("SIM")) kind = ReportKind.Sim;
+                else if (_studies && k.Is("STUDY")) return new ReportStudyStatement(v.Pos, ExpectValueName("the study name, as in REPORT STUDY a"));
                 else throw Err(k, $"expected BUSES, BRANCHES, ELEMENTS or SIM after REPORT, found {k.Describe()}");
                 return new ReportStatement(v.Pos, kind);
             }
@@ -239,6 +308,8 @@ public sealed class Parser
                 return ParseProc(v);
             case "CALL":
                 return ParseCall(v);
+            case "STUDY" when _studies:
+                return ParseStudy(v);
             default:
                 throw Err(v, $"unknown verb '{v.Text}'; verbs are {VerbList}");
         }
@@ -355,6 +426,122 @@ public sealed class Parser
         return new CallStatement(v.Pos, name, args.ToImmutable());
     }
 
+    // ---- STUDY (RC5 WP11, STUDIES scripts only) -------------------------------------------------------------------------
+
+    private Statement ParseStudy(Token v)
+    {
+        Token k = Next();
+        StudyKind kind;
+        NameRef? bus = null;
+        if (k.Is("CONTINGENCY")) kind = StudyKind.Contingency;
+        else if (k.Is("SHORTCIRCUIT"))
+        {
+            kind = StudyKind.ShortCircuit;
+            ExpectKeyword("BUS", "after STUDY SHORTCIRCUIT");
+            bus = ExpectNameRef("the bus name in double quotes");
+        }
+        else if (k.Is("OPF")) kind = StudyKind.Opf;
+        // RC5 WP15: STUDY SCOPF (the word is not reserved, so a STUDIES script that used it as a name still parses).
+        else if (k.Is(StudyExtension.ScopfWord)) kind = StudyKind.Scopf;
+        // RC5 2.1.110: STUDY RMS and STUDY CCT, the dynamics-study rows (CCT and DYNAMICS are read in place).
+        else if (k.Is("RMS") || k.Is(StudyExtension.CctWord)) return ParseDynamicStudy(v, k.Is("RMS") ? StudyKind.Rms : StudyKind.Cct);
+        else throw Err(k, $"expected CONTINGENCY, SHORTCIRCUIT, OPF, SCOPF, RMS or CCT after STUDY, found {k.Describe()}");
+        ExpectKeyword("AS", "before the study name, as in STUDY CONTINGENCY AS a");
+        return new StudyStatement(v.Pos, kind, bus, ExpectValueName("a name for the study"));
+    }
+
+    /// <summary>STUDY RMS DYNAMICS "f.dyr" FAULT BUS "b" AT t CLEAR AT t FOR t AS name, and STUDY CCT DYNAMICS "f.dyr"
+    /// FAULT BUS "b" AT t FOR t AS name. Times are in S or MS; the fault time is 0 or later, the clearing after it, the run
+    /// length above 0.</summary>
+    private StudyStatement ParseDynamicStudy(Token v, StudyKind kind)
+    {
+        string word = kind == StudyKind.Rms ? "STUDY RMS" : "STUDY CCT";
+        ExpectKeyword(StudyExtension.DynamicsWord, $"after {word} (the DYR file, as in {word} DYNAMICS \"case.dyr\")");
+        Located<string> dyr = ExpectString("the DYR file path in double quotes");
+        ExpectKeyword("FAULT", "after the DYR file");
+        ExpectKeyword("BUS", "after FAULT");
+        NameRef bus = ExpectNameRef("the bus name in double quotes");
+        ExpectKeyword("AT", "after the fault bus (the fault time, as in AT 0.1 S)");
+        Located<Quantity> at = ExpectTime("the fault time");
+        Located<Quantity>? clear = null;
+        if (kind == StudyKind.Rms)
+        {
+            ExpectKeyword("CLEAR", "after the fault time (as in CLEAR AT 0.15 S)");
+            ExpectKeyword("AT", "after CLEAR");
+            clear = ExpectTime("the clearing time");
+            if (Sec(clear.Value.Value) <= Sec(at.Value))
+                throw new ScriptException(ErrorPhase.Syntax, clear.Value.Pos, "the fault must clear after it starts");
+        }
+        ExpectKeyword("FOR", "before the run length (as in FOR 3 S)");
+        Located<Quantity> length = ExpectTime("the run length");
+        if (Sec(length.Value) <= 0) throw new ScriptException(ErrorPhase.Syntax, length.Pos, "the run length must be above 0");
+        ExpectKeyword("AS", $"before the study name, as in {word} ... AS r");
+        return new StudyStatement(v.Pos, kind, bus, ExpectValueName("a name for the study"))
+        {
+            Dynamic = new DynamicStudyArgs(dyr, at.Value, clear?.Value, length.Value),
+        };
+    }
+
+    private static decimal Sec(Quantity q) => q.Unit == Unit.Ms ? q.Value / 1000m : q.Value;
+
+    private Located<Quantity> ExpectTime(string what)
+    {
+        Located<Quantity> q = ExpectQuantity(what + " in S or MS");
+        if (q.Value.Unit is not (Unit.S or Unit.Ms)) throw new ScriptException(ErrorPhase.Syntax, q.Pos, $"{what} is a time, in S or MS");
+        if (q.Value.Value < 0) throw new ScriptException(ErrorPhase.Syntax, q.Pos, $"{what} cannot be negative");
+        return q;
+    }
+
+    /// <summary>A study reading that starts with <paramref name="t"/>, or null when <paramref name="t"/> starts none.</summary>
+    private Expr? ParseStudyReading(Token t)
+    {
+        StudyReading r;
+        if (t.Is("VIOLATIONS")) r = StudyReading.Violations;
+        else if (t.Is("OBJECTIVE")) r = StudyReading.Objective;
+        // RC5 WP15: SECURED OF STUDY s (only with OF STUDY after it, so a value named secured is still a value).
+        else if (t.Is(StudyExtension.SecuredWord) && Peek.Is("OF") && PeekAt(1).Is("STUDY")) r = StudyReading.Secured;
+        // RC5 2.1.110: STABLE / CCT OF STUDY s and FINAL FREQUENCY OF STUDY s, read in place the same way.
+        else if (t.Is(StudyExtension.StableWord) && Peek.Is("OF") && PeekAt(1).Is("STUDY")) r = StudyReading.Stable;
+        else if (t.Is(StudyExtension.CctWord) && Peek.Is("OF") && PeekAt(1).Is("STUDY")) r = StudyReading.Cct;
+        else if (t.Is(StudyExtension.FinalWord) && Peek.Is("FREQUENCY") && PeekAt(1).Is("OF") && PeekAt(2).Is("STUDY"))
+        {
+            Next();
+            r = StudyReading.FinalFrequency;
+        }
+        // MIN VOLTAGE OF BUS b IN STUDY s (MIN followed by VOLTAGE, so the MIN function is untouched).
+        else if (t.Is("MIN") && Peek.Is(StudyExtension.VoltageWord) && PeekAt(1).Is("OF"))
+        {
+            Next();
+            ExpectKeyword("OF", "after MIN VOLTAGE");
+            ExpectKeyword("BUS", "after MIN VOLTAGE OF");
+            NameRef b = ExpectNameRef("the bus name in double quotes");
+            ExpectKeyword("IN", "after the bus name");
+            ExpectKeyword("STUDY", "after IN");
+            _height = 0;
+            return new StudyExpr(t.Pos, StudyReading.MinVoltage, Noun.Bus, b, ExpectValueName("the study name"));
+        }
+        else if (t.Is("WORST"))
+        {
+            ExpectKeyword("LOADING", "after WORST");
+            r = StudyReading.WorstLoading;
+        }
+        else if (t.Is("IK"))
+        {
+            ExpectKeyword("OF", "after IK");
+            ExpectKeyword("BUS", "after IK OF");
+            NameRef b = ExpectNameRef("the bus name in double quotes");
+            ExpectKeyword("IN", "after the bus name");
+            ExpectKeyword("STUDY", "after IN");
+            _height = 0;
+            return new StudyExpr(t.Pos, StudyReading.Ik, Noun.Bus, b, ExpectValueName("the study name"));
+        }
+        else return null;
+        ExpectKeyword("OF", $"after {t.Text.ToUpperInvariant()}{(r == StudyReading.WorstLoading ? " LOADING" : "")}");
+        ExpectKeyword("STUDY", "after OF");
+        _height = 0;
+        return new StudyExpr(t.Pos, r, null, null, ExpectValueName("the study name"));
+    }
+
     // ---- SELECT ENGINE -------------------------------------------------------------------------------------------------
 
     private Statement ParseSelect(Token v)
@@ -425,22 +612,32 @@ public sealed class Parser
     private Cond ParseCond()
     {
         Cond l = ParseAnd();
+        int h = _height;
         while (Peek.Is("OR"))
         {
             Token t = Next();
-            l = new OrCond(t.Pos, l, ParseAnd());
+            Cond r = ParseAnd();
+            h = Math.Max(h, _height) + 1;
+            Height(h, t);
+            l = new OrCond(t.Pos, l, r);
         }
+        _height = h;
         return l;
     }
 
     private Cond ParseAnd()
     {
         Cond l = ParseNot();
+        int h = _height;
         while (Peek.Is("AND"))
         {
             Token t = Next();
-            l = new AndCond(t.Pos, l, ParseNot());
+            Cond r = ParseNot();
+            h = Math.Max(h, _height) + 1;
+            Height(h, t);
+            l = new AndCond(t.Pos, l, r);
         }
+        _height = h;
         return l;
     }
 
@@ -449,7 +646,12 @@ public sealed class Parser
         if (Peek.Is("NOT"))
         {
             Token t = Next();
-            return new NotCond(t.Pos, ParseNot());
+            Cond operand;
+            Enter(t);
+            try { operand = ParseNot(); }
+            finally { Leave(); }
+            Height(_height + 1, t);
+            return new NotCond(t.Pos, operand);
         }
         return ParseAtom();
     }
@@ -466,10 +668,11 @@ public sealed class Parser
             NameRef r = ExpectNameRef($"the {noun.ToString().ToLowerInvariant()} name in double quotes");
             ExpectKeyword("IS", "after the name");
             Token s = Next();
-            if (s.Is("TRIPPED")) return new StatusCond(t.Pos, noun, r, InService: false);
+            if (s.Is("TRIPPED")) { _height = 0; return new StatusCond(t.Pos, noun, r, InService: false); }
             if (s.Is("IN"))
             {
                 ExpectKeyword("SERVICE", "after IS IN");
+                _height = 0;
                 return new StatusCond(t.Pos, noun, r, InService: true);
             }
             throw Err(s, $"expected TRIPPED or IN SERVICE after IS, found {s.Describe()}");
@@ -480,7 +683,10 @@ public sealed class Parser
             try
             {
                 Next();
-                Cond inner = ParseCond();
+                Cond inner;
+                Enter(t);
+                try { inner = ParseCond(); }
+                finally { Leave(); }
                 if (Peek.IsSymbol(")"))
                 {
                     Next();
@@ -491,10 +697,13 @@ public sealed class Parser
             _i = save;
         }
         Expr left = ParseExpr();
+        int hl = _height;
         Token op = Next();
         if (op.Kind != TokenKind.Symbol || op.Text is not ("=" or "!=" or "<" or "<=" or ">" or ">="))
             throw Err(op, $"expected a comparison (=, !=, <, <=, >, >=), found {op.Describe()}");
-        return new CompareCond(op.Pos, op.Text, left, ParseExpr());
+        Expr right = ParseExpr();
+        Height(Math.Max(hl, _height) + 1, op);
+        return new CompareCond(op.Pos, op.Text, left, right);
     }
 
     // ---- expressions ---------------------------------------------------------------------------------------------------
@@ -502,22 +711,32 @@ public sealed class Parser
     private Expr ParseExpr()
     {
         Expr l = ParseTerm();
+        int h = _height;
         while (Peek.IsSymbol("+") || Peek.IsSymbol("-"))
         {
             Token op = Next();
-            l = new BinExpr(op.Pos, op.Text[0], l, ParseTerm());
+            Expr r = ParseTerm();
+            h = Math.Max(h, _height) + 1;
+            Height(h, op);
+            l = new BinExpr(op.Pos, op.Text[0], l, r);
         }
+        _height = h;
         return l;
     }
 
     private Expr ParseTerm()
     {
         Expr l = ParseUnary();
+        int h = _height;
         while (Peek.IsSymbol("*") || Peek.IsSymbol("/"))
         {
             Token op = Next();
-            l = new BinExpr(op.Pos, op.Text[0], l, ParseUnary());
+            Expr r = ParseUnary();
+            h = Math.Max(h, _height) + 1;
+            Height(h, op);
+            l = new BinExpr(op.Pos, op.Text[0], l, r);
         }
+        _height = h;
         return l;
     }
 
@@ -526,9 +745,14 @@ public sealed class Parser
         if (Peek.IsSymbol("-"))
         {
             Token m = Next();
-            Expr operand = ParseUnary();
+            Expr operand;
+            Enter(m);
+            try { operand = ParseUnary(); }
+            finally { Leave(); }
             // A minus straight before a number is part of the number, so -12 MVAR stays one literal.
-            return operand is NumberExpr { Value: >= 0 } n ? n with { Pos = m.Pos, Value = -n.Value } : new NegExpr(m.Pos, operand);
+            if (operand is NumberExpr { Value: >= 0 } n) return n with { Pos = m.Pos, Value = -n.Value };
+            Height(_height + 1, m);
+            return new NegExpr(m.Pos, operand);
         }
         return ParsePrimary();
     }
@@ -549,16 +773,23 @@ public sealed class Parser
                     else if (!(Peek.Is("AND") || Peek.Is("OR")))
                         throw Err(Peek, $"expected a unit ({string.Join(", ", Units.All.Select(Units.Keyword))}) after {t.Text}, found {Peek.Describe()}");
                 }
+                _height = 0;
                 return new NumberExpr(t.Pos, value, unit);
             }
             case TokenKind.String:
+                _height = 0;
                 return new StringExpr(t.Pos, t.Text);
             case TokenKind.Symbol when t.Text == "(":
             {
-                Expr e = ParseExpr();
-                Token close = Next();
-                if (!close.IsSymbol(")")) throw Err(close, $"expected ) to close the bracket, found {close.Describe()}");
-                return e;
+                Enter(t);
+                try
+                {
+                    Expr e = ParseExpr();
+                    Token close = Next();
+                    if (!close.IsSymbol(")")) throw Err(close, $"expected ) to close the bracket, found {close.Describe()}");
+                    return e;
+                }
+                finally { Leave(); }
             }
             case TokenKind.Word:
                 return ParseWordValue(t);
@@ -569,32 +800,54 @@ public sealed class Parser
 
     private Expr ParseWordValue(Token t)
     {
+        _height = 0;
         foreach (SystemQuantity q in Enum.GetValues<SystemQuantity>())
             if (t.Is(q.ToString())) return new SystemExpr(t.Pos, q);
+        // RC5 2.1.110: MIN VOLTAGE OF BUS b IN STUDY s comes before the MIN function (which takes a bracket).
+        if (_studies && t.Is("MIN") && Peek.Is(StudyExtension.VoltageWord) && ParseStudyReading(t) is { } minVoltage) return minVoltage;
         if (t.Is("ABS") || t.Is("MIN") || t.Is("MAX"))
         {
             string fn = t.Text.ToUpperInvariant();
             Token open = Next();
             if (!open.IsSymbol("(")) throw Err(open, $"expected ( after {fn}, found {open.Describe()}");
             var args = ImmutableArray.CreateBuilder<Expr>();
-            args.Add(ParseExpr());
-            if (fn != "ABS")
+            int h;
+            Enter(open);
+            try
             {
-                Token comma = Next();
-                if (!comma.IsSymbol(",")) throw Err(comma, $"{fn} takes two values; expected , found {comma.Describe()}");
                 args.Add(ParseExpr());
+                h = _height;
+                if (fn != "ABS")
+                {
+                    Token comma = Next();
+                    if (!comma.IsSymbol(",")) throw Err(comma, $"{fn} takes two values; expected , found {comma.Describe()}");
+                    args.Add(ParseExpr());
+                    h = Math.Max(h, _height);
+                }
             }
+            finally { Leave(); }
             Token close = Next();
             if (!close.IsSymbol(")")) throw Err(close, $"expected ) to close {fn}, found {close.Describe()}");
+            Height(h + 1, t);
             return new FuncExpr(t.Pos, fn, args.ToImmutable());
         }
+        if (_studies && ParseStudyReading(t) is { } reading) return reading;
         if (Measures.TryParse(t.Text, out Measure m))
         {
             ExpectKeyword("OF", $"after {t.Text.ToUpperInvariant()}");
             Noun noun = ExpectNoun(withBus: true);
-            return new MeasureExpr(t.Pos, m, noun, ExpectNameRef($"the {noun.ToString().ToLowerInvariant()} name in double quotes"));
+            NameRef r = ExpectNameRef($"the {noun.ToString().ToLowerInvariant()} name in double quotes");
+            _height = 0;
+            // RC5 WP11 (STUDIES scripts only): P OF GENERATOR g IN STUDY s reads the generator's output in an OPF study.
+            if (_studies && m == Measure.P && noun == Noun.Generator && Peek.Is("IN") && PeekAt(1).Is("STUDY"))
+            {
+                Next();
+                Next();
+                return new StudyExpr(t.Pos, StudyReading.P, Noun.Generator, r, ExpectValueName("the study name"));
+            }
+            return new MeasureExpr(t.Pos, m, noun, r);
         }
-        if (Grammar.IsReserved(t.Text))
+        if (Reserved(t.Text))
             throw Err(t, $"expected a value (a number with its unit, a name, a reading), found {t.Describe()}");
         return new VarExpr(t.Pos, t.Text);
     }
@@ -631,7 +884,7 @@ public sealed class Parser
     {
         Token t = Next();
         if (t.Kind == TokenKind.String) return new NameRef(t.Text, t.Pos, IsVariable: false);
-        if (t.Kind == TokenKind.Word && !Grammar.IsReserved(t.Text)) return new NameRef(t.Text, t.Pos, IsVariable: true);
+        if (t.Kind == TokenKind.Word && !Reserved(t.Text)) return new NameRef(t.Text, t.Pos, IsVariable: true);
         throw Err(t, $"expected {what} (or a name held in a value), found {t.Describe()}");
     }
 
@@ -640,7 +893,7 @@ public sealed class Parser
     {
         Token t = Next();
         if (t.Kind != TokenKind.Word) throw Err(t, $"expected {what}, found {t.Describe()}");
-        if (Grammar.IsReserved(t.Text)) throw Err(t, $"'{t.Text}' is a keyword of the language and cannot be used as a name");
+        if (Reserved(t.Text)) throw Err(t, $"'{t.Text}' is a keyword of the language and cannot be used as a name");
         return new Located<string>(t.Text, t.Pos);
     }
 

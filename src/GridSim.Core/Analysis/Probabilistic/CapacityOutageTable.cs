@@ -48,7 +48,7 @@ public sealed class CapacityOutageTable
             {
                 if (Math.Abs(v - Math.Round(v)) > 1e-9)
                     throw DomainRefusal.Mark(new InvalidOperationException(
-                        $"Capacity {v:R} MW is not a whole number of MW: give an explicit capacity step (stepMw) that divides every capacity."));
+                        FormattableString.Invariant($"Capacity {v:R} MW is not a whole number of MW: give an explicit capacity step (stepMw) that divides every capacity.")));
                 g = Gcd(g, (long)Math.Abs(Math.Round(v)));
             }
         return g == 0 ? 1.0 : g;
@@ -73,7 +73,7 @@ public sealed class CapacityOutageTable
             LatticePmf term = LatticePmf.OfTerm(u, 1.0, step);
             if (!term.AtomsExact)
                 throw DomainRefusal.Mark(new InvalidOperationException(
-                    $"A unit capacity is not an integer multiple of the {step:R} MW step: the convolution would be approximate, so it is out of scope. Choose a step that divides every capacity."));
+                    FormattableString.Invariant($"A unit capacity is not an integer multiple of the {step:R} MW step: the convolution would be approximate, so it is out of scope. Choose a step that divides every capacity.")));
             acc = acc.Convolve(term);
             installed += u.Atoms[^1].Value;
         }

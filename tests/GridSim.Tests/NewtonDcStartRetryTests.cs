@@ -186,7 +186,7 @@ public class NewtonDcStartRetryTests
         Assert.True(new PowerFlowOptions().RetryFromDcStart);
         foreach (IPowerFlowSolver s in Engines())
         {
-            foreach ((GridModel m, int cap) in new[] { (Chain(8, 60.0), 10), (IeeeCases.Case9(), 1) })
+            foreach ((GridModel m, int cap) in new[] { (Chain(8, 60.0), 10) })
             {
                 PowerFlowResult off = s.Solve(m, Flat(cap) with { RetryFromDcStart = false });
                 Assert.False(off.Converged);
@@ -195,6 +195,11 @@ public class NewtonDcStartRetryTests
                 Assert.Equal(cap, off.Iterations);
                 Assert.NotEqual(NewtonRetryOutcome.NotTried, s.Solve(m, Flat(cap)).NewtonRetry);   // on (the default), it runs
             }
+            // Approved by the maintainer (2.1.074): case9 at cap 1 was a retried solve here; a cap of 1 is never retried now.
+            PowerFlowResult one = s.Solve(IeeeCases.Case9(), Flat(1));
+            Assert.False(one.Converged);
+            Assert.Equal(1, one.Iterations);
+            Assert.Equal(NewtonRetryOutcome.NotTried, one.NewtonRetry);
         }
     }
 
@@ -223,8 +228,42 @@ public class NewtonDcStartRetryTests
             Assert.False(r.Converged);
             Assert.Equal(PowerFlowStatus.MaxIterations, r.Status);
             Assert.Equal(1, r.Iterations);
-            Assert.Equal(NewtonRetryOutcome.DidNotConverge, r.NewtonRetry);
-            Assert.Contains("was also tried and did not converge", r.NewtonRetryNote, StringComparison.Ordinal);
+            // Approved by the maintainer (2.1.074): a cap of 1 is never retried, so case9 at cap 1 is not retried.
+            Assert.Equal(NewtonRetryOutcome.NotTried, r.NewtonRetry);
+            Assert.Null(r.NewtonRetryNote);
+        }
+    }
+
+    private const string LightTwoBus = @"
+function mpc = light_two_bus
+mpc.baseMVA = 100;
+mpc.bus = [
+    1   3   0    0    0   0   1   1.0   0   230   1   1.1   0.9;
+    2   1   0.5  0.1  0   0   1   1.0   0   230   1   1.1   0.9;
+];
+mpc.gen = [
+    1   0   0   300   -300   1.0   100   1   300   0;
+];
+mpc.branch = [
+    1   2   0.001   0.01   0.0   250   0   0   0   0   1   -360   360;
+];
+";
+
+    /// <summary>A solve that converges in exactly one iteration at a cap of 1 is reported Converged by the ordinary solve,
+    /// with no retry (a lightly loaded two-bus system from flat start: the start mismatch is 5e-3 pu and one Newton step
+    /// takes it below 1e-4 pu).</summary>
+    [Fact]
+    public void A_solve_converging_in_one_iteration_at_cap_1_is_converged_with_no_retry()
+    {
+        GridModel m = MatpowerParser.ParseWithDiagnostics(LightTwoBus, "light_two_bus").Model;
+        foreach (IPowerFlowSolver s in Engines())
+        {
+            PowerFlowResult r = s.Solve(m, Flat(1) with { Tolerance = 1e-4 });
+            Assert.True(r.Converged);
+            Assert.Equal(PowerFlowStatus.Converged, r.Status);
+            Assert.Equal(1, r.Iterations);
+            Assert.Equal(NewtonRetryOutcome.NotTried, r.NewtonRetry);
+            Assert.Null(r.NewtonRetryNote);
         }
     }
 
@@ -248,17 +287,41 @@ mpc.branch = [
 ];
 ";
 
+    // The same two islands with the second one loaded far beyond its maximum transferable power (5000 MW through x = 0.1 pu
+    // on 100 MVA, a limit of about 500 MW): Newton cannot converge there, so the first solve stalls at the default cap.
+    private static readonly string TwoIslandsOverloaded = TwoIslands.Replace("4   1   60   10", "4   1   5000   10");
+
     [Fact]
     public void Without_a_single_slack_island_the_retry_is_not_run()
+    {
+        // Fixture changed (approved by the maintainer, 2.1.074): the test used a cap of 1 to make the first solve fail, and a
+        // cap of 1 is never retried now. The overloaded island makes the first solve stall at the default cap instead.
+        GridModel m = MatpowerParser.ParseWithDiagnostics(TwoIslandsOverloaded, "two_islands_overloaded").Model;
+        foreach (IPowerFlowSolver s in Engines())
+        {
+            PowerFlowOptions o = Flat(50);
+            PowerFlowResult off = s.Solve(m, o with { RetryFromDcStart = false });
+            Assert.False(off.Converged);
+            PowerFlowResult r = s.Solve(m, o);
+            Assert.False(r.Converged);
+            Assert.Equal(NewtonRetryOutcome.Unavailable, r.NewtonRetry);
+            Assert.Contains("was not run", r.NewtonRetryNote, StringComparison.Ordinal);
+            SameBits(off, r);   // the reported state is the first attempt's
+        }
+    }
+
+    /// <summary>Two islands at a cap of 1: the first solve fails, and a cap of 1 is never retried, so the island guard is not
+    /// reached either (2.1.074).</summary>
+    [Fact]
+    public void A_two_island_model_at_cap_1_is_not_retried()
     {
         GridModel m = MatpowerParser.ParseWithDiagnostics(TwoIslands, "two_islands").Model;
         foreach (IPowerFlowSolver s in Engines())
         {
             PowerFlowResult r = s.Solve(m, Flat(1));
             Assert.False(r.Converged);
-            Assert.Equal(NewtonRetryOutcome.Unavailable, r.NewtonRetry);
-            Assert.Contains("was not run", r.NewtonRetryNote, StringComparison.Ordinal);
-            Assert.True(s.Solve(m, Flat(50)).Converged);   // the ordinary solve itself is fine with room to iterate
+            Assert.Equal(NewtonRetryOutcome.NotTried, r.NewtonRetry);
+            Assert.Null(r.NewtonRetryNote);
         }
     }
 

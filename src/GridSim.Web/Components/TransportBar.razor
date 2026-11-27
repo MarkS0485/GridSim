@@ -62,11 +62,31 @@
            branch too, where the button silently did nothing (SimSession.Trip only acts on a LiveSim) - R303. *@
         <button class="tbtn trip" @onclick="() => Trip(1000)">Trip 1 GW</button>
     }
+    @if (_refusal is not null)
+    {
+        <span class="trefused" role="status">@_refusal</span>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired] public SimSession Session { get; set; } = default!;
     [Parameter] public EventCallback OnChanged { get; set; }
+
+    /// <summary>The page's role gate (null allows everything): given the band and the operation, null to go ahead or the refusal to show.
+    /// Driving a LIVE in-process session (play, step, speed, step size, trip) asks for the Operator band, as the same controls on
+    /// <c>/ws/sim</c> do; a replay or a bridge feed is driven freely (it runs no solver here).</summary>
+    [Parameter] public Func<GridSim.Core.Security.OperationRole, string, string?>? Authorize { get; set; }
+
+    private string? _refusal;
+
+    /// <summary>True when the action may go ahead; for a live session, asks the gate and keeps its refusal to show.</summary>
+    private bool Allowed(string operation)
+    {
+        _refusal = null;
+        if (Authorize is null || _session.IsReplay || _session.IsBridge) return true;
+        _refusal = Authorize(GridSim.Web.Site.AccessControl.SimControlRole, operation);
+        return _refusal is null;
+    }
 
     private SimSession _session => Session;
     // Raw replay mixes cadences (1 s frequency vs 30 min settlement data), so higher speeds are offered to make
@@ -91,18 +111,20 @@
 
     private async Task TogglePlay()
     {
-        if (_session.Playing) _session.Pause(); else _session.Play();
+        if (_session.Playing) _session.Pause();
+        else if (Allowed("play")) _session.Play();
         await OnChanged.InvokeAsync();
     }
 
     private async Task Step()
     {
-        _session.StepOnce();
+        if (Allowed("step")) _session.StepOnce();
         await OnChanged.InvokeAsync();
     }
 
     private async Task OnSpeed(ChangeEventArgs e)
     {
+        if (!Allowed("speed")) { await OnChanged.InvokeAsync(); return; }
         if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out double fps))
             _session.SetSpeed(fps);
@@ -111,6 +133,7 @@
 
     private async Task OnStepMinutes(ChangeEventArgs e)
     {
+        if (!Allowed("stepsize")) { await OnChanged.InvokeAsync(); return; }
         if (double.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out double minutes))
             _session.SetStepMinutes(minutes);
@@ -179,5 +202,8 @@
         _session.SeekTo(dt);
     }
 
-    private void Trip(double mw) => _session.Trip(mw);
+    private void Trip(double mw)
+    {
+        if (Allowed("trip")) _session.Trip(mw);
+    }
 }

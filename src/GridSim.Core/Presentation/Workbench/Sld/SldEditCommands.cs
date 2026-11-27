@@ -136,8 +136,8 @@ public sealed class SldCaseDocument : ISldDocument, IDisposable
     {
         string source = Path.GetFullPath(folder);
         if (!Directory.Exists(source)) throw new DirectoryNotFoundException("Case folder not found: " + folder);
-        string copy = Path.Combine(Path.GetTempPath(), "gridsim-sld-copy-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(copy);
+        // SEC-04: a temporary folder only this user can read (0700 outside Windows); the case's documents go into it.
+        string copy = Directory.CreateTempSubdirectory("gridsim-sld-copy-").FullName;
         try
         {
             foreach (string f in Directory.EnumerateFiles(source, "*.json", SearchOption.TopDirectoryOnly))
@@ -296,10 +296,11 @@ public sealed class SldCaseDocument : ISldDocument, IDisposable
     /// <summary>The model of the case as its documents stand now: the files staged in a fresh temporary folder and read by the real case loader (no dispatch, so no number of the case changes).</summary>
     private static GridModel? StageLoad(CaseSession s, bool dispatch = false)
     {
-        string stage = Path.Combine(Path.GetTempPath(), "gridsim-sld-" + Guid.NewGuid().ToString("N"));
+        string? stage = null;
         try
         {
-            Directory.CreateDirectory(stage);
+            // SEC-04: a user-only temporary folder (0700 outside Windows), not one every local account can read.
+            stage = Directory.CreateTempSubdirectory("gridsim-sld-").FullName;
             foreach (CaseDocument d in s.Documents.Where(d => d.Exists)) File.WriteAllBytes(Path.Combine(stage, d.FileName), d.Text.ToArray());
             return JsonGridLoader.LoadDirectory(stage, dispatch);
         }
@@ -529,11 +530,8 @@ public sealed class SldSubstationDocument : ISldDocument
     private void Set(SldSetSwitch c)
     {
         var subs = _model.Substations.Select(s => s with { Switches = s.Switches.Select(x => x.Id == c.SwitchId ? x with { NormalOpen = c.Open } : x).ToList() }).ToList();
-        SubstationModel next = new()
-        {
-            Name = _model.Name, BaseMva = _model.BaseMva, FrequencyHz = _model.FrequencyHz, Substations = subs, Lines = _model.Lines,
-            Transformers = _model.Transformers, Loads = _model.Loads, Generators = _model.Generators, Shunts = _model.Shunts,
-        };
+        // Every member but the substations is carried over member-wise, so nothing the file holds is lost on a switch edit.
+        SubstationModel next = _model.WithSubstations(subs);
         _text = SubstationJson.Write(next);
         _model = SubstationJson.Read(_text);   // the written form read back: what is shown is what is saved
         _sld = SldModel.From(_model);

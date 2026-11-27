@@ -57,14 +57,14 @@ public sealed class ProtectionController : IActiveAssetDynamics
     {
         if (!(capacityMw >= 0.0) || !double.IsFinite(capacityMw))
             throw new InvalidDataException(
-                $"Protection class '{cls.Name}' at bus {bus}: the capacity {capacityMw} MW must be a finite number of 0 MW or more " +
+                FormattableString.Invariant($"Protection class '{cls.Name}' at bus {bus}: the capacity {capacityMw} MW must be a finite number of 0 MW or more ") +
                 "(the infeed it trips or the demand it sheds).");
         // A recloser class (it has an auto-reclose delay) turns every stage into "open the target branch". With no
         // target it used to latch Tripped and open nothing, so the dashboard showed a trip on an untouched network
         // (R232, October 2026). Fail loud instead: the device cannot do what its class says.
         if (cls.Params.ContainsKey(AssetParams.AutoRecloseDelayS) && string.IsNullOrWhiteSpace(targetBranch))
             throw new InvalidDataException(
-                $"Protection class '{cls.Name}' is a recloser (it sets {AssetParams.AutoRecloseDelayS}), so the device at bus {bus} " +
+                FormattableString.Invariant($"Protection class '{cls.Name}' is a recloser (it sets {AssetParams.AutoRecloseDelayS}), so the device at bus {bus} ") +
                 "must name the branch it opens (TargetBranch), but none was given.");
         ClassName = cls.Name;
         Bus = bus;
@@ -73,7 +73,7 @@ public sealed class ProtectionController : IActiveAssetDynamics
         _detectionLatencyS = cls.Param(AssetParams.DetectionLatencyS, DefaultDetectionLatencyS);
         if (!double.IsFinite(systemNominalHz) || !(systemNominalHz > 0.0))
             throw new ArgumentOutOfRangeException(nameof(systemNominalHz), systemNominalHz,
-                $"Protection class '{cls.Name}' at bus {bus}: the system nominal frequency must be a finite number of Hz above 0.");
+                FormattableString.Invariant($"Protection class '{cls.Name}' at bus {bus}: the system nominal frequency must be a finite number of Hz above 0."));
         _delay = new MeasurementDelay(systemNominalHz);
         _stages = BuildStages(cls, targetBranch, systemNominalHz).Select(s => (s, new ProtectionEvaluator(s))).ToArray();
         _shedByStage = new double[_stages.Length];
@@ -94,7 +94,7 @@ public sealed class ProtectionController : IActiveAssetDynamics
     {
         if (!double.IsFinite(factor) || factor < 0.0)
             throw new ArgumentOutOfRangeException(nameof(factor), factor,
-                $"Protection class '{ClassName}' at bus {Bus}: the demand scale must be a finite fraction of 0 or more.");
+                FormattableString.Invariant($"Protection class '{ClassName}' at bus {Bus}: the demand scale must be a finite fraction of 0 or more."));
         _demandScale = factor;
     }
 
@@ -132,10 +132,10 @@ public sealed class ProtectionController : IActiveAssetDynamics
         // GR-620: a detection latency the full 512-sample history cannot hold is refused, not silently shortened.
         if (_delay.TruncatesLatency(ctx.ClockSeconds, _detectionLatencyS))
             throw new InvalidOperationException(
-                $"Protection class '{ClassName}' at bus {Bus}: the detection latency "
-                + $"{_detectionLatencyS.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s is longer than the "
-                + $"{MeasurementDelay.Capacity}-sample measurement history holds at this substep "
-                + $"({ctx.DtSeconds.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s); shorten the latency or lengthen the substep.");
+                FormattableString.Invariant($"Protection class '{ClassName}' at bus {Bus}: the detection latency ")
+                + FormattableString.Invariant($"{_detectionLatencyS.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s is longer than the ")
+                + FormattableString.Invariant($"{MeasurementDelay.Capacity}-sample measurement history holds at this substep ")
+                + FormattableString.Invariant($"({ctx.DtSeconds.ToString("R", System.Globalization.CultureInfo.InvariantCulture)} s); shorten the latency or lengthen the substep."));
         (double fMeas, double rocofMeas, double _) = _delay.Read(ctx.ClockSeconds, _detectionLatencyS);
         double phaseStep = _delay.PhaseStep(ctx.ClockSeconds, System.Math.Max(ctx.DtSeconds, 0.02));
 
@@ -225,7 +225,7 @@ public sealed class ProtectionController : IActiveAssetDynamics
         double settingsNominalHz = P(AssetParams.SettingsNominalHz, AssetParamDefaults.ProtectionSettingsNominalHz);
         if (!double.IsFinite(settingsNominalHz) || !(settingsNominalHz > 0.0))
             throw new InvalidDataException(
-                $"Protection class '{cls.Name}': {AssetParams.SettingsNominalHz} = {settingsNominalHz} must be a finite number of Hz above 0.");
+                FormattableString.Invariant($"Protection class '{cls.Name}': {AssetParams.SettingsNominalHz} = {settingsNominalHz} must be a finite number of Hz above 0."));
         double Hz(string k) => settingsNominalHz == systemNominalHz ? P(k) : systemNominalHz + (P(k) - settingsNominalHz);
 
         // N304 (LF3, October 2026; Ruling R1: fix) and N318 (LF6, October 2026; Ruling R1: direction-aware): a frequency
@@ -247,11 +247,11 @@ public sealed class ProtectionController : IActiveAssetDynamics
         // 0.0; prot-lfdd-stage1: lfddDwellS 0.0), so nothing that ran before is refused and no number moves.
         var missing = AssetParamDefaults.ProtectionDwellKeys
             .Where(p => Has(p.Threshold) && !Has(p.Dwell))
-            .Select(p => $"'{p.Threshold}' is set but its dwell '{p.Dwell}' is not")
+            .Select(p => FormattableString.Invariant($"'{p.Threshold}' is set but its dwell '{p.Dwell}' is not"))
             .ToList();
         if (missing.Count > 0)
             throw new InvalidDataException(
-                $"Protection class '{cls.Name}': {string.Join("; ", missing)}. A protection stage's definite-time delay is " +
+                FormattableString.Invariant($"Protection class '{cls.Name}': {string.Join("; ", missing)}. A protection stage's definite-time delay is ") +
                 "part of its setting and has no default (write 0 for an instantaneous stage).");
 
         // A recloser class (has an auto-reclose delay) opens a branch and recloses; otherwise stages latch and trip infeed.

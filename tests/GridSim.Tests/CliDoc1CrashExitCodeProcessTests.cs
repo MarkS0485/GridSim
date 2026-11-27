@@ -20,7 +20,7 @@ public sealed class CliDoc1CrashExitCodeProcessTests
 
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-doc1-cli-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-doc1-cli-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }
@@ -445,7 +445,7 @@ public sealed class CliDoc1CrashExitCodeProcessTests
     [InlineData("modal")]
     public void D053_missing_dir_folder_exits_1(string verb)
     {
-        string missing = Path.Combine(Path.GetTempPath(), "gridsim-doc1-no-such-folder-" + Guid.NewGuid().ToString("N"));
+        string missing = TestTemp.Under("gridsim-doc1-no-such-folder-" + Guid.NewGuid().ToString("N"));
         CliProcess.Result r = CliProcess.RunBuilt(verb, "--dir", missing);
         AssertExit(1, r);
         Assert.Contains($"error: {verb}: case folder not found: '{missing}'", r.StdErr, StringComparison.Ordinal);
@@ -469,7 +469,7 @@ public sealed class CliDoc1CrashExitCodeProcessTests
     [InlineData("modal")]
     public void D053_missing_case_file_exits_1(string verb)
     {
-        string missing = Path.Combine(Path.GetTempPath(), "gridsim-doc1-no-such-" + Guid.NewGuid().ToString("N") + ".m");
+        string missing = TestTemp.Under("gridsim-doc1-no-such-" + Guid.NewGuid().ToString("N") + ".m");
         CliProcess.Result r = CliProcess.RunBuilt(verb, missing);
         AssertExit(1, r);
         Assert.Contains("MATPOWER case file not found:", r.StdErr, StringComparison.Ordinal);
@@ -512,7 +512,7 @@ public sealed class CliDoc1CrashExitCodeProcessTests
     [InlineData("fault", "--bus", "1")]
     public void D130_missing_case_file_exits_1(string verb, params string[] extra)
     {
-        string missing = Path.Combine(Path.GetTempPath(), "gridsim-doc1-no-such-" + Guid.NewGuid().ToString("N") + ".m");
+        string missing = TestTemp.Under("gridsim-doc1-no-such-" + Guid.NewGuid().ToString("N") + ".m");
         CliProcess.Result r = CliProcess.RunBuilt(new[] { verb, missing }.Concat(extra).ToArray());
         AssertExit(1, r);
         Assert.Contains("MATPOWER case file not found:", r.StdErr, StringComparison.Ordinal);

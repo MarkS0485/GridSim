@@ -11,12 +11,29 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 
 // GridSim.Web - Blazor Server dashboard + REST/WebSocket API over GridSim.Core.
+// The telemetry guard runs before anything else. It exits with code 78 (one line on stderr and the trace log) when the
+// build marker is missing, a telemetry assembly is loaded or loads later, or an exporter variable is set; see
+// GridSim.Core.Diagnostics.TelemetryGuard. A test runner hosting this app in process is not itself a GridSim assembly,
+// so only the app's own assemblies are checked for the marker then.
+GridSim.Core.Diagnostics.TelemetryGuard.EnforceAtStartup(
+    "GridSim.Web", ["GridSim.Web", "GridSim.Core", "GridSim.Scripting"], foreignEntryAllowed: true);
+
 // Pin InvariantCulture up front for the same reason the CLI does: every number we parse or emit
 // (JSON, query strings) must be locale-independent so a comma-decimal host can't mis-read "0.5".
 CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
 CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+// The telemetry guard's web check, as soon as the configuration can be read and before anything uses it: the
+// Content-Security-Policy every answer carries, composed from this configuration exactly as the response-starting
+// callback below composes it (the security headers, then the script policy), must keep connect-src 'self', and no
+// third-party script origin may be configured (the removed Site analytics settings, or GridSim:ScriptCspSources). Either
+// exits with code 78, as does a malformed GridSim:FrameAncestors, GridSim:Hsts or GridSim:ScriptCsp setting (the policy
+// cannot be composed; the exit line names the setting).
+GridSim.Core.Diagnostics.TelemetryGuard.EnforceWebPolicy("GridSim.Web", () => new GridSim.Core.Diagnostics.TelemetryWebPolicy(
+    GridSim.Web.Site.SecurityHeaders.ConnectSrcOf(GridSim.Web.Site.SecurityHeaders.ServedPolicy(builder.Configuration)),
+    GridSim.Web.Site.SecurityHeaders.ConfiguredScriptOrigins(builder.Configuration)));
 
 // Public replay-only instance (GridSim:ReplayOnly=true): offer ONLY the raw public-data replay. The solve REST
 // API + the sim WebSocket are not mapped, the realtime estimator stays off, and the Blazor UI hides every
@@ -85,6 +102,11 @@ GridSim.Web.Site.WebLimits webLimits = GridSim.Web.Site.WebLimits.FromConfigurat
 builder.Services.AddSingleton(webLimits);
 Console.Error.WriteLine($"GridSim.Web: resource limits: {webLimits.Description}");
 
+// Per-client request limit on /api and /console (GridSim:MaxRequestsPerClientPerMinute; default 600, 0 = off). See Site/ClientRateLimiter.cs.
+GridSim.Web.Site.ClientRateLimiter clientRateLimiter = GridSim.Web.Site.ClientRateLimiter.FromConfiguration(builder.Configuration);
+builder.Services.AddSingleton(clientRateLimiter);
+Console.Error.WriteLine($"GridSim.Web: request limit: {clientRateLimiter.Description}");
+
 // Bug #179 (SECURITY): browser security headers (frame-ancestors / X-Frame-Options, nosniff, Referrer-Policy) and HSTS,
 // checked once here (GridSim:FrameAncestors, GridSim:Hsts; see SecurityHeaders).
 var securityHeaders = GridSim.Web.Site.SecurityHeaders.FromConfiguration(builder.Configuration);
@@ -97,6 +119,9 @@ builder.Services.AddHsts(o =>
     o.Preload = false;
 });
 Console.Error.WriteLine($"GridSim.Web: security headers {securityHeaders.Description}");
+// Opt-in script-src policy (GridSim:ScriptCsp = off | report-only | enforce; default off). See Site/ScriptCspPolicy.cs.
+var scriptCsp = GridSim.Web.Site.ScriptCspPolicy.FromConfiguration(builder.Configuration);
+Console.Error.WriteLine($"GridSim.Web: script policy: {scriptCsp.Description}");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -131,6 +156,7 @@ _ = GridSim.Core.Security.SecretStoreExtensions.Get(startupSecrets, GridSim.Web.
 _ = GridSim.Core.Security.SecretStoreExtensions.Get(startupSecrets, GridSim.Web.Site.KeyRingProtection.PreviousCertificatePasswordSetting);
 GridSim.Web.Site.KeyRingProtection.Plan keyPlan =
     GridSim.Web.Site.KeyRingProtection.Resolve(builder.Configuration, OperatingSystem.IsWindows(), startupSecrets);
+GridSim.Web.Site.KeyRingProtection.RequireEncryptedIfAsked(builder.Configuration, keyPlan);   // Auth:RequireKeyProtection (opt-in)
 Console.Error.WriteLine(keyPlan.LogLine);
 IDataProtectionBuilder dataProtection = builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(authKeysDir))
@@ -234,11 +260,22 @@ if (!string.IsNullOrWhiteSpace(auditAnchorPath) && string.IsNullOrWhiteSpace(aud
     throw new InvalidOperationException(
         "GridSim.Web: configuration setting Audit:AnchorPath is set but Audit:LogPath is not; the anchor belongs to a log. "
         + "Set Audit:LogPath too, or remove Audit:AnchorPath.");
+// 2.1.074 RC-4-Fixes: a host with no resident estimator may still keep an audit log. It holds no run, so it records the
+// access denials the host makes (one AccessDenied entry each; see AccessDenialAudit) and any bridge reconnect events.
+// Start-up checks the log's folder and builds the sinks and keys now, so a bad path or key stops the host naming the setting.
+GridSim.Core.Diagnostics.AuditRecorderOptions? ownAuditOptions = null;
 if (!string.IsNullOrWhiteSpace(auditLogPath) && !realtimeEnabled)
-    throw new InvalidOperationException(
-        "GridSim.Web: configuration setting Audit:LogPath is set, but this host runs no resident estimator "
-        + (replayOnly ? "(GridSim:ReplayOnly=true)" : "(Realtime:Enabled is not true)")
-        + ", so nothing would be recorded in it. Enable the resident estimator, or remove Audit:LogPath.");
+{
+    string? ownDir = Path.GetDirectoryName(Path.GetFullPath(auditLogPath));
+    if (ownDir is null || !Directory.Exists(ownDir))
+        throw new InvalidOperationException(
+            $"GridSim.Web: configuration setting Audit:LogPath ('{auditLogPath}') names a log whose folder does not exist. Create the folder or change the setting.");
+    try { ownAuditOptions = BuildAuditOptions(builder.Configuration); }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+    {
+        throw new InvalidOperationException($"GridSim.Web: the audit log settings under Audit: could not be read: {ex.Message}", ex);
+    }
+}
 
 // CAF-9 / gap B2 (D1 distrusted-source containment): Realtime:DistrustedSources (environment variable
 // Realtime__DistrustedSources) names, comma-separated, the measurement sources the resident estimator distrusts: their
@@ -319,12 +356,14 @@ if (realtimeEnabled)
 
 // B2 (November 2026): the access control the REST and WebSocket surfaces resolve, now with its denial recorder: the
 // resident estimator's audit log when Audit:LogPath is set (one AccessDenied entry per denial, through the same recorder
-// and sinks as the estimator's own security events), otherwise none (a denial is still refused, just not audited).
+// and sinks as the estimator's own security events), else the host's own log at Audit:LogPath when there is no resident estimator, otherwise none (a denial is still refused, just not audited).
 // Registered on every host, replay-only included, so a surface that asks for it can never find it missing.
 GridSim.Web.Site.AccessControl accessControl = new(accessRoles.AnonymousRole, accessRoles.AnonymousRoleIsDefault,
-    realtimeAudit is null
-        ? GridSim.Web.Site.AccessDenialAudit.None
-        : new GridSim.Web.Site.AccessDenialAudit(realtimeAudit, realtimeAuditOptions));
+    realtimeAudit is not null
+        ? new GridSim.Web.Site.AccessDenialAudit(realtimeAudit, realtimeAuditOptions)
+        : ownAuditOptions is not null
+            ? new GridSim.Web.Site.AccessDenialAudit(auditLogPath!, auditAnchorPath, ownAuditOptions)
+            : GridSim.Web.Site.AccessDenialAudit.None);
 builder.Services.AddSingleton(accessControl);
 // RC4: the script console (/console). Its role gate and limits are WebScriptConsole's; it uses the catalogue, the access control and the solve limits registered above.
 builder.Services.AddSingleton(new GridSim.Web.Site.WebScriptConsole(catalog, accessControl, webLimits));
@@ -341,7 +380,9 @@ WebApplication app = builder.Build();
 
 // D-DOC-076: build the session manager now, so a malformed GridSim:MaxSessions stops start-up (naming the setting)
 // rather than failing the first visitor's request.
-_ = app.Services.GetRequiredService<SessionManager>();
+SessionManager sessionManager = app.Services.GetRequiredService<SessionManager>();
+// Bridge reconnect attempts and give-ups are security events in the host's audit log (when it keeps one).
+if (accessControl.Audit.IsConfigured) sessionManager.SecurityAudit = accessControl.Audit.RecordEvent;
 
 // GR-720 (October 2026): the exception handler is the first middleware, so an exception thrown in any later one (the
 // security.txt answer, the replay-only gate, the forwarded-header handling) gets the generic /Error page rather than
@@ -358,6 +399,7 @@ app.Use(async (ctx, next) =>
     ctx.Response.OnStarting(() =>
     {
         securityHeaders.Apply(ctx.Response.Headers);
+        scriptCsp.Apply(ctx.Response.Headers);
         return Task.CompletedTask;
     });
     await next();
@@ -465,6 +507,15 @@ var fwd = new ForwardedHeadersOptions
 };
 trustedProxies.ApplyTo(fwd);
 Console.Error.WriteLine($"GridSim.Web: forwarded headers trusted from {trustedProxies.Description}");
+// The loopback anonymous default is decided per request: it holds only for a request that came straight from a loopback peer
+// with no proxy header. The fact is read here, before the forwarded-headers middleware rewrites the peer and removes the
+// headers, and applied to the user after sign-in has run (below).
+const string DirectLoopbackKey = "GridSim.DirectLoopback";
+app.Use(async (ctx, next) =>
+{
+    ctx.Items[DirectLoopbackKey] = GridSim.Web.Site.AccessControl.IsDirectLoopback(ctx.Connection.RemoteIpAddress, ctx.Request.Headers);
+    await next();
+});
 app.UseForwardedHeaders(fwd);
 
 app.UseStaticFiles();
@@ -473,6 +524,26 @@ app.UseStaticFiles();
 // and before antiforgery/endpoints so User is populated for every component that reads it.
 app.UseAuthentication();
 app.UseAuthorization();
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Items[DirectLoopbackKey] is not true)
+        ctx.User = GridSim.Web.Site.AccessControl.MarkNotDirectLoopback(ctx.User);
+    await next();
+});
+// Per-client request limit, after sign-in is read and the forwarded address is applied, so the client is the real caller.
+app.Use(async (ctx, next) =>
+{
+    if (clientRateLimiter.Enabled && GridSim.Web.Site.ClientRateLimiter.Covers(ctx.Request.Path)
+        && !clientRateLimiter.TryAcquire(accessControl.ClientKeyFor(ctx.User, ctx.Connection.RemoteIpAddress)))
+    {
+        ctx.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        ctx.Response.Headers.RetryAfter = clientRateLimiter.RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        ctx.Response.ContentType = "application/json";
+        await ctx.Response.WriteAsync($"{{\"error\":\"Too many requests: this client is limited to {clientRateLimiter.MaxPerMinute} a minute ({GridSim.Web.Site.ClientRateLimiter.Setting}).\"}}");
+        return;
+    }
+    await next();
+});
 
 // Serve the git-ignored geography snapshot (DNO/GSP/asset GeoJSON) under /geo when present, so the
 // network map's admin-boundary overlays light up. Optional & graceful: if the folder is absent the
@@ -608,11 +679,8 @@ static GridSim.Core.Security.ISecretStore WebSecretStore(IConfiguration config)
 // B2 (November 2026): the options the log was opened with (sinks, anchor keys) are handed back through
 // recorderOptions, so the access control can reopen the same log with the same sinks and keys for a denial that
 // arrives after the resident estimator's run has finished and closed it (Site/AccessControl.cs, AccessDenialAudit).
-static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPath, string? anchorPath, string caseName, string windowsDir,
-    IConfiguration config, out GridSim.Core.Diagnostics.AuditRecorderOptions recorderOptions)
+static GridSim.Core.Diagnostics.AuditRecorderOptions BuildAuditOptions(IConfiguration config)
 {
-    try
-    {
         var sinks = new List<GridSim.Core.Diagnostics.IAuditSink>();
         var channels = new List<GridSim.Core.Diagnostics.IDeliveryChannel>();
         if (config["Audit:ForwardPath"] is { Length: > 0 } forwardPath)
@@ -627,7 +695,7 @@ static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPa
             sinks.AddRange(GridSim.Core.Diagnostics.Incident.IncidentWiring.AuditSinksFor(incidents));
             channels.Add(incidents);
         }
-        var options = new GridSim.Core.Diagnostics.AuditRecorderOptions
+        return new GridSim.Core.Diagnostics.AuditRecorderOptions
         {
             Sinks = sinks,
             DeliveryChannels = channels,
@@ -636,6 +704,14 @@ static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPa
             AnchorVerificationKey = config["Audit:AnchorVerificationKeyPath"] is { Length: > 0 } verifyPath
                 ? GridSim.Core.Diagnostics.AuditRecorderOptions.LoadKey(verifyPath, requirePrivate: false) : null,
         };
+}
+
+static GridSim.Core.Diagnostics.AuditRunRecorder StartRealtimeAudit(string logPath, string? anchorPath, string caseName, string windowsDir,
+    IConfiguration config, out GridSim.Core.Diagnostics.AuditRecorderOptions recorderOptions)
+{
+    try
+    {
+        var options = BuildAuditOptions(config);
         recorderOptions = options;
         GridSim.Core.Diagnostics.AuditRunRecorder audit = GridSim.Core.Diagnostics.AuditRunRecorder.Start(
             logPath, GridSim.Core.Diagnostics.AuditEvent.DefaultActor(), "web-realtime",

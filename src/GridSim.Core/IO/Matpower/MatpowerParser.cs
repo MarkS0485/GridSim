@@ -51,7 +51,7 @@ public static class MatpowerParser
     /// <see cref="AssumedFrequencyHz"/> assumption. The CLI's <c>--frequency-hz</c> flag reaches it.</para></summary>
     public static GridModel ParseFile(string path, MatpowerUnitHandling units = MatpowerUnitHandling.NormaliseRawFeeders,
         double? frequencyHz = null)
-        => Parse(File.ReadAllText(path), Path.GetFileNameWithoutExtension(path), frequencyHz, units);
+        => Parse(GridSim.Core.IO.InputFileLimits.ReadAllText(path), Path.GetFileNameWithoutExtension(path), frequencyHz, units);
 
     /// <summary>Parse case text, returning the model together with any diagnostic notes.</summary>
     /// <remarks>
@@ -111,8 +111,22 @@ public static class MatpowerParser
         return parsed with { Model = normalised, Notes = notes, RawUnitsConverted = true };
     }
 
+    /// <summary>
+    /// RC5 WP7: parse case text as <see cref="ParseWithDiagnostics"/> does, except that out-of-service (status 0) branches
+    /// are KEPT with <see cref="Branch.InService"/> false instead of being dropped (a branch incident to a dropped bus is
+    /// still dropped). For a study that switches branches (feeder reconfiguration reads the open tie switches of case33bw
+    /// and the other published feeders this way). Every other caller keeps the unchanged drop rule.
+    /// </summary>
+    public static MatpowerParseResult ParseWithOpenBranches(string text, string? name = null, double? frequencyHz = null,
+        MatpowerUnitHandling units = MatpowerUnitHandling.NormaliseRawFeeders)
+    {
+        if (units != MatpowerUnitHandling.NormaliseRawFeeders && units != MatpowerUnitHandling.AsWritten)
+            throw new ArgumentOutOfRangeException(nameof(units), units, "Unknown MatpowerUnitHandling value.");
+        return ApplyUnitHandling(ParseAsWritten(text, name, frequencyHz, keepOpenBranches: true), units);
+    }
+
     /// <summary>The parse itself, every number exactly as the file writes it (the whole parser before N165).</summary>
-    private static MatpowerParseResult ParseAsWritten(string text, string? name, double? frequencyHz)
+    private static MatpowerParseResult ParseAsWritten(string text, string? name, double? frequencyHz, bool keepOpenBranches = false)
     {
         if (string.IsNullOrWhiteSpace(text))
             throw new InvalidDataException("Empty MATPOWER case text.");
@@ -342,7 +356,8 @@ public static class MatpowerParser
         for (int ri = 0; ri < branchRows.Length; ri++)
         {
             double[] r = branchRows[ri];
-            if (!Status(r[10], "branch", ri, "BR_STATUS", caseName)) { brOff++; continue; }
+            bool brInService = Status(r[10], "branch", ri, "BR_STATUS", caseName);
+            if (!brInService && !keepOpenBranches) { brOff++; continue; }
             // ANGMIN / ANGMAX (columns 12, 13) are not modelled. MATPOWER reads 0 or +/-360 as "no limit"; any other
             // pair is an angle-difference limit that this model does not carry, so it is counted for the notes.
             if (r.Length >= 13 && !((r[11] <= -360 || r[11] == 0) && (r[12] >= 360 || r[12] == 0))) brAngleLimits++;
@@ -367,7 +382,8 @@ public static class MatpowerParser
                 Name: null,
                 IsTransformer: isXfmr,
                 RateBMva: At(r, 6),     // F20: RATE_B (short-term); carried, used only by an opt-in post-fault check
-                RateCMva: At(r, 7)));   // F20: RATE_C (emergency); likewise
+                RateCMva: At(r, 7))     // F20: RATE_C (emergency); likewise
+            { InService = brInService });   // always true unless ParseWithOpenBranches kept a status 0 branch
         }
         if (brOff > 0) notes.Add(FormattableString.Invariant($"skipped {brOff} out-of-service branch(es)."));
         if (brDangling > 0) notes.Add(FormattableString.Invariant($"skipped {brDangling} branch(es) incident to a dropped bus."));
@@ -455,7 +471,9 @@ public static class MatpowerParser
             if (whole > 1)
                 throw new InvalidDataException($"MATPOWER case '{caseName}' assigns mpc.{field} {whole} times; only one assignment can be read.");
         }
-        MatchCollection indexed = Regex.Matches(text, @"(?m)^\s*mpc\.(bus|gen|branch|gencost|dcline)\s*\([^;\r\n]*?\)\s*=(?!=)");
+        // IO-05: [ \t]* rather than \s* after the line anchor and around the index: \s also matches line breaks, so at every
+        // line start the scan ran over all the blank lines that followed before failing, quadratic in their number.
+        MatchCollection indexed = Regex.Matches(text, @"(?m)^[ \t]*mpc\.(bus|gen|branch|gencost|dcline)[ \t]*\([^;\r\n]*?\)[ \t]*=(?!=)");
         if (indexed.Count > 0)
         {
             string fields = string.Join(", ", indexed.Select(x => "mpc." + x.Groups[1].Value).Distinct(StringComparer.Ordinal));
@@ -496,7 +514,9 @@ public static class MatpowerParser
                 throw new InvalidDataException($"{where}: NCOST is {nCost.ToString("R", CultureInfo.InvariantCulture)}; it must be a whole number of at least 1.");
             int n = (int)nCost;
             int count = model == GeneratorCostModel.Polynomial ? n : 2 * n;
-            if (r.Length < 4 + count)
+            // R2-15: the length check in 64-bit arithmetic (4 + 2 x NCOST wrapped negative for NCOST near int.MaxValue / 2
+            // and passed it).
+            if (r.Length < 4L + count)
                 throw new InvalidDataException($"{where}: NCOST {n} needs {count} cost number(s) after NCOST but the row has only {r.Length - 4}.");
             for (int k = 0; k < 4 + count; k++)
                 if (!double.IsFinite(r[k]))
@@ -554,52 +574,72 @@ public static class MatpowerParser
         }
         if (double.TryParse(t, NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return v;
         int pos = 0;
-        double result = EvalExpr(t, ref pos);
+        double result = EvalExpr(t, ref pos, 0);
         if (pos != t.Length) throw new FormatException($"Unparseable numeric token '{t}'.");
         return result;
     }
 
+    /// <summary>IO-01: the deepest nesting of parentheses (and sqrt calls) the expression evaluator follows. A real case
+    /// nests two or three levels (135/sqrt(3)); a token nested deeper is refused, because each level is a stack frame and a
+    /// stack overflow ends the process with no message.</summary>
+    internal const int MaxExpressionDepth = 64;
+
     // A minimal recursive-descent evaluator for the arithmetic MATPOWER occasionally embeds in data
     // matrices: + - * /, parentheses, unary sign, sqrt(...), and the constant pi. Invariant culture.
-    private static double EvalExpr(string s, ref int i)
+    // IO-01: depth counts the open parentheses and sqrt calls; a run of unary signs is a loop, not recursion.
+    private static double EvalExpr(string s, ref int i, int depth)
     {
-        double val = EvalTerm(s, ref i);
+        double val = EvalTerm(s, ref i, depth);
         while (i < s.Length && (s[i] == '+' || s[i] == '-'))
         {
             char op = s[i++];
-            double rhs = EvalTerm(s, ref i);
+            double rhs = EvalTerm(s, ref i, depth);
             val = op == '+' ? val + rhs : val - rhs;
         }
         return val;
     }
 
-    private static double EvalTerm(string s, ref int i)
+    private static double EvalTerm(string s, ref int i, int depth)
     {
-        double val = EvalFactor(s, ref i);
+        double val = EvalFactor(s, ref i, depth);
         while (i < s.Length && (s[i] == '*' || s[i] == '/'))
         {
             char op = s[i++];
-            double rhs = EvalFactor(s, ref i);
+            double rhs = EvalFactor(s, ref i, depth);
             val = op == '*' ? val * rhs : val / rhs;
         }
         return val;
     }
 
-    private static double EvalFactor(string s, ref int i)
+    private static double EvalFactor(string s, ref int i, int depth)
     {
-        if (i >= s.Length) throw new FormatException($"Unexpected end of expression in '{s}'.");
+        // A run of unary signs, read in a loop (each sign used to be one more stack frame).
+        bool negate = false;
+        while (i < s.Length && (s[i] == '+' || s[i] == '-'))
+        {
+            if (s[i] == '-') negate = !negate;
+            i++;
+        }
+        double value = EvalPrimary(s, ref i, depth);
+        return negate ? -value : value;
+    }
+
+    private static double EvalPrimary(string s, ref int i, int depth)
+    {
+        if (i >= s.Length) throw new FormatException($"Unexpected end of expression in '{Short(s)}'.");
         char c = s[i];
-        if (c == '+') { i++; return EvalFactor(s, ref i); }
-        if (c == '-') { i++; return -EvalFactor(s, ref i); }
-        if (c == '(') { i++; double v = EvalExpr(s, ref i); Expect(s, ref i, ')'); return v; }
-        if (Match(s, ref i, "sqrt")) { Expect(s, ref i, '('); double v = EvalExpr(s, ref i); Expect(s, ref i, ')'); return Math.Sqrt(v); }
+        bool opens = c == '(' || (i + 4 <= s.Length && string.Compare(s, i, "sqrt", 0, 4, StringComparison.OrdinalIgnoreCase) == 0);
+        if (opens && depth >= MaxExpressionDepth)
+            throw new FormatException($"the expression nests parentheses deeper than {MaxExpressionDepth} levels.");
+        if (c == '(') { i++; double v = EvalExpr(s, ref i, depth + 1); Expect(s, ref i, ')'); return v; }
+        if (Match(s, ref i, "sqrt")) { Expect(s, ref i, '('); double v = EvalExpr(s, ref i, depth + 1); Expect(s, ref i, ')'); return Math.Sqrt(v); }
         if (Match(s, ref i, "pi")) return Math.PI;
 
         int start = i;
         while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.' || s[i] == 'e' || s[i] == 'E' ||
                ((s[i] == '+' || s[i] == '-') && i > start && (s[i - 1] == 'e' || s[i - 1] == 'E'))))
             i++;
-        if (i == start) throw new FormatException($"Unexpected character '{c}' in expression '{s}'.");
+        if (i == start) throw new FormatException($"Unexpected character '{c}' in expression '{Short(s)}'.");
         return double.Parse(s[start..i], NumberStyles.Float, CultureInfo.InvariantCulture);
     }
 
@@ -612,22 +652,29 @@ public static class MatpowerParser
 
     private static void Expect(string s, ref int i, char c)
     {
-        if (i >= s.Length || s[i] != c) throw new FormatException($"Expected '{c}' in expression '{s}'.");
+        if (i >= s.Length || s[i] != c) throw new FormatException($"Expected '{c}' in expression '{Short(s)}'.");
         i++;
     }
+
+    /// <summary>An expression as quoted in a message: at most 80 characters.</summary>
+    private static string Short(string s) => s.Length <= 80 ? s : s[..80] + "...";
 
     /// <summary>Strip <c>%</c> comments and join <c>...</c> line continuations.</summary>
     private static string Clean(string text)
     {
         var sb = new StringBuilder(text.Length);
-        string pending = "";
+        // IO-05: the continued statement is built in a StringBuilder (string concatenation copied the whole statement again
+        // for every continuation line, quadratic in the number of lines).
+        var pending = new StringBuilder();
         // Bug hunt 2026-10-29, finding 49: MATLAB block comments. A line that holds only "%{" opens a block and one that
         // holds only "%}" closes it (blocks nest, as in MATLAB); every line inside is comment. Only "%" line comments
         // used to be stripped, so the text of a commented-out block was parsed as live data (a commented-out
         // mpc.gencost became real costs without a word). Each removed line is kept as an empty line, so line numbers
         // in later messages do not move, and a block never closed is refused.
         int blockDepth = 0;
-        foreach (string raw in text.Split('\n'))
+        // IO-18: CR-only line endings (classic Mac) are lines too, as the PSS/E, UCTE and COMTRADE readers take them; a CR-only
+        // file was one line, cut at its first '%'.
+        foreach (string raw in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
             string bare = raw.TrimEnd('\r').Trim();
             if (bare == "%{") { blockDepth++; sb.Append('\n'); continue; }
@@ -641,11 +688,11 @@ public static class MatpowerParser
             string trimmed = line.TrimEnd();
             if (trimmed.EndsWith("...", StringComparison.Ordinal))
             {
-                pending += trimmed[..^3] + " ";
+                pending.Append(trimmed.AsSpan(0, trimmed.Length - 3)).Append(' ');
                 continue;
             }
             sb.Append(pending).Append(line).Append('\n');
-            pending = "";
+            pending.Clear();
         }
         if (pending.Length > 0) sb.Append(pending).Append('\n');
         if (blockDepth > 0)

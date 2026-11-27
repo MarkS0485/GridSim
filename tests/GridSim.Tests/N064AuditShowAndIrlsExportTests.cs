@@ -24,7 +24,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class N064AuditShowAndIrlsExportTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-n064-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-n064-{Guid.NewGuid():N}");
 
     public N064AuditShowAndIrlsExportTests() => Directory.CreateDirectory(_dir);
 

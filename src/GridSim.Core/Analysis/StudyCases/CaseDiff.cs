@@ -45,7 +45,7 @@ public static class CaseDiff
 
     private static JsonDocument Parse(byte[] bytes, string file)
     {
-        try { return JsonDocument.Parse(bytes, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
+        try { return JsonDocument.Parse(GridSim.Core.IO.Utf8Json.WithoutBom(bytes), new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true }); }
         catch (JsonException ex) { throw new StudyCaseException($"{file} is not valid JSON: {ex.Message}"); }
     }
 

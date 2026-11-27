@@ -108,7 +108,7 @@ public static class CableSizing
             double? ca = ft is null ? null : Lookup(ft.Keys, ft.Factors, amb);
             if (ft is null) { oos.Add($"ambient correction: no ambient table for insulation '{c.Insulation}' in table file '{tables.Id}'"); factorsOk = false; }
             else if (ca is null) { oos.Add($"ambient correction: {amb} C is not a tabulated temperature (tabulated: {string.Join(", ", ft.Keys)}); no interpolation is done"); factorsOk = false; }
-            else { cf *= ca.Value; factors.Add($"Ca = {ca.Value:R} (ambient {amb:R} C, table)"); }
+            else { cf *= ca.Value; factors.Add(FormattableString.Invariant($"Ca = {ca.Value:R} (ambient {amb:R} C, table)")); }
         }
         else if (c.Iec60287 is not null && c.AmbientC is not null) factors.Add("ambient: not applied; the IEC 60287 calculation carries the soil temperature");
         else factors.Add("Ca: no ambient correction requested");
@@ -118,11 +118,11 @@ public static class CableSizing
             double? cg = gt is null ? null : Lookup(gt.Keys, gt.Factors, n);
             if (gt is null) { oos.Add($"grouping correction: no grouping table for method '{c.InstallationMethod}' in table file '{tables.Id}'"); factorsOk = false; }
             else if (cg is null) { oos.Add($"grouping correction: {n} circuits is not tabulated (tabulated: {string.Join(", ", gt.Keys)})"); factorsOk = false; }
-            else { cf *= cg.Value; factors.Add($"Cg = {cg.Value:R} ({n} circuits, table)"); }
+            else { cf *= cg.Value; factors.Add(FormattableString.Invariant($"Cg = {cg.Value:R} ({n} circuits, table)")); }
         }
         else factors.Add("Cg: no grouping correction requested");
         if (c.ExtraFactors is not null)
-            foreach (NamedFactor f in c.ExtraFactors) { cf *= f.Value; factors.Add($"{f.Name} = {f.Value:R} (source: {f.Source})"); }
+            foreach (NamedFactor f in c.ExtraFactors) { cf *= f.Value; factors.Add(FormattableString.Invariant($"{f.Name} = {f.Value:R} (source: {f.Source})")); }
 
         // ---- base ratings per candidate size ----
         var sizes = new List<double>();
@@ -134,9 +134,9 @@ public static class CableSizing
         {
             foreach (Iec60287Candidate k in basis.Candidates.OrderBy(x => x.SizeMm2))
             {
-                CableRatingResult r = Iec60287CableRating.Calculate(new CableRatingRequest($"size {k.SizeMm2:R}", k.Cable, basis.System, basis.Installation, basis.ScreenLoss, null, RatingSelection.Calculated));
+                CableRatingResult r = Iec60287CableRating.Calculate(new CableRatingRequest(FormattableString.Invariant($"size {k.SizeMm2:R}"), k.Cable, basis.System, basis.Installation, basis.ScreenLoss, null, RatingSelection.Calculated));
                 if (r.CalculatedRatingA is double a) { sizes.Add(k.SizeMm2); baseAmps[k.SizeMm2] = a; }
-                else oos.Add($"IEC 60287 rating of {k.SizeMm2:R} mm2 is out of scope: {string.Join("; ", r.OutOfScope)}");
+                else oos.Add(FormattableString.Invariant($"IEC 60287 rating of {k.SizeMm2:R} mm2 is out of scope: {string.Join("; ", r.OutOfScope)}"));
             }
             ampClause = "IEC 60287-1-1 / 60287-2-1 (buried single-core cable, steady state) with Cg and the named factors on top";
             if (sizes.Count == 0) { oos.Add("no candidate could be rated by IEC 60287"); ampOk = false; }
@@ -153,7 +153,7 @@ public static class CableSizing
         {
             foreach (double s in sizes) if (baseAmps[s] >= required!.Value) { ampMin = s; break; }
             checks.Add(new SizingCheck("ampacity", "EVALUATED",
-                ampMin is null ? $"no tabulated size carries {required:R} A (In {inA:R} A / factors {cf:R})" : $"smallest size with It >= In / (product of factors) = {inA:R} / {cf:R} = {required:R} A",
+                ampMin is null ? FormattableString.Invariant($"no tabulated size carries {required:R} A (In {inA:R} A / factors {cf:R})") : FormattableString.Invariant($"smallest size with It >= In / (product of factors) = {inA:R} / {cf:R} = {required:R} A"),
                 ampMin, ampClause));
         }
         else checks.Add(new SizingCheck("ampacity", "OUT OF SCOPE", string.Join("; ", oos), null, ampClause));
@@ -172,7 +172,7 @@ public static class CableSizing
                 vd = s => Lookup(it.SizesMm2, it.ROhmPerKm, s) is double r && Lookup(it.SizesMm2, it.XOhmPerKm, s) is double x
                     ? kk * c.DesignCurrentA * c.LengthM / 1000.0 * (r * c.PowerFactor + x * sinPhi) / c.SystemVoltageV * 100.0 : null;
             if (vt is null && it is null) checks.Add(new SizingCheck("voltage drop", "OUT OF SCOPE", $"no mV/A/m or impedance table for {c.Conductor}, {c.Insulation}, {(c.Phases == 3 ? "3ph" : "1ph")} in table file '{tables.Id}'", null, vdClause));
-            else checks.Add(new SizingCheck("voltage drop", "EVALUATED", $"{(vt is not null ? "tabulated mV/A/m" : "computed from R and X")}; limit {lim:R} percent of {c.SystemVoltageV:R} V", null, vdClause));
+            else checks.Add(new SizingCheck("voltage drop", "EVALUATED", FormattableString.Invariant($"{(vt is not null ? "tabulated mV/A/m" : "computed from R and X")}; limit {lim:R} percent of {c.SystemVoltageV:R} V"), null, vdClause));
         }
         else checks.Add(new SizingCheck("voltage drop", "NOT REQUESTED", "no voltage-drop limit given", null, vdClause));
 
@@ -186,7 +186,7 @@ public static class CableSizing
             else
             {
                 thermalMin = Math.Sqrt(fc * fc * fd) / kt.K;
-                checks.Add(new SizingCheck("thermal", "EVALUATED", $"S >= sqrt({fc:R}^2 x {fd:R}) / {kt.K:R} = {thermalMin:R} mm2", thermalMin, thClause));
+                checks.Add(new SizingCheck("thermal", "EVALUATED", FormattableString.Invariant($"S >= sqrt({fc:R}^2 x {fd:R}) / {kt.K:R} = {thermalMin:R} mm2"), thermalMin, thClause));
             }
         }
         else checks.Add(new SizingCheck("thermal", "NOT REQUESTED", "no fault current and duration given", null, thClause));

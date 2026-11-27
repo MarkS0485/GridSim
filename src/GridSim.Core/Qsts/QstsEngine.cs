@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using GridSim.Core.Abstractions;
 using GridSim.Core.Model;
 using GridSim.Core.PowerFlow;
@@ -203,7 +204,7 @@ public sealed class QstsEngine
         {
             var sw = Stopwatch.StartNew();
             QstsStudy s = _s;
-            var records = new List<QstsStepRecord>(s.Steps);
+            var records = new List<QstsStepRecord>(Math.Min(s.Steps, 1 << 16));   // NUM-17: not pre-sized from the file's number
             int nBr = _model.Branches.Count;
             var secAbove = new double[_nBus]; var secBelow = new double[_nBus];
             var puAbove = new double[_nBus]; var puBelow = new double[_nBus];
@@ -504,7 +505,7 @@ public sealed class QstsEngine
                 {
                     if (!has[i] && !hasCap[i]) continue;
                     Bus b = buses[i];
-                    if (has[i]) b = b with { Pd = b.Pd + sb.AddP[i] - pvP[i] - stP[i], Qd = b.Qd + sb.AddQ[i] - pvQ[i] };
+                    if (has[i]) b = QstsDeviceDemand.WithConstantPowerDevices(b, sb.AddP[i], pvP[i], stP[i], sb.AddQ[i], pvQ[i]);
                     if (hasCap[i]) b = b with { Bs = b.Bs + capQ[i] };
                     buses[i] = b;
                 }
@@ -562,7 +563,7 @@ public sealed class QstsEngine
                     {
                         int idx = _oltcBranch[o];
                         if (idx < 0) continue;
-                        double before = _branches[idx].TapRatio, after = solvedModel.Branches[idx].TapRatio;
+                        double before = SteadyStateSolver.EffectiveTap(_branches[idx].TapRatio), after = SteadyStateSolver.EffectiveTap(solvedModel.Branches[idx].TapRatio);
                         if (Math.Abs(after - before) > SteadyStateSolver.TapChangeEpsilon)
                         {
                             int n = (int)Math.Round(Math.Abs(after - before) / _model.Oltcs[o].StepPu);
@@ -646,12 +647,26 @@ public sealed class QstsEngine
             return (p, Math.Clamp(q, -qMax, qMax));
         }
 
+        // The net demand of the unit's bus (demand less PV there). With two or more self-consumption units on the bus,
+        // each takes its share in proportion to its rating (ratings summed in unit order), so together they ask for the
+        // net demand once. A lone unit takes the whole net demand, unscaled.
         private double SelfConsumptionRequest(int j, StepBase sb)
         {
-            int i = _busPos[_s.Storage[j].Bus];
+            int bus = _s.Storage[j].Bus;
+            int i = _busPos[bus];
             double net = sb.Buses[i].Pd + sb.AddP[i];
-            for (int u = 0; u < _pvP.Length; u++) if (_s.Pv[u].Bus == _s.Storage[j].Bus) net -= _pvP[u];
-            return net;
+            for (int u = 0; u < _pvP.Length; u++) if (_s.Pv[u].Bus == bus) net -= _pvP[u];
+            int count = 0;
+            double ratingSum = 0.0;
+            for (int k = 0; k < _s.Storage.Count; k++)
+            {
+                QstsStorageUnit o = _s.Storage[k];
+                if (o.Bus != bus || o.Mode != StorageMode.SelfConsumption) continue;
+                count++;
+                ratingSum += o.RatedMw;
+            }
+            if (count <= 1) return net;
+            return net * (_s.Storage[j].RatedMw / ratingSum);
         }
 
         /// <summary>Clamp a storage request to the rating and to what the energy allows over the coming step:
@@ -1294,7 +1309,7 @@ public sealed class QstsEngine
         {
             Oltc rec = _model.Oltcs[o];
             Branch tx = _branches[_oltcBranch[o]];
-            double tap = tx.TapRatio;
+            double tap = SteadyStateSolver.EffectiveTap(tx.TapRatio);   // NUM-06
             bool controlsTappedEnd = rec.ControlsBus == tx.From && rec.ControlsBus != tx.To;
             double TapDown() => tap <= rec.MinTap ? tap : Math.Max(rec.MinTap, tap - rec.StepPu);
             double TapUp() => tap >= rec.MaxTap ? tap : Math.Min(rec.MaxTap, tap + rec.StepPu);
@@ -1319,6 +1334,9 @@ public sealed class QstsEngine
             {
                 int idx = _oltcBranch[o];
                 if (idx < 0 || _oltcHeld[o]) { if (!dryRun) ResetOltc(o); continue; }
+                // NUM-05: an open transformer cannot move its controlled bus. It is not stepped (no operation counted for
+                // the hosting-capacity tap criterion), not reported at a limit, and its excursion timer is reset.
+                if (!_branches[idx].InService) { if (!dryRun) ResetOltc(o); continue; }
                 Oltc rec = _model.Oltcs[o];
                 double v = OltcSensed(o, r);
                 if (double.IsNaN(v)) continue;
@@ -1329,7 +1347,7 @@ public sealed class QstsEngine
                 if (!dryRun && dir != _oltcDir[o]) { _oltcDir[o] = dir; _oltcAcc[o] = 0; _oltcOpsInExc[o] = 0; }
                 if (!(acc >= OltcNeed(o, opsInExc))) continue;   // armed, waiting for its delay (acts at a later step)
                 double nt = NewTap(o, v);
-                if (Math.Abs(nt - _branches[idx].TapRatio) > SteadyStateSolver.TapChangeEpsilon)
+                if (Math.Abs(nt - SteadyStateSolver.EffectiveTap(_branches[idx].TapRatio)) > SteadyStateSolver.TapChangeEpsilon)
                 {
                     if (dryRun) return true;
                     ready.Add((o, v));
@@ -1351,7 +1369,7 @@ public sealed class QstsEngine
                 int idx = _oltcBranch[o];
                 if (!stepped.Add(idx)) continue;   // one step per transformer per iteration (the first record has it)
                 Oltc rec = _model.Oltcs[o];
-                double from = _branches[idx].TapRatio;
+                double from = SteadyStateSolver.EffectiveTap(_branches[idx].TapRatio);
                 double nt = NewTap(o, v);
                 if (rec.ImpedanceCorrection is { } ic)
                 {
@@ -1384,5 +1402,42 @@ public sealed class QstsEngine
                 _oltcLastWeight[o] = InverseWeight(o, v);
             }
         }
+    }
+}
+
+/// <summary>NUM-04: the QSTS bus demand with its device injections kept at constant power.</summary>
+internal static class QstsDeviceDemand
+{
+    /// <summary>NUM-04: add the device injections (load additions, PV, storage) to a bus's demand as CONSTANT power. Every
+    /// engine draws <c>Pd x PMultiplier(V)</c> on a bus with a voltage-varying ZIP, so folding the devices into Pd alone
+    /// scaled the inverter's and the storage's power (and a load addition) by the bus's voltage characteristic while the
+    /// study's own records said otherwise. The ZIP is re-based on the new demand so that
+    /// <c>Pd' x ZIP'(V) = Pd x ZIP(V) + dP</c> (and the same for Q): A' = A Pd / Pd', B' = B Pd / Pd',
+    /// C' = (C Pd + dP) / Pd'. A bus with no varying ZIP is changed exactly as before (Pd + dP), bit for bit. A bus whose
+    /// devices cancel its load exactly at nominal while its ZIP part still varies cannot be written as one ZIP and is
+    /// refused by name.</summary>
+    internal static Bus WithConstantPowerDevices(Bus b, double addP, double pvP, double stP, double addQ, double pvQ)
+    {
+        // The demand in the order it was always summed (bit for bit on a bus with no varying ZIP).
+        double pd = b.Pd + addP - pvP - stP, qd = b.Qd + addQ - pvQ;
+        double dP = addP - pvP - stP, dQ = addQ - pvQ;
+        if (b.Zip is not { VariesWithVoltage: true } z || (dP == 0.0 && dQ == 0.0)) return b with { Pd = pd, Qd = qd };
+        (double ap, double bp, double cp) = Rebase(z.Ap, z.Bp, z.Cp, b.Pd, dP, pd, b.Id, "real");
+        (double aq, double bq, double cq) = Rebase(z.Aq, z.Bq, z.Cq, b.Qd, dQ, qd, b.Id, "reactive");
+        return b with { Pd = pd, Qd = qd, Zip = new ZipLoad(ap, bp, cp, aq, bq, cq) };
+    }
+
+    private static (double A, double B, double C) Rebase(double a, double bb, double c, double load, double d, double total, int busId, string what)
+    {
+        if (d == 0.0) return (a, bb, c);
+        // R5-12: near-cancellation is refused as exact cancellation is: with |total| below 1e-9 of the load the re-based
+        // A and B would be 1e9 times larger and their product with the demand would be cancellation error.
+        if (total == 0.0 || Math.Abs(total) < 1e-9 * Math.Abs(load))
+        {
+            if (load * a == 0.0 && load * bb == 0.0) return (0.0, 0.0, 1.0);
+            throw new InvalidOperationException(string.Create(CultureInfo.InvariantCulture,
+                $"QSTS: at bus {busId} the device injections cancel the {what} load exactly, or to within 1e-9 of it, while its ZIP part still varies with voltage, so the devices cannot be kept at constant power; change the bus's ZIP or the device size slightly."));
+        }
+        return (a * load / total, bb * load / total, (c * load + d) / total);
     }
 }

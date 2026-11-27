@@ -12,7 +12,8 @@ namespace GridSim.SchemaEditor;
 /// Exit codes follow the programme's contract (PLAN.md binding rule 3), which the planning note's sketch predates:
 /// 0 OK; 1 input error (the case cannot be read: missing folder, malformed file); 2 usage error, or the licence
 /// refuses the case (as the CLI's licence gate exits 2), or the console is not interactive; 3 validation failure
-/// (--check found errors). With --check the gate runs, the report is printed and nothing is written; without it the
+/// (--check found errors); 78 the telemetry guard refused to start (<c>GridSim.Core.Diagnostics.TelemetryGuard</c>, run
+/// first in <c>Main</c>). With --check the gate runs, the report is printed and nothing is written; without it the
 /// full-screen editor opens.
 /// </summary>
 internal static class EntryPoint
@@ -25,10 +26,19 @@ internal static class EntryPoint
         "  x.network.json  a single v2 network file (gridsim-network/2)\n" +
         "  --check        run the save gate (schemas, loader, licence) and print the report; write nothing\n" +
         "  --version      print the version\n" +
-        "Exit codes: 0 ok, 1 input error, 2 usage or licence, 3 check failed.";
+        "Exit codes: 0 ok, 1 input error, 2 usage or licence, 3 check failed, 78 telemetry guard.";
+
+    /// <summary>The app's own assemblies, each of which must carry the TelemetryOff build marker: the editor and the one
+    /// GridSim assembly it references.</summary>
+    internal static readonly string[] AppAssemblies = ["GridSim.SchemaEditor", "GridSim.Core"];
 
     public static int Main(string[] args)
     {
+        // The telemetry guard runs before anything else, --version and --help included. It exits with code 78 (one line
+        // on stderr and the trace log) when the build marker is missing, a telemetry assembly is loaded or loads later, or
+        // an exporter, APM agent or agent-injection variable is set; see GridSim.Core.Diagnostics.TelemetryGuard. Main
+        // only; Run, which the tests drive in process, does not run it.
+        GridSim.Core.Diagnostics.TelemetryGuard.EnforceAtStartup("GridSim.SchemaEditor", AppAssemblies, foreignEntryAllowed: false);
         // Invariant culture for the whole process, as the CLI does: every number typed or shown is culture-free.
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;

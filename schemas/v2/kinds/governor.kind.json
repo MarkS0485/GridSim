@@ -11,11 +11,14 @@
         "TGOV1",
         "IEEEG1",
         "HYGOV",
-        "GAST"
+        "GAST",
+        "GGOV1",
+        "WSIEG1",
+        "IEEEG3"
       ],
       "required": false,
       "markGated": true,
-      "description": "Governor model: the lumped centre-of-inertia primary response, or a per-machine TGOV1, IEEEG1, hydro or GAST (simple gas turbine with exhaust temperature load limit) governor. HYGOV names GridSim's simplified hydro governor (N312): the transient-droop governor (permanent droop droopPu, transient droop, dashpot reset, gate servo) driving an ideal, lossless water column, which is the PSS/E HYGOV structure WITHOUT the turbine gain At, the no-load flow qNL, the turbine damping Dturb and the gate velocity limit. Those four have no key here, so a full PSS/E HYGOV data set is represented only approximately.",
+      "description": "Governor model: the lumped centre-of-inertia primary response, or a per-machine TGOV1, IEEEG1, hydro or GAST (simple gas turbine with exhaust temperature load limit) governor. HYGOV names GridSim's simplified hydro governor (N312): the transient-droop governor (permanent droop droopPu, transient droop, dashpot reset, gate servo) driving an ideal, lossless water column, which is the PSS/E HYGOV structure WITHOUT the turbine gain At, the no-load flow qNL, the turbine damping Dturb and the gate velocity limit. Those four have no key here, so a full PSS/E HYGOV data set is represented only approximately. GGOV1 (the GE general governor-turbine model, PSS/E GGOV1) takes the ggov1... parameters (the electrical-power feedback, PID, load limiter, acceleration limiter and actuator) with droopPu (R), valveMaxPu and valveMinPu (Vmax, Vmin) and turbineDampingPu (Dm). WSIEG1 (the WECC modified IEEE type 1 steam governor) takes the wsieg1... parameters (IEEEG1's structure with the nonlinear gate-to-flow table) with valveMaxPu and valveMinPu (PMAX, PMIN). IEEEG3 (the IEEE 1973 hydro governor, PSS/E IEEEG3) takes the ieeeg3... parameters with droopPu (the permanent droop sigma) and valveMaxPu and valveMinPu (PMAX, PMIN); its turbine coefficients a11, a13, a21 and a23 default to the ideal turbine 0.5, 1, 1.5, 1.",
       "codeDefaults": []
     },
     "droopPu": {
@@ -474,6 +477,672 @@
       "required": false,
       "markGated": false,
       "description": "GAST temperature limiter gain KT (0 or above). Required for model GAST in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Rselect": {
+      "type": "integer",
+      "unit": "1",
+      "min": -2,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 droop feedback Rselect: 1 electrical power, 0 none (isochronous), -1 fuel valve stroke, -2 governor output. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Flag": {
+      "type": "integer",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 fuel source switch Flag: 0 fuel flow independent of speed, 1 proportional to speed. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1TpelecS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 electrical power transducer time constant Tpelec (s); 0 passes the power through. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1MaxErrPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 maximum speed error signal maxerr (pu). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1MinErrPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 minimum speed error signal minerr (pu). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kpgov": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 governor proportional gain Kpgov. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kigov": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 governor integral gain Kigov (1/s). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kdgov": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 governor derivative gain Kdgov. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1TdgovS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 governor derivative time constant Tdgov (s); above 0 when Kdgov is above 0. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1TactS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 actuator time constant Tact (s). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kturb": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 turbine gain Kturb; above 0. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1WfnlPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 no-load fuel flow Wfnl (pu). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1TbS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 turbine lag time constant Tb (s); Tb = Tc = 0 bypasses the lead-lag. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1TcS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 turbine lead time constant Tc (s). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1TengS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: the diesel transport delay Teng (s). Only 0 (the default) is modelled; any other value is refused.",
+      "codeDefaults": []
+    },
+    "ggov1TfloadS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 load limiter (temperature measurement) time constant Tfload (s). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kpload": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 load limiter proportional gain Kpload; with Kiload 0 as well, the load limiter is left out. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kiload": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 load limiter integral gain Kiload (1/s). Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1LdrefPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 load limiter reference Ldref (pu); a high value deactivates the limiter. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1RopenPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 maximum valve opening rate Ropen (pu/s); above 0. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1RclosePuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "required": false,
+      "markGated": false,
+      "description": "GGOV1 maximum valve closing rate Rclose (pu/s); below 0. Required for model GGOV1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ggov1Kimw": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: supervisory load controller (reset) gain Kimw (1/s); 0 (the default) is none.",
+      "codeDefaults": []
+    },
+    "ggov1AsetPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: acceleration limiter set point Aset (pu/s); default 0.",
+      "codeDefaults": []
+    },
+    "ggov1Ka": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: acceleration limiter gain Ka; 0 (the default) leaves the limiter out.",
+      "codeDefaults": []
+    },
+    "ggov1TaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: acceleration limiter time constant Ta (s); 0 (the default) leaves the limiter out.",
+      "codeDefaults": []
+    },
+    "ggov1TrateMw": {
+      "type": "number",
+      "unit": "MW",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: turbine rating Trate (MW). Above 0: the GGOV1 per-unit values are on the turbine rating, converted to the machine base in the study; 0 (the default): on the machine base.",
+      "codeDefaults": []
+    },
+    "ggov1DbPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: speed governor deadband db. Only 0 (the default) is modelled; any other value is refused.",
+      "codeDefaults": []
+    },
+    "ggov1TsaS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: temperature detection lead time constant Tsa (s); default 0.",
+      "codeDefaults": []
+    },
+    "ggov1TsbS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: temperature detection lag time constant Tsb (s); default 0 (Tsa = Tsb = 0 bypasses the lead-lag).",
+      "codeDefaults": []
+    },
+    "ggov1RupPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: maximum rate of load limit increase Rup (pu/s), on the load limiter integral; above 0, default 99.",
+      "codeDefaults": []
+    },
+    "ggov1RdownPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model GGOV1: maximum rate of load limit decrease Rdown (pu/s); below 0, default -99.",
+      "codeDefaults": []
+    },
+    "wsieg1K": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 governor gain K (the reciprocal of the droop); above 0. Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T1S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 governor lag time constant T1 (s); T1 = T2 = 0 is the pure gain. Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T2S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 governor lead time constant T2 (s). Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T3S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 valve servo time constant T3 (s). Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1UoPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 maximum valve opening rate Uo (pu/s); above 0. Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1UcPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 maximum valve closing rate Uc (pu/s); below 0. Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T4S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 steam chest time constant T4 (s). Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T5S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 reheater time constant T5 (s). Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T6S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 crossover time constant T6 (s). Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1T7S": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "WSIEG1 second crossover time constant T7 (s). Required for model WSIEG1 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "wsieg1K1": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K1 (HP shaft); the eight sum to 1. Default 1.",
+      "codeDefaults": []
+    },
+    "wsieg1K2": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K2 (LP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1K3": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K3 (HP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1K4": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K4 (LP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1K5": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K5 (HP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1K6": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K6 (LP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1K7": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K7 (HP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1K8": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "max": 1,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the stage fraction K8 (LP shaft); the eight sum to 1. Default 0.",
+      "codeDefaults": []
+    },
+    "wsieg1Db1Pu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the intentional deadband db1. Only 0 (the default) is modelled; any other value is refused.",
+      "codeDefaults": []
+    },
+    "wsieg1ErrPu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the intentional deadband hysteresis err. Only 0 (the default) is modelled.",
+      "codeDefaults": []
+    },
+    "wsieg1Db2Pu": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: the unintentional deadband db2. Only 0 (the default) is modelled.",
+      "codeDefaults": []
+    },
+    "wsieg1Gv1": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: gate position GV1 of the nonlinear gain table (pu); all ten table values 0 (the default) is the identity.",
+      "codeDefaults": []
+    },
+    "wsieg1Pgv1": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: steam flow PGV1 at GV1 of the nonlinear gain table (pu).",
+      "codeDefaults": []
+    },
+    "wsieg1Gv2": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: gate position GV2 of the nonlinear gain table (pu); all ten table values 0 (the default) is the identity.",
+      "codeDefaults": []
+    },
+    "wsieg1Pgv2": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: steam flow PGV2 at GV2 of the nonlinear gain table (pu).",
+      "codeDefaults": []
+    },
+    "wsieg1Gv3": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: gate position GV3 of the nonlinear gain table (pu); all ten table values 0 (the default) is the identity.",
+      "codeDefaults": []
+    },
+    "wsieg1Pgv3": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: steam flow PGV3 at GV3 of the nonlinear gain table (pu).",
+      "codeDefaults": []
+    },
+    "wsieg1Gv4": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: gate position GV4 of the nonlinear gain table (pu); all ten table values 0 (the default) is the identity.",
+      "codeDefaults": []
+    },
+    "wsieg1Pgv4": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: steam flow PGV4 at GV4 of the nonlinear gain table (pu).",
+      "codeDefaults": []
+    },
+    "wsieg1Gv5": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: gate position GV5 of the nonlinear gain table (pu); all ten table values 0 (the default) is the identity.",
+      "codeDefaults": []
+    },
+    "wsieg1Pgv5": {
+      "type": "number",
+      "unit": "pu@machine",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: steam flow PGV5 at GV5 of the nonlinear gain table (pu).",
+      "codeDefaults": []
+    },
+    "wsieg1Iblock": {
+      "type": "integer",
+      "unit": "1",
+      "min": 0,
+      "max": 3,
+      "required": false,
+      "markGated": false,
+      "description": "Optional for model WSIEG1: IBLOCK, PSS/E's limit initialisation: 1 sets a PMIN of 0 to the initial gate, 2 a PMAX of 0, 3 both; 0 (the default) keeps them.",
+      "codeDefaults": []
+    },
+    "ieeeg3TgS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 gate servomotor time constant TG (s), above 0. Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3TpS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 pilot valve time constant TP (s). Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3UoPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 gate opening rate limit Uo (pu of the machine base per second), above 0. Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3UcPuPerS": {
+      "type": "number",
+      "unit": "MW/s/MW",
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 gate closing rate limit Uc (pu of the machine base per second), below 0. Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3TransientDroopPu": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 transient droop delta. Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3TrS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 transient droop (dashpot) time constant TR (s), above 0. Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3TwS": {
+      "type": "number",
+      "unit": "s",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 water starting time TW (s), above 0. Required for model IEEEG3 in a gridsim-dynamics/2 file.",
+      "codeDefaults": []
+    },
+    "ieeeg3A11": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 turbine coefficient a11, above 0. Default 0.5 (the ideal turbine).",
+      "codeDefaults": []
+    },
+    "ieeeg3A13": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 turbine coefficient a13. Default 1.",
+      "codeDefaults": []
+    },
+    "ieeeg3A21": {
+      "type": "number",
+      "unit": "1",
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 turbine coefficient a21. Default 1.5.",
+      "codeDefaults": []
+    },
+    "ieeeg3A23": {
+      "type": "number",
+      "unit": "1",
+      "min": 0,
+      "required": false,
+      "markGated": false,
+      "description": "IEEEG3 turbine coefficient a23, above 0. Default 1.",
       "codeDefaults": []
     }
   }

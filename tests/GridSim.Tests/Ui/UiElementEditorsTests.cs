@@ -200,7 +200,9 @@ public sealed class UiElementEditorsTests
             ("Identity and role", new[] { "name", "bus", "type", "role", "inService", "powerFlowOnly" }),
             ("Real power", new[] { "capacityMva", "outputMw", "capacityFactor", "pMinMw", "pMaxMw" }),
             ("Reactive power and voltage", new[] { "qMinMvar", "qMaxMvar", "qOutputMvar", "voltageSetpoint" }),
-            ("Dynamics parameters", v2 ? new[] { "inertiaH", "unitTransformerXPu", "subtransientXdPu", "negativeSeqXPu", "template" } : new[] { "inertiaH", "unitTransformerXPu", "dynamicsClass" }),
+            // Added 2026-11-20 (RC5): the v2 generator's optional protectionTemplate (its unitProtection template) sits after
+            // its dynamics template.
+            ("Dynamics parameters", v2 ? new[] { "inertiaH", "unitTransformerXPu", "subtransientXdPu", "negativeSeqXPu", "template", "protectionTemplate" } : new[] { "inertiaH", "unitTransformerXPu", "dynamicsClass" }),
             ("Converter block", v2 ? new[] { "converter", "converter.interfaced", "converter.faultCurrentPu", "converter.gridForming" } : new[] { "converterInterfaced", "converterFaultCurrentPu", "gridForming" }),
         },
         CaseRoles.Demands => new[]

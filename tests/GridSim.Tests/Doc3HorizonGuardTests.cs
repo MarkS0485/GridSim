@@ -29,7 +29,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Doc3HorizonGuardTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-doc3-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-doc3-" + Guid.NewGuid().ToString("N"));
 
     public Doc3HorizonGuardTests() => Directory.CreateDirectory(_dir);
 

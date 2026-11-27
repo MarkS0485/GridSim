@@ -80,7 +80,7 @@ public static class SequenceReduction
         return r;
     }
 
-    /// <summary>Real-matrix version of <see cref="TransposeAverage3"/>.</summary>
+    /// <summary>Real-matrix version of <see cref="TransposeAverage3(Complex[,])"/>.</summary>
     public static double[,] TransposeAverage3(double[,] c)
     {
         double s = (c[0, 0] + c[1, 1] + c[2, 2]) / 3.0;

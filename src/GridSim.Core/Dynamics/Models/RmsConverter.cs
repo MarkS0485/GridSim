@@ -84,10 +84,29 @@ public sealed record RmsConverterUnit(
     /// Its buses are retained as extra converter nodes with no injection (<see cref="NodeBuses"/>).</summary>
     public global::GridSim.Core.Dynamics.Models.Wecc.WeccMeasurement? WeccMeasurement { get; init; }
 
+    /// <summary>WP3b (RC5): set when this unit is a dynamic load (<see cref="DynamicLoadData"/>), not converter plant: the
+    /// kernel drives it with the load's own model and its Norton admittance is the load's. Null for every converter.</summary>
+    internal DynamicLoadPlan? DynamicLoad { get; init; }
+
+    /// <summary>WP6 (RC5): set when this unit is a terminal of a network device with an RMS model (an SVC, a STATCOM, or one
+    /// end of an LCC or VSC link) or a generator-held SVC or STATCOM: the kernel drives it with the device's own model, a
+    /// current source with no Norton admittance. Null for every other unit.</summary>
+    internal RmsDevicePlan? Device { get; init; }
+
+    /// <summary>RC5 WP23: the unit's IEC 61400-27-1 style Type 4 wind turbine model (<see cref="SubtransientInit.MachineData.Iec61400"/>),
+    /// a current source with no Norton admittance; null (the default) for every other unit.</summary>
+    public global::GridSim.Core.Dynamics.Models.Iec61400.Iec61400Data? Iec61400 { get; init; }
+
     /// <summary>The kernel's dynamic model of this unit: the WECC chain when <see cref="Wecc"/> is set, else the
     /// historical converter. <paramref name="nodeBuses"/> is the network's converter-node bus order
     /// (<see cref="NodeBuses"/>), from which a WECC plant controller finds its measurement nodes.</summary>
-    public IRmsConverterModel CreateModel(IReadOnlyList<int> nodeBuses) => Wecc is null
+    public IRmsConverterModel CreateModel(IReadOnlyList<int> nodeBuses) => Iec61400 is not null
+        ? new global::GridSim.Core.Dynamics.Models.Iec61400.Iec61400State(this)
+        : Device is not null
+        ? Device.CreateModel(nodeBuses)
+        : DynamicLoad is not null
+        ? DynamicLoad.CreateModel()
+        : Wecc is null
         ? new LegacyRmsConverterModel(new RmsConverterState(this))
         : Wecc.Der is not null
             ? new global::GridSim.Core.Dynamics.Models.Wecc.DerAState(this)
@@ -117,7 +136,8 @@ public sealed record RmsConverterUnit(
     /// (REGC_B, REGFM_A1) stamps <c>RatingPu / Z</c> with its own source impedance
     /// (<see cref="global::GridSim.Core.Dynamics.Models.Wecc.WeccPlant.NortonImpedance"/>); every other WECC unit is a
     /// current source (zero).</summary>
-    public Complex NortonAdmittance => Wecc is { NortonImpedance: { } zw } ? RatingPu / zw
+    public Complex NortonAdmittance => DynamicLoad is not null ? DynamicLoad.NortonAdmittance
+        : Wecc is { NortonImpedance: { } zw } ? RatingPu / zw
         : Wecc is not null ? Complex.Zero
         : Parameters.GridForming
         ? RatingPu / new Complex(0.0, Math.Max(Parameters.VirtualReactancePu, RmsConverterState.MinVirtualReactancePu))
@@ -189,6 +209,9 @@ public sealed class RmsConverterState
     /// reference (I = P / V) in a grid-following unit.</summary>
     public const double MinControlVoltagePu = 0.01;
 
+    /// <summary>R5-05: the relative tolerance of the start-current check against Imax x rating (DYN-04).</summary>
+    internal const double ImaxStartTolerance = 1e-9;
+
     private readonly RmsConverterUnit _u;
     private readonly FirstOrderLag _vf;
     private readonly double _ip0, _iq0, _v0Mag, _imax;
@@ -226,6 +249,22 @@ public sealed class RmsConverterState
         _ip0 = unit.P0 / _v0Mag;
         _iq0 = unit.Q0 / _v0Mag;
         _imax = unit.Parameters.BlockInDip ? double.PositiveInfinity : unit.Parameters.Imax * unit.RatingPu;
+        // DYN-04: a grid-following unit whose solved current is above its limit would be clamped from the first step and
+        // leave its operating point at t = 0 with nothing to say why. Refused at initialisation, as R252 refuses a
+        // synchronous controller started outside its limits (both inclusive: a unit exactly at its limit is an equilibrium).
+        if (!_gfm)
+        {
+            // R5-05: a unit dispatched at its limit lands a few ulps either side of it in the solve, so the limit holds a
+            // relative tolerance of 1e-9 (far below any current a solve resolves, far above rounding).
+            double i0 = Math.Sqrt(_ip0 * _ip0 + _iq0 * _iq0);
+            if (!(i0 <= _imax * (1.0 + ImaxStartTolerance)))
+                throw new ArgumentOutOfRangeException(nameof(unit), i0,
+                    $"converter {unit.Name} at bus {unit.Bus}: the solved operating point needs a current of {ControlBlocks.Num(i0)} pu "
+                    + $"(P {ControlBlocks.Num(unit.P0)}, Q {ControlBlocks.Num(unit.Q0)} at {ControlBlocks.Num(_v0Mag)} pu), above its limit "
+                    + $"Imax x rating = {ControlBlocks.Num(unit.Parameters.Imax)} x {ControlBlocks.Num(unit.RatingPu)} = {ControlBlocks.Num(_imax)} pu (system base). "
+                    + "Starting there would clamp the current and the run would not begin at the solved point (R252); check the unit's MBase "
+                    + "(a missing MBase takes the system base) and its Imax.");
+        }
         _ip = _ip0; _iq = _iq0; _ipFrozen = _ip0;
         _angle = DetMath.Phase(unit.V0);
     }

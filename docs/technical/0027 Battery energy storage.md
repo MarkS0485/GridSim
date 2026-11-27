@@ -53,12 +53,13 @@ R1, R2, the OCV and the entropic coefficient are evaluated once, at the start-of
 a_k   = exp(-dt / tau_k)                                        k = 1, 2
 V_k+  = V_k * a_k + I * R_k * (1 - a_k)                         exact zero-order hold
 Qirr  = I^2 R0 dt + 0.5 (V1^2 + V1+^2) / R1 dt + 0.5 (V2^2 + V2+^2) / R2 dt
-Qrev  = I * T * dUdT(SoC) * dt
+Qrev  = -I * T * dUdT(SoC) * dt
 heat  = Qirr + Qrev                                             J per cell
 ```
 
 `Qirr` integrates the dissipation in each RC resistor with a trapezoid on the squared voltage. `Qrev` is the
-reversible entropic term. Where `dU/dT` is negative, as for LFP and NMC, it cools the cell on discharge and heats it on charge. The charge and rate effects
+reversible entropic term (Bernardi, Pawlikowski and Newman 1985, with discharge-positive current). Where `dU/dT` is
+negative, as for LFP and NMC, it heats the cell on discharge and cools it on charge. The charge and rate effects
 are:
 
 ```
@@ -490,8 +491,13 @@ demand  = sum of m.Buses.Pd                                             before t
 records = fleet.Advance(step, hour, StepHours, demand, price)           price NaN without a series
 model   = fleet.Apply(m), warm-started from the last converged step     GridScenario.WithSolvedVoltages
 pf      = solver.Solve(model, options)
-slackMw = pf.PInjMw[slack] + Pd[slack]                                  NaN when no slack bus
+slackMw = pf.PInjMw[slack] + P_load(slack, Vm[slack])                    NaN when no slack bus
 ```
+
+`P_load` is `LoadAtVoltage.Mw`, the load rule the solver and `SolvedGeneration` use: a constant-power load is its stored
+`Pd`, and a voltage-dependent (ZIP) load at the slack bus is `Pd` times its multiplier at the solved slack voltage. A
+constant-impedance 100 MW load at a slack held at 1.04 pu draws 100 x 1.04^2 = 108.16 MW, and that is what the slack
+output includes.
 
 Only a converged solve becomes the next warm start. A step that does not converge is recorded with
 `Converged = false` and `Vmin`, `Vmax` NaN; the CLI prints `-` in its slack and voltage columns and exits 3. Without `options` the run solves with 100 iterations and
@@ -772,7 +778,7 @@ A storage run is sequential and has no random input and no clock input. Sites ar
 loop has a fixed bound or a fixed iteration cap (30 substeps, 50 bisection iterations, the simplex iteration cap), the
 simplex breaks ratio-test ties by the first row, and the CLI sets the invariant culture for the whole process (`Program.cs`, `CultureInfo.CurrentCulture`), which is how numbers are formatted. The same inputs
 give the same outputs run to run, and the CLI report carries no timings, so the same command prints the same text. The
-network solves underneath are the validated Newton engines of [ch. 3, Power flow](<0003 Power flow.md>) with their
+network solves underneath are the verified Newton engines of [ch. 3, Power flow](<0003 Power flow.md>) with their
 bit-identity contract. `S4SolverConvergenceTests` compares two storage configurations bit for bit; no test repeats a
 storage run and compares the bits across CPUs.
 

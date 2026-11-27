@@ -80,7 +80,7 @@ public sealed class Ieeeg1
         double k2 = 0.0, double k4 = 0.0, double k6 = 0.0, double k8 = 0.0,
         double valveOpeningRatePuPerS = double.PositiveInfinity, double valveClosingRatePuPerS = double.NegativeInfinity)
     {
-        if (droopPu <= 0.0) throw new System.ArgumentOutOfRangeException(nameof(droopPu), "Droop R must be > 0.");
+        if (!(droopPu > 0.0) || !double.IsFinite(droopPu)) throw new System.ArgumentOutOfRangeException(nameof(droopPu), "Droop R must be > 0.");   // DYN-11: NaN too
         _rDroop = droopPu;
 
         // T1 = T2 = 0 (no phase shaping) is the pure gain K; a lead with no lag is improper and stays refused by LeadLag.

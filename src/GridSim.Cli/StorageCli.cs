@@ -116,7 +116,7 @@ internal static class StorageCli
         outPath ??= Path.Combine(Directory.GetCurrentDirectory(), "results", $"chain-storage-{caseName}.md");
         // D-DOC-072: the report and its CSV through the one output policy (CliFiles creates the folder and never lets an
         // output replace an input of the run).
-        using var md = new StreamWriter(CliFiles.Output(outPath, "storage report")) { AutoFlush = true };
+        using var md = new StreamWriter(CliFiles.ReportWithCsv(outPath, "storage report")) { AutoFlush = true };
         using var csv = new StreamWriter(CliFiles.Output(Path.ChangeExtension(outPath, ".csv"), "storage report CSV")) { AutoFlush = true };
         // GR-692: the report's <report>.run-metadata.json sidecar, as the other report-file verbs write it.
         RunInfo.WriteJson(CliFiles.Output(RunInfo.MetadataPathFor(outPath), "run metadata"), $"chain {caseName} (storage)");

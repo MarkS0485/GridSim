@@ -326,7 +326,7 @@ public static class FullModalAnalysis
             modes.Add(MakeMode(p.Value, part, p.RelativeResidual, options, states, avail));
         }
         int failing = res.Pairs.Count(p => !p.PassesGate);
-        if (failing > 0) incomplete.Add($"{failing} returned eigenpair(s) failed the residual gate {options.ResidualGate:E1} (largest relative residual {maxRes:E2}).");
+        if (failing > 0) incomplete.Add(FormattableString.Invariant($"{failing} returned eigenpair(s) failed the residual gate {options.ResidualGate:E1} (largest relative residual {maxRes:E2})."));
 
         bool allIn = modes.All(m => region.Contains(m.Mode.Eigenvalue));
         modes = modes.Where(m => region.Contains(m.Mode.Eigenvalue)).ToList();
@@ -360,7 +360,7 @@ public static class FullModalAnalysis
             if (m.Mode.IsOscillatory && (double.IsNaN(minZ) || m.Mode.DampingRatio < minZ)) minZ = m.Mode.DampingRatio;
         foreach (FullMode m in list)
             if (!m.ResidualPassed && !incomplete.Any(s => s.Contains("residual gate", StringComparison.Ordinal)))
-                incomplete.Add($"an eigenpair failed the residual gate {options.ResidualGate:E1}.");
+                incomplete.Add(FormattableString.Invariant($"an eigenpair failed the residual gate {options.ResidualGate:E1}."));
         string digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             list.SelectMany(m => new[] { BitConverter.GetBytes(m.Mode.Eigenvalue.Real), BitConverter.GetBytes(m.Mode.Eigenvalue.Imaginary) }).SelectMany(b => b).ToArray())).ToLowerInvariant();
         return new FullModalResult

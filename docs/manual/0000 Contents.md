@@ -13,7 +13,7 @@ are being written.
 | Ch | Chapter | What it covers |
 |---|---|---|
 | 1 | [Getting started](<0001 Getting started.md>) | Install the .NET SDK, build, run the tests, first solve. |
-| 2 | [Loading networks](<0002 Loading networks.md>) | Built-in cases, MATPOWER files, JSON case folders, the GB models and the case library. |
+| 2 | [Loading networks](<0002 Loading networks.md>) | Built-in cases, MATPOWER files, JSON case folders, PSS/E RAW (revisions 30 to 36), RAWX, DYR and SEQ, the GB models and the case library. |
 | 3 | [Configuration](<0003 Configuration.md>) | Environment variables, settings files and paths. |
 | 4 | [Licensing and activation](<0004 Licensing and activation.md>) | Licence tiers (issued gratis at present), bus limits, installing and checking a licence. |
 
@@ -21,8 +21,8 @@ are being written.
 
 | Ch | Chapter | What it covers |
 |---|---|---|
-| 5 | [Running power flows](<0005 Running power flows.md>) | The bare run, the report, engine choice, Q-limits, OLTC, solve exports, recorded runs. |
-| 6 | [OPF, CPF, taps, distribution factors and losses](<0006 OPF, CPF, taps, distribution factors and losses.md>) | `dcpf`, `dcopf`, `acopf`, `cpf`, `taps`, `ptdf`, `lodf`, `losses`. |
+| 5 | [Running power flows](<0005 Running power flows.md>) | The bare run, the report, engine choice, Q-limits, OLTC, solve exports, recorded runs, and `reduce` (Ward, extended Ward, REI, short-circuit and dynamic equivalents). |
+| 6 | [OPF, CPF, taps, distribution factors and losses](<0006 OPF, CPF, taps, distribution factors and losses.md>) | `dcpf`, `dcopf`, `acopf`, `acopf-full`, `acopf-opt` (cost, losses, reactive power), `acscopf`, `reconfig`, `cpf`, `taps`, `ptdf`, `lodf`, `losses`. |
 | 7 | [Three-phase distribution feeders](<0007 Three-phase distribution feeders.md>) | `dist3ph`: unbalanced sweep, faults and estimation on feeders. |
 | 34 | [Time series and hosting capacity](<0034 Time series and hosting capacity.md>) | `qsts`: quasi-static time series with timed tap changers, capacitor banks, inverters and storage; `hosting`: PV and load hosting capacity. |
 
@@ -40,7 +40,7 @@ are being written.
 | Ch | Chapter | What it covers |
 |---|---|---|
 | 11 | [Contingency analysis](<0011 Contingency analysis.md>) | `trip`, `screen`, N-1, N-2, N-1-1, sweeps, `stress`, `chain`, `cycle`. |
-| 12 | [Faults, short circuit and protection grading](<0012 Faults, short circuit and protection grading.md>) | `fault`, `iec60909`, `protection-check`, `grade`. |
+| 12 | [Faults, short circuit and protection grading](<0012 Faults, short circuit and protection grading.md>) | `fault`, `iec60909`, `protection-check`, `grade`, and placed 50/51, 50N/51N, 67, 21 and 87L devices with `protection-eval` and `protection-grade`. |
 | 13 | [Battery storage studies](<0013 Battery storage studies.md>) | `--bess` sites on `chain` and `gda-replay`: chemistries, dispatch policies, state of charge, losses and ageing. |
 
 ## V. Dynamics
@@ -48,7 +48,7 @@ are being written.
 | Ch | Chapter | What it covers |
 |---|---|---|
 | 14 | [Frequency studies](<0014 Frequency studies.md>) | `freq`, `transient`, `replay`, `domains`, `h0-study`, `fit-frequency`, the live frequency view. |
-| 15 | [RMS, modal and impedance stability](<0015 RMS, modal and impedance stability.md>) | `stability` (classical and RMS, CCT, RMS event studies), `modal`, `impedance-stability`, machine data files. |
+| 15 | [RMS, modal and impedance stability](<0015 RMS, modal and impedance stability.md>) | `stability` (classical and RMS, CCT, RMS event studies with unbalanced and impedance faults), `modal`, `impedance-stability`, machine data files, dynamic loads, SVC, STATCOM and HVDC models, unit relays, user models and plug-ins, and `grid-code`. |
 | 16 | [Electromagnetic transients](<0016 Electromagnetic transients (EMT).md>) | The `emt` verb: switching, faults and waveforms. |
 | 17 | [Harmonic studies](<0017 Harmonic studies.md>) | The `harmonics` verb: penetration, impedance scans and resonance, IEEE 519 compliance. |
 
@@ -76,7 +76,9 @@ are being written.
 | 26 | [Audit log, deployment and assurance](<0026 Audit log, deployment and assurance.md>) | `--audit-log` and its anchor, `audit verify` and `audit show`, the web host in Docker behind nginx, SSO, CI, and the assurance documents. |
 | 27 | [Validation tools](<0027 Validation tools.md>) | `crossval`, SE sidecars, `physics-check`, `conformance`, `simdcheck`. |
 | 28 | [Benchmarking and GPU](<0028 Benchmarking and GPU.md>) | `bench`, `batchsolve`, `gpucheck`, `simdcheck`, the GPU backends, published results, renting a GPU server. |
-| 35 | [Scripting](<0035 Scripting.md>) | `gridsim-script`: the `.gss` script language (grammar 1), the interactive recorded console, five stepping engines, loops, decisions, values and procedures, the run record and its hashes. |
+| 35 | [Scripting](<0035 Scripting.md>) | `gridsim-script`: the `.gss` script language (grammar 1), the interactive recorded console, five stepping engines, loops, decisions, values and procedures, the run record and its hashes, and the STUDIES extension. |
+| 36 | [Determinism and reproducibility](<0036 Determinism and reproducibility.md>) | What you can rely on to repeat bit for bit, how to check two runs by hashing the result file, the stated exceptions (the `cycle` verb, the GPU path, dense and sparse WLS) and how BREAKING-labelled releases tell you results move. |
+| 37 | [Using GridSim from AI tools (MCP)](<0037 Using GridSim from AI tools (MCP).md>) | The GridSim MCP server: installing it in Claude Code or another MCP client, the GridSim path, licence and workspace, the tools by task, the evidence block, the study record and replay, RELEASE and UNSUPPORTED BUILD, what is refused, offline operation. |
 
 ## IX. Reference
 
@@ -85,5 +87,5 @@ are being written.
 | 19 | [CLI reference](<0019 CLI reference.md>) | Every verb, flag, default and exit code. (Its file keeps the number 19 because a test reads it.) |
 | 29 | [Extending GridSim](<0029 Extending GridSim.md>) | The extension seams: solvers, estimators, assets, formats. |
 | 30 | [Troubleshooting](<0030 Troubleshooting.md>) | Messages, exit codes and what to do about them. |
-| 31 | [Exports and formats](<0031 Exports and formats.md>) | Every export and run-directory file, field by field. |
+| 31 | [Exports and formats](<0031 Exports and formats.md>) | Every export and run-directory file, field by field, and COMTRADE. |
 | 32 | Glossary (*in preparation*) | User-level terms; the full glossary is technical ch. 12. |

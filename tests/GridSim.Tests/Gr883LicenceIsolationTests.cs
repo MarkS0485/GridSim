@@ -16,7 +16,7 @@ namespace GridSim.Tests;
 /// </summary>
 public sealed class Gr883LicenceIsolationTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"gridsim-gr883-{Guid.NewGuid():N}");
+    private readonly string _dir = TestTemp.Under($"gridsim-gr883-{Guid.NewGuid():N}");
 
     public Gr883LicenceIsolationTests() => Directory.CreateDirectory(_dir);
 

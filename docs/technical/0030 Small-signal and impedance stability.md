@@ -163,13 +163,16 @@ archetype, and inject back into the COI power balance:
 ```
 M_T       = sum_i M_i
 df   [Hz]    = f0 * sum_i (M_i / M_T) d(omega)_i                                   dfRow[g+i] = f0 M_i / M_T
-rocof [Hz/s] = -(f0 / M_T) * ( sum_j (sum_i K_L[i,j]) d(delta)_j + sum_i D_i d(omega)_i )     machine-driven part
+rocof [Hz/s] = (f0 / M_T) * ( -sum_j (sum_i K_L[i,j]) d(delta)_j - sum_i D_i d(omega)_i
+                              + sum_b (PowerOutputRow . x_b) / BaseMva )
 x_b'   = Aself x_b + FreqInputRow * df + RocofInputRow * rocof                      one row per block state
 d(omega)_i' += (1 / M_T) * (PowerOutputRow . x_b) / BaseMva                         every machine i
 ```
 
-The rate term uses only the machine-driven part of df/dt, which breaks the algebraic loop between the inverter
-output and the COI.
+The rate row is the exact COI df/dt: the sum over the machines of `(M_i / M_T)` times their speed rows, so it holds
+the inverters' own power as well as the machine terms. The inverter power is a lag state with no feedthrough, so
+the row has no algebraic loop. With one machine (`H = 5`, `D = 0`) and one grid-forming block with `tau = 0.05 s` and
+`synInertia = x BaseMva M_T / f0`, the actuator pole is `-(1 + x) / tau`: `-40` at `x = 1`.
 
 Grid-forming block, one state (`StateKind.DroopActuatorLag`, the first-order lag `p_lag` of the injected MW):
 
@@ -505,7 +508,7 @@ integrable machine has no modal model; the scan then prints `n/a on this case` a
 | Fault-edge tolerance | 1e-6 | steps | An RK4 sample within this of a fault edge has reached it | `MultiMachineSubtransient.StageTimeToleranceSteps` |
 | Slip limit | 2 pi | rad | Rotor-angle distance from the COI that counts as loss of synchronism | `slipLimitRad`, `RmsTransientStability.DefaultSlipLimitRad` |
 | Fault shunt | 1e7 | pu | Bolted-fault conductance to ground at the fault bus | literal in `ClassicalInit.FromSolvedCase` |
-| Load voltage floor | 1e-9 | pu^2 | Floor on `|V|^2` in the load admittance | literal in `ClassicalInit.FromSolvedCase` |
+| Load voltage floor | 1e-9 | pu^2 | Floor on `\|V\|^2` in the load admittance | literal in `ClassicalInit.FromSolvedCase` |
 | Nominal frequency of the search | case value | Hz | `f0` of every CCT trial: the case's own frequency unless the caller passes one (60 Hz for `case9`; the CLI passes none) | `f0` default of `CriticalClearingBracket`, `GridModel.FrequencyHz` |
 | Nominal frequency of `--clear` | case value | Hz | `f0` of the classical single study | `GridModel.FrequencyHz` |
 | Synthetic `X'd` | 0.30 | pu, machine base | Used for every machine of every case but `case9` | `CliDefaults.SyntheticXdpPu` |

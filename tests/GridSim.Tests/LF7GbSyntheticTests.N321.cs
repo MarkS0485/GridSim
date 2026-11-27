@@ -28,7 +28,7 @@ public sealed partial class LF7GbSyntheticTests
 
     private static string TempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "gridsim-lf7-" + Guid.NewGuid().ToString("N"));
+        string dir = TestTemp.Under("gridsim-lf7-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }

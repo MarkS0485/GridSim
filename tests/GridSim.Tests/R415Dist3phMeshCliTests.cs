@@ -22,7 +22,7 @@ public sealed class R415Dist3phMeshCliTests : IDisposable
          "earthing":[{"node":"S","wire":"n","r_ohm":0}]}
         """;
 
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), "gridsim-r415-" + Guid.NewGuid().ToString("N"));
+    private readonly string _dir = TestTemp.Under("gridsim-r415-" + Guid.NewGuid().ToString("N"));
 
     public R415Dist3phMeshCliTests() => Directory.CreateDirectory(_dir);
 

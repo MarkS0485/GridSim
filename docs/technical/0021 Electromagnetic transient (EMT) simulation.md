@@ -626,6 +626,23 @@ the code shown on the first failure.
 
 Exit codes: 0 success, 1 case load failure, 2 usage or build error, 3 numerical failure.
 
+## The `cosim` and `emt-partition` verbs
+
+Both run unchanged Core code on the nodal solver.
+
+`gridsim cosim` parses an inline `emt3` study and builds it with `Emt3Runner.Run(study, extend)`. The overload calls the
+hook once, after every element of the study and before the outputs are resolved, with the network and a function that
+returns a bus's three phase nodes; `Run(study)` is `Run(study, null)`, so `emt3` is unchanged. The hook adds
+`RmsEmtInterface.Add(net, "rms", "", nodes(boundary), side, options, step)` with the `PhasorSide` of the document. The
+exchange log is written with each number in its shortest round-trip form, so the CSV holds the exact bits.
+
+`gridsim emt-partition` builds a `PartitionedModel` from its own single-conductor document. The partition of each node
+is found by a union-find over the branches, switches and uncut lines; the root of each part is the node seen first, so the
+partitions are numbered p1, p2, ... in document order (sources, then branches, switches and lines). Elements are added in
+the same order: sources, branches, switches, lines. `PartitionedEngine.Run` runs the model; `--monolithic` builds the
+same description with `singlePartition: true` and runs `NodalSolver.Run` on its one network. `--partition auto` cuts each
+line with `travel >= step (1 - 1e-12)`, the partitioner's own test.
+
 ## Parameters and defaults
 
 | Name | Value | Unit | Meaning | Source symbol |
@@ -683,7 +700,7 @@ Each invariant is pinned by a test in `tests/GridSim.Tests/`.
 | The build maps tap, From-end charging and negative reactance exactly as the power-flow stamp; an untapped branch builds the original element; a tap is never lost to a Bergeron line | `Build_maps_tap_and_from_end_charging_exactly_as_the_power_flow_stamp`, `Build_maps_a_negative_reactance_to_a_series_capacitor_with_the_same_reactance`, `Untapped_branch_builds_exactly_the_original_element`, `Travelling_wave_mode_never_drops_a_tap` (all `EmtTapAndSeriesCapacitorTests`) |
 | Untapped cases give bit-identical trajectories: 13 pinned SHA-256 digests, each over every recorded instant of a 40 ms DC run at 20 us and the probes sampled for it (at most 150 evenly strided node voltages and the first 20 branch currents), as raw IEEE-754 bytes (gb-full, uk, case9 and case30, each lumped, with lines and with a fault; case33bw lumped) | `EmtUntappedBitIdentityTests.Untapped_case_emt_trajectory_is_bit_identical_to_the_pre_R078_engine` |
 | A case with a different `dt` (one ulp, NaN, double) or a different network is refused, and the refusal leaves the engine unadvanced | `EmtCaseConsistencyTests.A_case_with_a_different_dt_is_refused`, `A_case_with_a_different_network_is_refused`, `Refused_cases_leave_the_engine_unadvanced` |
-| An equivalent rebuilt network is accepted and gives bit-identical samples, statistics and `max|probe|` | `EmtCaseConsistencyTests.An_equivalent_rebuilt_network_is_accepted_and_gives_the_same_trajectory` |
+| An equivalent rebuilt network is accepted and gives bit-identical samples, statistics and `max\|probe\|` | `EmtCaseConsistencyTests.An_equivalent_rebuilt_network_is_accepted_and_gives_the_same_trajectory` |
 | A second `Simulate`, or one after a manual `Step`, is refused; `Reset()` then `Simulate` is bit-identical to a fresh engine (including an initially open switch) | `EmtCaseConsistencyTests.A_second_simulate_without_reset_is_refused`, `Simulate_after_a_manual_step_is_refused`, `Reset_then_simulate_is_bit_identical_to_a_fresh_engine`, `Reset_restores_an_initially_open_switch` |
 | The three-phase engine refuses a second `Simulate` | `EmtCaseConsistencyTests.Three_phase_engine_refuses_a_second_simulate` |
 | An event naming a non-switch is refused with the valid ids; a no-op event leaves the run bit-identical with no extra refactorisation; a real event refactors | `DistributionAndEmtInputValidationTests.A_switch_event_on_a_non_switch_element_fails_loud`, `A_no_op_switch_event_leaves_the_run_bit_identical_to_no_event`, `A_real_switch_event_still_fires_the_cda_and_refactors` |
@@ -723,7 +740,7 @@ Each oracle is independent of the engine. Tolerances are the test assertions.
 
 | Case | Setup | Result asserted |
 |---|---|---|
-| Series RLC step, underdamped, critical, overdamped | `V = 1` pu, `L = C = 1e-3`, `R = 0.4, 2.0, 4.0`, `dt = 1 us`, 3 ms | max `|i_emt - i_analytic| < 1e-5` |
+| Series RLC step, underdamped, critical, overdamped | `V = 1` pu, `L = C = 1e-3`, `R = 0.4, 2.0, 4.0`, `dt = 1 us`, 3 ms | max `\|i_emt - i_analytic\| < 1e-5` |
 | Order of accuracy | `R = 0.4`, 2 ms, `dt = 2 us` against `1 us` | error ratio `> 3.0` (second order gives 4) |
 | Series R-C loop (same three regimes) | R and C in one `SeriesCapacitorBranch`, inductor to ground | max error `< 1e-5` |
 | Series R-C order | `dt = 2 us` against `1 us` | trapezoidal ratio `> 3.0`; backward Euler ratio in `(1.8, 2.2)` and fine-step error `< 1e-2` |
@@ -733,16 +750,16 @@ Each oracle is independent of the engine. Tolerances are the test assertions.
 | CDA | capacitor switched onto a voltage step, `dt = 2 us` | peak second difference of the capacitor current with CDA `< 0.5 x` without |
 | Matched line | `Rs = Zc = 100`, `tau = 1 ms`, `dt = 10 us` | far end below 0.02 before `tau`; `0.5` pu to 2 decimals at 2 ms and 2.9 ms; sending end `0.5` at 2 ms |
 | Open-ended line | same source | far end below 0.05 before `tau`; `1.0` at 1.5 ms; sending end `0.5` at 0.5 ms and `1.0` at 2.5 ms (to 2 decimals) |
-| Two-bus phasor, 8 parameter sets (tapped line with charging, tapped transformer, tapped and untapped series capacitors, negative-`R` equivalent, ideal series capacitor, tap 0) | 50 Hz, `dt = 10 us`, 1 s, one-bin DFT of the last cycle | `|V2_emt - V2_phasor| < 2e-6` pu against `AdmittanceStamp.Branch` |
+| Two-bus phasor, 8 parameter sets (tapped line with charging, tapped transformer, tapped and untapped series capacitors, negative-`R` equivalent, ideal series capacitor, tap 0) | 50 Hz, `dt = 10 us`, 1 s, one-bin DFT of the last cycle | `\|V2_emt - V2_phasor\| < 2e-6` pu against `AdmittanceStamp.Branch` |
 | Negative charging, 3 parameter sets | same | `< 2e-6` pu |
-| Power-flow equivalence, IEEE 14 and IEEE 57 | slack and PV buses ideal sources at their power-flow voltages, PQ injections as admittances, `dt = 10 us`, 0.5 s | worst bus `|V_emt - V_pf| < 2e-5` pu; the test asserts the bound; its comment records the measured 5.44e-6 pu (case14) and 5.35e-6 pu (case57) |
+| Power-flow equivalence, IEEE 14 and IEEE 57 | slack and PV buses ideal sources at their power-flow voltages, PQ injections as admittances, `dt = 10 us`, 0.5 s | worst bus `\|V_emt - V_pf\| < 2e-5` pu; the test asserts the bound; its comment records the measured 5.44e-6 pu (case14) and 5.35e-6 pu (case57) |
 | Negative demand at DC | `R = 0.1`, `Pd = -50` MW on 100 MVA | `V2 = 1.05` pu within `1e-12` at every stepped sample |
 | Negative demand at 50 Hz | `R = 0.1`, `X = 0.2`, `Gs = 40` MW | phasor error `< 2e-6` pu |
-| Out-of-phase synchronisation | machine and inverter EMFs in opposition, breaker closes at a voltage zero, `dt = 1 us`, 60 ms | max `|i_emt - i_analytic| < 1e-5` pu after the close; first peak exceeds the AC magnitude |
-| Three-phase balanced coupled line | `Rs = 1`, `Ls = 1 mH`, `Rm = 0.2`, `Lm = 0.3 mH`, `Rload = 10`, `dt = 20 us`, `t >= 0.08 s` | phase a against the positive-sequence phasor `< 5e-3`; `|va + vb + vc| < 5e-3` |
-| Three-phase single-line-to-ground fault | `Rf = 0.01`, 40 ms to 90 ms | faulted phase rms `< 0.25 x` healthy phase B; phase C `> 0.5 x` pre-fault; phase a recovers to `> 0.7 x`; mean `|va+vb+vc| > 0.05` |
-| Grid-following converter | `dt = 50 us`, `Rf = 0.05` fault 0.3 s to 0.45 s | `P = 0.5` to 2 decimals and `|V|` to 3 decimals at the phasor voltage; in the fault, `V` within 0.006 and `Iq`, `Ip` within 0.015 of an independent fixed point of the same law; recovers `P = 0.5` |
-| Grid-forming converter | fault 3.0 s to 3.15 s | `P = 0.5` at 2 decimals, `|V|` within 0.01; `|I| = 1.2` pu to 2 decimals in the fault; recovers |
+| Out-of-phase synchronisation | machine and inverter EMFs in opposition, breaker closes at a voltage zero, `dt = 1 us`, 60 ms | max `\|i_emt - i_analytic\| < 1e-5` pu after the close; first peak exceeds the AC magnitude |
+| Three-phase balanced coupled line | `Rs = 1`, `Ls = 1 mH`, `Rm = 0.2`, `Lm = 0.3 mH`, `Rload = 10`, `dt = 20 us`, `t >= 0.08 s` | phase a against the positive-sequence phasor `< 5e-3`; `\|va + vb + vc\| < 5e-3` |
+| Three-phase single-line-to-ground fault | `Rf = 0.01`, 40 ms to 90 ms | faulted phase rms `< 0.25 x` healthy phase B; phase C `> 0.5 x` pre-fault; phase a recovers to `> 0.7 x`; mean `\|va+vb+vc\| > 0.05` |
+| Grid-following converter | `dt = 50 us`, `Rf = 0.05` fault 0.3 s to 0.45 s | `P = 0.5` to 2 decimals and `\|V\|` to 3 decimals at the phasor voltage; in the fault, `V` within 0.006 and `Iq`, `Ip` within 0.015 of an independent fixed point of the same law; recovers `P = 0.5` |
+| Grid-forming converter | fault 3.0 s to 3.15 s | `P = 0.5` at 2 decimals, `\|V\|` within 0.01; `\|I\| = 1.2` pu to 2 decimals in the fault; recovers |
 
 ## Worked example
 
