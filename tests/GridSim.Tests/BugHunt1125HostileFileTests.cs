@@ -88,25 +88,25 @@ public sealed class BugHunt1125HostileFileTests : IDisposable
         return Math.Max(1, t[0]);
     }
 
-    /// <summary>R2-10: linearity is tested as a ratio: four times the lines must take well under sixteen times as long (a
-    /// quadratic parse gives about 16, a linear one about 4); an absolute cap stays only as a backstop.</summary>
+    /// <summary>R2-10: linearity is tested as a ratio: sixteen times the lines must take well under 256 times as long (a
+    /// quadratic parse gives about 256, a linear one about 16); an absolute cap stays only as a backstop.
+    /// <para>2.1.174: the step was four times the lines against an 8x limit (linear 4, quadratic 16). That margin was too
+    /// thin: a linear parse whose larger input no longer fits the processor's caches measured 8.4x to 10.0x on public CI
+    /// (ubuntu-latest, macos-latest, windows-11-arm), with the fastest of seven timings. With a sixteenfold step and a 64x
+    /// limit, a linear parse (measured 10x to 19x on a Windows laptop) and a quadratic one (256x) are each a factor of
+    /// about four from the limit.</para></summary>
     [Fact]
     public void Io05_blank_lines_and_continuation_lines_are_read_in_linear_time()
     {
         var total = Stopwatch.StartNew();
-        // 400,000 and 1,600,000 blank lines (was 40,000 and 160,000): at the old sizes the small parse took about 1 ms and
-        // the step to the large one crossed the large-object heap, so a linear parse measured 6.2x on a quiet laptop and 8.8x
-        // on windows-11-arm (2.1.174). Measured here at these sizes: 3.7x.
-        string small = Case("1") + new string('\n', 400_000), large = Case("1") + new string('\n', 1_600_000);
+        string small = Case("1") + new string('\n', 400_000), large = Case("1") + new string('\n', 6_400_000);
         MatpowerParser.Parse(small, "warm");
         long a = Median(() => MatpowerParser.Parse(small, "s")), b = Median(() => MatpowerParser.Parse(large, "l"));
-        Assert.True(b < 8 * a, $"blank lines: 4x the lines took {(double)b / a:F1}x as long");
-        // 50,000 and 200,000 lines (was 5,000 and 20,000): the small parse took about 0.7 ms, so one pause on a shared CI
-        // runner turned a measured 2.8x into 9.8x (windows-11-arm, 2.1.174). Measured here: 2.8x at both sizes, linear.
-        string cs = Continued(50_000), cl = Continued(200_000);
+        Assert.True(b < 64 * a, $"blank lines: 16x the lines took {(double)b / a:F1}x as long");
+        string cs = Continued(50_000), cl = Continued(800_000);
         MatpowerParser.Parse(cs, "warm");
         long c = Median(() => MatpowerParser.Parse(cs, "s")), d = Median(() => MatpowerParser.Parse(cl, "l"));
-        Assert.True(d < 8 * c, $"continuation lines: 4x the lines took {(double)d / c:F1}x as long");
+        Assert.True(d < 64 * c, $"continuation lines: 16x the lines took {(double)d / c:F1}x as long");
         Assert.Equal(2, MatpowerParser.Parse(large, "l").Buses.Count);
         Assert.True(total.Elapsed < TimeSpan.FromMinutes(2), $"took {total.Elapsed}");
     }
