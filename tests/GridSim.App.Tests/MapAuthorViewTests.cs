@@ -213,6 +213,19 @@ public sealed class MapAuthorViewTests
     private static Point ToWindow(MainWindow w, Point local)
         => w.MapControl.TranslatePoint(local, w) ?? throw new InvalidOperationException("the map is not in the window");
 
+    // The second press and release of a double-click at window point <atWindow>, raised on <target> with ClickCount 2, so
+    // the double-click does not depend on how much real time passed since the first click (see the drill-in test).
+    private static void SecondPressOfDoubleClick(MainWindow w, Control target, Point atWindow)
+    {
+        var pointer = new Pointer(Pointer.GetNextFreeId(), PointerType.Mouse, isPrimary: true);
+        ulong now = (ulong)Environment.TickCount64;
+        target.RaiseEvent(new PointerPressedEventArgs(target, pointer, w, atWindow, now,
+            new PointerPointProperties(RawInputModifiers.LeftMouseButton, PointerUpdateKind.LeftButtonPressed), KeyModifiers.None, clickCount: 2));
+        target.RaiseEvent(new PointerReleasedEventArgs(target, pointer, w, atWindow, now,
+            new PointerPointProperties(RawInputModifiers.None, PointerUpdateKind.LeftButtonReleased), KeyModifiers.None, MouseButton.Left));
+        pointer.Capture(null);
+    }
+
     // A left click at map-local point <local> (the window's own pointer events, as a user's click).
     private static void Click(MainWindow w, Point local)
     {
@@ -617,13 +630,18 @@ public sealed class MapAuthorViewTests
             Assert.NotEqual(-1, bus);
             SchematicNode node = map.View.Nodes[map.View.IdToIndex[bus]];
 
-            // Two quick clicks at the same point: the first selects the bus, the second drills in onto it.
+            // Two quick clicks at the same point: the first selects the bus, the second drills in onto it. The first goes
+            // through the headless input as a real click. The second is delivered as the double-click's second press and
+            // release (ClickCount 2) directly: scripted through the headless input it counted as a double-click only if
+            // it came within the 500 ms double-tap time of real time, and on a slow CI runner the first click's handling
+            // took longer, so it became a single click and nothing drilled in (windows-latest hwintrinsic-off, the 2.1.174
+            // RC-5 release gate; reproduced locally with a 600 ms gap). Avalonia offers no way to give scripted presses
+            // their own timestamps.
             Point at = ToWindow(w, BusPoint(map, bus));
             w.MouseMove(at);
             w.MouseDown(at, MouseButton.Left);
             w.MouseUp(at, MouseButton.Left);
-            w.MouseDown(at, MouseButton.Left);
-            w.MouseUp(at, MouseButton.Left);
+            SecondPressOfDoubleClick(w, map, at);
             Render(w);
 
             // Exactly SchematicView.CenterOn(bus, FocusZoom): the zoom at substation level, the bus at the centre.
