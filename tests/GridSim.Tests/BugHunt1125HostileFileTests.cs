@@ -18,6 +18,7 @@ namespace GridSim.Tests;
 /// lines, the CGMES limits hold for the folder form too, counts in a file are checked before anything is sized from them,
 /// an LCC tap step of 0 is refused and guarded, and the DGS, RAWX and COMTRADE findings IO-09 to IO-11.
 /// </summary>
+[Collection(ParserTimingTestGroup.Name)]
 public sealed class BugHunt1125HostileFileTests : IDisposable
 {
     private readonly string _dir = JournalTestSupport.NewDir("bh1125-io");
