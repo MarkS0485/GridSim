@@ -92,7 +92,10 @@ public sealed class BugHunt1125HostileFileTests : IDisposable
     public void Io05_blank_lines_and_continuation_lines_are_read_in_linear_time()
     {
         var total = Stopwatch.StartNew();
-        string small = Case("1") + new string('\n', 40_000), large = Case("1") + new string('\n', 160_000);
+        // 400,000 and 1,600,000 blank lines (was 40,000 and 160,000): at the old sizes the small parse took about 1 ms and
+        // the step to the large one crossed the large-object heap, so a linear parse measured 6.2x on a quiet laptop and 8.8x
+        // on windows-11-arm (2.1.174). Measured here at these sizes: 3.7x.
+        string small = Case("1") + new string('\n', 400_000), large = Case("1") + new string('\n', 1_600_000);
         MatpowerParser.Parse(small, "warm");
         long a = Median(() => MatpowerParser.Parse(small, "s")), b = Median(() => MatpowerParser.Parse(large, "l"));
         Assert.True(b < 8 * a, $"blank lines: 4x the lines took {(double)b / a:F1}x as long");

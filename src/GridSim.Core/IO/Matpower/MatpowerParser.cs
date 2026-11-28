@@ -674,8 +674,16 @@ public static class MatpowerParser
         int blockDepth = 0;
         // IO-18: CR-only line endings (classic Mac) are lines too, as the PSS/E, UCTE and COMTRADE readers take them; a CR-only
         // file was one line, cut at its first '%'.
-        foreach (string raw in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+        // IO-05 (2.1.174): the lines are walked one at a time, as Split('\n') would give them (the same segments, a final
+        // empty one included), instead of an array holding every line at once: with over a million lines the array kept
+        // them all alive into the older collector generations, and the parse grew faster than the file on Linux CI.
+        string normalised = text.Replace("\r\n", "\n").Replace('\r', '\n');
+        for (int start = 0; start <= normalised.Length;)
         {
+            int end = normalised.IndexOf('\n', start);
+            if (end < 0) end = normalised.Length;
+            string raw = normalised.Substring(start, end - start);
+            start = end + 1;
             string bare = raw.TrimEnd('\r').Trim();
             if (bare == "%{") { blockDepth++; sb.Append('\n'); continue; }
             if (blockDepth > 0)

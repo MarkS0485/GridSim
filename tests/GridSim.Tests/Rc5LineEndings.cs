@@ -19,7 +19,20 @@ internal static class Rc5LineEndings
     internal static byte[] ToCrLf(byte[] bytes) => Encoding.UTF8.GetBytes(ToCrLf(Encoding.UTF8.GetString(bytes)));
 
     /// <summary>The same for the JSON-escaped form of a line ending inside a string value (a backslash and "n", or a backslash,
-    /// "r", a backslash and "n"), as a transcript line shows it.</summary>
-    internal static string EscapedToCrLf(string jsonLine) =>
-        jsonLine.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", "\r\n", StringComparison.Ordinal);
+    /// "r", a backslash and "n"), as a transcript line shows it. Only a real escape is matched: one preceded by an even
+    /// number of backslashes (so an escaped backslash before an "n", as in "C:\\net", is left alone). Before 2.1.174 this
+    /// replaced raw line feeds, which a one-line transcript never holds, so an rpc study's escaped stdout kept LF on Linux
+    /// and macOS where the Windows pins have CRLF (T8a level 2, first seen in public CI).</summary>
+    internal static string EscapedToCrLf(string jsonLine)
+    {
+        string raw = ToCrLf(jsonLine);
+        string lf = EscapedCrLf.Replace(raw, "$1\\n");
+        return EscapedLf.Replace(lf, "$1\\r\\n");
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex EscapedCrLf =
+        new(@"(?<!\\)((?:\\\\)*)\\r\\n", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    private static readonly System.Text.RegularExpressions.Regex EscapedLf =
+        new(@"(?<!\\)((?:\\\\)*)\\n", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 }

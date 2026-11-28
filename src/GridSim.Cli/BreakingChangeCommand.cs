@@ -197,6 +197,11 @@ internal static class BreakingChangeCommand
             scratch = Path.Combine(Path.GetTempPath(), "gridsim-bcv-" + Guid.NewGuid().ToString("N")[..12]);
             ownScratch = true;
         }
+        // macOS: the temporary folder (/var/folders/...) and /tmp are reached through links (/var -> /private/var), and a
+        // re-run started in its scratch folder reports that folder resolved (/private/var/...). The confinement check then
+        // saw the re-run's own outputs as outside the scratch folder and refused them (a run job's export: first seen in
+        // public CI at 2.1.174). The scratch folder is held resolved, as the re-run sees it.
+        scratch = ResolvedPath(scratch);
 
         string buildVersion = GridSim.Core.BuildInfo.Version;
         string buildCommit = JournalRecorder.FullCommit(GridSim.Core.BuildInfo.InformationalVersion);
@@ -339,6 +344,24 @@ internal static class BreakingChangeCommand
     private static string InputsText(JournalEntry e) => string.Join(";", e.Tokens
         .Where(t => t.Kind is "input" or "case-folder" or "builtin")
         .Select(t => t.Kind == "builtin" ? t.Raw : Path.GetFileName(Path.TrimEndingDirectorySeparator(t.Abs))));
+
+    /// <summary>The path with every symbolic link among its existing folders resolved; the part that does not exist yet is
+    /// kept as written. On Windows it is returned unchanged.</summary>
+    internal static string ResolvedPath(string path)
+    {
+        if (OperatingSystem.IsWindows()) return path;
+        string full = Path.GetFullPath(path);
+        string root = Path.GetPathRoot(full)!;
+        string current = root;
+        foreach (string part in full[root.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, part);
+            if (!Directory.Exists(current)) continue;
+            FileSystemInfo? target = new DirectoryInfo(current).ResolveLinkTarget(returnFinalTarget: true);
+            if (target is not null) current = target.FullName;
+        }
+        return current;
+    }
 
     private static Prepared Prepare(JournalLine line, int position, string scratch, string journal, string md, string buildVersion, string buildCommit,
         BreakingChangeMap map, string root, Func<string, GridSim.Core.Model.GridModel> loadCase)

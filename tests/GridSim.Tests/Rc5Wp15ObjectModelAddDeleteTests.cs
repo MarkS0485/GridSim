@@ -294,7 +294,12 @@ public sealed class Rc5Wp15ObjectModelAddDeleteTests : IDisposable
 
     /// <summary>The transcript hash as the pinning script computed it: tool version, host token and handle token replaced,
     /// lines joined with LF, SHA-256 in lower-case hex. Line 0 must be hello and line 1 the load of case9.</summary>
-    private static string TranscriptSha(IReadOnlyList<string> lines)
+    private static string TranscriptSha(IReadOnlyList<string> lines) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(TranscriptNormalised(lines)))).ToLowerInvariant();
+
+    /// <summary>The normalised transcript <see cref="TranscriptSha"/> hashes (printed when a pin fails, so a difference on
+    /// another system can be read, not only seen).</summary>
+    private static string TranscriptNormalised(IReadOnlyList<string> lines)
     {
         // A built-in case's case_sha256 is SHA-256("built-in:<name>:<tool version>") (RpcCommand), so it moves with every
         // version by design. The host's own value for this build is replaced by the value the 2.1.108 build sent
@@ -316,7 +321,7 @@ public sealed class Rc5Wp15ObjectModelAddDeleteTests : IDisposable
             l = Regex.Replace(l, "case-[0-9a-f]{16}-", "case-<host>-");
             return Regex.Replace(l, "\"host\":\"[0-9a-f]{16}\"", "\"host\":\"<host>\"");
         });
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\n", norm)))).ToLowerInvariant();
+        return string.Join("\n", norm);
     }
 
     /// <summary>
@@ -366,9 +371,12 @@ public sealed class Rc5Wp15ObjectModelAddDeleteTests : IDisposable
         List<string> two = Converse(level2, "--protocol", "2");
         Assert.Contains(",\"save\",\"add\",\"delete\"]", two[0], StringComparison.Ordinal);
         Assert.Contains(two, l => l.Contains(", save, add, delete.", StringComparison.Ordinal));
-        Assert.Equal("3156fccb99ab92aa77249de2afff54704f80e3175d39de775a2b73b16e56295e", TranscriptSha(two.Select(l => l
+        List<string> twoAsBefore = two.Select(l => l
             .Replace(",\"save\",\"add\",\"delete\"]", ",\"save\"]", StringComparison.Ordinal)
-            .Replace(", save, add, delete.", ", save.", StringComparison.Ordinal)).ToList()));
+            .Replace(", save, add, delete.", ", save.", StringComparison.Ordinal)).ToList();
+        string twoSha = TranscriptSha(twoAsBefore);
+        Assert.True(twoSha == "3156fccb99ab92aa77249de2afff54704f80e3175d39de775a2b73b16e56295e",
+            "level 2 transcript sha " + twoSha + ", normalised transcript:\n" + TranscriptNormalised(twoAsBefore));
     }
 
     private static JsonElement J(string line)
