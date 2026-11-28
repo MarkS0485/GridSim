@@ -158,9 +158,11 @@ jobs:
 
       - name: Test
         # The RAM gate (tests/CONDITIONAL-TESTING.md) never leaves a test out of a release: every large case runs.
+        # -m:1 runs the test projects one after another: with every large case on, three test hosts at once pushed the
+        # 16 GB runner into swap until it stopped answering (the 2.1.174 RC-5 release run, force-cancelled after 50 min).
         env:
           GRIDSIM_TEST_MAX_BUSES: all
-        run: dotnet test GridSim.slnx -c Release --no-build --nologo
+        run: dotnet test GridSim.slnx -c Release --no-build --nologo -m:1
 
       - name: Vulnerable package gate
         shell: bash
