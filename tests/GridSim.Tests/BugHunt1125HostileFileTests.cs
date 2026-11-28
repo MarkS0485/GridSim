@@ -69,8 +69,10 @@ public sealed class BugHunt1125HostileFileTests : IDisposable
         return sb.ToString();
     }
 
-    /// <summary>The median of seven timings of <paramref name="parse"/>, in ticks, each after a full collection, so one
-    /// collection or scheduler pause on a busy runner does not land inside a single short timing.</summary>
+    /// <summary>The fastest of seven timings of <paramref name="parse"/>, in ticks, each after a full collection. On a busy
+    /// runner noise only ever adds time, so the fastest run is the cost of the parse itself; the median of seven still
+    /// landed on a slowed run under the parallel suite (8.4x on ubuntu-latest, 2.1.174). A quadratic parse is slow on every
+    /// run, so it still shows about 16x here.</summary>
     private static long Median(Action parse)
     {
         var t = new long[7];
@@ -83,7 +85,7 @@ public sealed class BugHunt1125HostileFileTests : IDisposable
             t[k] = sw.ElapsedTicks;
         }
         Array.Sort(t);
-        return Math.Max(1, t[3]);
+        return Math.Max(1, t[0]);
     }
 
     /// <summary>R2-10: linearity is tested as a ratio: four times the lines must take well under sixteen times as long (a

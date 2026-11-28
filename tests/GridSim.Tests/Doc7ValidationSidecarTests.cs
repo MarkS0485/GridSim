@@ -16,6 +16,7 @@ namespace GridSim.Tests;
 /// N219 (review-progress/2026-10/DOCS-FINDINGS-TRIAGE.md, stream 7). These are checks, scoring, sidecars and messages
 /// only: no solver number changes, and every test below that touches a solve reads the solve as it always was.
 /// </summary>
+[Collection(InstallDataFolderTestGroup.Name)]
 public sealed class Doc7ValidationSidecarTests
 {
     private static string Root() => CliProcess.Root();

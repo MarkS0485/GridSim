@@ -13,6 +13,7 @@ namespace GridSim.Tests;
 /// no manifest bundles nothing; the install (test output) root carries the manifest; and, as a process, a 2,869-bus copy
 /// placed INSIDE the program's own data folder is refused by the free tier while the shipped file still runs.
 /// </summary>
+[Collection(InstallDataFolderTestGroup.Name)]
 public sealed partial class Lf5RemainingTests
 {
     private static readonly string[] ManifestFolders = { "matpower", "uk", "gb-synthetic", "gb-full", "intl", "dist3ph" };
